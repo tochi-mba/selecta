@@ -435,6 +435,21 @@ wheels = [
 ]
 
 [[package]]
+name = "nnaudio"
+version = "0.3.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+    { name = "torch", version = "2.15.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.15.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c1/0a/720b3ebfa8efe8ac964a89e45964a5f500e2825e5e0566291f88ecc55f43/nnaudio-0.3.4.tar.gz", hash = "sha256:bda234f99c11dd7806e13593d607fdd258b86d87dc6735e810e0d8ce57fd3711", size = 39505, upload-time = "2025-12-07T23:20:41.887Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/59/8b/fa7173e7749a57ff5a1008050aed1433874e4010a7537a1588883ad597d6/nnaudio-0.3.4-py3-none-any.whl", hash = "sha256:48db0c54443f4f3f54057d416bd9ba304110552b4bba32f897e864f55deaa87c", size = 43847, upload-time = "2025-12-07T23:20:40.491Z" },
+]
+
+[[package]]
 name = "numba"
 version = "0.68.1"
 source = { registry = "https://pypi.org/simple" }
@@ -621,6 +636,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pyloudnorm"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/23/00/f915eaa75326f4209941179c2b93ac477f2040e4aeff5bb21d16eb8058f9/pyloudnorm-0.2.0.tar.gz", hash = "sha256:8bf597658ea4e1975c275adf490f6deb5369ea409f2901f939915efa4b681b16", size = 14037, upload-time = "2026-01-04T11:43:35.265Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/b6/65a49a05614b2548edbba3aab118f2ebe7441dfd778accdcdce9f6567f20/pyloudnorm-0.2.0-py3-none-any.whl", hash = "sha256:9bb69afb904f59d007a7f9ba3d75d16fb8aeef35c44d6df822a9f192d69cf13f", size = 10879, upload-time = "2026-01-04T11:43:34.534Z" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -755,9 +783,11 @@ dependencies = [
     { name = "httpx" },
     { name = "librosa" },
     { name = "mutagen" },
+    { name = "nnaudio" },
     { name = "numpy" },
     { name = "pedalboard" },
     { name = "psutil" },
+    { name = "pyloudnorm" },
     { name = "rich" },
     { name = "scipy" },
     { name = "soundfile" },
@@ -782,9 +812,11 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "librosa", specifier = ">=1.0" },
     { name = "mutagen", specifier = ">=1.48" },
+    { name = "nnaudio", specifier = ">=0.3.4" },
     { name = "numpy", specifier = ">=2.1" },
     { name = "pedalboard", specifier = ">=0.9.26" },
     { name = "psutil", specifier = ">=6" },
+    { name = "pyloudnorm", specifier = ">=0.2.0" },
     { name = "rich", specifier = ">=13" },
     { name = "scipy", specifier = ">=1.14" },
     { name = "soundfile", specifier = ">=0.13" },
