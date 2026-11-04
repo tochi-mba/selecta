@@ -1,0 +1,53 @@
+# This repo is public. No audio, stems, caches or model weights, ever.
+*.mp3
+*.flac
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.opus
+*.aiff
+*.aif
+*.wma
+*.lrc
+
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.th
+*.bin
+
+# Local data and outputs
+/data/
+/out/
+/reels/
+/.cache/
+*.sqlite
+*.sqlite3
+*.db
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Web
+node_modules/
+web/dist/
+*.tsbuildinfo
+
+# Tools and OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+.env
+.env.*
