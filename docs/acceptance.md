@@ -1,35 +1,51 @@
 # Build-plan acceptance ledger
 
-This is an evidence ledger, not a marketing checklist. “Implemented” means code and synthetic
-tests exist. “Needs listening” means the implementation is complete but the plan explicitly
-requires a person or this specific music library to judge it.
+Every line here was checked on 5 November 2026 by running it, against commit `74a3e2b`, on a copy of the real library. Green CI only proves the code builds and its tests pass, so it counts for nothing here. Nothing below says whether Selecta sounds good, because only a listener can judge that.
 
-## Implemented
+## Works
 
-- Incremental library scan, reversible non-music filtering and duplicate detection.
-- CPU beat/downbeat, section, energy, loudness, key and timbre analysis with resumable refresh.
-- Declarative `TransitionScript` renderer, warping, 24 dB/oct band ownership, effects, limiting,
-  audit checks, repair attempts and a never-silent fallback.
-- Core and extended recipe catalogue, including stem-backed and wordplay modes.
-- Local-only API; persistent queue, steering and preferences; song-ID-only audio access.
-- Type-led React UI for Start/Deck, Arc, Found, Crate, Workshop, Stage and Listening Room.
-- Rolling beam planner, visible energy arc, joint transition feasibility and persistent queue.
-- Sequential LRCLIB retrieval, token-safe lyric links, word-cut confidence gate and boundary snap.
-- On-demand windowed Demucs with a 5 GB LRU cap; it never precomputes the whole library.
-- Seam Book searches for lyric, hook, transposed melody and harmonic relationships.
-- Blind 1–5 ratings, reason tags and bad-transition-rate reporting.
+| What | Evidence | Known limits |
+|---|---|---|
+| Library scan and filter | 1,389 files in 5 s: 707 songs, 614 set aside, 68 duplicates. Every audiobook folder caught | An override can only be set in the database, not in the app |
+| Fast analysis, resumable | Tempos match known values (`I Wish` 105.9, `Fast Car` 104.4). Resumed cleanly after being killed mid-run | Key accuracy is still unchecked by ear |
+| Lyric lookup | 583 of 707 songs have line-synced lyrics | Timing is by line, not by word |
+| Core recipes | `cut_on_one`, `echo_out`, `delay_throw`, `reverb_wash`, `bass_swap_blend`, `filter_sweep` render real songs | Not yet judged by ear |
+| Audit and repair | Broken renders fail the right checks, and failures steer the next attempt | Thresholds aren't calibrated against ratings |
+| Stem windows | 46 s window in 112 s under heavy CPU load, 32 MB, 0 ms offset against the main decode | The cap deletes single files, leaving broken windows, and ignores priority |
+| Set export | 4.3-minute set in 34 s, with every transition passing its audit | One transition with no audited option aborts the whole export |
+| Local-only server | Foreign hosts get 403, and audio is reachable only by song ID | No Origin check, so another website can rebuild the queue. A bad request returns 500 |
 
-## Needs this library and the user's ears
+## Partly works
 
-- Stage 1 timing report is complete: 21 real songs averaged roughly 26 seconds on this laptop,
-  projecting about five hours for the 707-track music library. The 20-song beat/downbeat/key
-  listening page is at `reels/beat-check/grid.html` (local and intentionally ignored by Git).
-- Listening check 1 is rendered at `reels/check-1/index.html`: five audit-passing transitions
-  covering echo, clean cuts and a reverb wash. Its ratings are still needed before recipe tuning.
-- Listening reels 2–3 and recipe tuning.
-- Mix-versus-vocal alignment bake-off across ten multilingual songs.
-- Discovery usefulness ratings.
-- The approximately 60-pair blind comparison against fixed crossfade, cue-search, commercial and
-  human baselines. “Best DJ” is not considered proven until Selecta wins on bad-transition rate.
+| What | Works | Doesn't |
+|---|---|---|
+| Planner | Builds a queue with feasible transitions | An artist repeated 2 songs apart (the rule is 10). About 91 s for 20 songs on a 25-song library |
+| Steering | Mix language and stems change the plan | More, Less, Take me to, Wordplay and Effects never change it. Undo does nothing. A locked song loses its lock on re-plan |
+| Mix language | `seamless` planned real blends | `punchy` names a recipe that doesn't exist (`backspin`). `wordplay` plans cuts with no link: 1 of 5 shared any word, by chance |
+| Lyric links | Matches on whole tokens | Top results are generic ("you know that"). A full-library run would build about 22 million pairs (my estimate: about 9 GB), so it hasn't been run |
+| Web interface | Screens load, search works, storage slider saves | See below |
 
-These cannot truthfully be marked passed without the user's music database and listening results.
+## Not real yet
+
+| Claim | What's actually there |
+|---|---|
+| Extended recipes | `drop_swap`, `half_double` and `word_cut` are sample-identical to `cut_on_one`. `brake` is identical to `reverb_wash`. `long_blend` is `bass_swap_blend`. Nothing can loop, because the renderer has no loop control. `riser_air` adds no riser. `tempo_ramp` is a relabelled filter sweep, and it failed its audit on the 120 to 135 BPM test pair |
+| Stem recipes | The planner never supplies stems, so they fall back to an echo. Given a real stem window, A renders silent |
+| Wordplay | `word_cut` and `word_loop` never read a word. No word aligner exists. `cut_safe` and `energy_minimum_boundary` are never called outside their tests |
+| Same-melody search | Flagged 300 of 300 song pairs, and matched a tune against its own notes shuffled and transposed, because it averages note order away first |
+| Other discovery | No fingerprint, rhythm, shortest-path or LLM judge code exists, so "Take me to" has nothing to run on |
+| Blind listening test | Rating functions exist, but no route calls them. The page has no audio, its buttons send nothing, and no baselines exist |
+| Playing a set in the browser | The Deck plays one original file through a plain audio tag, with no transition and no loudness match. No route serves a rendered transition |
+| Deck and Stage content | Lyrics, the section strip and "hold the word" are hard-coded placeholders |
+| Dead controls | `Resume set`, and every rating, tag and Next button in the Listening Room |
+| Screens and layout | No Start screen or folder picker. Navigation disappears below 750 px |
+| "Priority songs are protected" | The stem cache evicts by file access time only and never reads priority |
+| "Local only" | The stylesheet imports Google Fonts, so the page contacts Google |
+| Intertwined transition | No beat alignment: on 30 eligible pairs the median offset was 145 ms, and 93% were over 40 ms, which reads as two separate hits. Its timing is hard-coded in seconds, it isn't audited, and the planner can't reach it |
+
+## Still needs a person
+
+- Whether any transition sounds good.
+- Beat, downbeat and key accuracy on rap and Latin tracks.
+- Whether any discovery is clever rather than corny.
+- The blind comparison, once it exists. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.

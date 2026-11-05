@@ -4,9 +4,7 @@ An auto DJ for your own music folder. Point it at a folder and it plays a set in
 
 It runs entirely on your PC. Your music never leaves your machine, and no audio is ever stored in this repo.
 
-**Status: working local-first build.** Scanning, analysis, audited rendering, set planning,
-steering, lyrics, discovery, blind ratings and the browser interface are implemented. Model-heavy
-features remain on-demand so a CPU-only laptop never tries to stem-split the whole library.
+**Status: early build.** Scanning, analysis, core transitions, the audit and set export work from the command line. Playing a set in the browser, wordplay, stem transitions, discovery and the blind listening test aren't finished. [docs/acceptance.md](docs/acceptance.md) has the verified state of each.
 
 ## What makes it different
 
