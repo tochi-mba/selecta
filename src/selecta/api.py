@@ -258,9 +258,23 @@ def create_app(
             songs, _ = library_now(conn)
             counts = _counts(conn)
             counts["ready"] = len(songs)
+            steering = get_steering(conn).__dict__
+            target_song = (
+                conn.execute(
+                    "SELECT artist,title FROM songs WHERE id=?", (steering["target"],)
+                ).fetchone()
+                if steering["target"]
+                else None
+            )
+            steering["target_label"] = (
+                f"{target_song['artist'] or 'Unknown artist'} — "
+                f"{target_song['title'] or 'Untitled'}"
+                if target_song
+                else None
+            )
             return {
                 "counts": counts,
-                "steering": get_steering(conn).__dict__,
+                "steering": steering,
                 "queue": queue(conn),
                 "moves": {name: label for name, (label, _) in MOVES.items()},
                 "analysis_running": bool(
@@ -504,17 +518,33 @@ def create_app(
         songs, traits = library_now(conn)
         if len(eligible(vibe, songs, traits)) < MIN_SONGS:
             raise HTTPException(400, f"{vibe.name} needs more analysed songs.")
-        selected_language = get_steering(conn).mix_language
-        planned, seams = build_vibe(
-            vibe,
-            songs,
-            traits,
-            phrases_of(conn),
-            min(count, 100),
-            start,
-            verdicts=store.verdicts(),
-            mix_language=selected_language if selected_language != "balanced" else None,
-        )
+        steering = get_steering(conn)
+        selected_language = steering.mix_language
+        destination = steering.target
+        try:
+            end_id = int(destination) if destination else None
+        except ValueError as problem:
+            raise HTTPException(
+                400, "Choose a destination song from your analysed library."
+            ) from problem
+        if end_id is not None and all(song.id != end_id for song in songs):
+            raise HTTPException(
+                400, "That destination is no longer mix-ready. Choose another song."
+            )
+        try:
+            planned, seams = build_vibe(
+                vibe,
+                songs,
+                traits,
+                phrases_of(conn),
+                min(count, 100),
+                start,
+                verdicts=store.verdicts(),
+                mix_language=selected_language if selected_language != "balanced" else None,
+                end_id=end_id,
+            )
+        except ValueError as problem:
+            raise HTTPException(400, str(problem)) from problem
         mix.remember(conn, f"changing to {vibe.name}")
         mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
         mix.set_mix_name(conn, vibe.name)

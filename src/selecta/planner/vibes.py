@@ -436,9 +436,18 @@ def build_vibe(
     seed: int | None = None,
     verdicts: Verdicts | None = None,
     mix_language: str | None = None,
+    end_id: int | None = None,
 ) -> tuple[list[PlannedSong], dict[int, dict]]:
     """Plan a mix for this vibe, and say how each seam should land."""
     found = eligible(vibe, songs, traits)
+    if end_id is not None:
+        destination = next((song for song in songs if song.id == end_id), None)
+        if destination is None:
+            raise ValueError(f"destination song {end_id} is not available in the mix-ready library")
+        if all(song.id != end_id for song in found):
+            if vibe.seasonal:
+                raise ValueError("choose a Christmas song for the Christmas mix destination")
+            found.append(destination)
     rng = np.random.default_rng(seed)
     first = start if start is not None else _opening_song(vibe, found, traits, rng).id
     verdicts = verdicts or Verdicts()
@@ -459,7 +468,13 @@ def build_vibe(
             song: value / top - WARNING_COST * min(verdicts.warned_songs[song], 3)
             for song, value in belongs.items()
         },
+        end_id=end_id,
     )
+    if end_id is not None and (not planned or planned[-1].song.id != end_id):
+        raise ValueError(
+            "No valid transition route reaches that song in this mix. Clear the destination or "
+            "choose a different mix."
+        )
     return planned, seam_choices(selected_vibe, planned, phrases, rng, verdicts)
 
 

@@ -310,6 +310,13 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .card.ghost { opacity: 0.4; }
 .saved { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; }
 .saved li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); padding: 8px 0; }
+.mix-steering, .destination-control { display: grid; grid-template-columns: minmax(110px, auto) minmax(180px, 1fr); align-items: center; gap: 8px 14px; margin: 20px 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.mix-steering .hint, .destination-control > .hint, .destination-selected, .destination-results { grid-column: 1 / -1; }
+.destination-control input { width: 100%; min-width: 0; }
+.destination-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.destination-results button { width: 100%; text-align: left; }
+.destination-selected { justify-content: space-between; align-items: center; }
+@media (max-width: 520px) { .mix-steering, .destination-control { grid-template-columns: 1fr; } .mix-steering .hint, .destination-control > .hint, .destination-selected, .destination-results { grid-column: auto; } }
 .waiting ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.92rem; }
 .nudge {
   margin-top: 32px;

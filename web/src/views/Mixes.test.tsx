@@ -78,6 +78,24 @@ describe('Pick a feeling', () => {
     expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { value?: string }).value === 'seamless')).toBe(true);
   });
 
+  it('lets the listener set a song as the destination for future mixes', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /saved': [],
+      'GET /songs': [
+        { id: 7, artist: 'Example Artist', title: 'Midnight', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false },
+        { id: 8, artist: 'Unready Artist', title: 'No Cues', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: null, never: false },
+      ],
+      'POST /steer': { mix_language: 'balanced', target: '7' },
+    });
+    show();
+    fireEvent.change(await screen.findByLabelText('Take me to'), { target: { value: 'midnight' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Midnight — Example Artist' }));
+    expect(await screen.findByText('Midnight — Example Artist')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'No Cues — Unready Artist' })).toBeNull();
+    expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { action?: string; value?: string }).action === 'take_me_to' && (call.body as { value?: string }).value === '7')).toBe(true);
+  });
+
   it('groups mixes by why you’d press them', async () => {
     fakeBackend({
       'GET /vibes': [

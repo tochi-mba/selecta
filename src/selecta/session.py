@@ -45,7 +45,10 @@ def steer(conn: sqlite3.Connection, action: str, value: str | int | None = None)
             raise ValueError(f"unknown stem frequency: {frequency}")
         state.stems = frequency
     elif action == "take_me_to":
-        state.target = str(value) if value else None
+        target = str(value) if value else ""
+        if target and not target.isdecimal():
+            raise ValueError("destination must be a song ID from your library")
+        state.target = target or None
     elif action == "length_mode":
         state.length_mode = str(value or "party")
     elif action != "undo":

@@ -73,7 +73,7 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 | What | Works | Doesn't |
 |---|---|---|
 | Planner | 8 songs in 5 s, artists kept 10 apart, locks kept, feel honoured by each seam | The arc follows energy numbers that barely vary (0.32 to 0.55) until they're rescaled |
-| Steering | Bigger, calmer, something else, feel, length, start song, lock; saved transition feel is sent from the Mixes UI and overrides a mix's default style in planner tests | "Take me to" isn't built; the intertwined stem move isn't in the mix planner |
+| Steering | Bigger, calmer, something else, feel, length, start song, lock; saved transition feel is sent from the Mixes UI and overrides a mix's default style in planner tests. “Take me to” searches mix-ready songs and constrains a new plan to end on the chosen destination, with a clear error if no route exists | Destination steering is an endpoint constraint in the beam planner, not yet a shortest-path search through the seam graph. The intertwined stem move isn't in the mix planner |
 | Stem cache | Whole windows across stems and rendered seams are budgeted together; priority-song stem windows are protected by source metadata | Existing windows created before metadata cannot be mapped to priority songs and remain ordinary eviction candidates |
 | Audit | Fails broken renders and sagging seams, in plain words | Beat check misreads syncopated drums, so rides allow up to 40 ms. Thresholds are starting values |
 
