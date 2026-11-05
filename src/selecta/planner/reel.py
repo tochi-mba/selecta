@@ -54,7 +54,8 @@ class ReelEntry:
 
 def load_library(conn: sqlite3.Connection, settings: Settings) -> list[SongInfo]:
     rows = conn.execute(
-        "SELECT song_id FROM analysis WHERE error IS NULL AND bpm IS NOT NULL ORDER BY song_id"
+        "SELECT song_id FROM analysis WHERE error IS NULL AND bpm IS NOT NULL AND version = "
+        "(SELECT MAX(version) FROM analysis) ORDER BY song_id"
     ).fetchall()
     songs: list[SongInfo] = []
     for row in rows:
@@ -172,7 +173,8 @@ _STYLE_NAMES = {
 
 def _page(entries: list[ReelEntry]) -> str:
     rows = "\n".join(_row(i, entry) for i, entry in enumerate(entries))
-    return _PAGE.replace("{{rows}}", rows).replace("{{count}}", str(len(entries)))
+    page = _PAGE.replace("{{style}}", PAGE_STYLE)
+    return page.replace("{{rows}}", rows).replace("{{count}}", str(len(entries)))
 
 
 def _row(index: int, entry: ReelEntry) -> str:
@@ -199,12 +201,7 @@ def _row(index: int, entry: ReelEntry) -> str:
 </article>"""
 
 
-_PAGE = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Selecta reel</title>
-<style>
-:root{--bg:#f6f4ef;--ink:#16140f;--soft:#6a655a;--line:#d8d3c7;--accent:#c8401f;--field:#fff}
+PAGE_STYLE = """:root{--bg:#f6f4ef;--ink:#16140f;--soft:#6a655a;--line:#d8d3c7;--accent:#c8401f;--field:#fff}
 @media (prefers-color-scheme:dark){:root{--bg:#141310;--ink:#f3efe6;--soft:#a39d8f;--line:#37342c;--accent:#ff6a3d;--field:#1d1b17}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 ui-sans-serif,system-ui,sans-serif}
@@ -228,7 +225,13 @@ footer{border-top:1px solid var(--line);padding-top:24px}
 #copy{background:var(--accent);border-color:var(--accent);color:#fff}
 #status{margin-left:8px;color:var(--soft);font-size:14px}
 textarea{width:100%;height:120px;margin-top:12px;font:13px ui-monospace,monospace;background:var(--field);color:inherit;border:1px solid var(--line);border-radius:6px;padding:8px;display:none}
-</style></head><body><main>
+"""
+
+_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Selecta reel</title>
+<style>{{style}}</style></head><body><main>
 <h1>Selecta reel</h1>
 <p class="lede">{{count}} transitions from your own songs. Each one starts about 16 seconds before the seam. Use Jump to get 8 seconds ahead of it, rate it, and note anything you heard.</p>
 {{rows}}

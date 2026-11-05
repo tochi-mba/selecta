@@ -17,6 +17,8 @@ from selecta.config import ANALYSIS_VERSION, load_settings
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 console = Console()
+DEFAULT_MIX_OUTPUT = Path("out/mix.flac")
+DEFAULT_REEL_OUTPUT = Path("reels/reel-1")
 
 
 def _open():
@@ -60,13 +62,14 @@ def analyse(
     seed: int = typer.Option(7, help="Random seed used with --sample."),
     beat_model: str = typer.Option(None, help="Beat model checkpoint, such as final0."),
     low_priority: bool = typer.Option(True, help="Run below normal priority."),
+    refresh: bool = typer.Option(False, help="Only update songs analysed by an older version."),
 ) -> None:
     """Run fast analysis on songs that don't have it yet. Safe to stop and resume."""
     from selecta.analysis.pipeline import Analysers, analyse_song
     from selecta.jobs import lower_priority
 
     settings, conn = _open()
-    songs = db.songs_needing_analysis(conn, ANALYSIS_VERSION, folder)
+    songs = db.songs_needing_analysis(conn, ANALYSIS_VERSION, folder, refresh)
     if sample:
         random.Random(seed).shuffle(songs)
     if limit:
@@ -218,7 +221,7 @@ def mix(
     a: str = typer.Argument(..., help="Outgoing song: an id or part of its title."),
     b: str = typer.Argument(..., help="Incoming song: an id or part of its title."),
     style: str = typer.Option(None, help="Force a recipe, such as echo_out."),
-    output: Path = typer.Option(Path("out/mix.flac"), "--output", "-o"),
+    output: Path = typer.Option(DEFAULT_MIX_OUTPUT, "--output", "-o"),
     before: float = typer.Option(16.0, help="Seconds of A to hear first."),
     after: float = typer.Option(24.0, help="Seconds of B to hear after."),
 ) -> None:
@@ -268,7 +271,7 @@ def mix(
 
 @app.command()
 def reel(
-    output: Path = typer.Option(Path("reels/reel-1"), "--output", "-o"),
+    output: Path = typer.Option(DEFAULT_REEL_OUTPUT, "--output", "-o"),
     seed: int = typer.Option(7),
 ) -> None:
     """Render a mix of transitions from your own songs for you to listen to and rate."""
@@ -277,6 +280,41 @@ def reel(
     settings, conn = _open()
     entries = build_reel(conn, settings, output, seed=seed, log=console.print)
     console.print(f"{len(entries)} transitions written. Open {output / 'index.html'}.")
+
+
+@app.command("beat-check")
+def beat_check(
+    output: Path = typer.Option(DEFAULT_REEL_OUTPUT, "--output", "-o"),
+    count: int = typer.Option(20),
+) -> None:
+    """Render clicks over your songs, so you can check the beat grids and keys by ear."""
+    from selecta.planner.gridcheck import build_grid_check
+
+    settings, conn = _open()
+    clips = build_grid_check(conn, settings, output, count)
+    console.print(f"{len(clips)} clips written. Open {output / 'grid.html'}.")
+
+
+@app.command()
+def listen(
+    folder: Path = typer.Argument(DEFAULT_REEL_OUTPUT),
+    port: int = typer.Option(8765),
+    open_browser: bool = typer.Option(True, "--open/--no-open"),
+) -> None:
+    """Serve a reel on this machine only, so seeking works in the browser."""
+    import webbrowser
+
+    import uvicorn
+    from fastapi import FastAPI
+    from fastapi.staticfiles import StaticFiles
+
+    server = FastAPI()
+    server.mount("/", StaticFiles(directory=folder, html=True))
+    url = f"http://127.0.0.1:{port}/"
+    console.print(f"Listening room at {url} (press Ctrl+C to stop).")
+    if open_browser:
+        webbrowser.open(url)
+    uvicorn.run(server, host="127.0.0.1", port=port, log_level="warning")
 
 
 if __name__ == "__main__":

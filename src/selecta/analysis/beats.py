@@ -19,8 +19,9 @@ from scipy.signal import savgol_filter
 ONSET_HOP = 128
 ONSET_SR = 22_050
 ONSET_HOP_TIME = ONSET_HOP / ONSET_SR
-STEADY_TOLERANCE = 0.035
-STEADY_SHARE = 0.8
+STEADY_TOLERANCE = 0.03
+STEADY_SHARE = 0.7
+STEADY_MAX_RMS_MS = 16.0
 SMOOTH_WINDOW_BEATS = 17
 
 
@@ -104,38 +105,43 @@ def _strong_mask(strengths: np.ndarray, env: np.ndarray) -> np.ndarray:
     return strengths >= threshold
 
 
-def _robust_line(index: np.ndarray, times: np.ndarray) -> tuple[float, float, np.ndarray]:
-    """Fit a straight line that one bad stretch of beats can't drag off course."""
-    weights = np.ones_like(times)
-    slope, intercept = 0.0, 0.0
-    for _ in range(6):
-        slope, intercept = np.polyfit(index, times, 1, w=weights)
-        residual = times - (slope * index + intercept)
-        scale = max(float(np.median(np.abs(residual))) * 1.4826, 0.004)
-        weights = 1.0 / np.maximum(1.0, np.abs(residual) / (1.5 * scale))
-    return float(slope), float(intercept), times - (slope * index + intercept)
+def _coherence(beats: np.ndarray, periods: np.ndarray) -> np.ndarray:
+    phases = np.exp(2j * np.pi * beats[None, :] / periods[:, None])
+    return np.abs(phases.mean(axis=1))
 
 
 def _constant_grid(beats: np.ndarray) -> tuple[np.ndarray, float, float] | None:
-    """Try to explain the beats as one steady tempo, tolerating slips and missing beats.
+    """Try to explain the beats as one steady tempo.
 
-    Programmed music really is this steady, and the tracker's slips are the only noise. Returns
-    the grid, the share of beats that agree with it, and the fit error, or None if it doesn't fit.
+    Rather than counting beats, which one slip throws off for the rest of the song, this looks for
+    the period that makes the most beats fall in phase. Stretches where the tracker wandered, or
+    locked onto the offbeat, simply don't vote. Programmed music really is this steady, so a good
+    fit gives a grid far better than the tracker's own 20 ms output. Returns the grid, the share of
+    beats that agree with it, and the fit error in ms, or None if the song isn't steady.
     """
-    index = np.arange(beats.size, dtype=np.float64)
-    for _ in range(4):
-        slope, intercept, _ = _robust_line(index, beats)
-        index = np.round((beats - intercept) / slope)
-    slope, intercept, residual = _robust_line(index, beats)
+    typical = float(np.median(np.diff(beats)))
+    coarse = typical * np.linspace(0.97, 1.03, 1201)
+    period = float(coarse[int(np.argmax(_coherence(beats, coarse)))])
+    fine = period * np.linspace(0.9995, 1.0005, 201)
+    period = float(fine[int(np.argmax(_coherence(beats, fine)))])
+
+    angle = float(np.angle(np.exp(2j * np.pi * beats / period).mean()))
+    offset = angle / (2 * np.pi) * period
+    index = np.round((beats - offset) / period)
+    residual = beats - (offset + index * period)
     inliers = np.abs(residual) <= STEADY_TOLERANCE
     share = float(inliers.mean())
-    if share < STEADY_SHARE:
+    if share < STEADY_SHARE or inliers.sum() < 16:
         return None
+
     slope, intercept = np.polyfit(index[inliers], beats[inliers], 1)
+    fitted = beats[inliers] - (slope * index[inliers] + intercept)
+    rms_ms = float(np.sqrt(np.mean(fitted**2)) * 1000)
+    if rms_ms > STEADY_MAX_RMS_MS:
+        return None
     first, last = int(index.min()), int(index.max())
     grid = slope * np.arange(first, last + 1) + intercept
-    rms = float(np.sqrt(np.mean((beats[inliers] - (slope * index[inliers] + intercept)) ** 2)))
-    return grid, share, rms * 1000
+    return grid, share, rms_ms
 
 
 def _smooth_grid(beats: np.ndarray) -> np.ndarray:
@@ -150,9 +156,11 @@ def _smooth_grid(beats: np.ndarray) -> np.ndarray:
     return np.maximum.accumulate(smooth + savgol_filter(drift, window, 1))
 
 
-def fit_grid(beats: np.ndarray, env: np.ndarray) -> tuple[np.ndarray, bool, float, float]:
+def fit_grid(
+    raw_beats: np.ndarray, beats: np.ndarray, env: np.ndarray
+) -> tuple[np.ndarray, bool, float, float]:
     """Return refined beats, whether tempo is constant, fit error in ms, and onset agreement."""
-    constant = _constant_grid(beats)
+    constant = _constant_grid(raw_beats)
     if constant is not None:
         grid, _, rms_ms = constant
         is_constant = True
@@ -239,7 +247,7 @@ def build_grid(
     beats = regularize(raw_beats)
     if beats.size < 16:
         return None
-    refined, constant, rms_ms, agreement = fit_grid(beats, env)
+    refined, constant, rms_ms, agreement = fit_grid(raw_beats, beats, env)
     bars, meter, regularity = fit_bars(refined, raw_downbeats)
     stability = 1.0 if constant else tempo_stability(refined)
     bpm = 60.0 / float(np.median(np.diff(refined)))

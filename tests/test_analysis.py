@@ -40,6 +40,23 @@ def test_steady_track_snaps_to_a_grid_within_the_audible_limit():
     assert np.max(errors) < 0.02
 
 
+def test_steady_track_survives_a_tracker_that_loses_its_way():
+    """A slip mid-song used to wreck the whole fit, so programmed music got a noisy grid."""
+    track = make_track(bpm=126, bars=48)
+    _, env = _env(track)
+    raw = track.beats.copy()
+    raw[60:76] += 0.238
+    raw = np.delete(raw, [20, 21, 22, 110])
+    raw = np.round(raw / 0.02) * 0.02
+
+    grid = build_grid(raw, track.downbeats, env)
+
+    assert grid.constant_tempo
+    assert abs(grid.bpm - 126) < 0.05
+    keep = min(grid.beats.size, track.beats.size)
+    assert np.max(np.abs(grid.beats[:keep] - track.beats[:keep])) < 0.015
+
+
 def test_drifting_track_keeps_following_the_beat():
     track = make_track(bpm=100, drift=0.03)
     _, env = _env(track)

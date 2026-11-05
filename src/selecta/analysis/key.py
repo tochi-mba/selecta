@@ -50,6 +50,14 @@ def camelot(name: str) -> str:
     return f"{_CAMELOT_MAJOR[pitch]}B" if major else f"{_CAMELOT_MINOR[pitch]}A"
 
 
+def tonic_of_camelot(code: str) -> tuple[int, bool]:
+    """The pitch class of a Camelot code's tonic, and whether it's major."""
+    number, letter = int(code[:-1]), code[-1]
+    table = _CAMELOT_MAJOR if letter == "B" else _CAMELOT_MINOR
+    pitch = next(p for p, n in table.items() if n == number)
+    return pitch, letter == "B"
+
+
 def camelot_distance(a: str, b: str) -> int:
     """Steps around the wheel, plus one for a major/minor switch."""
     number_a, letter_a = int(a[:-1]), a[-1]

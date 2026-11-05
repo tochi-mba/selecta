@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SAMPLE_RATE = 44_100
-ANALYSIS_VERSION = 2
+ANALYSIS_VERSION = 3
 
 
 def default_home() -> Path:

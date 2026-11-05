@@ -244,6 +244,6 @@ def scan_folder(conn: sqlite3.Connection, root: Path) -> ScanReport:
 
 def set_aside_summary(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute(
-        "SELECT folder, COUNT(*) AS files, MIN(set_aside_reason) AS reason, SUM(duration) AS seconds "
+        "SELECT folder, COUNT(*) AS files, MIN(set_aside_reason) AS reason "
         "FROM songs WHERE is_music = 0 GROUP BY folder ORDER BY files DESC"
     ).fetchall()

@@ -63,7 +63,38 @@ def features_path(settings: Settings, song_id: int) -> Path:
     return settings.features_dir / f"{song_id}.npz"
 
 
-def analyse_audio(stereo: np.ndarray, analysers: Analysers) -> AnalysisResult | None:
+@dataclass
+class Earlier:
+    """Slow results worth keeping when only the later steps have changed."""
+
+    raw_beats: np.ndarray
+    raw_downbeats: np.ndarray
+    key: KeyResult
+
+
+def earlier_results(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Earlier | None:
+    path = features_path(settings, song_id)
+    row = conn.execute(
+        "SELECT key, camelot, key_confidence, key_agrees_chroma FROM analysis "
+        "WHERE song_id = ? AND key IS NOT NULL",
+        (song_id,),
+    ).fetchone()
+    if row is None or not path.exists():
+        return None
+    with np.load(path) as data:
+        if "raw_beats" not in data.files:
+            return None
+        beats = data["raw_beats"].astype(np.float64)
+        downbeats = data["raw_downbeats"].astype(np.float64)
+    key = KeyResult(
+        row["key"], row["camelot"], row["key_confidence"], bool(row["key_agrees_chroma"]), ""
+    )
+    return Earlier(beats, downbeats, key)
+
+
+def analyse_audio(
+    stereo: np.ndarray, analysers: Analysers, earlier: Earlier | None = None
+) -> AnalysisResult | None:
     timer = _Timer()
     tick = time.perf_counter()
     mono = audio.to_mono(stereo)
@@ -71,7 +102,10 @@ def analyse_audio(stereo: np.ndarray, analysers: Analysers) -> AnalysisResult | 
     duration = stereo.shape[0] / SAMPLE_RATE
     tick = timer.lap("resample", tick)
 
-    raw_beats, raw_downbeats = analysers.beats.raw(mono_22k, FEATURE_SR)
+    if earlier is not None:
+        raw_beats, raw_downbeats = earlier.raw_beats, earlier.raw_downbeats
+    else:
+        raw_beats, raw_downbeats = analysers.beats.raw(mono_22k, FEATURE_SR)
     tick = timer.lap("beats", tick)
 
     envelope = onset_envelope(mono_22k)
@@ -83,7 +117,9 @@ def analyse_audio(stereo: np.ndarray, analysers: Analysers) -> AnalysisResult | 
     features = extract(mono_22k, grid.bar_times(), duration)
     tick = timer.lap("features", tick)
 
-    if analysers.key is not None:
+    if earlier is not None:
+        key = earlier.key
+    elif analysers.key is not None:
         key = analysers.key.detect(mono_22k, FEATURE_SR, features.chroma_profile)
     else:
         from selecta.analysis.key import camelot, chroma_key
@@ -105,7 +141,8 @@ def analyse_song(
     try:
         stereo = audio.decode(song["path"])
         decode_seconds = time.perf_counter() - started
-        result = analyse_audio(stereo, analysers)
+        earlier = earlier_results(conn, settings, song["id"])
+        result = analyse_audio(stereo, analysers, earlier)
     except Exception as error:  # noqa: BLE001
         db.save_analysis(
             conn,

@@ -120,13 +120,18 @@ def save_lyrics(
 
 
 def songs_needing_analysis(
-    conn: sqlite3.Connection, version: int, folder_contains: str | None = None
+    conn: sqlite3.Connection,
+    version: int,
+    folder_contains: str | None = None,
+    only_existing: bool = False,
 ) -> list[sqlite3.Row]:
     query = (
         "SELECT s.* FROM songs s LEFT JOIN analysis a ON a.song_id = s.id "
         "WHERE s.is_music = 1 AND s.duplicate_of IS NULL "
         "AND (a.song_id IS NULL OR a.version < ?)"
     )
+    if only_existing:
+        query += " AND a.song_id IS NOT NULL"
     params: list[Any] = [version]
     if folder_contains:
         query += " AND s.folder LIKE ?"
