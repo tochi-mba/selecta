@@ -174,11 +174,19 @@ def _song(tmp_path, name, artist, bpm=120.0, energy=0.5, camelot="8A"):
 
 def test_a_plan_never_brings_an_artist_back_too_soon(tmp_path):
     """An earlier planner repeated an artist two songs apart. The rule is ten."""
-    songs = [_song(tmp_path, f"s{i}", f"Artist {i % 3}") for i in range(9)]
-    planned = plan_set(songs, songs[0].id, 6)
-    artists = [item.song.artist for item in planned]
-    assert len(artists) == 3, "only three artists, so it has to stop rather than repeat"
     assert ARTIST_SEPARATION >= 10
+    songs = [_song(tmp_path, f"s{i}", f"Artist {i % 24}") for i in range(48)]
+    artists = [item.song.artist for item in plan_set(songs, songs[0].id, 22)]
+    assert len(artists) == 22
+    for i, artist in enumerate(artists):
+        assert artist not in artists[max(i - ARTIST_SEPARATION, 0) : i]
+
+
+def test_a_few_artists_share_a_plan_rather_than_stop_it_short(tmp_path):
+    songs = [_song(tmp_path, f"s{i}", f"Artist {i % 3}") for i in range(9)]
+    artists = [item.song.artist for item in plan_set(songs, songs[0].id, 6)]
+    assert len(artists) == 6
+    assert all(x != y for x, y in zip(artists, artists[1:], strict=False))
 
 
 def test_a_plan_is_quick_and_never_repeats_a_song(tmp_path):
