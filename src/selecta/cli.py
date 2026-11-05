@@ -375,5 +375,32 @@ def discover(limit: int = typer.Option(1000, help="Maximum audio links to keep p
     console.print(f"Found {lyric_count} lyric links and {audio_count} audio links.")
 
 
+@app.command("set-mix")
+def set_mix(
+    output: Path = typer.Option(Path("out/selecta-set.wav"), "--output", "-o"),
+    count: int = typer.Option(7, min=2, max=50),
+) -> None:
+    """Render the current planned queue as one continuous audited mix."""
+    from selecta.analysis.song import load_song
+    from selecta.render.setmix import render_set
+
+    settings, conn = _open()
+    rows = conn.execute("SELECT song_id FROM queue ORDER BY position LIMIT ?", (count,)).fetchall()
+    if len(rows) < count:
+        raise typer.BadParameter(f"the queue has only {len(rows)} songs; run `selecta plan` first")
+    songs = [load_song(conn, settings, row["song_id"]) for row in rows]
+    choices, seconds = render_set(songs, output, console.print)
+    tracklist = output.with_suffix(".txt")
+    tracklist.write_text(
+        "\n".join(f"{i + 1:02d}. {song.name}" for i, song in enumerate(songs))
+        + "\n\nTransitions\n"
+        + "\n".join(
+            f"{i + 1:02d}. {choice.rendered.script.style}" for i, choice in enumerate(choices)
+        ),
+        encoding="utf-8",
+    )
+    console.print(f"Wrote {seconds / 60:.1f} minutes to {output} and {tracklist}.")
+
+
 if __name__ == "__main__":
     app()
