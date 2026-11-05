@@ -12,6 +12,7 @@ from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.render import dsp
+from selecta.render.script import Curve
 from selecta.stems import StemWindow, separate_window
 
 TRANSITION_SECONDS = 28.0
@@ -24,6 +25,13 @@ class Intertwined:
     b_end: float
     exit_cue: Cue
     entry_cue: Cue
+    a_dry: np.ndarray
+    b_dry: np.ndarray
+    b_points: np.ndarray
+    a_vocal: Curve
+    b_vocal: Curve
+    a_drums: Curve
+    b_drums: Curve
 
 
 def _read(path: Path) -> np.ndarray:
@@ -45,10 +53,44 @@ def _fit(audio: np.ndarray, seconds: float, speed: float = 1.0) -> np.ndarray:
 
 
 def _curve(count: int, points: list[tuple[float, float]]) -> np.ndarray:
-    # Points describe positions within a 16-bar transition, scaled to its actual tempo.
+    # Points use one nominal 28s timeline, scaled to the actual 16-bar duration.
     times = np.arange(count) / SAMPLE_RATE * TRANSITION_SECONDS / (count / SAMPLE_RATE)
     values = np.interp(times, [p[0] for p in points], [p[1] for p in points])
     return values.astype(np.float32)[:, None]
+
+
+def _pair_that_fits(a: SongInfo, b: SongInfo) -> tuple[Cue, Cue] | None:
+    if abs(a.bpm / b.bpm - 1.0) > 0.03:
+        return None
+    if min(a.grid_confidence, b.grid_confidence) < 0.55:
+        return None
+    if a.beats_per_bar != b.beats_per_bar or camelot_distance(a.camelot, b.camelot) > 1:
+        return None
+    exits, entries = a.exit_cues(), b.entry_cues()
+    if not exits or not entries:
+        return None
+    beats = 16 * a.beats_per_bar
+    for exit_cue in exits:
+        if exit_cue.bar < 8:
+            continue
+        a_index = a.beat_index_of_bar(exit_cue.bar - 8)
+        if a_index + beats >= len(a.beats):
+            continue
+        for entry_cue in entries:
+            b_index = b.beat_index_of_bar(entry_cue.bar)
+            if b_index + beats < len(b.beats):
+                return exit_cue, entry_cue
+    return None
+
+
+def can_intertwine(a: SongInfo, b: SongInfo) -> bool:
+    """Cheap musical and phrase-length gates, before the expensive stem separation."""
+    return _pair_that_fits(a, b) is not None
+
+
+def _vocal_curve(duration: float, points: list[tuple[float, float]]) -> Curve:
+    """Mirror the same normalized automation points used by `_curve` on the audio layers."""
+    return Curve([(point * duration / TRANSITION_SECONDS, value) for point, value in points])
 
 
 def _layers(stems: StemWindow, seconds: float, speed: float = 1.0) -> dict[str, np.ndarray]:
@@ -56,19 +98,10 @@ def _layers(stems: StemWindow, seconds: float, speed: float = 1.0) -> dict[str, 
 
 
 def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwined:
-    gap = abs(a.bpm / b.bpm - 1.0)
-    if gap > 0.03:
-        raise ValueError("intertwining is limited to a 3% tempo gap")
-    if min(a.grid_confidence, b.grid_confidence) < 0.55:
-        raise ValueError("intertwining needs reliable beat grids")
-    if a.beats_per_bar != b.beats_per_bar:
-        raise ValueError("intertwining needs matching meters")
-    if camelot_distance(a.camelot, b.camelot) > 1:
-        raise ValueError("tonal stem layering needs compatible keys")
-    exit_cue = a.exit_cues()[0]
-    entry_cue = b.entry_cues()[0]
-    if exit_cue.bar < 8:
-        raise ValueError("outgoing cue needs eight bars of lead-in")
+    cues = _pair_that_fits(a, b)
+    if cues is None:
+        raise ValueError("these tracks don't meet the tempo, grid, key, or phrase checks")
+    exit_cue, entry_cue = cues
     a_index = a.beat_index_of_bar(exit_cue.bar - 8)
     b_index = b.beat_index_of_bar(entry_cue.bar)
     beats = 16 * a.beats_per_bar
@@ -103,21 +136,31 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
     a_vocal = _curve(count, [(0, 1), (14, 1), (16, 0)])
     b_vocal = _curve(count, [(0, 0), (16, 0), (18, 1)])
 
-    mixed = (
+    gain = 10.0 ** (min(a.gain_db, b.gain_db) / 20.0)
+    a_dry = (
         layers_a["drums"] * a_drums
-        + layers_b["drums"] * b_drums
         + layers_a["bass"] * a_bass
-        + layers_b["bass"] * b_bass
         + layers_a["other"] * a_other
-        + layers_b["other"] * b_other
         + layers_a["vocals"] * a_vocal
+    ) * gain
+    b_dry = (
+        layers_b["drums"] * b_drums
+        + layers_b["bass"] * b_bass
+        + layers_b["other"] * b_other
         + layers_b["vocals"] * b_vocal
-    )
-    mixed *= 10.0 ** (min(a.gain_db, b.gain_db) / 20.0)
+    ) * gain
+    mixed = dsp.limit(a_dry + b_dry)
     return Intertwined(
-        dsp.limit(mixed),
+        mixed,
         a_start,
         float(b_points[-1]),
         exit_cue,
         entry_cue,
+        a_dry,
+        b_dry,
+        b_points,
+        _vocal_curve(duration, [(0, 1), (14, 1), (16, 0)]),
+        _vocal_curve(duration, [(0, 0), (16, 0), (18, 1)]),
+        _vocal_curve(duration, [(0, 1), (12, 1), (16, 0)]),
+        _vocal_curve(duration, [(0, 0), (4, 0), (12, 1)]),
     )

@@ -162,6 +162,7 @@ def test_a_shared_phrase_opens_up_the_word_moves(tmp_path):
     assert moves["word_cut"]["available"]
     assert moves["phrase_roll"]["available"]
     assert moves["word_blend"]["available"]
+    assert moves["stem_intertwine"]["available"]
 
 
 def _song(tmp_path, name, artist, bpm=120.0, energy=0.5, camelot="8A"):
@@ -549,6 +550,7 @@ def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, mon
     monkeypatch.setattr(vibes, "modes_for", lambda *_: {"word_blend"})
     monkeypatch.setattr(vibes, "ride_lines", lambda *_: (object(), object()))
     monkeypatch.setattr(vibes, "enumerate_candidates", lambda *_args, **_kwargs: [object()])
+    monkeypatch.setattr(vibes, "can_intertwine", lambda *_: True)
     vibe = vibes.BY_KEY["pick"]
 
     never = vibes._moves_that_fit(vibe, a, b, Verdicts(), "never")
@@ -557,6 +559,60 @@ def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, mon
 
     assert "vocal_ride" not in dict(never)
     assert often["vocal_ride"] > sometimes["vocal_ride"]
+    assert "stem_intertwine" not in dict(never)
+    assert often["stem_intertwine"] > sometimes["stem_intertwine"]
+    failed = vibes._moves_that_fit(
+        vibe,
+        a,
+        b,
+        Verdicts(failed={(a.id, b.id, "stem_intertwine")}),
+        "often",
+    )
+    assert "stem_intertwine" not in dict(failed)
+
+
+def test_intertwined_stem_request_uses_the_shared_audited_seam_path(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from selecta.render.script import Curve
+
+    a = _song(tmp_path, "intertwine-render-a", "First")
+    b = _song(tmp_path, "intertwine-render-b", "Second")
+    exit_cue, entry_cue = a.exit_cues()[0], b.entry_cues()[0]
+    a_index = a.beat_index_of_bar(exit_cue.bar - 8)
+    b_index = b.beat_index_of_bar(entry_cue.bar)
+    a_points = a.beats[a_index : a_index + 65]
+    b_points = b.beats[b_index : b_index + 65]
+    start = float(a_points[0])
+    duration = float(a_points[-1] - start)
+    empty = np.zeros((int(round(duration * SR)), 2), dtype=np.float32)
+    result = SimpleNamespace(
+        audio=empty,
+        a_start=start,
+        b_end=float(b_points[-1]),
+        exit_cue=exit_cue,
+        entry_cue=entry_cue,
+        a_dry=empty,
+        b_dry=empty,
+        b_points=b_points,
+        a_vocal=Curve.constant(1),
+        b_vocal=Curve.constant(0),
+        a_drums=Curve.constant(1),
+        b_drums=Curve.constant(1),
+    )
+    monkeypatch.setattr("selecta.seams.render_intertwined", lambda *_: result)
+    monkeypatch.setattr("selecta.seams.audit", lambda _rendered: SimpleNamespace(passed=True))
+    store = SeamStore(Settings(tmp_path))
+
+    rendered, _, why = store._chosen_move(
+        SeamRequest(a.id, b.id, "stem_intertwine"), a, b
+    )
+
+    assert rendered.script.style == "stem_intertwine"
+    assert rendered.script.meta["bars"] == 16
+    assert rendered.script.a_source_start == start
+    assert abs(rendered.script.b_source_end - b_points[-1]) < 1e-6
+    assert "vocals take turns" in why
 
 
 def test_building_a_vibe_starts_on_a_song_it_can_leave(tmp_path):

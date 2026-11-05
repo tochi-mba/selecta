@@ -25,6 +25,7 @@ from selecta.planner.beam import PlannedSong, plan_set
 from selecta.planner.choose import enumerate_candidates
 from selecta.planner.moods import THEMES, is_english, is_seasonal, read_lyrics
 from selecta.planner.wordreel import Verdicts, modes_for, ride_lines
+from selecta.render.intertwine import can_intertwine
 from selecta.styles.wordplay import felt_bpm
 
 MIN_SONGS = 6
@@ -508,6 +509,12 @@ def _moves_that_fit(
     ):
         ride_weight = RIDE_WEIGHT[vibe.language] * (1.5 if stems == "often" else 1.0)
         options.append(("vocal_ride", ride_weight))
+    if (
+        stems != "never"
+        and (a.id, b.id, "stem_intertwine") not in verdicts.failed
+        and can_intertwine(a, b)
+    ):
+        options.append(("stem_intertwine", 0.15 if stems == "sometimes" else 0.45))
     exits, entries = a.exit_cues()[:3], b.entry_cues()[:4]
     for name, weight in MOVE_WEIGHTS[vibe.language].items():
         if (a.id, b.id, name) in verdicts.failed:
