@@ -54,6 +54,7 @@ MOVE_WEIGHTS: dict[str, dict[str, float]] = {
 RIDE_WEIGHT = {"balanced": 3.0, "seamless": 3.0, "wordplay": 1.5, "punchy": 1.5}
 MAX_SHARE = {
     "vocal_ride": 0.35,
+    "stem_intertwine": 0.3,
     "bass_swap_blend": 0.4,
     "filter_sweep": 0.3,
     "tempo_ramp": 0.25,
@@ -70,6 +71,7 @@ FAMILIES = {
     "echo_out": "effect",
     "cut_on_one": "effect",
     "vocal_ride": "voice",
+    "stem_intertwine": "blend",
 }
 OVER_SHARE = 0.05
 WARNED_BEFORE = 0.25
@@ -514,7 +516,7 @@ def _moves_that_fit(
         and (a.id, b.id, "stem_intertwine") not in verdicts.failed
         and can_intertwine(a, b)
     ):
-        options.append(("stem_intertwine", 0.15 if stems == "sometimes" else 0.45))
+        options.append(("stem_intertwine", 0.35 if stems == "sometimes" else 1.3))
     exits, entries = a.exit_cues()[:3], b.entry_cues()[:4]
     for name, weight in MOVE_WEIGHTS[vibe.language].items():
         if (a.id, b.id, name) in verdicts.failed:

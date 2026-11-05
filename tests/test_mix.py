@@ -1276,6 +1276,58 @@ def test_a_cut_is_the_last_thing_tried(tmp_path, monkeypatch):
     assert fell_back
 
 
+def test_stems_never_also_removes_vocal_rides_from_fallbacks(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    track = make_track(bpm=120, bars=64, seed=1)
+    a = song_from_track(tmp_path, "no-stems-a", track)
+    b = song_from_track(tmp_path, "no-stems-b", track)
+    a.id, b.id = 1, 2
+    asked = []
+
+    def nothing_works(request, _a, _b):
+        asked.append(request.move)
+        raise CannotRender("not here")
+
+    monkeypatch.setattr("selecta.seams.ride_lines", lambda *_: (object(), object()))
+    monkeypatch.setattr(store, "_chosen_move", nothing_works)
+    store._best_move(a, b, [], stem_preference="never")
+
+    assert "vocal_ride" not in asked
+
+
+def test_stems_never_skips_old_soft_planned_stem_moves(tmp_path, monkeypatch):
+    from selecta.session import steer
+
+    connection = db.connect(tmp_path / "steering.sqlite")
+    steer(connection, "stems", "never")
+    a = _song(tmp_path, "stale-stem-a", "First")
+    b = _song(tmp_path, "stale-stem-b", "Second")
+    monkeypatch.setattr("selecta.seams.load_song", lambda _c, _s, song: {a.id: a, b.id: b}[song])
+    store = SeamStore(Settings(tmp_path))
+    attempted = []
+    seen = {}
+
+    def chosen(request, *_songs):
+        attempted.append(request.move)
+        raise AssertionError("a stale automatic stem choice should not render")
+
+    def fallback(_a, _b, tried, asked, near, stem_preference):
+        seen["tried"] = tried
+        seen["preference"] = stem_preference
+        return None, None, "fallback", True
+
+    monkeypatch.setattr(store, "_chosen_move", chosen)
+    monkeypatch.setattr(store, "_best_move", fallback)
+    monkeypatch.setattr(store, "_save", lambda _request, *_args: {"status": "ready"})
+
+    store.render_now(connection, SeamRequest(a.id, b.id, "vocal_ride", soft=True))
+
+    assert not attempted
+    assert seen["preference"] == "never"
+    assert seen["tried"][0]["why"] == "Stem-assisted moves are set to Never."
+    connection.close()
+
+
 def test_a_seam_says_what_was_tried_before_what_it_landed_on(tmp_path, monkeypatch):
     store = SeamStore(Settings(tmp_path))
     track = make_track(bpm=120, bars=64, seed=1)

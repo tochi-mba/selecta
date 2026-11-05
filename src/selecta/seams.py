@@ -743,7 +743,14 @@ class SeamStore:
         tried: list[dict] = []
         rendered: Rendered | None = None
         near: tuple | None = None
-        if request.move != "auto":
+        preference = db.preference(conn, "steering", {}) if conn is not None else {}
+        stem_preference = preference.get("stems", "sometimes")
+        disabled_planned_stem = (
+            request.soft and stem_preference == "never" and request.move in STEM_MOVES
+        )
+        if disabled_planned_stem:
+            tried.append({"move": request.move, "why": "Stem-assisted moves are set to Never."})
+        elif request.move != "auto":
             try:
                 rendered, report, why = self._chosen_move(request, a, b)
             except CannotTrust as problem:
@@ -761,7 +768,14 @@ class SeamStore:
                     tried.append({"move": request.move, "why": _what_failed(report)})
                 rendered = None
         if rendered is None:
-            rendered, report, why, fell_back = self._best_move(a, b, tried, request.move, near)
+            rendered, report, why, fell_back = self._best_move(
+                a,
+                b,
+                tried,
+                request.move,
+                near,
+                stem_preference=stem_preference,
+            )
         return self._save(request, rendered, report, why, fell_back, tried)
 
     def _chosen_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
@@ -792,6 +806,7 @@ class SeamStore:
         tried: list[dict],
         asked: str = "auto",
         near: tuple | None = None,
+        stem_preference: str = "sometimes",
     ):
         """The move that best suits these two and the rest of the mix. A clean take of a ride or
         blend comes first, then one of those with a near miss, then an effect. A cut only if
@@ -799,6 +814,8 @@ class SeamStore:
         near miss that's already in hand."""
         can_ride = "word_blend" in modes_for(a, b) and ride_lines(a, b) is not None
         moves = fallback_order(a.id, b.id, can_ride, self.mix_moves())
+        if stem_preference == "never":
+            moves = [move for move in moves if move not in STEM_MOVES]
         held = near
         for group in (
             [move for move in moves if move in SMOOTH_MOVES],
