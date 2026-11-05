@@ -4,7 +4,9 @@ An auto DJ for your own music folder. Point it at a folder and it plays a set in
 
 It runs entirely on your PC. Your music never leaves your machine, and no audio is ever stored in this repo.
 
-**Status: early build.** See [docs/research.md](docs/research.md) for the thinking behind it.
+**Status: working local-first build.** Scanning, analysis, audited rendering, set planning,
+steering, lyrics, discovery, blind ratings and the browser interface are implemented. Model-heavy
+features remain on-demand so a CPU-only laptop never tries to stem-split the whole library.
 
 ## What makes it different
 
@@ -19,7 +21,25 @@ You'll need [uv](https://docs.astral.sh/uv/), [pnpm](https://pnpm.io/) and [ffmp
 ```bash
 uv sync
 uv run selecta scan "C:\path\to\your\music"
+uv run selecta analyse --limit 10
+uv run selecta lyrics
+uv run selecta plan
+
+cd web
+pnpm install
+pnpm build
+cd ..
+uv run selecta web
 ```
+
+Use `selecta beat-check` to verify beats, downbeats and keys by ear before analysing the whole
+library. Use `selecta discover` after lyrics are ready to fill the Found screen's Seam Book.
+
+## What is deliberately local
+
+The server binds to `127.0.0.1`, rejects foreign Host headers and exposes originals only through
+validated song IDs. Audio, model weights, stems, caches, databases and rendered mixes are ignored
+by Git. LRCLIB receives only track metadata when you explicitly run the lyrics command.
 
 ## Licence
 
