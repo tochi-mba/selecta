@@ -21,8 +21,12 @@ requires a person or this specific music library to judge it.
 
 ## Needs this library and the user's ears
 
-- Stage 1 timing report and the 20-song rap/Latin beat-and-key check.
-- Listening reels 1–3 and recipe tuning.
+- Stage 1 timing report is complete: 21 real songs averaged roughly 26 seconds on this laptop,
+  projecting about five hours for the 707-track music library. The 20-song beat/downbeat/key
+  listening page is at `reels/beat-check/grid.html` (local and intentionally ignored by Git).
+- Listening check 1 is rendered at `reels/check-1/index.html`: five audit-passing transitions
+  covering echo, clean cuts and a reverb wash. Its ratings are still needed before recipe tuning.
+- Listening reels 2–3 and recipe tuning.
 - Mix-versus-vocal alignment bake-off across ten multilingual songs.
 - Discovery usefulness ratings.
 - The approximately 60-pair blind comparison against fixed crossfade, cue-search, commercial and

@@ -119,7 +119,9 @@ def fetch_all(
     rows = conn.execute(
         "SELECT s.id, s.artist, s.title, s.album, s.duration FROM songs s "
         "LEFT JOIN lyrics l ON l.song_id = s.id "
-        "WHERE s.is_music = 1 AND s.duplicate_of IS NULL AND l.song_id IS NULL ORDER BY s.id"
+        "LEFT JOIN analysis a ON a.song_id = s.id "
+        "WHERE s.is_music = 1 AND s.duplicate_of IS NULL AND l.song_id IS NULL "
+        "ORDER BY (a.song_id IS NOT NULL) DESC, s.id"
     ).fetchall()
     if limit:
         rows = rows[:limit]

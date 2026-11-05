@@ -82,7 +82,7 @@ def _pick_pairs(
     style: str, library: list[SongInfo], used: set[int], rng: random.Random
 ) -> list[tuple[float, SongInfo, SongInfo]]:
     pool = [song for song in library if song.id not in used]
-    scored: list[tuple[float, SongInfo, SongInfo]] = []
+    best: dict[tuple[int, int], tuple[float, SongInfo, SongInfo]] = {}
     for _ in range(PAIRS_PER_STYLE):
         if len(pool) < 2:
             break
@@ -91,7 +91,11 @@ def _pick_pairs(
             continue
         candidates = enumerate_candidates(a, b, style)
         if candidates:
-            scored.append((candidates[0].score, a, b))
+            pair = (a.id, b.id)
+            item = (candidates[0].score, a, b)
+            if pair not in best or item[0] > best[pair][0]:
+                best[pair] = item
+    scored = list(best.values())
     scored.sort(key=lambda item: -item[0])
     return scored
 
