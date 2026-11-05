@@ -43,6 +43,21 @@ The new rules were set from these same ratings, so only further reels can test t
 | Helpers on Windows | A helper froze while the worker waited on its input pipe. Side by side: still frozen after 25 s, against 0.3 s with the fix. Covered by a test |
 | Memory | Each analysis process holds about a gigabyte. 24 at once nearly filled the machine, so requests now share one process, one song at a time |
 
+## Mixes
+
+Sixteen mixes under four headings: the moment, the mood, the sound and the journey, plus Selecta's pick. Each one reads lyrics, key, tempo, energy, genre and year against the rest of the library, and says which songs belong most, not just which are allowed.
+
+| What | Measured on the real library, 3 builds of each mix, 510 seams |
+|---|---|
+| Moves planned | Vocal rides 29%, blends 18%, ramps 18%, filter sweeps 15%, word moves about 8%, echoes and throws 8%, cuts under 2% and only in Rap run. Before this, 47% of "let Selecta pick" seams ended as cuts, going by every seam rendered so far |
+| Variety | No move runs twice in a row where anything else fits, and each move has a cap on its share of a mix. A move's weight falls the more that mix has used it. Fallbacks read the same counts, so a fallback doesn't pile onto what the mix has plenty of |
+| Length | Mixes reach the length asked for wherever enough songs exist. Small pools relax how far apart an artist must be, rather than stopping short |
+| Seasonal songs | Christmas songs only play in the Christmas mix, which appears once there are enough of them |
+
+Vocal rides now find where a voice stops and starts from the separated vocal itself, so they work in any language. Moves that need exact words still rely on an English-only timing model, so those are planned only for English songs, and only where timing hasn't already failed. Past results are read back before planning, so a move that failed on two songs isn't planned for them again.
+
+The planned shares above are what's asked for. What it sounds like, and how often a planned move survives rendering, needs more listening and more real renders.
+
 ## Partly works
 
 | What | Works | Doesn't |

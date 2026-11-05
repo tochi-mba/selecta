@@ -168,7 +168,7 @@ def plan_set(
     cues = _Cues()
     riders = _Riders()
     belongs = belongs or {}
-    # a mix drawn from a few artists can't keep them ten songs apart, and shouldn't stop short for it
+    # a mix from a few artists can't keep them ten songs apart, and shouldn't stop short for it
     separation = min(ARTIST_SEPARATION, max(len({_artist(song) for song in songs}) // 2, 1))
     beams: list[tuple[float, list[PlannedSong]]] = [
         (0.0, [PlannedSong(first, None, "You started here")])
