@@ -16,13 +16,13 @@ This ledger combines measured acceptance runs with the latest live-library snaps
 | Word timing | Starts within about 80 ms of what the model hears unguided, on four sung lines read by hand. On speech with known times, a steady 66 to 70 ms offset, unchanged over music, which settling onto the voice removes | No ground truth on singing. Many lines are refused, including *Layla* |
 | Local-only server | Foreign hosts and other sites' changes get 403. A bad request gets 400. The page makes no outside requests | Binds to 127.0.0.1 |
 
-## Latest live-library snapshot — 5 November 2026, 22:02 UTC
+## Latest live-library snapshot — 5 November 2026, 22:16 UTC
 
 - Scan: 1,389 files: 707 music, 614 set aside, 68 duplicates.
-- Audio analysis: 79 of 707 complete; 628 remain. The background worker is running.
-- Mix-ready pool: 48 songs currently pass the planner's cue and feature checks. The UI now reports this separately from completed audio analysis.
-- Lyrics lookup: 76 synced lyric rows, 2 instrumentals, 6 plain-text-only results, and 21 misses. The first 50 newly prioritized lookups returned 45 synced lyrics, 2 instrumentals, and 3 misses.
-- Storage: 64.1 GB free; 0.36 GB cached; the current cache budget is 25.6 GB.
+- Audio analysis: 93 of 707 complete; 614 remain. The background worker is running.
+- Mix-ready pool: 85 songs currently pass the planner's cue and feature checks. The UI code now reports this separately from completed audio analysis.
+- Lyrics lookup: 583 synced lyric rows, 7 instrumentals, 17 plain-text-only results, and 103 misses. The full 555-song uncached lookup returned 461 synced lyrics, 5 instrumentals, 11 plain-text results, and 78 misses.
+- Storage: 61.3 GB free; 0.58 GB cached; the current cache budget is 25.6 GB.
 
 The older measured mix and word-link counts below are historical results; this run is rebuilding the usable pool as analysis and lyric lookup continue.
 
