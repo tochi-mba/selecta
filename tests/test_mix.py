@@ -197,6 +197,24 @@ def test_a_plan_is_quick_and_never_repeats_a_song(tmp_path):
     assert len(ids) == len(set(ids)) == 12
 
 
+def test_a_plan_can_reach_a_requested_destination(tmp_path):
+    songs = [_song(tmp_path, f"destination-{i}", f"Artist {i}") for i in range(16)]
+    planned = plan_set(songs, songs[0].id, 6, end_id=songs[-1].id)
+    assert len(planned) == 6
+    assert planned[0].song.id == songs[0].id
+    assert planned[-1].song.id == songs[-1].id
+    assert len({item.song.id for item in planned}) == 6
+
+
+def test_a_destination_cannot_also_be_the_explicit_start(tmp_path):
+    songs = [_song(tmp_path, f"destination-conflict-{i}", f"Artist {i}") for i in range(4)]
+    with pytest.raises(ValueError, match="start song and destination are the same"):
+        plan_set(songs, songs[0].id, 3, end_id=songs[0].id)
+    assert plan_set(songs, count=1, end_id=songs[1].id)[0].song.id == songs[1].id
+    with pytest.raises(ValueError, match="one-song mix cannot start and finish"):
+        plan_set(songs, songs[0].id, 1, end_id=songs[1].id)
+
+
 def test_shared_phrases_pull_a_wordplay_plan_towards_them(tmp_path):
     first = _song(tmp_path, "a", "First")
     close = _song(tmp_path, "b", "Second", bpm=120.0)
@@ -463,6 +481,27 @@ def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypa
     assert seen["seam_language"] == "punchy"
 
 
+def test_building_a_vibe_ends_on_the_requested_song(tmp_path):
+    from selecta.planner.vibes import BY_KEY, build_vibe
+
+    songs, traits = _vibe_library(tmp_path)
+    destination = songs[-1]
+    planned, _ = build_vibe(
+        BY_KEY["slow_burn"], songs, traits, {}, 6, seed=4, end_id=destination.id
+    )
+    assert len(planned) == 6
+    assert planned[-1].song.id == destination.id
+    assert planned[-1].reason == "your requested destination"
+
+
+def test_destination_does_not_break_seasonal_mix_rules(tmp_path):
+    from selecta.planner.vibes import BY_KEY, build_vibe
+
+    songs, traits = _vibe_library(tmp_path)
+    with pytest.raises(ValueError, match="choose a Christmas song"):
+        build_vibe(BY_KEY["christmas"], songs, traits, {}, 6, end_id=songs[0].id)
+
+
 def test_a_vibe_with_too_few_songs_says_how_many_it_needs(tmp_path):
     from selecta.planner.vibes import BY_KEY, describe
 
@@ -512,6 +551,16 @@ def test_the_vibes_route_lists_cards_and_refuses_a_mix_with_too_few_songs(client
     assert {card["key"] for card in cards} >= {"pick", "late_night", "afro_heat"}
     assert client.post("/api/vibes/afro_heat/build").status_code == 400
     assert client.post("/api/vibes/nonsense/build").status_code == 404
+
+
+def test_destination_steering_persists_and_status_names_the_song(client):
+    response = client.post("/api/steer", json={"action": "take_me_to", "value": 2})
+    assert response.status_code == 200
+    assert response.json()["target"] == "2"
+    status = client.get("/api/status").json()
+    assert status["steering"]["target_label"] == "Artist 2 — Song 2"
+    invalid = client.post("/api/steer", json={"action": "take_me_to", "value": "unknown"})
+    assert invalid.status_code == 400
 
 
 def test_the_cache_never_fills_the_drive_or_outgrows_its_limit(tmp_path, monkeypatch):

@@ -52,7 +52,7 @@ export type SeamOptions = {
 
 export type Status = {
   counts: Record<string, number>;
-  steering: { mix_language: string };
+  steering: { mix_language: string; target: string | null; target_label?: string | null };
   moves: Record<string, string>;
   analysis_running: boolean;
   analysing: number[];

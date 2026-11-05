@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { get, MixData, post, VibeCard } from '../api';
+import { get, MixData, post, SongRow, VibeCard } from '../api';
 import { length, SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
 
@@ -15,6 +15,16 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const [building, setBuilding] = useState('');
   const [problem, setProblem] = useState('');
   const [mixLanguage, setMixLanguage] = useState(status.steering.mix_language);
+  const [destinationQuery, setDestinationQuery] = useState('');
+  const [destinationResults, setDestinationResults] = useState<SongRow[]>([]);
+  const [destination, setDestination] = useState<{ id: string; label: string } | null>(
+    status.steering.target
+      ? {
+          id: status.steering.target,
+          label: status.steering.target_label ?? `Song ${status.steering.target}`,
+        }
+      : null,
+  );
   const { counts } = status;
 
   useEffect(() => {
@@ -23,6 +33,36 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   }, [counts.analysed, counts.lyrics, counts.ready]);
 
   useEffect(() => setMixLanguage(status.steering.mix_language), [status.steering.mix_language]);
+  useEffect(() => {
+    setDestination(
+      status.steering.target
+        ? {
+            id: status.steering.target,
+            label: status.steering.target_label ?? `Song ${status.steering.target}`,
+          }
+        : null,
+    );
+  }, [status.steering.target, status.steering.target_label]);
+
+  useEffect(() => {
+    const query = destinationQuery.trim();
+    if (query.length < 2) {
+      setDestinationResults([]);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      get<SongRow[]>(`/songs?q=${encodeURIComponent(query)}&state=ready&limit=20`)
+        .then((rows) =>
+          setDestinationResults(
+            rows.filter(
+              (row) => !row.never && ['synced', 'instrumental'].includes(row.lyric_status ?? ''),
+            ),
+          ),
+        )
+        .catch(() => setDestinationResults([]));
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [destinationQuery]);
 
   const start = async (key: string, name: string, open: boolean) => {
     setBuilding(key);
@@ -75,6 +115,25 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       refreshStatus();
     } catch (error) {
       setMixLanguage(previous);
+      setProblem((error as Error).message);
+    }
+  };
+
+  const chooseDestination = async (song: SongRow | null) => {
+    const previous = destination;
+    const next = song
+      ? { id: String(song.id), label: `${song.title ?? 'Untitled'} — ${song.artist ?? 'Unknown artist'}` }
+      : null;
+    setDestination(next);
+    try {
+      await post('/steer', { action: 'take_me_to', value: next?.id ?? '' });
+      setDestinationQuery('');
+      setDestinationResults([]);
+      refreshStatus();
+      if (next) notify(`Future mixes will land on ${next.label}.`);
+      else notify('Selecta will choose the ending again.');
+    } catch (error) {
+      setDestination(previous);
       setProblem((error as Error).message);
     }
   };
@@ -138,6 +197,36 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           <option value="punchy">Punchy changes</option>
         </select>
         <p className="hint">This guides new mixes. You can still change any transition song by song.</p>
+      </section>
+
+      <section className="destination-control" aria-label="Mix destination">
+        <label htmlFor="destination-search">Take me to</label>
+        <input
+          id="destination-search"
+          type="search"
+          value={destinationQuery}
+          onChange={(event) => setDestinationQuery(event.target.value)}
+          placeholder="Search a mix-ready song"
+        />
+        {destination && (
+          <div className="row wrap destination-selected">
+            <span>Mixes will build toward <b>{destination.label}</b></span>
+            <button onClick={() => void chooseDestination(null)}>Clear destination</button>
+          </div>
+        )}
+        {destinationQuery.trim().length >= 2 && (
+          <ul className="destination-results" aria-label="Destination songs">
+            {destinationResults.map((song) => (
+              <li key={song.id}>
+                <button onClick={() => void chooseDestination(song)}>
+                  {song.title ?? 'Untitled'} — {song.artist ?? 'Unknown artist'}
+                </button>
+              </li>
+            ))}
+            {!destinationResults.length && <li className="hint">No ready songs match yet.</li>}
+          </ul>
+        )}
+        <p className="hint">Selecta will plan a route and finish on your chosen song. Clear it to let each mix decide.</p>
       </section>
 
       {problem && <p className="warn" role="alert">{problem}</p>}
