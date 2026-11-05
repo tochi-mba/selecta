@@ -317,5 +317,63 @@ def listen(
     uvicorn.run(server, host="127.0.0.1", port=port, log_level="warning")
 
 
+@app.command()
+def web(
+    port: int = typer.Option(8733),
+    open_browser: bool = typer.Option(True, "--open/--no-open"),
+) -> None:
+    """Open the local Selecta web app."""
+    import webbrowser
+
+    import uvicorn
+
+    url = f"http://127.0.0.1:{port}/"
+    if open_browser:
+        webbrowser.open(url)
+    uvicorn.run("selecta.api:app", host="127.0.0.1", port=port, log_level="warning")
+
+
+@app.command()
+def plan(
+    count: int = typer.Option(20, help="Songs to put in the rolling set plan."),
+    start: int = typer.Option(None, help="Optional starting song id."),
+) -> None:
+    """Plan a steerable set with rolling beam search."""
+    from selecta.analysis.song import load_song
+    from selecta.planner.beam import plan_set
+
+    settings, conn = _open()
+    rows = conn.execute(
+        "SELECT song_id FROM analysis WHERE version=? AND error IS NULL ORDER BY song_id",
+        (ANALYSIS_VERSION,),
+    ).fetchall()
+    songs = [load_song(conn, settings, row["song_id"]) for row in rows]
+    planned = plan_set(songs, start, count)
+    conn.execute("DELETE FROM queue")
+    conn.executemany(
+        "INSERT INTO queue(position,song_id,transition,reason) VALUES(?,?,?,?)",
+        [(i, item.song.id, item.transition, item.reason) for i, item in enumerate(planned)],
+    )
+    conn.commit()
+    console.print(f"Planned {len(planned)} songs. Open them with `selecta web`.")
+
+
+@app.command()
+def discover(limit: int = typer.Option(1000, help="Maximum audio links to keep per run.")) -> None:
+    """Search the whole analysed library and fill the Seam Book."""
+    from selecta.analysis.song import load_song
+    from selecta.discovery.search import audio_search, lyric_search
+
+    settings, conn = _open()
+    lyric_count = lyric_search(conn)
+    rows = conn.execute(
+        "SELECT song_id FROM analysis WHERE version=? AND error IS NULL ORDER BY song_id",
+        (ANALYSIS_VERSION,),
+    ).fetchall()
+    songs = [load_song(conn, settings, row["song_id"]) for row in rows]
+    audio_count = audio_search(conn, songs, limit)
+    console.print(f"Found {lyric_count} lyric links and {audio_count} audio links.")
+
+
 if __name__ == "__main__":
     app()

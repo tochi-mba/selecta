@@ -63,6 +63,43 @@ CREATE TABLE IF NOT EXISTS lyrics (
     plain TEXT,
     fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS preferences (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS seam_book (
+    id INTEGER PRIMARY KEY,
+    song_a INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+    song_b INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    score REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    UNIQUE(song_a, song_b, kind, payload)
+);
+
+CREATE TABLE IF NOT EXISTS ratings (
+    id INTEGER PRIMARY KEY,
+    seam_id INTEGER REFERENCES seam_book(id) ON DELETE SET NULL,
+    song_a INTEGER NOT NULL REFERENCES songs(id),
+    song_b INTEGER NOT NULL REFERENCES songs(id),
+    method TEXT NOT NULL,
+    rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+    tags TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS queue (
+    position INTEGER PRIMARY KEY,
+    song_id INTEGER NOT NULL REFERENCES songs(id),
+    state TEXT NOT NULL DEFAULT 'planned',
+    transition TEXT,
+    reason TEXT,
+    locked INTEGER NOT NULL DEFAULT 0
+);
 """
 
 
@@ -152,3 +189,17 @@ def find_songs(conn: sqlite3.Connection, text: str) -> Iterable[sqlite3.Row]:
         "ORDER BY s.artist, s.title",
         (like, like),
     ).fetchall()
+
+
+def preference(conn: sqlite3.Connection, key: str, default: Any = None) -> Any:
+    row = conn.execute("SELECT value FROM preferences WHERE key = ?", (key,)).fetchone()
+    return json.loads(row["value"]) if row else default
+
+
+def set_preference(conn: sqlite3.Connection, key: str, value: Any) -> None:
+    conn.execute(
+        "INSERT INTO preferences(key, value) VALUES (?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
+        (key, json.dumps(value)),
+    )
+    conn.commit()

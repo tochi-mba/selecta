@@ -114,8 +114,8 @@ def render(script: TransitionScript, cache: SongCache | None = None) -> Rendered
     cache = cache or SongCache()
     count = int(round(script.duration * SAMPLE_RATE))
 
-    placed_a, drift_a = _part_audio(script.a, cache.get(script.a.song.path), count)
-    placed_b, drift_b = _part_audio(script.b, cache.get(script.b.song.path), count)
+    placed_a, drift_a = _part_audio(script.a, cache.get(script.a.audio_path), count)
+    placed_b, drift_b = _part_audio(script.b, cache.get(script.b.audio_path), count)
     dry_a, tails_a = _apply_moves(script.a, placed_a)
     dry_b, tails_b = _apply_moves(script.b, placed_b)
 

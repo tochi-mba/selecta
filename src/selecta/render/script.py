@@ -122,6 +122,7 @@ class Wash:
 class Part:
     song: SongInfo
     warp: Warp
+    source_path: str | None = None
     gain: Curve = field(default_factory=lambda: Curve.constant(1.0))
     low: Curve = field(default_factory=lambda: Curve.constant(1.0))
     mid: Curve = field(default_factory=lambda: Curve.constant(1.0))
@@ -140,6 +141,10 @@ class Part:
     @property
     def output_end(self) -> float:
         return float(self.warp.output[-1])
+
+    @property
+    def audio_path(self) -> str:
+        return self.source_path or self.song.path
 
 
 @dataclass
