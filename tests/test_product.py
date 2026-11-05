@@ -10,10 +10,11 @@ from selecta.api import create_app
 from selecta.config import Settings
 from selecta.eval.ratings import results, save_rating
 from selecta.lyrics.lrclib import Line
-from selecta.lyrics.match import discover, normalise
+from selecta.lyrics.match import SongFacts, discover, normalise
 from selecta.planner.arc import feasible_curve, target_energy
 from selecta.planner.choose import styles_for_language
 from selecta.session import get_steering, steer
+from selecta.styles import all_recipes
 
 
 def connection(path: Path) -> sqlite3.Connection:
@@ -24,9 +25,10 @@ def test_wordplay_uses_tokens_and_finds_shared_phrases():
     assert normalise("lover") != normalise("love")
     links = discover(
         {
-            1: [Line(1, 3, "all night long"), Line(10, 12, "all night long")],
-            2: [Line(2, 4, "we go all night long")],
-        }
+            1: [Line(50, 52, "all night long"), Line(60, 62, "all night long")],
+            2: [Line(50, 54, "we go all night long"), Line(60, 62, "somewhere else")],
+        },
+        facts={1: SongFacts("One", "x", 240.0), 2: SongFacts("Two", "y", 240.0)},
     )
     assert any(link.phrase == "all night long" for link in links)
     assert links[0].kind == "shared_phrase"
@@ -50,10 +52,46 @@ def test_steering_persists(tmp_path: Path):
 
 def test_mixing_language_keeps_choices_without_forcing_one_recipe():
     seamless = styles_for_language("seamless", "often")
-    assert {"bass_swap_blend", "vocal_swap", "acapella_bridge"} <= seamless
+    assert {"bass_swap_blend", "filter_sweep", "tempo_ramp"} <= seamless
     assert "cut_on_one" not in seamless
-    assert "vocal_swap" not in styles_for_language("seamless", "never")
+    assert "cut_on_one" in styles_for_language("punchy")
     assert styles_for_language("balanced") is None
+    assert set(styles_for_language("seamless")) | set(styles_for_language("punchy")) <= set(
+        all_recipes()
+    )
+
+
+def test_every_recipe_on_offer_is_different_from_the_others(tmp_path: Path):
+    """An earlier build listed several recipes that rendered the same samples as another one."""
+    names = all_recipes()
+    assert not {"drop_swap", "brake", "riser_air", "half_double", "word_cut"} & set(names)
+
+
+def test_api_refuses_changes_requested_by_another_website(tmp_path: Path):
+    settings = Settings(home=tmp_path)
+    settings.home.mkdir(exist_ok=True)
+    db.connect(settings.db_path).close()
+    client = TestClient(create_app(settings=settings))
+    hostile = {"Origin": "https://evil.example"}
+    assert client.post("/api/steer", json={"action": "more"}, headers=hostile).status_code == 403
+    assert client.post("/api/plan", headers=hostile).status_code == 403
+    local = {"Origin": "http://127.0.0.1:8000"}
+    assert client.post("/api/steer", json={"action": "more"}, headers=local).status_code == 200
+    assert client.post("/api/steer", json={"action": "more"}).status_code == 200
+
+
+def test_a_bad_steering_request_is_refused_cleanly(tmp_path: Path):
+    settings = Settings(home=tmp_path)
+    settings.home.mkdir(exist_ok=True)
+    db.connect(settings.db_path).close()
+    client = TestClient(create_app(settings=settings))
+    assert client.post("/api/steer", json={"action": "nonsense"}).status_code == 400
+
+
+def test_the_page_never_contacts_another_server():
+    style = (Path(__file__).parent.parent / "web" / "src" / "style.css").read_text("utf-8")
+    assert "http://" not in style
+    assert "https://" not in style
 
 
 def test_blind_test_reports_bad_rate(tmp_path: Path):

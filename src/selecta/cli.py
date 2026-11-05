@@ -273,12 +273,36 @@ def mix(
 def reel(
     output: Path = typer.Option(DEFAULT_REEL_OUTPUT, "--output", "-o"),
     seed: int = typer.Option(7),
+    words: int = typer.Option(8, help="How many word links to render first. 0 skips them."),
+    only_words: bool = typer.Option(False, help="Stop after the word cuts."),
 ) -> None:
     """Render a mix of transitions from your own songs for you to listen to and rate."""
-    from selecta.planner.reel import build_reel
+    from selecta.discovery.search import lyric_links
+    from selecta.lyrics.match import varied_links
+    from selecta.planner.fit import TimbreSpace
+    from selecta.planner.reel import build_reel, load_library, word_entry, write_page
+    from selecta.planner.wordreel import analyse_links, build_takes, default_modes
+    from selecta.render.engine import SongCache
 
     settings, conn = _open()
-    entries = build_reel(conn, settings, output, seed=seed, log=console.print)
+    output.mkdir(parents=True, exist_ok=True)
+    first = []
+    if words:
+        links = varied_links(lyric_links(conn), words * 5)
+        analyse_links(conn, settings, links, console.print)
+        space = TimbreSpace.fit(load_library(conn, settings))
+        cache = SongCache(capacity=4)
+        takes = build_takes(
+            conn, settings, links, words, default_modes, space, cache, console.print
+        )
+        first = [word_entry(n, take, output, cache) for n, take in enumerate(takes, 1)]
+        write_page(first, output)
+        console.print(f"{len(first)} word cuts written.")
+    entries = (
+        first
+        if only_words
+        else build_reel(conn, settings, output, seed=seed, log=console.print, first=first)
+    )
     console.print(f"{len(entries)} transitions written. Open {output / 'index.html'}.")
 
 
