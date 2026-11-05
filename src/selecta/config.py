@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,6 +41,24 @@ class Settings:
     @property
     def renders_dir(self) -> Path:
         return self.home / "renders"
+
+    @property
+    def storage_file(self) -> Path:
+        return self.home / "storage.json"
+
+    @property
+    def effective_cache_cap_bytes(self) -> int:
+        try:
+            value = json.loads(self.storage_file.read_text("utf-8"))["budget_bytes"]
+            return max(512 * 1024**2, int(value))
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return self.cache_cap_bytes
+
+    def set_storage_budget(self, budget_bytes: int) -> None:
+        minimum = 512 * 1024**2
+        self.storage_file.write_text(
+            json.dumps({"budget_bytes": max(minimum, int(budget_bytes))}, indent=2), "utf-8"
+        )
 
     def ensure_dirs(self) -> None:
         for path in (self.home, self.features_dir, self.models_dir, self.renders_dir):

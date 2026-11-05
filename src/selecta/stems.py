@@ -83,5 +83,5 @@ def separate_window(
     for name, destination in paths.__dict__.items():
         shutil.move(str(produced / f"{name}.wav"), destination)
     excerpt.unlink(missing_ok=True)
-    _prune(settings.home / "stems", settings.cache_cap_bytes)
+    _prune(settings.home / "stems", settings.effective_cache_cap_bytes)
     return paths
