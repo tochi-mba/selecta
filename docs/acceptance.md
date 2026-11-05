@@ -68,6 +68,11 @@ Vocal rides now find where a voice stops and starts from the separated vocal its
 
 The planned shares above are what's asked for. What it sounds like, and how often a planned move survives rendering, needs more listening and more real renders.
 
+### Local export batch — 5 November 2026
+
+- Ten four-song MP3s were exported to `Music/Selecta Mixes Refresh 2026-11-05`, with 40 distinct library IDs across the batch. Each also has a tracklist and per-seam audit results.
+- All 30 rendered seams passed the current automated checks. The renderer chose 27 clean cuts and 3 bass-swap blends. This is a cut-heavy result, not evidence of the smoother blended sound requested; the exports still need a person's listening review.
+
 ## Partly works
 
 | What | Works | Doesn't |
