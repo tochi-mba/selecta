@@ -17,6 +17,7 @@ from selecta.api import create_app
 from selecta.config import ANALYSIS_VERSION, Settings
 from selecta.lyrics.lrclib import Line
 from selecta.planner.beam import ARTIST_SEPARATION, plan_set, suggest_next
+from selecta.planner.choose import enumerate_candidates
 from selecta.seams import (
     MIX,
     PREPARING,
@@ -540,7 +541,7 @@ def test_recommendations_put_the_best_fit_first_and_say_why(tmp_path):
     assert [item.song.id for item in ranked] == [same.id, near.id, far.id]
     assert ranked[0].reason.startswith("Same tempo")
     assert "tempo" in ranked[1].reason.lower()
-    assert ranked[2].reason == "A change of pace"
+    assert ranked[2].reason == "A big tempo jump, so an echo"
 
 
 def test_recommendations_consider_the_song_on_each_side(tmp_path):
@@ -1217,3 +1218,148 @@ def test_a_mix_from_a_few_artists_still_reaches_its_length(tmp_path):
     assert len(planned) == 12
     artists = [item.song.artist for item in planned]
     assert all(x != y for x, y in zip(artists, artists[1:], strict=False))
+
+
+def _takes(store, monkeypatch, reports):
+    def take(request, _a, _b):
+        if request.move not in reports:
+            raise CannotRender("not here")
+        return f"take of {request.move}", reports[request.move], "why"
+
+    monkeypatch.setattr(store, "_chosen_move", take)
+
+
+def _two_songs(tmp_path):
+    track = make_track(bpm=120, bars=64, seed=1)
+    a = song_from_track(tmp_path, "a", track)
+    b = song_from_track(tmp_path, "b", track)
+    a.id, b.id = 1, 2
+    return a, b
+
+
+def test_a_clean_take_beats_a_near_miss(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    near = _report(("beat alignment", 30.0, 20.0))
+    _takes(store, monkeypatch, {"filter_sweep": near, "bass_swap_blend": _report()})
+    tried: list[dict] = []
+    rendered, report, _why, _fell_back = store._best_move(a, b, tried)
+    assert rendered == "take of bass_swap_blend"
+    assert report.passed
+
+
+def test_a_near_miss_blend_beats_a_clean_effect(tmp_path, monkeypatch):
+    """By ear a blend a little off still beats an echo. The warning stays, so it isn't hidden."""
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    near = _report(("beat alignment", 30.0, 20.0))
+    _takes(store, monkeypatch, {"filter_sweep": near, "echo_out": _report()})
+    tried: list[dict] = []
+    rendered, report, _why, _fell_back = store._best_move(a, b, tried)
+    assert rendered == "take of filter_sweep"
+    assert not report.passed
+    assert "filter_sweep" not in {attempt["move"] for attempt in tried}
+
+
+def test_a_planned_near_miss_is_kept_if_nothing_comes_out_cleaner(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    _takes(store, monkeypatch, {})
+    held = ("take of tempo_ramp", _report(("level fall", 5.0, 3.5)), "why", "tempo_ramp")
+    tried: list[dict] = []
+    rendered, _report_kept, _why, fell_back = store._best_move(a, b, tried, "tempo_ramp", held)
+    assert rendered == "take of tempo_ramp"
+    assert not fell_back, "it's the move that was asked for"
+
+
+def test_a_steady_beat_gap_is_closed_with_a_second_take(tmp_path):
+    from dataclasses import replace
+
+    from selecta.audit.checks import audit
+    from selecta.render.engine import SongCache, render
+    from selecta.render.script import Warp
+    from selecta.seams import tighten_beats
+
+    a, b = _two_songs(tmp_path)
+    cache = SongCache()
+    pool = enumerate_candidates(a, b, "bass_swap_blend")
+    script = pool[0].recipe.make(a, b, pool[0].exit_cue, pool[0].entry_cue, pool[0].bars)
+    assert audit(render(script, cache)).passed
+    apart = replace(
+        script, b=replace(script.b, warp=Warp(script.b.warp.output, script.b.warp.source - 0.035))
+    )
+    off = render(apart, cache)
+    assert any(check.name == "beat alignment" for check in audit(off).failures)
+    fixed, report = tighten_beats(off, cache)
+    assert not any(check.name == "beat alignment" for check in report.failures)
+    assert fixed is not off
+
+
+def test_a_warning_counts_against_a_move_and_its_songs(tmp_path):
+    from selecta.planner.vibes import BY_KEY, _moves_that_fit
+    from selecta.planner.wordreel import Verdicts
+
+    a, b = _two_songs(tmp_path)
+    clean = dict(_moves_that_fit(BY_KEY["pick"], a, b, Verdicts()))
+    known = Verdicts(warned={(1, 2, "bass_swap_blend")})
+    warned = dict(_moves_that_fit(BY_KEY["pick"], a, b, known))
+    assert warned["bass_swap_blend"] < clean["bass_swap_blend"]
+
+
+def test_a_shaky_beat_grid_lowers_how_good_a_handoff_looks(tmp_path):
+    from selecta.planner.beam import _Riders, handoff_quality
+
+    a, b = _two_songs(tmp_path)
+    a.grid_confidence = b.grid_confidence = 0.98
+    sure = handoff_quality(a, b, _Riders())
+    a.grid_confidence = 0.6
+    assert handoff_quality(a, b, _Riders()) < sure
+    a.grid_confidence = 0.3
+    assert handoff_quality(a, b, _Riders()) == 0.1
+
+
+def test_a_song_is_recommended_for_how_it_hands_over_on_both_sides(tmp_path):
+    from selecta.planner.beam import rank_candidates
+
+    before = _song(tmp_path, "before", "Before", bpm=120.0, camelot="8A")
+    after = _song(tmp_path, "after", "After", bpm=120.0, camelot="8A")
+    good = _song(tmp_path, "good", "Good", bpm=120.0, camelot="8A")
+    lopsided = _song(tmp_path, "lop", "Lopsided", bpm=145.0, camelot="2B")
+    ranked = rank_candidates(before, after, [before, after, good, lopsided], {before.id, after.id})
+    assert ranked[0].song.id == good.id
+
+
+def test_recommendations_keep_to_the_mix_and_away_from_nearby_artists(tmp_path):
+    from selecta.planner.beam import rank_candidates
+
+    before = _song(tmp_path, "before", "Before", bpm=120.0, camelot="8A")
+    one = _song(tmp_path, "one", "One", bpm=120.0, camelot="8A")
+    two = _song(tmp_path, "two", "Two", bpm=120.0, camelot="8A")
+    songs = [before, one, two]
+    assert (
+        rank_candidates(before, None, songs, {before.id}, belongs={two.id: 1.0})[0].song.id
+        == two.id
+    )
+    assert (
+        rank_candidates(before, None, songs, {before.id}, nearby_artists={"two"})[0].song.id
+        == one.id
+    )
+
+
+def test_bigger_and_calmer_think_about_the_next_song_too(tmp_path):
+    current = _song(tmp_path, "now", "Now", bpm=120.0, camelot="8A", energy=0.5)
+    following = _song(tmp_path, "next", "Next", bpm=120.0, camelot="8A", energy=0.5)
+    fits_both = _song(tmp_path, "both", "Both", bpm=120.0, camelot="8A", energy=0.6)
+    fits_one = _song(tmp_path, "one", "One", bpm=127.0, camelot="1B", energy=0.6)
+    songs = [current, following, fits_both, fits_one]
+    pick = suggest_next(current, songs, {following.id}, set(), 0, after=following)
+    assert pick.id == fits_both.id
+
+
+def test_suggestions_say_what_will_happen(tmp_path):
+    from selecta.planner.beam import rank_candidates
+
+    now = _song(tmp_path, "now", "Now", bpm=120.0, camelot="8A")
+    ramp = _song(tmp_path, "ramp", "Ramp", bpm=100.0, camelot="8A")
+    ranked = rank_candidates(now, None, [now, ramp], {now.id})
+    assert ranked[0].reason == "A tempo ramp gets there"

@@ -18,14 +18,14 @@ import threading
 import time
 from collections import Counter, deque
 from collections.abc import Callable, Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 import soundfile as sf
 
 from selecta import db, jobs
 from selecta.analysis.song import Cue, SongInfo, load_song
-from selecta.audit.checks import AuditReport, Check, audit
+from selecta.audit.checks import AuditReport, Check, audit, beat_offset
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner
 from selecta.lyrics.lrclib import Line
@@ -42,6 +42,7 @@ from selecta.planner.wordreel import (
     ride_lines,
 )
 from selecta.render.engine import Rendered, SongCache, in_context, render
+from selecta.render.script import Part, Warp
 from selecta.stems import prune_cache
 from selecta.styles import all_recipes
 from selecta.styles.wordplay import phrase_roll, vocal_ride, word_blend, word_cut, word_exchange
@@ -50,6 +51,7 @@ RENDER_VERSION = 1
 PREVIEW_SECONDS = 12.0
 IDLE_CHECK_SECONDS = 3.0
 RIDES_BEFORE_OTHERS = 0.35
+SMOOTH_MOVES = {"vocal_ride", "bass_swap_blend", "filter_sweep", "tempo_ramp"}
 WORD_TIMED_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
 NEAR_MISS = {"beat alignment": 20.0, "level fall": 3.0, "entry level": 1.5}
 """How far past its limit each forgiving check can go, in its own units."""
@@ -224,6 +226,36 @@ def _chosen_cue(song: SongInfo, bar: int) -> Cue:
     return Cue(bar, song.bar_time(bar), "chosen", 0.5, 0)
 
 
+def _closer(report: AuditReport, than: AuditReport) -> bool:
+    """Is this take nearer to clean than that one?"""
+    miss = lambda r: (len(r.failures), sum(c.value - c.limit for c in r.failures))  # noqa: E731
+    return miss(report) < miss(than)
+
+
+def tighten_beats(rendered: Rendered, cache: SongCache) -> tuple[Rendered, AuditReport]:
+    """The render measures exactly how far apart the beats landed, so a steady gap can be closed
+    with a second take rather than warned about. A live DJ only gets the one."""
+    report = audit(rendered)
+    if not any(check.name == "beat alignment" for check in report.failures):
+        return rendered, report
+    offset = beat_offset(rendered)
+    if offset is None:
+        return rendered, report
+    script = rendered.script
+    b = script.b.song
+
+    def later(part: Part) -> Part:
+        if part.song is not b:
+            return part
+        return replace(part, warp=Warp(part.warp.output, part.warp.source - offset))
+
+    second = render(
+        replace(script, b=later(script.b), extras=[later(part) for part in script.extras]), cache
+    )
+    second_report = audit(second)
+    return (second, second_report) if _closer(second_report, report) else (rendered, report)
+
+
 def _bar_cue_render(
     request: SeamRequest, a: SongInfo, b: SongInfo, cache: SongCache
 ) -> tuple[Rendered, AuditReport, str]:
@@ -256,19 +288,19 @@ def _bar_cue_render(
             (item.exit_cue, item.entry_cue, item.bars, "; ".join(item.reasons))
             for item in pool[:PLACEMENTS_TO_TRY]
         ]
-    first = None
+    best = None
     for exit_cue, entry_cue, bars, why in tries:
         script = recipe.make(a, b, exit_cue, entry_cue, bars)
         if script is None:
             continue
-        rendered = render(script, cache)
-        report = audit(rendered)
+        rendered, report = tighten_beats(render(script, cache), cache)
         if report.passed:
             return rendered, report, why
-        first = first or (rendered, report, why)
-    if first is None:
+        if best is None or _closer(report, best[1]):
+            best = (rendered, report, why)
+    if best is None:
         raise CannotRender("Those cue points don't leave enough room for this move.")
-    return first
+    return best
 
 
 def _stem_render(
@@ -348,8 +380,8 @@ def _stem_render(
                     break
     if script is None:
         raise CannotRender("The beats and the words don't line up for this move here.")
-    rendered = render(script, cache)
-    return rendered, audit(rendered), why
+    rendered, report = tighten_beats(render(script, cache), cache)
+    return rendered, report, why
 
 
 def _switch_at(rendered: Rendered) -> float:
@@ -527,6 +559,9 @@ class SeamStore:
             elif state.get("status") == "ready":
                 style = state.get("style")
                 found.worked.add((*pair, style))
+                if not state.get("passed"):
+                    found.warned.add((*pair, style))
+                    found.warned_songs.update(pair)
                 if style in WORD_TIMED_MOVES:
                     found.timed.update(pair)
         return found
@@ -660,6 +695,7 @@ class SeamStore:
         fell_back = False
         tried: list[dict] = []
         rendered: Rendered | None = None
+        near: tuple | None = None
         if request.move != "auto":
             try:
                 rendered, report, why = self._chosen_move(request, a, b)
@@ -671,11 +707,14 @@ class SeamStore:
                 if not request.soft:
                     raise
                 tried.append({"move": request.move, "why": str(problem)})
-            if request.soft and rendered is not None and not good_enough(report):
-                tried.append({"move": request.move, "why": _what_failed(report)})
+            if request.soft and rendered is not None and not report.passed:
+                if good_enough(report):
+                    near = (rendered, report, why, request.move)
+                else:
+                    tried.append({"move": request.move, "why": _what_failed(report)})
                 rendered = None
         if rendered is None:
-            rendered, report, why, fell_back = self._best_move(a, b, tried, request.move)
+            rendered, report, why, fell_back = self._best_move(a, b, tried, request.move, near)
         return self._save(request, rendered, report, why, fell_back, tried)
 
     def _chosen_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
@@ -687,32 +726,50 @@ class SeamStore:
             return _bar_cue_render(request, a, b, self._cache)
         raise CannotRender(f"There's no move called {request.move}.")
 
-    def _try_move(self, a: SongInfo, b: SongInfo, move: str, tried: list[dict]):
-        """Render one move, noting why if it can't work."""
+    def _take(self, a: SongInfo, b: SongInfo, move: str, tried: list[dict]):
+        """Render one move, noting why if it can't be done at all."""
         try:
-            rendered, report, why = self._chosen_move(SeamRequest(a.id, b.id, move), a, b)
+            return self._chosen_move(SeamRequest(a.id, b.id, move), a, b)
         except CannotTrust as problem:
             tried.append({"move": move, "why": UNSURE_WORDS, "song": problem.song_id})
-            return None
         except CannotRender as problem:
             tried.append({"move": move, "why": str(problem)})
-            return None
-        if good_enough(report):
-            return rendered, report, why
-        tried.append({"move": move, "why": _what_failed(report)})
         return None
 
-    def _best_move(self, a: SongInfo, b: SongInfo, tried: list[dict], asked: str = "auto"):
-        """The move that best suits these two and the rest of the mix. A cut only if nothing else
-        can work, since it's the one the listener likes least."""
+    def _best_move(
+        self,
+        a: SongInfo,
+        b: SongInfo,
+        tried: list[dict],
+        asked: str = "auto",
+        near: tuple | None = None,
+    ):
+        """The move that best suits these two and the rest of the mix. A clean take of a ride or
+        blend comes first, then one of those with a near miss, then an effect. A cut only if
+        nothing else can work, since it's the one the listener likes least. `near` is a take with a
+        near miss that's already in hand."""
         can_ride = "word_blend" in modes_for(a, b) and ride_lines(a, b) is not None
         moves = fallback_order(a.id, b.id, can_ride, self.mix_moves())
-        for move in moves:
-            if move == asked:
-                continue
-            result = self._try_move(a, b, move, tried)
-            if result is not None:
-                rendered, report, why = result
+        held = near
+        for group in (
+            [move for move in moves if move in SMOOTH_MOVES],
+            [move for move in moves if move not in SMOOTH_MOVES],
+        ):
+            for move in group:
+                if move == asked or (move == "vocal_ride" and held is not None):
+                    continue  # stems take minutes, which isn't worth it to improve on a near miss
+                take = self._take(a, b, move, tried)
+                if take is None:
+                    continue
+                rendered, report, why = take
+                if report.passed:
+                    return rendered, report, why, asked not in {"auto", move}
+                if held is None and good_enough(report):
+                    held = (rendered, report, why, move)
+                tried.append({"move": move, "why": _what_failed(report)})
+            if held is not None:
+                rendered, report, why, move = held
+                tried[:] = [attempt for attempt in tried if attempt["move"] != move]
                 return rendered, report, why, asked not in {"auto", move}
         choice = choose_transition(a, b, "cut_on_one", cache=self._cache)
         why = "; ".join(choice.candidate.reasons)

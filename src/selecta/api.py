@@ -14,7 +14,7 @@ import subprocess
 import sys
 import threading
 import time
-from collections import deque
+from collections import Counter, deque
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -122,6 +122,8 @@ class PairRequest(BaseModel):
 
 
 SWAPS_REMEMBERED = 12
+NEARBY_SONGS = 3
+MOST_FROM_ONE_ARTIST = 2
 
 
 def _counts(conn: sqlite3.Connection) -> dict[str, int]:
@@ -597,12 +599,13 @@ def create_app(
     def suggest(position: int = 0, q: str = "", limit: int = 12) -> dict:
         """What could go here, best fit first. With a search, only what matches, still best fit
         first, followed by matching songs that aren't analysed yet."""
-        from selecta.planner.beam import rank_candidates
+        from selecta.planner.beam import _artist, rank_candidates
+        from selecta.planner.vibes import belonging
 
         text = q.strip().casefold()
         with connect() as conn:
             items = mix.read_mix(conn, store)
-            songs, _ = library_now(conn)
+            songs, traits = library_now(conn)
             by_id = {song.id: song for song in songs}
             before = (
                 by_id.get(items[position - 1]["song_id"]) if 0 < position <= len(items) else None
@@ -610,13 +613,34 @@ def create_app(
             after = by_id.get(items[position]["song_id"]) if 0 <= position < len(items) else None
             used = {item["song_id"] for item in items}
             phrases = phrases_of(conn) if before is not None else {}
-            ranked = rank_candidates(before, after, songs, used, phrases)
+            close = items[max(position - NEARBY_SONGS, 0) : position + NEARBY_SONGS]
+            ranked = rank_candidates(
+                before,
+                after,
+                songs,
+                used,
+                phrases,
+                around=[by_id[item["song_id"]] for item in items if item["song_id"] in by_id],
+                belongs=belonging(mix.mix_name(conn), songs, traits),
+                nearby_artists={
+                    _artist(by_id[item["song_id"]]) for item in close if item["song_id"] in by_id
+                },
+            )
             if text:
                 ranked = [
                     item
                     for item in ranked
                     if text in f"{item.song.artist} {item.song.title}".casefold()
                 ]
+            else:
+                # recommendations should be a real choice, not one artist's whole catalogue
+                seen: Counter[str] = Counter()
+                varied = []
+                for item in ranked:
+                    seen[_artist(item.song)] += 1
+                    if seen[_artist(item.song)] <= MOST_FROM_ONE_ARTIST:
+                        varied.append(item)
+                ranked = varied
             found = [
                 {
                     "song_id": item.song.id,
@@ -685,12 +709,13 @@ def create_app(
     def swap_song(position: int, direction: int = 0) -> dict:
         """Replace the song at this place: something bigger, calmer, or just different."""
         from selecta.planner.beam import _artist, suggest_next
+        from selecta.planner.vibes import belonging
 
         with connect() as conn:
             items = mix.read_mix(conn, store)
             if not 1 <= position < len(items):
                 raise HTTPException(404, "There's no song to swap there.")
-            songs, _ = library_now(conn)
+            songs, traits = library_now(conn)
             library = {song.id: song for song in songs}
             current = library.get(items[position - 1]["song_id"])
             if current is None:
@@ -704,21 +729,22 @@ def create_app(
             }
             # a song just swapped out shouldn't come straight back
             fresh = [song for song in songs if song.id not in swapped_out]
-            pick = suggest_next(
-                current,
-                fresh,
-                in_mix,
-                artists,
-                max(-1, min(direction, 1)),
-                items[position]["song_id"],
-            ) or suggest_next(
-                current,
-                songs,
-                in_mix,
-                artists,
-                max(-1, min(direction, 1)),
-                items[position]["song_id"],
+            following = (
+                library.get(items[position + 1]["song_id"]) if position + 1 < len(items) else None
             )
+            belongs = belonging(mix.mix_name(conn), songs, traits)
+            pick = None
+            for pool in (fresh, songs):
+                pick = pick or suggest_next(
+                    current,
+                    pool,
+                    in_mix,
+                    artists,
+                    max(-1, min(direction, 1)),
+                    items[position]["song_id"],
+                    after=following,
+                    belongs=belongs,
+                )
             if pick is None:
                 raise HTTPException(404, "Nothing else fits here yet. Analysing more songs helps.")
             swapped_out.append(items[position]["song_id"])

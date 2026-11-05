@@ -87,6 +87,8 @@ class Verdicts:
 
     failed: set[tuple[int, int, str]] = field(default_factory=set)
     worked: set[tuple[int, int, str]] = field(default_factory=set)
+    warned: set[tuple[int, int, str]] = field(default_factory=set)
+    warned_songs: Counter[int] = field(default_factory=Counter)
     timed: Counter[int] = field(default_factory=Counter)
     untimed: Counter[int] = field(default_factory=Counter)
 

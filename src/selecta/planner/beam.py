@@ -35,6 +35,10 @@ LINK_BONUS = 0.25
 
 
 BELONGING = 0.3
+HANDOFF_WEIGHT = 0.45
+MIX_FIT_WEIGHT = 0.25
+SAME_ARTIST_COST = 0.3
+SURE_GRID = 0.9
 OFF_MENU_PENALTY = 0.3
 
 
@@ -88,29 +92,35 @@ class _Riders:
         return self._in[song.id]
 
 
-def handoff_quality(a: SongInfo, b: SongInfo, riders: _Riders) -> float:
-    """How good the best move between two songs should sound, going by what the listener rated.
-    Vocal rides were the favourite, blends good, and effects and cuts mostly disliked. They're all
-    a person ends up hearing when a mix picks songs that can't carry anything better."""
-    if (
-        a.beats_per_bar != b.beats_per_bar
-        or min(a.grid_confidence, b.grid_confidence) < BLEND_MIN_GRID
-    ):
-        return 0.1
-    gap = abs(a.bpm / b.bpm - 1.0)
-    keys = camelot_distance(a.camelot, b.camelot)
-    if (
-        gap <= BLEND_MAX_GAP
-        and keys <= BLEND_MAX_KEY_DISTANCE
+def can_ride(a: SongInfo, b: SongInfo, riders: _Riders) -> bool:
+    return (
+        a.beats_per_bar == b.beats_per_bar
+        and min(a.grid_confidence, b.grid_confidence) >= BLEND_MIN_GRID
+        and abs(a.bpm / b.bpm - 1.0) <= BLEND_MAX_GAP
+        and camelot_distance(a.camelot, b.camelot) <= BLEND_MAX_KEY_DISTANCE
         and riders.can_leave(a)
         and riders.can_enter(b)
-    ):
-        return 1.0
+    )
+
+
+def handoff_quality(a: SongInfo, b: SongInfo, riders: _Riders) -> float:
+    """How good the best move between two songs should sound, going by what the listener rated.
+    Vocal rides were the favourite, blends good, and effects and cuts mostly disliked, and those are
+    all a person gets when a mix picks songs that can't carry anything better. A shaky beat grid is
+    what most often puts beats out of line, so it counts against any move that matches beats."""
+    grid = min(a.grid_confidence, b.grid_confidence)
+    if a.beats_per_bar != b.beats_per_bar or grid < BLEND_MIN_GRID:
+        return 0.1
+    sure = 0.75 + 0.25 * min((grid - BLEND_MIN_GRID) / (SURE_GRID - BLEND_MIN_GRID), 1.0)
+    gap = abs(a.bpm / b.bpm - 1.0)
+    keys = camelot_distance(a.camelot, b.camelot)
+    if can_ride(a, b, riders):
+        return sure
     if gap <= 0.05:
-        return 0.75 if keys <= 3 else 0.55
+        return (0.75 if keys <= 3 else 0.55) * sure
     if gap <= BLEND_MAX_GAP:
-        return 0.55
-    return 0.3 if gap <= 0.3 else 0.1
+        return 0.55 * sure
+    return 0.3 * sure if gap <= 0.3 else 0.1
 
 
 class _Cues:
@@ -232,23 +242,32 @@ def suggest_next(
     avoid_artists: set[str],
     direction: int = 0,
     avoid: int | None = None,
+    after: SongInfo | None = None,
+    belongs: dict[int, float] | None = None,
 ) -> SongInfo | None:
     """The best song to follow this one, for one tap of "bigger", "calmer" or "something else".
 
     `direction` is 1 for more energy, -1 for less, 0 for no preference. `avoid` is the song being
-    replaced, whose energy sets what "bigger" and "calmer" are measured against.
+    replaced, whose energy sets what "bigger" and "calmer" are measured against. `after` is the song
+    it has to hand over to, and `belongs` says which songs suit the mix.
     """
     space = TimbreSpace.fit(songs)
     energies = np.array([song.energy for song in songs])
     energy_range = (float(energies.min()), float(energies.max()))
     baseline = next((song.energy for song in songs if song.id == avoid), current.energy)
+    riders = _Riders()
+    belongs = belongs or {}
     options = []
     for song in songs:
         if song.id in exclude or song.id == current.id or _artist(song) in avoid_artists:
             continue
         if direction and (song.energy - baseline) * direction <= 0:
             continue
-        options.append((_quick_score(current, song, 0.5, energy_range, space, set()), song))
+        score = _quick_score(current, song, 0.5, energy_range, space, set())
+        score += HANDOFF_WEIGHT * handoff_quality(current, song, riders)
+        if after is not None:
+            score += HANDOFF_WEIGHT * handoff_quality(song, after, riders)
+        options.append((score + BELONGING * belongs.get(song.id, 0.0), song))
     options.sort(key=lambda item: -item[0])
     cues = _Cues()
     for _, song in options[: CHECK_PER_STEP * 4]:
@@ -264,16 +283,20 @@ class Suggestion:
     reason: str
 
 
-def _why_it_fits(a: SongInfo, b: SongInfo, space: TimbreSpace | None, shares: str | None) -> str:
-    """A few words a person can check by ear. Never a score."""
+def _why_it_fits(
+    a: SongInfo, b: SongInfo, space: TimbreSpace | None, shares: str | None, riders: _Riders
+) -> str:
+    """What a person will hear if they pick this, in words they can check by ear. Never a score."""
     if shares:
         return f"Shares “{shares}”"
-    parts = []
-    gap = folded_gap(a, b)
-    if gap <= 0.02:
-        parts.append("Same tempo")
-    elif gap <= 0.06:
-        parts.append("Close tempo")
+    if can_ride(a, b, riders):
+        return "A voice can ride across"
+    gap = abs(a.bpm / b.bpm - 1.0)
+    if gap > 0.3:
+        return "A big tempo jump, so an echo"
+    if gap > BLEND_MAX_GAP:
+        return "A tempo ramp gets there"
+    parts = ["Same tempo" if gap <= 0.02 else "Close tempo"]
     distance = camelot_distance(a.camelot, b.camelot)
     if distance == 0:
         parts.append("same key")
@@ -282,10 +305,20 @@ def _why_it_fits(a: SongInfo, b: SongInfo, space: TimbreSpace | None, shares: st
     timbre = space.distance(a, b) if space is not None else None
     if timbre is not None and timbre < 0.8:
         parts.append("similar sound")
-    if not parts:
-        return "A change of pace"
-    text = ", ".join(parts)
-    return text[0].upper() + text[1:]
+    return ", ".join(parts)
+
+
+def _suits_the_mix(song: SongInfo, around: list[SongInfo], energy_range: tuple) -> float:
+    """How well a song sits with the rest of the mix it would join, 0 to 1."""
+    if not around:
+        return 0.0
+    low, high = energy_range
+    level = abs(song.energy - float(np.mean([item.energy for item in around])))
+    energy = 1.0 - min(level / max(high - low, 1e-6), 1.0)
+    bpm = float(np.median([item.bpm for item in around]))
+    tempo = max(0.0, 1.0 - abs(song.bpm / bpm - 1.0) / 0.25)
+    family = sum(item.family == song.family for item in around) / len(around)
+    return (energy + tempo + family) / 3.0
 
 
 def rank_candidates(
@@ -294,12 +327,22 @@ def rank_candidates(
     songs: list[SongInfo],
     exclude: set[int],
     shares: dict[tuple[int, int], str] | None = None,
+    around: list[SongInfo] | None = None,
+    belongs: dict[int, float] | None = None,
+    nearby_artists: set[str] | None = None,
 ) -> list[Suggestion]:
-    """Every song, best fit first, for a place in a mix between `before` and `after`."""
+    """Every song, best first, for a place in a mix between `before` and `after`. The best song can
+    hand over well on both sides and suits the mix it's joining, so it's judged the way a mix is
+    built. `around` is the rest of the mix, `belongs` says which songs suit it, and `nearby_artists`
+    are the artists just either side."""
     shares = shares or {}
+    around = around or []
+    belongs = belongs or {}
+    nearby_artists = nearby_artists or set()
     space = TimbreSpace.fit(songs)
     energies = np.array([song.energy for song in songs]) if songs else np.zeros(1)
     energy_range = (float(energies.min()), float(energies.max()))
+    riders = _Riders()
     ranked: list[Suggestion] = []
     links = set(shares)
     for song in songs:
@@ -307,14 +350,30 @@ def rank_candidates(
             continue
         scores = []
         if before is not None:
-            scores.append(_quick_score(before, song, 0.5, energy_range, space, links))
+            scores.append(
+                _quick_score(before, song, 0.5, energy_range, space, links)
+                + HANDOFF_WEIGHT * handoff_quality(before, song, riders)
+            )
         if after is not None:
-            scores.append(_quick_score(song, after, 0.5, energy_range, space, links))
+            scores.append(
+                _quick_score(song, after, 0.5, energy_range, space, links)
+                + HANDOFF_WEIGHT * handoff_quality(song, after, riders)
+            )
+        score = float(np.mean(scores)) if scores else 0.0
+        score += BELONGING * belongs.get(song.id, 0.0)
+        score += MIX_FIT_WEIGHT * _suits_the_mix(song, around, energy_range)
         reference = before or after
-        phrase = shares.get((before.id, song.id)) if before is not None else None
         if reference is not None and _artist(reference) == _artist(song):
-            scores = [score - 0.3 for score in scores]
-        reason = _why_it_fits(reference, song, space, phrase) if reference is not None else ""
-        ranked.append(Suggestion(song, float(np.mean(scores)) if scores else 0.0, reason))
+            score -= SAME_ARTIST_COST
+        if _artist(song) in nearby_artists:
+            score -= SAME_ARTIST_COST
+        phrase = shares.get((before.id, song.id)) if before is not None else None
+        if before is not None:
+            reason = _why_it_fits(before, song, space, phrase, riders)
+        elif after is not None:
+            reason = _why_it_fits(song, after, space, None, riders)
+        else:
+            reason = ""
+        ranked.append(Suggestion(song, score, reason))
     ranked.sort(key=lambda item: -item.score)
     return ranked

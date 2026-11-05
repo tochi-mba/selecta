@@ -178,7 +178,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                     <h3>{card.name}</h3>
                     <p>{card.blurb}</p>
                     <p className="artists">{card.artists.join(', ')}</p>
-                    <p className="facts">
+                    <p className="how">
                       {card.tempo ? `${card.tempo[0]}–${card.tempo[1]} BPM · ` : ''}
                       {card.moves}
                     </p>

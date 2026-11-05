@@ -19,6 +19,9 @@ from selecta.render.script import Part, TransitionScript
 
 BEAT_TARGET_MS = 10.0
 BEAT_LIMIT_MS = 20.0
+MIN_BEATS_MEASURED = 4
+MIN_NUDGE_MS = 5.0
+MAX_NUDGE_SPREAD_MS = 30.0
 VOCAL_OVERLAP_TARGET = 1.0
 VOCAL_OVERLAP_LIMIT = 2.0
 QUIET_LIMIT_SECONDS = 1.2
@@ -63,10 +66,9 @@ def _audible_window(part: Part, count: int, threshold: float = 0.3) -> np.ndarra
     return part.gain.sample(count, SAMPLE_RATE) >= threshold
 
 
-def _beat_alignment(rendered: Rendered) -> Check | None:
+def _beat_differences(rendered: Rendered) -> list[float]:
+    """How many milliseconds later A's beats land than B's, for each beat clear enough to hear."""
     script = rendered.script
-    if not script.expects_beats_aligned:
-        return None
     period = script.meta["period"]
     start, end = script.overlap
     count = rendered.audio.shape[0]
@@ -87,7 +89,27 @@ def _beat_alignment(rendered: Rendered) -> Check | None:
         if slice_a.max() < np.percentile(env_a, 92) or slice_b.max() < np.percentile(env_b, 92):
             continue
         differences.append((int(np.argmax(slice_a)) - int(np.argmax(slice_b))) * hop * 1000.0)
-    if len(differences) < 4:
+    return differences
+
+
+def beat_offset(rendered: Rendered) -> float | None:
+    """Seconds to delay B by to line the beats up, if they're apart by a steady amount. Beats that
+    scatter are a different problem, or the check misreading the drums, and a nudge won't help."""
+    differences = _beat_differences(rendered)
+    if len(differences) < MIN_BEATS_MEASURED:
+        return None
+    low, middle, high = np.percentile(differences, [25, 50, 75])
+    if abs(middle) < MIN_NUDGE_MS or high - low > MAX_NUDGE_SPREAD_MS:
+        return None
+    return float(middle) / 1000.0
+
+
+def _beat_alignment(rendered: Rendered) -> Check | None:
+    script = rendered.script
+    if not script.expects_beats_aligned:
+        return None
+    differences = _beat_differences(rendered)
+    if len(differences) < MIN_BEATS_MEASURED:
         return Check(
             "beat alignment",
             True,

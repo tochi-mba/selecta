@@ -71,6 +71,9 @@ FAMILIES = {
     "vocal_ride": "voice",
 }
 OVER_SHARE = 0.05
+WARNED_BEFORE = 0.25
+WARNING_COST = 0.15
+"""Songs behind past warnings get picked a little less, up to three warnings' worth."""
 RECENT_PENALTY = 0.45
 SAME_FAMILY_PENALTY = 0.35
 MOVE_WORDS = {
@@ -374,6 +377,19 @@ def eligible(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> li
     ]
 
 
+def belonging(name: str, songs: list[SongInfo], traits: dict[int, Traits]) -> dict[int, float]:
+    """How much each song suits the mix of this name, 0 to 1, for choosing what to add to it. Songs
+    that fit start at a half. A mix someone made themselves has no such opinion."""
+    vibe = next((item for item in VIBES if item.name == name), None)
+    if vibe is None:
+        return {}
+    values = {
+        song.id: vibe.belongs(song, traits[song.id]) for song in eligible(vibe, songs, traits)
+    }
+    top = max(values.values(), default=1.0) or 1.0
+    return {song: 0.5 + 0.5 * max(value / top, 0.0) for song, value in values.items()}
+
+
 def describe(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> dict:
     """What a mix's card shows. Everything on it is read from the songs that would really play."""
     found = eligible(vibe, songs, traits)
@@ -424,6 +440,7 @@ def build_vibe(
     found = eligible(vibe, songs, traits)
     rng = np.random.default_rng(seed)
     first = start if start is not None else _opening_song(vibe, found, traits, rng).id
+    verdicts = verdicts or Verdicts()
     belongs = {song.id: vibe.belongs(song, traits[song.id]) for song in found}
     top = max(belongs.values(), default=1.0) or 1.0
     planned = plan_set(
@@ -435,7 +452,10 @@ def build_vibe(
         arc=vibe.arc,
         seed=int(rng.integers(0, 2**31)),
         steady=vibe.steady,
-        belongs={song: value / top for song, value in belongs.items()},
+        belongs={
+            song: value / top - WARNING_COST * min(verdicts.warned_songs[song], 3)
+            for song, value in belongs.items()
+        },
     )
     return planned, seam_choices(vibe, planned, phrases, rng, verdicts)
 
@@ -472,7 +492,8 @@ def _moves_that_fit(
         if (a.id, b.id, name) in verdicts.failed:
             continue
         if enumerate_candidates(a, b, name, exits=exits, entries=entries):
-            options.append((name, weight))
+            warned = (a.id, b.id, name) in verdicts.warned
+            options.append((name, weight * (WARNED_BEFORE if warned else 1.0)))
     return options
 
 

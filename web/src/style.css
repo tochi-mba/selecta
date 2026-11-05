@@ -399,4 +399,4 @@ kbd { font: 0.82rem var(--mono); background: var(--panel-2); border: 1px solid v
 
 .vibe-group { margin-top: 26px; }
 .vibe-group > .eyebrow { margin: 0 0 10px; }
-.card .facts { color: var(--soft); font: 0.76rem var(--mono); margin: 0; }
+.card .how { color: var(--soft); font: 0.76rem var(--mono); }

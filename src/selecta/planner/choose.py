@@ -192,6 +192,10 @@ def _lengths_for(recipe: Recipe, a: SongInfo, b: SongInfo) -> tuple[int, ...]:
     return tuple(length for length in recipe.lengths if length in preferred)
 
 
+LEVEL_FALL_FREE_DB = 2.5
+LEVEL_RISE_FREE_DB = 1.5
+
+
 def enumerate_candidates(
     a: SongInfo,
     b: SongInfo,
@@ -295,8 +299,17 @@ def _score(
         + 0.15 * energy_term
         + 0.10 * (1.0 - key_penalty)
         + 0.10 * vocal_term
-    )
+    ) * (0.7 + 0.3 * _level_term(a, b, exit_cue, entry_cue, bars))
     return Candidate(recipe, exit_cue, entry_cue, bars, round(score, 4), tuple(reasons))
+
+
+def _level_term(a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue, bars: int) -> float:
+    """How level the set stays across this seam, 0 to 1. Most warnings on rendered seams were the
+    level falling away after them, and that can be seen coming from the numbers already to hand."""
+    step = level_step(a, b, exit_cue.bar, entry_cue.bar + bars)
+    if step is None:
+        return 1.0
+    return max(0.0, 1.0 - max(-step - LEVEL_FALL_FREE_DB, step - LEVEL_RISE_FREE_DB, 0.0) / 6.0)
 
 
 def _next_candidate(
