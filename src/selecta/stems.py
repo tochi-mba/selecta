@@ -65,7 +65,19 @@ def separate_window(
         capture_output=True,
     )
     subprocess.run(
-        ["demucs", "-n", "htdemucs", "--shifts", "0", "-o", str(target), str(excerpt)], check=True
+        [
+            "demucs",
+            "-d",
+            "cpu",
+            "-n",
+            "htdemucs",
+            "--shifts",
+            "0",
+            "-o",
+            str(target),
+            str(excerpt),
+        ],
+        check=True,
     )
     produced = target / "htdemucs" / "window"
     for name, destination in paths.__dict__.items():

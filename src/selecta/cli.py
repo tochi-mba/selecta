@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.table import Table
 
 from selecta import db
-from selecta.config import ANALYSIS_VERSION, load_settings
+from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, load_settings
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 console = Console()
@@ -413,6 +413,28 @@ def set_mix(
         encoding="utf-8",
     )
     console.print(f"Wrote {seconds / 60:.1f} minutes to {output} and {tracklist}.")
+
+
+@app.command("stem-preview")
+def stem_preview(
+    a: int = typer.Argument(..., help="Outgoing song ID."),
+    b: int = typer.Argument(..., help="Incoming song ID."),
+    output: Path = typer.Option(Path("out/stem-preview.flac"), "--output", "-o"),
+) -> None:
+    """Render one groove-preserving transition with intertwined stems."""
+    import soundfile as sf
+
+    from selecta.analysis.song import load_song
+    from selecta.render.intertwine import render_intertwined
+
+    settings, conn = _open()
+    outgoing = load_song(conn, settings, a)
+    incoming = load_song(conn, settings, b)
+    console.print(f"Separating and intertwining {outgoing.name} -> {incoming.name}…")
+    result = render_intertwined(settings, outgoing, incoming)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    sf.write(output, result.audio, SAMPLE_RATE, subtype="PCM_16")
+    console.print(f"Wrote {result.audio.shape[0] / SAMPLE_RATE:.1f}s to {output}.")
 
 
 if __name__ == "__main__":
