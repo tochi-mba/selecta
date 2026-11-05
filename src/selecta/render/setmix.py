@@ -11,7 +11,7 @@ import soundfile as sf
 from selecta.analysis.song import SongInfo
 from selecta.audit.checks import audit
 from selecta.config import SAMPLE_RATE
-from selecta.planner.choose import Choice, choose_transition, enumerate_candidates
+from selecta.planner.choose import Choice, enumerate_candidates
 from selecta.render import dsp
 from selecta.render.engine import SongCache, render
 
@@ -57,7 +57,7 @@ def render_set(
             earliest = choices[-1].rendered.script.b_source_end + 8.0
             choice = _choose_after(a, b, earliest, cache)
         else:
-            choice = choose_transition(a, b, cache=cache)
+            choice = _choose_after(a, b, 0.0, cache)
         if not choice.report.passed:
             failed = ", ".join(check.name for check in choice.report.failures)
             raise RuntimeError(f"transition {number} failed its audit: {failed}")
