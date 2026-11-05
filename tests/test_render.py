@@ -138,6 +138,40 @@ def test_big_gap_is_split_across_both_songs(tmp_path):
     assert timing.b_warp.max_stretch < 0.04
 
 
+def test_a_grid_sitting_off_the_real_beat_gets_nudged_into_the_pocket(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
+    b = song_from_track(tmp_path, "b", make_track(bpm=120, bars=48, seed=2))
+    b.beats = b.beats + 0.015
+
+    rendered = render(bass_swap_blend(a, b, _cue(a, 24), _cue(b, 0), 8))
+
+    assert abs(rendered.drift_ms["nudge"] + 15.0) < 4.0
+    assert checks.audit(rendered).value("beat alignment") <= 6.0
+
+
+def test_nudge_fades_out_so_b_meets_its_native_audio_at_the_seam(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
+    b = song_from_track(tmp_path, "b", make_track(bpm=120, bars=48, seed=2))
+    b.beats = b.beats + 0.015
+
+    script = bass_swap_blend(a, b, _cue(a, 24), _cue(b, 0), 8)
+    rendered = render(script)
+    native = audio_io.decode(b.path) * 10 ** (b.gain_db / 20)
+    tail = int(0.1 * SR)
+    end = int(round(script.b_source_end * SR))
+    heard = rendered.b_dry[-tail:, 0]
+    source = native[end - tail : end, 0]
+
+    assert np.corrcoef(heard, source)[0, 1] > 0.98
+
+
+def test_near_identical_tempos_still_leave_room_to_settle(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
+    b = song_from_track(tmp_path, "b", make_track(bpm=120, bars=48, seed=2))
+    timing = blend_timing(a, b, exit_bar=24, entry_bar=0, bars=8)
+    assert timing.duration - timing.overlap_end >= 3.9
+
+
 @pytest.mark.parametrize("make,bars", [(bass_swap_blend, 8), (filter_sweep, 8)])
 def test_blends_render_clean_and_pass_the_audit(pair, make, bars):
     a, b = pair

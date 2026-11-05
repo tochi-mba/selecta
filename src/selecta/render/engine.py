@@ -110,12 +110,36 @@ def _apply_moves(part: Part, placed: np.ndarray) -> tuple[np.ndarray, np.ndarray
     return signal * part.gain.sample(count, SAMPLE_RATE)[:, None], tails
 
 
+def _nudge_into_the_pocket(
+    script: TransitionScript, placed_a: np.ndarray, placed_b: np.ndarray
+) -> tuple[np.ndarray, float]:
+    """Close the last few milliseconds between two grids, as a DJ would by ear.
+
+    Each song's grid sits on its own onsets, which may be a hat in one and a kick in the other.
+    Measuring across the whole overlap and sliding B removes that constant offset. The slide
+    fades out after the overlap, so B still arrives exactly on its native audio at the seam.
+    """
+    start, end = script.overlap
+    lo, hi = int(start * SAMPLE_RATE), int(end * SAMPLE_RATE)
+    count = placed_b.shape[0]
+    if not script.expects_beats_aligned or hi - lo < 4 * SAMPLE_RATE or count - hi < SAMPLE_RATE:
+        return placed_b, 0.0
+    lag = dsp.onset_offset(placed_a[lo:hi].mean(axis=1), placed_b[lo:hi].mean(axis=1))
+    if lag is None or abs(lag) < 0.001:
+        return placed_b, 0.0
+    samples = np.arange(count, dtype=np.float64)
+    taper = np.interp(samples, [hi, count - 1], [1.0, 0.0])
+    positions = np.clip(samples + lag * SAMPLE_RATE * taper, 0, count - 1)
+    return dsp.fine_warp(placed_b, positions), lag
+
+
 def render(script: TransitionScript, cache: SongCache | None = None) -> Rendered:
     cache = cache or SongCache()
     count = int(round(script.duration * SAMPLE_RATE))
 
     placed_a, drift_a = _part_audio(script.a, cache.get(script.a.audio_path), count)
     placed_b, drift_b = _part_audio(script.b, cache.get(script.b.audio_path), count)
+    placed_b, nudge = _nudge_into_the_pocket(script, placed_a, placed_b)
     dry_a, tails_a = _apply_moves(script.a, placed_a)
     dry_b, tails_b = _apply_moves(script.b, placed_b)
 
@@ -125,7 +149,11 @@ def render(script: TransitionScript, cache: SongCache | None = None) -> Rendered
         mixed,
         dry_a,
         dry_b,
-        {"a": round(drift_a * 1000, 2), "b": round(drift_b * 1000, 2)},
+        {
+            "a": round(drift_a * 1000, 2),
+            "b": round(drift_b * 1000, 2),
+            "nudge": round(nudge * 1000, 2),
+        },
     )
 
 

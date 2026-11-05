@@ -18,6 +18,7 @@ from selecta.render.script import Warp
 A_NATIVE_MAX_GAP = 0.03
 RAMP_BEATS = 16
 SETTLED_GAP = 0.002
+SETTLE_BEATS = 8
 
 
 @dataclass
@@ -64,7 +65,7 @@ def blend_timing(
     gap = tempo_gap(a, b)
     a_native = gap <= A_NATIVE_MAX_GAP
     pre_beats = a.beats_per_bar if a_native else RAMP_BEATS
-    post_beats = 1 if gap <= SETTLED_GAP else RAMP_BEATS
+    post_beats = SETTLE_BEATS if gap <= SETTLED_GAP else RAMP_BEATS
     if a_start - pre_beats < 0 or b_start + beat_count + post_beats >= b.beats.size:
         return None
 

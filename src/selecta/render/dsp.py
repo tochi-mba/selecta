@@ -137,6 +137,46 @@ def transient_envelope(mono: np.ndarray) -> np.ndarray:
     return np.maximum(np.diff(logged, prepend=logged[:1]), 0.0)
 
 
+def onset_offset(reference: np.ndarray, other: np.ndarray, reach: float = 0.02) -> float | None:
+    """How late `other`'s onsets fall against `reference`'s, in seconds, or None if unclear.
+
+    Kicks and snares are what flam audibly, so low-band onsets get a say alongside the
+    full-band ones, which hats and consonants otherwise dominate. Two different songs rarely
+    correlate cleanly, so a weak peak, or one at the edge of the search, means no answer: a
+    wrong nudge does more harm than none.
+    """
+
+    def envelope(mono: np.ndarray) -> np.ndarray:
+        full = transient_envelope(mono)
+        low = transient_envelope(zero_phase_lowpass(mono, 250.0))
+        return full / max(float(full.max()), 1e-9) + low / max(float(low.max()), 1e-9)
+
+    env_r, env_o = envelope(reference), envelope(other)
+    size = min(env_r.size, env_o.size)
+    frames = int(reach / _ENV_HOP_TIME)
+    if size <= frames * 4:
+        return None
+    r = env_r[frames : size - frames]
+    r = r - r.mean()
+    scores = np.array(
+        [
+            float(np.dot(r, env_o[frames + lag : size - frames + lag]))
+            for lag in range(-frames, frames + 1)
+        ]
+    )
+    best = int(np.argmax(scores))
+    if best in (0, scores.size - 1) or scores[best] <= 0:
+        return None
+    if scores[best] < float(np.median(scores)) * 1.25:
+        return None
+    lag = float(best - frames)
+    left, mid, right = scores[best - 1 : best + 2]
+    curve = left - 2 * mid + right
+    if abs(curve) > 1e-9:
+        lag += 0.5 * (left - right) / curve
+    return lag * _ENV_HOP_TIME
+
+
 def _stretch_lag(
     reference: np.ndarray, actual: np.ndarray, window: float = 2.0, hop: float = 0.5
 ) -> tuple[np.ndarray, np.ndarray]:
