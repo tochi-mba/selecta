@@ -465,6 +465,7 @@ def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypa
 
     def plan_set(*_args, **kwargs):
         seen["language"] = kwargs["mix_language"]
+        seen["stems"] = kwargs["stems"]
         return []
 
     def seam_choices(vibe, *_args):
@@ -479,6 +480,10 @@ def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypa
     vibes.build_vibe(vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1, mix_language="punchy")
     assert seen["language"] == "punchy"
     assert seen["seam_language"] == "punchy"
+    vibes.build_vibe(
+        vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1, stems="never"
+    )
+    assert seen["stems"] == "never"
 
 
 def test_building_a_vibe_ends_on_the_requested_song(tmp_path):
@@ -535,6 +540,25 @@ def test_word_handoffs_stay_rare_unless_the_mix_is_about_them(tmp_path):
     assert positions[1] - positions[0] >= 4
 
 
+def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, monkeypatch):
+    from selecta.planner import vibes
+    from selecta.planner.wordreel import Verdicts
+
+    a = _song(tmp_path, "stem-a", "First")
+    b = _song(tmp_path, "stem-b", "Second")
+    monkeypatch.setattr(vibes, "modes_for", lambda *_: {"word_blend"})
+    monkeypatch.setattr(vibes, "ride_lines", lambda *_: (object(), object()))
+    monkeypatch.setattr(vibes, "enumerate_candidates", lambda *_args, **_kwargs: [object()])
+    vibe = vibes.BY_KEY["pick"]
+
+    never = vibes._moves_that_fit(vibe, a, b, Verdicts(), "never")
+    sometimes = dict(vibes._moves_that_fit(vibe, a, b, Verdicts(), "sometimes"))
+    often = dict(vibes._moves_that_fit(vibe, a, b, Verdicts(), "often"))
+
+    assert "vocal_ride" not in dict(never)
+    assert often["vocal_ride"] > sometimes["vocal_ride"]
+
+
 def test_building_a_vibe_starts_on_a_song_it_can_leave(tmp_path):
     from selecta.planner.vibes import BY_KEY, build_vibe
 
@@ -561,6 +585,14 @@ def test_destination_steering_persists_and_status_names_the_song(client):
     assert status["steering"]["target_label"] == "Artist 2 — Song 2"
     invalid = client.post("/api/steer", json={"action": "take_me_to", "value": "unknown"})
     assert invalid.status_code == 400
+
+
+def test_stem_frequency_steering_persists_and_validates(client):
+    response = client.post("/api/steer", json={"action": "stems", "value": "never"})
+    assert response.status_code == 200
+    assert response.json()["stems"] == "never"
+    assert client.get("/api/status").json()["steering"]["stems"] == "never"
+    assert client.post("/api/steer", json={"action": "stems", "value": "always"}).status_code == 400
 
 
 def test_the_cache_never_fills_the_drive_or_outgrows_its_limit(tmp_path, monkeypatch):

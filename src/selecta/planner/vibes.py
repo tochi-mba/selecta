@@ -437,6 +437,7 @@ def build_vibe(
     verdicts: Verdicts | None = None,
     mix_language: str | None = None,
     end_id: int | None = None,
+    stems: str = "sometimes",
 ) -> tuple[list[PlannedSong], dict[int, dict]]:
     """Plan a mix for this vibe, and say how each seam should land."""
     found = eligible(vibe, songs, traits)
@@ -460,6 +461,7 @@ def build_vibe(
         first,
         count,
         mix_language=language,
+        stems=stems,
         links=set(phrases) if vibe.wordplay or vibe.key == "pick" else set(),
         arc=vibe.arc,
         seed=int(rng.integers(0, 2**31)),
@@ -475,7 +477,7 @@ def build_vibe(
             "No valid transition route reaches that song in this mix. Clear the destination or "
             "choose a different mix."
         )
-    return planned, seam_choices(selected_vibe, planned, phrases, rng, verdicts)
+    return planned, seam_choices(selected_vibe, planned, phrases, rng, verdicts, stems)
 
 
 def _word_move(a: SongInfo, b: SongInfo, verdicts: Verdicts) -> str | None:
@@ -495,16 +497,17 @@ def _word_move(a: SongInfo, b: SongInfo, verdicts: Verdicts) -> str | None:
 
 
 def _moves_that_fit(
-    vibe: Vibe, a: SongInfo, b: SongInfo, verdicts: Verdicts
+    vibe: Vibe, a: SongInfo, b: SongInfo, verdicts: Verdicts, stems: str = "sometimes"
 ) -> list[tuple[str, float]]:
     """Moves these two songs can carry, and how much to favour each."""
     options: list[tuple[str, float]] = []
-    if (
+    if stems != "never" and (
         (a.id, b.id, "vocal_ride") not in verdicts.failed
         and "word_blend" in modes_for(a, b)
         and ride_lines(a, b)
     ):
-        options.append(("vocal_ride", RIDE_WEIGHT[vibe.language]))
+        ride_weight = RIDE_WEIGHT[vibe.language] * (1.5 if stems == "often" else 1.0)
+        options.append(("vocal_ride", ride_weight))
     exits, entries = a.exit_cues()[:3], b.entry_cues()[:4]
     for name, weight in MOVE_WEIGHTS[vibe.language].items():
         if (a.id, b.id, name) in verdicts.failed:
@@ -545,6 +548,7 @@ def seam_choices(
     phrases: dict[tuple[int, int], str],
     rng: np.random.Generator | None = None,
     verdicts: Verdicts | None = None,
+    stems: str = "sometimes",
 ) -> dict[int, dict]:
     """The move into each song, chosen from what fits and what the mix has already used, so no two
     mixes run the same way and no one move takes over. Word hand-offs go where a real link can be
@@ -559,14 +563,15 @@ def seam_choices(
     for before, item in zip(planned, planned[1:], strict=False):
         since_word += 1
         phrase = phrases.get((before.song.id, item.song.id))
-        if phrase and (vibe.wordplay or since_word >= WORD_SPACING):
+        word_spacing = 2 if stems == "often" else WORD_SPACING
+        if stems != "never" and phrase and (vibe.wordplay or since_word >= word_spacing):
             move = _word_move(before.song, item.song, verdicts)
             if move:
                 seams[item.song.id] = {"move": move, "phrase": phrase, "soft": True}
                 since_word = 0
                 history.append(move)
                 continue
-        options = _moves_that_fit(vibe, before.song, item.song, verdicts)
+        options = _moves_that_fit(vibe, before.song, item.song, verdicts, stems)
         move = _choose_move(options, history, total, rng)
         if move is None:
             continue

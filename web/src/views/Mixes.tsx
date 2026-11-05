@@ -15,6 +15,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const [building, setBuilding] = useState('');
   const [problem, setProblem] = useState('');
   const [mixLanguage, setMixLanguage] = useState(status.steering.mix_language);
+  const [stemFrequency, setStemFrequency] = useState(status.steering.stems);
   const [destinationQuery, setDestinationQuery] = useState('');
   const [destinationResults, setDestinationResults] = useState<SongRow[]>([]);
   const [destination, setDestination] = useState<{ id: string; label: string } | null>(
@@ -33,6 +34,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   }, [counts.analysed, counts.lyrics, counts.ready]);
 
   useEffect(() => setMixLanguage(status.steering.mix_language), [status.steering.mix_language]);
+  useEffect(() => setStemFrequency(status.steering.stems), [status.steering.stems]);
   useEffect(() => {
     setDestination(
       status.steering.target
@@ -119,6 +121,18 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     }
   };
 
+  const chooseStemFrequency = async (value: string) => {
+    const previous = stemFrequency;
+    setStemFrequency(value);
+    try {
+      await post('/steer', { action: 'stems', value });
+      refreshStatus();
+    } catch (error) {
+      setStemFrequency(previous);
+      setProblem((error as Error).message);
+    }
+  };
+
   const chooseDestination = async (song: SongRow | null) => {
     const previous = destination;
     const next = song
@@ -197,6 +211,22 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           <option value="punchy">Punchy changes</option>
         </select>
         <p className="hint">This guides new mixes. You can still change any transition song by song.</p>
+      </section>
+
+      <section className="mix-steering" aria-label="Stem transition controls">
+        <label htmlFor="stem-frequency">Stem-assisted moves</label>
+        <select
+          id="stem-frequency"
+          value={stemFrequency}
+          onChange={(event) => void chooseStemFrequency(event.target.value)}
+        >
+          <option value="never">Never</option>
+          <option value="sometimes">Sometimes</option>
+          <option value="often">Often</option>
+        </select>
+        <p className="hint">
+          This steers vocal rides and word hand-offs in new mixes. Selecta uses them only where the pair fits and the render passes its checks.
+        </p>
       </section>
 
       <section className="destination-control" aria-label="Mix destination">
