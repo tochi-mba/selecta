@@ -1,8 +1,11 @@
-"""Turn word links found in lyrics into rendered cuts a person can judge.
+"""Turn word links found in lyrics into rendered hand-offs a person can judge.
 
 This is the deep end of the funnel: every step costs more than the last, so each only runs on what
-got through the one before. Lyrics find the links in seconds. Songs get analysed only if a link
-needs them. Stems and word timing run only on the links that still look good.
+got through the one before. Lyrics find the links in seconds. Musical fit needs analysed songs.
+Stems and word timing run only on links that still look good.
+
+A link has to fit musically before the words count for anything. The listener's verdict on the
+first word reel was that it felt like "we are just using the words because it happens to match".
 """
 
 from __future__ import annotations
@@ -15,43 +18,74 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo, load_song
 from selecta.audit.checks import AuditReport, audit
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner, Word, settle_edges
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import LyricLink, normalise
-from selecta.planner.fit import TimbreSpace, folded_gap
+from selecta.planner.fit import TimbreSpace, level_step
 from selecta.render.engine import Rendered, SongCache, render
-from selecta.stems import separate_window
-from selecta.styles.wordplay import VocalWindow, word_cut, word_echo, word_roll
+from selecta.stems import band_of, separate_window
+from selecta.styles.wordplay import (
+    Stem,
+    felt_bpm,
+    phrase_roll,
+    vocal_ride,
+    word_blend,
+    word_cut,
+    word_exchange,
+)
 
-STEM_LEAD = 5.0
-STEM_TAIL = 6.0
+WINDOW_LEAD = 30.0
+"""B's band can start this long before its voice, which is what the stems are for."""
+WINDOW_TAIL = 8.0
 LINE_SEARCH_BEFORE = 0.6
 LINE_SEARCH_AFTER = 3.5
 SECOND_LOOK_SECONDS = 0.4
 MAX_WANDER_SECONDS = 0.08
 """Align twice over different windows. A phrase that moves more than this was never pinned down."""
-MIN_AGREEMENT = 0.6
-"""Share of the line's fitted words that start where an unguided reading also hears a word."""
+MIN_AGREEMENT = 0.55
+"""How well the fit matches an unguided reading, by word starts or letters, whichever is higher."""
+CHECK_MARGIN = 3.0
 MIN_VOICE_DB = -38.0
 MAX_WORD_SECONDS = 3.5
 
-MAX_LINK_TIMBRE = 1.6
-MAX_LINK_TEMPO_GAP = 0.30
-"""A shared phrase is a musical reason of its own, so a link can cross more than a plain cut."""
+BLEND_MAX_GAP = 0.08
+BLEND_MAX_KEY_DISTANCE = 2
+BLEND_MIN_GRID = 0.55
+ROLL_MIN_TEMPO_RATIO = 0.88
+"""A roll promises a drop. Reel 2's hype song into a much slower one felt like a broken promise."""
+CUT_MAX_GAP = 0.06
+"""A bare cut only felt right where the pulse carried across. The best one was 4.5% apart."""
+MAX_TIMBRE = 1.6
+DEFAULT_QUOTAS = {"word_blend": 3, "word_exchange": 3, "phrase_roll": 3, "word_cut": 1}
+MODE_PAYOFF = {"word_blend": 1.0, "word_exchange": 0.95, "phrase_roll": 0.85, "word_cut": 0.6}
 
-MODES = ("word_cut", "word_echo", "word_roll")
+
+RIDE_BARS = 4
+MIN_RIDE_SINGING = 0.35
+
+
+class CannotTrust(ValueError):
+    """The word timing for this line isn't reliable enough to cut on."""
 
 
 @dataclass(frozen=True)
 class Phrase:
     words: list[Word]
-    score: float
-    wander: float
-    window: VocalWindow
-    free_before: float
+    agreement: float
+    voice: Stem
+    band: Stem
+
+
+@dataclass
+class RideTake:
+    line_a: Line
+    line_b: Line
+    rendered: Rendered
+    report: AuditReport
 
 
 @dataclass
@@ -60,14 +94,67 @@ class WordTake:
     link: LyricLink
     rendered: Rendered
     report: AuditReport
-    phrase_a: Phrase
-    phrase_b: Phrase
 
 
-def _neighbours(song: SongInfo, line: Line) -> tuple[Line | None, Line | None]:
-    earlier = [other for other in song.lines if other.start < line.start]
-    later = [other for other in song.lines if other.start > line.start]
-    return (earlier[-1] if earlier else None), (later[0] if later else None)
+def _fit_line(
+    settings: Settings, aligner: Aligner, song: SongInfo, line: Line
+) -> tuple[list[Word], list[Word], float, np.ndarray, float, float, Stem, Stem]:
+    """Fit a line's words to the separated voice, or raise if the fit can't be trusted."""
+    later = [other.start for other in song.lines if other.start > line.start]
+    origin = max(0.0, line.start - WINDOW_LEAD)
+    next_start = later[0] if later else line.end + LINE_SEARCH_AFTER
+    length = max(line.end, next_start) + WINDOW_TAIL - origin
+    stems = separate_window(settings, Path(song.path), origin, length)
+    vocal = sf.read(stems.vocals, dtype="float32")[0]
+
+    def clip(lo: float, hi: float) -> np.ndarray:
+        return vocal[max(int((lo - origin) * SAMPLE_RATE), 0) : int((hi - origin) * SAMPLE_RATE)]
+
+    lo = max(line.start - LINE_SEARCH_BEFORE, origin)
+    hi = min(next_start + 0.3, line.end + LINE_SEARCH_AFTER)
+    words = aligner.align(clip(lo, hi), SAMPLE_RATE, line.text, lo)
+    lo_wide = max(lo - SECOND_LOOK_SECONDS, origin)
+    second = aligner.align(clip(lo_wide, hi + SECOND_LOOK_SECONDS), SAMPLE_RATE, line.text, lo_wide)
+    if not words or len(second) != len(words):
+        raise CannotTrust("couldn't fit the line")
+    lo_check = max(lo - CHECK_MARGIN, origin)
+    score = aligner.check(clip(lo_check, hi + CHECK_MARGIN), SAMPLE_RATE, words, lo_check)
+    if score < MIN_AGREEMENT:
+        raise CannotTrust(f"only {score:.0%} agreement with an unguided reading")
+    return (
+        words,
+        second,
+        score,
+        vocal,
+        origin,
+        next_start,
+        Stem(str(stems.vocals), origin),
+        Stem(str(band_of(stems)), origin),
+    )
+
+
+def _steady(words: list[Word], second: list[Word], indices: range) -> None:
+    """The words a cut depends on must stay put across two looks. Others in the line may wander."""
+    wander = max(abs(words[i].start - second[i].start) for i in indices)
+    if wander > MAX_WANDER_SECONDS:
+        raise CannotTrust(f"timing moved {wander * 1000:.0f} ms between two looks")
+
+
+def _settled(
+    words: list[Word], indices: range, vocal: np.ndarray, origin: float, next_start: float
+) -> list[Word]:
+    settled = []
+    for i in indices:
+        latest = words[i + 1].start if i + 1 < len(words) else next_start - 0.03
+        settled.append(settle_edges(words[i], vocal, SAMPLE_RATE, origin, latest))
+    if any(word.end - word.start > MAX_WORD_SECONDS for word in settled):
+        raise CannotTrust("a word ran implausibly long")
+    first = int((settled[0].start - origin) * SAMPLE_RATE)
+    voice = vocal[max(first, 0) : int((settled[-1].end - origin) * SAMPLE_RATE)]
+    level = 20 * np.log10(max(float(np.sqrt(np.mean(voice**2))), 1e-7)) if voice.size else -120.0
+    if level < MIN_VOICE_DB:
+        raise CannotTrust("no clear voice at those times")
+    return settled
 
 
 def locate_phrase(
@@ -77,63 +164,192 @@ def locate_phrase(
     line: Line,
     phrase: str,
     at_end: bool,
-) -> Phrase | None:
-    """Find the shared words in the separated voice, or None if they can't be trusted."""
-    before, after = _neighbours(song, line)
-    origin = max(0.0, line.start - STEM_LEAD)
-    next_start = after.start if after else line.end + LINE_SEARCH_AFTER
-    length = max(line.end, next_start) + STEM_TAIL - origin
-    stems = separate_window(settings, Path(song.path), origin, length)
-    vocal = sf.read(stems.vocals, dtype="float32")[0]
-
-    def aligned(lo: float, hi: float) -> list[Word]:
-        first, last = int((lo - origin) * SAMPLE_RATE), int((hi - origin) * SAMPLE_RATE)
-        return aligner.align(vocal[max(first, 0) : last], SAMPLE_RATE, line.text, max(lo, origin))
-
-    lo = line.start - LINE_SEARCH_BEFORE
-    hi = min(next_start + 0.3, line.end + LINE_SEARCH_AFTER)
-    words = aligned(lo, hi)
-    second = aligned(lo - SECOND_LOOK_SECONDS, hi + SECOND_LOOK_SECONDS)
+) -> Phrase:
+    """Find the shared words in the separated voice, or raise if they can't be trusted."""
+    fit = _fit_line(settings, aligner, song, line)
+    words, second, score, vocal, origin, next_start, voice, band = fit
     size = len(phrase.split())
-    if len(words) < size or len(second) != len(words):
-        return None
+    if len(words) < size:
+        raise CannotTrust("couldn't fit the line")
     span = range(len(words) - size, len(words)) if at_end else range(size)
     if tuple(words[i].text for i in span) != normalise(phrase):
-        return None
+        raise CannotTrust("line text doesn't match the phrase")
+    _steady(words, second, span)
+    return Phrase(_settled(words, span, vocal, origin, next_start), score, voice, band)
 
-    wander = max(abs(words[i].start - second[i].start) for i in span)
-    score = aligner.check(
-        vocal[max(int((lo - origin) * SAMPLE_RATE), 0) : int((hi - origin) * SAMPLE_RATE)],
-        SAMPLE_RATE,
-        words,
-        max(lo, origin),
-    )
-    if wander > MAX_WANDER_SECONDS or score < MIN_AGREEMENT:
-        return None
 
-    settled = []
-    for i in span:
-        latest = words[i + 1].start if i + 1 < len(words) else next_start - 0.03
-        settled.append(settle_edges(words[i], vocal, SAMPLE_RATE, origin, latest))
-    if any(word.end - word.start > MAX_WORD_SECONDS for word in settled):
+def locate_line_edge(
+    settings: Settings, aligner: Aligner, song: SongInfo, line: Line, at_end: bool
+) -> Phrase:
+    """Find the first or last word of a line, for a hand-off with no shared words."""
+    fit = _fit_line(settings, aligner, song, line)
+    words, second, score, vocal, origin, next_start, voice, band = fit
+    span = range(len(words) - 1, len(words)) if at_end else range(1)
+    _steady(words, second, span)
+    return Phrase(_settled(words, span, vocal, origin, next_start), score, voice, band)
+
+
+def ride_lines(a: SongInfo, b: SongInfo) -> tuple[Line, Line] | None:
+    """A line for A's voice to finish on, and the line B's voice should start with.
+
+    A has to be singing through the ride, or there's no voice to carry over B's band. B starts best
+    on the first line of a chorus, which then lands as A's voice ends.
+    """
+    if not (a.lines and b.lines):
         return None
-    lo_sample = int((settled[0].start - origin) * SAMPLE_RATE)
-    hi_sample = int((settled[-1].end - origin) * SAMPLE_RATE)
-    voice = vocal[lo_sample:hi_sample]
+    ride = RIDE_BARS * a.period * a.beats_per_bar
+    chorus_ends = {float(a.bar_time(bar)) for bar in a.chorus_end_bars()}
+    best_a: tuple[float, Line] | None = None
+    for line in a.lines:
+        if line.start < 60.0 or a.duration - line.end < 15.0 or len(line.words) < 2:
+            continue
+        sung = a.vocal_seconds(line.end - ride, line.end) / ride
+        if sung < MIN_RIDE_SINGING:
+            continue
+        near_chorus_end = any(abs(line.end - end) < 4.0 for end in chorus_ends)
+        score = sung + (0.5 if near_chorus_end else 0.0)
+        if best_a is None or score > best_a[0]:
+            best_a = (score, line)
+    if best_a is None:
+        return None
+    chorus_starts = {float(b.bar_time(bar)) for bar in b.chorus_start_bars()}
+    best_b: tuple[float, Line] | None = None
+    for i, line in enumerate(b.lines):
+        if line.start > b.duration * 0.6 or b.duration - line.start < 60.0 or not line.words:
+            continue
+        if i and line.start - b.lines[i - 1].end < 0.15:
+            continue
+        near_chorus = any(abs(line.start - start) < 2.0 for start in chorus_starts)
+        score = 1.0 if near_chorus else 0.4
+        if line.start < WINDOW_LEAD:
+            score -= 0.5
+        if best_b is None or score > best_b[0]:
+            best_b = (score, line)
+    return (best_a[1], best_b[1]) if best_b else None
+
+
+def build_rides(
+    conn: sqlite3.Connection,
+    settings: Settings,
+    pairs: list[tuple[int, int]],
+    wanted: int,
+    cache: SongCache | None = None,
+    log: Callable[[str], None] = print,
+    on_take: Callable[[RideTake], None] | None = None,
+) -> list[RideTake]:
+    """Vocal rides between songs that can play together, for as many pairs as it takes."""
+    cache = cache or SongCache(capacity=6)
+    aligner = Aligner(str(settings.models_dir))
+    takes: list[RideTake] = []
+    for a_id, b_id in pairs:
+        if len(takes) >= wanted:
+            break
+        a = load_song(conn, settings, a_id)
+        b = load_song(conn, settings, b_id)
+        label = f"{a.name[:32]} > {b.name[:32]}"
+        lines = ride_lines(a, b)
+        if lines is None:
+            log(f"  skip ride {label}: no line for A's voice to ride on")
+            continue
+        try:
+            edge_a = locate_line_edge(settings, aligner, a, lines[0], at_end=True)
+            edge_b = locate_line_edge(settings, aligner, b, lines[1], at_end=False)
+        except CannotTrust as problem:
+            log(f"  skip ride {label}: {problem}")
+            continue
+        for bars in (8, 4):
+            script = vocal_ride(
+                a,
+                b,
+                edge_a.words[0],
+                edge_b.words[0],
+                edge_a.voice,
+                edge_a.band,
+                edge_b.band,
+                bars,
+            )
+            if script is not None:
+                break
+        if script is None:
+            log(f"  no ride for {label}: the timing doesn't work out")
+            continue
+        rendered = render(script, cache)
+        report = audit(rendered)
+        if not report.passed:
+            failed = [f"{c.name} {c.value}{c.unit}" for c in report.failures]
+            log(f"  reject ride {label}: {failed}")
+            continue
+        takes.append(RideTake(lines[0], lines[1], rendered, report))
+        if on_take:
+            on_take(takes[-1])
+        log(f"  keep ride {label}: {lines[0].text[:40]} / {lines[1].text[:40]}")
+    return takes
+
+
+def modes_for(a: SongInfo, b: SongInfo, space: TimbreSpace | None = None) -> tuple[str, ...]:
+    """Which hand-offs these two songs can really support, best first."""
+    if space is not None:
+        distance = space.distance(a, b)
+        if distance is not None and distance > MAX_TIMBRE:
+            return ()
+    modes: list[str] = []
+    gap = abs(a.bpm / b.bpm - 1.0)
     if (
-        voice.size == 0
-        or 20 * np.log10(max(float(np.sqrt(np.mean(voice**2))), 1e-7)) < MIN_VOICE_DB
+        gap <= BLEND_MAX_GAP
+        and camelot_distance(a.camelot, b.camelot) <= BLEND_MAX_KEY_DISTANCE
+        and min(a.grid_confidence, b.grid_confidence) >= BLEND_MIN_GRID
+        and a.beats_per_bar == b.beats_per_bar
     ):
-        return None
+        modes += ["word_blend", "word_exchange"]
+    if roll_suits(a, b):
+        modes.append("phrase_roll")
+    if gap <= CUT_MAX_GAP:
+        modes.append("word_cut")
+    return tuple(modes)
 
-    free_before = line.start - before.end if before else line.start
-    free_before += max(settled[0].start - line.start, 0.0)
-    return Phrase(settled, score, wander, VocalWindow(str(stems.vocals), origin), free_before)
+
+def roll_suits(a: SongInfo, b: SongInfo) -> bool:
+    """A stutter promises a drop, and B has to arrive on something. On the reels, every roll out of
+    a rock song failed, and a hype song into a much slower one felt like a broken promise."""
+    return a.family != "rock" and felt_bpm(b) >= felt_bpm(a) * ROLL_MIN_TEMPO_RATIO
 
 
-def default_modes(number: int) -> tuple[str, ...]:
-    """The first two links show every mode, so modes can be compared on the same words."""
-    return MODES if number < 2 else (MODES[number % len(MODES)],)
+def music_fit(a: SongInfo, b: SongInfo, space: TimbreSpace | None = None) -> float:
+    """How well two songs meet, 0 to 1, apart from any words they share."""
+    modes = modes_for(a, b, space)
+    if not modes:
+        return 0.0
+    fit = MODE_PAYOFF[modes[0]]
+    if space is not None:
+        distance = space.distance(a, b)
+        if distance is not None and distance > 1.0:
+            fit *= 1.0 - (distance - 1.0) * 0.6
+    return fit
+
+
+def rank_links(
+    links: list[LyricLink],
+    songs: dict[int, SongInfo],
+    space: TimbreSpace | None = None,
+) -> list[LyricLink]:
+    """Links between analysed songs, best first, by how good the words and the music are together.
+
+    A link that would jump a long way in level at its own place in each song loses out too,
+    whatever its words."""
+    scored = []
+    for link in links:
+        a, b = songs.get(link.song_a), songs.get(link.song_b)
+        if a is None or b is None:
+            continue
+        fit = music_fit(a, b, space)
+        if fit <= 0.0:
+            continue
+        step = level_step(a, b, a.bar_at(link.line_a.end), b.bar_at(link.line_b.start))
+        if step is not None and abs(step) > 6.0:
+            continue
+        scored.append((link.score * fit, link))
+    scored.sort(key=lambda item: -item[0])
+    return [link for _, link in scored]
 
 
 def analyse_links(
@@ -163,64 +379,85 @@ def analyse_links(
     return len(needed)
 
 
-def link_is_workable(a: SongInfo, b: SongInfo, space: TimbreSpace | None) -> tuple[bool, str]:
-    gap = folded_gap(a, b)
-    if gap > MAX_LINK_TEMPO_GAP:
-        return False, f"tempo gap {gap:.0%}"
-    if space is not None:
-        distance = space.distance(a, b)
-        if distance is not None and distance > MAX_LINK_TIMBRE:
-            return False, f"sound too far apart ({distance:.2f})"
-    return True, ""
-
-
 def _script(style: str, a: SongInfo, b: SongInfo, phrase_a: Phrase, phrase_b: Phrase):
-    if style == "word_cut":
-        return word_cut(a, b, phrase_a.words, phrase_b.words)
-    make = word_echo if style == "word_echo" else word_roll
-    return make(a, b, phrase_a.words, phrase_b.words, phrase_a.window, phrase_b.free_before)
+    if style == "word_blend":
+        for bars in (8, 4):
+            script = word_blend(
+                a,
+                b,
+                phrase_a.words,
+                phrase_b.words,
+                phrase_a.voice,
+                phrase_a.band,
+                phrase_b.band,
+                bars,
+            )
+            if script is not None:
+                return script
+        return None
+    if style == "phrase_roll":
+        return phrase_roll(
+            a, b, phrase_a.words, phrase_b.words, phrase_a.voice, phrase_a.band, phrase_b.band
+        )
+    if style == "word_exchange":
+        return word_exchange(
+            a,
+            b,
+            phrase_a.words,
+            phrase_b.words,
+            phrase_a.voice,
+            phrase_a.band,
+            phrase_b.voice,
+            phrase_b.band,
+        )
+    return word_cut(a, b, phrase_a.words, phrase_b.words, phrase_b.band)
 
 
 def build_takes(
     conn: sqlite3.Connection,
     settings: Settings,
     links: list[LyricLink],
-    wanted: int,
-    modes_for: Callable[[int], tuple[str, ...]],
+    quotas: dict[str, int],
     space: TimbreSpace | None = None,
     cache: SongCache | None = None,
     log: Callable[[str], None] = print,
+    on_take: Callable[[WordTake], None] | None = None,
 ) -> list[WordTake]:
-    """Render links in order until `wanted` have at least one take that passes its audit."""
+    """Render links in order, each as the best hand-off it supports that's still wanted, until
+    every quota is met. No song or meaningful word is used twice."""
     cache = cache or SongCache(capacity=4)
     aligner = Aligner(str(settings.models_dir))
+    remaining = dict(quotas)
     takes: list[WordTake] = []
-    linked = 0
+    used_words: set[str] = set()
+    used_songs: set[int] = set()
     for link in links:
-        if linked >= wanted:
+        if not any(remaining.values()):
             break
+        words = link.phrase.split()
+        if any(word in used_words for word in words if len(word) > 3):
+            continue
+        if {link.song_a, link.song_b} & used_songs:
+            continue
         try:
             a = load_song(conn, settings, link.song_a)
             b = load_song(conn, settings, link.song_b)
         except KeyError:
-            log(f"  not analysed yet: [{link.phrase}]")
             continue
-        label = f"[{link.phrase}] {a.name[:32]} > {b.name[:32]}"
-        workable, reason = link_is_workable(a, b, space)
-        if not workable:
-            log(f"  skip {label}: {reason}")
+        wanted = [mode for mode in modes_for(a, b, space) if remaining.get(mode, 0) > 0]
+        if not wanted:
             continue
-        phrase_a = locate_phrase(settings, aligner, a, link.line_a, link.phrase, at_end=True)
-        phrase_b = locate_phrase(settings, aligner, b, link.line_b, link.phrase, at_end=False)
-        if phrase_a is None or phrase_b is None:
-            side = "A" if phrase_a is None else "B"
-            log(f"  skip {label}: word timing not trustworthy in {side}")
+        label = f"'{link.phrase}' {a.name[:32]} > {b.name[:32]}"
+        try:
+            phrase_a = locate_phrase(settings, aligner, a, link.line_a, link.phrase, at_end=True)
+            phrase_b = locate_phrase(settings, aligner, b, link.line_b, link.phrase, at_end=False)
+        except CannotTrust as problem:
+            log(f"  skip {label}: {problem}")
             continue
-        kept = 0
-        for style in modes_for(linked):
+        for style in wanted:
             script = _script(style, a, b, phrase_a, phrase_b)
             if script is None:
-                log(f"  no {style} for {label}")
+                log(f"  no {style} for {label}: the timing doesn't work out")
                 continue
             rendered = render(script, cache)
             report = audit(rendered)
@@ -228,9 +465,12 @@ def build_takes(
                 failed = [f"{c.name} {c.value}{c.unit}" for c in report.failures]
                 log(f"  reject {style} {label}: {failed}")
                 continue
-            takes.append(WordTake(style, link, rendered, report, phrase_a, phrase_b))
-            kept += 1
+            takes.append(WordTake(style, link, rendered, report))
+            if on_take:
+                on_take(takes[-1])
+            remaining[style] -= 1
+            used_words.update(words)
+            used_songs.update((link.song_a, link.song_b))
             log(f"  keep {style} {label}")
-        if kept:
-            linked += 1
+            break
     return takes

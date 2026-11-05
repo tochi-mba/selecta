@@ -173,8 +173,10 @@ def discover(
     lines_by_song: dict[int, list[Line]],
     limit: int = 5000,
     facts: dict[int, SongFacts] | None = None,
+    keep_all_pairs: bool = False,
 ) -> list[LyricLink]:
-    """Every song pair where A can finish a line on a word and B can open a line with it."""
+    """Every song pair where A can finish a line on a word and B can open a line with it.
+    Normally one link per pair, the best. `keep_all_pairs` keeps each phrase a pair shares."""
     facts = facts or {}
     exits: dict[tuple[str, ...], list[_Spot]] = defaultdict(list)
     entries: dict[tuple[str, ...], list[_Spot]] = defaultdict(list)
@@ -190,7 +192,7 @@ def discover(
 
     total = max(len(lines_by_song), 1)
     artists = {song: clean_artist(fact.artist).casefold() for song, fact in facts.items()}
-    best: dict[tuple[int, int], LyricLink] = {}
+    best: dict[tuple, LyricLink] = {}
     for key, leaving in exits.items():
         arriving = entries.get(key)
         if not arriving:
@@ -204,7 +206,7 @@ def discover(
                 if artist and artist == artists.get(b.song):
                     continue
                 score, kind = _strength(key, a, b, share)
-                pair = (a.song, b.song)
+                pair = (a.song, b.song, key) if keep_all_pairs else (a.song, b.song)
                 if pair not in best or score > best[pair].score:
                     best[pair] = LyricLink(
                         a.song, b.song, kind, " ".join(key), a.line, b.line, round(score, 4)

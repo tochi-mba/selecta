@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 import numpy as np
 
@@ -191,6 +192,34 @@ def word_starts_heard(
     return starts
 
 
+def letters_heard(
+    best_labels: np.ndarray, labels: tuple[str, ...], seconds_per_frame: float
+) -> list[tuple[float, str]]:
+    """Each new letter in an unguided reading, with when it was heard."""
+    found: list[tuple[float, str]] = []
+    previous = BLANK
+    for frame, label in enumerate(best_labels):
+        if label != previous and label != BLANK and labels[label] != "|":
+            found.append((frame * seconds_per_frame, labels[label]))
+        previous = label
+    return found
+
+
+def letter_match(words: list[Word], heard: list[tuple[float, str]], margin: float = 0.06) -> float:
+    """How closely the letters heard during each fitted word resemble that word, 0 to 1.
+
+    An unguided reading runs words together ("NESO ME" for "next to me"), so comparing word starts
+    alone unfairly fails good lines. Weighted by length, so long words count for more.
+    """
+    total, weight = 0.0, 0
+    for word in words:
+        spelled = spell(word.text)
+        text = "".join(c for t, c in heard if word.start - margin <= t <= word.end + margin)
+        total += SequenceMatcher(None, spelled, text).ratio() * len(spelled)
+        weight += len(spelled)
+    return total / weight if weight else 0.0
+
+
 def agreement(words: list[Word], heard: list[float], tolerance: float = HEARD_TOLERANCE) -> float:
     """The share of fitted words that start where an unguided reading also hears a word start."""
     if not words:
@@ -232,10 +261,16 @@ class Aligner:
     def check(
         self, audio: np.ndarray, sample_rate: int, words: list[Word], origin: float = 0.0
     ) -> float:
-        """How well fitted words agree with what the model hears when it isn't told the lyrics."""
+        """How well fitted words agree with what the model hears when it isn't told the lyrics.
+        Give it audio reaching well past the words, since a reading goes wrong at its edges."""
         emissions, seconds = self.emissions(audio, sample_rate)
-        starts = word_starts_heard(emissions.argmax(axis=1), self.separator, seconds)
-        return agreement(words, [origin + start for start in starts])
+        best = emissions.argmax(axis=1)
+        starts = word_starts_heard(best, self.separator, seconds)
+        letters = letters_heard(best, self.labels, seconds)
+        return max(
+            agreement(words, [origin + start for start in starts]),
+            letter_match(words, [(origin + time, letter) for time, letter in letters]),
+        )
 
     def align(
         self, audio: np.ndarray, sample_rate: int, text: str, origin: float = 0.0

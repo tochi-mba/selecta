@@ -1,4 +1,4 @@
-"""Word links, word timing and the cuts built on them, using synthetic audio only."""
+"""Word links, word timing and the hand-offs built on them, using synthetic audio only."""
 
 import numpy as np
 import pytest
@@ -6,22 +6,37 @@ import soundfile as sf
 from helpers import song_from_track
 from synth import SR, make_track
 
-from selecta.audit.checks import audit
+from selecta.audit.checks import BEAT_LIMIT_MS, audit
 from selecta.audit.deep import sung_overlap_seconds
 from selecta.lyrics.align import (
     Word,
     agreement,
     best_path,
+    letter_match,
+    letters_heard,
     settle_edges,
     spell,
     word_starts_heard,
     words_from_path,
 )
 from selecta.lyrics.lrclib import Line
-from selecta.lyrics.match import SongFacts, discover
-from selecta.render.engine import render
-from selecta.stems import _prune
-from selecta.styles.wordplay import VocalWindow, word_cut, word_echo, word_roll
+from selecta.lyrics.match import LyricLink, SongFacts, discover
+from selecta.planner.wordreel import modes_for, rank_links, ride_lines
+from selecta.render.engine import _part_audio, render
+from selecta.render.script import Part, Warp
+from selecta.stems import StemWindow, _prune, band_of
+from selecta.styles.wordplay import (
+    Stem,
+    _handoff_shift,
+    _quick_steps,
+    felt_bpm,
+    phrase_roll,
+    roll_shape,
+    vocal_ride,
+    word_blend,
+    word_cut,
+    word_exchange,
+)
 
 LATE = 60.0
 
@@ -205,26 +220,22 @@ def test_pruning_removes_whole_windows_and_spares_priority_ones(tmp_path):
 
 @pytest.fixture
 def word_pair(tmp_path):
+    """Two songs close in tempo, with phrases placed on real beats, and stems that cover all of
+    each song. A's voice is a tone, so it can be told apart from everything else."""
     a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
-    b = song_from_track(tmp_path, "b", make_track(bpm=95, bars=48, seed=2))
-    a.lines = [Line(40.0, 42.0, "you have got me on my knees")]
-    b.lines = [Line(30.0, 33.0, "on my knees tonight")]
-    origin = 30.0
-    t = np.arange(SR * 20) / SR
-    voice = 0.2 * np.sin(2 * np.pi * 440 * t).astype(np.float32)
+    b = song_from_track(tmp_path, "b", make_track(bpm=118, bars=48, seed=2))
+    a_at = float(a.beats[100])
+    b_at = float(b.beats[60])
+    a.lines = [Line(a_at - 3.0, a_at + 0.9, "all I really need is good news")]
+    b.lines = [Line(b_at, b_at + 3.0, "good news is on the way")]
+    seconds = int(a.duration) + 1
+    t = np.arange(SR * seconds) / SR
+    voice = 0.2 * np.sin(2 * np.pi * 880 * t).astype(np.float32)
     path = tmp_path / "voice.wav"
     sf.write(path, np.stack((voice, voice), axis=1), SR, subtype="FLOAT")
-    phrase_a = [
-        Word("on", 41.0, 41.1, 0.9),
-        Word("my", 41.1, 41.2, 0.9),
-        Word("knees", 41.2, 41.7, 0.9),
-    ]
-    phrase_b = [
-        Word("on", 30.0, 30.2, 0.9),
-        Word("my", 30.2, 30.4, 0.9),
-        Word("knees", 30.4, 31.0, 0.9),
-    ]
-    return a, b, phrase_a, phrase_b, VocalWindow(str(path), origin)
+    phrase_a = [Word("good", a_at, a_at + 0.3, 0.9), Word("news", a_at + 0.3, a_at + 0.8, 0.9)]
+    phrase_b = [Word("good", b_at, b_at + 0.3, 0.9), Word("news", b_at + 0.3, b_at + 0.8, 0.9)]
+    return a, b, phrase_a, phrase_b, Stem(str(path), 0.0), Stem(a.path, 0.0), Stem(b.path, 0.0)
 
 
 def _rms(audio):
@@ -232,61 +243,378 @@ def _rms(audio):
 
 
 def test_word_cut_lands_b_on_its_word_the_moment_a_reaches_it(word_pair):
-    a, b, phrase_a, phrase_b, _ = word_pair
+    a, b, phrase_a, phrase_b, *_ = word_pair
     script = word_cut(a, b, phrase_a, phrase_b)
     cut = script.meta["cut"]
-    assert float(script.a.warp.source_at(cut)) == pytest.approx(41.0 - 0.02, abs=1e-6)
-    assert float(script.b.warp.source_at(cut)) == pytest.approx(30.0 - 0.02, abs=1e-6)
+    assert float(script.a.warp.source_at(cut)) == pytest.approx(phrase_a[0].start - 0.02, abs=1e-6)
+    assert float(script.b.warp.source_at(cut)) == pytest.approx(phrase_b[0].start - 0.02, abs=1e-6)
     rendered = render(script)
     assert _rms(rendered.a_dry[int((cut + 0.05) * SR) :]) == 0.0
     assert _rms(rendered.b_dry[: int((cut - 0.05) * SR)]) == 0.0
     assert "phrase integrity" not in [c.name for c in audit(rendered).failures]
 
 
-def test_word_echo_stops_the_band_and_lands_b_on_a_beat_of_a(word_pair):
-    a, b, phrase_a, phrase_b, voice = word_pair
-    b.lines = [Line(28.0, 29.98, "right before"), *b.lines]
-    script = word_echo(a, b, phrase_a, phrase_b, voice)
-    drop = script.meta["cut"]
+def test_word_cut_brings_b_in_early_without_its_bass(word_pair):
+    """The listener: "we should start instrumentals sooner before we do it"."""
+    a, b, phrase_a, phrase_b, _, _, band_b = word_pair
+    script = word_cut(a, b, phrase_a, phrase_b, band_b)
+    cut = script.meta["cut"]
+    swell = script.extras[0]
+    assert swell.output_start < cut - 1.0
+    assert swell.low.is_constant(0.0)
+    assert float(swell.warp.source_at(cut)) == pytest.approx(phrase_b[0].start - 0.02, abs=1e-3)
+    assert np.isfinite(render(script).audio).all()
+
+
+def _voice_hits(script, voice):
+    return sorted(
+        (part for part in script.extras if part.source_path == voice.path),
+        key=lambda part: part.output_start,
+    )
+
+
+def test_phrase_roll_is_built_the_way_the_listener_described(word_pair):
+    """ "good news good news, then news news news news, then faster news news news news news,
+    and then the next song cuts Good news is on the way" """
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = phrase_roll(a, b, phrase_a, phrase_b, voice, band_a, band_b)
+    hits = _voice_hits(script, voice)
+    shape = roll_shape(a, b, phrase_a)
+    assert len(hits) == shape.phrase_loops + shape.word_hits + shape.fast_hits
+    assert shape.phrase_loops == 2
+    phrase_start = phrase_a[0].start - 0.02
+    word_start = phrase_a[1].start - 0.02
+    sources = [float(hit.warp.source[0]) for hit in hits]
+    assert sources[:2] == pytest.approx([phrase_start, phrase_start])
+    assert sources[2:] == pytest.approx([word_start] * (len(hits) - 2))
+    starts = np.array([hit.output_start for hit in hits])
+    gaps = np.diff(starts)
+    assert gaps[-1] < gaps[2] * 0.6, "the last hits should be about twice as fast"
     landing = script.meta["landing"]
-    assert float(script.a.warp.source_at(drop)) == pytest.approx(41.2 - 0.02, abs=1e-6)
-    beats = (landing - drop) / a.period
-    assert beats == pytest.approx(round(beats))
-    assert float(script.b.warp.source_at(landing)) == pytest.approx(30.0 - 0.02, abs=1e-6)
+    assert hits[-1].output_end <= landing + 0.01
+    assert starts[0] >= script.overlap[0] - 0.1, "the repeats come after A has sung it"
+    assert float(script.b.warp.source_at(landing)) == pytest.approx(
+        phrase_b[0].start - 0.02, abs=1e-6
+    )
+
+
+def test_a_rolls_shape_comes_from_its_own_tracks(tmp_path):
+    """ "all the phrase rolls shouldnt be exactly the same, it should be dependent on the
+    tracks" """
+
+    def words(*lengths, at=40.0):
+        found = []
+        for length in lengths:
+            found.append(Word("word", at, at + length, 0.9))
+            at += length
+        return found
+
+    fast = song_from_track(tmp_path, "fast", make_track(bpm=128, bars=8, seed=1))
+    slow = song_from_track(tmp_path, "slow", make_track(bpm=82, bars=8, seed=2))
+    assert roll_shape(fast, fast, words(0.3, 0.4)) != roll_shape(slow, slow, words(0.3, 0.4))
+    single = roll_shape(fast, fast, words(0.5))
+    assert single.phrase_loops == 0, "one word goes straight to the stutter"
+    long_phrase = roll_shape(fast, fast, words(0.8, 0.8, 0.8))
+    assert long_phrase.phrase_loops == 1, "a long phrase only repeats once"
+    assert roll_shape(fast, fast, words(0.3, 0.4)).phrase_loops == 2
+
+
+def test_a_roll_brings_the_bass_in_steps_not_all_at_once(word_pair):
+    """How DJs build it: a little bass, more bass, most of it, then all of it on the landing."""
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = phrase_roll(a, b, phrase_a, phrase_b, voice, band_a, band_b)
+    word_stage, fast_stage, landing = (
+        script.meta["word_stage"],
+        script.meta["fast_stage"],
+        script.meta["landing"],
+    )
+    leaving = next(p for p in script.extras if p.source_path == band_a.path)
+    rising = next(p for p in script.extras if p.source_path == band_b.path)
+    assert word_stage < leaving.output_end < landing, "A's band leaves under the word"
+    assert rising.output_start == pytest.approx(word_stage)
+    level = lambda time: float(np.interp(time, rising.low.times, rising.low.values))  # noqa: E731
+    assert level(word_stage + 0.01) == 0.0
+    assert 0.0 < level(fast_stage + 0.05) < level(landing - 0.05) < 1.0
+    assert level(landing) == 1.0
+    assert float(rising.warp.source_at(landing)) == pytest.approx(
+        phrase_b[0].start - 0.02, abs=1e-3
+    )
     rendered = render(script)
-    assert _rms(rendered.a_dry[int((drop + 0.05) * SR) :]) == 0.0
-    assert script.b.output_start == pytest.approx(landing)
-    gap = rendered.audio[int((drop + 0.6) * SR) : int((landing - 0.01) * SR)]
-    assert _rms(gap) > 0.001, "the word should still be ringing"
     assert np.isfinite(rendered.audio).all()
+    assert "quiet time" not in [c.name for c in audit(rendered).failures], "no holes in the roll"
 
 
-def test_a_long_held_word_rings_until_b_lands_with_no_dead_air(word_pair):
-    a, b, phrase_a, phrase_b, voice = word_pair
-    script = word_echo(a, b, [Word("knees", 41.2, 44.0, 0.9)], phrase_b, voice)
-    wait_after_word = script.meta["landing"] - script.meta["cut"] - 2.8
-    assert 0 < wait_after_word <= 2.6
+def test_the_last_repeat_rings_on_into_b(word_pair):
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = phrase_roll(a, b, phrase_a, phrase_b, voice, band_a, band_b)
+    hits = _voice_hits(script, voice)
+    assert hits[-1].echo is not None
+    assert all(hit.echo is None for hit in hits[:-1])
 
 
-def test_word_roll_repeats_faster_and_lands_on_beat_four(word_pair):
-    a, b, phrase_a, phrase_b, voice = word_pair
-    script = word_roll(a, b, phrase_a, phrase_b, voice)
-    drop = script.meta["cut"]
-    beat = a.period
-    assert script.meta["landing"] == pytest.approx(drop + 4 * beat)
-    starts = sorted(part.output_start for part in script.extras)
-    assert [round((s - drop) / beat, 3) for s in starts] == [0.0, 1.0, 2.0, 2.5, 3.0, 3.5]
-    assert all(part.source_path == voice.path for part in script.extras)
+def test_a_single_word_rolls_without_a_phrase_stage(word_pair):
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = phrase_roll(a, b, phrase_a[-1:], phrase_b, voice, band_a, band_b)
+    shape = roll_shape(a, b, phrase_a[-1:])
+    assert len(_voice_hits(script, voice)) == shape.word_hits + shape.fast_hits
+
+
+def test_call_and_response_trades_the_phrase_over_bs_band(word_pair):
+    """A, then B answers, then A again, then B for good: how DJ tutorials teach wordplay."""
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    voice_b = Stem(voice.path, 0.0)
+    script = word_exchange(a, b, phrase_a, phrase_b, voice, band_a, voice_b, band_b)
+    assert script is not None
+    slot, landing = script.meta["slot"], script.meta["landing"]
+    answer, call = _voice_hits(script, voice)
+    assert answer.song is b
+    assert answer.output_start == pytest.approx(landing - 2 * slot)
+    assert float(answer.warp.source[0]) == pytest.approx(phrase_b[0].start - 0.02)
+    assert call.song is a
+    assert landing - 1.5 * slot < call.output_start < landing - 0.5 * slot
+    assert float(call.warp.source[0]) == pytest.approx(phrase_a[0].start - 0.02)
+    assert float(script.b.warp.source_at(landing)) == pytest.approx(
+        phrase_b[0].start - 0.02, abs=1e-6
+    )
+    rising = next(p for p in script.extras if p.source_path == band_b.path)
+    leaving = next(p for p in script.extras if p.source_path == band_a.path)
+    assert rising.output_start < script.overlap[0], "B's band starts before A has finished"
+    assert leaving.output_end <= answer.output_start + 0.01, "A's band is gone before B answers"
+    assert np.isfinite(render(script).audio).all()
+
+
+def test_a_slower_song_gets_its_voice_fitted_to_the_faster_grid(word_pair):
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = word_exchange(a, b, phrase_a, phrase_b, voice, band_a, Stem(voice.path, 0.0), band_b)
+    call = _voice_hits(script, voice)[1]
+    assert call.warp.max_stretch == pytest.approx(abs(a.bpm / b.bpm - 1.0), abs=1e-6)
+
+
+def test_rock_songs_dont_stutter_and_bare_cuts_need_a_close_tempo(tmp_path):
+    """Every roll out of a rock song on the reels failed, and the best cut was 4.5% apart."""
+    rock = song_from_track(tmp_path, "a", make_track(bpm=120, bars=8, seed=1), genre="Rock")
+    pop = song_from_track(tmp_path, "b", make_track(bpm=121, bars=8, seed=2), genre="Pop")
+    far = song_from_track(tmp_path, "c", make_track(bpm=100, bars=8, seed=3), genre="Pop")
+    assert "phrase_roll" not in modes_for(rock, pop)
+    assert "phrase_roll" in modes_for(pop, rock)
+    assert "word_cut" in modes_for(pop, rock)
+    assert "word_cut" not in modes_for(pop, far)
+
+
+def test_handoff_keeps_bars_together_and_voices_in_order(word_pair):
+    a, b, phrase_a, phrase_b, *_ = word_pair
+    a_end = phrase_a[-1].end
+    shift, handoff_beat = _handoff_shift(a, b, a_end, phrase_b[0].start)
+    a_bar_start = int(a.bar_starts[a.bar_at(a_end)])
+    b_bar_start = int(b.bar_starts[b.bar_at(phrase_b[0].start)])
+    assert (shift - (b_bar_start - a_bar_start)) % a.beats_per_bar == 0
+    a_beat = float(np.interp(a_end, a.beats, np.arange(a.beats.size)))
+    assert -0.25 <= handoff_beat - a_beat < a.beats_per_bar
+
+
+def test_word_blend_starts_bs_band_bars_before_its_voice(word_pair):
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = word_blend(a, b, phrase_a, phrase_b, voice, band_a, band_b, bars=4)
+    assert script is not None
+    start, handoff = script.overlap
+    bar = 60.0 / a.bpm * a.beats_per_bar
+    assert handoff - start > 2.5 * bar
+    assert script.b.source_path == band_b.path
+    assert float(script.b.warp.source_at(handoff)) == pytest.approx(
+        phrase_b[0].start - 0.02, abs=1e-3
+    )
+    assert script.meta["voice_end"] <= handoff + script.meta["period"] / 2
+    a_down = float(script.a.warp.source_at(start))
+    b_down = float(script.b.warp.source_at(start))
+    assert np.min(np.abs(a.bar_times - a_down)) < 0.01, "A starts the overlap on a downbeat"
+    assert np.min(np.abs(b.bar_times - b_down)) < 0.01, "so does B"
+
+
+def test_word_blend_hands_from_one_voice_to_the_other_on_the_beat(word_pair):
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = word_blend(a, b, phrase_a, phrase_b, voice, band_a, band_b, bars=4)
+    handoff = script.meta["handoff"]
     rendered = render(script)
     assert np.isfinite(rendered.audio).all()
-    assert _rms(rendered.a_dry[int((drop + 0.05) * SR) :]) == 0.0
+    assert _rms(rendered.a_dry[int((handoff - 0.2) * SR) :]) < 1e-3, "A's band has already left"
+    assert _rms(rendered.b_dry[int((handoff + 0.2) * SR) :]) == 0.0, "B's full mix has taken over"
+    report = audit(rendered)
+    assert report.value("beat alignment") <= BEAT_LIMIT_MS
+    assert script.extras[-1].follows_b
 
 
-def test_b_only_prerolls_into_silence_of_its_own(word_pair):
-    a, b, phrase_a, phrase_b, voice = word_pair
-    b.lines = [Line(29.0, 30.0, "right before"), *b.lines]
-    tight = word_echo(a, b, phrase_a, phrase_b, voice)
-    b.lines = b.lines[1:]
-    open_up = word_echo(a, b, phrase_a, phrase_b, voice)
-    assert tight.b.output_start >= open_up.b.output_start
-    assert open_up.b.lowpass is not None
+def test_a_blend_is_refused_when_stems_dont_reach_far_enough_back(word_pair):
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    late = Stem(band_b.path, phrase_b[0].start - 1.0)
+    assert word_blend(a, b, phrase_a, phrase_b, voice, band_a, late, bars=8) is None
+
+
+def test_a_hype_song_never_rolls_into_a_much_slower_one(tmp_path):
+    """Reel 2 #03: "the roll seems like we expect a drop and then we go into this super slow."""
+    hype = song_from_track(tmp_path, "a", make_track(bpm=126, bars=8, seed=1))
+    slow = song_from_track(tmp_path, "b", make_track(bpm=102, bars=8, seed=2))
+    assert "phrase_roll" not in modes_for(hype, slow)
+    assert "phrase_roll" in modes_for(slow, hype)
+
+
+def test_half_time_songs_are_judged_by_the_beat_people_feel(tmp_path):
+    """Reel 2 #10, the favourite: a 160 BPM grid that feels like 80, into a song at 113."""
+    fast_grid = song_from_track(tmp_path, "a", make_track(bpm=160, bars=8, seed=1))
+    faster_feel = song_from_track(tmp_path, "b", make_track(bpm=113, bars=8, seed=2))
+    assert felt_bpm(fast_grid) == pytest.approx(80.0)
+    assert "phrase_roll" in modes_for(fast_grid, faster_feel)
+
+
+def test_only_songs_that_can_play_together_get_a_blend(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=8, seed=1), camelot="8A")
+    near = song_from_track(tmp_path, "b", make_track(bpm=118, bars=8, seed=2), camelot="9A")
+    clashing = song_from_track(tmp_path, "c", make_track(bpm=118, bars=8, seed=3), camelot="2A")
+    assert modes_for(a, near)[0] == "word_blend"
+    assert "word_blend" not in modes_for(a, clashing)
+
+
+def test_music_decides_the_order_as_well_as_the_words(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1), camelot="8A")
+    fits = song_from_track(tmp_path, "b", make_track(bpm=118, bars=48, seed=2), camelot="8A")
+    only_cut = song_from_track(tmp_path, "c", make_track(bpm=108, bars=48, seed=3), camelot="2A")
+    none = song_from_track(tmp_path, "d", make_track(bpm=88, bars=48, seed=4), camelot="2A")
+    songs = {a.id: a, fits.id: fits, only_cut.id: only_cut, none.id: none}
+    line = Line(30.0, 32.0, "text")
+
+    def link(b, score):
+        return LyricLink(a.id, b.id, "shared_word", "text", line, line, score)
+
+    ranked = rank_links([link(none, 0.99), link(only_cut, 0.8), link(fits, 0.7)], songs)
+    assert [item.song_b for item in ranked] == [fits.id, only_cut.id]
+
+
+def test_a_part_reads_a_stem_from_where_the_stem_starts(tmp_path):
+    t = np.arange(SR * 4) / SR
+    ramp = np.stack((t, t), axis=1).astype(np.float32)
+    path = tmp_path / "stem.wav"
+    sf.write(path, ramp, SR, subtype="FLOAT")
+    song = song_from_track(tmp_path, "s", make_track(bpm=120, bars=8, seed=1))
+    part = Part(
+        song=song, warp=Warp.identity(1.0, 11.0, 1.0), source_path=str(path), window_origin=10.0
+    )
+    placed, _ = _part_audio(part, ramp, SR * 3)
+    assert placed[SR, 0] == pytest.approx(1.0, abs=1e-3)
+    assert placed[SR // 2, 0] == 0.0
+
+
+def test_a_part_can_stop_reading_before_its_warp_ends(tmp_path):
+    song = song_from_track(tmp_path, "s", make_track(bpm=120, bars=8, seed=1))
+    ramp = np.ones((SR * 4, 2), dtype=np.float32)
+    part = Part(song=song, warp=Warp.identity(0.0, 0.0, 3.0), render_until=1.0)
+    placed, _ = _part_audio(part, ramp, SR * 3)
+    assert placed[SR // 2, 0] == 1.0
+    assert placed[SR + 100, 0] == 0.0
+    assert float(part.warp.source_at(2.5)) == 2.5, "timing maths still sees the whole song"
+
+
+def test_trimming_a_warp_keeps_its_mapping():
+    warp = Warp(np.array([0.0, 4.0, 8.0]), np.array([10.0, 14.0, 20.0]))
+    cut = warp.trimmed(2.0, 6.0)
+    assert cut.output.tolist() == [2.0, 4.0, 6.0]
+    assert cut.source.tolist() == [12.0, 14.0, 17.0]
+
+
+def test_a_band_is_everything_except_the_voice(tmp_path):
+    parts = {}
+    for name, level in (("vocals", 0.5), ("drums", 0.1), ("bass", 0.2), ("other", 0.3)):
+        path = tmp_path / f"{name}.wav"
+        sf.write(path, np.full((SR // 10, 2), level, dtype=np.float32), SR, subtype="FLOAT")
+        parts[name] = path
+    band = sf.read(band_of(StemWindow(**parts)), dtype="float32")[0]
+    assert band[100, 0] == pytest.approx(0.6, abs=1e-5)
+
+
+def test_a_vocal_ride_keeps_as_voice_going_over_bs_band_until_bs_voice_starts(word_pair):
+    """The listener: "the prev vocals didnt ride the beat of the next song long enough"."""
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = vocal_ride(a, b, phrase_a[-1], phrase_b[0], voice, band_a, band_b, bars=4)
+    assert script.style == "vocal_ride"
+    start, handoff = script.overlap
+    a_gone = script.a.gain.times[-1]
+    voice_part = script.extras[0]
+    assert voice_part.source_path == voice.path
+    assert a_gone < handoff, "A's band leaves first"
+    assert script.meta["voice_end"] > a_gone, "and A's voice carries on without it"
+    assert handoff - a_gone > script.meta["period"], "for a real stretch of B's band"
+    assert np.isfinite(render(script).audio).all()
+
+
+def test_ride_lines_need_a_as_voice_singing_and_prefer_a_chorus_in_b(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=96, seed=1))
+    b = song_from_track(tmp_path, "b", make_track(bpm=120, bars=96, seed=2))
+    a.lines = [Line(70.0 + i * 3, 72.9 + i * 3, f"sung line number {i}") for i in range(8)]
+    b.lines = [
+        Line(40.0, 43.0, "a verse line here"),
+        Line(b.bar_time(32) + 0.1, b.bar_time(32) + 3.0, "the chorus starts here"),
+    ]
+    b.sections = [
+        {"start_bar": 0, "end_bar": 32, "label": "verse", "energy": 0.6, "chorus_prob": 0.2},
+        {"start_bar": 32, "end_bar": 64, "label": "chorus", "energy": 0.8, "chorus_prob": 0.9},
+    ]
+    line_a, line_b = ride_lines(a, b)
+    assert line_a in a.lines
+    assert a.vocal_seconds(line_a.end - 8.0, line_a.end) > 2.0
+    assert line_b.text == "the chorus starts here"
+    a.lines = [Line(70.0, 71.0, "lonely line")]
+    assert ride_lines(a, b) is None
+
+
+def test_letters_rescue_a_good_line_an_unguided_reading_ran_together():
+    """ "NESO ME" for "next to me": the word starts mostly miss, but the letters are close."""
+    words = [
+        Word("next", 20.7, 21.0, 0.8),
+        Word("to", 21.05, 21.25, 0.4),
+        Word("me", 21.3, 21.6, 0.9),
+    ]
+    heard = [(20.74, "N"), (20.8, "E"), (20.9, "S"), (21.1, "O"), (21.3, "M"), (21.4, "E")]
+    assert letter_match(words, heard) > 0.55
+    assert letter_match(words, [(20.74, "Q"), (21.3, "Z")]) < 0.2
+
+
+def test_letters_are_read_in_order_without_blanks_or_separators():
+    labels = ("-", "|", "A", "B")
+    assert letters_heard(np.array([0, 2, 2, 0, 1, 3, 0]), labels, 0.02) == [
+        (pytest.approx(0.02), "A"),
+        (pytest.approx(0.1), "B"),
+    ]
+
+
+@pytest.mark.parametrize("bpm", [75.0, 118.0, 155.0])
+def test_the_quick_steps_stay_on_bs_grid_at_any_tempo(tmp_path, bpm):
+    """A fast song's beats once crowded out every hit, which refused the listener's own example."""
+    b = song_from_track(tmp_path, "b", make_track(bpm=bpm, bars=48, seed=2))
+    enter_b = float(b.beats[60]) - 0.02
+    fast = _quick_steps(b, enter_b)
+    assert fast.size >= 8
+    assert fast[-1] < enter_b
+    spacing = np.diff(fast[-8:])
+    assert spacing == pytest.approx(np.full(7, spacing[0]), abs=1e-3)
+    assert 0.15 < spacing[0] < 0.35
+
+
+def test_a_ride_times_b_against_as_band_not_as_voice(word_pair):
+    """Rap consonants and sung onsets threw the beat check off, and rejected good rides."""
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    script = vocal_ride(a, b, phrase_a[-1], phrase_b[0], voice, band_a, band_b, bars=4)
+    assert script.a.source_path == band_a.path
+    assert script.b.source_path == band_b.path
+    assert float(script.a.warp.source_at(0.0)) == script.a_source_start
+    start = script.overlap[0]
+    a_full = script.extras[1]
+    assert a_full.audio_path == a.path
+    assert a_full.output_end <= start + 0.1
+    assert script.a.render_from < start
+
+
+def test_a_part_can_start_reading_late(tmp_path):
+    song = song_from_track(tmp_path, "s", make_track(bpm=120, bars=8, seed=1))
+    part = Part(song=song, warp=Warp.identity(0.0, 0.0, 3.0), render_from=1.0, render_until=2.0)
+    placed, _ = _part_audio(part, np.ones((SR * 4, 2), dtype=np.float32), SR * 3)
+    assert placed[SR // 2, 0] == 0.0
+    assert placed[SR + SR // 2, 0] == 1.0
+    assert placed[SR * 2 + SR // 2, 0] == 0.0

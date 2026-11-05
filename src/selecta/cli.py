@@ -273,7 +273,7 @@ def mix(
 def reel(
     output: Path = typer.Option(DEFAULT_REEL_OUTPUT, "--output", "-o"),
     seed: int = typer.Option(7),
-    words: int = typer.Option(8, help="How many word links to render first. 0 skips them."),
+    words: int = typer.Option(9, help="How many word hand-offs to render first. 0 skips them."),
     only_words: bool = typer.Option(False, help="Stop after the word cuts."),
 ) -> None:
     """Render a mix of transitions from your own songs for you to listen to and rate."""
@@ -281,23 +281,30 @@ def reel(
     from selecta.lyrics.match import varied_links
     from selecta.planner.fit import TimbreSpace
     from selecta.planner.reel import build_reel, load_library, word_entry, write_page
-    from selecta.planner.wordreel import analyse_links, build_takes, default_modes
+    from selecta.planner.wordreel import (
+        DEFAULT_QUOTAS,
+        analyse_links,
+        build_takes,
+        rank_links,
+    )
     from selecta.render.engine import SongCache
 
     settings, conn = _open()
     output.mkdir(parents=True, exist_ok=True)
     first = []
     if words:
-        links = varied_links(lyric_links(conn), words * 5)
-        analyse_links(conn, settings, links, console.print)
-        space = TimbreSpace.fit(load_library(conn, settings))
-        cache = SongCache(capacity=4)
-        takes = build_takes(
-            conn, settings, links, words, default_modes, space, cache, console.print
-        )
+        links = lyric_links(conn)
+        analyse_links(conn, settings, varied_links(links, words * 5), console.print)
+        library = load_library(conn, settings)
+        space = TimbreSpace.fit(library)
+        ranked = rank_links(links, {song.id: song for song in library}, space)
+        total = sum(DEFAULT_QUOTAS.values())
+        quotas = {mode: max(1, count * words // total) for mode, count in DEFAULT_QUOTAS.items()}
+        cache = SongCache(capacity=6)
+        takes = build_takes(conn, settings, ranked, quotas, space, cache, console.print)
         first = [word_entry(n, take, output, cache) for n, take in enumerate(takes, 1)]
         write_page(first, output)
-        console.print(f"{len(first)} word cuts written.")
+        console.print(f"{len(first)} word hand-offs written.")
     entries = (
         first
         if only_words
@@ -330,10 +337,11 @@ def listen(
 
     import uvicorn
     from fastapi import FastAPI
-    from fastapi.staticfiles import StaticFiles
+
+    from selecta.api import FreshFiles
 
     server = FastAPI()
-    server.mount("/", StaticFiles(directory=folder, html=True))
+    server.mount("/", FreshFiles(directory=folder, html=True))
     url = f"http://127.0.0.1:{port}/"
     console.print(f"Listening room at {url} (press Ctrl+C to stop).")
     if open_browser:

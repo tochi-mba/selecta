@@ -97,11 +97,12 @@ def _beat_alignment(rendered: Rendered) -> Check | None:
             detail="too few clean beats to measure",
         )
     value = float(np.percentile(np.abs(differences), 75))
+    limit = script.meta.get("beat_limit_ms", BEAT_LIMIT_MS)
     return Check(
         "beat alignment",
-        value <= BEAT_LIMIT_MS,
+        value <= limit,
         round(value, 1),
-        BEAT_LIMIT_MS,
+        limit,
         "ms",
         fix="change_recipe",
         detail=f"{len(differences)} beats measured",
@@ -110,7 +111,7 @@ def _beat_alignment(rendered: Rendered) -> Check | None:
 
 def _vocal_overlap(script: TransitionScript, count: int) -> Check | None:
     a, b = script.a.song, script.b.song
-    if script.overlap[1] - script.overlap[0] < 0.5:
+    if script.overlap[1] - script.overlap[0] < 0.5 or script.meta.get("wordplay"):
         return None
     if not (a.vocals_known and b.vocals_known):
         return Check(

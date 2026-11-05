@@ -197,11 +197,15 @@ def enumerate_candidates(
     b: SongInfo,
     style: str | None = None,
     recipes: dict[str, Recipe] | None = None,
+    exits: list[Cue] | None = None,
+    entries: list[Cue] | None = None,
 ) -> list[Candidate]:
+    """Every transition worth trying between two songs, best first. A planner checking many pairs
+    can pass in a few cues per song, which is far quicker than working them out each time."""
     recipes = recipes or all_recipes()
     gap = tempo_gap(a, b)
-    exits = a.exit_cues()[:8]
-    entries = b.entry_cues()[:10]
+    exits = a.exit_cues()[:8] if exits is None else exits
+    entries = b.entry_cues()[:10] if entries is None else entries
     can_beatmatch = (
         a.grid_confidence >= BLEND_MIN_CONFIDENCE
         and b.grid_confidence >= BLEND_MIN_CONFIDENCE

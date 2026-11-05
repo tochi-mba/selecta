@@ -1,30 +1,130 @@
-import React,{useEffect,useState} from 'react';
-import{createRoot}from'react-dom/client';
-import'./style.css';
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { get, MixItem, Status } from './api';
+import { NowState, SetPlayer } from './player';
+import { Library } from './views/Library';
+import { Links } from './views/Links';
+import { Mix } from './views/Mix';
+import { Now } from './views/Now';
+import { Start } from './views/Start';
+import { Workshop } from './views/Workshop';
+import './style.css';
 
-type Status={counts:Record<string,number>,steering:{energy:number,wordplay:string,flash:string,mix_language:string,stems:string,target?:string},queue:any[]};
-const api=async(path:string,init?:RequestInit)=>{const r=await fetch('/api'+path,init);if(!r.ok)throw Error(await r.text());return r.json()};
-const post=(path:string,body:any)=>api(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+export type View = 'Now' | 'Mix' | 'Library' | 'Links' | 'Workshop';
+const VIEWS: View[] = ['Now', 'Mix', 'Library', 'Links', 'Workshop'];
 
-function App(){
- const[view,setView]=useState('Deck'),[status,setStatus]=useState<Status|null>(null),[notice,setNotice]=useState('');
- const refresh=()=>api('/status').then(setStatus); useEffect(()=>{refresh()},[]);
- useEffect(()=>{const keys=(e:KeyboardEvent)=>{if(e.target instanceof HTMLInputElement)return;({n:'Skip',e:'Why',f:'Stage','/':'Crate'} as any)[e.key.toLowerCase()]&&setView(({n:'Deck',e:'Why',f:'Stage','/':'Crate'}as any)[e.key.toLowerCase()]);if(e.key==='ArrowUp')steer('more');if(e.key==='ArrowDown')steer('less')};addEventListener('keydown',keys);return()=>removeEventListener('keydown',keys)},[]);
- const steer=async(action:string,value?:string)=>{await post('/steer',{action,value});setNotice(`Planned — lands at the next seam`);refresh()};
- if(!status)return <main><p>Warming the system…</p></main>;
- const props={status,steer,notice};
- return <><header className="top"><b>SELECTA</b><nav>{['Deck','Arc','Found','Crate','Workshop','Listening Room'].map(x=><button aria-current={view===x} onClick={()=>setView(x)}>{x}</button>)}</nav><button onClick={()=>setView('Stage')}>Stage ↗</button></header>
- {view==='Deck'?<Deck {...props}/>:view==='Arc'?<Arc {...props}/>:view==='Found'?<Found/>:view==='Crate'?<Crate/>:view==='Workshop'?<Workshop status={status}/>:view==='Stage'?<Stage status={status}/>:view==='Listening Room'?<Listening/>:<Why/>}</>;
+function App() {
+  const [view, setView] = useState<View>('Now');
+  const [status, setStatus] = useState<Status | null>(null);
+  const [problem, setProblem] = useState('');
+  const [mix, setMix] = useState<MixItem[]>([]);
+  const mixRef = useRef<MixItem[]>([]);
+  mixRef.current = mix;
+
+  const refreshMix = useCallback(() => {
+    get<{ mix: MixItem[] }>('/mix').then((data) => setMix(data.mix)).catch(() => {});
+  }, []);
+  const refreshStatus = useCallback(() => {
+    get<Status>('/status')
+      .then((data) => {
+        setStatus(data);
+        setProblem('');
+      })
+      .catch((error: Error) => setProblem(error.message));
+  }, []);
+
+  const player = useMemo(() => new SetPlayer(() => mixRef.current, refreshMix), [refreshMix]);
+  const [now, setNow] = useState<NowState>(player.state);
+  useEffect(() => {
+    player.onChange = setNow;
+  }, [player]);
+
+  useEffect(() => {
+    refreshStatus();
+    refreshMix();
+    const timer = window.setInterval(refreshStatus, 4000);
+    return () => window.clearInterval(timer);
+  }, [refreshStatus, refreshMix]);
+
+  // Anything still rendering gets checked often, so its status changes on its own.
+  const busy = mix.some((item) => ['queued', 'rendering'].includes(item.seam?.state.status ?? ''));
+  useEffect(() => {
+    if (!busy) return;
+    const timer = window.setInterval(refreshMix, 1500);
+    return () => window.clearInterval(timer);
+  }, [busy, refreshMix]);
+
+  useEffect(() => {
+    const keys = (event: KeyboardEvent) => {
+      const typing = event.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName);
+      if (typing) return;
+      if (event.code === 'Space') {
+        event.preventDefault();
+        if (now.phase === 'idle' && mixRef.current.length) void player.playFrom(0);
+        else void player.togglePause();
+      } else if (event.key.toLowerCase() === 'n') void player.skip();
+      else if (event.key === '/') {
+        event.preventDefault();
+        setView('Library');
+      }
+    };
+    window.addEventListener('keydown', keys);
+    return () => window.removeEventListener('keydown', keys);
+  }, [player, now.phase]);
+
+  if (problem && !status) {
+    return (
+      <main className="page">
+        <h1 className="display">Can’t reach Selecta.</h1>
+        <p className="lede">{problem}</p>
+      </main>
+    );
+  }
+  if (!status) return <main className="page" aria-busy="true" />;
+
+  if (status.counts.total === 0) {
+    return <Start status={status} onChange={refreshStatus} />;
+  }
+
+  const shared = { status, mix, refreshMix, refreshStatus, player, now, setView };
+  const playing = mix[now.position];
+  return (
+    <>
+      <header className="bar">
+        <button className="brand" onClick={() => setView('Now')}>
+          Selecta
+        </button>
+        <nav aria-label="Main">
+          {VIEWS.map((name) => (
+            <button key={name} aria-current={view === name ? 'page' : undefined} onClick={() => setView(name)}>
+              {name}
+            </button>
+          ))}
+        </nav>
+      </header>
+      {view === 'Now' && <Now {...shared} />}
+      {view === 'Mix' && <Mix {...shared} />}
+      {view === 'Library' && <Library {...shared} />}
+      {view === 'Links' && <Links {...shared} />}
+      {view === 'Workshop' && <Workshop {...shared} />}
+      {view !== 'Now' && playing && now.phase !== 'idle' && (
+        <aside className="mini" aria-label="Now playing">
+          <button className="round" onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : 'Play'}>
+            {now.phase === 'playing' ? '❚❚' : '▶'}
+          </button>
+          <button className="mini-song" onClick={() => setView('Now')}>
+            <b>{playing.title}</b>
+            <span>{playing.artist}</span>
+          </button>
+          <button onClick={() => void player.skip()}>Skip</button>
+        </aside>
+      )}
+    </>
+  );
 }
 
-function Deck({status,steer,notice}:any){const q=status.queue;const now=q[0],next=q[1];const[current,setCurrent]=useState<HTMLAudioElement|null>(null);const act=async(action:string,id?:number,value?:string)=>{await post('/queue/action',{action,song_id:id,value});location.reload()};return <main className="deck"><p className="eyebrow">NOW PLAYING</p><h1>{now?.title||'Your set starts here'}</h1><p className="artist">{now?.artist||'Choose a folder and analyse your music'}</p>{now&&<audio ref={setCurrent} src={`/api/audio/${now.song_id}`} onEnded={()=>act('played')} controls/>}{next&&<audio src={`/api/audio/${next.song_id}`} preload="auto" hidden/>}<div className="strip"><i/><span>INTRO</span><span>VERSE</span><span>CHORUS</span><b/></div><div className="lyrics">Words become the interface.<br/><em>The machine stays quiet.</em></div><section className="next"><small>NEXT · {next?.state||'PLANNED'}</small><strong>{next?.title||'Waiting for analysed songs'}</strong><span>{next?.artist}</span>{next&&<div className="seam-choice"><small>HOW SHOULD THIS LAND?</small>{['auto','intertwine','blend','cut','wordplay','effect'].map(x=><button aria-pressed={next.transition===x} onClick={()=>act('transition',next.song_id,x)}>{x}</button>)}</div>}</section><div className="controls"><button onClick={()=>steer('less')}>↓ Less</button><button onClick={()=>steer('more')}>↑ More</button><button onClick={()=>act('skip')}>Skip now</button><button onClick={()=>next&&act('lock',next.song_id)}>Lock</button><button onClick={()=>{const x=prompt('Take me to…');if(x)steer('take_me_to',x)}}>Take me to…</button></div><p className="notice">{notice}</p></main>}
-function Arc({status,steer}:any){const[e,setE]=useState(status.steering.energy);return <main><p className="eyebrow">THE NEXT 60 MINUTES</p><h1>Shape the night.</h1><div className="arc"><svg viewBox="0 0 800 220"><path d={`M0 170 C180 ${140-e*15},250 70,400 65 S600 130,800 100`}/></svg></div><div className="controls"><button onClick={()=>setE(-1)}>Slow burn</button><button onClick={()=>setE(1)}>Peak time</button><button onClick={()=>setE(-2)}>Wind down</button></div><Field label="Mix language" values={['balanced','seamless','punchy','wordplay','surprise']} current={status.steering.mix_language} set={(v:string)=>steer('mix_language',v)}/><Field label="Use stems" values={['never','sometimes','often']} current={status.steering.stems} set={(v:string)=>steer('stems',v)}/><Field label="Effects" values={['smooth','balanced','flashy']} current={status.steering.flash} set={(v:string)=>steer('flash',v)}/><Field label="Wordplay" values={['never','sometimes','often']} current={status.steering.wordplay} set={(v:string)=>steer('wordplay',v)}/></main>}
-function Field({label,values,current,set}:any){return <section className="field"><b>{label}</b>{values.map((v:string)=><button aria-pressed={current===v} onClick={()=>set(v)}>{v}</button>)}</section>}
-function Found(){const[rows,setRows]=useState<any[]>([]);useEffect(()=>{api('/found').then(setRows)},[]);return <main><p className="eyebrow">SEAM BOOK</p><h1>Things hiding in your library.</h1>{rows.length?rows.map(x=><article className="found"><b>{x.artist_a} — {x.title_a}</b><span>↝ {x.kind} ↝</span><b>{x.artist_b} — {x.title_b}</b><p>{JSON.parse(x.payload).reason||'A machine-found connection ready for your ears.'}</p><button onClick={()=>post(`/found/${x.id}/approved`,{})}>Sounds good</button><button onClick={()=>post(`/found/${x.id}/rejected`,{})}>Not for me</button></article>):<p>Run discovery after lyrics and analysis are ready. New connections will arrive here.</p>}</main>}
-function Crate(){const[q,setQ]=useState(''),[state,setState]=useState('all'),[rows,setRows]=useState<any[]>([]);const load=()=>api(`/songs?q=${encodeURIComponent(q)}&state=${state}`).then(setRows);useEffect(()=>{load()},[q,state]);const priority=async(x:any)=>{await post(`/songs/${x.id}/priority?priority=${x.processing_priority?0:100}`,{});load()};return <main><p className="eyebrow">CRATE</p><h1>Every song, searchable.</h1><p>Priority songs are processed first and keep their deep-analysis cache. Everything else waits in the background tier.</p><input autoFocus placeholder="Artist, title…" value={q} onChange={e=>setQ(e.target.value)}/><div className="tabs">{['all','ready','not_yet','set_aside'].map(x=><button aria-pressed={state===x} onClick={()=>setState(x)}>{x.replace('_',' ')}</button>)}</div>{rows.map(x=><div className="song"><b>{x.title}</b><span>{x.artist}</span><small>{x.bpm?`${x.bpm.toFixed(0)} BPM · ${x.genre||'Unsorted'}`:'Background queue'}</small><button onClick={()=>priority(x)} aria-pressed={x.processing_priority===100}>{x.processing_priority===100?'Priority ✓':'Prioritize'}</button><button>Never play</button></div>)}</main>}
-function Workshop({status}:any){const c=status.counts;const[storage,setStorage]=useState<any>(null);useEffect(()=>{api('/storage').then(setStorage)},[]);const save=async(gb:number)=>setStorage(await post('/storage',{budget_gb:gb}));const gb=(n:number)=>(n/1073741824).toFixed(1);return <main><p className="eyebrow">WORKSHOP</p><h1>Your library, becoming playable.</h1><div className="counts"><Metric n={c.analysed} t="Playable"/><Metric n={c.lyrics} t="Wordplay-ready"/><Metric n={c.found} t="Found links"/></div>{storage&&<section className="storage"><h2>Storage budget</h2><p><strong>{gb(storage.used_bytes)} GB</strong> used of <strong>{gb(storage.budget_bytes)} GB</strong> · {gb(storage.free_bytes)} GB free on this drive</p><input type="range" min="0.5" max={Math.max(.5,+gb(storage.free_bytes)+ +gb(storage.budget_bytes))} step="0.5" value={gb(storage.budget_bytes)} onChange={e=>save(+e.target.value)}/><p>Priority songs are protected. Background stems and renders are evicted first when this fills up.</p></section>}<p>{c.music-c.analysed} songs remain. New library songs join the background tier automatically.</p><button>Pause</button><button>Analyse next priority</button></main>}
-function Metric({n,t}:any){return <div><strong>{n}</strong><span>{t}</span></div>}
-function Stage({status}:any){const x=status.queue[0];return <main className="stage"><p>{x?.artist||'SELECTA'}</p><h1>{x?.title||'Resume set'}</h1><div className="stageword">hold the word</div><button>▶ Resume set</button></main>}
-function Listening(){return <main><p className="eyebrow">BLIND LISTENING ROOM</p><h1>Judge the seam, not the method.</h1><p>Pairs are randomised and labels stay hidden until the test closes.</p><div className="rating">{[1,2,3,4,5].map(n=><button>{n}</button>)}</div><div className="tabs">{['beat','downbeat','mid-vocal','key','energy','contrast','cut-off ending'].map(x=><button>{x}</button>)}</div><button>Next hidden transition</button></main>}
-function Why(){return <main><p className="eyebrow">WHY THIS NEXT</p><h1>It keeps the energy moving without crowding the vocals.</h1><p>Expand only when you want the mechanics; raw scores stay out of the way.</p></main>}
-createRoot(document.getElementById('root')!).render(<App/>);
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

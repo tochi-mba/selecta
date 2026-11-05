@@ -24,6 +24,17 @@ class StemWindow:
     other: Path
 
 
+def band_of(stems: StemWindow) -> Path:
+    """Everything except the voice, written once beside the stems it comes from."""
+    path = stems.vocals.parent / "band.wav"
+    if not path.exists():
+        drums = sf.read(stems.drums, dtype="float32")[0]
+        bass = sf.read(stems.bass, dtype="float32")[0]
+        other = sf.read(stems.other, dtype="float32")[0]
+        sf.write(path, drums + bass + other, SAMPLE_RATE, subtype="FLOAT")
+    return path
+
+
 def _window_dirs(root: Path) -> list[tuple[Path, int, float]]:
     found = []
     for folder in root.iterdir():

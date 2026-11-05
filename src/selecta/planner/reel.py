@@ -20,10 +20,10 @@ from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo, load_song
 from selecta.audit.deep import sung_overlap
 from selecta.config import SAMPLE_RATE, Settings
-from selecta.lyrics.lrclib import clean_artist
+from selecta.lyrics.lrclib import Line, clean_artist
 from selecta.planner.choose import Choice, choose_transition, enumerate_candidates, tempo_gap
 from selecta.planner.fit import MAX_FOLDED_GAP, TimbreSpace, folded_gap
-from selecta.planner.wordreel import WordTake
+from selecta.planner.wordreel import RideTake, WordTake
 from selecta.render.engine import SongCache, in_context
 
 DEFAULT_MIX = (
@@ -60,6 +60,12 @@ class ReelEntry:
     b_id: int
     exit_bar: int
     entry_bar: int
+
+
+@dataclass(frozen=True)
+class _RideLink:
+    line_a: Line
+    line_b: Line
 
 
 def lead_artist(song: SongInfo) -> str:
@@ -123,6 +129,15 @@ def _pick_pairs(
     scored = list(best.values())
     scored.sort(key=lambda item: -item[0])
     return scored
+
+
+def ride_entry(number: int, take: RideTake, out_dir: Path, cache: SongCache) -> ReelEntry:
+    return word_entry(
+        number,
+        WordTake("vocal_ride", _RideLink(take.line_a, take.line_b), take.rendered, take.report),
+        out_dir,
+        cache,
+    )
 
 
 def word_entry(number: int, take: WordTake, out_dir: Path, cache: SongCache) -> ReelEntry:
@@ -242,8 +257,10 @@ _STYLE_NAMES = {
     "filter_sweep": "Filter sweep",
     "tempo_ramp": "Tempo ramp",
     "word_cut": "Word cut",
-    "word_echo": "Word echo",
-    "word_roll": "Word roll",
+    "word_blend": "Word blend",
+    "word_exchange": "Call and response",
+    "vocal_ride": "Vocal ride",
+    "phrase_roll": "Phrase roll",
     "echo_out": "Echo out",
     "cut_on_one": "Cut on the one",
     "reverb_wash": "Reverb wash",

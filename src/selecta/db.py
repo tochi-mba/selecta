@@ -99,7 +99,8 @@ CREATE TABLE IF NOT EXISTS queue (
     state TEXT NOT NULL DEFAULT 'planned',
     transition TEXT,
     reason TEXT,
-    locked INTEGER NOT NULL DEFAULT 0
+    locked INTEGER NOT NULL DEFAULT 0,
+    seam TEXT
 );
 """
 
@@ -114,6 +115,14 @@ def connect(path: Path) -> sqlite3.Connection:
     if "processing_priority" not in columns:
         conn.execute("ALTER TABLE songs ADD COLUMN processing_priority INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    if "seam" not in {row["name"] for row in conn.execute("PRAGMA table_info(queue)")}:
+        try:
+            conn.execute("ALTER TABLE queue ADD COLUMN seam TEXT")
+            conn.commit()
+        except sqlite3.OperationalError as problem:
+            # the page opens with two requests at once, and the other one may have just added it
+            if "duplicate column" not in str(problem):
+                raise
     return conn
 
 

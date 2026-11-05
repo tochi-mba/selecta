@@ -57,9 +57,18 @@ def blend_timing(
         return None
     a_start = a.beat_index_of_bar(exit_bar - bars)
     a_end = a.beat_index_of_bar(exit_bar)
-    b_start = b.beat_index_of_bar(entry_bar)
+    if a_end - a_start != bars * a.beats_per_bar:
+        return None
+    return beat_lock(a, b, a_start, a_end, b.beat_index_of_bar(entry_bar), ramp_beats)
+
+
+def beat_lock(
+    a: SongInfo, b: SongInfo, a_start: int, a_end: int, b_start: int, ramp_beats: int = RAMP_BEATS
+) -> BlendTiming | None:
+    """Play A's beats from `a_start` to `a_end` against B's from `b_start`, or None if they don't
+    both exist. The numbers are positions in each song's list of beats."""
     beat_count = a_end - a_start
-    if beat_count != bars * a.beats_per_bar:
+    if beat_count <= 0 or b_start < 0:
         return None
 
     gap = tempo_gap(a, b)
