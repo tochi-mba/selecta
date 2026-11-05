@@ -6,13 +6,19 @@ import os
 import subprocess
 import sys
 import threading
+import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import TextIO
 
 import psutil
 
 _LOW = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
 _LOWEST = getattr(subprocess, "IDLE_PRIORITY_CLASS", 0)
+MIX_RENDERING_SIGN = "rendering-mix"
+MIX_SIGN_LASTS_SECONDS = 120.0
+MIX_SIGN_CHECK_SECONDS = 3.0
+MIX_SIGN_RENEW_SECONDS = 30.0
 
 
 class Interrupted(BaseException):
@@ -84,6 +90,29 @@ def kill_tree(pid: int) -> None:
             process.kill()
     except psutil.NoSuchProcess:
         pass
+
+
+def mark_mix_rendering(home: Path, rendering: bool) -> None:
+    """Low priority alone isn't enough: Demucs leaves hyperthreads free, and analysis running on
+    them slows it down. So the worker keeps this sign up while it works on the mix."""
+    sign = home / MIX_RENDERING_SIGN
+    if rendering:
+        sign.touch()
+    else:
+        sign.unlink(missing_ok=True)
+
+
+def mix_is_rendering(home: Path) -> bool:
+    """A sign nobody has renewed was left by a worker that stopped, so it doesn't count."""
+    try:
+        return time.time() - (home / MIX_RENDERING_SIGN).stat().st_mtime < MIX_SIGN_LASTS_SECONDS
+    except OSError:
+        return False
+
+
+def wait_while_mix_renders(home: Path) -> None:
+    while mix_is_rendering(home):
+        time.sleep(MIX_SIGN_CHECK_SECONDS)
 
 
 def take_app_input() -> TextIO:

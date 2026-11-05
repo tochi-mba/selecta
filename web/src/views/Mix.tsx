@@ -308,7 +308,11 @@ function SeamRow(props: {
       {open && state.status === 'ready' && (
         <div className="report">
           {state.why && <p className="hint">{state.why}.</p>}
-          {state.fell_back && <p className="warn">Nothing cleared the bar here, so this is the safe echo.</p>}
+          {state.tried?.map((attempt) => (
+            <p className="hint" key={attempt.move}>
+              {names[attempt.move] ?? attempt.move} couldn’t work here. {attempt.why}.
+            </p>
+          ))}
           <ul>
             {state.checks?.map((check) => (
               <li key={check.name} className={check.passed ? 'ok' : 'bad'}>

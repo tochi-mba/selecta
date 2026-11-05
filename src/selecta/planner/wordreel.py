@@ -11,8 +11,9 @@ first word reel was that it felt like "we are just using the words because it ha
 from __future__ import annotations
 
 import sqlite3
+from collections import Counter
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -50,6 +51,11 @@ MIN_AGREEMENT = 0.55
 """How well the fit matches an unguided reading, by word starts or letters, whichever is higher."""
 CHECK_MARGIN = 3.0
 MIN_VOICE_DB = -38.0
+EDGE_FRAME_SECONDS = 0.02
+VOICE_REST_DB = 24.0
+"""This far below a line's loud parts, the voice counts as having stopped."""
+MIN_REST_SECONDS = 0.12
+EDGE_WORD_SECONDS = 0.3
 MAX_WORD_SECONDS = 3.5
 
 BLEND_MAX_GAP = 0.08
@@ -71,6 +77,21 @@ MIN_RIDE_SINGING = 0.35
 
 class CannotTrust(ValueError):
     """The word timing for this line isn't reliable enough to cut on."""
+
+    song_id: int | None = None
+
+
+@dataclass
+class Verdicts:
+    """What past renders showed, so a mix doesn't plan on what has already failed."""
+
+    failed: set[tuple[int, int, str]] = field(default_factory=set)
+    worked: set[tuple[int, int, str]] = field(default_factory=set)
+    timed: Counter[int] = field(default_factory=Counter)
+    untimed: Counter[int] = field(default_factory=Counter)
+
+    def can_time_words(self, song_id: int) -> bool:
+        return self.timed[song_id] > 0 or self.untimed[song_id] == 0
 
 
 @dataclass(frozen=True)
@@ -117,11 +138,15 @@ def _fit_line(
     lo_wide = max(lo - SECOND_LOOK_SECONDS, origin)
     second = aligner.align(clip(lo_wide, hi + SECOND_LOOK_SECONDS), SAMPLE_RATE, line.text, lo_wide)
     if not words or len(second) != len(words):
-        raise CannotTrust("couldn't fit the line")
+        problem = CannotTrust("couldn't fit the line")
+        problem.song_id = song.id
+        raise problem
     lo_check = max(lo - CHECK_MARGIN, origin)
     score = aligner.check(clip(lo_check, hi + CHECK_MARGIN), SAMPLE_RATE, words, lo_check)
     if score < MIN_AGREEMENT:
-        raise CannotTrust(f"only {score:.0%} agreement with an unguided reading")
+        problem = CannotTrust(f"only {score:.0%} agreement with an unguided reading")
+        problem.song_id = song.id
+        raise problem
     return (
         words,
         second,
@@ -179,6 +204,73 @@ def locate_phrase(
     return Phrase(_settled(words, span, vocal, origin, next_start), score, voice, band)
 
 
+def voice_edge(
+    vocal: np.ndarray, origin: float, line: Line, next_start: float, at_end: bool
+) -> float | None:
+    """Where the singing itself stops or starts near a line, read from the separated voice.
+
+    A ride only needs to know when a voice stops and another begins, not which word is which. So
+    this works in any language, where fitting words to the voice only works in English. None means
+    there's no clear voice here at all.
+    """
+    mono = vocal.mean(axis=1) if vocal.ndim > 1 else vocal
+    hop = int(EDGE_FRAME_SECONDS * SAMPLE_RATE)
+    lo = max(line.start - 1.0, origin)
+    hi = min(max(line.end, next_start) + 1.0, origin + mono.size / SAMPLE_RATE)
+    part = mono[int((lo - origin) * SAMPLE_RATE) : int((hi - origin) * SAMPLE_RATE)]
+    if part.size < hop * 10:
+        return None
+    level = np.sqrt(np.mean(part[: part.size // hop * hop].reshape(-1, hop) ** 2, axis=1))
+    loud = float(np.percentile(level, 90))
+    if 20.0 * np.log10(max(loud, 1e-7)) < MIN_VOICE_DB:
+        return None
+    voiced = level > loud * 10.0 ** (-VOICE_REST_DB / 20.0)
+    times = lo + (np.arange(level.size) + 0.5) * EDGE_FRAME_SECONDS
+    rest = int(MIN_REST_SECONDS / EDGE_FRAME_SECONDS)
+    if at_end:
+        target = line.end
+        reach = (line.start + 0.3 * (line.end - line.start), line.end + 0.8)
+        edges = [
+            i for i in range(level.size - 1) if voiced[i] and not voiced[i + 1 : i + 1 + rest].any()
+        ]
+    else:
+        target = line.start
+        reach = (line.start - 1.0, line.start + 1.0)
+        edges = [
+            i for i in range(1, level.size) if voiced[i] and not voiced[max(0, i - rest) : i].any()
+        ]
+    inside = [i for i in edges if reach[0] <= times[i] <= reach[1]]
+    if inside:
+        return float(times[min(inside, key=lambda i: abs(times[i] - target))])
+    # no clean rest, as in rap with no gap between lines: take the quietest moment nearby
+    close = np.flatnonzero(np.abs(times - target) <= 0.4)
+    if close.size == 0:
+        return None
+    return float(times[close[int(np.argmin(level[close]))]])
+
+
+def locate_voice_edge(settings: Settings, song: SongInfo, line: Line, at_end: bool) -> Phrase:
+    """Find where a voice stops or starts, for a ride. Uses the same stems as finding its words."""
+    later = [other.start for other in song.lines if other.start > line.start]
+    origin = max(0.0, line.start - WINDOW_LEAD)
+    next_start = later[0] if later else line.end + LINE_SEARCH_AFTER
+    length = max(line.end, next_start) + WINDOW_TAIL - origin
+    stems = separate_window(settings, Path(song.path), origin, length)
+    vocal = sf.read(stems.vocals, dtype="float32")[0]
+    edge = voice_edge(vocal, origin, line, next_start, at_end)
+    if edge is None:
+        problem = CannotTrust("no clear voice near that line")
+        problem.song_id = song.id
+        raise problem
+    text = (line.words[-1] if at_end else line.words[0]) if line.words else ""
+    word = (
+        Word(text, max(edge - EDGE_WORD_SECONDS, line.start), edge, 1.0)
+        if at_end
+        else Word(text, edge, edge + EDGE_WORD_SECONDS, 1.0)
+    )
+    return Phrase([word], 1.0, Stem(str(stems.vocals), origin), Stem(str(band_of(stems)), origin))
+
+
 def locate_line_edge(
     settings: Settings, aligner: Aligner, song: SongInfo, line: Line, at_end: bool
 ) -> Phrase:
@@ -212,7 +304,13 @@ def ride_lines(a: SongInfo, b: SongInfo) -> tuple[Line, Line] | None:
     A has to be singing through the ride, or there's no voice to carry over B's band. B starts best
     on the first line of a chorus, which then lands as A's voice ends.
     """
-    if not (a.lines and b.lines):
+    out, into = ride_exit_line(a), ride_entry_line(b)
+    return (out, into) if out is not None and into is not None else None
+
+
+def ride_exit_line(a: SongInfo) -> Line | None:
+    """The line A's voice is best off finishing a ride on, if it has one."""
+    if not a.lines:
         return None
     ride = RIDE_BARS * a.period * a.beats_per_bar
     chorus_ends = {float(a.bar_time(bar)) for bar in a.chorus_end_bars()}
@@ -227,7 +325,12 @@ def ride_lines(a: SongInfo, b: SongInfo) -> tuple[Line, Line] | None:
         score = sung + (0.5 if near_chorus_end else 0.0)
         if best_a is None or score > best_a[0]:
             best_a = (score, line)
-    if best_a is None:
+    return best_a[1] if best_a else None
+
+
+def ride_entry_line(b: SongInfo) -> Line | None:
+    """The line B's voice is best off coming in on, if it has one."""
+    if not b.lines:
         return None
     chorus_starts = {float(b.bar_time(bar)) for bar in b.chorus_start_bars()}
     best_b: tuple[float, Line] | None = None
@@ -242,7 +345,7 @@ def ride_lines(a: SongInfo, b: SongInfo) -> tuple[Line, Line] | None:
             score -= 0.5
         if best_b is None or score > best_b[0]:
             best_b = (score, line)
-    return (best_a[1], best_b[1]) if best_b else None
+    return best_b[1] if best_b else None
 
 
 def build_rides(

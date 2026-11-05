@@ -25,12 +25,23 @@ Every line here was checked on 5 November 2026 by running it on the real library
 | Tempo ramp | 1 of 2 good | Same note on the good one |
 | Echo out, cut, delay throw, reverb | 0 of 4 on reel 1, then 4 of 7 on reel 2, one only "tolerable" | No measurement separated the good from the bad |
 | Word cut | 3 of 5 good | Now needs tempos within 6% |
-| Word blend | 1 of 1 good, "could be smoother" | Reworked after that note |
-| Phrase roll | 2 of 4 good | Reworked after that note: shape comes from each pair, bass in steps. Rock songs excluded |
+| Word blend | 2 of 3 good | Reworked after the first note. Reel 4's try "just doesn't work" |
+| Phrase roll | 4 of 6 good | Shape comes from each pair, bass in steps. Rock songs excluded. Reel 4: "much better", though the last repeat could be better |
 | Word echo | 0 of 4 | Removed |
-| Vocal ride, call and response | Not yet heard | New on reel 4. Vocal ride came from the listener's notes, call and response from DJ tutorials |
+| Vocal ride | 2 of 2 good, "insane" and "swaggy" | Came from the listener's notes. Now tried first between any two songs that suit it |
+| Call and response | 0 of 3 on reel 4, "too algorithmic" | Rebuilt after that note: a vocal ride, with A's phrase dropped into B's real gaps between lines, at falling levels. The rebuilt version hasn't been heard |
 
 The new rules were set from these same ratings, so only further reels can test them.
+
+## Rendering
+
+| What | Measured |
+|---|---|
+| Order | What's about to be heard, then the current mix in order, then other requests, then word links in spare time. Unit tests cover the order |
+| Giving way | A word render stops as soon as a mix seam is waiting. Analysis of the library pauses between songs while the mix renders |
+| Speed | On the 4-core laptop with analysis paused, three of a real mix's seams finished in about five minutes. A seam needing stems can take longer |
+| Helpers on Windows | A helper froze while the worker waited on its input pipe. Side by side: still frozen after 25 s, against 0.3 s with the fix. Covered by a test |
+| Memory | Each analysis process holds about a gigabyte. 24 at once nearly filled the machine, so requests now share one process, one song at a time |
 
 ## Partly works
 
@@ -45,7 +56,7 @@ The new rules were set from these same ratings, so only further reels can test t
 
 - Melody, sample, rhythm and shortest-path discovery. The old same-melody search matched everything, and still runs under `selecta discover`, but the app no longer shows it.
 - The blind listening test. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
-- Stage view, the drawn Arc, and the typographic word moment.
+- The drawn Arc and the typographic word moment. Fullscreen lyrics work, without the word moment.
 - Loop rolls on A's band, half and double time, drop swaps and brakes. The placeholders that faked these are gone.
 - The intertwined transition: no beat alignment, and the planner can't reach it.
 
@@ -53,4 +64,4 @@ The new rules were set from these same ratings, so only further reels can test t
 
 - Whether anything sounds good, especially the moves not yet heard.
 - Beat, downbeat and key accuracy on rap and Latin tracks.
-- Whether the interface is actually easy to use.
+- Whether the interface is actually easy to use. Every screen was walked in a browser at desktop and phone width, with page tests in `web/src`, but that can't judge taste.

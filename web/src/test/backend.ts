@@ -47,6 +47,7 @@ export function status(more: Partial<Status> = {}): Status {
     moves: { bass_swap_blend: 'Blend', cut_on_one: 'Cut' },
     analysis_running: false,
     analysing: [],
+    mix_rendering: false,
     scan: { status: 'idle' },
     ...more,
   };

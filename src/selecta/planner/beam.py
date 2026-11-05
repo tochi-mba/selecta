@@ -16,6 +16,13 @@ from selecta.lyrics.lrclib import clean_artist
 from selecta.planner.arc import target_energy
 from selecta.planner.choose import enumerate_candidates, styles_for_language
 from selecta.planner.fit import TimbreSpace, folded_gap
+from selecta.planner.wordreel import (
+    BLEND_MAX_GAP,
+    BLEND_MAX_KEY_DISTANCE,
+    BLEND_MIN_GRID,
+    ride_entry_line,
+    ride_exit_line,
+)
 
 ARTIST_SEPARATION = 10
 """No artist comes back within this many songs."""
@@ -25,6 +32,10 @@ FRESHNESS = 0.03
 PLAN_EXITS = 2
 PLAN_ENTRIES = 3
 LINK_BONUS = 0.25
+
+
+BELONGING = 0.3
+OFF_MENU_PENALTY = 0.3
 
 
 @dataclass(frozen=True)
@@ -57,6 +68,49 @@ def _quick_score(
     timbre = 1.0 - min(distance, 2.0) / 2.0 if distance is not None else 0.5
     score = 0.25 * fit + 0.3 * tempo + 0.2 * key + 0.25 * timbre
     return score + (LINK_BONUS if (a.id, b.id) in linked else 0.0)
+
+
+class _Riders:
+    """Which songs have a line to ride out on or bring a voice in on, worked out once."""
+
+    def __init__(self) -> None:
+        self._out: dict[int, bool] = {}
+        self._in: dict[int, bool] = {}
+
+    def can_leave(self, song: SongInfo) -> bool:
+        if song.id not in self._out:
+            self._out[song.id] = ride_exit_line(song) is not None
+        return self._out[song.id]
+
+    def can_enter(self, song: SongInfo) -> bool:
+        if song.id not in self._in:
+            self._in[song.id] = ride_entry_line(song) is not None
+        return self._in[song.id]
+
+
+def handoff_quality(a: SongInfo, b: SongInfo, riders: _Riders) -> float:
+    """How good the best move between two songs should sound, going by what the listener rated.
+    Vocal rides were the favourite, blends good, and effects and cuts mostly disliked. They're all
+    a person ends up hearing when a mix picks songs that can't carry anything better."""
+    if (
+        a.beats_per_bar != b.beats_per_bar
+        or min(a.grid_confidence, b.grid_confidence) < BLEND_MIN_GRID
+    ):
+        return 0.1
+    gap = abs(a.bpm / b.bpm - 1.0)
+    keys = camelot_distance(a.camelot, b.camelot)
+    if (
+        gap <= BLEND_MAX_GAP
+        and keys <= BLEND_MAX_KEY_DISTANCE
+        and riders.can_leave(a)
+        and riders.can_enter(b)
+    ):
+        return 1.0
+    if gap <= 0.05:
+        return 0.75 if keys <= 3 else 0.55
+    if gap <= BLEND_MAX_GAP:
+        return 0.55
+    return 0.3 if gap <= 0.3 else 0.1
 
 
 class _Cues:
@@ -94,10 +148,14 @@ def plan_set(
     links: set[tuple[int, int]] | None = None,
     arc: str = "slow_burn",
     seed: int | None = None,
+    steady: float = 0.35,
+    belongs: dict[int, float] | None = None,
 ) -> list[PlannedSong]:
     """A set of up to `count` songs from `songs`, starting at `start_id`, following the energy
     shape `arc`. `links` holds pairs that share a phrase, which get a head start. With a `seed`,
-    close calls can go either way, so two builds of the same mix don't come out the same."""
+    close calls can go either way, so two builds of the same mix don't come out the same. `steady`
+    is how strongly to prefer pairs that can carry a real move, and `belongs` says which songs
+    suit this mix most, from 0 to 1."""
     rng = None if seed is None else np.random.default_rng(seed)
     if not songs:
         return []
@@ -108,6 +166,10 @@ def plan_set(
     energies = np.array([song.energy for song in songs])
     energy_range = (float(energies.min()), float(energies.max()))
     cues = _Cues()
+    riders = _Riders()
+    belongs = belongs or {}
+    # a mix drawn from a few artists can't keep them ten songs apart, and shouldn't stop short for it
+    separation = min(ARTIST_SEPARATION, max(len({_artist(song) for song in songs}) // 2, 1))
     beams: list[tuple[float, list[PlannedSong]]] = [
         (0.0, [PlannedSong(first, None, "You started here")])
     ]
@@ -117,9 +179,14 @@ def plan_set(
         for total, path in beams:
             current = path[-1].song
             used = {item.song.id for item in path}
-            recent = {_artist(item.song) for item in path[-ARTIST_SEPARATION:]}
+            recent = {_artist(item.song) for item in path[-separation:]}
             options = [
-                (_quick_score(current, song, progress, energy_range, space, links, arc), song)
+                (
+                    _quick_score(current, song, progress, energy_range, space, links, arc)
+                    + steady * handoff_quality(current, song, riders)
+                    + BELONGING * belongs.get(song.id, 0.0),
+                    song,
+                )
                 for song in songs
                 if song.id not in used and _artist(song) not in recent
             ]
@@ -129,10 +196,14 @@ def plan_set(
                 ]
             options.sort(key=lambda item: -item[0])
             kept = 0
-            for score, song in options[:LOOK_PER_STEP]:
-                if kept == CHECK_PER_STEP:
+            for looked, (score, song) in enumerate(options):
+                if kept == CHECK_PER_STEP or (kept and looked >= LOOK_PER_STEP):
                     break
                 move = _best_move(current, song, allowed, cues)
+                if move is None:
+                    # this mix's favourite moves don't fit here, which beats stopping the mix short
+                    move = _best_move(current, song, None, cues)
+                    score -= OFF_MENU_PENALTY
                 if move is None:
                     continue
                 kept += 1

@@ -20,6 +20,7 @@ from selecta.planner.beam import ARTIST_SEPARATION, plan_set, suggest_next
 from selecta.seams import (
     MIX,
     PREPARING,
+    CannotRender,
     SeamRequest,
     SeamStore,
     links_between,
@@ -420,9 +421,9 @@ def test_each_vibe_only_uses_songs_that_fit_it(tmp_path):
     afro = eligible(BY_KEY["afro_heat"], songs, traits)
     assert afro and all(song.family == "afro" for song in afro)
     old = eligible(BY_KEY["throwbacks"], songs, traits)
-    assert old and all(traits[song.id].year < 2006 for song in old)
+    assert old and all(traits[song.id].year < 2010 for song in old)
     peak = eligible(BY_KEY["peak"], songs, traits)
-    assert peak and all(traits[song.id].energy >= 0.55 for song in peak)
+    assert peak and all(traits[song.id].energy >= 0.6 for song in peak)
     planned, _ = build_vibe(BY_KEY["peak"], songs, traits, {}, 5, seed=1)
     assert {item.song.id for item in planned} <= {song.id for song in peak}
 
@@ -448,6 +449,7 @@ def test_word_handoffs_stay_rare_unless_the_mix_is_about_them(tmp_path):
     for i in range(8):
         song = song_from_track(tmp_path, f"w{i}", track, genre="Pop")
         song.id = i + 1
+        song.lines = [Line(10.0, 12.0, "you and me in the night")]
         songs.append(song)
     planned = [PlannedSong(song, "bass_swap_blend", "") for song in songs]
     phrases = {(songs[i].id, songs[i + 1].id): "good news" for i in range(7)}
@@ -879,3 +881,339 @@ def test_helpers_start_while_the_worker_waits_for_requests():
     reader.join(60)
     process.kill()
     assert lines and lines[0].strip() == "finished", "the helper froze"
+
+
+def test_analysis_waits_only_while_the_sign_is_fresh(tmp_path):
+    import os
+    import time
+
+    jobs.mark_mix_rendering(tmp_path, True)
+    assert jobs.mix_is_rendering(tmp_path)
+    old = time.time() - jobs.MIX_SIGN_LASTS_SECONDS - 1
+    os.utime(tmp_path / jobs.MIX_RENDERING_SIGN, (old, old))
+    assert not jobs.mix_is_rendering(tmp_path), "a stopped worker can't hold analysis up forever"
+    jobs.mark_mix_rendering(tmp_path, True)
+    jobs.mark_mix_rendering(tmp_path, False)
+    assert not jobs.mix_is_rendering(tmp_path)
+    jobs.mark_mix_rendering(tmp_path, False)  # taking down a sign that isn't up is fine
+
+
+def test_the_sign_goes_up_for_the_mix_and_not_for_spare_time_work(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    store.settings.home.mkdir(parents=True, exist_ok=True)
+    seen = []
+    jobs_to_do = [(MIX, _request(1)), (PREPARING, _request(2))]
+
+    def next_job():
+        if not jobs_to_do:
+            raise KeyboardInterrupt
+        rank, request = jobs_to_do.pop(0)
+        store._running_rank = rank
+        return request
+
+    def note(_conn, _request):
+        seen.append(jobs.mix_is_rendering(store.settings.home))
+        return {}
+
+    monkeypatch.setattr(store, "_next_job", next_job)
+    monkeypatch.setattr(store, "render_now", note)
+    monkeypatch.setattr("selecta.jobs.set_render_priority", lambda _important: None)
+    with pytest.raises(KeyboardInterrupt):
+        store.run_forever()
+    assert seen == [True, False]
+
+
+def test_a_request_pushed_back_by_the_mix_is_not_lost(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    theirs = _request(5)
+    store.ask(theirs)
+    calls = []
+
+    def interrupted_once(_conn, request):
+        calls.append(request.a)
+        if len(calls) == 1:
+            raise jobs.Interrupted
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(store, "render_now", interrupted_once)
+    monkeypatch.setattr("selecta.jobs.set_render_priority", lambda _important: None)
+    with pytest.raises(KeyboardInterrupt):
+        store.run_forever()
+    assert calls == [5, 5], "it went back in line and was picked up again"
+
+
+def test_rendering_from_the_words_page_never_jumps_the_mix(client, monkeypatch):
+    sent = []
+    monkeypatch.setattr(
+        "selecta.seams.SeamStore.submit",
+        lambda _store, request, urgent=False: sent.append(urgent) or {"status": "queued"},
+    )
+    reply = client.post("/api/seams", json={"a": 1, "b": 2, "move": "cut_on_one"})
+    assert reply.status_code == 200
+    assert sent == [False]
+
+
+def test_a_mix_doesnt_stop_short_when_its_favourite_moves_dont_fit(tmp_path):
+    from selecta.planner.vibes import BY_KEY, build_vibe
+
+    songs, traits = _vibe_library(tmp_path)
+    for i, song in enumerate(songs):
+        song.bpm = 80.0 + 25.0 * (i % 5)  # far apart, so no blend reaches between most of them
+        traits[song.id] = traits[song.id]
+    planned, _ = build_vibe(BY_KEY["slow_burn"], songs, traits, {}, 10, seed=2)
+    assert len(planned) == 10
+
+
+def test_christmas_songs_stay_out_of_every_other_mix(tmp_path):
+    from selecta.planner.vibes import BY_KEY, VIBES, eligible, traits_of
+
+    songs, _ = _vibe_library(tmp_path)
+    songs[0].title = "Jingle Bell Rock"
+    songs[1].title = "Last Christmas"
+    traits = traits_of(songs, {})
+    for vibe in VIBES:
+        found = {song.id for song in eligible(vibe, songs, traits)}
+        if vibe.key == "christmas":
+            assert found == {songs[0].id, songs[1].id}
+        else:
+            assert not found & {songs[0].id, songs[1].id}, vibe.key
+    assert "christmas" in BY_KEY
+
+
+def test_lyrics_tell_a_sad_song_from_a_party_song(tmp_path):
+    from selecta.planner.vibes import BY_KEY, eligible, traits_of
+
+    songs, _ = _vibe_library(tmp_path)
+    sad, party = songs[0], songs[1]
+    sad.lines = [Line(10.0 + i, 11.0 + i, "i cry alone with these tears") for i in range(8)]
+    party.lines = [Line(10.0 + i, 11.0 + i, "dance at the party tonight") for i in range(8)]
+    sad.bpm = party.bpm = 100.0
+    traits = traits_of(songs, {})
+    assert traits[sad.id].about("heartbreak") > traits[party.id].about("heartbreak")
+    assert traits[party.id].about("party") > traits[sad.id].about("party")
+    assert traits[sad.id].english
+    assert sad.id in {song.id for song in eligible(BY_KEY["feelings"], songs, traits)}
+    assert party.id not in {song.id for song in eligible(BY_KEY["feelings"], songs, traits)}
+
+
+def test_a_song_not_in_english_gets_no_word_handoffs_but_can_still_ride(tmp_path):
+    from selecta.planner.vibes import _word_move
+    from selecta.planner.wordreel import Verdicts
+
+    track = make_track(bpm=120, bars=64, seed=1)
+    a = song_from_track(tmp_path, "a", track)
+    b = song_from_track(tmp_path, "b", track)
+    a.id, b.id = 1, 2
+    a.lines = [Line(10.0, 12.0, "you and me in the night")]
+    b.lines = [Line(10.0, 12.0, "you and me in the night")]
+    assert _word_move(a, b, Verdicts()) is not None
+    b.lines = [Line(10.0, 12.0, "wetin dey happen abeg oga")]
+    assert _word_move(a, b, Verdicts()) is None
+
+
+def test_a_move_that_failed_on_two_songs_isnt_planned_again(tmp_path):
+    from selecta.planner.vibes import BY_KEY, _moves_that_fit
+    from selecta.planner.wordreel import Verdicts
+
+    track = make_track(bpm=120, bars=64, seed=1)
+    a = song_from_track(tmp_path, "a", track)
+    b = song_from_track(tmp_path, "b", track)
+    a.id, b.id = 1, 2
+    fresh = [name for name, _ in _moves_that_fit(BY_KEY["pick"], a, b, Verdicts())]
+    assert "bass_swap_blend" in fresh
+    known = Verdicts(failed={(1, 2, "bass_swap_blend")})
+    assert "bass_swap_blend" not in [
+        name for name, _ in _moves_that_fit(BY_KEY["pick"], a, b, known)
+    ]
+
+
+def test_only_a_rap_mix_ever_plans_a_cut():
+    from selecta.planner.vibes import MOVE_WEIGHTS
+
+    assert [name for name, moves in MOVE_WEIGHTS.items() if "cut_on_one" in moves] == ["punchy"]
+
+
+def _report(*checks):
+    from selecta.audit.checks import AuditReport, Check
+
+    return AuditReport([Check(name, False, value, limit) for name, value, limit in checks])
+
+
+def test_a_near_miss_is_good_enough_but_a_real_problem_isnt():
+    from selecta.seams import good_enough
+
+    assert good_enough(_report())
+    assert good_enough(_report(("beat alignment", 35.0, 20.0)))
+    assert not good_enough(_report(("beat alignment", 60.0, 20.0)))
+    assert not good_enough(_report(("quiet time", 3.0, 1.2)))
+    assert not good_enough(_report(("beat alignment", 35.0, 20.0), ("harmony", 2.0, 1.0)))
+
+
+def test_a_cut_is_the_last_thing_tried(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    track = make_track(bpm=120, bars=64, seed=1)
+    a = song_from_track(tmp_path, "a", track)
+    b = song_from_track(tmp_path, "b", track)
+    a.id, b.id = 1, 2
+    asked = []
+
+    def nothing_works(request, _a, _b):
+        asked.append(request.move)
+        raise CannotRender("not here")
+
+    monkeypatch.setattr(store, "_chosen_move", nothing_works)
+    tried: list[dict] = []
+    rendered, report, _why, fell_back = store._best_move(a, b, tried, "vocal_ride")
+    assert "cut_on_one" not in asked
+    assert asked[0] in {"filter_sweep", "bass_swap_blend", "tempo_ramp"}
+    assert asked[-1] == "reverb_wash", "the listener likes reverb least, so it's the last effect"
+    assert {item["move"] for item in tried} == set(asked)
+    assert rendered.script.style == "cut_on_one"
+    assert fell_back
+
+
+def test_a_seam_says_what_was_tried_before_what_it_landed_on(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    track = make_track(bpm=120, bars=64, seed=1)
+    a = song_from_track(tmp_path, "a", track)
+    b = song_from_track(tmp_path, "b", track)
+    a.id, b.id = 1, 2
+    monkeypatch.setattr("selecta.seams.load_song", lambda _c, _s, song: {1: a, 2: b}[song])
+    request = SeamRequest(a=1, b=2, move="vocal_ride", soft=True)
+    state = store.render_now(None, request)
+    assert state["status"] == "ready"
+    assert state["style"] != "cut_on_one", "two songs at the same tempo can always blend"
+    assert state["tried"][0]["move"] == "vocal_ride"
+    verdicts = store.verdicts()
+    assert (1, 2, "vocal_ride") in verdicts.failed
+    assert (1, 2, state["style"]) in verdicts.worked
+
+
+def test_seams_an_old_fallback_swapped_get_another_chance(tmp_path):
+    store = SeamStore(Settings(tmp_path))
+    folder = store.folder("old")
+    folder.mkdir(parents=True)
+    swapped = {
+        "status": "ready",
+        "key": "old",
+        "style": "cut_on_one",
+        "request": {"a": 1, "b": 2, "move": "vocal_ride"},
+    }
+    (folder / "seam.json").write_text(json.dumps(swapped), "utf-8")
+    assert store.status("old")["status"] == "none"
+    swapped["tried"] = [{"move": "vocal_ride", "why": "no"}]
+    (folder / "seam.json").write_text(json.dumps(swapped), "utf-8")
+    assert store.status("old")["status"] == "ready", "it was tried under the new rules"
+
+
+def test_a_voice_edge_comes_from_the_singing_itself():
+    from selecta.config import SAMPLE_RATE
+    from selecta.planner.wordreel import voice_edge
+
+    audio = np.zeros(SAMPLE_RATE * 20, dtype=np.float32)
+    time_axis = np.arange(int(SAMPLE_RATE * 4.0)) / SAMPLE_RATE
+    audio[SAMPLE_RATE * 5 : SAMPLE_RATE * 9] = 0.3 * np.sin(2 * np.pi * 220 * time_axis)
+    line = Line(5.2, 9.6, "any language at all")
+    assert voice_edge(audio, 0.0, line, 12.0, at_end=True) == pytest.approx(9.0, abs=0.05)
+    assert voice_edge(audio, 0.0, line, 12.0, at_end=False) == pytest.approx(5.0, abs=0.05)
+    assert voice_edge(np.zeros_like(audio), 0.0, line, 12.0, at_end=True) is None
+
+
+def _same_songs(tmp_path, count):
+    from selecta.planner.beam import PlannedSong
+
+    track = make_track(bpm=120, bars=64, seed=1)
+    songs = []
+    for i in range(count):
+        song = song_from_track(tmp_path, f"m{i}", track, genre="Pop")
+        song.id = i + 1
+        song.lines = [
+            Line(70.0 + j * 4.0, 73.5 + j * 4.0, "you and me in the night") for j in range(10)
+        ]
+        songs.append(song)
+    return [PlannedSong(song, "bass_swap_blend", "") for song in songs]
+
+
+def test_no_one_move_takes_over_a_mix_even_when_every_song_could_ride(tmp_path):
+    from collections import Counter
+
+    from selecta.planner.vibes import BY_KEY, seam_choices
+
+    planned = _same_songs(tmp_path, 13)
+    for seed in range(8):
+        seams = seam_choices(BY_KEY["pick"], planned, {}, np.random.default_rng(seed))
+        moves = [seams[item.song.id]["move"] for item in planned[1:]]
+        counts = Counter(moves)
+        assert counts["vocal_ride"] >= 1, "the favourite still gets its moments"
+        assert counts["vocal_ride"] <= 5, moves
+        assert len(counts) >= 3, moves
+        assert all(x != y for x, y in zip(moves, moves[1:], strict=False)), moves
+
+
+def test_builds_of_a_mix_come_out_different(tmp_path):
+    from selecta.planner.vibes import BY_KEY, seam_choices
+
+    planned = _same_songs(tmp_path, 13)
+    runs = {
+        tuple(
+            seam_choices(BY_KEY["pick"], planned, {}, np.random.default_rng(seed))[item.song.id][
+                "move"
+            ]
+            for item in planned[1:]
+        )
+        for seed in range(6)
+    }
+    assert len(runs) >= 3
+
+
+def test_a_fallback_takes_the_rest_of_the_mix_into_account():
+    from collections import Counter
+
+    from selecta.seams import fallback_order
+
+    fresh = fallback_order(1, 2, True, Counter())
+    assert fresh[0] == "vocal_ride"
+    full = fallback_order(1, 2, True, Counter({"vocal_ride": 4, "filter_sweep": 2}))
+    assert full.index("vocal_ride") > full.index("bass_swap_blend"), "plenty of rides already"
+    assert full.index("bass_swap_blend") < full.index("filter_sweep"), "least used comes first"
+    assert full[-1] == "reverb_wash"
+    assert "cut_on_one" not in full
+    assert "vocal_ride" not in fallback_order(1, 2, False, Counter())
+
+
+def test_a_seam_from_a_replaced_mix_stops_for_the_active_one(tmp_path):
+    store = SeamStore(Settings(tmp_path))
+    old, new = _request(1), _request(2)
+    active = {old.key}
+    store.keep_for_now = lambda: set(active)
+    store.next_mix_seam = lambda: old
+    store._next_job()
+    assert store._give_way() is False
+    active.clear()
+    active.add(new.key)
+    store._active_checked_at = 0.0
+    assert store._give_way() is True
+
+
+def test_a_leftover_request_from_the_last_mix_waits_behind_the_active_one(tmp_path):
+    store = SeamStore(Settings(tmp_path))
+    old, new = _request(1), _request(2)
+    store.keep_for_now = lambda: {new.key}
+    waiting = [new]
+    store.next_mix_seam = lambda: waiting.pop() if waiting else None
+    store.ask(old, urgent=True)
+    assert store._next_job() == new
+    assert store._next_job() == old
+
+
+def test_a_mix_from_a_few_artists_still_reaches_its_length(tmp_path):
+    from selecta.planner.vibes import BY_KEY, build_vibe
+
+    songs, traits = _vibe_library(tmp_path)
+    for i, song in enumerate(songs):
+        song.artist = f"Artist {i % 6}"
+        song.bpm = 120.0
+    planned, _ = build_vibe(BY_KEY["slow_burn"], songs, traits, {}, 12, seed=4)
+    assert len(planned) == 12
+    artists = [item.song.artist for item in planned]
+    assert all(x != y for x, y in zip(artists, artists[1:], strict=False))

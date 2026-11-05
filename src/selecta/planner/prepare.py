@@ -8,6 +8,7 @@ from typing import Any
 from selecta.analysis.song import SongInfo
 from selecta.lyrics.match import LyricLink
 from selecta.planner.fit import TimbreSpace
+from selecta.planner.moods import is_english
 from selecta.planner.wordreel import modes_for, rank_links
 from selecta.seams import SeamRequest
 
@@ -58,8 +59,9 @@ def next_to_prepare(
 ) -> SeamRequest | None:
     """The best link that has no good take yet, trying its next move if the last one fell short."""
     for link in unique[:LINKS_TO_PREPARE]:
-        moves = modes_for(library[link.song_a], library[link.song_b], space)
-        if not moves:
+        a, b = library[link.song_a], library[link.song_b]
+        moves = modes_for(a, b, space)
+        if not moves or not (is_english(a) and is_english(b)):
             continue
         move, state = link_state(link, moves, status)
         if state["status"] == "none":

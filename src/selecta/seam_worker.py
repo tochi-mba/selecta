@@ -12,6 +12,7 @@ import os
 import sys
 import threading
 import time
+from collections import Counter
 from typing import TextIO
 
 from selecta import db, mix
@@ -48,7 +49,18 @@ def _mix_seams(store: SeamStore, settings):
     def keep() -> set[str]:
         return {request.key for request, _ in pairs()}
 
-    return next_seam, keep
+    def moves() -> Counter[str]:
+        """What the mix uses so far: what finished seams became, and what the rest plan to be."""
+        used: Counter[str] = Counter()
+        items = mix.read_mix(conn, store)
+        for item in items[1:]:
+            state, settings_now = item["seam"]["state"], item["seam"]["settings"]
+            move = state.get("style") if state["status"] == "ready" else settings_now.get("move")
+            if move and move != "auto":
+                used[move] += 1
+        return used
+
+    return next_seam, keep, moves
 
 
 def _preparer(store: SeamStore, settings):
@@ -88,7 +100,7 @@ def main() -> None:
         store.next_idle_job = _preparer(store, settings)
     app_input = take_app_input()
     threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()
-    store.next_mix_seam, store.keep_for_now = _mix_seams(store, settings)
+    store.next_mix_seam, store.keep_for_now, store.mix_moves = _mix_seams(store, settings)
     store.run_forever()
 
 

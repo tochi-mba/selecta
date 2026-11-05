@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { get, MixData, post, VibeCard } from '../api';
-import { SET_LENGTHS } from '../lib';
+import { length, SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
 
 type Saved = { name: string; songs: number };
+
+const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
 export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshStatus }: ViewProps) {
@@ -64,7 +66,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
 
   const hero = cards?.find((card) => card.key === 'pick');
   const ready = cards?.filter((card) => card.ready && card.key !== 'pick') ?? [];
-  const waiting = cards?.filter((card) => !card.ready) ?? [];
+  const waiting = cards?.filter((card) => !card.ready && card.key !== 'christmas') ?? [];
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
 
   if (counts.analysed < 6) {
@@ -163,25 +165,40 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <section>
         <h2 className="section-title">Pick a feeling</h2>
         <p className="hint">Every one is built from your own songs, fresh each time you press play.</p>
-        {!cards && <div className="cards" aria-busy="true"><div className="card ghost" /><div className="card ghost" /><div className="card ghost" /></div>}
-        <div className="cards">
-          {ready.map((card) => (
-            <article className="card" key={card.key} data-vibe={card.key}>
-              <h3>{card.name}</h3>
-              <p>{card.blurb}</p>
-              <p className="artists">{card.artists.join(', ')}</p>
-              <div className="row">
+        {!cards && <div className="cards" aria-busy="true" key="loading"><div className="card ghost" /><div className="card ghost" /><div className="card ghost" /></div>}
+        {GROUPS.map((group) => {
+          const inGroup = ready.filter((card) => card.group === group);
+          if (!inGroup.length) return null;
+          return (
+            <div className="vibe-group" key={group}>
+              <h3 className="eyebrow">{group}</h3>
+              <div className="cards">
+                {inGroup.map((card) => (
+                  <article className="card" key={card.key} data-vibe={card.key}>
+                    <h3>{card.name}</h3>
+                    <p>{card.blurb}</p>
+                    <p className="artists">{card.artists.join(', ')}</p>
+                    <p className="facts">
+                      {card.tempo ? `${card.tempo[0]}–${card.tempo[1]} BPM · ` : ''}
+                      {card.moves}
+                    </p>
+                    <div className="row">
                 <button className="primary" disabled={!!building} onClick={() => void start(card.key, card.name, false)}>
                   {building === card.key ? 'Building…' : 'Play'}
                 </button>
                 <button disabled={!!building} onClick={() => void start(card.key, card.name, true)}>
                   Edit first
                 </button>
-                <small className="soft">{card.songs} songs to draw on</small>
+                      <small className="soft">
+                        {card.songs} songs, up to {length(card.seconds)}
+                      </small>
+                    </div>
+                  </article>
+                ))}
               </div>
-            </article>
-          ))}
-        </div>
+            </div>
+          );
+        })}
       </section>
 
       {waiting.length > 0 && (

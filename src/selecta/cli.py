@@ -68,7 +68,12 @@ def analyse(
 ) -> None:
     """Run fast analysis on songs that don't have it yet. Safe to stop and resume."""
     from selecta.analysis.pipeline import Analysers, analyse_song
-    from selecta.jobs import lower_priority, lowest_priority, stop_when_app_stops
+    from selecta.jobs import (
+        lower_priority,
+        lowest_priority,
+        stop_when_app_stops,
+        wait_while_mix_renders,
+    )
 
     if from_app:
         stop_when_app_stops()
@@ -94,6 +99,8 @@ def analyse(
 
     failures = 0
     for number, item in enumerate(songs, 1):
+        if from_app and not song:
+            wait_while_mix_renders(settings.home)
         if db.is_analysed(conn, item["id"], ANALYSIS_VERSION) and not refresh:
             continue  # someone asked for it by name while this was working through the list
         result = analyse_song(conn, settings, item, analysers)

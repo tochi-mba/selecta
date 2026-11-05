@@ -59,7 +59,7 @@ export function App() {
   }, []);
 
   const notify = useCallback((message: string, undo = false) => {
-    setToast({ message, undo, id: Date.now() });
+    setToast({ message: message.replace(/\.\.$/, '.'), undo, id: Date.now() });
   }, []);
   const undo = useCallback(async () => {
     const next = await post<MixData>('/mix/undo');

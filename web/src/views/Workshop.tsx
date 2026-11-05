@@ -104,7 +104,9 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
         <h2>Analysis</h2>
         <p>
           {status.analysis_running
-            ? `Working through your songs at low priority, so you can keep using your PC. ${left} to go.`
+            ? status.mix_rendering
+              ? `Waiting while your mix renders, then it carries on. ${left} to go.`
+              : `Working through your songs at low priority, so you can keep using your PC. ${left} to go.`
             : left
               ? `${left} song${left === 1 ? '' : 's'} left, about ${hours < 1 ? `${Math.ceil(hours * 60)} minutes` : `${Math.ceil(hours)} hours`} in the background. More songs means better mixes and more word links.`
               : 'Every song is ready.'}

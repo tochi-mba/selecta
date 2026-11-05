@@ -14,6 +14,7 @@ export type SeamState = {
   preview_seam?: number;
   bars?: number;
   rating?: string;
+  tried?: { move: string; why: string }[];
   checks?: { name: string; passed: boolean; text: string; value: string }[];
 };
 
@@ -55,6 +56,7 @@ export type Status = {
   moves: Record<string, string>;
   analysis_running: boolean;
   analysing: number[];
+  mix_rendering: boolean;
   scan: { status: string; folder?: string; music?: number; set_aside?: number; error?: string };
 };
 
@@ -109,6 +111,10 @@ export type VibeCard = {
   ready: boolean;
   needs: number;
   artists: string[];
+  group: string;
+  tempo: [number, number] | null;
+  moves: string;
+  seconds: number;
 };
 
 export type Suggestion = {

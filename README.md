@@ -18,16 +18,23 @@ You'll need [uv](https://docs.astral.sh/uv/), [pnpm](https://pnpm.io/) and [ffmp
 
 ```bash
 uv sync
-uv run selecta scan "C:\path\to\your\music"
-uv run selecta analyse --limit 10
-uv run selecta lyrics
-uv run selecta plan
-
 cd web
 pnpm install
 pnpm build
 cd ..
 uv run selecta web
+```
+
+The first screen asks where your music is, then reads it and analyses it in the background. Pick a
+mix on the Mixes page and press play. Its seams start rendering by themselves, ahead of everything
+else, and you can change how any song hands over to the next on the Edit page.
+
+To run the tests:
+
+```bash
+uv run pytest
+cd web
+pnpm test
 ```
 
 Use `selecta beat-check` to verify beats, downbeats and keys by ear before analysing the whole

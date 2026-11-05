@@ -396,3 +396,7 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .keys dt { min-width: 62px; margin: 0; }
 .keys dd { margin: 0; color: var(--soft); }
 kbd { font: 0.82rem var(--mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; }
+
+.vibe-group { margin-top: 26px; }
+.vibe-group > .eyebrow { margin: 0 0 10px; }
+.card .facts { color: var(--soft); font: 0.76rem var(--mono); margin: 0; }

@@ -26,7 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from selecta import audio as audio_io
-from selecta import db, mix
+from selecta import db, jobs, mix
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings, load_settings
 from selecta.seams import (
     MOVES,
@@ -262,6 +262,7 @@ def create_app(
                     background.analysis and background.analysis.poll() is None
                 ),
                 "analysing": songs_in_line(conn),
+                "mix_rendering": jobs.mix_is_rendering(settings.home),
                 "scan": background.scan,
             }
 
@@ -494,7 +495,15 @@ def create_app(
         songs, traits = library_now(conn)
         if len(eligible(vibe, songs, traits)) < MIN_SONGS:
             raise HTTPException(400, f"{vibe.name} needs more analysed songs.")
-        planned, seams = build_vibe(vibe, songs, traits, phrases_of(conn), min(count, 100), start)
+        planned, seams = build_vibe(
+            vibe,
+            songs,
+            traits,
+            phrases_of(conn),
+            min(count, 100),
+            start,
+            verdicts=store.verdicts(),
+        )
         mix.remember(conn, f"changing to {vibe.name}")
         mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
         mix.set_mix_name(conn, vibe.name)
@@ -776,8 +785,8 @@ def create_app(
     def audition(body: PairRequest) -> dict:
         if body.move not in MOVES:
             raise HTTPException(400, f"unknown move: {body.move}")
-        request = SeamRequest(a=body.a, b=body.b, move=body.move, phrase=body.phrase)
-        return store.submit(request, urgent=True)
+        # the mix comes first, so this waits behind it, even though someone asked for it by name
+        return store.submit(SeamRequest(a=body.a, b=body.b, move=body.move, phrase=body.phrase))
 
     @app.get("/api/seams/{key}")
     def seam_state(key: str) -> dict:
