@@ -10,7 +10,8 @@ Every line here was checked on 5 November 2026 by running it, against commit `74
 | Fast analysis, resumable | Tempos match known values (`I Wish` 105.9, `Fast Car` 104.4). Resumed cleanly after being killed mid-run | Key accuracy is still unchecked by ear |
 | Lyric lookup | 583 of 707 songs have line-synced lyrics | Timing is by line, not by word |
 | Core recipes | `cut_on_one`, `echo_out`, `delay_throw`, `reverb_wash`, `bass_swap_blend`, `filter_sweep` render real songs | Not yet judged by ear |
-| Audit and repair | Broken renders fail the right checks, and failures steer the next attempt | Thresholds aren't calibrated against ratings |
+| Blend timing | Drums separated with Demucs in the 5 reel blends: typical offset 3 to 17 ms, against a 20 ms limit | Only blends that passed the audit were measured. Two have some hits further out, 26 and 56 ms at the 90th percentile |
+| Audit and repair | Broken renders fail the right checks, failures steer the next attempt, and the harmony check catches a tritone or semitone clash on overlaps of 8 bars or more | Thresholds aren't calibrated against ratings. Only 6 of 36 blend renders passed, mostly on beat alignment, and it isn't known yet whether the rejected ones were really off |
 | Stem windows | 46 s window in 112 s under heavy CPU load, 32 MB, 0 ms offset against the main decode | The cap deletes single files, leaving broken windows, and ignores priority |
 | Set export | 4.3-minute set in 34 s, with every transition passing its audit | One transition with no audited option aborts the whole export |
 | Local-only server | Foreign hosts get 403, and audio is reachable only by song ID | No Origin check, so another website can rebuild the queue. A bad request returns 500 |
