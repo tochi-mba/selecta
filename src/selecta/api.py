@@ -23,6 +23,7 @@ class SteerRequest(BaseModel):
 class QueueAction(BaseModel):
     action: str
     song_id: int | None = None
+    value: str | None = None
 
 
 def _counts(conn: sqlite3.Connection) -> dict[str, int]:
@@ -106,7 +107,14 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
                 (ANALYSIS_VERSION,),
             ).fetchall()
             songs = [load_song(conn, settings, row["song_id"]) for row in rows]
-            planned = plan_set(songs, start, min(count, 100))
+            steering = get_steering(conn)
+            planned = plan_set(
+                songs,
+                start,
+                min(count, 100),
+                mix_language=steering.mix_language,
+                stems=steering.stems,
+            )
             conn.execute("DELETE FROM queue")
             conn.executemany(
                 "INSERT INTO queue(position,song_id,transition,reason) VALUES(?,?,?,?)",
@@ -127,6 +135,13 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
                 conn.execute("UPDATE queue SET position=-position-2 WHERE position<0")
             elif body.action == "lock" and body.song_id is not None:
                 conn.execute("UPDATE queue SET locked=1-locked WHERE song_id=?", (body.song_id,))
+            elif body.action == "transition" and body.song_id is not None:
+                allowed = {"auto", "intertwine", "blend", "cut", "wordplay", "effect"}
+                if body.value not in allowed:
+                    raise HTTPException(400, "unsupported transition preference")
+                conn.execute(
+                    "UPDATE queue SET transition=? WHERE song_id=?", (body.value, body.song_id)
+                )
             else:
                 raise HTTPException(400, "unsupported queue action")
             conn.commit()

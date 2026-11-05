@@ -169,6 +169,28 @@ def enumerate_candidates(
     return sorted(candidates, key=lambda c: -c.score)
 
 
+def styles_for_language(language: str, stems: str = "sometimes") -> set[str] | None:
+    """Translate human-facing intent into a recipe family, not one compulsory effect."""
+    families = {
+        "seamless": {
+            "bass_swap_blend",
+            "filter_sweep",
+            "long_blend",
+            "vocal_swap",
+            "staged_stem_swap",
+            "acapella_bridge",
+        },
+        "punchy": {"cut_on_one", "drop_swap", "brake", "backspin", "echo_out"},
+        "wordplay": {"word_cut", "word_loop", "exchange", "acapella_bridge"},
+        "surprise": None,
+        "balanced": None,
+    }
+    selected = families.get(language)
+    if selected is not None and stems == "never":
+        selected = selected - {"vocal_swap", "staged_stem_swap", "acapella_bridge", "exchange"}
+    return selected
+
+
 def _score(
     recipe: Recipe,
     a: SongInfo,

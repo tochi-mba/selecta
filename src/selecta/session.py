@@ -13,6 +13,8 @@ class Steering:
     energy: int = 0
     wordplay: str = "sometimes"
     flash: str = "balanced"
+    mix_language: str = "balanced"
+    stems: str = "sometimes"
     target: str | None = None
     length_mode: str = "party"
 
@@ -32,6 +34,16 @@ def steer(conn: sqlite3.Connection, action: str, value: str | int | None = None)
         state.wordplay = str(value or "sometimes")
     elif action == "flash":
         state.flash = str(value or "balanced")
+    elif action == "mix_language":
+        language = str(value or "balanced")
+        if language not in {"balanced", "seamless", "punchy", "wordplay", "surprise"}:
+            raise ValueError(f"unknown mixing language: {language}")
+        state.mix_language = language
+    elif action == "stems":
+        frequency = str(value or "sometimes")
+        if frequency not in {"never", "sometimes", "often"}:
+            raise ValueError(f"unknown stem frequency: {frequency}")
+        state.stems = frequency
     elif action == "take_me_to":
         state.target = str(value) if value else None
     elif action == "length_mode":

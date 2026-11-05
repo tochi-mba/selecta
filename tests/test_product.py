@@ -12,6 +12,7 @@ from selecta.eval.ratings import results, save_rating
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import discover, normalise
 from selecta.planner.arc import feasible_curve, target_energy
+from selecta.planner.choose import styles_for_language
 from selecta.session import get_steering, steer
 
 
@@ -45,6 +46,14 @@ def test_steering_persists(tmp_path: Path):
         state = get_steering(conn)
     assert state.energy == 1
     assert state.wordplay == "often"
+
+
+def test_mixing_language_keeps_choices_without_forcing_one_recipe():
+    seamless = styles_for_language("seamless", "often")
+    assert {"bass_swap_blend", "vocal_swap", "acapella_bridge"} <= seamless
+    assert "cut_on_one" not in seamless
+    assert "vocal_swap" not in styles_for_language("seamless", "never")
+    assert styles_for_language("balanced") is None
 
 
 def test_blind_test_reports_bad_rate(tmp_path: Path):

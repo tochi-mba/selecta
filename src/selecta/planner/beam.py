@@ -8,7 +8,7 @@ import numpy as np
 
 from selecta.analysis.song import SongInfo
 from selecta.planner.arc import target_energy
-from selecta.planner.choose import enumerate_candidates
+from selecta.planner.choose import enumerate_candidates, styles_for_language
 
 
 @dataclass(frozen=True)
@@ -19,11 +19,20 @@ class PlannedSong:
 
 
 def _edge(
-    a: SongInfo, b: SongInfo, progress: float, recent: list[SongInfo]
+    a: SongInfo,
+    b: SongInfo,
+    progress: float,
+    recent: list[SongInfo],
+    allowed_styles: set[str] | None,
 ) -> tuple[float, str] | None:
     if a.artist.casefold() == b.artist.casefold() or any(x.id == b.id for x in recent):
         return None
-    candidates = enumerate_candidates(a, b)[:1]
+    candidates = enumerate_candidates(a, b)
+    if allowed_styles is not None:
+        candidates = [
+            candidate for candidate in candidates if candidate.recipe.name in allowed_styles
+        ]
+    candidates = candidates[:1]
     if not candidates:
         return None
     transition = candidates[0]
@@ -37,11 +46,17 @@ def _edge(
 
 
 def plan_set(
-    songs: list[SongInfo], start_id: int | None = None, count: int = 20, width: int = 8
+    songs: list[SongInfo],
+    start_id: int | None = None,
+    count: int = 20,
+    width: int = 8,
+    mix_language: str = "balanced",
+    stems: str = "sometimes",
 ) -> list[PlannedSong]:
     if not songs:
         return []
     first = next((x for x in songs if x.id == start_id), songs[0])
+    allowed_styles = styles_for_language(mix_language, stems)
     beams: list[tuple[float, list[PlannedSong]]] = [
         (0.0, [PlannedSong(first, None, "You started here")])
     ]
@@ -53,7 +68,13 @@ def plan_set(
                 :50
             ]
             for song in shortlist:
-                edge = _edge(current, song, step / count, [x.song for x in path[-10:]])
+                edge = _edge(
+                    current,
+                    song,
+                    step / count,
+                    [x.song for x in path[-10:]],
+                    allowed_styles,
+                )
                 if edge:
                     score, style = edge
                     reason = f"{style.replace('_', ' ')}; follows the energy arc"

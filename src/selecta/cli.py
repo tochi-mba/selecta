@@ -348,7 +348,16 @@ def plan(
         (ANALYSIS_VERSION,),
     ).fetchall()
     songs = [load_song(conn, settings, row["song_id"]) for row in rows]
-    planned = plan_set(songs, start, count)
+    from selecta.session import get_steering
+
+    steering = get_steering(conn)
+    planned = plan_set(
+        songs,
+        start,
+        count,
+        mix_language=steering.mix_language,
+        stems=steering.stems,
+    )
     conn.execute("DELETE FROM queue")
     conn.executemany(
         "INSERT INTO queue(position,song_id,transition,reason) VALUES(?,?,?,?)",
