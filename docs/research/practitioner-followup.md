@@ -25,6 +25,17 @@ upvotes and individual examples do not establish universal parameters.
   describes mixing shorter around vocal phrases, sometimes using a short incoming loop, and varying
   clean cuts/effects instead of forcing a long dance-style blend. This is consistent with the mixed-
   genre plan, but remains anecdotal and listener-dependent.
+- A [long-set discussion](https://www.reddit.com/r/Beatmatch/comments/1nuqon3) stresses phrase alignment,
+  gradually shifting tempo when the music supports it, and using an intermediary “slam” track when a
+  jump is too large. A [2026 thread about sets feeling boring](https://www.reddit.com/r/Beatmatch/comments/1vtls9z)
+  places track selection, energy peaks and valleys, and each track's role ahead of perfecting more
+  transition tricks. One contributor describes choosing the destination first, then working
+  backwards through a few tracks; that is a useful hypothesis for a future “Take me to” planner,
+  not evidence that this strategy works for every listener.
+- In a discussion about [very different BPMs](https://www.reddit.com/r/Beatmatch/comments/1tapfda),
+  contributors recommend gradual tempo changes, half/double-time relationships, or simply playing
+  the next song without pretending every handoff must be beatmatched. This argues for a planner that
+  can choose a clean sequential handoff when a beatmatched route would sound forced.
 - A [harmonic-mixing discussion](https://www.reddit.com/r/Beatmatch/comments/163v5m9/how_important_is_harmonic_mixing/)
   and a [key-versus-phrasing thread](https://www.reddit.com/r/Beatmatch/comments/1td6psz/are_you_mixing_in_key/)
   emphasize phrase, groove, energy and listening over software-assigned key. Key remains a useful
@@ -39,6 +50,8 @@ upvotes and individual examples do not establish universal parameters.
   a stem intertwine.
 - Prefer phrase-safe, source-aware transitions; choose a short cut or effect when a long layer is
   musically unsuitable, even if BPM or key looks convenient.
+- Keep track selection and energy shape ahead of transition novelty; test destination-oriented
+  planning as a user-controlled journey rather than treating every handoff as a trick.
 - Make auditioning and the compute/artifact trade-off visible before expensive separation.
 - Validate each stem arrangement on its actual song pair. Fixed-position vocal fades do not meet
   that bar and remain an implementation gap.

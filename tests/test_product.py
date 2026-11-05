@@ -3,11 +3,13 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+import numpy as np
 from fastapi.testclient import TestClient
 
 from selecta import db
+from selecta.analysis.pipeline import features_path
 from selecta.api import create_app
-from selecta.config import Settings
+from selecta.config import ANALYSIS_VERSION, Settings
 from selecta.eval.ratings import results, save_rating
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import SongFacts, discover, normalise
@@ -114,6 +116,50 @@ def test_api_rejects_foreign_hosts_and_persists_controls(tmp_path: Path):
     changed = client.post("/api/steer", json={"action": "more"})
     assert changed.json()["energy"] == 1
     assert client.get("/api/status", headers={"host": "attacker.example"}).status_code == 403
+
+
+def test_status_distinguishes_analysed_songs_from_mix_ready_and_refreshes_after_lyrics(
+    tmp_path: Path,
+):
+    settings = Settings(tmp_path)
+    with connection(tmp_path) as conn:
+        for song_id in (1, 2):
+            conn.execute(
+                "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
+                "VALUES(?,?,?,1,1,64,?,?,1)",
+                (song_id, f"{song_id}.flac", "music", f"Artist {song_id}", f"Song {song_id}"),
+            )
+            conn.execute(
+                "INSERT INTO analysis(song_id,version,bpm,camelot,grid_confidence,beats_per_bar,"
+                "constant_tempo,key_confidence,lufs,peak_db,energy,sections) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                (song_id, ANALYSIS_VERSION, 120, "8A", 0.95, 4, 1, 0.9, -14, -2, 0.5, "[]"),
+            )
+            path = features_path(settings, song_id)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            np.savez(
+                path,
+                beats=np.arange(0, 128, dtype=np.float32) * 0.5,
+                bar_starts=np.arange(0, 128, 4),
+                energy_bars=np.full(32, 0.5, dtype=np.float32),
+                low_share_bars=np.full(32, 0.3, dtype=np.float32),
+                chroma_bars=np.zeros((32, 12), dtype=np.float32),
+                rms_db_bars=np.full(32, -14, dtype=np.float32),
+                mfcc_bars=np.zeros((32, 20), dtype=np.float32),
+            )
+        conn.execute("INSERT INTO lyrics(song_id,status) VALUES(1,'instrumental')")
+        conn.commit()
+
+    client = TestClient(create_app(settings, tmp_path / "no-web"))
+    before = client.get("/api/status").json()["counts"]
+    assert before["analysed"] == 2
+    assert before["ready"] == 1
+
+    with connection(tmp_path) as conn:
+        conn.execute("INSERT INTO lyrics(song_id,status) VALUES(2,'instrumental')")
+        conn.commit()
+    after = client.get("/api/status").json()["counts"]
+    assert after["ready"] == 2
 
 
 def test_storage_budget_and_priority_queue(tmp_path: Path):

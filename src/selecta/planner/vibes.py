@@ -435,6 +435,7 @@ def build_vibe(
     start: int | None = None,
     seed: int | None = None,
     verdicts: Verdicts | None = None,
+    mix_language: str | None = None,
 ) -> tuple[list[PlannedSong], dict[int, dict]]:
     """Plan a mix for this vibe, and say how each seam should land."""
     found = eligible(vibe, songs, traits)
@@ -447,7 +448,7 @@ def build_vibe(
         found,
         first,
         count,
-        mix_language=vibe.language,
+        mix_language=mix_language or vibe.language,
         links=set(phrases) if vibe.wordplay or vibe.key == "pick" else set(),
         arc=vibe.arc,
         seed=int(rng.integers(0, 2**31)),

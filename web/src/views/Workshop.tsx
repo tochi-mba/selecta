@@ -97,7 +97,8 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
     <main className="page">
       <h1 className="display small">Workshop</h1>
       <div className="metrics">
-        <div><strong>{counts.analysed}</strong><span>ready to mix</span></div>
+        <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
+        <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
         <div><strong>{left}</strong><span>still to analyse</span></div>
         <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>
         <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
@@ -112,7 +113,7 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
               : `Working through your songs at low priority, so you can keep using your PC. ${left} to go.`
             : left
               ? `${left} song${left === 1 ? '' : 's'} left, about ${hours < 1 ? `${Math.ceil(hours * 60)} minutes` : `${Math.ceil(hours)} hours`} in the background. More songs means better mixes and more word links.`
-              : 'Every song is ready.'}
+              : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
         </p>
         {left > 0 && (
           <div className="row wrap">
