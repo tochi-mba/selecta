@@ -379,13 +379,26 @@ def discover(limit: int = typer.Option(1000, help="Maximum audio links to keep p
 def set_mix(
     output: Path = typer.Option(Path("out/selecta-set.wav"), "--output", "-o"),
     count: int = typer.Option(7, min=2, max=50),
+    songs: str = typer.Option(
+        "", help="Comma-separated song IDs in play order; otherwise use the planned queue."
+    ),
 ) -> None:
     """Render the current planned queue as one continuous audited mix."""
     from selecta.analysis.song import load_song
     from selecta.render.setmix import render_set
 
     settings, conn = _open()
-    rows = conn.execute("SELECT song_id FROM queue ORDER BY position LIMIT ?", (count,)).fetchall()
+    if songs:
+        try:
+            song_ids = [int(value.strip()) for value in songs.split(",") if value.strip()]
+        except ValueError as error:
+            raise typer.BadParameter("--songs must contain comma-separated numeric IDs") from error
+        rows = [{"song_id": song_id} for song_id in song_ids]
+        count = len(rows)
+    else:
+        rows = conn.execute(
+            "SELECT song_id FROM queue ORDER BY position LIMIT ?", (count,)
+        ).fetchall()
     if len(rows) < count:
         raise typer.BadParameter(f"the queue has only {len(rows)} songs; run `selecta plan` first")
     songs = [load_song(conn, settings, row["song_id"]) for row in rows]
