@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from bisect import bisect_right
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Literal
@@ -83,6 +84,7 @@ class SongInfo:
     chroma_bars: np.ndarray | None = None
     rms_db_bars: np.ndarray | None = None
     mfcc_bars: np.ndarray | None = None
+    _line_index: tuple | None = field(default=None, repr=False, compare=False)
 
     @property
     def name(self) -> str:
@@ -122,9 +124,20 @@ class SongInfo:
         return any(line.start + margin < time < line.end - margin for line in self.lines)
 
     def vocal_seconds(self, start: float, end: float) -> float:
+        """How much singing falls in this stretch. Planning asks this constantly, so it only looks
+        at lines near the stretch, which LRC's in-order lines make possible."""
+        lines = self.lines
+        if not lines or end <= start:
+            return 0.0
+        if self._line_index is None or self._line_index[0] is not lines:
+            self._line_index = (lines, [line.start for line in lines])
+        first = max(bisect_right(self._line_index[1], start) - 1, 0)
         total = 0.0
-        for line in self.lines:
-            total += max(0.0, min(end, line.end) - max(start, line.start))
+        for line in lines[first:]:
+            if line.start >= end:
+                break
+            if line.end > start:
+                total += min(end, line.end) - max(start, line.start)
         return total
 
     def vocal_free_after(self, time: float) -> float:

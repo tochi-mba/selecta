@@ -8,7 +8,8 @@ B's voice does.
 - `word_blend`: B's band comes in under A, locked to the beat, while A's band leaves. A's voice ends
   up singing over B's music, then B's voice takes the phrase from it.
 - `vocal_ride`: the same blend with no shared words, for any two songs that fit.
-- `word_exchange`: call and response. The voices trade the phrase over B's band until B keeps it.
+- `word_exchange`: call and response. A rides B's band, B takes the phrase, and A calls back in the
+  gaps B leaves between its own lines.
 - `phrase_roll`: the listener's own design. "Good news, good news", then "news news news news",
   then faster, while the bands change underneath, and B lands on "Good news is on the way". How many
   repeats it takes, and how quick, comes from the two songs, because the same pattern on every pair
@@ -39,8 +40,15 @@ _BAND_LEAVES = 0.3
 _BAND_GONE = 0.65
 """Shares of the overlap. After this, A's voice rides B's band alone until it finishes."""
 _VOICE_LEVEL = 1.1
-_RIDE_BEAT_LIMIT_MS = 28.0
-"""A's band is leaving for most of a ride's overlap, and 40 ms is where hits sound doubled."""
+_RIDE_BEAT_LIMIT_MS = 40.0
+"""A ride's bands only overlap briefly while one is leaving. Syncopated drums read as off the beat
+to this check, and it failed a blend the listener liked, so only clear doubling counts here."""
+_FAST_START_LEVEL = 0.8
+_LAST_HIT_SHARE = 0.6
+"""The last repeat stops early, leaving a breath for B's word to land in."""
+_MAX_ANSWERS = 3
+_ANSWER_REACH = 24.0
+_CALL_LEVELS = (0.85, 0.65, 0.5)
 _MAX_FAST_HITS = 8
 _MAX_PHRASE_PULSES = 8
 _TIGHT_STEP = 0.45
@@ -185,6 +193,7 @@ def _ride(
     band_a: Stem,
     band_b: Stem,
     bars: int,
+    tail_seconds: float = 0.0,
 ) -> TransitionScript | None:
     if a.beats_per_bar != b.beats_per_bar:
         return None
@@ -204,6 +213,12 @@ def _ride(
         return None
     if not _reaches(band_b, float(timing.b_warp.source[0])):
         return None
+    if tail_seconds > 0:
+        timing.b_warp = Warp(
+            np.append(timing.b_warp.output, timing.b_warp.output[-1] + tail_seconds),
+            np.append(timing.b_warp.source, timing.b_warp.source[-1] + tail_seconds),
+        )
+        timing.duration += tail_seconds
 
     start = timing.overlap_start
     handoff = float(timing.b_warp.output_at(enter_b))
@@ -212,7 +227,23 @@ def _ride(
     if handoff <= start + 2.0 or voice_end > handoff + timing.master_period / 2:
         return None
     span = voice_end - start
-    band_leaves, band_gone = start + span * _BAND_LEAVES, start + span * _BAND_GONE
+    first_voice = min(
+        (
+            float(timing.a_warp.output_at(line.start))
+            for line in a.lines
+            if line.start >= float(timing.a_warp.source_at(start))
+        ),
+        default=start,
+    )
+    # A's band leaves once A's own voice is there to carry the ride, however that song is built
+    band_leaves = min(
+        max(start + span * _BAND_LEAVES, first_voice), voice_end - 2 * timing.master_period
+    )
+    band_gone = min(
+        band_leaves + span * (_BAND_GONE - _BAND_LEAVES), voice_end - timing.master_period
+    )
+    if band_gone <= band_leaves:
+        band_leaves, band_gone = start + span * _BAND_LEAVES, start + span * _BAND_GONE
     stems_from = float(timing.a_warp.source_at(start)) - _CROSSFADE
     if not (_reaches(voice_a, stems_from) and _reaches(band_a, stems_from)):
         return None
@@ -443,7 +474,9 @@ def phrase_roll(
     for i, song_time in enumerate(fast):
         at = landing - (enter_b - float(song_time))
         next_at = landing - (enter_b - float(fast[i + 1])) if i + 1 < fast.size else landing
-        hits.append(_hit(a, voice_a, at, word_start, min(word_length, next_at - at)))
+        rising = _FAST_START_LEVEL + (_VOICE_LEVEL - _FAST_START_LEVEL) * i / max(fast.size - 1, 1)
+        room = (next_at - at) * (_LAST_HIT_SHARE if i + 1 == fast.size else 1.0)
+        hits.append(_hit(a, voice_a, at, word_start, min(word_length, room), rising))
     ring = hits[-1]
     ring.echo = Echo(
         delay_seconds=b.period,
@@ -526,6 +559,25 @@ def phrase_roll(
     )
 
 
+def _answer_gaps(b: SongInfo, after: float, length: float) -> list[float]:
+    """Beats in B where a voice of this length fits between B's own lines, soonest first.
+
+    This is what makes call and response depend on the song: how many answers there are, and where
+    they fall, comes from where B actually leaves room. A busy hook has no gaps, and gets no move.
+    """
+    lines = [line for line in b.lines if line.end > after]
+    edges = [(after, lines[0].start)] if lines else []
+    edges += [(one.end, two.start) for one, two in zip(lines, lines[1:], strict=False)]
+    found: list[float] = []
+    for begin, end in edges:
+        if begin - after > _ANSWER_REACH or len(found) == _MAX_ANSWERS:
+            break
+        beats = b.beats[(b.beats >= begin + 0.03) & (b.beats + length <= end - 0.05)]
+        if beats.size:
+            found.append(float(beats[0]))
+    return found
+
+
 def word_exchange(
     a: SongInfo,
     b: SongInfo,
@@ -533,104 +585,42 @@ def word_exchange(
     phrase_b: list[Word],
     voice_a: Stem,
     band_a: Stem,
-    voice_b: Stem,
     band_b: Stem,
+    bars: int = 8,
 ) -> TransitionScript | None:
-    """Call and response: the voices trade the phrase over B's band until B keeps it.
+    """Call and response: A rides B's band, B takes the phrase, and A calls back in B's own gaps.
 
-    This is how DJ tutorials teach wordplay. A sings it with its own band, as the song does.
-    B's band has already started underneath, and A's band leaves as it finishes. Then B answers, A calls once
-    more, and B answers for good, in its real place in the song with its bass now fully in.
+    B just plays its song. A's phrase drops into the room B leaves between its lines, further away
+    each time, until B has it to itself. An earlier version traded the phrase in fixed slots, and
+    the listener called it too algorithmic, because it ignored what each song was doing.
     """
     start_a = phrase_a[0].start - _PAD
-    end_a = phrase_a[-1].end + _PAD
-    enter_b = phrase_b[0].start - _PAD
-    end_b = phrase_b[-1].end + _PAD
-    lead = min(_LEAD_SECONDS, start_a)
-    if lead < 2.0 or enter_b < 0:
-        return None
+    length = phrase_a[-1].end + _PAD - start_a
     speed = a.bpm / b.bpm
-    length_a = end_a - start_a
-    length_b = end_b - enter_b
-    pulses = np.ceil(max(length_a / speed, length_b) / pulse(b) - 0.1)
-    slot_pulses = next((size for size in (2, 4, 8) if size >= pulses), None)
-    if slot_pulses is None:
+    call = length / speed
+    gaps = _answer_gaps(b, phrase_b[-1].end, call)
+    if not gaps:
         return None
-    slot = slot_pulses * pulse(b)
-
-    near_a = float(a.beats[np.argmin(np.abs(a.beats - start_a))]) - start_a
-    near_b = float(b.beats[np.argmin(np.abs(b.beats - enter_b))]) - enter_b
-    phrase_end = lead + length_a
-    # the next place B's grid has a slot starting, once A has finished its own line
-    landing = phrase_end + 3 * slot + max(near_b, 0.0)
-    pickup_a = (near_b - near_a) / speed
-    bar = pulse(b) * b.beats_per_bar
-    band_from = landing - 3 * slot - bar
-    if band_from < 0.5 or not (_reaches(band_b, enter_b - (landing - band_from))):
+    tail = gaps[-1] + call + _AFTER_SECONDS - phrase_b[-1].end
+    script = _ride(
+        "word_exchange", a, b, phrase_a[-1], phrase_b[0], voice_a, band_a, band_b, bars, tail
+    )
+    if script is None or not _reaches(voice_a, start_a):
         return None
-    if not (_reaches(voice_a, start_a) and _reaches(voice_b, enter_b) and _reaches(band_a, end_a)):
-        return None
-
-    call = min(length_a / speed, slot - 0.05)
-    answer = min(length_b, slot - 0.05)
-    hits = [
-        _hit(b, voice_b, landing - 2 * slot, enter_b, answer),
-        _hit(a, voice_a, landing - slot + pickup_a, start_a, call, speed=speed),
-    ]
-    band_a_gone = landing - 2 * slot
-    leaves = Part(
-        song=a,
-        warp=Warp.identity(
-            phrase_end - _CROSSFADE, end_a - _CROSSFADE, band_a_gone - phrase_end + _CROSSFADE
-        ),
-        source_path=band_a.path,
-        window_origin=band_a.origin,
-        gain=Curve(
-            [
-                (phrase_end - _CROSSFADE, 0.0),
-                (phrase_end + _CROSSFADE, 1.0),
-                (band_a_gone, 0.0),
-            ]
-        ),
-        low=Curve([(phrase_end - 0.05, 1.0), (phrase_end + 0.05, 0.0)]),
+    near = float(a.beats[np.argmin(np.abs(a.beats - start_a))]) - start_a
+    for index, beat in enumerate(gaps):
+        at = float(script.b.warp.output_at(beat)) - max(near, 0.0) / speed
+        level = _CALL_LEVELS[min(index, len(_CALL_LEVELS) - 1)]
+        hit = _hit(a, voice_a, at, start_a, call, level, speed)
+        script.extras.append(hit)
+    last = script.extras[-1]
+    last.echo = Echo(
+        delay_seconds=b.period,
+        feedback=0.45,
+        wet=0.35,
+        return_highpass_hz=220.0,
+        damp_lowpass_hz=6500.0,
     )
-    rises = Part(
-        song=b,
-        warp=Warp.identity(
-            band_from, enter_b - (landing - band_from), landing - band_from + _DECLICK
-        ),
-        source_path=band_b.path,
-        window_origin=band_b.origin,
-        gain=Curve(
-            [
-                (band_from, 0.0),
-                (phrase_end, 0.8),
-                (landing - 2 * slot, 1.0),
-                (landing - _DECLICK, 1.0),
-                (landing, 0.0),
-            ]
-        ),
-        low=Curve(
-            [
-                (phrase_end - 0.05, 0.0),
-                (phrase_end + 0.05, 1.0),
-            ]
-        ),
-    )
-    return TransitionScript(
-        style="word_exchange",
-        duration=landing + _AFTER_SECONDS,
-        a=Part(
-            song=a,
-            warp=Warp.identity(0.0, start_a - lead, phrase_end + _CROSSFADE * 2),
-            gain=Curve([(phrase_end - _CROSSFADE, 1.0), (phrase_end + _CROSSFADE, 0.0)]),
-        ),
-        b=Part(
-            song=b,
-            warp=Warp.identity(landing, enter_b, _AFTER_SECONDS),
-            gain=fade_in(landing, landing + _DECLICK),
-        ),
-        overlap=(phrase_end, landing),
-        extras=[leaves, rises, *hits],
-        meta={"cut": phrase_end, "wordplay": True, "landing": landing, "slot": slot},
-    )
+    last.echo_send = Curve.constant(1.0)
+    script.meta["calls"] = len(gaps)
+    return script

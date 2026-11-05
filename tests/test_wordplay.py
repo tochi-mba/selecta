@@ -21,12 +21,13 @@ from selecta.lyrics.align import (
 )
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import LyricLink, SongFacts, discover
-from selecta.planner.wordreel import modes_for, rank_links, ride_lines
+from selecta.planner.wordreel import modes_for, rank_links, ride_lengths, ride_lines
 from selecta.render.engine import _part_audio, render
 from selecta.render.script import Part, Warp
 from selecta.stems import StemWindow, _prune, band_of
 from selecta.styles.wordplay import (
     Stem,
+    _answer_gaps,
     _handoff_shift,
     _quick_steps,
     felt_bpm,
@@ -359,35 +360,72 @@ def test_a_single_word_rolls_without_a_phrase_stage(word_pair):
     assert len(_voice_hits(script, voice)) == shape.word_hits + shape.fast_hits
 
 
-def test_call_and_response_trades_the_phrase_over_bs_band(word_pair):
-    """A, then B answers, then A again, then B for good: how DJ tutorials teach wordplay."""
+def _exchange_pair(word_pair, gaps=True):
     a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
-    voice_b = Stem(voice.path, 0.0)
-    script = word_exchange(a, b, phrase_a, phrase_b, voice, band_a, voice_b, band_b)
+    start = phrase_b[0].start
+    spacing = 5.0 if gaps else 1.1
+    b.lines = [
+        Line(start + i * spacing, start + i * spacing + 1.0, f"b sings line {i}") for i in range(10)
+    ]
+    return a, b, phrase_a, phrase_b, voice, band_a, band_b
+
+
+def test_call_and_response_drops_a_into_the_gaps_b_leaves(word_pair):
+    """B plays its song, and A calls back in the room between B's own lines."""
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = _exchange_pair(word_pair)
+    script = word_exchange(a, b, phrase_a, phrase_b, voice, band_a, band_b, bars=4)
     assert script is not None
-    slot, landing = script.meta["slot"], script.meta["landing"]
-    answer, call = _voice_hits(script, voice)
-    assert answer.song is b
-    assert answer.output_start == pytest.approx(landing - 2 * slot)
-    assert float(answer.warp.source[0]) == pytest.approx(phrase_b[0].start - 0.02)
-    assert call.song is a
-    assert landing - 1.5 * slot < call.output_start < landing - 0.5 * slot
-    assert float(call.warp.source[0]) == pytest.approx(phrase_a[0].start - 0.02)
-    assert float(script.b.warp.source_at(landing)) == pytest.approx(
-        phrase_b[0].start - 0.02, abs=1e-6
-    )
-    rising = next(p for p in script.extras if p.source_path == band_b.path)
-    leaving = next(p for p in script.extras if p.source_path == band_a.path)
-    assert rising.output_start < script.overlap[0], "B's band starts before A has finished"
-    assert leaving.output_end <= answer.output_start + 0.01, "A's band is gone before B answers"
+    assert script.style == "word_exchange"
+    calls = [part for part in script.extras if part.source_path == voice.path][1:]
+    assert 1 <= len(calls) == script.meta["calls"] <= 3
+    for call in calls:
+        source = float(script.b.warp.source_at(call.output_start))
+        for line in b.lines:
+            assert not line.start < source < line.end, "A never talks over B"
+    assert float(calls[0].gain.values[1]) > float(calls[-1].gain.values[1]) or len(calls) == 1
+    assert calls[-1].echo is not None, "A's last call rings away"
     assert np.isfinite(render(script).audio).all()
 
 
-def test_a_slower_song_gets_its_voice_fitted_to_the_faster_grid(word_pair):
+def test_a_busy_hook_with_no_gaps_gets_no_call_and_response(word_pair):
+    """It depends on the song: where B never stops singing, the move doesn't happen."""
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = _exchange_pair(word_pair, gaps=False)
+    assert word_exchange(a, b, phrase_a, phrase_b, voice, band_a, band_b, bars=4) is None
+
+
+def test_the_number_of_answers_comes_from_the_song(tmp_path):
+    b = song_from_track(tmp_path, "b", make_track(bpm=120, bars=64, seed=2))
+    roomy = [Line(40.0 + i * 5, 41.0 + i * 5, "line words here") for i in range(10)]
+    tight = [
+        Line(40.0, 41.0, "a"),
+        Line(41.2, 42.0, "b"),
+        Line(46.0, 47.0, "c"),
+        Line(47.2, 48.0, "d"),
+    ]
+    b.lines = roomy
+    assert len(_answer_gaps(b, 38.0, 1.0)) == 3
+    b.lines = tight
+    assert len(_answer_gaps(b, 38.0, 1.0)) == 2
+
+
+def test_a_rides_length_comes_from_how_long_a_is_singing(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=96, seed=1))
+    a.lines = [Line(100.0 + i, 100.9 + i, "words") for i in range(30)]
+    assert ride_lengths(a, 130.0)[0] == 12, "sung all the way through, so as long as stems allow"
+    a.lines = [Line(120.0, 130.0, "one long line")]
+    longest = ride_lengths(a, 130.0)[0]
+    assert longest < 12, "only one line to carry it"
+
+
+def test_as_band_waits_for_as_voice_before_it_leaves(word_pair):
+    """A's voice comes in late on some songs. The band can't leave the singer with nothing."""
     a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
-    script = word_exchange(a, b, phrase_a, phrase_b, voice, band_a, Stem(voice.path, 0.0), band_b)
-    call = _voice_hits(script, voice)[1]
-    assert call.warp.max_stretch == pytest.approx(abs(a.bpm / b.bpm - 1.0), abs=1e-6)
+    end = phrase_a[-1].end
+    a.lines = [Line(end - 5.0, end, "a late line of singing")]
+    script = vocal_ride(a, b, phrase_a[-1], phrase_b[0], voice, band_a, band_b, bars=8)
+    band_gain = script.a.gain
+    leaves = float(band_gain.times[2])
+    assert leaves >= float(script.a.warp.output_at(end - 5.0)) - 0.01
 
 
 def test_rock_songs_dont_stutter_and_bare_cuts_need_a_close_tempo(tmp_path):

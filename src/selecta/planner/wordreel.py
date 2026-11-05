@@ -65,6 +65,7 @@ MODE_PAYOFF = {"word_blend": 1.0, "word_exchange": 0.95, "phrase_roll": 0.85, "w
 
 
 RIDE_BARS = 4
+RIDE_LENGTHS = (16, 12, 8, 4)
 MIN_RIDE_SINGING = 0.35
 
 
@@ -189,6 +190,22 @@ def locate_line_edge(
     return Phrase(_settled(words, span, vocal, origin, next_start), score, voice, band)
 
 
+def ride_lengths(a: SongInfo, end: float) -> tuple[int, ...]:
+    """How many bars this ride could run, longest first, as far as A's own singing can carry it.
+
+    The listener's favourite move, so it shouldn't be the same length on every song.
+    """
+    bar = a.period * a.beats_per_bar
+    fit = []
+    for bars in RIDE_LENGTHS:
+        seconds = bars * bar
+        if seconds > WINDOW_LEAD - 3.0:
+            continue
+        if a.vocal_seconds(end - seconds, end) / seconds >= MIN_RIDE_SINGING:
+            fit.append(bars)
+    return tuple(fit) or (8, 4)
+
+
 def ride_lines(a: SongInfo, b: SongInfo) -> tuple[Line, Line] | None:
     """A line for A's voice to finish on, and the line B's voice should start with.
 
@@ -257,7 +274,7 @@ def build_rides(
         except CannotTrust as problem:
             log(f"  skip ride {label}: {problem}")
             continue
-        for bars in (8, 4):
+        for bars in ride_lengths(a, edge_a.words[0].end):
             script = vocal_ride(
                 a,
                 b,
@@ -381,7 +398,7 @@ def analyse_links(
 
 def _script(style: str, a: SongInfo, b: SongInfo, phrase_a: Phrase, phrase_b: Phrase):
     if style == "word_blend":
-        for bars in (8, 4):
+        for bars in ride_lengths(a, phrase_a.words[-1].end):
             script = word_blend(
                 a,
                 b,
@@ -400,16 +417,20 @@ def _script(style: str, a: SongInfo, b: SongInfo, phrase_a: Phrase, phrase_b: Ph
             a, b, phrase_a.words, phrase_b.words, phrase_a.voice, phrase_a.band, phrase_b.band
         )
     if style == "word_exchange":
-        return word_exchange(
-            a,
-            b,
-            phrase_a.words,
-            phrase_b.words,
-            phrase_a.voice,
-            phrase_a.band,
-            phrase_b.voice,
-            phrase_b.band,
-        )
+        for bars in ride_lengths(a, phrase_a.words[-1].end):
+            script = word_exchange(
+                a,
+                b,
+                phrase_a.words,
+                phrase_b.words,
+                phrase_a.voice,
+                phrase_a.band,
+                phrase_b.band,
+                bars,
+            )
+            if script is not None:
+                return script
+        return None
     return word_cut(a, b, phrase_a.words, phrase_b.words, phrase_b.band)
 
 

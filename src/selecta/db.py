@@ -190,6 +190,14 @@ def songs_needing_analysis(
     return conn.execute(query + " ORDER BY s.processing_priority DESC, s.id", params).fetchall()
 
 
+def is_analysed(conn: sqlite3.Connection, song_id: int, version: int) -> bool:
+    found = conn.execute(
+        "SELECT 1 FROM analysis WHERE song_id=? AND version>=? AND error IS NULL",
+        (song_id, version),
+    ).fetchone()
+    return found is not None
+
+
 def song_by_id(conn: sqlite3.Connection, song_id: int) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
 

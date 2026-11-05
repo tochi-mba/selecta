@@ -1,11 +1,15 @@
-import { get, MixItem, post, SeamState } from './api';
+import { MixItem, post, SeamState } from './api';
+import { saveResume } from './lib';
 
 /** Plays a mix with no gaps, by scheduling finished audio on the sound card's own clock.
  *
  * Songs and seams arrive whole, so nothing is rendered while playing, and a busy machine can't make
  * it stutter. A seam starts on the exact sample its song reaches it, with a 30 ms crossfade, because
- * both sides hold the same audio there. If a seam isn't ready in time the song plays on, and the
- * next song fades in at the end, so a set is never silent.
+ * both sides hold the same audio there. If a seam can't be made, Selecta falls back to its own pick.
+ * If nothing is ready in time, the song plays on and the next one fades in, so a set is never silent.
+ *
+ * The mix can change while it plays: songs can be moved, swapped or removed, so the player finds its
+ * place by song, and drops a planned seam if what it leads to has changed.
  */
 
 export type NowState = {
@@ -24,17 +28,19 @@ const SEAM_FADE = 0.03;
 const HEADROOM = 0.25;
 const KEEP_SONGS = 3;
 const END_FADE = 3;
+const LOAD_NEXT_WITHIN = 45;
 const SKIP_LEAD = 8;
+const SAVE_EVERY = 5;
 
 type Playing = { source: AudioBufferSourceNode; gain: GainNode };
 type Current = Playing & {
+  songId: number;
   position: number;
   startedAt: number;
   offset: number;
   duration: number;
 };
 type Planned = {
-  fromPosition: number;
   whenA: number;
   clip: Playing;
   next: Current;
@@ -51,7 +57,9 @@ export class SetPlayer {
   private current: Current | null = null;
   private planned: Planned | null = null;
   private ending = false;
-  private requested = new Set<number>();
+  private requested = new Set<string>();
+  private fallenBack = new Set<number>();
+  private savedAt = 0;
   private getMix: () => MixItem[];
   private refreshMix: () => void;
   state: NowState = {
@@ -86,16 +94,24 @@ export class SetPlayer {
     this.onChange(this.state);
   }
 
+  /** Point at a place in the mix without playing, after a reload. Browsers need a tap to play. */
+  cue(position: number, time: number) {
+    const item = this.getMix()[position];
+    if (!item || this.state.phase !== 'idle') return;
+    this.update({ position, songTime: time, duration: item.duration });
+  }
+
   private loadSong(id: number): Promise<AudioBuffer> {
     let found = this.songs.get(id);
     if (!found) {
-      found = fetch(`/api/songs/${id}/audio`)
-        .then((response) => response.arrayBuffer())
-        .then((data) => this.audio().decodeAudioData(data));
+      found = fetch(`/api/songs/${id}/audio`).then(async (response) => {
+        if (!response.ok) throw new Error('That song isn’t available.');
+        return this.audio().decodeAudioData(await response.arrayBuffer());
+      });
+      found.catch(() => this.songs.delete(id));
       this.songs.set(id, found);
       while (this.songs.size > KEEP_SONGS) {
-        const oldest = this.songs.keys().next().value as number;
-        this.songs.delete(oldest);
+        this.songs.delete(this.songs.keys().next().value as number);
       }
     }
     return found;
@@ -104,9 +120,11 @@ export class SetPlayer {
   private loadClip(key: string): Promise<AudioBuffer> {
     let found = this.clips.get(key);
     if (!found) {
-      found = fetch(`/api/seams/${key}/clip`)
-        .then((response) => response.arrayBuffer())
-        .then((data) => this.audio().decodeAudioData(data));
+      found = fetch(`/api/seams/${key}/clip`).then(async (response) => {
+        if (!response.ok) throw new Error('That seam isn’t available.');
+        return this.audio().decodeAudioData(await response.arrayBuffer());
+      });
+      found.catch(() => this.clips.delete(key));
       this.clips.set(key, found);
       if (this.clips.size > KEEP_SONGS) this.clips.delete(this.clips.keys().next().value as string);
     }
@@ -123,21 +141,40 @@ export class SetPlayer {
     return { source, gain };
   }
 
-  private stopAll() {
+  private silence(playing: Playing | undefined | null) {
+    if (!playing) return;
     const now = this.context?.currentTime ?? 0;
-    for (const playing of [this.current, this.planned?.clip, this.planned?.next]) {
-      if (!playing) continue;
-      playing.gain.gain.cancelScheduledValues(now);
-      try {
-        playing.source.stop();
-      } catch {
-        /* a layer that hasn't started can't be stopped, and that's fine */
-      }
-      playing.source.disconnect();
+    playing.gain.gain.cancelScheduledValues(now);
+    try {
+      playing.source.stop();
+    } catch {
+      /* a layer that hasn't started can't be stopped, and that's fine */
     }
+    playing.source.disconnect();
+  }
+
+  private stopAll() {
+    this.silence(this.current);
+    this.silence(this.planned?.clip);
+    this.silence(this.planned?.next);
     this.current = null;
     this.planned = null;
     this.ending = false;
+  }
+
+  /** Take back a planned seam, because the song after this one has changed. */
+  private unplan() {
+    const planned = this.planned;
+    const current = this.current;
+    if (!planned || !current || !this.context) return;
+    this.silence(planned.clip);
+    this.silence(planned.next);
+    const now = this.context.currentTime;
+    current.gain.gain.cancelScheduledValues(now);
+    current.gain.gain.setValueAtTime(1, now);
+    // calling stop again replaces the earlier stop time
+    current.source.stop(current.startedAt + (current.duration - current.offset) + 1);
+    this.planned = null;
   }
 
   async playFrom(position: number, offset = 0) {
@@ -148,12 +185,18 @@ export class SetPlayer {
     const context = this.audio();
     await context.resume();
     this.update({ phase: 'loading', position, songTime: offset, duration: item.duration, notice: '', inSeam: false });
-    const buffer = await this.loadSong(item.song_id);
+    let buffer: AudioBuffer;
+    try {
+      buffer = await this.loadSong(item.song_id);
+    } catch (error) {
+      this.update({ phase: 'idle', notice: (error as Error).message });
+      return;
+    }
     const playing = this.layer(buffer);
     const startedAt = context.currentTime + 0.05;
     playing.gain.gain.setValueAtTime(1, startedAt);
     playing.source.start(startedAt, offset);
-    this.current = { ...playing, position, startedAt, offset, duration: buffer.duration };
+    this.current = { ...playing, songId: item.song_id, position, startedAt, offset, duration: buffer.duration };
     this.requested.clear();
     this.update({ phase: 'playing', duration: buffer.duration });
     if (this.timer === null) this.timer = window.setInterval(() => this.tick(), 200);
@@ -168,12 +211,12 @@ export class SetPlayer {
     } else if (this.state.phase === 'paused') {
       await context.resume();
       this.update({ phase: 'playing' });
-    } else {
-      await this.playFrom(this.state.position);
+    } else if (this.state.phase === 'idle') {
+      await this.playFrom(this.state.position, this.state.songTime);
     }
   }
 
-  /** Jump to just before the next seam. Press again if it isn't ready, and the next song fades in. */
+  /** Jump to just before the next seam. Past that point, or with no seam ready, go straight on. */
   async skip() {
     const mix = this.getMix();
     const current = this.current;
@@ -195,17 +238,41 @@ export class SetPlayer {
 
   stop() {
     this.stopAll();
-    this.update({ phase: 'idle', notice: '' });
+    if (this.timer !== null) {
+      window.clearInterval(this.timer);
+      this.timer = null;
+    }
+    this.update({ phase: 'idle', notice: '', position: 0, songTime: 0, inSeam: false, seamAt: null });
   }
 
   private songTime(): number {
     if (!this.current || !this.context) return 0;
-    return this.current.offset + Math.max(0, this.context.currentTime - this.current.startedAt);
+    const played = this.current.offset + Math.max(0, this.context.currentTime - this.current.startedAt);
+    return Math.min(played, this.current.duration);
+  }
+
+  private requestSeam(item: MixItem, seam: SeamState) {
+    if (seam.status === 'failed') {
+      // whatever was chosen won't work here, so let Selecta pick, unless that's what failed
+      const chosen = item.seam?.settings.move ?? 'auto';
+      if (chosen === 'auto' || this.fallenBack.has(item.position)) return;
+      this.fallenBack.add(item.position);
+      post(`/mix/${item.position}/seam`, { move: 'auto' })
+        .then(() => post(`/mix/${item.position}/render`))
+        .then(() => this.refreshMix())
+        .catch(() => {});
+      this.update({ notice: `That move couldn’t work into ${item.title}, so Selecta picked another.` });
+      return;
+    }
+    if ((seam.status === 'none' || seam.status === 'queued') && !this.requested.has(seam.key)) {
+      this.requested.add(seam.key);
+      post(`/mix/${item.position}/render`).then(() => this.refreshMix()).catch(() => {});
+    }
   }
 
   private tick() {
     const context = this.context;
-    if (!context || !this.current) return;
+    if (!context || !this.current || this.state.phase === 'paused') return;
     const mix = this.getMix();
     const now = context.currentTime;
 
@@ -216,48 +283,63 @@ export class SetPlayer {
       this.planned = null;
       this.requested.clear();
       this.ending = false;
-      this.update({ position: this.current.position, duration: this.current.duration, lastSeamKey: key });
+      this.update({ duration: this.current.duration, lastSeamKey: key });
       this.refreshMix();
     }
 
     const current = this.current;
-    const time = this.songTime();
-    const inSeam = !!this.planned && now >= this.planned.whenA;
+    // the mix may have been edited, so find our place by song
+    const found = mix.findIndex((item) => item.song_id === current.songId);
+    if (found >= 0) current.position = found;
     const nextItem = mix[current.position + 1];
     const seam: SeamState | undefined = nextItem?.seam?.state;
+
+    if (this.planned && (!seam || seam.key !== this.planned.key) && now < this.planned.whenA - 0.1) {
+      this.unplan();
+    }
+
+    const time = this.songTime();
+    const inSeam = !!this.planned && now >= this.planned.whenA;
     this.update({
+      position: current.position,
       songTime: time,
       inSeam,
       seamAt: seam?.status === 'ready' ? (seam.a_source_start ?? null) : null,
       nextReady: seam?.status === 'ready',
     });
 
+    if (now - this.savedAt > SAVE_EVERY) {
+      this.savedAt = now;
+      saveResume({ songId: current.songId, position: current.position, time });
+    }
+
     if (!nextItem) {
-      if (now > current.startedAt + (current.duration - current.offset)) this.update({ phase: 'idle' });
+      if (now > current.startedAt + (current.duration - current.offset)) this.update({ phase: 'idle', songTime: 0 });
       return;
     }
-    if (seam && seam.status !== 'ready' && seam.status !== 'failed' && !this.requested.has(nextItem.position)) {
-      this.requested.add(nextItem.position);
-      post(`/mix/${nextItem.position}/render`).then(() => this.refreshMix()).catch(() => {});
-    }
+    if (seam) this.requestSeam(nextItem, seam);
     if (!this.planned && seam?.status === 'ready') {
       this.loadSong(nextItem.song_id).catch(() => {});
-      this.plan(current, nextItem, seam);
+      void this.plan(current, nextItem, seam);
     }
     const left = current.duration - time;
+    if (left < LOAD_NEXT_WITHIN) this.loadSong(nextItem.song_id).catch(() => {});
     if (!this.planned && !this.ending && left < END_FADE + 0.2 && this.state.phase === 'playing') {
       this.ending = true;
-      this.fadeInto(nextItem.position);
+      void this.fadeInto(nextItem.position);
     }
   }
 
   private async plan(current: Current, nextItem: MixItem, seam: SeamState) {
     if (this.planned || seam.a_source_start === undefined) return;
     const context = this.audio();
-    const [clipBuffer, nextBuffer] = await Promise.all([
-      this.loadClip(seam.key),
-      this.loadSong(nextItem.song_id),
-    ]);
+    let clipBuffer: AudioBuffer;
+    let nextBuffer: AudioBuffer;
+    try {
+      [clipBuffer, nextBuffer] = await Promise.all([this.loadClip(seam.key), this.loadSong(nextItem.song_id)]);
+    } catch {
+      return;
+    }
     if (this.planned || this.current !== current) return;
     const whenA = current.startedAt + (seam.a_source_start - current.offset);
     if (whenA < context.currentTime + HEADROOM) return; // too late: the song plays on and fades over
@@ -278,13 +360,13 @@ export class SetPlayer {
     after.gain.gain.linearRampToValueAtTime(1, clipEnd);
     after.source.start(clipEnd - SEAM_FADE, offset);
     this.planned = {
-      fromPosition: current.position,
       whenA,
       clip,
       key: seam.key,
       switchAt: seam.switch_at ?? 0,
       next: {
         ...after,
+        songId: nextItem.song_id,
         position: nextItem.position,
         startedAt: clipEnd - SEAM_FADE,
         offset,
@@ -299,13 +381,27 @@ export class SetPlayer {
     const current = this.current;
     if (!item || !current) return;
     const context = this.audio();
-    const buffer = await this.loadSong(item.song_id);
+    let buffer: AudioBuffer;
+    try {
+      buffer = await this.loadSong(item.song_id);
+    } catch {
+      const following = this.getMix()[position + 1];
+      if (following) {
+        this.update({ notice: `${item.title} wouldn’t load, so this skipped it.` });
+        await this.fadeInto(position + 1);
+      } else {
+        this.stopAll();
+        this.update({ phase: 'idle', notice: `${item.title} wouldn’t load, so the mix stopped here.` });
+      }
+      return;
+    }
+    if (this.current !== current) return;
     const playing = this.layer(buffer);
     const at = Math.max(context.currentTime + 0.05, current.startedAt + (current.duration - current.offset) - END_FADE);
     playing.gain.gain.setValueAtTime(0, at);
     playing.gain.gain.linearRampToValueAtTime(1, at + END_FADE);
     playing.source.start(at);
-    this.current = { ...playing, position, startedAt: at, offset: 0, duration: buffer.duration };
+    this.current = { ...playing, songId: item.song_id, position, startedAt: at, offset: 0, duration: buffer.duration };
     this.requested.clear();
     this.ending = false;
     this.update({
@@ -315,5 +411,3 @@ export class SetPlayer {
     });
   }
 }
-
-export const refreshSeam = (key: string) => get<SeamState>(`/seams/${key}`);

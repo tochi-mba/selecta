@@ -7,12 +7,13 @@ rendering used, at the level the mix uses, plus finished seams, and joins them o
 from __future__ import annotations
 
 import io
-import random
+import os
 import shutil
 import sqlite3
 import subprocess
 import sys
 import threading
+from collections import deque
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -29,7 +30,6 @@ from selecta import db, mix
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings, load_settings
 from selecta.seams import (
     MOVES,
-    WORD_MOVES,
     CannotRender,
     SeamRequest,
     SeamStore,
@@ -37,10 +37,24 @@ from selecta.seams import (
     seam_options,
 )
 from selecta.session import get_steering, queue, steer
+from selecta.stems import MIN_CACHE_BYTES, cache_bytes, largest_cache_bytes, prune_cache
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "testserver"}
 LINKS_KEEP_SECONDS = 600.0
-VIBES = {"balanced", "seamless", "punchy", "wordplay"}
+VIBE_KEYS = {
+    "pick",
+    "peak",
+    "house_party",
+    "late_night",
+    "afro_heat",
+    "rap_run",
+    "rnb_hours",
+    "road_trip",
+    "throwbacks",
+    "sunday",
+    "wordplay",
+    "slow_burn",
+}
 
 
 class FreshFiles(StaticFiles):
@@ -84,6 +98,7 @@ class SeamSettings(BaseModel):
     exit_bar: int | None = None
     entry_bar: int | None = None
     phrase: str | None = None
+    soft: bool = False
 
 
 class RateRequest(BaseModel):
@@ -95,11 +110,18 @@ class ScanRequest(BaseModel):
     folder: str
 
 
+class NameRequest(BaseModel):
+    name: str
+
+
 class PairRequest(BaseModel):
     a: int
     b: int
     move: str
     phrase: str | None = None
+
+
+SWAPS_REMEMBERED = 12
 
 
 def _counts(conn: sqlite3.Connection) -> dict[str, int]:
@@ -129,19 +151,63 @@ def _wav(audio: np.ndarray) -> bytes:
 class _Background:
     """One long job at a time of each kind, whose state the page can poll."""
 
-    def __init__(self) -> None:
+    def __init__(self, home: Path) -> None:
         self.scan: dict = {"status": "idle"}
         self.analysis: subprocess.Popen | None = None
+        self.asked: list[int] = []
+        self.asking: threading.Thread | None = None
         self.lock = threading.Lock()
+        self.home = home
+
+    def analyse(self, *songs: int) -> subprocess.Popen:
+        """Analysis at low priority, tied to the app so it stops when the app does."""
+        wanted = [part for song in songs for part in ("--song", str(song))]
+        return subprocess.Popen(
+            [sys.executable, "-m", "selecta.cli", "analyse", "--from-app", *wanted],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SELECTA_HOME": str(self.home)},
+        )
+
+    def ask_for(self, song_id: int) -> list[int]:
+        """Songs a person wants now wait in one line, however many they ask for. Each analysis
+        process holds about a gigabyte, so one per click can fill the machine's memory."""
+        with self.lock:
+            if song_id not in self.asked:
+                self.asked.append(song_id)
+            if self.asking is None:
+                self.asking = threading.Thread(target=self._work_through_asked, daemon=True)
+                self.asking.start()
+            return list(self.asked)
+
+    def _work_through_asked(self) -> None:
+        while True:
+            with self.lock:
+                batch = list(self.asked)
+                if not batch:
+                    self.asking = None
+                    return
+            try:
+                self.analyse(*batch).wait()
+            finally:
+                with self.lock:
+                    self.asked = [song for song in self.asked if song not in batch]
 
 
-def create_app(settings: Settings | None = None, web_dir: Path | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, web_dir: Path | None = None, prepare_links: bool = False
+) -> FastAPI:
     settings = settings or load_settings()
     settings.home.mkdir(parents=True, exist_ok=True)
     app = FastAPI(title="Selecta", docs_url="/api/docs")
     store = SeamStore(settings)
-    background = _Background()
+    store.forget_unfinished()  # no worker is running yet, so nothing can be under way
+    background = _Background(settings.home)
+    swapped_out: deque[int] = deque(maxlen=SWAPS_REMEMBERED)
     links_cache: dict = {"at": 0.0, "links": []}
+    library_cache: dict = {}
+    library_lock = threading.Lock()
 
     @app.middleware("http")
     async def local_only(request, call_next):
@@ -176,6 +242,14 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
             links_cache["at"] = time.monotonic()
         return links_cache["links"]
 
+    def songs_in_line(conn: sqlite3.Connection) -> list[int]:
+        """Songs a person asked for that aren't done, with the one being worked on first."""
+        return [
+            song
+            for song in list(background.asked)
+            if not db.is_analysed(conn, song, ANALYSIS_VERSION)
+        ]
+
     @app.get("/api/status")
     def status() -> dict:
         with connect() as conn:
@@ -187,6 +261,7 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
                 "analysis_running": bool(
                     background.analysis and background.analysis.poll() is None
                 ),
+                "analysing": songs_in_line(conn),
                 "scan": background.scan,
             }
 
@@ -194,20 +269,26 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     def storage() -> dict:
         usage = shutil.disk_usage(settings.home)
         used = sum(path.stat().st_size for path in settings.home.rglob("*") if path.is_file())
+        cache = cache_bytes(settings)
+        largest = largest_cache_bytes(settings)
         return {
-            "budget_bytes": settings.effective_cache_cap_bytes,
             "used_bytes": used,
+            "cache_bytes": cache,
+            "kept_bytes": max(used - cache, 0),
+            "budget_bytes": min(settings.effective_cache_cap_bytes, largest),
+            "largest_budget_bytes": largest,
+            "smallest_budget_bytes": MIN_CACHE_BYTES,
             "free_bytes": usage.free,
             "total_bytes": usage.total,
         }
 
     @app.post("/api/storage")
     def set_storage(body: StorageRequest) -> dict:
-        usage = shutil.disk_usage(settings.home)
-        maximum = max(0.5, (usage.free + settings.effective_cache_cap_bytes) / 1024**3)
-        if not 0.5 <= body.budget_gb <= maximum:
-            raise HTTPException(400, f"budget must be between 0.5 and {maximum:.1f} GB")
-        settings.set_storage_budget(int(body.budget_gb * 1024**3))
+        wanted = int(body.budget_gb * 1024**3)
+        if wanted < MIN_CACHE_BYTES:
+            raise HTTPException(400, "The limit can't go below 0.5 GB.")
+        settings.set_storage_budget(min(wanted, largest_cache_bytes(settings)))
+        prune_cache(settings)
         return storage()
 
     @app.post("/api/scan")
@@ -230,6 +311,15 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
                     "music": report.music - report.duplicates,
                     "set_aside": sum(report.set_aside.values()),
                 }
+                # nobody should have to find a button to make the app start working
+                subprocess.run(
+                    [sys.executable, "-m", "selecta.cli", "lyrics"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    env={**os.environ, "SELECTA_HOME": str(settings.home)},
+                    check=False,
+                )
+                start_analysis()
             except Exception as problem:  # noqa: BLE001 - shown to the person, not swallowed
                 background.scan = {"status": "failed", "error": str(problem)}
             finally:
@@ -243,11 +333,7 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     def start_analysis() -> dict:
         with background.lock:
             if background.analysis is None or background.analysis.poll() is not None:
-                background.analysis = subprocess.Popen(
-                    [sys.executable, "-m", "selecta.cli", "analyse"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
+                background.analysis = background.analyse()
         return {"running": True}
 
     @app.post("/api/analysis/stop")
@@ -355,83 +441,221 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     # ---- the mix: songs in order, with an editable seam between each pair
 
     def mix_payload(conn: sqlite3.Connection) -> dict:
-        return {"mix": mix.read_mix(conn, store)}
+        return {
+            "mix": mix.read_mix(conn, store),
+            "name": mix.mix_name(conn),
+            "can_undo": bool(db.preference(conn, "mix_undo", [])),
+        }
 
     @app.get("/api/mix")
     def get_mix() -> dict:
         with connect() as conn:
             return mix_payload(conn)
 
+    def phrases_of(conn: sqlite3.Connection) -> dict[tuple[int, int], str]:
+        phrases: dict[tuple[int, int], str] = {}
+        for link in all_links(conn):
+            phrases.setdefault((link.song_a, link.song_b), link.phrase)
+        return phrases
+
+    def library_now(conn: sqlite3.Connection) -> tuple[list, dict]:
+        """Every analysed song the person hasn't ruled out. Loading them takes a second or two, and
+        they only change when more songs are analysed, so one copy is kept."""
+        from selecta.planner.reel import load_library
+        from selecta.planner.vibes import traits_of
+
+        never = never_played(conn)
+        stamp = (_counts(conn)["analysed"], tuple(sorted(never)))
+        with library_lock:
+            if library_cache.get("stamp") != stamp:
+                songs = [song for song in load_library(conn, settings) if song.id not in never]
+                years = {
+                    row["id"]: row["year"] for row in conn.execute("SELECT id,year FROM songs")
+                }
+                library_cache.update(
+                    stamp=stamp, songs=songs, traits=traits_of(songs, years), ranked=None
+                )
+            return library_cache["songs"], library_cache["traits"]
+
+    @app.get("/api/vibes")
+    def vibes() -> list[dict]:
+        from selecta.planner.vibes import VIBES, describe
+
+        with connect() as conn:
+            songs, traits = library_now(conn)
+        return [describe(vibe, songs, traits) for vibe in VIBES]
+
+    def play_vibe(conn: sqlite3.Connection, key: str, count: int, start: int | None) -> dict:
+        from selecta.planner.vibes import BY_KEY, MIN_SONGS, build_vibe, eligible
+
+        vibe = BY_KEY.get(key)
+        if vibe is None:
+            raise HTTPException(404, f"There's no mix called {key}.")
+        songs, traits = library_now(conn)
+        if len(eligible(vibe, songs, traits)) < MIN_SONGS:
+            raise HTTPException(400, f"{vibe.name} needs more analysed songs.")
+        planned, seams = build_vibe(vibe, songs, traits, phrases_of(conn), min(count, 100), start)
+        mix.remember(conn, f"changing to {vibe.name}")
+        mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
+        mix.set_mix_name(conn, vibe.name)
+        return {**mix_payload(conn), "count": len(planned)}
+
+    @app.post("/api/vibes/{key}/build")
+    def build_vibe_route(key: str, count: int = 12, start: int | None = None) -> dict:
+        with connect() as conn:
+            return play_vibe(conn, key, count, start)
+
     @app.post("/api/mix/build")
     def build_mix(body: BuildRequest) -> dict:
-        from selecta.planner.beam import plan_set
-        from selecta.planner.reel import load_library
-        from selecta.planner.wordreel import modes_for
-
-        if body.vibe not in VIBES:
+        names = {
+            "balanced": "pick",
+            "seamless": "slow_burn",
+            "punchy": "rap_run",
+            "wordplay": "wordplay",
+        }
+        if body.vibe not in names and body.vibe not in VIBE_KEYS:
             raise HTTPException(400, f"unknown vibe: {body.vibe}")
         with connect() as conn:
-            never = never_played(conn)
-            library = [song for song in load_library(conn, settings) if song.id not in never]
-            if not library:
-                raise HTTPException(400, "No songs are analysed yet.")
-            by_id = {song.id: song for song in library}
-            phrases = {}
-            if body.vibe == "wordplay":
-                for link in all_links(conn):
-                    phrases.setdefault((link.song_a, link.song_b), link.phrase)
-            start = body.start
-            if start is None:
-                # a locked first song leads the mix. Otherwise each build starts somewhere new.
-                current = mix.read_mix(conn, store)
-                if current and current[0]["locked"]:
-                    start = current[0]["song_id"]
-                else:
-                    start = random.choice([s for s in library if s.exit_cues()] or library).id
-            planned = plan_set(
-                library,
-                start,
-                min(body.count, 100),
-                mix_language=body.vibe,
-                links=set(phrases),
-            )
-            seams = {}
-            for before, item in zip(planned, planned[1:], strict=False):
-                pair = (before.song.id, item.song.id)
-                if pair in phrases:
-                    moves = modes_for(by_id[pair[0]], by_id[pair[1]])
-                    best = next((m for m in moves if m in WORD_MOVES), None)
-                    if best:
-                        seams[item.song.id] = {"move": best, "phrase": phrases[pair]}
-                elif body.vibe in {"seamless", "punchy"} and item.transition:
-                    seams[item.song.id] = {"move": item.transition}
-            mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
-            return {**mix_payload(conn), "count": len(planned)}
+            return play_vibe(conn, names.get(body.vibe, body.vibe), body.count, body.start)
+
+    @app.post("/api/mix/undo")
+    def undo_mix() -> dict:
+        with connect() as conn:
+            undone = mix.undo(conn)
+            return {**mix_payload(conn), "undone": undone}
+
+    @app.get("/api/saved")
+    def saved() -> list[dict]:
+        with connect() as conn:
+            return [
+                {"name": item["name"], "songs": item["songs"]} for item in mix.saved_mixes(conn)
+            ]
+
+    @app.post("/api/saved")
+    def save(body: NameRequest) -> list[dict]:
+        name = body.name.strip()[:60]
+        if not name:
+            raise HTTPException(400, "A saved mix needs a name.")
+        with connect() as conn:
+            mix.save_mix(conn, name)
+        return saved()
+
+    @app.post("/api/saved/load")
+    def load_saved(body: NameRequest) -> dict:
+        with connect() as conn:
+            mix.remember(conn, f"opening {body.name}")
+            if not mix.load_saved(conn, body.name):
+                raise HTTPException(404, "That mix isn't saved any more.")
+            return mix_payload(conn)
+
+    @app.post("/api/saved/delete")
+    def delete_saved(body: NameRequest) -> list[dict]:
+        with connect() as conn:
+            mix.delete_saved(conn, body.name)
+        return saved()
 
     @app.post("/api/mix/clear")
     def clear_mix() -> dict:
         with connect() as conn:
+            mix.remember(conn, "clearing the mix")
             mix.write_order(conn, [])
+            mix.set_mix_name(conn, "Your mix")
             return mix_payload(conn)
 
     @app.post("/api/mix/songs")
     def add_song(body: AddRequest) -> dict:
         with connect() as conn:
-            analysed_or_404(conn, body.song_id)
+            song = analysed_or_404(conn, body.song_id)
+            mix.remember(conn, f"adding {song.title}")
             mix.add_song(conn, body.song_id, body.position)
             return mix_payload(conn)
 
     @app.delete("/api/mix/songs/{position}")
     def remove_song(position: int) -> dict:
         with connect() as conn:
+            mix.remember(conn, "removing that song")
             mix.remove_at(conn, position)
             return mix_payload(conn)
 
     @app.post("/api/mix/move")
     def move_song(body: MoveRequest) -> dict:
         with connect() as conn:
+            mix.remember(conn, "moving that song")
             mix.move_song(conn, body.source, body.target)
             return mix_payload(conn)
+
+    @app.get("/api/mix/suggest")
+    def suggest(position: int = 0, q: str = "", limit: int = 12) -> dict:
+        """What could go here, best fit first. With a search, only what matches, still best fit
+        first, followed by matching songs that aren't analysed yet."""
+        from selecta.planner.beam import rank_candidates
+
+        text = q.strip().casefold()
+        with connect() as conn:
+            items = mix.read_mix(conn, store)
+            songs, _ = library_now(conn)
+            by_id = {song.id: song for song in songs}
+            before = (
+                by_id.get(items[position - 1]["song_id"]) if 0 < position <= len(items) else None
+            )
+            after = by_id.get(items[position]["song_id"]) if 0 <= position < len(items) else None
+            used = {item["song_id"] for item in items}
+            phrases = phrases_of(conn) if before is not None else {}
+            ranked = rank_candidates(before, after, songs, used, phrases)
+            if text:
+                ranked = [
+                    item
+                    for item in ranked
+                    if text in f"{item.song.artist} {item.song.title}".casefold()
+                ]
+            found = [
+                {
+                    "song_id": item.song.id,
+                    "artist": item.song.artist,
+                    "title": item.song.title,
+                    "bpm": item.song.bpm,
+                    "key": item.song.camelot,
+                    "duration": item.song.duration,
+                    "reason": item.reason,
+                    "analysed": True,
+                }
+                for item in ranked[: min(limit, 100)]
+            ]
+            waiting = []
+            if text:
+                rows = conn.execute(
+                    "SELECT s.id,s.artist,s.title,s.duration FROM songs s "
+                    "LEFT JOIN analysis a ON a.song_id=s.id "
+                    "WHERE s.is_music=1 AND s.duplicate_of IS NULL AND a.song_id IS NULL "
+                    "AND (s.artist LIKE ? OR s.title LIKE ?) ORDER BY s.artist,s.title LIMIT 8",
+                    (f"%{q.strip()}%", f"%{q.strip()}%"),
+                ).fetchall()
+                waiting = [
+                    {
+                        "song_id": row["id"],
+                        "artist": row["artist"] or "Unknown artist",
+                        "title": row["title"] or "Untitled",
+                        "duration": row["duration"],
+                        "bpm": None,
+                        "key": None,
+                        "reason": "Needs analysing first",
+                        "analysed": False,
+                    }
+                    for row in rows
+                ]
+        return {"songs": found + waiting, "searching": bool(text)}
+
+    @app.post("/api/songs/{song_id}/analyse")
+    def analyse_one(song_id: int) -> dict:
+        """Analyse one song now, for when a person wants it and it isn't ready yet."""
+        with connect() as conn:
+            if db.song_by_id(conn, song_id) is None:
+                raise HTTPException(404)
+            if db.is_analysed(conn, song_id, ANALYSIS_VERSION):
+                return {"song_id": song_id, "ahead": 0, "analysing": songs_in_line(conn)}
+            background.ask_for(song_id)
+            line = songs_in_line(conn)
+        return {"song_id": song_id, "ahead": line.index(song_id), "analysing": line}
 
     @app.post("/api/mix/{position}/lock")
     def lock_song(position: int) -> dict:
@@ -452,14 +676,13 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     def swap_song(position: int, direction: int = 0) -> dict:
         """Replace the song at this place: something bigger, calmer, or just different."""
         from selecta.planner.beam import _artist, suggest_next
-        from selecta.planner.reel import load_library
 
         with connect() as conn:
             items = mix.read_mix(conn, store)
             if not 1 <= position < len(items):
                 raise HTTPException(404, "There's no song to swap there.")
-            never = never_played(conn)
-            library = {song.id: song for song in load_library(conn, settings)}
+            songs, _ = library_now(conn)
+            library = {song.id: song for song in songs}
             current = library.get(items[position - 1]["song_id"])
             if current is None:
                 raise HTTPException(404, "The song before this one isn't analysed.")
@@ -470,9 +693,18 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
                 for item in nearby
                 if item["position"] != position and item["song_id"] in library
             }
+            # a song just swapped out shouldn't come straight back
+            fresh = [song for song in songs if song.id not in swapped_out]
             pick = suggest_next(
                 current,
-                [song for song in library.values() if song.id not in never],
+                fresh,
+                in_mix,
+                artists,
+                max(-1, min(direction, 1)),
+                items[position]["song_id"],
+            ) or suggest_next(
+                current,
+                songs,
                 in_mix,
                 artists,
                 max(-1, min(direction, 1)),
@@ -480,6 +712,8 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
             )
             if pick is None:
                 raise HTTPException(404, "Nothing else fits here yet. Analysing more songs helps.")
+            swapped_out.append(items[position]["song_id"])
+            mix.remember(conn, "swapping that song")
             mix.replace_at(conn, position, pick.id)
             return mix_payload(conn)
 
@@ -497,6 +731,7 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
             raise HTTPException(400, f"unknown move: {body.move}")
         with connect() as conn:
             seam_request_at(conn, position)
+            mix.remember(conn, "changing that seam")
             mix.set_seam(conn, position, body.model_dump())
             return mix_payload(conn)
 
@@ -504,7 +739,20 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     def render_at(position: int) -> dict:
         with connect() as conn:
             request = seam_request_at(conn, position)
-        return store.submit(request)
+        return store.submit(request, urgent=True)
+
+    @app.post("/api/mix/render")
+    def render_all() -> dict:
+        """Queue every seam that isn't done, at once, and say so straight away. Asking one seam at
+        a time left the page showing "not rendered yet" until the last request came back."""
+        with connect() as conn:
+            items = mix.read_mix(conn, store)
+            for before, item in zip(items, items[1:], strict=False):
+                if item["seam"]["state"]["status"] in {"none", "failed"}:
+                    store.submit(
+                        request_from(before["song_id"], item["song_id"], item["seam"]["settings"])
+                    )
+            return mix_payload(conn)
 
     @app.post("/api/mix/export")
     def export() -> dict:
@@ -528,7 +776,8 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     def audition(body: PairRequest) -> dict:
         if body.move not in MOVES:
             raise HTTPException(400, f"unknown move: {body.move}")
-        return store.submit(SeamRequest(a=body.a, b=body.b, move=body.move, phrase=body.phrase))
+        request = SeamRequest(a=body.a, b=body.b, move=body.move, phrase=body.phrase)
+        return store.submit(request, urgent=True)
 
     @app.get("/api/seams/{key}")
     def seam_state(key: str) -> dict:
@@ -559,28 +808,54 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
 
     # ---- word links across the whole library
 
-    @app.get("/api/links")
-    def links(q: str = "", limit: int = 60) -> list[dict]:
-        from selecta.planner.fit import TimbreSpace
-        from selecta.planner.reel import load_library
-        from selecta.planner.wordreel import modes_for, rank_links
+    def ranked_links(conn: sqlite3.Connection) -> tuple[list, dict, object]:
+        """Word links worth offering, best first. They only change when more songs are analysed."""
+        from selecta.planner.prepare import best_links
 
+        songs, _ = library_now(conn)
+        if library_cache.get("ranked") is None:
+            library_cache["ranked"] = best_links(all_links(conn), songs)
+        return library_cache["ranked"]
+
+    if prepare_links:
+        store.prepare_links = True
+        store.start()
+
+        def warm_up() -> None:
+            """Load the library and lyric links now, so the first tap on a mix doesn't wait."""
+            with connect() as conn:
+                ranked_links(conn)
+
+        threading.Thread(target=warm_up, daemon=True).start()
+
+    @app.get("/api/links")
+    def links(q: str = "", limit: int = 60) -> dict:
+        from selecta.planner.prepare import LINKS_TO_PREPARE, link_state
+        from selecta.planner.wordreel import modes_for
+
+        text = q.casefold()
         with connect() as conn:
-            found = all_links(conn)
-            library = {song.id: song for song in load_library(conn, settings)}
+            unique, library, space = ranked_links(conn)
             names = {
                 row["id"]: (row["artist"], row["title"])
                 for row in conn.execute("SELECT id,artist,title FROM songs")
             }
-        space = TimbreSpace.fit(library.values())
-        ranked = rank_links(found, library, space)
-        text = q.casefold()
         shown = []
-        words: set[str] = set()
-        for link in ranked:
-            if link.phrase in words or (text and text not in link.phrase):
+        prepared = 0
+        for rank, link in enumerate(unique):
+            moves = modes_for(library[link.song_a], library[link.song_b], space)
+            if not moves:
                 continue
-            words.add(link.phrase)
+            move, state = link_state(link, moves, store.status)
+            done = state["status"] == "ready" and state.get("passed", False)
+            prepared += 1 if done else 0
+            if text and text not in link.phrase:
+                continue
+            order = {"ready": 0 if done else 3, "rendering": 1, "queued": 1, "none": 2}.get(
+                state["status"], 4
+            )
+            if state.get("rating") == "bad":
+                order = 4
             shown.append(
                 {
                     "phrase": link.phrase,
@@ -593,12 +868,19 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
                     "title_b": names[link.song_b][1],
                     "line_a": link.line_a.text,
                     "line_b": link.line_b.text,
-                    "moves": list(modes_for(library[link.song_a], library[link.song_b], space)),
+                    "moves": list(moves),
+                    "move": move,
+                    "state": state,
+                    "worked": order < 3,
+                    "_order": (order, rank),
                 }
             )
-            if len(shown) >= min(limit, 200):
-                break
-        return shown
+        shown.sort(key=lambda item: item.pop("_order"))
+        return {
+            "links": shown[: min(limit, 200)],
+            "prepared": prepared,
+            "preparing": min(LINKS_TO_PREPARE, len(unique)),
+        }
 
     root = web_dir or Path(__file__).parents[2] / "web" / "dist"
     if root.exists():
@@ -606,4 +888,6 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     return app
 
 
-app = create_app()
+def serve() -> FastAPI:
+    """The app as `selecta web` runs it. Only this starts the worker, not importing the file."""
+    return create_app(prepare_links=True)

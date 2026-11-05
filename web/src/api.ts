@@ -37,6 +37,8 @@ export type MixItem = {
   seam: { settings: SeamSettings; state: SeamState } | null;
 };
 
+export type MixData = { mix: MixItem[]; name: string; can_undo: boolean; undone?: string | null };
+
 export type SeamOptions = {
   moves: { name: string; label: string; description: string; available: boolean; reason: string | null }[];
   exits: { bar: number; time: number; kind: string }[];
@@ -52,6 +54,7 @@ export type Status = {
   steering: { mix_language: string };
   moves: Record<string, string>;
   analysis_running: boolean;
+  analysing: number[];
   scan: { status: string; folder?: string; music?: number; set_aside?: number; error?: string };
 };
 
@@ -91,6 +94,43 @@ export type Link = {
   line_a: string;
   line_b: string;
   moves: string[];
+  move: string;
+  state: SeamState;
+  worked: boolean;
+};
+
+export type LinkList = { links: Link[]; prepared: number; preparing: number };
+
+export type VibeCard = {
+  key: string;
+  name: string;
+  blurb: string;
+  songs: number;
+  ready: boolean;
+  needs: number;
+  artists: string[];
+};
+
+export type Suggestion = {
+  song_id: number;
+  artist: string;
+  title: string;
+  bpm: number | null;
+  key: string | null;
+  duration: number;
+  reason: string;
+  analysed: boolean;
+};
+
+export type Storage = {
+  used_bytes: number;
+  cache_bytes: number;
+  kept_bytes: number;
+  budget_bytes: number;
+  largest_budget_bytes: number;
+  smallest_budget_bytes: number;
+  free_bytes: number;
+  total_bytes: number;
 };
 
 async function send<T>(path: string, init?: RequestInit): Promise<T> {
@@ -117,15 +157,3 @@ export const post = <T,>(path: string, body?: unknown) =>
   });
 
 export const del = <T,>(path: string) => send<T>(path, { method: 'DELETE' });
-
-export const clock = (seconds: number | null | undefined): string => {
-  if (seconds == null || !Number.isFinite(seconds)) return '–:––';
-  const whole = Math.max(0, Math.round(seconds));
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
-};
-
-export const length = (seconds: number): string => {
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min`;
-  return `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
-};

@@ -10,16 +10,20 @@ from __future__ import annotations
 
 import hashlib
 import json
-import queue
+import os
 import sqlite3
+import subprocess
+import sys
 import threading
-from collections.abc import Iterable
+import time
+from collections import deque
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import soundfile as sf
 
-from selecta import db
+from selecta import db, jobs
 from selecta.analysis.song import Cue, SongInfo, load_song
 from selecta.audit.checks import AuditReport, Check, audit
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
@@ -33,14 +37,21 @@ from selecta.planner.wordreel import (
     locate_line_edge,
     locate_phrase,
     modes_for,
+    ride_lengths,
     ride_lines,
 )
 from selecta.render.engine import Rendered, SongCache, in_context, render
+from selecta.stems import prune_cache
 from selecta.styles import all_recipes
 from selecta.styles.wordplay import phrase_roll, vocal_ride, word_blend, word_cut, word_exchange
 
 RENDER_VERSION = 1
 PREVIEW_SECONDS = 12.0
+IDLE_CHECK_SECONDS = 3.0
+MIX_CHECK_SECONDS = 2.0
+# who goes first: what's about to be heard, the rest of the mix, other requests, then spare time
+URGENT, MIX, LATER, PREPARING = range(4)
+UNSURE_WORDS = "Selecta can’t tell exactly when these words are sung, so it won’t cut on them."
 PLACEMENTS_TO_TRY = 4
 
 MOVES: dict[str, tuple[str, str]] = {
@@ -74,6 +85,8 @@ class SeamRequest:
     exit_bar: int | None = None
     entry_bar: int | None = None
     phrase: str | None = None
+    soft: bool = False
+    """Selecta chose this move, not the person, so if it doesn't pass, use whatever does."""
 
     @property
     def key(self) -> str:
@@ -268,7 +281,7 @@ def _stem_render(
         edge_a = locate_line_edge(settings, aligner, a, lines[0], at_end=True)
         edge_b = locate_line_edge(settings, aligner, b, lines[1], at_end=False)
         script = None
-        for bars in [request.bars] if request.bars else [8, 4]:
+        for bars in [request.bars] if request.bars else ride_lengths(a, edge_a.words[0].end):
             script = vocal_ride(
                 a,
                 b,
@@ -297,21 +310,25 @@ def _stem_render(
                 a, b, phrase_a.words, phrase_b.words, phrase_a.voice, phrase_a.band, phrase_b.band
             )
         elif request.move == "word_exchange":
-            script = word_exchange(
-                a,
-                b,
-                phrase_a.words,
-                phrase_b.words,
-                phrase_a.voice,
-                phrase_a.band,
-                phrase_b.voice,
-                phrase_b.band,
-            )
+            script = None
+            for bars in [request.bars] if request.bars else ride_lengths(a, phrase_a.words[-1].end):
+                script = word_exchange(
+                    a,
+                    b,
+                    phrase_a.words,
+                    phrase_b.words,
+                    phrase_a.voice,
+                    phrase_a.band,
+                    phrase_b.band,
+                    bars,
+                )
+                if script is not None:
+                    break
         elif request.move == "word_cut":
             script = word_cut(a, b, phrase_a.words, phrase_b.words, phrase_b.band)
         else:
             script = None
-            for bars in [request.bars] if request.bars else [8, 4]:
+            for bars in [request.bars] if request.bars else ride_lengths(a, phrase_a.words[-1].end):
                 script = word_blend(
                     a,
                     b,
@@ -336,95 +353,239 @@ def _switch_at(rendered: Rendered) -> float:
 
 
 class SeamStore:
-    """Finished seams on disk, and one worker making more."""
+    """Finished seams on disk. The app asks for more here, and a worker process makes them, so
+    rendering can never make the app feel slow. See `selecta.seam_worker`."""
 
     def __init__(self, settings: Settings):
         self.settings = settings
         self.root = settings.renders_dir / "seams"
         self._lock = threading.Lock()
         self._states: dict[str, dict] = {}
-        self._queue: queue.Queue[SeamRequest] = queue.Queue()
-        self._worker: threading.Thread | None = None
-        self._cache = SongCache(capacity=6)
+        self._urgent: deque[SeamRequest] = deque()
+        self._later: deque[SeamRequest] = deque()
+        self._arrived = threading.Event()
+        self._running_rank = PREPARING
+        self._mix_checked_at = 0.0
+        self._mix_waiting = False
+        self.next_mix_seam: Callable[[], SeamRequest | None] = lambda: None
+        self.keep_for_now: Callable[[], set[str]] = set
+        self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
+        self._worker: subprocess.Popen | None = None
+        self.prepare_links = False
+        self._cache = SongCache(capacity=7)
         self._aligner: Aligner | None = None
 
     def folder(self, key: str) -> Path:
         return self.root / key
 
     def status(self, key: str) -> dict:
-        with self._lock:
-            state = self._states.get(key)
-        if state is not None:
-            return state
+        """What's on disk comes first, because that's where the worker reports. Nothing is under
+        way once the worker has gone, so a crash can't leave a seam "rendering" forever."""
+        state = self._last_known(key)
+        if state["status"] in {"queued", "rendering"} and self._worker_has_gone():
+            return {"status": "none", "key": key}
+        return state
+
+    def _last_known(self, key: str) -> dict:
         meta = self.folder(key) / "seam.json"
         if meta.exists():
-            return json.loads(meta.read_text("utf-8"))
-        return {"status": "none", "key": key}
+            try:
+                return json.loads(meta.read_text("utf-8"))
+            except (OSError, ValueError):
+                pass  # mid-write: what we last knew will do for this moment
+        with self._lock:
+            state = self._states.get(key)
+        return state if state is not None else {"status": "none", "key": key}
 
-    def submit(self, request: SeamRequest) -> dict:
+    def _worker_has_gone(self) -> bool:
+        return self._worker is not None and self._worker.poll() is not None
+
+    def submit(self, request: SeamRequest, urgent: bool = False) -> dict:
+        """Ask the worker for a seam. Anything done or under way stays as it is. Urgent is for
+        what a person just tapped or is about to hear: it goes ahead of everything, even a seam
+        already waiting."""
         key = request.key
         current = self.status(key)
-        if current["status"] in {"ready", "queued", "rendering"}:
+        if current["status"] in {"ready", "rendering"}:
             return current
+        if current["status"] == "queued" and not urgent:
+            return current
+        (self.folder(key) / "seam.json").unlink(missing_ok=True)
         state = {"status": "queued", "key": key, "request": asdict(request)}
         with self._lock:
             self._states[key] = state
-        self._queue.put(request)
-        self._ensure_worker()
+        self.start()
+        assert self._worker is not None and self._worker.stdin is not None
+        self._worker.stdin.write(json.dumps({"request": asdict(request), "urgent": urgent}) + "\n")
+        self._worker.stdin.flush()
         return state
 
-    def _ensure_worker(self) -> None:
+    def start(self) -> None:
+        """Start the worker if it isn't running, which also begins spare-time preparing."""
         with self._lock:
-            if self._worker is None or not self._worker.is_alive():
-                self._worker = threading.Thread(target=self._run, daemon=True, name="seams")
-                self._worker.start()
+            if self._worker is not None and self._worker.poll() is None:
+                return
+            command = [sys.executable, "-m", "selecta.seam_worker"]
+            if self.prepare_links:
+                command.append("--prepare")
+            self._worker = subprocess.Popen(
+                command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                env={**os.environ, "SELECTA_HOME": str(self.settings.home)},
+            )
 
-    def _run(self) -> None:
-        conn = db.connect(self.settings.db_path)
-        while True:
-            request = self._queue.get()
-            key = request.key
-            with self._lock:
-                self._states[key] = {**self._states[key], "status": "rendering"}
+    # ---- the rest runs in the worker process
+
+    def ask(self, request: SeamRequest, urgent: bool = False) -> None:
+        with self._lock:
+            self._urgent = deque(item for item in self._urgent if item.key != request.key)
+            self._later = deque(item for item in self._later if item.key != request.key)
+            if urgent:
+                self._urgent.appendleft(request)
+            else:
+                self._later.append(request)
+        self._arrived.set()
+
+    def forget_unfinished(self) -> None:
+        """Anything marked as under way was cut off when the last worker stopped."""
+        if not self.root.is_dir():
+            return
+        for meta in self.root.glob("*/seam.json"):
             try:
-                result = self.render_now(conn, request)
-            except (CannotRender, CannotTrust) as problem:
-                result = {
-                    "status": "failed",
-                    "key": key,
-                    "request": asdict(request),
-                    "error": str(problem),
-                }
-            except Exception as problem:  # noqa: BLE001 - a failed seam must not end the worker
-                result = {
-                    "status": "failed",
-                    "key": key,
-                    "request": asdict(request),
-                    "error": f"Something went wrong rendering this: {problem}",
-                }
+                if json.loads(meta.read_text("utf-8")).get("status") == "rendering":
+                    meta.unlink()
+            except (OSError, ValueError):
+                meta.unlink(missing_ok=True)
+
+    def _next_job(self) -> SeamRequest:
+        """What's about to be heard, then the rest of the mix in order, then anything else a person
+        asked for. Only spare time goes on preparing word links."""
+        while True:
+            self._arrived.clear()
             with self._lock:
-                self._states[key] = result
+                if self._urgent:
+                    self._running_rank = URGENT
+                    return self._urgent.popleft()
+            request = self.next_mix_seam()
+            if request is not None:
+                self._running_rank = MIX
+                return request
+            while True:
+                with self._lock:
+                    request = self._later.popleft() if self._later else None
+                if request is None or self.status(request.key)["status"] != "ready":
+                    break
+            if request is not None:
+                self._running_rank = LATER
+                return request
+            request = self.next_idle_job()
+            if request is not None:
+                self._running_rank = PREPARING
+                return request
+            self._arrived.wait(IDLE_CHECK_SECONDS)
+
+    def _give_way(self) -> bool:
+        """Is something more important waiting than what's running now?"""
+        rank = self._running_rank
+        if rank <= URGENT:
+            return False
+        if self._urgent:
+            return True
+        if rank <= MIX:
+            return False
+        now = time.monotonic()
+        if now - self._mix_checked_at > MIX_CHECK_SECONDS:
+            self._mix_checked_at = now
+            self._mix_waiting = self.next_mix_seam() is not None
+        if self._mix_waiting:
+            return True
+        return rank > LATER and bool(self._later)
+
+    def _mark_rendering(self, request: SeamRequest) -> None:
+        folder = self.folder(request.key)
+        folder.mkdir(parents=True, exist_ok=True)
+        state = {"status": "rendering", "key": request.key, "request": asdict(request)}
+        (folder / "seam.json").write_text(json.dumps(state), "utf-8")
+
+    def run_forever(self) -> None:
+        conn = db.connect(self.settings.db_path)
+        jobs.give_way_when(self._give_way)
+        while True:
+            request = self._next_job()
+            jobs.set_render_priority(self._running_rank != PREPARING)
+            self._mark_rendering(request)
+            try:
+                self.render_now(conn, request)
+            except jobs.Interrupted:
+                # it was only spare-time work or further down the line, so it's simply not done yet
+                (self.folder(request.key) / "seam.json").unlink(missing_ok=True)
+                continue
+            except CannotTrust:
+                self._save_failure(request, UNSURE_WORDS)
+            except CannotRender as problem:
+                self._save_failure(request, str(problem))
+            except Exception as problem:  # noqa: BLE001 - a failed seam must not end the worker
+                self._save_failure(request, f"Something went wrong: {problem}")
+            prune_cache(self.settings, {request.key} | self.keep_for_now())
+
+    def _save_failure(self, request: SeamRequest, error: str) -> dict:
+        """Remember what didn't work, so spare time isn't spent trying it again."""
+        result = {
+            "status": "failed",
+            "key": request.key,
+            "request": asdict(request),
+            "error": error,
+        }
+        folder = self.folder(request.key)
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "seam.json").write_text(json.dumps(result, indent=1), "utf-8")
+        return result
 
     def render_now(self, conn: sqlite3.Connection, request: SeamRequest) -> dict:
         a = load_song(conn, self.settings, request.a)
         b = load_song(conn, self.settings, request.b)
         fell_back = False
-        if request.move == "auto":
-            choice = choose_transition(a, b, cache=self._cache)
-            rendered, report = choice.rendered, choice.report
-            why = "; ".join(choice.candidate.reasons)
-            fell_back = choice.fell_back
-        elif request.move in STEM_MOVES:
+        rendered: Rendered | None = None
+        if request.move != "auto":
+            try:
+                rendered, report, why = self._chosen_move(request, a, b)
+            except (CannotRender, CannotTrust):
+                if not request.soft:
+                    raise
+            if request.soft and rendered is not None and not report.passed:
+                rendered = None
+        if rendered is None:
+            rendered, report, why, fell_back = self._best_move(a, b)
+        return self._save(request, rendered, report, why, fell_back)
+
+    def _chosen_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
+        if request.move in STEM_MOVES:
             if self._aligner is None:
                 self._aligner = Aligner(str(self.settings.models_dir))
-            rendered, report, why = _stem_render(
-                self.settings, self._aligner, request, a, b, self._cache
-            )
-        elif request.move in MOVES:
-            rendered, report, why = _bar_cue_render(request, a, b, self._cache)
-        else:
-            raise CannotRender(f"There's no move called {request.move}.")
-        return self._save(request, rendered, report, why, fell_back)
+            return _stem_render(self.settings, self._aligner, request, a, b, self._cache)
+        if request.move in MOVES:
+            return _bar_cue_render(request, a, b, self._cache)
+        raise CannotRender(f"There's no move called {request.move}.")
+
+    def _best_move(self, a: SongInfo, b: SongInfo):
+        """The best move that passes. The vocal ride is the listener's favourite, so it's tried
+        first wherever two songs can carry it."""
+        if "word_blend" in modes_for(a, b) and ride_lines(a, b) is not None:
+            try:
+                rendered, report, why = self._chosen_move(
+                    SeamRequest(a.id, b.id, "vocal_ride"), a, b
+                )
+                if report.passed:
+                    return rendered, report, why, False
+            except (CannotRender, CannotTrust):
+                pass
+        choice = choose_transition(a, b, cache=self._cache)
+        why = "; ".join(choice.candidate.reasons)
+        return choice.rendered, choice.report, why, choice.fell_back
 
     def _save(
         self,
@@ -480,6 +641,7 @@ def request_from(a: int, b: int, seam: dict | None) -> SeamRequest:
         exit_bar=seam.get("exit_bar"),
         entry_bar=seam.get("entry_bar"),
         phrase=seam.get("phrase"),
+        soft=bool(seam.get("soft", False)),
     )
 
 

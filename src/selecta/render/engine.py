@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from selecta import audio as audio_io
+from selecta import jobs
 from selecta.config import SAMPLE_RATE
 from selecta.render import dsp
 from selecta.render.script import Part, TransitionScript
@@ -146,6 +147,7 @@ def _nudge_into_the_pocket(
 
 
 def render(script: TransitionScript, cache: SongCache | None = None) -> Rendered:
+    jobs.check_in()
     cache = cache or SongCache()
     count = int(round(script.duration * SAMPLE_RATE))
 

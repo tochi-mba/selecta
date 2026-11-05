@@ -83,7 +83,10 @@ def load_library(conn: sqlite3.Connection, settings: Settings) -> list[SongInfo]
     ).fetchall()
     songs: list[SongInfo] = []
     for row in rows:
-        song = load_song(conn, settings, row["song_id"])
+        try:
+            song = load_song(conn, settings, row["song_id"])
+        except OSError:
+            continue
         if not song.vocals_known and not song.instrumental:
             continue
         songs.append(song)

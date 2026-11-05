@@ -8,6 +8,7 @@ import sqlite3
 import numpy as np
 import soundfile as sf
 
+from selecta import db
 from selecta.analysis.song import load_song
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.render.engine import SongCache
@@ -168,3 +169,65 @@ def export_mix(conn: sqlite3.Connection, settings: Settings, store: SeamStore, d
     destination.parent.mkdir(parents=True, exist_ok=True)
     sf.write(destination, audio, SAMPLE_RATE, subtype="PCM_16")
     return {"seconds": audio.shape[0] / SAMPLE_RATE, "name": destination.name}
+
+
+UNDO_DEPTH = 20
+
+
+def remember(conn: sqlite3.Connection, label: str) -> None:
+    """Keep the mix as it is now, so this next change can be undone. Selecta never asks "are you
+    sure?", it just lets you take things back."""
+    history = db.preference(conn, "mix_undo", [])
+    history.append(
+        {"label": label, "name": mix_name(conn), "items": [list(item) for item in _items(conn)]}
+    )
+    db.set_preference(conn, "mix_undo", history[-UNDO_DEPTH:])
+
+
+def undo(conn: sqlite3.Connection) -> str | None:
+    """Put the last remembered mix back, and say what was undone."""
+    history = db.preference(conn, "mix_undo", [])
+    if not history:
+        return None
+    last = history.pop()
+    db.set_preference(conn, "mix_undo", history)
+    write_order(conn, [tuple(item) for item in last["items"]])
+    set_mix_name(conn, last["name"])
+    return last["label"]
+
+
+def mix_name(conn: sqlite3.Connection) -> str:
+    return db.preference(conn, "mix_name", "Your mix")
+
+
+def set_mix_name(conn: sqlite3.Connection, name: str) -> None:
+    db.set_preference(conn, "mix_name", name)
+
+
+def saved_mixes(conn: sqlite3.Connection) -> list[dict]:
+    return db.preference(conn, "saved_mixes", [])
+
+
+def save_mix(conn: sqlite3.Connection, name: str) -> list[dict]:
+    """Keep the mix under a name. Saving the same name again replaces it."""
+    items = [list(item) for item in _items(conn)]
+    saved = [mix for mix in saved_mixes(conn) if mix["name"] != name]
+    saved.insert(0, {"name": name, "items": items, "songs": len(items)})
+    db.set_preference(conn, "saved_mixes", saved)
+    set_mix_name(conn, name)
+    return saved
+
+
+def load_saved(conn: sqlite3.Connection, name: str) -> bool:
+    for saved in saved_mixes(conn):
+        if saved["name"] == name:
+            write_order(conn, [tuple(item) for item in saved["items"]])
+            set_mix_name(conn, name)
+            return True
+    return False
+
+
+def delete_saved(conn: sqlite3.Connection, name: str) -> list[dict]:
+    saved = [mix for mix in saved_mixes(conn) if mix["name"] != name]
+    db.set_preference(conn, "saved_mixes", saved)
+    return saved

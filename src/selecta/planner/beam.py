@@ -21,8 +21,9 @@ ARTIST_SEPARATION = 10
 """No artist comes back within this many songs."""
 CHECK_PER_STEP = 4
 LOOK_PER_STEP = 40
-PLAN_EXITS = 3
-PLAN_ENTRIES = 4
+FRESHNESS = 0.03
+PLAN_EXITS = 2
+PLAN_ENTRIES = 3
 LINK_BONUS = 0.25
 
 
@@ -44,16 +45,17 @@ def _quick_score(
     energy_range: tuple[float, float],
     space: TimbreSpace | None,
     linked: set[tuple[int, int]],
+    arc: str = "slow_burn",
 ) -> float:
     """How promising a pair looks, from numbers already to hand."""
     low, high = energy_range
     level = (b.energy - low) / max(high - low, 1e-6)
-    arc = 1.0 - abs(level - target_energy(progress))
+    fit = 1.0 - abs(level - target_energy(progress, arc))
     tempo = max(0.0, 1.0 - folded_gap(a, b) / 0.2)
     key = 1.0 - min(camelot_distance(a.camelot, b.camelot), 4) / 4.0
     distance = space.distance(a, b) if space is not None else None
     timbre = 1.0 - min(distance, 2.0) / 2.0 if distance is not None else 0.5
-    score = 0.25 * arc + 0.3 * tempo + 0.2 * key + 0.25 * timbre
+    score = 0.25 * fit + 0.3 * tempo + 0.2 * key + 0.25 * timbre
     return score + (LINK_BONUS if (a.id, b.id) in linked else 0.0)
 
 
@@ -90,9 +92,13 @@ def plan_set(
     mix_language: str = "balanced",
     stems: str = "sometimes",
     links: set[tuple[int, int]] | None = None,
+    arc: str = "slow_burn",
+    seed: int | None = None,
 ) -> list[PlannedSong]:
-    """A set of up to `count` songs from `songs`, starting at `start_id`. `links` holds pairs that
-    share a phrase, which get a head start when the person wants wordplay."""
+    """A set of up to `count` songs from `songs`, starting at `start_id`, following the energy
+    shape `arc`. `links` holds pairs that share a phrase, which get a head start. With a `seed`,
+    close calls can go either way, so two builds of the same mix don't come out the same."""
+    rng = None if seed is None else np.random.default_rng(seed)
     if not songs:
         return []
     links = links or set()
@@ -113,10 +119,14 @@ def plan_set(
             used = {item.song.id for item in path}
             recent = {_artist(item.song) for item in path[-ARTIST_SEPARATION:]}
             options = [
-                (_quick_score(current, song, progress, energy_range, space, links), song)
+                (_quick_score(current, song, progress, energy_range, space, links, arc), song)
                 for song in songs
                 if song.id not in used and _artist(song) not in recent
             ]
+            if rng is not None:
+                options = [
+                    (score + float(rng.normal(0.0, FRESHNESS)), song) for score, song in options
+                ]
             options.sort(key=lambda item: -item[0])
             kept = 0
             for score, song in options[:LOOK_PER_STEP]:
@@ -174,3 +184,66 @@ def suggest_next(
         if _best_move(current, song, None, cues) is not None:
             return song
     return None
+
+
+@dataclass(frozen=True)
+class Suggestion:
+    song: SongInfo
+    score: float
+    reason: str
+
+
+def _why_it_fits(a: SongInfo, b: SongInfo, space: TimbreSpace | None, shares: str | None) -> str:
+    """A few words a person can check by ear. Never a score."""
+    if shares:
+        return f"Shares “{shares}”"
+    parts = []
+    gap = folded_gap(a, b)
+    if gap <= 0.02:
+        parts.append("Same tempo")
+    elif gap <= 0.06:
+        parts.append("Close tempo")
+    distance = camelot_distance(a.camelot, b.camelot)
+    if distance == 0:
+        parts.append("same key")
+    elif distance == 1:
+        parts.append("matching key")
+    timbre = space.distance(a, b) if space is not None else None
+    if timbre is not None and timbre < 0.8:
+        parts.append("similar sound")
+    if not parts:
+        return "A change of pace"
+    text = ", ".join(parts)
+    return text[0].upper() + text[1:]
+
+
+def rank_candidates(
+    before: SongInfo | None,
+    after: SongInfo | None,
+    songs: list[SongInfo],
+    exclude: set[int],
+    shares: dict[tuple[int, int], str] | None = None,
+) -> list[Suggestion]:
+    """Every song, best fit first, for a place in a mix between `before` and `after`."""
+    shares = shares or {}
+    space = TimbreSpace.fit(songs)
+    energies = np.array([song.energy for song in songs]) if songs else np.zeros(1)
+    energy_range = (float(energies.min()), float(energies.max()))
+    ranked: list[Suggestion] = []
+    links = set(shares)
+    for song in songs:
+        if song.id in exclude:
+            continue
+        scores = []
+        if before is not None:
+            scores.append(_quick_score(before, song, 0.5, energy_range, space, links))
+        if after is not None:
+            scores.append(_quick_score(song, after, 0.5, energy_range, space, links))
+        reference = before or after
+        phrase = shares.get((before.id, song.id)) if before is not None else None
+        if reference is not None and _artist(reference) == _artist(song):
+            scores = [score - 0.3 for score in scores]
+        reason = _why_it_fits(reference, song, space, phrase) if reference is not None else ""
+        ranked.append(Suggestion(song, float(np.mean(scores)) if scores else 0.0, reason))
+    ranked.sort(key=lambda item: -item.score)
+    return ranked

@@ -13,7 +13,12 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from selecta import jobs
 from selecta.config import SAMPLE_RATE, Settings
+
+MIN_CACHE_BYTES = 512 * 1024**2
+FREE_SPACE_RESERVE = 2 * 1024**3
+"""However high the limit is set, leave this much of the drive free."""
 
 
 @dataclass(frozen=True)
@@ -47,13 +52,14 @@ def _window_dirs(root: Path) -> list[tuple[Path, int, float]]:
     return found
 
 
-def _prune(root: Path, cap: int, keep: set[str] | None = None) -> None:
+def _prune(root: Path | list[Path], cap: int, keep: set[str] | None = None) -> None:
     """Delete whole windows, oldest first, since one missing stem makes the rest useless.
 
     Windows named in `keep` go only once nothing else is left to delete.
     """
     keep = keep or set()
-    windows = _window_dirs(root)
+    roots = [root] if isinstance(root, Path) else root
+    windows = [window for place in roots if place.is_dir() for window in _window_dirs(place)]
     total = sum(size for _, size, _ in windows)
     ordered = sorted(windows, key=lambda w: (w[0].name in keep, w[2]))
     for folder, size, _ in ordered:
@@ -63,26 +69,68 @@ def _prune(root: Path, cap: int, keep: set[str] | None = None) -> None:
         total -= size
 
 
+def cache_roots(settings: Settings) -> list[Path]:
+    """Everything Selecta can make again: separated stems and finished seams."""
+    return [settings.home / "stems", settings.renders_dir / "seams"]
+
+
+def cache_bytes(settings: Settings) -> int:
+    return sum(
+        size
+        for place in cache_roots(settings)
+        if place.is_dir()
+        for _, size, _ in _window_dirs(place)
+    )
+
+
+def largest_cache_bytes(settings: Settings) -> int:
+    """The most the cache may ever hold: what it holds now plus free space, less a safety margin."""
+    free = shutil.disk_usage(settings.home).free
+    return max(MIN_CACHE_BYTES, cache_bytes(settings) + free - FREE_SPACE_RESERVE)
+
+
+def prune_cache(settings: Settings, keep: set[str] | None = None) -> None:
+    """Keep the cache under the person's limit, and never let it fill the drive."""
+    cap = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+    _prune(cache_roots(settings), cap, keep)
+
+
 def run_demucs(wav: Path, out_dir: Path) -> Path:
     """Run Demucs from this environment, wherever the app was started from."""
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "demucs",
-            "-d",
-            "cpu",
-            "-n",
-            "htdemucs",
-            "--shifts",
-            "0",
-            "-o",
-            str(out_dir),
-            str(wav),
-        ],
-        check=True,
-        capture_output=True,
-    )
+    command = [
+        sys.executable,
+        "-m",
+        "demucs",
+        "-d",
+        "cpu",
+        "-n",
+        "htdemucs",
+        "--shifts",
+        "0",
+        "-o",
+        str(out_dir),
+        str(wav),
+    ]
+    with tempfile.TemporaryFile() as errors:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=errors,
+            creationflags=jobs.child_priority(),
+        )
+        try:
+            while True:
+                try:
+                    process.wait(timeout=1.0)
+                    break
+                except subprocess.TimeoutExpired:
+                    jobs.check_in()
+        except jobs.Interrupted:
+            jobs.kill_tree(process.pid)
+            raise
+        if process.returncode:
+            errors.seek(0)
+            raise subprocess.CalledProcessError(process.returncode, command, stderr=errors.read())
     return out_dir / "htdemucs" / wav.stem
 
 
@@ -135,5 +183,5 @@ def separate_window(
     for name, destination in paths.__dict__.items():
         shutil.move(str(produced / f"{name}.wav"), destination)
     excerpt.unlink(missing_ok=True)
-    _prune(settings.home / "stems", settings.effective_cache_cap_bytes)
+    prune_cache(settings, {target.name})
     return paths

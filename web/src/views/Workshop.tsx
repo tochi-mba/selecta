@@ -1,27 +1,83 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { get, post } from '../api';
+import { FormEvent, useEffect, useRef, useState } from 'react';
+import { get, post, Storage } from '../api';
+import { gb, storageWords } from '../lib';
 import { ViewProps } from './shared';
 
-type Storage = { budget_bytes: number; used_bytes: number; free_bytes: number };
-const gb = (bytes: number) => bytes / 1024 ** 3;
+const GB = 1024 ** 3;
 
-export function Workshop({ status, refreshStatus }: ViewProps) {
-  const { counts } = status;
+/** The limit moves the moment the slider does. Saving waits until the slider stops. */
+function StoragePanel() {
   const [storage, setStorage] = useState<Storage | null>(null);
+  const [limit, setLimit] = useState<number | null>(null);
+  const wait = useRef<number | undefined>(undefined);
+
+  const refresh = () =>
+    get<Storage>('/storage').then((data) => {
+      setStorage(data);
+      setLimit((current) => current ?? data.budget_bytes / GB);
+    });
+  useEffect(() => {
+    void refresh().catch(() => {});
+    const timer = window.setInterval(() => void refresh().catch(() => {}), 15000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  if (!storage || limit === null) return null;
+  const words = storageWords(storage);
+  const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);
+  const smallest = storage.smallest_budget_bytes / GB;
+
+  const move = (value: number) => {
+    setLimit(value);
+    window.clearTimeout(wait.current);
+    wait.current = window.setTimeout(() => {
+      void post<Storage>('/storage', { budget_gb: value }).then(setStorage);
+    }, 400);
+  };
+
+  const total = storage.used_bytes + storage.free_bytes;
+  return (
+    <section className="panel stack">
+      <h2>Storage</h2>
+      <p>{words.summary}</p>
+      <div className="bar-meter" role="img" aria-label={words.summary}>
+        <i className="kept" style={{ width: `${(100 * storage.kept_bytes) / total}%` }} />
+        <i className="cache" style={{ width: `${(100 * storage.cache_bytes) / total}%` }} />
+      </div>
+      <p className="hint">{words.detail}</p>
+      <label className="limit">
+        <span>
+          Keep up to <b>{limit.toFixed(1)} GB</b> of vocals and seams
+        </span>
+        <input
+          type="range"
+          min={smallest}
+          max={largest}
+          step={0.1}
+          value={Math.min(limit, largest)}
+          onChange={(event) => move(Number(event.target.value))}
+        />
+      </label>
+      <p className="hint">
+        When it’s full, Selecta deletes the ones it used longest ago, and makes them again if they’re needed. It always
+        leaves at least 2 GB free. Your music is never touched. The most it can use right now is {gb(storage.largest_budget_bytes)}.
+      </p>
+    </section>
+  );
+}
+
+export function Workshop({ status, refreshStatus, notify }: ViewProps) {
+  const { counts } = status;
   const [folder, setFolder] = useState('');
   const [problem, setProblem] = useState('');
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
-
-  useEffect(() => {
-    get<Storage>('/storage').then(setStorage).catch(() => {});
-  }, []);
+  const hours = (left * 25) / 3600;
+  const reading = status.scan.status === 'running';
 
   const toggle = async () => {
     await post(status.analysis_running ? '/analysis/stop' : '/analysis/start');
     refreshStatus();
-  };
-  const budget = async (value: number) => {
-    setStorage(await post<Storage>('/storage', { budget_gb: value }));
+    notify(status.analysis_running ? 'Paused. It’ll pick up where it left off.' : 'Analysing in the background.');
   };
   const scan = async (event: FormEvent) => {
     event.preventDefault();
@@ -48,57 +104,42 @@ export function Workshop({ status, refreshStatus }: ViewProps) {
         <h2>Analysis</h2>
         <p>
           {status.analysis_running
-            ? 'Running in the background, at low priority. You can keep using your PC.'
+            ? `Working through your songs at low priority, so you can keep using your PC. ${left} to go.`
             : left
-              ? `${left} songs left, at about 25 seconds each. More songs means better mixes and more word links.`
-              : 'Every song is analysed.'}
+              ? `${left} song${left === 1 ? '' : 's'} left, about ${hours < 1 ? `${Math.ceil(hours * 60)} minutes` : `${Math.ceil(hours)} hours`} in the background. More songs means better mixes and more word links.`
+              : 'Every song is ready.'}
         </p>
         {left > 0 && (
-          <div className="row">
-            <button className="primary" onClick={() => void toggle()}>
+          <div className="row wrap">
+            <button className={status.analysis_running ? '' : 'primary'} onClick={() => void toggle()}>
               {status.analysis_running ? 'Pause' : 'Analyse the rest'}
             </button>
-            <span className="hint">Safe to pause any time. It picks up where it left off.</span>
+            <span className="hint">Safe to pause any time.</span>
           </div>
         )}
       </section>
 
+      <StoragePanel />
+
       <section className="panel stack">
         <h2>Add another folder</h2>
         <form className="row" onSubmit={scan}>
-          <input value={folder} onChange={(event) => setFolder(event.target.value)} placeholder="C:\Users\you\Music" aria-label="Music folder" />
-          <button disabled={!folder.trim() || status.scan.status === 'running'}>
-            {status.scan.status === 'running' ? 'Reading…' : 'Read folder'}
-          </button>
+          <input
+            value={folder}
+            onChange={(event) => setFolder(event.target.value)}
+            placeholder="C:\Users\you\Music"
+            aria-label="Music folder"
+          />
+          <button disabled={!folder.trim() || reading}>{reading ? 'Reading…' : 'Read folder'}</button>
         </form>
         {problem && <p className="warn" role="alert">{problem}</p>}
         {status.scan.status === 'done' && (
           <p className="hint">
-            Read {status.scan.folder}: {status.scan.music} songs, {status.scan.set_aside} set aside.
+            Read {status.scan.folder}: {status.scan.music} songs, {status.scan.set_aside} set aside. Analysing them now.
           </p>
         )}
+        {status.scan.status === 'failed' && <p className="warn" role="alert">{status.scan.error}</p>}
       </section>
-
-      {storage && (
-        <section className="panel stack">
-          <h2>Storage</h2>
-          <p>
-            Selecta is using {gb(storage.used_bytes).toFixed(1)} GB. Its limit for stems is {gb(storage.budget_bytes).toFixed(1)} GB, with{' '}
-            {gb(storage.free_bytes).toFixed(1)} GB free on this drive.
-          </p>
-          <label>
-            Limit
-            <input
-              type="range"
-              min={0.5}
-              max={Math.max(1, Math.floor(gb(storage.free_bytes) + gb(storage.budget_bytes)))}
-              step={0.5}
-              value={gb(storage.budget_bytes)}
-              onChange={(event) => void budget(Number(event.target.value))}
-            />
-          </label>
-        </section>
-      )}
     </main>
   );
 }

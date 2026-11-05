@@ -63,13 +63,21 @@ def analyse(
     beat_model: str = typer.Option(None, help="Beat model checkpoint, such as final0."),
     low_priority: bool = typer.Option(True, help="Run below normal priority."),
     refresh: bool = typer.Option(False, help="Only update songs analysed by an older version."),
+    song: list[int] = typer.Option(None, help="Analyse just these song ids."),
+    from_app: bool = typer.Option(False, hidden=True, help="Stop when the app stops."),
 ) -> None:
     """Run fast analysis on songs that don't have it yet. Safe to stop and resume."""
     from selecta.analysis.pipeline import Analysers, analyse_song
-    from selecta.jobs import lower_priority
+    from selecta.jobs import lower_priority, lowest_priority, stop_when_app_stops
 
+    if from_app:
+        stop_when_app_stops()
     settings, conn = _open()
-    songs = db.songs_needing_analysis(conn, ANALYSIS_VERSION, folder, refresh)
+    if song:
+        rows = [db.song_by_id(conn, song_id) for song_id in song]
+        songs = [row for row in rows if row is not None]
+    else:
+        songs = db.songs_needing_analysis(conn, ANALYSIS_VERSION, folder, refresh)
     if sample:
         random.Random(seed).shuffle(songs)
     if limit:
@@ -78,16 +86,18 @@ def analyse(
         console.print("Nothing to analyse.")
         return
     if low_priority:
-        lower_priority()
+        (lowest_priority if from_app else lower_priority)()
 
     started = time.perf_counter()
     analysers = Analysers.load(settings, beat_model)
     console.print(f"Models loaded in {time.perf_counter() - started:.1f} s. {len(songs)} to go.")
 
     failures = 0
-    for number, song in enumerate(songs, 1):
-        result = analyse_song(conn, settings, song, analysers)
-        name = f"{song['artist'] or '?'} - {song['title']}"
+    for number, item in enumerate(songs, 1):
+        if db.is_analysed(conn, item["id"], ANALYSIS_VERSION) and not refresh:
+            continue  # someone asked for it by name while this was working through the list
+        result = analyse_song(conn, settings, item, analysers)
+        name = f"{item['artist'] or '?'} - {item['title']}"
         if result is None:
             failures += 1
             console.print(f"{number}/{len(songs)} [red]failed[/] {name}", highlight=False)
@@ -362,7 +372,7 @@ def web(
     url = f"http://127.0.0.1:{port}/"
     if open_browser:
         webbrowser.open(url)
-    uvicorn.run("selecta.api:app", host="127.0.0.1", port=port, log_level="warning")
+    uvicorn.run("selecta.api:serve", factory=True, host="127.0.0.1", port=port, log_level="warning")
 
 
 @app.command()

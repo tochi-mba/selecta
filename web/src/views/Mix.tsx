@@ -1,136 +1,109 @@
-import { useEffect, useRef, useState } from 'react';
-import { clock, del, get, length, MixItem, post, SeamOptions, SeamSettings, SongRow } from '../api';
-import { VIBES, ViewProps } from './shared';
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { del, get, MixData, MixItem, post, SeamOptions, SeamSettings, Suggestion } from '../api';
+import { analysingWords, askedToAnalyse, clock, length, runningTime, seamStatusWords } from '../lib';
+import { ViewProps } from './shared';
 
-const SIZES = [8, 12, 20, 40];
-
-/** Build a whole mix in two taps. Locked songs stay exactly where they are. */
-export function BuildPanel({ refreshMix, mix, setView }: ViewProps) {
-  const [vibe, setVibe] = useState('balanced');
-  const [count, setCount] = useState(12);
-  const [start, setStart] = useState<SongRow | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState('');
-
-  const build = async () => {
-    setBusy(true);
-    setProblem('');
-    try {
-      await post('/mix/build', { vibe, count, start: start?.id ?? null });
-      refreshMix();
-      setView('Mix');
-    } catch (error) {
-      setProblem((error as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const locked = mix.filter((item) => item.locked).length;
-
-  return (
-    <section className="panel stack">
-      <fieldset>
-        <legend>Feel</legend>
-        <div className="chips">
-          {VIBES.map((option) => (
-            <button key={option.name} aria-pressed={vibe === option.name} onClick={() => setVibe(option.name)}>
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <p className="hint">{VIBES.find((option) => option.name === vibe)?.hint}</p>
-      </fieldset>
-      <fieldset>
-        <legend>Songs</legend>
-        <div className="chips">
-          {SIZES.map((size) => (
-            <button key={size} aria-pressed={count === size} onClick={() => setCount(size)}>
-              {size}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend>Start with</legend>
-        {start ? (
-          <p className="row">
-            <b>{start.title}</b>
-            <span className="soft">{start.artist}</span>
-            <button className="link" onClick={() => setStart(null)}>Change</button>
-          </p>
-        ) : (
-          <SongSearch placeholder="Any song, or leave empty" onPick={setStart} />
-        )}
-      </fieldset>
-      <div className="row">
-        <button className="primary" onClick={() => void build()} disabled={busy}>
-          {busy ? 'Building…' : mix.length ? 'Rebuild the mix' : 'Build my mix'}
-        </button>
-        {locked > 0 && <span className="hint">{locked} locked {locked === 1 ? 'song stays' : 'songs stay'} put</span>}
-      </div>
-      {problem && <p className="warn" role="alert">{problem}</p>}
-    </section>
-  );
-}
-
-function SongSearch({ onPick, placeholder }: { onPick: (song: SongRow) => void; placeholder: string }) {
+/** What could go at this place in the mix: the best fits first, and the same order when searching. */
+export function Adder(props: {
+  position: number;
+  onAdd: (song: Suggestion) => void;
+  onClose: () => void;
+  notify: (message: string) => void;
+  line: number[];
+  refreshStatus: () => void;
+}) {
+  const { position, onAdd, onClose, notify, line, refreshStatus } = props;
   const [query, setQuery] = useState('');
-  const [rows, setRows] = useState<SongRow[]>([]);
+  const [songs, setSongs] = useState<Suggestion[] | null>(null);
+
+  const load = () => {
+    get<{ songs: Suggestion[] }>(`/mix/suggest?position=${position}&q=${encodeURIComponent(query)}&limit=${query ? 30 : 8}`)
+      .then((data) => setSongs(data.songs))
+      .catch(() => setSongs([]));
+  };
   useEffect(() => {
-    if (!query.trim()) {
-      setRows([]);
-      return;
-    }
-    const wait = window.setTimeout(() => {
-      get<SongRow[]>(`/songs?q=${encodeURIComponent(query)}&state=ready&limit=8`).then(setRows).catch(() => {});
-    }, 150);
+    const wait = window.setTimeout(load, query ? 150 : 0);
     return () => window.clearTimeout(wait);
-  }, [query]);
+  }, [query, position]);
+
+  // A song being analysed joins the list by itself once it's ready.
+  useEffect(() => {
+    if (!line.length) return;
+    const timer = window.setInterval(load, 4000);
+    return () => window.clearInterval(timer);
+  }, [line.length, query, position]);
+
+  const analyse = async (song: Suggestion) => {
+    const { ahead } = await post<{ ahead: number }>(`/songs/${song.song_id}/analyse`);
+    refreshStatus();
+    notify(askedToAnalyse(song.title, ahead));
+  };
+
+  const keys = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') onClose();
+    const first = songs?.find((song) => song.analysed);
+    if (event.key === 'Enter' && first) onAdd(first);
+  };
+
   return (
-    <div className="search">
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder={placeholder}
-        aria-label="Search songs"
-      />
-      {rows.length > 0 && (
-        <ul className="results">
-          {rows.map((row) => (
-            <li key={row.id}>
-              <button
-                onClick={() => {
-                  onPick(row);
-                  setQuery('');
-                }}
-              >
-                <b>{row.title}</b> <span>{row.artist}</span>
+    <div className="adder">
+      <div className="row">
+        <input
+          autoFocus
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={keys}
+          placeholder="Search, or pick from below"
+          aria-label="Search for a song to add here"
+        />
+        <button onClick={onClose}>Cancel</button>
+      </div>
+      <p className="hint">{query ? 'Best fit first' : 'These would fit best here'}</p>
+      {songs === null && <p className="hint">Finding what fits…</p>}
+      {songs?.length === 0 && <p className="hint">Nothing matches that.</p>}
+      <ul className="suggestions">
+        {songs?.map((song) => (
+          <li key={song.song_id}>
+            <button className="suggestion" disabled={!song.analysed} onClick={() => onAdd(song)}>
+              <b>{song.title}</b>
+              <span>{song.artist}</span>
+              <small>{song.reason}</small>
+            </button>
+            {!song.analysed && (
+              <button disabled={line.includes(song.song_id)} onClick={() => void analyse(song)}>
+                {analysingWords(line, song.song_id)}
               </button>
-            </li>
-          ))}
-        </ul>
-      )}
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
 function Preview({ seamKey, seamAt }: { seamKey: string; seamAt: number }) {
   const audio = useRef<HTMLAudioElement>(null);
-  const start = () => {
+  useEffect(() => {
     const element = audio.current;
     if (!element) return;
     const go = () => {
       element.currentTime = Math.max(0, seamAt - 8);
-      void element.play();
+      void element.play().catch(() => {});
     };
     if (element.readyState > 0) go();
     else element.addEventListener('loadedmetadata', go, { once: true });
-  };
-  useEffect(start, [seamKey]);
+  }, [seamKey, seamAt]);
   return <audio ref={audio} controls src={`/api/seams/${seamKey}/preview`} className="preview" />;
 }
 
-function SeamEditor({ position, item, refreshMix }: { position: number; item: MixItem; refreshMix: () => void }) {
+function SeamEditor(props: {
+  position: number;
+  item: MixItem;
+  previous: MixItem;
+  refreshMix: () => void;
+  notify: (message: string, undo?: boolean) => void;
+}) {
+  const { position, item, previous, refreshMix, notify } = props;
   const [options, setOptions] = useState<SeamOptions | null>(null);
   const [problem, setProblem] = useState('');
   const settings: SeamSettings = item.seam?.settings ?? {};
@@ -145,14 +118,16 @@ function SeamEditor({ position, item, refreshMix }: { position: number; item: Mi
     return () => {
       live = false;
     };
-  }, [position, item.song_id]);
+  }, [position, item.song_id, previous.song_id]);
 
   const change = async (changes: SeamSettings) => {
     setProblem('');
     try {
-      await post(`/mix/${position}/seam`, { ...settings, ...changes });
+      // anything the person picks is their choice, so it stops being Selecta's to replace
+      await post(`/mix/${position}/seam`, { ...settings, ...changes, soft: false });
       await post(`/mix/${position}/render`);
       refreshMix();
+      notify('Changed that seam. Rendering it now.', true);
     } catch (error) {
       setProblem((error as Error).message);
     }
@@ -162,9 +137,11 @@ function SeamEditor({ position, item, refreshMix }: { position: number; item: Mi
   if (!options) return <p className="hint">Working out what’s possible…</p>;
 
   const move = options.moves.find((option) => option.name === chosen);
-  const usesBars = ['bass_swap_blend', 'filter_sweep', 'vocal_ride', 'word_blend'].includes(chosen);
+  const blends = ['bass_swap_blend', 'filter_sweep'].includes(chosen);
+  const rides = ['vocal_ride', 'word_blend', 'word_exchange'].includes(chosen);
   const usesCues = ['bass_swap_blend', 'filter_sweep', 'tempo_ramp', 'cut_on_one', 'echo_out', 'delay_throw', 'reverb_wash'].includes(chosen);
   const usesPhrase = ['word_blend', 'word_exchange', 'phrase_roll', 'word_cut'].includes(chosen);
+  const off = options.moves.filter((option) => !option.available);
   return (
     <div className="editor stack">
       <fieldset>
@@ -184,34 +161,32 @@ function SeamEditor({ position, item, refreshMix }: { position: number; item: Mi
         </div>
         <p className="hint">{move?.description}</p>
         <p className="hint">{options.tempo_gap}% tempo gap, keys {options.keys.join(' and ')}.</p>
-        {options.moves.some((option) => !option.available) && (
+        {off.length > 0 && (
           <details className="why-not">
-            <summary>Why some moves are greyed out</summary>
+            <summary>Why {off.length === 1 ? 'one move is' : `${off.length} moves are`} greyed out</summary>
             <ul>
-              {options.moves
-                .filter((option) => !option.available)
-                .map((option) => (
-                  <li key={option.name}>
-                    <b>{option.label}:</b> {option.reason}
-                  </li>
-                ))}
+              {off.map((option) => (
+                <li key={option.name}>
+                  <b>{option.label}:</b> {option.reason}
+                </li>
+              ))}
             </ul>
           </details>
         )}
       </fieldset>
 
-      {usesBars && (
+      {(blends || rides) && (
         <fieldset>
-          <legend>{chosen === 'bass_swap_blend' || chosen === 'filter_sweep' ? 'Overlap' : 'How long B’s band plays under A’s voice'}</legend>
+          <legend>{blends ? 'How long they overlap' : 'How long B’s band plays under A’s voice'}</legend>
           <div className="chips">
-            {[4, 8, 16].map((bars) => (
+            <button aria-pressed={settings.bars === undefined} onClick={() => void change({ bars: undefined })}>
+              Pick for me
+            </button>
+            {(blends ? [4, 8, 16] : [4, 8, 12, 16]).map((bars) => (
               <button key={bars} aria-pressed={settings.bars === bars} onClick={() => void change({ bars })}>
                 {bars} bars
               </button>
             ))}
-            <button aria-pressed={settings.bars === undefined} onClick={() => void change({ bars: undefined })}>
-              Pick for me
-            </button>
           </div>
         </fieldset>
       )}
@@ -219,7 +194,7 @@ function SeamEditor({ position, item, refreshMix }: { position: number; item: Mi
       {usesCues && (
         <div className="cue-row">
           <label>
-            Leave <b>this song</b>
+            Leave <b>{previous.title}</b> at
             <select
               value={settings.exit_bar ?? ''}
               onChange={(event) => void change({ exit_bar: event.target.value ? Number(event.target.value) : undefined })}
@@ -233,7 +208,7 @@ function SeamEditor({ position, item, refreshMix }: { position: number; item: Mi
             </select>
           </label>
           <label>
-            Bring in <b>{item.title}</b>
+            Bring in <b>{item.title}</b> at
             <select
               value={settings.entry_bar ?? ''}
               onChange={(event) => void change({ entry_bar: event.target.value ? Number(event.target.value) : undefined })}
@@ -271,15 +246,25 @@ function SeamEditor({ position, item, refreshMix }: { position: number; item: Mi
   );
 }
 
-function SeamRow({ item, refreshMix, open, onToggle }: { item: MixItem; refreshMix: () => void; open: boolean; onToggle: () => void }) {
+function SeamRow(props: {
+  item: MixItem;
+  previous: MixItem;
+  refreshMix: () => void;
+  open: boolean;
+  onToggle: () => void;
+  names: Record<string, string>;
+  notify: (message: string, undo?: boolean) => void;
+}) {
+  const { item, previous, refreshMix, open, onToggle, names, notify } = props;
   const seam = item.seam!;
   const state = seam.state;
   const chosen = seam.settings.move ?? 'auto';
   const [hearing, setHearing] = useState(false);
-  const label = state.label && (chosen === 'auto' || state.style === chosen) ? state.label : undefined;
+  const busy = state.status === 'queued' || state.status === 'rendering';
+  const label = state.status === 'ready' ? (state.label ?? names[chosen]) : (names[chosen] ?? chosen);
 
   const hear = async () => {
-    setHearing(true);
+    setHearing(!hearing || state.status !== 'ready');
     if (state.status !== 'ready') {
       await post(`/mix/${item.position}/render`);
       refreshMix();
@@ -290,30 +275,21 @@ function SeamRow({ item, refreshMix, open, onToggle }: { item: MixItem; refreshM
     refreshMix();
   };
 
-  const pill =
-    state.status === 'ready'
-      ? state.passed
-        ? 'Ready'
-        : 'Ready, with a warning'
-      : state.status === 'failed'
-        ? 'Can’t do this one'
-        : state.status === 'none'
-          ? 'Not rendered yet'
-          : state.status === 'queued'
-            ? 'Waiting to render'
-            : 'Rendering…';
-
   return (
     <li className={`seam ${open ? 'open' : ''}`}>
       <div className="seam-line">
         <button className="seam-name" onClick={onToggle} aria-expanded={open}>
-          <b>{label ?? (chosen === 'auto' ? 'Let Selecta pick' : chosen.replace(/_/g, ' '))}</b>
-          <span className={`pill ${state.status} ${state.status === 'ready' && !state.passed ? 'warned' : ''}`}>{pill}</span>
+          <b>{label}</b>
+          <span className={`pill ${state.status} ${state.status === 'ready' && !state.passed ? 'warned' : ''}`}>
+            {seamStatusWords(state.status, state.passed)}
+          </span>
         </button>
         <div className="seam-actions">
-          <button onClick={() => void hear()} disabled={state.status === 'queued' || state.status === 'rendering'}>
-            {state.status === 'ready' ? 'Hear it' : 'Render & hear'}
-          </button>
+          {!busy && (
+            <button onClick={() => void hear()}>
+              {state.status === 'ready' ? (hearing ? 'Hide' : 'Hear it') : 'Render and hear'}
+            </button>
+          )}
           {state.status === 'ready' && (
             <span className="pair" role="group" aria-label="Rate this seam">
               <button aria-pressed={state.rating === 'good'} onClick={() => void rate('good')}>Good</button>
@@ -323,7 +299,11 @@ function SeamRow({ item, refreshMix, open, onToggle }: { item: MixItem; refreshM
           <button onClick={onToggle}>{open ? 'Close' : 'Change'}</button>
         </div>
       </div>
-      {state.status === 'failed' && <p className="warn">{state.error}</p>}
+      {state.status === 'failed' && (
+        <p className="warn">
+          {state.error} {!open && <button className="link" onClick={onToggle}>Try another move</button>}
+        </p>
+      )}
       {hearing && state.status === 'ready' && <Preview seamKey={state.key} seamAt={state.preview_seam ?? 0} />}
       {open && state.status === 'ready' && (
         <div className="report">
@@ -338,7 +318,7 @@ function SeamRow({ item, refreshMix, open, onToggle }: { item: MixItem; refreshM
           </ul>
         </div>
       )}
-      {open && <SeamEditor position={item.position} item={item} refreshMix={refreshMix} />}
+      {open && <SeamEditor position={item.position} item={item} previous={previous} refreshMix={refreshMix} notify={notify} />}
     </li>
   );
 }
@@ -346,16 +326,17 @@ function SeamRow({ item, refreshMix, open, onToggle }: { item: MixItem; refreshM
 function SongLine(props: {
   item: MixItem;
   total: number;
-  refreshMix: () => void;
+  setMixData: (data: MixData) => void;
   onPlay: () => void;
   onDrop: (from: number, to: number) => void;
   playing: boolean;
+  notify: (message: string, undo?: boolean) => void;
 }) {
-  const { item, total, refreshMix, onPlay, onDrop, playing } = props;
+  const { item, total, setMixData, onPlay, onDrop, playing, notify } = props;
   const [over, setOver] = useState(false);
-  const act = async (call: Promise<unknown>) => {
-    await call;
-    refreshMix();
+  const act = async (call: Promise<MixData>, message?: string) => {
+    setMixData(await call);
+    if (message) notify(message, true);
   };
   return (
     <li
@@ -373,7 +354,7 @@ function SongLine(props: {
         onDrop(Number(event.dataTransfer.getData('text/plain')), item.position);
       }}
     >
-      <span className="grip" aria-hidden="true">⠿</span>
+      <span className="grip" aria-hidden="true" title="Drag to move">⠿</span>
       <span className="count">{item.position + 1}</span>
       <div className="song-name">
         <b>{item.title}</b>
@@ -387,25 +368,25 @@ function SongLine(props: {
         <button
           aria-label={`Move ${item.title} up`}
           disabled={item.position === 0}
-          onClick={() => void act(post('/mix/move', { source: item.position, target: item.position - 1 }))}
+          onClick={() => void act(post<MixData>('/mix/move', { source: item.position, target: item.position - 1 }), `Moved ${item.title} up.`)}
         >
           ↑
         </button>
         <button
           aria-label={`Move ${item.title} down`}
           disabled={item.position === total - 1}
-          onClick={() => void act(post('/mix/move', { source: item.position, target: item.position + 1 }))}
+          onClick={() => void act(post<MixData>('/mix/move', { source: item.position, target: item.position + 1 }), `Moved ${item.title} down.`)}
         >
           ↓
         </button>
         <button
           aria-pressed={item.locked}
-          title="A locked song stays here when the mix is rebuilt"
-          onClick={() => void act(post(`/mix/${item.position}/lock`))}
+          title="A locked song stays right here when the mix is rebuilt"
+          onClick={() => void act(post<MixData>(`/mix/${item.position}/lock`))}
         >
           {item.locked ? 'Locked' : 'Lock'}
         </button>
-        <button aria-label={`Remove ${item.title}`} onClick={() => void act(del(`/mix/songs/${item.position}`))}>
+        <button aria-label={`Remove ${item.title}`} onClick={() => void act(del<MixData>(`/mix/songs/${item.position}`), `Removed ${item.title}.`)}>
           ✕
         </button>
       </div>
@@ -414,89 +395,145 @@ function SongLine(props: {
 }
 
 export function Mix(props: ViewProps) {
-  const { mix, refreshMix, player, now, setView } = props;
+  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus } = props;
+  const line = status.analysing ?? [];
   const [openSeam, setOpenSeam] = useState<number | null>(null);
-  const [building, setBuilding] = useState(false);
   const [adding, setAdding] = useState<number | null>(null);
+  const [wantFile, setWantFile] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [exported, setExported] = useState<{ name: string; seconds: number } | null>(null);
   const [problem, setProblem] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState(mixName);
 
-  const total = mix.reduce((sum, item) => sum + (item.duration ?? 0), 0);
+  const total = runningTime(mix);
   const seams = mix.slice(1).map((item) => item.seam!.state);
   const ready = seams.filter((state) => state.status === 'ready').length;
+  const failed = seams.filter((state) => state.status === 'failed').length;
 
-  const addSong = async (song: SongRow, position: number) => {
-    await post('/mix/songs', { song_id: song.id, position });
+  const addSong = async (song: Suggestion, position: number) => {
+    setMixData(await post<MixData>('/mix/songs', { song_id: song.song_id, position }));
     setAdding(null);
-    refreshMix();
+    notify(`Added ${song.title}.`, true);
   };
+
+  const waiting = seams.filter((state) => state.status === 'none' || state.status === 'failed').length;
 
   const renderAll = async () => {
-    setProblem('');
-    for (const item of mix.slice(1)) {
-      if (item.seam!.state.status === 'none' || item.seam!.state.status === 'failed') {
-        await post(`/mix/${item.position}/render`);
-      }
-    }
-    refreshMix();
+    setMixData(await post<MixData>('/mix/render'));
+    notify(`Rendering ${waiting} seam${waiting === 1 ? '' : 's'}, in order, ahead of everything else.`);
   };
 
-  const save = async () => {
+  const download = async () => {
     setProblem('');
-    setSaving(true);
-    try {
-      setExported(await post<{ name: string; seconds: number }>('/mix/export'));
-    } catch (error) {
-      setProblem((error as Error).message);
-    } finally {
-      setSaving(false);
+    setExported(null);
+    setWantFile(true);
+    setMixData(await post<MixData>('/mix/render'));
+  };
+
+  // Downloading renders whatever isn't ready, then saves the file by itself.
+  useEffect(() => {
+    if (!wantFile || saving) return;
+    if (ready < seams.length) {
+      const stuck = seams.every((state) => state.status === 'ready' || state.status === 'failed');
+      if (failed && stuck) {
+        setWantFile(false);
+        setProblem(`${failed} seam${failed === 1 ? '' : 's'} couldn’t be made. Pick another move for ${failed === 1 ? 'it' : 'them'}, then try again.`);
+      }
+      return;
     }
+    setSaving(true);
+    post<{ name: string; seconds: number }>('/mix/export')
+      .then(setExported)
+      .catch((error: Error) => setProblem(error.message))
+      .finally(() => {
+        setSaving(false);
+        setWantFile(false);
+      });
+  }, [wantFile, ready, failed, seams.length, saving]);
+
+  const saveMix = async (event: FormEvent) => {
+    event.preventDefault();
+    const clean = name.trim();
+    if (!clean) return;
+    await post('/saved', { name: clean });
+    setNaming(false);
+    refreshMix();
+    notify(`Saved ${clean}. It’s on the Mixes page.`);
   };
 
   const clear = async () => {
     player.stop();
-    await post('/mix/clear');
-    refreshMix();
+    setMixData(await post<MixData>('/mix/clear'));
+    notify('Cleared the mix.', true);
   };
+
+  if (!mix.length) {
+    return (
+      <main className="page">
+        <h1 className="display small">Nothing here yet</h1>
+        <p className="lede">Start from one of Selecta’s mixes, or add songs yourself.</p>
+        <div className="row wrap">
+          <button className="primary" onClick={() => setView('Mixes')}>See the mixes</button>
+          <button onClick={() => setAdding(0)}>Add a song</button>
+        </div>
+        {adding === 0 && (
+          <Adder position={0} onAdd={(song) => void addSong(song, 0)} onClose={() => setAdding(null)} notify={notify} line={line} refreshStatus={refreshStatus} />
+        )}
+      </main>
+    );
+  }
 
   return (
     <main className="page mix">
       <header className="mix-head">
         <div>
-          <h1 className="display small">Your mix</h1>
+          <h1 className="display small">{mixName}</h1>
           <p className="lede">
-            {mix.length
-              ? `${mix.length} songs, about ${length(total * 0.8)}. Tap any seam to change how it lands. ${seams.length ? `${ready} of ${seams.length} seams are ready.` : ''}`
-              : 'Nothing here yet.'}
+            {mix.length} {mix.length === 1 ? 'song' : 'songs'}, about {length(total)}.
+            {seams.length > 0 && ` ${ready} of ${seams.length} seams are ready. Tap any seam to change how it lands.`}
           </p>
         </div>
         <div className="row wrap">
-          {mix.length > 0 && (
-            <button className="primary" onClick={() => void player.playFrom(0)}>
-              Play from the top
-            </button>
-          )}
-          <button onClick={() => setBuilding(!building)} aria-expanded={building}>
-            {mix.length ? 'Rebuild' : 'Build a mix'}
+          <button className="primary" onClick={() => {
+            setView('Now');
+            void player.playFrom(0);
+          }}>
+            Play from the top
           </button>
-          <button onClick={() => setView('Library')}>Add songs</button>
-          {mix.length > 1 && ready < seams.length && <button onClick={() => void renderAll()}>Render every seam</button>}
-          {mix.length > 1 && (
-            <button onClick={() => void save()} disabled={ready < seams.length || saving} title={ready < seams.length ? 'Every seam has to be rendered first' : ''}>
-              {saving ? 'Saving…' : 'Save as a file'}
+          <button onClick={() => {
+            setName(mixName);
+            setNaming(!naming);
+          }} aria-expanded={naming}>
+            Save
+          </button>
+          {ready < seams.length && (
+            <button onClick={() => void renderAll()} disabled={!waiting}>
+              {waiting ? 'Render every seam' : `Rendering ${ready} of ${seams.length}…`}
             </button>
           )}
-          {mix.length > 0 && <button onClick={() => void clear()}>Clear</button>}
+          {mix.length > 1 && (
+            <button onClick={() => void download()} disabled={wantFile}>
+              {saving ? 'Saving file…' : wantFile ? `Rendering ${ready} of ${seams.length}…` : 'Download audio'}
+            </button>
+          )}
+          <button onClick={() => setView('Mixes')}>New mix</button>
+          <button onClick={() => void clear()}>Clear</button>
         </div>
       </header>
+      {naming && (
+        <form className="row" onSubmit={saveMix}>
+          <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
+          <button className="primary" disabled={!name.trim()}>Save mix</button>
+          <button type="button" onClick={() => setNaming(false)}>Cancel</button>
+        </form>
+      )}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {exported && (
         <p className="notice" role="status">
-          Saved {length(exported.seconds)}: <a href={`/api/exports/${exported.name}`}>download {exported.name}</a>
+          Ready, {length(exported.seconds)} long: <a href={`/api/exports/${exported.name}`} download>download {exported.name}</a>
         </p>
       )}
-      {(building || !mix.length) && <BuildPanel {...props} />}
 
       <ol className="timeline">
         {mix.map((item, index) => (
@@ -504,7 +541,10 @@ export function Mix(props: ViewProps) {
             {index > 0 && (
               <SeamRow
                 item={item}
+                previous={mix[index - 1]}
                 refreshMix={refreshMix}
+                names={status.moves}
+                notify={notify}
                 open={openSeam === index}
                 onToggle={() => setOpenSeam(openSeam === index ? null : index)}
               />
@@ -512,21 +552,38 @@ export function Mix(props: ViewProps) {
             <SongLine
               item={item}
               total={mix.length}
-              refreshMix={refreshMix}
+              setMixData={setMixData}
+              notify={notify}
               playing={now.phase !== 'idle' && now.position === index}
-              onPlay={() => void player.playFrom(index)}
+              onPlay={() => {
+                setView('Now');
+                void player.playFrom(index);
+              }}
               onDrop={(from, to) => {
-                if (from !== to) void post('/mix/move', { source: from, target: to }).then(refreshMix);
+                if (from !== to) {
+                  void post<MixData>('/mix/move', { source: from, target: to }).then((data) => {
+                    setMixData(data);
+                    notify('Moved that song.', true);
+                  });
+                }
               }}
             />
             {adding === index + 1 ? (
-              <li className="adder">
-                <SongSearch placeholder="Search for a song to add here" onPick={(song) => void addSong(song, index + 1)} />
-                <button onClick={() => setAdding(null)}>Cancel</button>
+              <li className="adder-row">
+                <Adder
+                  position={index + 1}
+                  onAdd={(song) => void addSong(song, index + 1)}
+                  onClose={() => setAdding(null)}
+                  notify={notify}
+                  line={line}
+                  refreshStatus={refreshStatus}
+                />
               </li>
             ) : (
               <li className="add-gap">
-                <button onClick={() => setAdding(index + 1)} aria-label={`Add a song after ${item.title}`}>+</button>
+                <button onClick={() => setAdding(index + 1)} aria-label={`Add a song after ${item.title}`} title="Add a song here">
+                  +
+                </button>
               </li>
             )}
           </FragmentRow>

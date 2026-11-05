@@ -19,6 +19,7 @@ from difflib import SequenceMatcher
 
 import numpy as np
 
+from selecta import jobs
 from selecta.lyrics.lrclib import Line
 
 MIN_WORD_SECONDS = 0.08
@@ -248,6 +249,7 @@ class Aligner:
         self.separator = self.index["|"]
 
     def emissions(self, audio: np.ndarray, sample_rate: int) -> tuple[np.ndarray, float]:
+        jobs.check_in()
         import soxr
 
         mono = audio.mean(axis=1) if audio.ndim == 2 else audio
