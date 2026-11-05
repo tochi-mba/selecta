@@ -64,7 +64,7 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 |---|---|---|
 | Planner | 8 songs in 5 s, artists kept 10 apart, locks kept, feel honoured by each seam | The arc follows energy numbers that barely vary (0.32 to 0.55) until they're rescaled |
 | Steering | Bigger, calmer, something else, feel, length, start song, lock | "Take me to" isn't built |
-| Stem cache | Whole windows are deleted, oldest first | Nothing passes priority songs to it yet. Each stem window now also keeps a band file, using more disk |
+| Stem cache | Whole windows across stems and rendered seams are budgeted together; priority-song stem windows are protected by source metadata | Existing windows created before metadata cannot be mapped to priority songs and remain ordinary eviction candidates |
 | Audit | Fails broken renders and sagging seams, in plain words | Beat check misreads syncopated drums, so rides allow up to 40 ms. Thresholds are starting values |
 
 ## Not built

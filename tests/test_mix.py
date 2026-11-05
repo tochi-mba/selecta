@@ -521,6 +521,38 @@ def test_stems_and_seams_share_one_limit(tmp_path):
     assert not (tmp_path / "stems" / "window").exists()
 
 
+def test_cache_pruning_keeps_stems_for_priority_songs_even_over_budget(tmp_path):
+    from selecta import stems
+
+    settings = Settings(tmp_path)
+    settings.home.mkdir(exist_ok=True)
+    conn = db.connect(settings.db_path)
+    source = tmp_path / "priority.flac"
+    source.touch()
+    conn.execute(
+        "INSERT INTO songs(id,path,folder,size,mtime,duration,processing_priority) "
+        "VALUES(1,?,?,?,?,?,100)",
+        (str(source), str(tmp_path), 1, 1.0, 100.0),
+    )
+    conn.commit()
+    conn.close()
+
+    root = tmp_path / "stems"
+    protected = root / "priority-window"
+    ordinary = root / "ordinary-window"
+    protected.mkdir(parents=True)
+    ordinary.mkdir()
+    (protected / "window.json").write_text(json.dumps({"source": str(source)}))
+    (ordinary / "vocals.wav").write_bytes(b"a" * 100)
+    (protected / "vocals.wav").write_bytes(b"p" * 100)
+    priority_names = stems._priority_window_names(settings)
+
+    stems._prune(root, 100, protect=priority_names)
+
+    assert protected.exists()
+    assert not ordinary.exists()
+
+
 def test_storage_says_what_can_be_remade_and_keeps_the_limit_possible(tmp_path):
     settings = Settings(tmp_path)
     client = TestClient(create_app(settings, tmp_path / "no-web"))

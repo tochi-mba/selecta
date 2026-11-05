@@ -10,6 +10,7 @@ Researched in November 2026, before any code was written. This page is the summa
 | [auto-dj-systems.md](research/auto-dj-systems.md) | Academic systems, commercial products, how transitions get evaluated |
 | [music-analysis.md](research/music-analysis.md) | Beats, key, structure, stems and lyric alignment on a CPU-only laptop |
 | [ui-ux.md](research/ui-ux.md) | Interface patterns, steering, trust, web platform limits |
+| [practitioner-followup.md](research/practitioner-followup.md) | 2026 practitioner forum check on phrase choices, vocal overlap, and selective stem use |
 
 **How far to trust this.** Measured evidence is thin and skews heavily to house and trance. Nothing measured covers pop, rap, Latin or Asian pop mixing, and I found no measured study of wordplay at all. Much of the practice lives in video I couldn't read. So most numbers in the plan are starting values to tune by ear, not established facts.
 
