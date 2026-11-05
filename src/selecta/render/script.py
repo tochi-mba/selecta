@@ -94,6 +94,12 @@ class Warp:
         """The largest tempo change this warp asks for, as a fraction."""
         return float(np.max(np.abs(np.diff(self.source) / np.diff(self.output) - 1.0)))
 
+    def trimmed(self, start: float, end: float) -> Warp:
+        """The same mapping, covering only this stretch of output time."""
+        inside = (self.output > start) & (self.output < end)
+        output = np.concatenate(([start], self.output[inside], [end]))
+        return Warp(output, np.interp(output, self.output, self.source))
+
     def source_at(self, time: np.ndarray | float) -> np.ndarray | float:
         return np.interp(time, self.output, self.source)
 
@@ -112,10 +118,10 @@ class Echo:
 
 @dataclass
 class Wash:
-    wet: float = 0.6
-    room_size: float = 0.9
-    damping: float = 0.35
-    return_highpass_hz: float = 300.0
+    wet: float = 0.38
+    decay_seconds: float = 2.2
+    damping: float = 0.45
+    return_highpass_hz: float = 350.0
 
 
 @dataclass
@@ -133,6 +139,21 @@ class Part:
     echo_send: Curve | None = None
     wash: Wash | None = None
     wash_send: Curve | None = None
+    window_origin: float = 0.0
+    """Where `source_path` starts in the song, for a stem file covering only part of it."""
+    render_from: float | None = None
+    render_until: float | None = None
+    """Output times to read audio between. The warp still describes the whole song's timing."""
+    follows_b: bool = False
+    """An extra layer of song B, which has to take the same small timing nudge as B."""
+
+    @property
+    def heard_warp(self) -> Warp:
+        if self.render_until is None and self.render_from is None:
+            return self.warp
+        first = float(self.warp.output[0]) if self.render_from is None else self.render_from
+        last = float(self.warp.output[-1]) if self.render_until is None else self.render_until
+        return self.warp.trimmed(first, last)
 
     @property
     def output_start(self) -> float:
@@ -158,6 +179,8 @@ class TransitionScript:
     expects_beats_aligned: bool = False
     quiet_allowed: float = 0.0
     """Output seconds of intended silence, so the audit doesn't flag a deliberate gap."""
+    extras: list[Part] = field(default_factory=list)
+    """More layers on the same timeline, such as one word of a separated voice."""
     meta: dict = field(default_factory=dict)
 
     @property

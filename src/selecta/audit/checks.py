@@ -19,11 +19,15 @@ from selecta.render.script import Part, TransitionScript
 
 BEAT_TARGET_MS = 10.0
 BEAT_LIMIT_MS = 20.0
+MIN_BEATS_MEASURED = 4
+MIN_NUDGE_MS = 5.0
+MAX_NUDGE_SPREAD_MS = 30.0
 VOCAL_OVERLAP_TARGET = 1.0
 VOCAL_OVERLAP_LIMIT = 2.0
 QUIET_LIMIT_SECONDS = 1.2
 MIN_ENERGY_RATIO = 0.22
 ENTRY_LEVEL_LIMIT_DB = 2.5
+LEVEL_FALL_LIMIT_DB = 3.5
 TRUE_PEAK_LIMIT_DB = -1.0
 LOW_CLASH_LIMIT = 0.15
 STRETCH_TARGET = 0.05
@@ -62,10 +66,9 @@ def _audible_window(part: Part, count: int, threshold: float = 0.3) -> np.ndarra
     return part.gain.sample(count, SAMPLE_RATE) >= threshold
 
 
-def _beat_alignment(rendered: Rendered) -> Check | None:
+def _beat_differences(rendered: Rendered) -> list[float]:
+    """How many milliseconds later A's beats land than B's, for each beat clear enough to hear."""
     script = rendered.script
-    if not script.expects_beats_aligned:
-        return None
     period = script.meta["period"]
     start, end = script.overlap
     count = rendered.audio.shape[0]
@@ -86,7 +89,27 @@ def _beat_alignment(rendered: Rendered) -> Check | None:
         if slice_a.max() < np.percentile(env_a, 92) or slice_b.max() < np.percentile(env_b, 92):
             continue
         differences.append((int(np.argmax(slice_a)) - int(np.argmax(slice_b))) * hop * 1000.0)
-    if len(differences) < 4:
+    return differences
+
+
+def beat_offset(rendered: Rendered) -> float | None:
+    """Seconds to delay B by to line the beats up, if they're apart by a steady amount. Beats that
+    scatter are a different problem, or the check misreading the drums, and a nudge won't help."""
+    differences = _beat_differences(rendered)
+    if len(differences) < MIN_BEATS_MEASURED:
+        return None
+    low, middle, high = np.percentile(differences, [25, 50, 75])
+    if abs(middle) < MIN_NUDGE_MS or high - low > MAX_NUDGE_SPREAD_MS:
+        return None
+    return float(middle) / 1000.0
+
+
+def _beat_alignment(rendered: Rendered) -> Check | None:
+    script = rendered.script
+    if not script.expects_beats_aligned:
+        return None
+    differences = _beat_differences(rendered)
+    if len(differences) < MIN_BEATS_MEASURED:
         return Check(
             "beat alignment",
             True,
@@ -96,11 +119,12 @@ def _beat_alignment(rendered: Rendered) -> Check | None:
             detail="too few clean beats to measure",
         )
     value = float(np.percentile(np.abs(differences), 75))
+    limit = script.meta.get("beat_limit_ms", BEAT_LIMIT_MS)
     return Check(
         "beat alignment",
-        value <= BEAT_LIMIT_MS,
+        value <= limit,
         round(value, 1),
-        BEAT_LIMIT_MS,
+        limit,
         "ms",
         fix="change_recipe",
         detail=f"{len(differences)} beats measured",
@@ -109,7 +133,7 @@ def _beat_alignment(rendered: Rendered) -> Check | None:
 
 def _vocal_overlap(script: TransitionScript, count: int) -> Check | None:
     a, b = script.a.song, script.b.song
-    if script.overlap[1] - script.overlap[0] < 0.5:
+    if script.overlap[1] - script.overlap[0] < 0.5 or script.meta.get("wordplay"):
         return None
     if not (a.vocals_known and b.vocals_known):
         return Check(
@@ -148,6 +172,8 @@ def _phrase_integrity(script: TransitionScript) -> Check:
     exit_source = float(script.a.warp.source_at(script.overlap[1]))
     if script.overlap[1] - script.overlap[0] < 1.5 and "cut" in script.meta:
         exit_source = float(script.a.warp.source_at(script.meta["cut"]))
+    if script.meta.get("wordplay"):
+        return Check("phrase integrity", True, 0.0, 0.0, "", detail="cut on aligned words")
     a_midline = a.vocals_known and any(
         line.start + 0.2 < exit_source < line.end - 0.2 for line in a.lines
     )
@@ -206,6 +232,33 @@ def _entry_level(rendered: Rendered) -> Check:
         "dB",
         fix="move_cue",
     )
+
+
+def _level_fall(rendered: Rendered) -> Check | None:
+    """Whether the set sags after the seam and stays down.
+
+    The first reel's seams that fell 6 to 9 dB were all disliked. A's echo or reverb tail can hide
+    that for the first moment, so this measures from a second past the overlap.
+    """
+    script = rendered.script
+    start, end = script.overlap
+    before = rendered.audio[max(0, int((start - 3.0) * SAMPLE_RATE)) : int(start * SAMPLE_RATE)]
+    after = rendered.audio[int((end + 1.0) * SAMPLE_RATE) : int((end + 8.0) * SAMPLE_RATE)]
+    if before.shape[0] < SAMPLE_RATE or after.shape[0] < 2 * SAMPLE_RATE:
+        return None
+    fall = _level_db(before) - _level_db(after)
+    return Check(
+        "level fall",
+        fall <= LEVEL_FALL_LIMIT_DB,
+        round(fall, 2),
+        LEVEL_FALL_LIMIT_DB,
+        "dB",
+        fix="move_cue",
+    )
+
+
+def _level_db(audio: np.ndarray) -> float:
+    return 20.0 * float(np.log10(max(float(np.sqrt(np.mean(audio**2))), 1e-6)))
 
 
 def true_peak_db(audio: np.ndarray) -> float:
@@ -289,6 +342,7 @@ def audit(rendered: Rendered) -> AuditReport:
         _phrase_integrity(script),
         *_seam_energy(rendered),
         _entry_level(rendered),
+        _level_fall(rendered),
         _low_clash(rendered),
         _harmony(rendered),
     ):

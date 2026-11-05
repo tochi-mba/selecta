@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from bisect import bisect_right
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Literal
@@ -22,6 +23,7 @@ from selecta.lyrics.lrclib import Line, parse_lrc
 TARGET_LUFS = -14.0
 PEAK_CEILING_DB = -1.0
 VOCAL_MARGIN = 0.25
+HOOK_LEAD_BARS = (4, 8, 16)
 
 Family = Literal["hiphop", "rnb", "dance", "afro", "latin", "rock", "pop", "other"]
 
@@ -80,6 +82,9 @@ class SongInfo:
     vocals_known: bool = False
     instrumental: bool = False
     chroma_bars: np.ndarray | None = None
+    rms_db_bars: np.ndarray | None = None
+    mfcc_bars: np.ndarray | None = None
+    _line_index: tuple | None = field(default=None, repr=False, compare=False)
 
     @property
     def name(self) -> str:
@@ -119,9 +124,20 @@ class SongInfo:
         return any(line.start + margin < time < line.end - margin for line in self.lines)
 
     def vocal_seconds(self, start: float, end: float) -> float:
+        """How much singing falls in this stretch. Planning asks this constantly, so it only looks
+        at lines near the stretch, which LRC's in-order lines make possible."""
+        lines = self.lines
+        if not lines or end <= start:
+            return 0.0
+        if self._line_index is None or self._line_index[0] is not lines:
+            self._line_index = (lines, [line.start for line in lines])
+        first = max(bisect_right(self._line_index[1], start) - 1, 0)
         total = 0.0
-        for line in self.lines:
-            total += max(0.0, min(end, line.end) - max(start, line.start))
+        for line in lines[first:]:
+            if line.start >= end:
+                break
+            if line.end > start:
+                total += min(end, line.end) - max(start, line.start)
         return total
 
     def vocal_free_after(self, time: float) -> float:
@@ -143,6 +159,9 @@ class SongInfo:
 
     def chorus_end_bars(self) -> list[int]:
         return [s["end_bar"] for s in self.sections if s["label"] == "chorus"]
+
+    def chorus_start_bars(self) -> list[int]:
+        return [s["start_bar"] for s in self.sections if s["label"] == "chorus"]
 
     def exit_cues(self, min_played: float = 60.0, party: bool = True) -> list[Cue]:
         """Where A could finish. A's vocal must be finished by then, never cut mid-line.
@@ -221,6 +240,19 @@ class SongInfo:
             else:
                 quality, kind = 0.5, section["label"]
             cues.append(Cue(bar, time, kind, quality, self.bars_in(free)))
+        for chorus in self.chorus_start_bars():
+            for lead_bars in HOOK_LEAD_BARS:
+                bar = chorus - lead_bars
+                if bar < 0 or bar in seen or bar >= bars.size:
+                    continue
+                time = float(bars[bar])
+                if time > limit or self.duration - time < min_remaining:
+                    continue
+                if self.vocals_known and self.mid_line(time):
+                    continue
+                seen.add(bar)
+                free = self.vocal_free_after(time)
+                cues.append(Cue(bar, time, "before chorus", 0.75, self.bars_in(free)))
         return sorted(cues, key=lambda c: -c.quality)
 
 
@@ -309,4 +341,6 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
         vocals_known=vocals_known,
         instrumental=instrumental,
         chroma_bars=features["chroma_bars"].astype(np.float32),
+        rms_db_bars=features["rms_db_bars"].astype(np.float32),
+        mfcc_bars=features["mfcc_bars"].astype(np.float32),
     )

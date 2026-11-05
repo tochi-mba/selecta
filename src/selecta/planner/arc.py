@@ -8,6 +8,10 @@ import math
 def target_energy(progress: float, preset: str = "slow_burn") -> float:
     """A two-peak 60-minute wave, normalised to 0..1."""
     x = min(1.0, max(0.0, progress))
+    if preset == "steady":
+        return 0.85 + 0.05 * math.sin(x * math.pi * 3)
+    if preset == "climb":
+        return 0.4 + 0.58 * x
     if preset == "wind_down":
         return 0.82 - 0.48 * x + 0.06 * math.sin(x * math.pi * 4)
     if preset == "peak_time":

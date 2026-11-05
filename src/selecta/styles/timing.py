@@ -18,6 +18,7 @@ from selecta.render.script import Warp
 A_NATIVE_MAX_GAP = 0.03
 RAMP_BEATS = 16
 SETTLED_GAP = 0.002
+SETTLE_BEATS = 8
 
 
 @dataclass
@@ -49,22 +50,31 @@ def _pinned_every_bar(output: np.ndarray, source: np.ndarray, bar: int) -> Warp:
 
 
 def blend_timing(
-    a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int, bars: int
+    a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int, bars: int, ramp_beats: int = RAMP_BEATS
 ) -> BlendTiming | None:
     """Work out where every beat lands, or None if the grids don't allow this overlap."""
     if a.beats_per_bar != b.beats_per_bar or exit_bar < bars:
         return None
     a_start = a.beat_index_of_bar(exit_bar - bars)
     a_end = a.beat_index_of_bar(exit_bar)
-    b_start = b.beat_index_of_bar(entry_bar)
+    if a_end - a_start != bars * a.beats_per_bar:
+        return None
+    return beat_lock(a, b, a_start, a_end, b.beat_index_of_bar(entry_bar), ramp_beats)
+
+
+def beat_lock(
+    a: SongInfo, b: SongInfo, a_start: int, a_end: int, b_start: int, ramp_beats: int = RAMP_BEATS
+) -> BlendTiming | None:
+    """Play A's beats from `a_start` to `a_end` against B's from `b_start`, or None if they don't
+    both exist. The numbers are positions in each song's list of beats."""
     beat_count = a_end - a_start
-    if beat_count != bars * a.beats_per_bar:
+    if beat_count <= 0 or b_start < 0:
         return None
 
     gap = tempo_gap(a, b)
     a_native = gap <= A_NATIVE_MAX_GAP
-    pre_beats = a.beats_per_bar if a_native else RAMP_BEATS
-    post_beats = 1 if gap <= SETTLED_GAP else RAMP_BEATS
+    pre_beats = a.beats_per_bar if a_native else ramp_beats
+    post_beats = SETTLE_BEATS if gap <= SETTLED_GAP else ramp_beats
     if a_start - pre_beats < 0 or b_start + beat_count + post_beats >= b.beats.size:
         return None
 

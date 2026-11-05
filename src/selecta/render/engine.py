@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from selecta import audio as audio_io
+from selecta import jobs
 from selecta.config import SAMPLE_RATE
 from selecta.render import dsp
 from selecta.render.script import Part, TransitionScript
@@ -49,21 +50,22 @@ class Rendered:
 def _part_audio(part: Part, source: np.ndarray, count: int) -> tuple[np.ndarray, float]:
     """The part's song, placed on the output timeline, before any mixing moves."""
     output = np.zeros((count, 2), dtype=np.float32)
-    start_sample = int(round(part.output_start * SAMPLE_RATE))
+    warp = part.heard_warp
+    start_sample = int(round(float(warp.output[0]) * SAMPLE_RATE))
 
-    if part.warp.is_identity:
-        source_start = float(part.warp.source[0])
+    if warp.is_identity:
+        source_start = float(warp.source[0]) - part.window_origin
         begin = int(round(source_start * SAMPLE_RATE))
         length = min(
             count - start_sample,
             source.shape[0] - begin,
-            int(round((part.output_end - part.output_start) * SAMPLE_RATE)),
+            int(round((float(warp.output[-1]) - float(warp.output[0])) * SAMPLE_RATE)),
         )
         if length > 0 and begin >= 0:
             output[start_sample : start_sample + length] = source[begin : begin + length]
         return output, 0.0
 
-    stretched, drift = dsp.stretch_to_warp(source, part.warp.output, part.warp.source, 0.0)
+    stretched, drift = dsp.stretch_to_warp(source, warp.output, warp.source, part.window_origin)
     length = min(stretched.shape[0], count - start_sample)
     output[start_sample : start_sample + length] = stretched[:length]
     return output, drift
@@ -102,7 +104,7 @@ def _apply_moves(part: Part, placed: np.ndarray) -> tuple[np.ndarray, np.ndarray
         send = signal * part.wash_send.sample(count, SAMPLE_RATE)[:, None]
         tails += dsp.reverb_tail(
             send,
-            part.wash.room_size,
+            part.wash.decay_seconds,
             part.wash.damping,
             part.wash.wet,
             part.wash.return_highpass_hz,
@@ -110,22 +112,69 @@ def _apply_moves(part: Part, placed: np.ndarray) -> tuple[np.ndarray, np.ndarray
     return signal * part.gain.sample(count, SAMPLE_RATE)[:, None], tails
 
 
+def _pocket_lag(script: TransitionScript, placed_a: np.ndarray, placed_b: np.ndarray) -> float:
+    """Measure the last few milliseconds between two grids, as a DJ would by ear.
+
+    Each song's grid sits on its own onsets, which may be a hat in one and a kick in the other.
+    """
+    start, end = script.overlap
+    lo, hi = int(start * SAMPLE_RATE), int(end * SAMPLE_RATE)
+    count = placed_b.shape[0]
+    if not script.expects_beats_aligned or hi - lo < 4 * SAMPLE_RATE or count - hi < SAMPLE_RATE:
+        return 0.0
+    lag = dsp.onset_offset(placed_a[lo:hi].mean(axis=1), placed_b[lo:hi].mean(axis=1))
+    return 0.0 if lag is None or abs(lag) < 0.001 else lag
+
+
+def _slide(script: TransitionScript, placed: np.ndarray, lag: float) -> np.ndarray:
+    """Slide B by the lag. The slide fades out after the overlap, so B still arrives exactly on
+    its native audio at the seam."""
+    if lag == 0.0:
+        return placed
+    count = placed.shape[0]
+    hi = int(script.overlap[1] * SAMPLE_RATE)
+    samples = np.arange(count, dtype=np.float64)
+    taper = np.interp(samples, [hi, count - 1], [1.0, 0.0])
+    positions = np.clip(samples + lag * SAMPLE_RATE * taper, 0, count - 1)
+    return dsp.fine_warp(placed, positions)
+
+
+def _nudge_into_the_pocket(
+    script: TransitionScript, placed_a: np.ndarray, placed_b: np.ndarray
+) -> tuple[np.ndarray, float]:
+    lag = _pocket_lag(script, placed_a, placed_b)
+    return _slide(script, placed_b, lag), lag
+
+
 def render(script: TransitionScript, cache: SongCache | None = None) -> Rendered:
+    jobs.check_in()
     cache = cache or SongCache()
     count = int(round(script.duration * SAMPLE_RATE))
 
     placed_a, drift_a = _part_audio(script.a, cache.get(script.a.audio_path), count)
     placed_b, drift_b = _part_audio(script.b, cache.get(script.b.audio_path), count)
+    placed_b, nudge = _nudge_into_the_pocket(script, placed_a, placed_b)
     dry_a, tails_a = _apply_moves(script.a, placed_a)
     dry_b, tails_b = _apply_moves(script.b, placed_b)
 
-    mixed = dsp.limit(dry_a + dry_b + tails_a + tails_b)
+    mixed = dry_a + dry_b + tails_a + tails_b
+    for extra in script.extras:
+        placed, _ = _part_audio(extra, cache.get(extra.audio_path), count)
+        if extra.follows_b:
+            placed = _slide(script, placed, nudge)
+        dry, tails = _apply_moves(extra, placed)
+        mixed = mixed + dry + tails
+    mixed = dsp.limit(mixed)
     return Rendered(
         script,
         mixed,
         dry_a,
         dry_b,
-        {"a": round(drift_a * 1000, 2), "b": round(drift_b * 1000, 2)},
+        {
+            "a": round(drift_a * 1000, 2),
+            "b": round(drift_b * 1000, 2),
+            "nudge": round(nudge * 1000, 2),
+        },
     )
 
 

@@ -4,9 +4,7 @@ An auto DJ for your own music folder. Point it at a folder and it plays a set in
 
 It runs entirely on your PC. Your music never leaves your machine, and no audio is ever stored in this repo.
 
-**Status: working local-first build.** Scanning, analysis, audited rendering, set planning,
-steering, lyrics, discovery, blind ratings and the browser interface are implemented. Model-heavy
-features remain on-demand so a CPU-only laptop never tries to stem-split the whole library.
+**Status: early build.** You can build a mix, edit how every song hands over to the next, hear each seam, play the set and save it as a file. Whether it sounds good is still being judged by ear, reel by reel. See [docs/acceptance.md](docs/acceptance.md) for exactly what works and what doesn't.
 
 ## What makes it different
 
@@ -20,16 +18,23 @@ You'll need [uv](https://docs.astral.sh/uv/), [pnpm](https://pnpm.io/) and [ffmp
 
 ```bash
 uv sync
-uv run selecta scan "C:\path\to\your\music"
-uv run selecta analyse --limit 10
-uv run selecta lyrics
-uv run selecta plan
-
 cd web
 pnpm install
 pnpm build
 cd ..
 uv run selecta web
+```
+
+The first screen asks where your music is, then reads it and analyses it in the background. Pick a
+mix on the Mixes page and press play. Its seams start rendering by themselves, ahead of everything
+else, and you can change how any song hands over to the next on the Edit page.
+
+To run the tests:
+
+```bash
+uv run pytest
+cd web
+pnpm test
 ```
 
 Use `selecta beat-check` to verify beats, downbeats and keys by ear before analysing the whole

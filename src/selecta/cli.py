@@ -63,13 +63,26 @@ def analyse(
     beat_model: str = typer.Option(None, help="Beat model checkpoint, such as final0."),
     low_priority: bool = typer.Option(True, help="Run below normal priority."),
     refresh: bool = typer.Option(False, help="Only update songs analysed by an older version."),
+    song: list[int] = typer.Option(None, help="Analyse just these song ids."),
+    from_app: bool = typer.Option(False, hidden=True, help="Stop when the app stops."),
 ) -> None:
     """Run fast analysis on songs that don't have it yet. Safe to stop and resume."""
     from selecta.analysis.pipeline import Analysers, analyse_song
-    from selecta.jobs import lower_priority
+    from selecta.jobs import (
+        lower_priority,
+        lowest_priority,
+        stop_when_app_stops,
+        wait_while_mix_renders,
+    )
 
+    if from_app:
+        stop_when_app_stops()
     settings, conn = _open()
-    songs = db.songs_needing_analysis(conn, ANALYSIS_VERSION, folder, refresh)
+    if song:
+        rows = [db.song_by_id(conn, song_id) for song_id in song]
+        songs = [row for row in rows if row is not None]
+    else:
+        songs = db.songs_needing_analysis(conn, ANALYSIS_VERSION, folder, refresh)
     if sample:
         random.Random(seed).shuffle(songs)
     if limit:
@@ -78,16 +91,20 @@ def analyse(
         console.print("Nothing to analyse.")
         return
     if low_priority:
-        lower_priority()
+        (lowest_priority if from_app else lower_priority)()
 
     started = time.perf_counter()
     analysers = Analysers.load(settings, beat_model)
     console.print(f"Models loaded in {time.perf_counter() - started:.1f} s. {len(songs)} to go.")
 
     failures = 0
-    for number, song in enumerate(songs, 1):
-        result = analyse_song(conn, settings, song, analysers)
-        name = f"{song['artist'] or '?'} - {song['title']}"
+    for number, item in enumerate(songs, 1):
+        if from_app and not song:
+            wait_while_mix_renders(settings.home)
+        if db.is_analysed(conn, item["id"], ANALYSIS_VERSION) and not refresh:
+            continue  # someone asked for it by name while this was working through the list
+        result = analyse_song(conn, settings, item, analysers)
+        name = f"{item['artist'] or '?'} - {item['title']}"
         if result is None:
             failures += 1
             console.print(f"{number}/{len(songs)} [red]failed[/] {name}", highlight=False)
@@ -273,12 +290,43 @@ def mix(
 def reel(
     output: Path = typer.Option(DEFAULT_REEL_OUTPUT, "--output", "-o"),
     seed: int = typer.Option(7),
+    words: int = typer.Option(9, help="How many word hand-offs to render first. 0 skips them."),
+    only_words: bool = typer.Option(False, help="Stop after the word cuts."),
 ) -> None:
     """Render a mix of transitions from your own songs for you to listen to and rate."""
-    from selecta.planner.reel import build_reel
+    from selecta.discovery.search import lyric_links
+    from selecta.lyrics.match import varied_links
+    from selecta.planner.fit import TimbreSpace
+    from selecta.planner.reel import build_reel, load_library, word_entry, write_page
+    from selecta.planner.wordreel import (
+        DEFAULT_QUOTAS,
+        analyse_links,
+        build_takes,
+        rank_links,
+    )
+    from selecta.render.engine import SongCache
 
     settings, conn = _open()
-    entries = build_reel(conn, settings, output, seed=seed, log=console.print)
+    output.mkdir(parents=True, exist_ok=True)
+    first = []
+    if words:
+        links = lyric_links(conn)
+        analyse_links(conn, settings, varied_links(links, words * 5), console.print)
+        library = load_library(conn, settings)
+        space = TimbreSpace.fit(library)
+        ranked = rank_links(links, {song.id: song for song in library}, space)
+        total = sum(DEFAULT_QUOTAS.values())
+        quotas = {mode: max(1, count * words // total) for mode, count in DEFAULT_QUOTAS.items()}
+        cache = SongCache(capacity=6)
+        takes = build_takes(conn, settings, ranked, quotas, space, cache, console.print)
+        first = [word_entry(n, take, output, cache) for n, take in enumerate(takes, 1)]
+        write_page(first, output)
+        console.print(f"{len(first)} word hand-offs written.")
+    entries = (
+        first
+        if only_words
+        else build_reel(conn, settings, output, seed=seed, log=console.print, first=first)
+    )
     console.print(f"{len(entries)} transitions written. Open {output / 'index.html'}.")
 
 
@@ -306,10 +354,11 @@ def listen(
 
     import uvicorn
     from fastapi import FastAPI
-    from fastapi.staticfiles import StaticFiles
+
+    from selecta.api import FreshFiles
 
     server = FastAPI()
-    server.mount("/", StaticFiles(directory=folder, html=True))
+    server.mount("/", FreshFiles(directory=folder, html=True))
     url = f"http://127.0.0.1:{port}/"
     console.print(f"Listening room at {url} (press Ctrl+C to stop).")
     if open_browser:
@@ -330,7 +379,7 @@ def web(
     url = f"http://127.0.0.1:{port}/"
     if open_browser:
         webbrowser.open(url)
-    uvicorn.run("selecta.api:app", host="127.0.0.1", port=port, log_level="warning")
+    uvicorn.run("selecta.api:serve", factory=True, host="127.0.0.1", port=port, log_level="warning")
 
 
 @app.command()
