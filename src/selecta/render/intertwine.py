@@ -44,7 +44,8 @@ def _fit(audio: np.ndarray, seconds: float, speed: float = 1.0) -> np.ndarray:
 
 
 def _curve(count: int, points: list[tuple[float, float]]) -> np.ndarray:
-    times = np.arange(count) / SAMPLE_RATE
+    # Points describe positions within a 16-bar transition, scaled to its actual tempo.
+    times = np.arange(count) / SAMPLE_RATE * TRANSITION_SECONDS / (count / SAMPLE_RATE)
     values = np.interp(times, [p[0] for p in points], [p[1] for p in points])
     return values.astype(np.float32)[:, None]
 
@@ -59,14 +60,19 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
         raise ValueError("intertwining is limited to a 3% tempo gap")
     exit_cue = a.exit_cues()[0]
     entry_cue = b.entry_cues()[0]
-    a_start = max(0.0, exit_cue.time - 16.0)
+    duration = a.period * a.beats_per_bar * 16
+    handoff = duration / 2
+    a_start = exit_cue.time - handoff
+    if a_start < 0:
+        raise ValueError("outgoing cue needs eight bars of lead-in")
     b_start = entry_cue.time
-    window = TRANSITION_SECONDS + 5.0
+    window = duration + 5.0
     stems_a = separate_window(settings, Path(a.path), a_start, window)
-    stems_b = separate_window(settings, Path(b.path), b_start, window * a.bpm / b.bpm)
-    layers_a = _layers(stems_a, TRANSITION_SECONDS)
-    layers_b = _layers(stems_b, TRANSITION_SECONDS, a.bpm / b.bpm)
-    count = int(TRANSITION_SECONDS * SAMPLE_RATE)
+    speed = a.bpm / b.bpm
+    stems_b = separate_window(settings, Path(b.path), b_start, window * speed)
+    layers_a = _layers(stems_a, duration)
+    layers_b = _layers(stems_b, duration, speed)
+    count = int(round(duration * SAMPLE_RATE))
 
     a_drums = _curve(count, [(0, 1), (12, 1), (16, 0)])
     b_drums = _curve(count, [(0, 0), (4, 0), (12, 1)])
@@ -91,7 +97,7 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
     return Intertwined(
         dsp.limit(mixed),
         a_start,
-        b_start + TRANSITION_SECONDS * a.bpm / b.bpm,
+        b_start + duration * speed,
         exit_cue,
         entry_cue,
     )
