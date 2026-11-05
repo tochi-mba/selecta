@@ -201,6 +201,8 @@ def test_shared_phrases_pull_a_wordplay_plan_towards_them(tmp_path):
     first = _song(tmp_path, "a", "First")
     close = _song(tmp_path, "b", "Second", bpm=120.0)
     linked = _song(tmp_path, "c", "Third", bpm=128.0, camelot="10A")
+    # Exercise link scoring independently of the grid-confidence gate.
+    first.grid_confidence = close.grid_confidence = linked.grid_confidence = 0.95
     without = plan_set([first, close, linked], first.id, 2)
     with_link = plan_set([first, close, linked], first.id, 2, links={(first.id, linked.id)})
     assert without[1].song.id == close.id
@@ -1169,7 +1171,7 @@ def _same_songs(tmp_path, count):
         song = song_from_track(tmp_path, f"m{i}", track, genre="Pop")
         song.id = i + 1
         song.lines = [
-            Line(70.0 + j * 4.0, 73.5 + j * 4.0, "you and me in the night") for j in range(10)
+            Line(66.0 + j * 4.0, 69.5 + j * 4.0, "you and me in the night") for j in range(10)
         ]
         songs.append(song)
     return [PlannedSong(song, "bass_swap_blend", "") for song in songs]
@@ -1181,6 +1183,8 @@ def test_no_one_move_takes_over_a_mix_even_when_every_song_could_ride(tmp_path):
     from selecta.planner.vibes import BY_KEY, seam_choices
 
     planned = _same_songs(tmp_path, 13)
+    for item in planned:
+        item.song.grid_confidence = 0.95
     for seed in range(8):
         seams = seam_choices(BY_KEY["pick"], planned, {}, np.random.default_rng(seed))
         moves = [seams[item.song.id]["move"] for item in planned[1:]]
