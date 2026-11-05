@@ -24,6 +24,7 @@ VOCAL_OVERLAP_LIMIT = 2.0
 QUIET_LIMIT_SECONDS = 1.2
 MIN_ENERGY_RATIO = 0.22
 ENTRY_LEVEL_LIMIT_DB = 2.5
+LEVEL_FALL_LIMIT_DB = 3.5
 TRUE_PEAK_LIMIT_DB = -1.0
 LOW_CLASH_LIMIT = 0.15
 STRETCH_TARGET = 0.05
@@ -148,6 +149,8 @@ def _phrase_integrity(script: TransitionScript) -> Check:
     exit_source = float(script.a.warp.source_at(script.overlap[1]))
     if script.overlap[1] - script.overlap[0] < 1.5 and "cut" in script.meta:
         exit_source = float(script.a.warp.source_at(script.meta["cut"]))
+    if script.meta.get("wordplay"):
+        return Check("phrase integrity", True, 0.0, 0.0, "", detail="cut on aligned words")
     a_midline = a.vocals_known and any(
         line.start + 0.2 < exit_source < line.end - 0.2 for line in a.lines
     )
@@ -206,6 +209,33 @@ def _entry_level(rendered: Rendered) -> Check:
         "dB",
         fix="move_cue",
     )
+
+
+def _level_fall(rendered: Rendered) -> Check | None:
+    """Whether the set sags after the seam and stays down.
+
+    The first reel's seams that fell 6 to 9 dB were all disliked. A's echo or reverb tail can hide
+    that for the first moment, so this measures from a second past the overlap.
+    """
+    script = rendered.script
+    start, end = script.overlap
+    before = rendered.audio[max(0, int((start - 3.0) * SAMPLE_RATE)) : int(start * SAMPLE_RATE)]
+    after = rendered.audio[int((end + 1.0) * SAMPLE_RATE) : int((end + 8.0) * SAMPLE_RATE)]
+    if before.shape[0] < SAMPLE_RATE or after.shape[0] < 2 * SAMPLE_RATE:
+        return None
+    fall = _level_db(before) - _level_db(after)
+    return Check(
+        "level fall",
+        fall <= LEVEL_FALL_LIMIT_DB,
+        round(fall, 2),
+        LEVEL_FALL_LIMIT_DB,
+        "dB",
+        fix="move_cue",
+    )
+
+
+def _level_db(audio: np.ndarray) -> float:
+    return 20.0 * float(np.log10(max(float(np.sqrt(np.mean(audio**2))), 1e-6)))
 
 
 def true_peak_db(audio: np.ndarray) -> float:
@@ -289,6 +319,7 @@ def audit(rendered: Rendered) -> AuditReport:
         _phrase_integrity(script),
         *_seam_energy(rendered),
         _entry_level(rendered),
+        _level_fall(rendered),
         _low_clash(rendered),
         _harmony(rendered),
     ):

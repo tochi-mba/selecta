@@ -22,6 +22,7 @@ from selecta.lyrics.lrclib import Line, parse_lrc
 TARGET_LUFS = -14.0
 PEAK_CEILING_DB = -1.0
 VOCAL_MARGIN = 0.25
+HOOK_LEAD_BARS = (4, 8, 16)
 
 Family = Literal["hiphop", "rnb", "dance", "afro", "latin", "rock", "pop", "other"]
 
@@ -80,6 +81,8 @@ class SongInfo:
     vocals_known: bool = False
     instrumental: bool = False
     chroma_bars: np.ndarray | None = None
+    rms_db_bars: np.ndarray | None = None
+    mfcc_bars: np.ndarray | None = None
 
     @property
     def name(self) -> str:
@@ -143,6 +146,9 @@ class SongInfo:
 
     def chorus_end_bars(self) -> list[int]:
         return [s["end_bar"] for s in self.sections if s["label"] == "chorus"]
+
+    def chorus_start_bars(self) -> list[int]:
+        return [s["start_bar"] for s in self.sections if s["label"] == "chorus"]
 
     def exit_cues(self, min_played: float = 60.0, party: bool = True) -> list[Cue]:
         """Where A could finish. A's vocal must be finished by then, never cut mid-line.
@@ -221,6 +227,19 @@ class SongInfo:
             else:
                 quality, kind = 0.5, section["label"]
             cues.append(Cue(bar, time, kind, quality, self.bars_in(free)))
+        for chorus in self.chorus_start_bars():
+            for lead_bars in HOOK_LEAD_BARS:
+                bar = chorus - lead_bars
+                if bar < 0 or bar in seen or bar >= bars.size:
+                    continue
+                time = float(bars[bar])
+                if time > limit or self.duration - time < min_remaining:
+                    continue
+                if self.vocals_known and self.mid_line(time):
+                    continue
+                seen.add(bar)
+                free = self.vocal_free_after(time)
+                cues.append(Cue(bar, time, "before chorus", 0.75, self.bars_in(free)))
         return sorted(cues, key=lambda c: -c.quality)
 
 
@@ -309,4 +328,6 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
         vocals_known=vocals_known,
         instrumental=instrumental,
         chroma_bars=features["chroma_bars"].astype(np.float32),
+        rms_db_bars=features["rms_db_bars"].astype(np.float32),
+        mfcc_bars=features["mfcc_bars"].astype(np.float32),
     )

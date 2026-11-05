@@ -112,10 +112,10 @@ class Echo:
 
 @dataclass
 class Wash:
-    wet: float = 0.6
-    room_size: float = 0.9
-    damping: float = 0.35
-    return_highpass_hz: float = 300.0
+    wet: float = 0.38
+    decay_seconds: float = 2.2
+    damping: float = 0.45
+    return_highpass_hz: float = 350.0
 
 
 @dataclass
@@ -158,6 +158,8 @@ class TransitionScript:
     expects_beats_aligned: bool = False
     quiet_allowed: float = 0.0
     """Output seconds of intended silence, so the audit doesn't flag a deliberate gap."""
+    extras: list[Part] = field(default_factory=list)
+    """More layers on the same timeline, such as one word of a separated voice."""
     meta: dict = field(default_factory=dict)
 
     @property

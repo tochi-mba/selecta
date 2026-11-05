@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import sqlite3
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -14,6 +15,8 @@ from pydantic import BaseModel
 from selecta import db
 from selecta.config import ANALYSIS_VERSION, Settings, load_settings
 from selecta.session import get_steering, queue, steer
+
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "testserver"}
 
 
 class SteerRequest(BaseModel):
@@ -58,8 +61,12 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     @app.middleware("http")
     async def local_only(request, call_next):
         host = request.headers.get("host", "").split(":")[0]
-        if host not in {"127.0.0.1", "localhost", "testserver"}:
+        if host not in LOCAL_HOSTS:
             return JSONResponse({"detail": "Selecta is local only"}, status_code=403)
+        origin = request.headers.get("origin")
+        if request.method not in {"GET", "HEAD", "OPTIONS"} and origin:
+            if urlsplit(origin).hostname not in LOCAL_HOSTS:
+                return JSONResponse({"detail": "Selecta is local only"}, status_code=403)
         return await call_next(request)
 
     def connect() -> sqlite3.Connection:
@@ -130,7 +137,10 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
     @app.post("/api/steer")
     def steering(body: SteerRequest) -> dict:
         with connect() as conn:
-            return steer(conn, body.action, body.value).__dict__
+            try:
+                return steer(conn, body.action, body.value).__dict__
+            except ValueError as problem:
+                raise HTTPException(400, str(problem)) from problem
 
     @app.post("/api/plan")
     def make_plan(count: int = 20, start: int | None = None) -> dict:

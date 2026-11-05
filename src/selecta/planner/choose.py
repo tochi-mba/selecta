@@ -13,12 +13,21 @@ from dataclasses import dataclass, field, replace
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
 from selecta.audit.checks import AuditReport, audit
+from selecta.planner.fit import (
+    COLD_ENTRY_DB,
+    MAX_FOLDED_GAP,
+    MAX_LEVEL_STEP_DB,
+    folded_gap,
+    level_step,
+    relative_level,
+)
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.styles import Recipe, all_recipes
 
 MAX_REPAIRS = 4
 
 BLEND_MIN_CONFIDENCE = 0.55
+HOOK_IN_FADE_PENALTY = 0.7
 BLEND_MAX_GAP = 0.05
 SHORT_BLEND_MAX_GAP = 0.08
 
@@ -101,29 +110,83 @@ def _energy_step(a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue) -> flo
 
 
 def _style_fit(recipe: Recipe, a: SongInfo, b: SongInfo, bars: int, gap: float) -> float:
+    """How much to want each move. The first reel's ratings set the order: four of five
+    beatmatched blends rated well, and none of the four tempo-free moves did."""
     rap = a.family == "hiphop" and b.family == "hiphop"
     if recipe.name == "bass_swap_blend":
-        fit = 0.9 if gap <= 0.03 else 0.65
+        fit = 0.95 if gap <= 0.03 else 0.7
         if rap:
             fit -= 0.3
         if a.family == "dance" or b.family == "dance":
-            fit += 0.1
+            fit += 0.05
         return fit
     if recipe.name == "filter_sweep":
-        return 0.6 if gap <= 0.03 else 0.45
-    if recipe.name == "cut_on_one":
-        return 0.7 if rap else 0.55
-    if recipe.name == "echo_out":
-        return 0.7 if gap > BLEND_MAX_GAP else 0.55
-    if recipe.name == "delay_throw":
+        return 0.75 if gap <= 0.03 else 0.55
+    if recipe.name == "tempo_ramp":
         return 0.6
+    if recipe.name == "cut_on_one":
+        return 0.6 if rap else 0.45
+    if recipe.name == "echo_out":
+        return 0.45
+    if recipe.name == "delay_throw":
+        return 0.4
     if recipe.name == "reverb_wash":
-        return 0.5
+        return 0.3
     return 0.5
+
+
+def _hook_in_fade(a: SongInfo, b: SongInfo, entry_cue: Cue, bars: int) -> float:
+    """How much of B's fade-in is B singing, weighted by how long that fade lasts.
+
+    A hook should land, not fade up. The one blend in the first reel that rated badly had B's
+    chorus singing from its first bar through the whole overlap.
+    """
+    seconds = bars * b.period * b.beats_per_bar
+    if seconds <= 0 or not b.vocals_known:
+        return 0.0
+    share = b.vocal_seconds(entry_cue.time, entry_cue.time + seconds * 0.65) / (seconds * 0.65)
+    return min(share, 1.0) * min(bars / 8.0, 1.0)
+
+
+def _tempo_free_landing(
+    a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue, gap: float
+) -> tuple[float, float] | None:
+    """Rules for moves with no overlap to hide in, or None if the landing can't work.
+
+    Returns how good the entry is and how well the vocals hand over. With no blend, B has to arrive
+    on something: the first reel's cuts into quiet song intros, with 7 to 10 seconds to wait for a
+    voice, all rated badly. Quiet into quiet is fine, since nothing falls.
+    """
+    if gap > BLEND_MAX_GAP and folded_gap(a, b) > MAX_FOLDED_GAP:
+        return None
+    step = level_step(a, b, exit_cue.bar, entry_cue.bar)
+    if step is not None and abs(step) > MAX_LEVEL_STEP_DB:
+        return None
+    entry_level = relative_level(b, entry_cue.bar, entry_cue.bar + 4)
+    exit_level = relative_level(a, exit_cue.bar - 4, exit_cue.bar)
+    if (
+        entry_level is not None
+        and exit_level is not None
+        and entry_level < COLD_ENTRY_DB
+        and exit_level >= COLD_ENTRY_DB
+    ):
+        return None
+    wait = b.vocal_free_after(entry_cue.time) if b.vocals_known and not b.instrumental else 0.0
+    beat = b.period
+    quality = {"chorus": 0.85, "verse": 0.7, "before chorus": 0.5, "song start": 0.4}.get(
+        entry_cue.kind, 0.45
+    )
+    if wait > 2 * b.period * b.beats_per_bar:
+        quality *= 0.5
+    before = a.vocal_free_before(exit_cue.time) if a.vocals_known and not a.instrumental else 9.0
+    hand_off = before <= 2 * a.period and wait <= 2 * beat
+    return quality, 1.0 if hand_off else 0.6
 
 
 def _lengths_for(recipe: Recipe, a: SongInfo, b: SongInfo) -> tuple[int, ...]:
     if not recipe.beatmatched:
+        return recipe.lengths
+    if recipe.max_gap is not None:
         return recipe.lengths
     preferred = set(_BLEND_BARS_BY_FAMILY[a.family]) | set(_BLEND_BARS_BY_FAMILY[b.family])
     return tuple(length for length in recipe.lengths if length in preferred)
@@ -138,7 +201,7 @@ def enumerate_candidates(
     recipes = recipes or all_recipes()
     gap = tempo_gap(a, b)
     exits = a.exit_cues()[:8]
-    entries = b.entry_cues()[:6]
+    entries = b.entry_cues()[:10]
     can_beatmatch = (
         a.grid_confidence >= BLEND_MIN_CONFIDENCE
         and b.grid_confidence >= BLEND_MIN_CONFIDENCE
@@ -153,7 +216,7 @@ def enumerate_candidates(
             continue
         for bars in _lengths_for(recipe, a, b):
             if recipe.beatmatched:
-                if not can_beatmatch or gap > SHORT_BLEND_MAX_GAP:
+                if not can_beatmatch or gap > (recipe.max_gap or SHORT_BLEND_MAX_GAP):
                     continue
                 if gap > BLEND_MAX_GAP and bars > 8:
                     continue
@@ -170,25 +233,16 @@ def enumerate_candidates(
 
 
 def styles_for_language(language: str, stems: str = "sometimes") -> set[str] | None:
-    """Translate human-facing intent into a recipe family, not one compulsory effect."""
+    """Translate human-facing intent into a recipe family, not one compulsory effect.
+
+    `wordplay` allows every recipe for now: word cuts come from the link search, which the set
+    planner doesn't draw on yet. Stem recipes will return here, gated by `stems`, once they're real.
+    """
     families = {
-        "seamless": {
-            "bass_swap_blend",
-            "filter_sweep",
-            "long_blend",
-            "vocal_swap",
-            "staged_stem_swap",
-            "acapella_bridge",
-        },
-        "punchy": {"cut_on_one", "drop_swap", "brake", "backspin", "echo_out"},
-        "wordplay": {"word_cut", "word_loop", "exchange", "acapella_bridge"},
-        "surprise": None,
-        "balanced": None,
+        "seamless": {"bass_swap_blend", "filter_sweep", "tempo_ramp"},
+        "punchy": {"cut_on_one", "echo_out", "delay_throw"},
     }
-    selected = families.get(language)
-    if selected is not None and stems == "never":
-        selected = selected - {"vocal_swap", "staged_stem_swap", "acapella_bridge", "exchange"}
-    return selected
+    return families.get(language)
 
 
 def _score(
@@ -202,6 +256,7 @@ def _score(
 ) -> Candidate | None:
     reasons = [f"{exit_cue.kind} into {entry_cue.kind}"]
     vocal_term = 1.0
+    entry_quality = entry_cue.quality
     if recipe.beatmatched and a.vocals_known and b.vocals_known:
         clash = _vocal_clash_seconds(a, b, exit_cue, entry_cue, bars)
         limit = 1.5 if (a.family == "hiphop" or b.family == "hiphop") else 2.5
@@ -210,6 +265,18 @@ def _score(
         vocal_term = 1.0 - clash / limit * 0.6
         if clash == 0:
             reasons.append("vocals take turns")
+        share = _hook_in_fade(a, b, entry_cue, bars)
+        vocal_term *= 1.0 - HOOK_IN_FADE_PENALTY * share
+    if recipe.beatmatched and entry_cue.bar + bars in b.chorus_start_bars():
+        entry_quality = min(1.0, entry_quality + 0.25)
+        reasons.append("B's chorus lands as A leaves")
+    if not recipe.beatmatched:
+        landing = _tempo_free_landing(a, b, exit_cue, entry_cue, gap)
+        if landing is None:
+            return None
+        entry_quality, vocal_term = landing
+        if vocal_term > 0.9:
+            reasons.append("one voice hands straight to the next")
 
     key_penalty = _key_penalty(a, b, bars)
     if key_penalty >= 0.75:
@@ -219,7 +286,7 @@ def _score(
     fit = _style_fit(recipe, a, b, bars, gap)
     score = (
         0.25 * exit_cue.quality
-        + 0.20 * entry_cue.quality
+        + 0.20 * entry_quality
         + 0.20 * fit
         + 0.15 * energy_term
         + 0.10 * (1.0 - key_penalty)

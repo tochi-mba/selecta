@@ -11,7 +11,7 @@ import numpy as np
 import pedalboard
 import soxr
 from scipy.ndimage import median_filter, minimum_filter1d, uniform_filter1d
-from scipy.signal import butter, sosfiltfilt
+from scipy.signal import butter, fftconvolve, sosfiltfilt
 
 from selecta.config import SAMPLE_RATE
 
@@ -94,14 +94,35 @@ def echo_tail(
     return zero_phase_highpass(tail, return_highpass_hz)
 
 
+def room_response(decay_seconds: float = 2.2, damping: float = 0.45, seed: int = 11) -> np.ndarray:
+    """A synthetic hall: decaying noise, different in each ear, with highs dying first.
+
+    Comb-filter reverbs ring at fixed pitches, which sits badly on a full mix. Decaying noise has
+    no pitch of its own, so it adds space without adding a tone.
+    """
+    length = int(decay_seconds * 1.5 * SAMPLE_RATE)
+    rng = np.random.default_rng(seed)
+    noise = rng.standard_normal((length, 2)).astype(np.float32)
+    low = zero_phase_lowpass(noise, 700.0)
+    high = noise - low
+    time = np.arange(length, dtype=np.float32) / SAMPLE_RATE
+    # -60 dB at decay_seconds; highs decay faster the more damping there is
+    low_decay = np.exp(-6.91 * time / decay_seconds)[:, None]
+    high_decay = np.exp(-6.91 * time / (decay_seconds * max(1.0 - damping, 0.1)))[:, None]
+    response = low * low_decay + high * high_decay
+    onset = int(0.012 * SAMPLE_RATE)
+    response[:onset] *= np.linspace(0.0, 1.0, onset, dtype=np.float32)[:, None]
+    response /= np.sqrt(np.sum(response**2, axis=0, keepdims=True)) + 1e-9
+    predelay = np.zeros((int(0.015 * SAMPLE_RATE), 2), dtype=np.float32)
+    return np.concatenate((predelay, response))
+
+
 def reverb_tail(
-    send: np.ndarray, room_size: float, damping: float, wet: float, return_highpass_hz: float
+    send: np.ndarray, decay_seconds: float, damping: float, wet: float, return_highpass_hz: float
 ) -> np.ndarray:
-    board = pedalboard.Reverb(room_size=room_size, damping=damping, wet_level=1.0, dry_level=0.0)
-    tail = board(send.T.astype(np.float32), SAMPLE_RATE, reset=True).T
-    if tail.shape[0] < send.shape[0]:
-        tail = np.pad(tail, ((0, send.shape[0] - tail.shape[0]), (0, 0)))
-    return zero_phase_highpass(tail[: send.shape[0]] * wet, return_highpass_hz)
+    response = room_response(decay_seconds, damping)
+    tail = fftconvolve(send, response, axes=0)[: send.shape[0]]
+    return zero_phase_highpass(tail.astype(np.float32) * wet, return_highpass_hz)
 
 
 def true_peaks(audio: np.ndarray) -> np.ndarray:

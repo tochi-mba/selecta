@@ -102,7 +102,7 @@ def _apply_moves(part: Part, placed: np.ndarray) -> tuple[np.ndarray, np.ndarray
         send = signal * part.wash_send.sample(count, SAMPLE_RATE)[:, None]
         tails += dsp.reverb_tail(
             send,
-            part.wash.room_size,
+            part.wash.decay_seconds,
             part.wash.damping,
             part.wash.wet,
             part.wash.return_highpass_hz,
@@ -143,7 +143,12 @@ def render(script: TransitionScript, cache: SongCache | None = None) -> Rendered
     dry_a, tails_a = _apply_moves(script.a, placed_a)
     dry_b, tails_b = _apply_moves(script.b, placed_b)
 
-    mixed = dsp.limit(dry_a + dry_b + tails_a + tails_b)
+    mixed = dry_a + dry_b + tails_a + tails_b
+    for extra in script.extras:
+        placed, _ = _part_audio(extra, cache.get(extra.audio_path), count)
+        dry, tails = _apply_moves(extra, placed)
+        mixed = mixed + dry + tails
+    mixed = dsp.limit(mixed)
     return Rendered(
         script,
         mixed,

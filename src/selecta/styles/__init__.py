@@ -22,25 +22,16 @@ class Recipe:
     beatmatched: bool
     lengths: tuple[int, ...] = (0,)
     needs_vocal_info: bool = False
+    max_gap: float | None = None
     description: str = ""
     options: dict = field(default_factory=dict)
 
 
 def all_recipes() -> dict[str, Recipe]:
-    from selecta.styles.advanced import (
-        brake,
-        drop_swap,
-        half_double,
-        long_blend,
-        loop_roll_build,
-        riser_air,
-        tempo_ramp,
-        word_cut,
-        word_loop,
-    )
-    from selecta.styles.blend import bass_swap_blend, filter_sweep
+    """Recipes the planner can pick from bar cues. Word cuts need word timing from a lyric link,
+    so `selecta.styles.wordplay` is reached through the word-link search instead."""
+    from selecta.styles.blend import bass_swap_blend, filter_sweep, tempo_ramp
     from selecta.styles.exits import cut_on_one, delay_throw, echo_out, reverb_wash
-    from selecta.styles.stems import acapella_bridge, exchange, staged_stem_swap, vocal_swap
 
     recipes = [
         Recipe("cut_on_one", cut_on_one, False, description="Cut on the downbeat"),
@@ -68,19 +59,12 @@ def all_recipes() -> dict[str, Recipe]:
             description="A filters up and away as B opens up",
         ),
         Recipe(
-            "long_blend", long_blend, True, lengths=(32,), description="Long instrumental blend"
+            "tempo_ramp",
+            tempo_ramp,
+            True,
+            lengths=(4,),
+            max_gap=0.16,
+            description="Ride both songs to a shared tempo for a short overlap",
         ),
-        Recipe("drop_swap", drop_swap, False, description="Swap one drop for another"),
-        Recipe("half_double", half_double, False, description="Half/double-time handoff"),
-        Recipe("loop_roll_build", loop_roll_build, False, lengths=(1, 2, 4)),
-        Recipe("tempo_ramp", tempo_ramp, True, lengths=(16,)),
-        Recipe("brake", brake, False, lengths=(1,)),
-        Recipe("riser_air", riser_air, False, lengths=(1,)),
-        Recipe("word_cut", word_cut, False, needs_vocal_info=True),
-        Recipe("word_loop", word_loop, False, lengths=(1, 2, 4), needs_vocal_info=True),
-        Recipe("vocal_swap", vocal_swap, True, lengths=(8, 16), needs_vocal_info=True),
-        Recipe("staged_stem_swap", staged_stem_swap, True, lengths=(16,), needs_vocal_info=True),
-        Recipe("acapella_bridge", acapella_bridge, True, lengths=(8,), needs_vocal_info=True),
-        Recipe("exchange", exchange, True, lengths=(4,), needs_vocal_info=True),
     ]
     return {recipe.name: recipe for recipe in recipes}

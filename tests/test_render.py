@@ -274,7 +274,7 @@ def test_audit_catches_a_low_end_fight(pair):
 
 def test_planner_refuses_a_blend_across_a_big_gap(tmp_path):
     a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
-    b = song_from_track(tmp_path, "b", make_track(bpm=85, bars=48, seed=2))
+    b = song_from_track(tmp_path, "b", make_track(bpm=108, bars=48, seed=2))
     names = {c.recipe.name for c in enumerate_candidates(a, b)}
     assert "bass_swap_blend" not in names
     assert "echo_out" in names

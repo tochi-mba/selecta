@@ -50,7 +50,7 @@ def _pinned_every_bar(output: np.ndarray, source: np.ndarray, bar: int) -> Warp:
 
 
 def blend_timing(
-    a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int, bars: int
+    a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int, bars: int, ramp_beats: int = RAMP_BEATS
 ) -> BlendTiming | None:
     """Work out where every beat lands, or None if the grids don't allow this overlap."""
     if a.beats_per_bar != b.beats_per_bar or exit_bar < bars:
@@ -64,8 +64,8 @@ def blend_timing(
 
     gap = tempo_gap(a, b)
     a_native = gap <= A_NATIVE_MAX_GAP
-    pre_beats = a.beats_per_bar if a_native else RAMP_BEATS
-    post_beats = SETTLE_BEATS if gap <= SETTLED_GAP else RAMP_BEATS
+    pre_beats = a.beats_per_bar if a_native else ramp_beats
+    post_beats = SETTLE_BEATS if gap <= SETTLED_GAP else ramp_beats
     if a_start - pre_beats < 0 or b_start + beat_count + post_beats >= b.beats.size:
         return None
 
