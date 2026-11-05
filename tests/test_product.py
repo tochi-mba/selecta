@@ -76,3 +76,21 @@ def test_api_rejects_foreign_hosts_and_persists_controls(tmp_path: Path):
     changed = client.post("/api/steer", json={"action": "more"})
     assert changed.json()["energy"] == 1
     assert client.get("/api/status", headers={"host": "attacker.example"}).status_code == 403
+
+
+def test_storage_budget_and_priority_queue(tmp_path: Path):
+    settings = Settings(tmp_path)
+    app = create_app(settings, tmp_path / "no-web")
+    with connection(tmp_path) as conn:
+        conn.executemany(
+            "INSERT INTO songs(id,path,folder,size,mtime,duration,is_music) VALUES(?,?,?,?,?,?,1)",
+            [(1, "one", "", 1, 1, 100), (2, "two", "", 1, 1, 100)],
+        )
+        conn.commit()
+    client = TestClient(app)
+    assert client.post("/api/storage", json={"budget_gb": 1}).status_code == 200
+    assert settings.effective_cache_cap_bytes == 1024**3
+    assert client.post("/api/songs/2/priority?priority=100").status_code == 200
+    with connection(tmp_path) as conn:
+        rows = db.songs_needing_analysis(conn, 3)
+    assert [row["id"] for row in rows] == [2, 1]

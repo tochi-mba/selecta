@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import sqlite3
 from pathlib import Path
 
@@ -24,6 +25,10 @@ class QueueAction(BaseModel):
     action: str
     song_id: int | None = None
     value: str | None = None
+
+
+class StorageRequest(BaseModel):
+    budget_gb: float
 
 
 def _counts(conn: sqlite3.Connection) -> dict[str, int]:
@@ -69,12 +74,43 @@ def create_app(settings: Settings | None = None, web_dir: Path | None = None) ->
                 "queue": queue(conn),
             }
 
+    @app.get("/api/storage")
+    def storage() -> dict:
+        usage = shutil.disk_usage(settings.home)
+        used = sum(path.stat().st_size for path in settings.home.rglob("*") if path.is_file())
+        return {
+            "budget_bytes": settings.effective_cache_cap_bytes,
+            "used_bytes": used,
+            "free_bytes": usage.free,
+            "total_bytes": usage.total,
+        }
+
+    @app.post("/api/storage")
+    def set_storage(body: StorageRequest) -> dict:
+        usage = shutil.disk_usage(settings.home)
+        maximum = max(0.5, (usage.free + settings.effective_cache_cap_bytes) / 1024**3)
+        if not 0.5 <= body.budget_gb <= maximum:
+            raise HTTPException(400, f"budget must be between 0.5 and {maximum:.1f} GB")
+        settings.set_storage_budget(int(body.budget_gb * 1024**3))
+        return storage()
+
+    @app.post("/api/songs/{song_id}/priority")
+    def prioritize(song_id: int, priority: int = 100) -> dict:
+        if priority not in {0, 100}:
+            raise HTTPException(400, "priority must be 0 or 100")
+        with connect() as conn:
+            if db.song_by_id(conn, song_id) is None:
+                raise HTTPException(404)
+            conn.execute("UPDATE songs SET processing_priority=? WHERE id=?", (priority, song_id))
+            conn.commit()
+        return {"song_id": song_id, "priority": priority}
+
     @app.get("/api/songs")
     def songs(q: str = "", state: str = "all", limit: int = 100) -> list[dict]:
         with connect() as conn:
             sql = (
                 "SELECT s.id,s.artist,s.title,s.genre,s.duration,s.is_music,a.bpm,a.energy,"
-                "a.grid_confidence,l.status lyric_status FROM songs s "
+                "a.grid_confidence,l.status lyric_status,s.processing_priority FROM songs s "
                 "LEFT JOIN analysis a ON a.song_id=s.id LEFT JOIN lyrics l ON l.song_id=s.id "
                 "WHERE (s.artist LIKE ? OR s.title LIKE ?)"
             )

@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS songs (
     set_aside_reason TEXT,
     music_override INTEGER,
     duplicate_of INTEGER REFERENCES songs(id)
+    ,processing_priority INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS songs_is_music ON songs(is_music);
 
@@ -109,6 +110,10 @@ def connect(path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(songs)")}
+    if "processing_priority" not in columns:
+        conn.execute("ALTER TABLE songs ADD COLUMN processing_priority INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
     return conn
 
 
@@ -173,7 +178,7 @@ def songs_needing_analysis(
     if folder_contains:
         query += " AND s.folder LIKE ?"
         params.append(f"%{folder_contains}%")
-    return conn.execute(query + " ORDER BY s.id", params).fetchall()
+    return conn.execute(query + " ORDER BY s.processing_priority DESC, s.id", params).fetchall()
 
 
 def song_by_id(conn: sqlite3.Connection, song_id: int) -> sqlite3.Row | None:
