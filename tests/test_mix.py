@@ -1137,7 +1137,7 @@ def _same_songs(tmp_path, count):
         song = song_from_track(tmp_path, f"m{i}", track, genre="Pop")
         song.id = i + 1
         song.lines = [
-            Line(70.0 + j * 4.0, 73.5 + j * 4.0, "you and me in the night") for j in range(10)
+            Line(30.0 + j * 4.0, 33.5 + j * 4.0, "you and me in the night") for j in range(20)
         ]
         songs.append(song)
     return [PlannedSong(song, "bass_swap_blend", "") for song in songs]

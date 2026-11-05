@@ -412,7 +412,7 @@ def test_a_rides_length_comes_from_how_long_a_is_singing(tmp_path):
     a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=96, seed=1))
     a.lines = [Line(100.0 + i, 100.9 + i, "words") for i in range(30)]
     assert ride_lengths(a, 130.0)[0] == 12, "sung all the way through, so as long as stems allow"
-    a.lines = [Line(120.0, 130.0, "one long line")]
+    a.lines = [Line(124.0, 130.0, "one long line")]
     longest = ride_lengths(a, 130.0)[0]
     assert longest < 12, "only one line to carry it"
 

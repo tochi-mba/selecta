@@ -56,6 +56,12 @@ Sixteen mixes under four headings: the moment, the mood, the sound and the journ
 
 Vocal rides now find where a voice stops and starts from the separated vocal itself, so they work in any language. Moves that need exact words still rely on an English-only timing model, so those are planned only for English songs, and only where timing hasn't already failed. Past results are read back before planning, so a move that failed on two songs isn't planned for them again.
 
+A warning on a rendered seam means a check fell short. Of 106 seams rendered before this work, 24 had one: mostly the level falling away after an echo, then beats 29 to 52 ms apart. So placements where the level falls now score lower, a steady beat gap is closed with a second take, and a clean ride or blend is tried before settling for a near miss. A near-miss ride or blend still beats a clean effect by ear, and it keeps its warning rather than hiding it. Songs and pairs behind past warnings get planned less.
+
+On a real 12-song mix after this, all 11 seams rendered: 4 vocal rides, 2 filter sweeps, 1 blend, 2 echoes, 2 throws and no cuts, with 3 warnings. That's one mix, not a measured rate.
+
+Suggestions for the + button and Bigger, Calmer and Something else are scored the way mixes are built: the hand-over on both sides, how well the song suits the mix, and keeping artists apart. Each one says what will happen, such as "A voice can ride across" or "A tempo ramp gets there".
+
 The planned shares above are what's asked for. What it sounds like, and how often a planned move survives rendering, needs more listening and more real renders.
 
 ## Partly works
