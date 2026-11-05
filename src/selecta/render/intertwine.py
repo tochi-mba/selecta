@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.render import dsp
@@ -44,7 +45,8 @@ def _fit(audio: np.ndarray, seconds: float, speed: float = 1.0) -> np.ndarray:
 
 
 def _curve(count: int, points: list[tuple[float, float]]) -> np.ndarray:
-    times = np.arange(count) / SAMPLE_RATE
+    # Points describe positions within a 16-bar transition, scaled to its actual tempo.
+    times = np.arange(count) / SAMPLE_RATE * TRANSITION_SECONDS / (count / SAMPLE_RATE)
     values = np.interp(times, [p[0] for p in points], [p[1] for p in points])
     return values.astype(np.float32)[:, None]
 
@@ -57,16 +59,40 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
     gap = abs(a.bpm / b.bpm - 1.0)
     if gap > 0.03:
         raise ValueError("intertwining is limited to a 3% tempo gap")
+    if min(a.grid_confidence, b.grid_confidence) < 0.55:
+        raise ValueError("intertwining needs reliable beat grids")
+    if a.beats_per_bar != b.beats_per_bar:
+        raise ValueError("intertwining needs matching meters")
+    if camelot_distance(a.camelot, b.camelot) > 1:
+        raise ValueError("tonal stem layering needs compatible keys")
     exit_cue = a.exit_cues()[0]
     entry_cue = b.entry_cues()[0]
-    a_start = max(0.0, exit_cue.time - 16.0)
+    if exit_cue.bar < 8:
+        raise ValueError("outgoing cue needs eight bars of lead-in")
+    a_index = a.beat_index_of_bar(exit_cue.bar - 8)
+    b_index = b.beat_index_of_bar(entry_cue.bar)
+    beats = 16 * a.beats_per_bar
+    if a_index + beats >= len(a.beats) or b_index + beats >= len(b.beats):
+        raise ValueError("stem transition needs sixteen complete bars on both tracks")
+    a_points = a.beats[a_index : a_index + beats + 1]
+    b_points = b.beats[b_index : b_index + beats + 1]
+    a_start = float(a_points[0])
+    duration = float(a_points[-1] - a_start)
     b_start = entry_cue.time
-    window = TRANSITION_SECONDS + 5.0
+    window = duration + 5.0
     stems_a = separate_window(settings, Path(a.path), a_start, window)
-    stems_b = separate_window(settings, Path(b.path), b_start, window * a.bpm / b.bpm)
-    layers_a = _layers(stems_a, TRANSITION_SECONDS)
-    layers_b = _layers(stems_b, TRANSITION_SECONDS, a.bpm / b.bpm)
-    count = int(TRANSITION_SECONDS * SAMPLE_RATE)
+    speed = a.bpm / b.bpm
+    stems_b = separate_window(settings, Path(b.path), b_start, window * speed)
+    layers_a = _layers(stems_a, duration)
+    layers_b = {}
+    # Pin every downbeat to A's actual grid, including source-window offsets.
+    keep = np.arange(0, beats + 1, a.beats_per_bar)
+    for name, path in stems_b.__dict__.items():
+        aligned, _ = dsp.stretch_to_warp(
+            _read(path), a_points[keep] - a_start, b_points[keep] - b_start, 0.0
+        )
+        layers_b[name] = _fit(aligned, duration)
+    count = int(round(duration * SAMPLE_RATE))
 
     a_drums = _curve(count, [(0, 1), (12, 1), (16, 0)])
     b_drums = _curve(count, [(0, 0), (4, 0), (12, 1)])
@@ -91,7 +117,7 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
     return Intertwined(
         dsp.limit(mixed),
         a_start,
-        b_start + TRANSITION_SECONDS * a.bpm / b.bpm,
+        float(b_points[-1]),
         exit_cue,
         entry_cue,
     )

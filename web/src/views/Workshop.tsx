@@ -24,6 +24,7 @@ function StoragePanel() {
 
   if (!storage || limit === null) return null;
   const words = storageWords(storage);
+  const overBudget = storage.cache_bytes > storage.budget_bytes;
   const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);
   const smallest = storage.smallest_budget_bytes / GB;
 
@@ -59,8 +60,10 @@ function StoragePanel() {
         />
       </label>
       <p className="hint">
-        When it’s full, Selecta deletes the ones it used longest ago, and makes them again if they’re needed. It always
-        leaves at least 2 GB free. Your music is never touched. The most it can use right now is {gb(storage.largest_budget_bytes)}.
+        {overBudget
+          ? 'Priority-song stem windows are protected, so they can temporarily put the cache over its limit. Lower a song’s priority to make its windows eligible for removal.'
+          : 'When it’s full, Selecta removes the oldest cache items that are not protected by song priority. It makes them again if needed.'}{' '}
+        It always leaves at least 2 GB free. Your music is never touched. The most it can use right now is {gb(storage.largest_budget_bytes)}.
       </p>
     </section>
   );

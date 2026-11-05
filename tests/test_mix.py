@@ -201,6 +201,8 @@ def test_shared_phrases_pull_a_wordplay_plan_towards_them(tmp_path):
     first = _song(tmp_path, "a", "First")
     close = _song(tmp_path, "b", "Second", bpm=120.0)
     linked = _song(tmp_path, "c", "Third", bpm=128.0, camelot="10A")
+    # Exercise link scoring independently of the grid-confidence gate.
+    first.grid_confidence = close.grid_confidence = linked.grid_confidence = 0.95
     without = plan_set([first, close, linked], first.id, 2)
     with_link = plan_set([first, close, linked], first.id, 2, links={(first.id, linked.id)})
     assert without[1].song.id == close.id
@@ -519,6 +521,38 @@ def test_stems_and_seams_share_one_limit(tmp_path):
     stems._prune(stems.cache_roots(settings), 1500, keep={"seam"})
     assert (settings.renders_dir / "seams" / "seam").exists()
     assert not (tmp_path / "stems" / "window").exists()
+
+
+def test_cache_pruning_keeps_stems_for_priority_songs_even_over_budget(tmp_path):
+    from selecta import stems
+
+    settings = Settings(tmp_path)
+    settings.home.mkdir(exist_ok=True)
+    conn = db.connect(settings.db_path)
+    source = tmp_path / "priority.flac"
+    source.touch()
+    conn.execute(
+        "INSERT INTO songs(id,path,folder,size,mtime,duration,processing_priority) "
+        "VALUES(1,?,?,?,?,?,100)",
+        (str(source), str(tmp_path), 1, 1.0, 100.0),
+    )
+    conn.commit()
+    conn.close()
+
+    root = tmp_path / "stems"
+    protected = root / "priority-window"
+    ordinary = root / "ordinary-window"
+    protected.mkdir(parents=True)
+    ordinary.mkdir()
+    (protected / "window.json").write_text(json.dumps({"source": str(source)}))
+    (ordinary / "vocals.wav").write_bytes(b"a" * 100)
+    (protected / "vocals.wav").write_bytes(b"p" * 100)
+    priority_names = stems._priority_window_names(settings)
+
+    stems._prune(root, 100, protect=priority_names)
+
+    assert protected.exists()
+    assert not ordinary.exists()
 
 
 def test_storage_says_what_can_be_remade_and_keeps_the_limit_possible(tmp_path):
@@ -1137,7 +1171,7 @@ def _same_songs(tmp_path, count):
         song = song_from_track(tmp_path, f"m{i}", track, genre="Pop")
         song.id = i + 1
         song.lines = [
-            Line(70.0 + j * 4.0, 73.5 + j * 4.0, "you and me in the night") for j in range(10)
+            Line(66.0 + j * 4.0, 69.5 + j * 4.0, "you and me in the night") for j in range(10)
         ]
         songs.append(song)
     return [PlannedSong(song, "bass_swap_blend", "") for song in songs]
@@ -1149,6 +1183,8 @@ def test_no_one_move_takes_over_a_mix_even_when_every_song_could_ride(tmp_path):
     from selecta.planner.vibes import BY_KEY, seam_choices
 
     planned = _same_songs(tmp_path, 13)
+    for item in planned:
+        item.song.grid_confidence = 0.95
     for seed in range(8):
         seams = seam_choices(BY_KEY["pick"], planned, {}, np.random.default_rng(seed))
         moves = [seams[item.song.id]["move"] for item in planned[1:]]
