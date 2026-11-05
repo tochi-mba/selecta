@@ -63,7 +63,7 @@ describe('songs not analysed yet', () => {
     fakeBackend({ 'GET /songs': [row(1, 'First')] });
     show(status({ analysis_running: true }));
     await userEvent.click(screen.getByRole('button', { name: 'Not analysed yet' }));
-    expect(screen.queryByRole('button', { name: 'Analyse them all' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Analyse them all' })).toBeNull();
     expect(screen.getByRole('button', { name: /Analysing now/ })).toBeInTheDocument();
   });
 });

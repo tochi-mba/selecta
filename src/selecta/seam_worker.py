@@ -12,10 +12,11 @@ import os
 import sys
 import threading
 import time
+from typing import TextIO
 
 from selecta import db, mix
 from selecta.config import load_settings
-from selecta.jobs import kill_tree_of_children, set_render_priority
+from selecta.jobs import kill_tree_of_children, set_render_priority, take_app_input
 from selecta.seams import SeamRequest, SeamStore, request_from
 from selecta.stems import cache_bytes, largest_cache_bytes
 
@@ -69,8 +70,8 @@ def _preparer(store: SeamStore, settings):
     return next_job
 
 
-def _read_requests(store: SeamStore) -> None:
-    for line in sys.stdin:
+def _read_requests(store: SeamStore, app_input: TextIO) -> None:
+    for line in app_input:
         if line.strip():
             message = json.loads(line)
             store.ask(SeamRequest(**message["request"]), urgent=message["urgent"])
@@ -85,7 +86,8 @@ def main() -> None:
     store.forget_unfinished()
     if "--prepare" in sys.argv:
         store.next_idle_job = _preparer(store, settings)
-    threading.Thread(target=_read_requests, args=(store,), daemon=True).start()
+    app_input = take_app_input()
+    threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()
     store.next_mix_seam, store.keep_for_now = _mix_seams(store, settings)
     store.run_forever()
 

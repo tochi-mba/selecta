@@ -201,7 +201,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <section className="nudge">
           <p>
             <b>{counts.analysed} of your {counts.music} songs are ready.</b> The rest will mean better mixes and many more
-            word links. It takes about {Math.ceil((left * 25) / 3600)} hours in the background.
+            word links. It takes about {Math.ceil((left * 25) / 3600)} hour{left * 25 > 3600 ? 's' : ''} in the background.
           </p>
           {status.analysis_running ? (
             <button onClick={() => setView('Workshop')}>Analysing now, see progress</button>

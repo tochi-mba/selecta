@@ -48,7 +48,7 @@ describe('a seam’s row', () => {
   it('offers no render button while the seam is under way, only its badge', () => {
     render(<Harness start={songs(seam('rendering', 'a'))} />);
     expect(screen.getByText('Rendering…')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Render and hear' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Render and hear' })).toBeNull();
   });
 
   it('offers listening and rating once ready', () => {

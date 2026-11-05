@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 from collections.abc import Callable
+from typing import TextIO
 
 import psutil
 
@@ -85,11 +86,26 @@ def kill_tree(pid: int) -> None:
         pass
 
 
+def take_app_input() -> TextIO:
+    """Keep the app's pipe to ourselves, and leave this process's standard input empty.
+
+    On Windows, while one thread waits on a pipe, anything else that touches that pipe waits too.
+    A helper inherits its parent's input and looks at it while starting, so ffmpeg and Demucs would
+    freeze until the app next happened to send a message. A private copy isn't inherited.
+    """
+    private = os.dup(0)
+    nothing = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(nothing, 0)
+    os.close(nothing)
+    return os.fdopen(private, "r", encoding="utf-8")
+
+
 def stop_when_app_stops() -> None:
     """The app holds this process's input open, so the input closing means the app has gone."""
+    app_input = take_app_input()
 
     def wait() -> None:
-        sys.stdin.read()
+        app_input.read()
         kill_tree_of_children()
         os._exit(0)
 

@@ -13,8 +13,8 @@ import sqlite3
 import subprocess
 import sys
 import threading
-from collections import deque
 import time
+from collections import deque
 from pathlib import Path
 from urllib.parse import urlsplit
 

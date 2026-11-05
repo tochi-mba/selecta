@@ -1,10 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { fakeBackend, seam, songs, status } from './test/backend';
 
 const data = (...items: Parameters<typeof songs>) => ({ mix: songs(...items), name: 'Test mix', can_undo: false });
+
+const navigation = async () => within(await screen.findByRole('navigation', { name: 'Main' }));
 
 function backend(mix: () => unknown) {
   return fakeBackend({
@@ -20,10 +22,10 @@ describe('the badges', () => {
     let reads = 0;
     backend(() => {
       reads += 1;
-      return reads < 3 ? data(seam('none', 'a')) : data(seam('ready', 'a', { duration: 30, a_source_start: 100, b_source_end: 10 }));
+      return reads < 4 ? data(seam('none', 'a')) : data(seam('ready', 'a', { duration: 30, a_source_start: 100, b_source_end: 10 }));
     });
     render(<App />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    await userEvent.click((await navigation()).getByRole('button', { name: 'Edit' }));
     expect(await screen.findByText('Waiting to render')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument(), { timeout: 6000 });
   });
@@ -32,7 +34,7 @@ describe('the badges', () => {
     const mix = vi.fn(() => data(seam('ready', 'a', { duration: 30, a_source_start: 100, b_source_end: 10 })));
     backend(mix);
     render(<App />);
-    await screen.findByRole('button', { name: 'Edit' });
+    await navigation();
     await waitFor(() => expect(mix).toHaveBeenCalled());
     await new Promise((done) => setTimeout(done, 400));
     const settled = mix.mock.calls.length;
@@ -65,10 +67,10 @@ describe('keyboard shortcuts', () => {
   it('opens the list with ? and closes it with Escape', async () => {
     backend(() => data(seam('none', 'a')));
     render(<App />);
-    await screen.findByRole('button', { name: 'Edit' });
+    await navigation();
     await userEvent.keyboard('?');
     expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

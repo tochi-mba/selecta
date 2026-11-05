@@ -848,3 +848,34 @@ def test_giving_way_leaves_the_seam_not_started(tmp_path, monkeypatch):
     with pytest.raises(KeyboardInterrupt):
         store.run_forever()
     assert store.status(_request(4).key)["status"] == "none"
+
+
+HELPER_WHILE_WAITING = """
+import subprocess, sys, threading, time
+from selecta.jobs import take_app_input
+app_input = take_app_input()
+threading.Thread(target=app_input.read, daemon=True).start()
+time.sleep(0.5)
+subprocess.run([sys.executable, "-c", "print('hello')"], stdout=subprocess.DEVNULL)
+print("finished", flush=True)
+"""
+
+
+def test_helpers_start_while_the_worker_waits_for_requests():
+    """On Windows they froze, so seams only moved when another request happened to arrive."""
+    import subprocess
+    import sys
+    import threading
+
+    process = subprocess.Popen(
+        [sys.executable, "-c", HELPER_WHILE_WAITING],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    lines: list[str] = []
+    reader = threading.Thread(target=lambda: lines.append(process.stdout.readline()), daemon=True)
+    reader.start()
+    reader.join(60)
+    process.kill()
+    assert lines and lines[0].strip() == "finished", "the helper froze"
