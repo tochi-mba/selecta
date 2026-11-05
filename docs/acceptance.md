@@ -4,7 +4,7 @@ This is an evidence ledger, not a marketing checklist. “Implemented” means c
 tests exist. “Needs listening” means the implementation is complete but the plan explicitly
 requires a person or this specific music library to judge it.
 
-## Implemented
+## Existing foundations (not proof of end-to-end completion)
 
 - Incremental library scan, reversible non-music filtering and duplicate detection.
 - CPU beat/downbeat, section, energy, loudness, key and timbre analysis with resumable refresh.
@@ -33,3 +33,30 @@ requires a person or this specific music library to judge it.
   human baselines. “Best DJ” is not considered proven until Selecta wins on bad-transition rate.
 
 These cannot truthfully be marked passed without the user's music database and listening results.
+
+## Confirmed implementation gaps — goal remains active
+
+Current source inspection supersedes the broad completion claims above.
+
+- Browser playback serves original encoded songs, reloads after queue actions, and does not
+  schedule rendered transitions or provide gapless audio-clock playback.
+- The Deck section strip, lyric text, Stage lyrics and Why explanation are placeholders.
+- Workshop Pause/Analyse buttons, Crate Never play, and Listening Room ratings are unwired.
+- Per-seam preferences are stored in queue.transition but full-set exports ignore them.
+- Set-wide mixing preferences filter planning but do not consistently control rendering.
+- Stem cache eviction does not protect priority songs or account for the full storage budget.
+- No directory watcher automatically schedules newly added music.
+- Word matching lacks verified forced alignment integration; word recipes must not imply
+  word-accurate execution from estimated LRC line boundaries.
+- Stem preview bar alignment exists, but its vocal fades still use fixed relative positions
+  instead of verified phrase endings, and it bypasses the common transition audit.
+- Melody discovery currently compares average chroma: this cannot establish a shared melody,
+  sample fingerprint, or rhythmic relationship. Those discovery layers remain unfinished.
+- Several extended recipes are aliases or approximations rather than the named technique.
+- Whole-package test coverage was last measured at 60.8%; browser and model-backed integration
+  coverage remains insufficient. A green current suite does not establish plan completion.
+- Ten earlier four-song sets exist, but they were rendered before the latest stem improvements.
+  Regeneration and listening comparison remain required.
+
+Completion requires working runtime behavior and tests for these paths, then actual listening
+evidence for the subjective criteria. No item is complete merely because a screen or function exists.
