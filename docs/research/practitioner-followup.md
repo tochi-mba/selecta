@@ -43,6 +43,28 @@ upvotes and individual examples do not establish universal parameters.
 - The [rekordbox product overview](https://rekordbox.com/en/feature/overview/) presents stems and
   phrase-aware mix points as selectable preparation/performance tools. This is a vendor description,
   not independent evidence that stem-heavy mixes sound better.
+- A later [r/Beatmatch thread asking whether stems are a holy grail](https://www.reddit.com/r/Beatmatch/comments/1tpovru/)
+  repeats a useful distinction: stems are one tool among EQ, beatmatching, loops, and wordplay; several
+  commenters say club-ready vocal mashups are often prepared edits rather than improvised live
+  separation. That favors letting a user request or audition a stem move, while keeping a regular
+  transition as the dependable default.
+- In a [discussion of favorite transitions](https://www.reddit.com/r/Beatmatch/comments/1fhwnyv/),
+  contributors describe long blends that land on a phrase, switching bass on phrase boundaries, and
+  blending mids across three tracks. Another [transition thread](https://www.reddit.com/r/Beatmatch/comments/1ren214/)
+  points out that beatmatching alone cannot fix a crowded arrangement. Together these support
+  scoring source density, phrase boundaries, and low-end ownership as separate considerations; a
+  matched BPM is not proof that a long overlap will be clean.
+- The [Rekordbox STEMS FAQ](https://rekordbox.com/en/support/faq/stems-7/) documents separate vocal,
+  drum, bass, and instrumental outputs, with mute/solo, stem-isolation level, and stem-effects modes.
+  [Ableton's stem-separation manual](https://www.ableton.com/en/manual/stem-separation/) recommends
+  comparing quality modes for the intended use. These primary product sources establish available
+  controls and the need to judge output quality, but do not establish a universal best transition.
+- A [2026 Beatmatch thread about stem quality](https://www.reddit.com/r/Beatmatch/comments/1rkilzd/stems/)
+  reports audible bleed and artifacts, and suggests that layering can mask some defects. A [thread
+  about using stems for recorded mashups](https://www.reddit.com/r/Beatmatch/comments/1rf8jnj/)
+  describes preparing and checking complex stem transitions at home before using them in a set.
+  This makes offline render-and-audition a better fit for Selecta's CPU-limited machine than promising
+  low-latency live separation, while preserving a per-pair fallback if the isolated parts sound weak.
 
 ## Product implications
 
@@ -57,3 +79,6 @@ upvotes and individual examples do not establish universal parameters.
   that bar and remain an implementation gap.
 - Treat artifact checks as a veto: if a separated component sounds exposed or unstable, use the full
   track and a non-stem cue instead. Repeating the same stem choreography should carry a variety cost.
+- Compare stem quality modes on a small, representative set before changing the separation model or
+  defaults. Product manuals describe controls, and forum posts describe individual experience; neither
+  substitutes for Selecta's own blind, paired listening measurements.
