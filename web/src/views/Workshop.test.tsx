@@ -53,4 +53,14 @@ describe('the storage slider', () => {
     show();
     expect(await screen.findByText('Selecta is using 4.2 GB. Your drive has 13 GB free.')).toBeInTheDocument();
   });
+
+  it('explains when protected priority stems exceed the selected limit', async () => {
+    fakeBackend({
+      'GET /storage': { ...storage, cache_bytes: 4 * GB, budget_bytes: 3 * GB },
+    });
+    show();
+    expect(
+      await screen.findByText(/Priority-song stem windows are protected, so they can temporarily put the cache over its limit/),
+    ).toBeInTheDocument();
+  });
 });
