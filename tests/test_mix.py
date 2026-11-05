@@ -439,6 +439,30 @@ def test_each_vibe_only_uses_songs_that_fit_it(tmp_path):
     assert {item.song.id for item in planned} <= {song.id for song in peak}
 
 
+def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypatch):
+    from selecta.planner import vibes
+
+    songs, traits = _vibe_library(tmp_path)
+    seen = {}
+
+    def plan_set(*_args, **kwargs):
+        seen["language"] = kwargs["mix_language"]
+        return []
+
+    def seam_choices(vibe, *_args):
+        seen["seam_language"] = vibe.language
+        return {}
+
+    monkeypatch.setattr(vibes, "plan_set", plan_set)
+    monkeypatch.setattr(vibes, "seam_choices", seam_choices)
+    vibes.build_vibe(vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1)
+    assert seen["language"] == "seamless"
+    assert seen["seam_language"] == "seamless"
+    vibes.build_vibe(vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1, mix_language="punchy")
+    assert seen["language"] == "punchy"
+    assert seen["seam_language"] == "punchy"
+
+
 def test_a_vibe_with_too_few_songs_says_how_many_it_needs(tmp_path):
     from selecta.planner.vibes import BY_KEY, describe
 

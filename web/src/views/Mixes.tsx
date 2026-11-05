@@ -14,12 +14,15 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const [songs, setSongs] = useState(12);
   const [building, setBuilding] = useState('');
   const [problem, setProblem] = useState('');
+  const [mixLanguage, setMixLanguage] = useState(status.steering.mix_language);
   const { counts } = status;
 
   useEffect(() => {
     get<VibeCard[]>('/vibes').then(setCards).catch((error: Error) => setProblem(error.message));
     get<Saved[]>('/saved').then(setSaved).catch(() => {});
-  }, [counts.analysed]);
+  }, [counts.analysed, counts.lyrics, counts.ready]);
+
+  useEffect(() => setMixLanguage(status.steering.mix_language), [status.steering.mix_language]);
 
   const start = async (key: string, name: string, open: boolean) => {
     setBuilding(key);
@@ -64,18 +67,31 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     notify('Analysing the rest of your library in the background.');
   };
 
+  const chooseMixLanguage = async (value: string) => {
+    const previous = mixLanguage;
+    setMixLanguage(value);
+    try {
+      await post('/steer', { action: 'mix_language', value });
+      refreshStatus();
+    } catch (error) {
+      setMixLanguage(previous);
+      setProblem((error as Error).message);
+    }
+  };
+
   const hero = cards?.find((card) => card.key === 'pick');
   const ready = cards?.filter((card) => card.ready && card.key !== 'pick') ?? [];
   const waiting = cards?.filter((card) => !card.ready && card.key !== 'christmas') ?? [];
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
+  const readyCount = counts.ready ?? 0;
 
-  if (counts.analysed < 6) {
+  if (readyCount < 6) {
     return (
       <main className="page">
         <h1 className="display">Getting your songs ready.</h1>
         <p className="lede">
-          {counts.analysed} of {counts.music} song{counts.music === 1 ? '' : 's'} ready. Selecta needs a few more before it can build a mix, and you
-          can use your PC as normal while it works.
+          {readyCount} of {counts.music} songs have the vocal or instrumental cues needed for mixes. Audio analysis is complete for {counts.analysed};
+          {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'} You can use your PC as normal while Selecta works.
         </p>
         <div className="row">
           {!status.analysis_running && (
@@ -112,6 +128,16 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="mix-steering" aria-label="Mix controls">
+        <label htmlFor="mix-language">Transition feel</label>
+        <select id="mix-language" value={mixLanguage} onChange={(event) => void chooseMixLanguage(event.target.value)}>
+          <option value="balanced">Let each mix choose</option>
+          <option value="seamless">Smooth blends</option>
+          <option value="punchy">Punchy changes</option>
+        </select>
+        <p className="hint">This guides new mixes. You can still change any transition song by song.</p>
       </section>
 
       {problem && <p className="warn" role="alert">{problem}</p>}
@@ -217,7 +243,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       {left > 0 && (
         <section className="nudge">
           <p>
-            <b>{counts.analysed} of your {counts.music} songs are ready.</b> The rest will mean better mixes and many more
+            <b>{counts.analysed} of {counts.music} songs have audio analysis; {counts.ready ?? 0} are ready for mixes.</b> The rest will mean better mixes and many more
             word links. It takes about {Math.ceil((left * 25) / 3600)} hour{left * 25 > 3600 ? 's' : ''} in the background.
           </p>
           {status.analysis_running ? (

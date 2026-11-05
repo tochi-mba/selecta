@@ -1,6 +1,6 @@
 # Build-plan acceptance ledger
 
-Every line here was checked on 5 November 2026 by running it on the real library or in a real browser. Green CI only proves the code builds and its tests pass, so it counts for nothing here. Only a listener can say whether Selecta sounds good, so "Heard" says what the listener has told us so far.
+This ledger combines measured acceptance runs with the latest live-library snapshot below. Evidence may come from the real library, a browser, or automated tests; a passing test proves its stated behavior, not that a transition sounds good. Only a listener can say whether Selecta sounds good, so "Heard" says what the listener has told us so far.
 
 ## Works
 
@@ -15,6 +15,16 @@ Every line here was checked on 5 November 2026 by running it on the real library
 | Word links | All 583 songs searched in 3.3 s: 12,878 pairs. 896 fit musically across the 172 songs with timing | Machine-found links can still be corny. Only a listener can judge |
 | Word timing | Starts within about 80 ms of what the model hears unguided, on four sung lines read by hand. On speech with known times, a steady 66 to 70 ms offset, unchanged over music, which settling onto the voice removes | No ground truth on singing. Many lines are refused, including *Layla* |
 | Local-only server | Foreign hosts and other sites' changes get 403. A bad request gets 400. The page makes no outside requests | Binds to 127.0.0.1 |
+
+## Latest live-library snapshot — 5 November 2026, 22:16 UTC
+
+- Scan: 1,389 files: 707 music, 614 set aside, 68 duplicates.
+- Audio analysis: 93 of 707 complete; 614 remain. The background worker is running.
+- Mix-ready pool: 85 songs currently pass the planner's cue and feature checks. The UI code now reports this separately from completed audio analysis.
+- Lyrics lookup: 583 synced lyric rows, 7 instrumentals, 17 plain-text-only results, and 103 misses. The full 555-song uncached lookup returned 461 synced lyrics, 5 instrumentals, 11 plain-text results, and 78 misses.
+- Storage: 61.3 GB free; 0.58 GB cached; the current cache budget is 25.6 GB.
+
+The older measured mix and word-link counts below are historical results; this run is rebuilding the usable pool as analysis and lyric lookup continue.
 
 ## Transitions
 
@@ -63,7 +73,7 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 | What | Works | Doesn't |
 |---|---|---|
 | Planner | 8 songs in 5 s, artists kept 10 apart, locks kept, feel honoured by each seam | The arc follows energy numbers that barely vary (0.32 to 0.55) until they're rescaled |
-| Steering | Bigger, calmer, something else, feel, length, start song, lock | "Take me to" isn't built |
+| Steering | Bigger, calmer, something else, feel, length, start song, lock; saved transition feel is sent from the Mixes UI and overrides a mix's default style in planner tests | "Take me to" isn't built; the intertwined stem move isn't in the mix planner |
 | Stem cache | Whole windows across stems and rendered seams are budgeted together; priority-song stem windows are protected by source metadata | Existing windows created before metadata cannot be mapped to priority songs and remain ordinary eviction candidates |
 | Audit | Fails broken renders and sagging seams, in plain words | Beat check misreads syncopated drums, so rides allow up to 40 ms. Thresholds are starting values |
 

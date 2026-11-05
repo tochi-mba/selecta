@@ -255,8 +255,11 @@ def create_app(
     @app.get("/api/status")
     def status() -> dict:
         with connect() as conn:
+            songs, _ = library_now(conn)
+            counts = _counts(conn)
+            counts["ready"] = len(songs)
             return {
-                "counts": _counts(conn),
+                "counts": counts,
                 "steering": get_steering(conn).__dict__,
                 "queue": queue(conn),
                 "moves": {name: label for name, (label, _) in MOVES.items()},
@@ -468,7 +471,11 @@ def create_app(
         from selecta.planner.vibes import traits_of
 
         never = never_played(conn)
-        stamp = (_counts(conn)["analysed"], tuple(sorted(never)))
+        counts = _counts(conn)
+        vocal_cues = conn.execute(
+            "SELECT COUNT(*) FROM lyrics WHERE status IN ('synced','instrumental')"
+        ).fetchone()[0]
+        stamp = (counts["analysed"], vocal_cues, tuple(sorted(never)))
         with library_lock:
             if library_cache.get("stamp") != stamp:
                 songs = [song for song in load_library(conn, settings) if song.id not in never]
@@ -497,6 +504,7 @@ def create_app(
         songs, traits = library_now(conn)
         if len(eligible(vibe, songs, traits)) < MIN_SONGS:
             raise HTTPException(400, f"{vibe.name} needs more analysed songs.")
+        selected_language = get_steering(conn).mix_language
         planned, seams = build_vibe(
             vibe,
             songs,
@@ -505,6 +513,7 @@ def create_app(
             min(count, 100),
             start,
             verdicts=store.verdicts(),
+            mix_language=selected_language if selected_language != "balanced" else None,
         )
         mix.remember(conn, f"changing to {vibe.name}")
         mix.merge_with_locks(conn, [item.song.id for item in planned], seams)

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { VibeCard } from '../api';
 import { SetPlayer } from '../player';
@@ -42,6 +42,42 @@ function show() {
 }
 
 describe('Pick a feeling', () => {
+  it('waits for six mix-ready songs even when audio analysis has finished on more', async () => {
+    fakeBackend({ 'GET /vibes': [], 'GET /saved': [] });
+    const player = new SetPlayer(() => [], () => {});
+    render(
+      <Mixes
+        status={status({ counts: { ...status().counts, analysed: 20, ready: 2 } })}
+        mix={[]}
+        mixName=""
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={() => {}}
+        refreshStatus={() => {}}
+        player={player}
+        now={player.state}
+        setView={() => {}}
+        notify={() => {}}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    expect(await screen.findByText(/2 of 90 songs have the vocal or instrumental cues needed/)).toBeInTheDocument();
+  });
+
+  it('lets the listener choose the transition feel and saves it for future mixes', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /saved': [],
+      'POST /steer': { mix_language: 'seamless' },
+    });
+    show();
+    const select = await screen.findByLabelText('Transition feel');
+    fireEvent.change(select, { target: { value: 'seamless' } });
+    expect(await screen.findByRole('combobox', { name: 'Transition feel' })).toHaveValue('seamless');
+    expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { value?: string }).value === 'seamless')).toBe(true);
+  });
+
   it('groups mixes by why you’d press them', async () => {
     fakeBackend({
       'GET /vibes': [

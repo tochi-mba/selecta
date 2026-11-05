@@ -13,7 +13,7 @@ hoped to render.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 import numpy as np
@@ -435,6 +435,7 @@ def build_vibe(
     start: int | None = None,
     seed: int | None = None,
     verdicts: Verdicts | None = None,
+    mix_language: str | None = None,
 ) -> tuple[list[PlannedSong], dict[int, dict]]:
     """Plan a mix for this vibe, and say how each seam should land."""
     found = eligible(vibe, songs, traits)
@@ -443,11 +444,13 @@ def build_vibe(
     verdicts = verdicts or Verdicts()
     belongs = {song.id: vibe.belongs(song, traits[song.id]) for song in found}
     top = max(belongs.values(), default=1.0) or 1.0
+    language = mix_language or vibe.language
+    selected_vibe = replace(vibe, language=language)
     planned = plan_set(
         found,
         first,
         count,
-        mix_language=vibe.language,
+        mix_language=language,
         links=set(phrases) if vibe.wordplay or vibe.key == "pick" else set(),
         arc=vibe.arc,
         seed=int(rng.integers(0, 2**31)),
@@ -457,7 +460,7 @@ def build_vibe(
             for song, value in belongs.items()
         },
     )
-    return planned, seam_choices(vibe, planned, phrases, rng, verdicts)
+    return planned, seam_choices(selected_vibe, planned, phrases, rng, verdicts)
 
 
 def _word_move(a: SongInfo, b: SongInfo, verdicts: Verdicts) -> str | None:
