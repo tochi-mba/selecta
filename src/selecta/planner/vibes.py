@@ -21,10 +21,11 @@ import numpy as np
 from selecta.analysis.song import SongInfo
 from selecta.lyrics.lrclib import clean_artist
 from selecta.planner.arc import target_energy
-from selecta.planner.beam import PlannedSong, plan_set
+from selecta.planner.beam import LINK_BONUS, WORDPLAY_LINK_BONUS, PlannedSong, plan_set
 from selecta.planner.choose import enumerate_candidates
+from selecta.planner.memory import SeamMemory
 from selecta.planner.moods import THEMES, is_english, is_seasonal, read_lyrics
-from selecta.planner.wordreel import Verdicts, modes_for, ride_lines
+from selecta.planner.wordreel import modes_for, ride_lines
 from selecta.styles.wordplay import felt_bpm
 
 MIN_SONGS = 6
@@ -71,9 +72,8 @@ FAMILIES = {
     "vocal_ride": "voice",
 }
 OVER_SHARE = 0.05
-WARNED_BEFORE = 0.25
-WARNING_COST = 0.15
-"""Songs behind past warnings get picked a little less, up to three warnings' worth."""
+SONG_RECORD_WEIGHT = 0.3
+"""Songs that keep rendering badly get picked a little less, and clean ones a little more."""
 RECENT_PENALTY = 0.45
 SAME_FAMILY_PENALTY = 0.35
 MOVE_WORDS = {
@@ -434,13 +434,13 @@ def build_vibe(
     count: int = DEFAULT_SONGS,
     start: int | None = None,
     seed: int | None = None,
-    verdicts: Verdicts | None = None,
+    memory: SeamMemory | None = None,
 ) -> tuple[list[PlannedSong], dict[int, dict]]:
     """Plan a mix for this vibe, and say how each seam should land."""
     found = eligible(vibe, songs, traits)
     rng = np.random.default_rng(seed)
     first = start if start is not None else _opening_song(vibe, found, traits, rng).id
-    verdicts = verdicts or Verdicts()
+    memory = memory or SeamMemory()
     belongs = {song.id: vibe.belongs(song, traits[song.id]) for song in found}
     top = max(belongs.values(), default=1.0) or 1.0
     planned = plan_set(
@@ -453,47 +453,44 @@ def build_vibe(
         seed=int(rng.integers(0, 2**31)),
         steady=vibe.steady,
         belongs={
-            song: value / top - WARNING_COST * min(verdicts.warned_songs[song], 3)
+            song: value / top + SONG_RECORD_WEIGHT * memory.song_value(song)
             for song, value in belongs.items()
         },
+        link_bonus=WORDPLAY_LINK_BONUS if vibe.wordplay else LINK_BONUS,
+        memory=memory,
     )
-    return planned, seam_choices(vibe, planned, phrases, rng, verdicts)
+    return planned, seam_choices(vibe, planned, phrases, rng, memory)
 
 
-def _word_move(a: SongInfo, b: SongInfo, verdicts: Verdicts) -> str | None:
+def _word_move(a: SongInfo, b: SongInfo, memory: SeamMemory) -> str | None:
     """A word hand-off these two can really carry. It needs both sets of words timed, which only
     works in English and has already failed on some songs."""
     if not (is_english(a) and is_english(b)):
         return None
-    if not (verdicts.can_time_words(a.id) and verdicts.can_time_words(b.id)):
+    if not (memory.can_time_words(a.id) and memory.can_time_words(b.id)):
         return None
     options = [
         name
         for name in modes_for(a, b)
-        if name in WORD_MOVES and (a.id, b.id, name) not in verdicts.failed
+        if name in WORD_MOVES and memory.move_factor(a.id, b.id, name) > 0
     ]
-    proven = [name for name in options if (a.id, b.id, name) in verdicts.worked]
+    proven = [name for name in options if memory.proven(a.id, b.id, name)]
     return (proven or options or [None])[0]
 
 
 def _moves_that_fit(
-    vibe: Vibe, a: SongInfo, b: SongInfo, verdicts: Verdicts
+    vibe: Vibe, a: SongInfo, b: SongInfo, memory: SeamMemory
 ) -> list[tuple[str, float]]:
     """Moves these two songs can carry, and how much to favour each."""
     options: list[tuple[str, float]] = []
-    if (
-        (a.id, b.id, "vocal_ride") not in verdicts.failed
-        and "word_blend" in modes_for(a, b)
-        and ride_lines(a, b)
-    ):
-        options.append(("vocal_ride", RIDE_WEIGHT[vibe.language]))
+    ride = memory.move_factor(a.id, b.id, "vocal_ride")
+    if ride > 0 and "word_blend" in modes_for(a, b) and ride_lines(a, b):
+        options.append(("vocal_ride", RIDE_WEIGHT[vibe.language] * ride))
     exits, entries = a.exit_cues()[:3], b.entry_cues()[:4]
     for name, weight in MOVE_WEIGHTS[vibe.language].items():
-        if (a.id, b.id, name) in verdicts.failed:
-            continue
-        if enumerate_candidates(a, b, name, exits=exits, entries=entries):
-            warned = (a.id, b.id, name) in verdicts.warned
-            options.append((name, weight * (WARNED_BEFORE if warned else 1.0)))
+        known = memory.move_factor(a.id, b.id, name)
+        if known > 0 and enumerate_candidates(a, b, name, exits=exits, entries=entries):
+            options.append((name, weight * known))
     return options
 
 
@@ -526,14 +523,14 @@ def seam_choices(
     planned: list[PlannedSong],
     phrases: dict[tuple[int, int], str],
     rng: np.random.Generator | None = None,
-    verdicts: Verdicts | None = None,
+    memory: SeamMemory | None = None,
 ) -> dict[int, dict]:
     """The move into each song, chosen from what fits and what the mix has already used, so no two
     mixes run the same way and no one move takes over. Word hand-offs go where a real link can be
     timed, and stay rare unless the mix is all about them. Every choice is soft: if it doesn't work
     out when it's rendered, the seam uses the next best thing, and a cut only as a last resort."""
     rng = rng or np.random.default_rng()
-    verdicts = verdicts or Verdicts()
+    memory = memory or SeamMemory()
     seams: dict[int, dict] = {}
     since_word = WORD_SPACING
     history: list[str] = []
@@ -542,13 +539,13 @@ def seam_choices(
         since_word += 1
         phrase = phrases.get((before.song.id, item.song.id))
         if phrase and (vibe.wordplay or since_word >= WORD_SPACING):
-            move = _word_move(before.song, item.song, verdicts)
+            move = _word_move(before.song, item.song, memory)
             if move:
                 seams[item.song.id] = {"move": move, "phrase": phrase, "soft": True}
                 since_word = 0
                 history.append(move)
                 continue
-        options = _moves_that_fit(vibe, before.song, item.song, verdicts)
+        options = _moves_that_fit(vibe, before.song, item.song, memory)
         move = _choose_move(options, history, total, rng)
         if move is None:
             continue

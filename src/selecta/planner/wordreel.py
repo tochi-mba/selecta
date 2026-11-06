@@ -11,9 +11,8 @@ first word reel was that it felt like "we are just using the words because it ha
 from __future__ import annotations
 
 import sqlite3
-from collections import Counter
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -79,21 +78,6 @@ class CannotTrust(ValueError):
     """The word timing for this line isn't reliable enough to cut on."""
 
     song_id: int | None = None
-
-
-@dataclass
-class Verdicts:
-    """What past renders showed, so a mix doesn't plan on what has already failed."""
-
-    failed: set[tuple[int, int, str]] = field(default_factory=set)
-    worked: set[tuple[int, int, str]] = field(default_factory=set)
-    warned: set[tuple[int, int, str]] = field(default_factory=set)
-    warned_songs: Counter[int] = field(default_factory=Counter)
-    timed: Counter[int] = field(default_factory=Counter)
-    untimed: Counter[int] = field(default_factory=Counter)
-
-    def can_time_words(self, song_id: int) -> bool:
-        return self.timed[song_id] > 0 or self.untimed[song_id] == 0
 
 
 @dataclass(frozen=True)

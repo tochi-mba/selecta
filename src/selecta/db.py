@@ -82,6 +82,24 @@ CREATE TABLE IF NOT EXISTS seam_book (
     UNIQUE(song_a, song_b, kind, payload)
 );
 
+CREATE TABLE IF NOT EXISTS seam_memory (
+    song_a INTEGER NOT NULL,
+    song_b INTEGER NOT NULL,
+    move TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    why TEXT NOT NULL DEFAULT '',
+    checks TEXT NOT NULL DEFAULT '{}',
+    exit_bar INTEGER,
+    entry_bar INTEGER,
+    bars INTEGER,
+    blamed_song INTEGER,
+    rating TEXT,
+    analysis_version INTEGER NOT NULL,
+    rules_version INTEGER NOT NULL,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (song_a, song_b, move)
+);
+
 CREATE TABLE IF NOT EXISTS ratings (
     id INTEGER PRIMARY KEY,
     seam_id INTEGER REFERENCES seam_book(id) ON DELETE SET NULL,

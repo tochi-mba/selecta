@@ -109,3 +109,16 @@ export function askedToAnalyse(title: string | null, ahead: number): string {
   if (ahead === 0) return `Analysing ${name}. It’s usually ready in about a minute.`;
   return `${name} is in line, with ${ahead} ahead of it.`;
 }
+
+/** Moves that couldn't work on a seam, one line per reason, so nothing is said three times. */
+export function triedWords(tried: { move: string; why: string }[], names: Record<string, string>): string[] {
+  const byReason = new Map<string, string[]>();
+  for (const { move, why } of tried) {
+    const reason = why.trim().replace(/\.+$/, '');
+    byReason.set(reason, [...(byReason.get(reason) ?? []), names[move] ?? move]);
+  }
+  return [...byReason].map(([reason, moves]) => {
+    const list = moves.length > 1 ? `${moves.slice(0, -1).join(', ')} and ${moves.at(-1)}` : moves[0];
+    return `${list} couldn’t work here. ${reason}.`;
+  });
+}

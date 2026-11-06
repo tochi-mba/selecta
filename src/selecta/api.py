@@ -28,6 +28,7 @@ from pydantic import BaseModel
 from selecta import audio as audio_io
 from selecta import db, jobs, mix
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings, load_settings
+from selecta.planner.memory import fill_from_finished_seams, load_memory, remember_rating
 from selecta.seams import (
     MOVES,
     CannotRender,
@@ -504,7 +505,7 @@ def create_app(
             phrases_of(conn),
             min(count, 100),
             start,
-            verdicts=store.verdicts(),
+            memory=load_memory(conn),
         )
         mix.remember(conn, f"changing to {vibe.name}")
         mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
@@ -625,6 +626,7 @@ def create_app(
                 nearby_artists={
                     _artist(by_id[item["song_id"]]) for item in close if item["song_id"] in by_id
                 },
+                memory=load_memory(conn),
             )
             if text:
                 ranked = [
@@ -733,6 +735,7 @@ def create_app(
                 library.get(items[position + 1]["song_id"]) if position + 1 < len(items) else None
             )
             belongs = belonging(mix.mix_name(conn), songs, traits)
+            known = load_memory(conn)
             pick = None
             for pool in (fresh, songs):
                 pick = pick or suggest_next(
@@ -744,6 +747,7 @@ def create_app(
                     items[position]["song_id"],
                     after=following,
                     belongs=belongs,
+                    memory=known,
                 )
             if pick is None:
                 raise HTTPException(404, "Nothing else fits here yet. Analysing more songs helps.")
@@ -837,9 +841,19 @@ def create_app(
         if body.rating not in {"good", "bad", "none"}:
             raise HTTPException(400, "rating must be good, bad or none")
         try:
-            return store.rate(Path(key).name, body.rating, body.note)
+            state = store.rate(Path(key).name, body.rating, body.note)
         except CannotRender as problem:
             raise HTTPException(400, str(problem)) from problem
+        request = state.get("request") or {}
+        if request.get("a") is not None and state.get("style"):
+            with connect() as conn:
+                remember_rating(conn, request["a"], request["b"], state["style"], body.rating)
+        return state
+
+    @app.get("/api/memory")
+    def what_it_remembers() -> dict:
+        with connect() as conn:
+            return load_memory(conn).summary()
 
     # ---- word links across the whole library
 
@@ -859,6 +873,10 @@ def create_app(
         def warm_up() -> None:
             """Load the library and lyric links now, so the first tap on a mix doesn't wait."""
             with connect() as conn:
+                if not db.preference(conn, "seam_memory_filled", False):
+                    fill_from_finished_seams(conn, store.root)
+                    db.set_preference(conn, "seam_memory_filled", True)
+                    conn.commit()
                 ranked_links(conn)
 
         threading.Thread(target=warm_up, daemon=True).start()

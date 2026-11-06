@@ -30,11 +30,12 @@ from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import LyricLink, SongFacts, discover
+from selecta.planner import memory as seam_memory
 from selecta.planner.choose import choose_transition, enumerate_candidates, tempo_gap
 from selecta.planner.fit import MAX_FOLDED_GAP, folded_gap
+from selecta.planner.memory import SeamMemory
 from selecta.planner.wordreel import (
     CannotTrust,
-    Verdicts,
     locate_phrase,
     locate_voice_edge,
     modes_for,
@@ -257,7 +258,11 @@ def tighten_beats(rendered: Rendered, cache: SongCache) -> tuple[Rendered, Audit
 
 
 def _bar_cue_render(
-    request: SeamRequest, a: SongInfo, b: SongInfo, cache: SongCache
+    request: SeamRequest,
+    a: SongInfo,
+    b: SongInfo,
+    cache: SongCache,
+    worked_before: tuple[int, int, int] | None = None,
 ) -> tuple[Rendered, AuditReport, str]:
     recipe = all_recipes()[request.move]
     pool = enumerate_candidates(a, b, request.move)
@@ -284,6 +289,12 @@ def _bar_cue_render(
             (exit_cue, entry_cue, bars, "; ".join(best.reasons) if best else "your cue points")
         ]
     else:
+        if worked_before is not None:
+            # where this move landed well last time is the first place to try it this time
+            pool = sorted(
+                pool,
+                key=lambda c: (c.exit_cue.bar, c.entry_cue.bar, c.bars) != worked_before,
+            )
         tries = [
             (item.exit_cue, item.entry_cue, item.bars, "; ".join(item.reasons))
             for item in pool[:PLACEMENTS_TO_TRY]
@@ -293,6 +304,7 @@ def _bar_cue_render(
         script = recipe.make(a, b, exit_cue, entry_cue, bars)
         if script is None:
             continue
+        script.meta.update(exit_bar=exit_cue.bar, entry_bar=entry_cue.bar, placed_bars=bars)
         rendered, report = tighten_beats(render(script, cache), cache)
         if report.passed:
             return rendered, report, why
@@ -450,6 +462,7 @@ class SeamStore:
         self.next_mix_seam: Callable[[], SeamRequest | None] = lambda: None
         self.keep_for_now: Callable[[], set[str]] = set
         self.mix_moves: Callable[[], Counter[str]] = Counter
+        self.memory = SeamMemory()
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
         self._worker: subprocess.Popen | None = None
         self.prepare_links = False
@@ -533,38 +546,6 @@ class SeamStore:
             else:
                 self._later.append(request)
         self._arrived.set()
-
-    def verdicts(self) -> Verdicts:
-        """What every finished seam showed about what works between which songs."""
-        found = Verdicts()
-        if not self.root.is_dir():
-            return found
-        for meta in self.root.glob("*/seam.json"):
-            try:
-                state = json.loads(meta.read_text("utf-8"))
-            except (OSError, ValueError):
-                continue
-            request = state.get("request") or {}
-            pair = (request.get("a"), request.get("b"))
-            if None in pair:
-                continue
-            for attempt in state.get("tried") or []:
-                found.failed.add((*pair, attempt["move"]))
-                if attempt.get("song") is not None:
-                    found.untimed[attempt["song"]] += 1
-            if state.get("status") == "failed":
-                found.failed.add((*pair, request.get("move")))
-                if state.get("untimed_song") is not None:
-                    found.untimed[state["untimed_song"]] += 1
-            elif state.get("status") == "ready":
-                style = state.get("style")
-                found.worked.add((*pair, style))
-                if not state.get("passed"):
-                    found.warned.add((*pair, style))
-                    found.warned_songs.update(pair)
-                if style in WORD_TIMED_MOVES:
-                    found.timed.update(pair)
-        return found
 
     def forget_unfinished(self) -> None:
         """Anything marked as under way was cut off when the last worker stopped."""
@@ -656,6 +637,7 @@ class SeamStore:
             jobs.mark_mix_rendering(self.settings.home, self._running_rank != PREPARING)
             self._sign_renewed_at = time.monotonic()
             self._mark_rendering(request)
+            self.memory = seam_memory.load_memory(conn)
             try:
                 self.render_now(conn, request)
             except jobs.Interrupted:
@@ -667,8 +649,20 @@ class SeamStore:
                 continue
             except CannotTrust as problem:
                 self._save_failure(request, UNSURE_WORDS, problem.song_id)
+                seam_memory.remember(
+                    conn,
+                    request.a,
+                    request.b,
+                    request.move,
+                    "failed",
+                    UNSURE_WORDS,
+                    blamed=problem.song_id,
+                )
             except CannotRender as problem:
                 self._save_failure(request, str(problem))
+                seam_memory.remember(
+                    conn, request.a, request.b, request.move, "failed", str(problem)
+                )
             except Exception as problem:  # noqa: BLE001 - a failed seam must not end the worker
                 self._save_failure(request, f"Something went wrong: {problem}")
             prune_cache(self.settings, {request.key} | self.keep_for_now())
@@ -715,7 +709,38 @@ class SeamStore:
                 rendered = None
         if rendered is None:
             rendered, report, why, fell_back = self._best_move(a, b, tried, request.move, near)
+        if conn is not None:
+            self._keep_what_was_learned(conn, a.id, b.id, rendered, report, tried)
         return self._save(request, rendered, report, why, fell_back, tried)
+
+    def _keep_what_was_learned(
+        self,
+        conn: sqlite3.Connection,
+        a: int,
+        b: int,
+        rendered: Rendered,
+        report: AuditReport,
+        tried: list[dict],
+    ) -> None:
+        for attempt in tried:
+            seam_memory.remember(
+                conn, a, b, attempt["move"], "failed", attempt["why"], blamed=attempt.get("song")
+            )
+        meta = rendered.script.meta
+        placed = (
+            (meta["exit_bar"], meta["entry_bar"], meta["placed_bars"])
+            if "exit_bar" in meta
+            else None
+        )
+        seam_memory.remember(
+            conn,
+            a,
+            b,
+            rendered.script.style,
+            "clean" if report.passed else "warned",
+            checks={check.name: check.value for check in report.failures},
+            placement=placed,
+        )
 
     def _chosen_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
         if request.move in STEM_MOVES:
@@ -723,7 +748,8 @@ class SeamStore:
                 self._aligner = Aligner(str(self.settings.models_dir))
             return _stem_render(self.settings, self._aligner, request, a, b, self._cache)
         if request.move in MOVES:
-            return _bar_cue_render(request, a, b, self._cache)
+            place = self.memory.placements.get((a.id, b.id, request.move))
+            return _bar_cue_render(request, a, b, self._cache, place)
         raise CannotRender(f"There's no move called {request.move}.")
 
     def _take(self, a: SongInfo, b: SongInfo, move: str, tried: list[dict]):
@@ -750,6 +776,11 @@ class SeamStore:
         near miss that's already in hand."""
         can_ride = "word_blend" in modes_for(a, b) and ride_lines(a, b) is not None
         moves = fallback_order(a.id, b.id, can_ride, self.mix_moves())
+        # what's already known to fail isn't worth minutes, and what's known to work goes first
+        moves = sorted(
+            (move for move in moves if self.memory.move_factor(a.id, b.id, move) > 0),
+            key=lambda move: not self.memory.proven(a.id, b.id, move),
+        )
         held = near
         for group in (
             [move for move in moves if move in SMOOTH_MOVES],

@@ -77,7 +77,7 @@ def _preparer(store: SeamStore, settings):
             state["ranked"] = best_links(lyric_links(conn), load_library(conn, settings))
             state["at"] = time.monotonic()
             conn.close()
-        return next_to_prepare(*state["ranked"], store.status)
+        return next_to_prepare(*state["ranked"], store.status, store.memory)
 
     return next_job
 
