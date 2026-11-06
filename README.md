@@ -11,7 +11,7 @@ It runs entirely on your PC. Your music never leaves your machine, and no audio 
 
 ## What makes it different
 
-- **It searches everything.** No person can hold every line, melody and groove of a whole library in their head. Selecta can.
+- **It searches across your library.** Lyric links and ordered harmonic candidates can reveal connections to audition. Verified melody, sample and rhythm discovery remain unfinished.
 - **It gets more than one take.** A live DJ gets one shot. Selecta renders a transition, measures the result, and repairs what failed before you ever hear it.
 - **It explains itself, but only when asked.** The plan stays visible and the machine stays quiet.
 
@@ -42,6 +42,52 @@ pnpm test
 
 Use `selecta beat-check` to verify beats, downbeats and keys by ear before analysing the whole
 library. Use `selecta discover` after lyrics are ready to fill the Found screen's Seam Book.
+
+For a resumable harmonic search across every analysed pair, run
+`selecta discover --exhaustive --pair-limit 1000`. Run it again to continue until the remaining
+count reaches zero. Unchanged comparisons, including non-matches, are reused. New or changed
+analysis adds work. Discovery gives way to current mix rendering; it does not approve matches
+for automatic use.
+
+## Blind listening comparisons
+
+Prepare two stereo renders of the same source cues and context. Import them with
+`selecta listening-import comparison.json`, using a manifest like this:
+
+```json
+{
+  "study": "heldout-v1",
+  "pair": "song-1-to-song-2",
+  "seed": 42,
+  "conditions": [
+    {
+      "path": "C:/audio/adaptive.wav",
+      "method": "adaptive",
+      "renderer": "commit-or-version",
+      "context": {"a": 1, "b": 2, "a_at": 30, "b_at": 16}
+    },
+    {
+      "path": "C:/audio/crossfade.wav",
+      "method": "fixed_crossfade",
+      "renderer": "baseline-v1",
+      "context": {"a": 1, "b": 2, "a_at": 30, "b_at": 16}
+    }
+  ]
+}
+```
+
+The importer checks matching duration, channel layout and sample rate, rejects invalid audio,
+and matches loudness at a shared peak-safe target. It retains originals and stores study copies
+outside the disposable seam cache. Identical context declarations are required, but their musical
+truth still needs checking by the person preparing the clips.
+
+Open Workshop's blind comparison panel and enter the study code, a listener nickname and listening
+setup. Method names stay hidden there. `selecta listening-report heldout-v1` reports missing
+responses, missing quality grades, and bad-transition rates (grades 1–2). Optional private `method`
+labels group results across pairs, with renderer versions kept separate. Old unlabelled clips stay
+unlabelled; their methods are not guessed. These are descriptive counts, not evidence of statistical
+superiority or independent listeners. The full evaluation still requires the planned stratified
+pairs and human ratings.
 
 ## What is deliberately local
 
