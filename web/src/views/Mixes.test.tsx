@@ -20,11 +20,15 @@ const card = (key: string, name: string, group: string, more: Partial<VibeCard> 
   ...more,
 });
 
-function show() {
+function show(energyArc: number[] | null = null) {
   const player = new SetPlayer(() => [], () => {});
+  const initialStatus = status();
   render(
     <Mixes
-      status={status()}
+      status={{
+        ...initialStatus,
+        steering: { ...initialStatus.steering, energy_arc: energyArc },
+      }}
       mix={[]}
       mixName=""
       canUndo={false}
@@ -130,6 +134,27 @@ describe('Pick a feeling', () => {
       ).toBe(true);
     });
     expect(screen.getByRole('button', { name: 'Use each mix’s arc' })).toBeEnabled();
+  });
+
+  it('clears a saved energy arc back to the mix-specific default', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /saved': [],
+      'POST /steer': { energy_arc: null },
+    });
+    show([20, 40, 80, 60, 30]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use each mix’s arc' }));
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) =>
+            call.method === 'POST' &&
+            call.path === '/steer' &&
+            (call.body as { action?: string }).action === 'energy_arc' &&
+            (call.body as { value?: number[] | null }).value === null,
+        ),
+      ).toBe(true);
+    });
   });
 
   it('lets the listener set a song as the destination for future mixes', async () => {
