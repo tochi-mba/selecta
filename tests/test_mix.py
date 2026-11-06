@@ -890,6 +890,31 @@ def test_spare_time_work_waits_behind_anything_a_person_asked_for(tmp_path):
     assert store._next_job() == idle
 
 
+def test_bad_rating_survives_audio_eviction_without_claiming_audio_is_ready(tmp_path):
+    import shutil
+
+    store = SeamStore(Settings(tmp_path))
+    request = SeamRequest(1, 2, "vocal_ride")
+    folder = store.folder(request.key)
+    folder.mkdir(parents=True)
+    state = {
+        "key": request.key,
+        "status": "ready",
+        "style": "vocal_ride",
+        "passed": True,
+        "request": {"a": 1, "b": 2, "move": "vocal_ride"},
+    }
+    (folder / "seam.json").write_text(json.dumps(state), "utf-8")
+    store.rate(request.key, "bad", "Voice clashes")
+    shutil.rmtree(folder)
+    fresh = SeamStore(Settings(tmp_path))
+    assert fresh.status(request.key)["status"] == "none"
+    assert (1, 2, "vocal_ride") in fresh.verdicts().failed
+    assert (1, 2, "vocal_ride") not in fresh.verdicts().worked
+    saved = json.loads((tmp_path / "seam-history" / f"{request.key}.json").read_text())
+    assert saved["note"] == "Voice clashes"
+
+
 def test_the_worker_reports_through_disk_so_the_app_can_read_it(tmp_path):
     worker = SeamStore(Settings(tmp_path))
     app_side = SeamStore(Settings(tmp_path))

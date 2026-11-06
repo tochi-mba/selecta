@@ -14,6 +14,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections import Counter, deque
@@ -527,9 +528,15 @@ class SeamStore:
         history = self.settings.home / "seam-history"
         history.mkdir(parents=True, exist_ok=True)
         target = history / f"{state['key']}.json"
-        temporary = target.with_suffix(".tmp")
-        temporary.write_text(json.dumps(state), "utf-8")
-        temporary.replace(target)
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=history, suffix=".tmp", delete=False
+        ) as stream:
+            temporary = Path(stream.name)
+            json.dump(state, stream)
+        try:
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
 
     def status(self, key: str) -> dict:
         """What's on disk comes first, because that's where the worker reports. Nothing is under
