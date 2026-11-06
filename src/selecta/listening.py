@@ -29,6 +29,11 @@ def register_comparison(
         raise ValueError("Both conditions must declare identical source cues and context")
     if not all(condition.get("renderer") for condition in conditions):
         raise ValueError("Record the renderer version for both conditions")
+    for condition in conditions:
+        if "method" in condition and (
+            not isinstance(condition["method"], str) or not condition["method"].strip()
+        ):
+            raise ValueError("Method labels must be nonempty strings")
     first, sr = sf.read(conditions[0]["path"], always_2d=True)
     second, other_sr = sf.read(conditions[1]["path"], always_2d=True)
     if sr != other_sr:
@@ -46,13 +51,22 @@ def register_comparison(
                     "source": str(Path(metadata["path"]).resolve()),
                     "context": metadata["context"],
                     "renderer": metadata["renderer"],
+                    "method": metadata.get("method"),
                     "preparation": report,
                 }
             ),
             "utf-8",
         )
         keys.append(key)
-    return create_trials(conn, study, [{"pair": pair, "conditions": keys}], seed)
+    trials = create_trials(conn, study, [{"pair": pair, "conditions": keys}], seed)
+    with conn:
+        for key, metadata in zip(keys, conditions, strict=True):
+            if metadata.get("method"):
+                conn.execute(
+                    "INSERT INTO listening_methods VALUES(?,?,?)",
+                    (key, metadata["method"].strip(), metadata["renderer"]),
+                )
+    return trials
 
 
 def prepare_comparison(
@@ -98,6 +112,10 @@ def prepare_comparison(
 
 
 def initialise(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS listening_methods ("
+        "condition TEXT PRIMARY KEY, method TEXT NOT NULL, renderer TEXT NOT NULL)"
+    )
     conn.execute(
         "CREATE TABLE IF NOT EXISTS listening_quality (trial TEXT NOT NULL, "
         "listener TEXT NOT NULL, "
@@ -220,6 +238,12 @@ def study_summary(conn: sqlite3.Connection, study: str) -> dict:
         "SELECT id,mapping FROM listening_trials WHERE study=?", (study,)
     ).fetchall()
     conditions, listeners = {}, set()
+    labels = {
+        row[0]: (row[1], row[2])
+        for row in conn.execute("SELECT condition,method,renderer FROM listening_methods")
+    }
+    methods: dict[str, dict[str, dict]] = {}
+    unlabelled = 0
     choices = {"a": 0, "b": 0, "tie": 0, "cannot_judge": 0}
     unanswered = missing = 0
     for trial, mapping_json in trials:
@@ -240,8 +264,21 @@ def study_summary(conn: sqlite3.Connection, study: str) -> dict:
                 result = conditions.setdefault(mapping[option], {"rated": 0, "bad": 0})
                 result["rated"] += 1
                 result["bad"] += grade <= 2
+                label = labels.get(mapping[option])
+                if label is None:
+                    unlabelled += 1
+                else:
+                    method, renderer = label
+                    group = methods.setdefault(method, {}).setdefault(
+                        renderer, {"rated": 0, "bad": 0}
+                    )
+                    group["rated"] += 1
+                    group["bad"] += grade <= 2
     for result in conditions.values():
         result["bad_transition_rate"] = result["bad"] / result["rated"]
+    for versions in methods.values():
+        for result in versions.values():
+            result["bad_transition_rate"] = result["bad"] / result["rated"]
     return {
         "trials": len(trials),
         "trials_without_any_response": unanswered,
@@ -249,4 +286,6 @@ def study_summary(conn: sqlite3.Connection, study: str) -> dict:
         "choices": choices,
         "missing_version_grades_in_responses": missing,
         "conditions": conditions,
+        "methods": methods,
+        "grades_without_method_labels": unlabelled,
     }

@@ -67,6 +67,21 @@ def _order(conn, store):
     return [item["song_id"] for item in mix.read_mix(conn, store)]
 
 
+def test_song_request_routes_keep_unanalysed_intent_without_changing_mix(conn, tmp_path):
+    conn.execute('DELETE FROM analysis WHERE song_id=1')
+    conn.commit()
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    added = client.post('/api/requests', json={'song_id': 1})
+    assert added.status_code == 200
+    request_id = added.json()['id']
+    assert client.post('/api/requests', json={'song_id': 1}).json()['id'] == request_id
+    assert len(client.get('/api/requests').json()['requests']) == 1
+    assert conn.execute('SELECT COUNT(*) FROM queue').fetchone()[0] == 0
+    assert client.post('/api/requests', json={'song_id': 9999}).status_code == 400
+    assert client.delete(f'/api/requests/{request_id}').json()['cancelled']
+    assert client.get('/api/requests').json()['requests'] == []
+
+
 def test_discovery_review_persists_without_changing_the_mix(conn, tmp_path):
     payload = json.dumps({"a_at": 2, "b_at": 8, "bars": 8, "transpose": 2})
     conn.execute(

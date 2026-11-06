@@ -91,3 +91,27 @@ def test_import_preserves_study_audio_and_rejects_context_mismatch(tmp_path):
     conditions[1] = {**conditions[1], "context": {"a": 99}}
     with pytest.raises(ValueError, match="identical source cues"):
         register_comparison(conn, settings, "heldout", "1-2", conditions)
+
+
+def test_private_method_labels_group_pairs_but_keep_renderer_versions_separate(tmp_path):
+    sr = 8000
+    wave = np.sin(np.arange(sr * 2) * 2 * np.pi * 440 / sr) * 0.4
+    path = tmp_path / "clip.wav"
+    sf.write(path, np.column_stack((wave, wave)), sr)
+    conn = sqlite3.connect(":memory:")
+    settings = Settings(tmp_path / "data")
+    for pair, version in (("1-2", "v1"), ("3-4", "v1"), ("5-6", "v2")):
+        conditions = [
+            dict(path=str(path), renderer=version, method=method, context={"pair": pair})
+            for method in ("adaptive", "fixed_crossfade")
+        ]
+        [trial] = register_comparison(conn, settings, "blind", pair, conditions)
+        respond(conn, trial, "listener", "tie", "headphones",
+                {"a": {"grade": 2}, "b": {"grade": 2}})
+    public = json.dumps(public_trials(conn, "blind"))
+    assert "adaptive" not in public and "fixed_crossfade" not in public
+    report = study_summary(conn, "blind")
+    for method in ("adaptive", "fixed_crossfade"):
+        assert report["methods"][method]["v1"] == dict(rated=2, bad=2, bad_transition_rate=1)
+        assert report["methods"][method]["v2"]["rated"] == 1
+    assert report["grades_without_method_labels"] == 0
