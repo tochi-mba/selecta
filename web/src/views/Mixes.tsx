@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type PointerEvent, useEffect, useState } from 'react';
 import { get, MixData, post, SongRow, VibeCard } from '../api';
 import { length, SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
@@ -171,6 +171,16 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const readyCount = counts.ready ?? 0;
   const arcPreview = energyArc ?? DEFAULT_ARC;
   const arcPoints = arcPreview.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
+  const drawArcAt = (event: PointerEvent<SVGSVGElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / (bounds.width || 1)) * 100;
+    const y = ((event.clientY - bounds.top) / (bounds.height || 1)) * 40;
+    const stop = Math.round(Math.max(0, Math.min(100, x)) / 25);
+    const energy = Math.round(Math.max(0, Math.min(100, (38 - y) / 0.34)));
+    const next = [...arcPreview];
+    next[stop] = energy;
+    setEnergyArc(next);
+  };
 
   if (readyCount < 6) {
     return (
@@ -248,14 +258,27 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           <div>
             <label>Energy arc</label>
             <p className="hint">
-              Shape energy from the opening to the finish. Selecta uses these five stops when choosing song order.
+              Draw the curve or fine-tune five stops. Selecta uses your shape to choose song order.
             </p>
           </div>
           <button type="button" onClick={() => setEnergyArc(null)} disabled={energyArc === null}>
             Use each mix’s arc
           </button>
         </div>
-        <svg className="energy-arc-preview" viewBox="0 0 100 40" role="img" aria-label="Energy shape preview">
+        <svg
+          className="energy-arc-preview"
+          viewBox="0 0 100 40"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="Draw energy arc"
+          onPointerDown={(event) => {
+            drawArcAt(event);
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (event.buttons === 1) drawArcAt(event);
+          }}
+        >
           <polyline points={arcPoints} />
           {arcPreview.map((energy, index) => (
             <circle key={ARC_STOPS[index]} cx={index * 25} cy={38 - energy * 0.34} r="2.2" />

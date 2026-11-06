@@ -112,7 +112,23 @@ describe('Pick a feeling', () => {
         ),
       ).toBe(true);
     });
-    expect(screen.getByRole('img', { name: 'Energy shape preview' })).toBeInTheDocument();
+    const drawing = screen.getByRole('img', { name: 'Draw energy arc' });
+    Object.defineProperty(drawing, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, width: 100, height: 40 }),
+    });
+    fireEvent.pointerDown(drawing, { clientX: 50, clientY: 4, pointerId: 1 });
+    expect(middle).toHaveValue('100');
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) =>
+            call.method === 'POST' &&
+            call.path === '/steer' &&
+            JSON.stringify((call.body as { value?: number[] }).value) ===
+              JSON.stringify([62, 72, 100, 85, 68]),
+        ),
+      ).toBe(true);
+    });
     expect(screen.getByRole('button', { name: 'Use each mix’s arc' })).toBeEnabled();
   });
 

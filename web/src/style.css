@@ -316,7 +316,7 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .energy-arc-heading { display: flex; align-items: start; justify-content: space-between; gap: 14px; }
 .energy-arc-heading > div { min-width: 0; }
 .energy-arc-heading .hint { margin: 6px 0 0; }
-.energy-arc-preview { display: block; width: 100%; height: 72px; margin: 12px 0 4px; overflow: visible; }
+.energy-arc-preview { display: block; width: 100%; height: 72px; margin: 12px 0 4px; overflow: visible; cursor: crosshair; touch-action: none; }
 .energy-arc-preview polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .energy-arc-preview circle { fill: var(--accent); }
 .energy-arc-stops { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
