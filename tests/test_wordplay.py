@@ -388,6 +388,9 @@ def test_the_last_repeat_rings_on_into_b(word_pair):
     hits = _voice_hits(script, voice)
     assert hits[-1].echo is not None
     assert all(hit.echo is None for hit in hits[:-1])
+    echo_room = min(script.meta["echo_room_beats"] / 2.0, 1.0)
+    assert hits[-1].echo.wet == pytest.approx(0.1 + 0.18 * echo_room)
+    assert hits[-1].echo.feedback == pytest.approx(0.15 + 0.25 * echo_room)
 
 
 def test_a_single_word_rolls_without_a_phrase_stage(word_pair):
@@ -421,6 +424,9 @@ def test_call_and_response_drops_a_into_the_gaps_b_leaves(word_pair):
             assert not line.start < source < line.end, "A never talks over B"
     assert float(calls[0].gain.values[1]) > float(calls[-1].gain.values[1]) or len(calls) == 1
     assert calls[-1].echo is not None, "A's last call rings away"
+    echo_room = min(script.meta["echo_room_beats"] / 2.0, 1.0)
+    assert calls[-1].echo.wet == pytest.approx(0.1 + 0.18 * echo_room)
+    assert calls[-1].echo.feedback == pytest.approx(0.15 + 0.25 * echo_room)
     assert np.isfinite(render(script).audio).all()
 
 

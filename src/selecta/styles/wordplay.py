@@ -543,10 +543,14 @@ def phrase_roll(
         room = (next_at - at) * (_LAST_HIT_SHARE if i + 1 == fast.size else 1.0)
         hits.append(_hit(a, voice_a, at, word_start, min(word_length, room), rising))
     ring = hits[-1]
+    echo_room_beats = max((landing - ring.gain.times[-1]) / b.period, 0.0)
+    echo_room = float(np.clip(echo_room_beats / 2.0, 0.0, 1.0))
+    echo_feedback = 0.15 + 0.25 * echo_room
+    echo_wet = 0.1 + 0.18 * echo_room
     ring.echo = Echo(
         delay_seconds=b.period,
-        feedback=0.35,
-        wet=0.3,
+        feedback=echo_feedback,
+        wet=echo_wet,
         return_highpass_hz=220.0,
         damp_lowpass_hz=6500.0,
     )
@@ -626,6 +630,9 @@ def phrase_roll(
             "acceleration": round(shape.acceleration, 3),
             "bass_midpoint": round(shape.bass_midpoint, 3),
             "bass_mid_level": round(shape.bass_mid_level, 3),
+            "echo_room_beats": echo_room_beats,
+            "echo_feedback": echo_feedback,
+            "echo_wet": echo_wet,
         },
     )
 
@@ -685,13 +692,29 @@ def word_exchange(
         hit = _hit(a, voice_a, at, start_a, call, level, speed)
         script.extras.append(hit)
     last = script.extras[-1]
+    last_call_at = float(script.b.warp.output_at(gaps[-1])) - max(near, 0.0) / speed
+    next_line = min(
+        (line.start for line in b.lines if line.start >= gaps[-1] + call),
+        default=None,
+    )
+    room_beats = (
+        max((float(script.b.warp.output_at(next_line)) - (last_call_at + call)) / b.period, 0.0)
+        if next_line is not None
+        else 2.0
+    )
+    room = float(np.clip(room_beats / 2.0, 0.0, 1.0))
+    echo_feedback = 0.15 + 0.25 * room
+    echo_wet = 0.1 + 0.18 * room
     last.echo = Echo(
         delay_seconds=b.period,
-        feedback=0.45,
-        wet=0.35,
+        feedback=echo_feedback,
+        wet=echo_wet,
         return_highpass_hz=220.0,
         damp_lowpass_hz=6500.0,
     )
     last.echo_send = Curve.constant(1.0)
     script.meta["calls"] = len(gaps)
+    script.meta["echo_room_beats"] = room_beats
+    script.meta["echo_feedback"] = echo_feedback
+    script.meta["echo_wet"] = echo_wet
     return script

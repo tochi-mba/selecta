@@ -185,8 +185,9 @@ upvotes and individual examples do not establish universal parameters.
   documents echo as repeated, attenuating delay and its depth control as a balance of dry/effected
   sound and feedback. This supports treating repeat amount as a meaningful audible control; it does
   not imply one best value for every transition. Selecta now scales vocal-ride, echo-out, delay-throw
-  and reverb-wash tails against the incoming song's measured lyric runway. The blend/roll moves also
-  use phrase timing, stems, local energy or bass information as relevant. Tests check this parameter
+  and reverb-wash tails against the incoming song's measured lyric runway. Phrase-roll and
+  call-and-response endings also scale their echo to the remaining vocal gap. The blend/roll moves
+  also use phrase timing, stems, local energy or bass information as relevant. Tests check this parameter
   behavior, while actual sound quality remains a listening question.
 - In a [Beatmatch echo/reverb thread](https://www.reddit.com/r/Beatmatch/comments/11t0c8d/help_with_echo_and_reverb/),
   one practitioner describes a one-beat echo at a low-to-mid depth after lowering the low EQ, while

@@ -54,8 +54,9 @@ The 6 November 2026 Preview snapshot had 23 ratings: phrase roll 7 Good / 9 Bad;
 vocal ride, echo out, and word cut 1 Good each; delay throw and bass swap blend 1 Bad each; other
 styles unrated. Bad ratings now remove only their exact ordered song-pair/style from automatic
 planning. They do not blacklist a style from other pairs. The sample is too small to infer global
-style quality. Vocal ride, echo out, delay throw, and reverb-wash amounts now respond to how soon B's
-next known lyric arrives. Tests verify the parameter mapping; listening still needs to establish
+style quality. Vocal ride, echo out, delay throw, reverb-wash, phrase-roll, and call-and-response
+tails now respond to the incoming lyric runway. Beatmatched bass swaps also adjust to local energy
+and low-band share. Tests verify the parameter mapping; listening still needs to establish
 whether the stems and tails sound natural on these songs.
 
 ## Rendering
