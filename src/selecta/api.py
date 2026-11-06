@@ -28,6 +28,7 @@ from pydantic import BaseModel
 
 from selecta import audio as audio_io
 from selecta import db, jobs, mix
+from selecta import requests as song_requests
 from selecta.arrange import (
     WontWork,
     arrangements,
@@ -1093,6 +1094,26 @@ def create_app(
             mix.write_order(conn, [])
             mix.set_mix_name(conn, "Your mix")
             return mix_payload(conn)
+
+    @app.get("/api/requests")
+    def get_song_requests() -> dict:
+        with connect() as conn:
+            return {"requests": song_requests.read_requests(conn)}
+
+    @app.post("/api/requests")
+    def request_song(body: AddRequest) -> dict:
+        with connect() as conn:
+            try:
+                request_id = song_requests.add_request(conn, body.song_id)
+            except ValueError as problem:
+                raise HTTPException(400, str(problem)) from problem
+            return {"id": request_id, "requests": song_requests.read_requests(conn)}
+
+    @app.delete("/api/requests/{request_id}")
+    def cancel_song_request(request_id: int) -> dict:
+        with connect() as conn:
+            cancelled = song_requests.cancel_request(conn, request_id)
+            return {"cancelled": cancelled, "requests": song_requests.read_requests(conn)}
 
     @app.post("/api/mix/songs")
     def add_song(body: AddRequest, draft: int | None = None) -> dict:
