@@ -8,6 +8,7 @@ import sqlite3
 import numpy as np
 
 from selecta.analysis.song import SongInfo
+from selecta.discovery.sequence import harmonic_sequence
 from selecta.lyrics.lrclib import parse_lrc
 from selecta.lyrics.match import LyricLink, SongFacts, discover
 
@@ -54,7 +55,7 @@ def lyric_search(conn: sqlite3.Connection) -> int:
 
 
 def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1000) -> int:
-    """Find coarse tonal-profile cousins, not same-melody matches.
+    """Find ordered harmonic candidates and coarse tonal-profile cousins.
 
     Averaging chroma across a whole track discards the order of notes. It can support a
     broad tonal resemblance, but cannot establish that two songs share a melody.
@@ -68,6 +69,20 @@ def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1
         for b in songs[i + 1 :]:
             if b.chroma_bars is None:
                 continue
+            sequence = harmonic_sequence(a.chroma_bars, b.chroma_bars)
+            if sequence is not None:
+                _save(
+                    conn,
+                    a.id,
+                    b.id,
+                    "harmonic_sequence_candidate",
+                    sequence,
+                    sequence["similarity"],
+                )
+                found += 1
+                if found >= limit:
+                    conn.commit()
+                    return found
             pb = b.chroma_bars.mean(axis=0)
             pb /= np.linalg.norm(pb) + 1e-9
             rotations = [float(np.dot(pa, np.roll(pb, shift))) for shift in range(12)]
