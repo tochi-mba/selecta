@@ -311,7 +311,8 @@ function SeamRow(props: {
       </div>
       {state.status === 'failed' && (
         <p className="warn">
-          {state.error} {!open && <button className="link" onClick={onToggle}>Try another move</button>}
+          Remembered failed attempt: {state.error} {!open && <button className="link" onClick={onToggle}>Try another move</button>}
+          <button className="link" onClick={() => void post(`/mix/${item.position}/render?retry=true`).then(refreshMix)}>Retry this attempt anyway</button>
         </p>
       )}
       {hearing && state.status === 'ready' && <Preview seamKey={state.key} seamAt={state.preview_seam ?? 0} />}

@@ -871,9 +871,11 @@ def create_app(
             return mix_payload(conn)
 
     @app.post("/api/mix/{position}/render")
-    def render_at(position: int) -> dict:
+    def render_at(position: int, retry: bool = False) -> dict:
         with connect() as conn:
             request = seam_request_at(conn, position)
+        if retry:
+            return store.submit(request, urgent=True, retry=True)
         return store.submit(request, urgent=True)
 
     @app.post("/api/mix/render")
