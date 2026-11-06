@@ -234,6 +234,17 @@ def test_a_destination_cannot_also_be_the_explicit_start(tmp_path):
         plan_set(songs, songs[0].id, 1, end_id=songs[1].id)
 
 
+def test_destination_planning_does_not_return_an_unfinished_route(tmp_path, monkeypatch):
+    from selecta.planner import beam
+
+    songs = [_song(tmp_path, f"unreachable-{i}", f"Artist {i}") for i in range(3)]
+    monkeypatch.setattr(beam, "_best_move", lambda *args: None)
+    with pytest.raises(ValueError, match="Could not find a playable route"):
+        plan_set(songs, songs[0].id, 3, end_id=songs[-1].id)
+    with pytest.raises(ValueError, match="empty library"):
+        plan_set([], end_id=99)
+
+
 def test_shared_phrases_pull_a_wordplay_plan_towards_them(tmp_path):
     first = _song(tmp_path, "a", "First")
     close = _song(tmp_path, "b", "Second", bpm=120.0)
