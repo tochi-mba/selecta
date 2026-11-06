@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 
 from selecta import db
@@ -15,6 +16,7 @@ class Steering:
     flash: str = "balanced"
     mix_language: str = "balanced"
     stems: str = "sometimes"
+    energy_arc: list[int] | None = None
     target: str | None = None
     length_mode: str = "party"
 
@@ -24,7 +26,11 @@ def get_steering(conn: sqlite3.Connection) -> Steering:
     return Steering(**{k: v for k, v in raw.items() if k in Steering.__annotations__})
 
 
-def steer(conn: sqlite3.Connection, action: str, value: str | int | None = None) -> Steering:
+def steer(
+    conn: sqlite3.Connection,
+    action: str,
+    value: str | int | Sequence[int] | None = None,
+) -> Steering:
     state = get_steering(conn)
     if action == "more":
         state.energy = min(2, state.energy + 1)
@@ -44,6 +50,17 @@ def steer(conn: sqlite3.Connection, action: str, value: str | int | None = None)
         if frequency not in {"never", "sometimes", "often"}:
             raise ValueError(f"unknown stem frequency: {frequency}")
         state.stems = frequency
+    elif action == "energy_arc":
+        if value is None:
+            state.energy_arc = None
+        elif (
+            not isinstance(value, (list, tuple))
+            or len(value) != 5
+            or any(type(point) is not int or not 0 <= point <= 100 for point in value)
+        ):
+            raise ValueError("energy arc must contain five whole-number points from 0 to 100")
+        else:
+            state.energy_arc = list(value)
     elif action == "take_me_to":
         target = str(value) if value else ""
         if target and not target.isdecimal():

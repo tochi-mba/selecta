@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { VibeCard } from '../api';
 import { SetPlayer } from '../player';
@@ -20,11 +20,15 @@ const card = (key: string, name: string, group: string, more: Partial<VibeCard> 
   ...more,
 });
 
-function show() {
+function show(energyArc: number[] | null = null) {
   const player = new SetPlayer(() => [], () => {});
+  const initialStatus = status();
   render(
     <Mixes
-      status={status()}
+      status={{
+        ...initialStatus,
+        steering: { ...initialStatus.steering, energy_arc: energyArc },
+      }}
       mix={[]}
       mixName=""
       canUndo={false}
@@ -88,6 +92,69 @@ describe('Pick a feeling', () => {
     fireEvent.change(await screen.findByLabelText('Stem-assisted moves'), { target: { value: 'often' } });
     expect(await screen.findByLabelText('Stem-assisted moves')).toHaveValue('often');
     expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { action?: string; value?: string }).action === 'stems' && (call.body as { value?: string }).value === 'often')).toBe(true);
+  });
+
+  it('lets the listener shape and save a five-stop energy arc', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /saved': [],
+      'POST /steer': { energy_arc: [62, 72, 35, 85, 68] },
+    });
+    show();
+    const middle = await screen.findByRole('slider', { name: 'Energy arc middle' });
+    fireEvent.change(middle, { target: { value: '35' } });
+    expect(middle).toHaveValue('35');
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) =>
+            call.method === 'POST' &&
+            call.path === '/steer' &&
+            (call.body as { action?: string; value?: number[] }).action === 'energy_arc' &&
+            JSON.stringify((call.body as { value?: number[] }).value) ===
+              JSON.stringify([62, 72, 35, 85, 68]),
+        ),
+      ).toBe(true);
+    });
+    const drawing = screen.getByRole('img', { name: 'Draw energy arc' });
+    Object.defineProperty(drawing, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, width: 100, height: 40 }),
+    });
+    fireEvent.pointerDown(drawing, { clientX: 50, clientY: 4, pointerId: 1 });
+    expect(middle).toHaveValue('100');
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) =>
+            call.method === 'POST' &&
+            call.path === '/steer' &&
+            JSON.stringify((call.body as { value?: number[] }).value) ===
+              JSON.stringify([62, 72, 100, 85, 68]),
+        ),
+      ).toBe(true);
+    });
+    expect(screen.getByRole('button', { name: 'Use each mix’s arc' })).toBeEnabled();
+  });
+
+  it('clears a saved energy arc back to the mix-specific default', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /saved': [],
+      'POST /steer': { energy_arc: null },
+    });
+    show([20, 40, 80, 60, 30]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use each mix’s arc' }));
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) =>
+            call.method === 'POST' &&
+            call.path === '/steer' &&
+            (call.body as { action?: string }).action === 'energy_arc' &&
+            (call.body as { value?: number[] | null }).value === null,
+        ),
+      ).toBe(true);
+    });
   });
 
   it('lets the listener set a song as the destination for future mixes', async () => {

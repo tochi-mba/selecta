@@ -6,6 +6,7 @@ real transition, which keeps planning fast enough to run while someone waits.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -61,11 +62,12 @@ def _quick_score(
     space: TimbreSpace | None,
     linked: set[tuple[int, int]],
     arc: str = "slow_burn",
+    energy_arc: Sequence[float] | None = None,
 ) -> float:
     """How promising a pair looks, from numbers already to hand."""
     low, high = energy_range
     level = (b.energy - low) / max(high - low, 1e-6)
-    fit = 1.0 - abs(level - target_energy(progress, arc))
+    fit = 1.0 - abs(level - target_energy(progress, arc, energy_arc))
     tempo = max(0.0, 1.0 - folded_gap(a, b) / 0.2)
     key = 1.0 - min(camelot_distance(a.camelot, b.camelot), 4) / 4.0
     distance = space.distance(a, b) if space is not None else None
@@ -161,6 +163,7 @@ def plan_set(
     steady: float = 0.35,
     belongs: dict[int, float] | None = None,
     end_id: int | None = None,
+    energy_arc: Sequence[float] | None = None,
 ) -> list[PlannedSong]:
     """A set of up to `count` songs from `songs`, starting at `start_id`, following the energy
     shape `arc`. `links` holds pairs that share a phrase, which get a head start. With a `seed`,
@@ -208,7 +211,9 @@ def plan_set(
             is_destination_step = end_id is not None and step == min(count, len(songs)) - 1
             options = [
                 (
-                    _quick_score(current, song, progress, energy_range, space, links, arc)
+                    _quick_score(
+                        current, song, progress, energy_range, space, links, arc, energy_arc
+                    )
                     + steady * handoff_quality(current, song, riders)
                     + BELONGING * belongs.get(song.id, 0.0),
                     song,
@@ -228,7 +233,9 @@ def plan_set(
                     if song.id != destination.id
                 ]
                 target_score = (
-                    _quick_score(current, destination, progress, energy_range, space, links, arc)
+                    _quick_score(
+                        current, destination, progress, energy_range, space, links, arc, energy_arc
+                    )
                     + steady * handoff_quality(current, destination, riders)
                     + BELONGING * belongs.get(destination.id, 0.0)
                 )

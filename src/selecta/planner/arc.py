@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 
 
-def target_energy(progress: float, preset: str = "slow_burn") -> float:
+def target_energy(
+    progress: float, preset: str = "slow_burn", custom: Sequence[float] | None = None
+) -> float:
     """A two-peak 60-minute wave, normalised to 0..1."""
     x = min(1.0, max(0.0, progress))
+    if custom:
+        position = x * (len(custom) - 1)
+        left = min(int(position), len(custom) - 1)
+        right = min(left + 1, len(custom) - 1)
+        fraction = position - left
+        return float(custom[left]) + (float(custom[right]) - float(custom[left])) * fraction
     if preset == "steady":
         return 0.85 + 0.05 * math.sin(x * math.pi * 3)
     if preset == "climb":

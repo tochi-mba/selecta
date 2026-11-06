@@ -467,6 +467,7 @@ def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypa
     def plan_set(*_args, **kwargs):
         seen["language"] = kwargs["mix_language"]
         seen["stems"] = kwargs["stems"]
+        seen["energy_arc"] = kwargs.get("energy_arc")
         return []
 
     def seam_choices(vibe, *_args):
@@ -482,9 +483,17 @@ def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypa
     assert seen["language"] == "punchy"
     assert seen["seam_language"] == "punchy"
     vibes.build_vibe(
-        vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1, stems="never"
+        vibes.BY_KEY["peak"],
+        songs,
+        traits,
+        {},
+        6,
+        seed=1,
+        stems="never",
+        energy_arc=[0.1, 0.4, 0.9, 0.6, 0.2],
     )
     assert seen["stems"] == "never"
+    assert seen["energy_arc"] == [0.1, 0.4, 0.9, 0.6, 0.2]
 
 
 def test_building_a_vibe_ends_on_the_requested_song(tmp_path):

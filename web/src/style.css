@@ -312,11 +312,22 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .saved li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); padding: 8px 0; }
 .mix-steering, .destination-control { display: grid; grid-template-columns: minmax(110px, auto) minmax(180px, 1fr); align-items: center; gap: 8px 14px; margin: 20px 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
 .mix-steering .hint, .destination-control > .hint, .destination-selected, .destination-results { grid-column: 1 / -1; }
+.energy-arc { margin: 20px 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.energy-arc-heading { display: flex; align-items: start; justify-content: space-between; gap: 14px; }
+.energy-arc-heading > div { min-width: 0; }
+.energy-arc-heading .hint { margin: 6px 0 0; }
+.energy-arc-preview { display: block; width: 100%; height: 72px; margin: 12px 0 4px; overflow: visible; cursor: crosshair; touch-action: none; }
+.energy-arc-preview polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.energy-arc-preview circle { fill: var(--accent); }
+.energy-arc-stops { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.energy-arc-stops label { display: grid; gap: 4px; color: var(--soft); font-size: .8rem; }
+.energy-arc-stops input { width: 100%; min-width: 0; }
+.energy-arc > .hint { margin: 10px 0 0; }
 .destination-control input { width: 100%; min-width: 0; }
 .destination-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 .destination-results button { width: 100%; text-align: left; }
 .destination-selected { justify-content: space-between; align-items: center; }
-@media (max-width: 520px) { .mix-steering, .destination-control { grid-template-columns: 1fr; } .mix-steering .hint, .destination-control > .hint, .destination-selected, .destination-results { grid-column: auto; } }
+@media (max-width: 520px) { .mix-steering, .destination-control { grid-template-columns: 1fr; } .mix-steering .hint, .destination-control > .hint, .destination-selected, .destination-results { grid-column: auto; } .energy-arc-stops { grid-template-columns: 1fr; gap: 6px; } .energy-arc-stops label { grid-template-columns: 56px 1fr; align-items: center; } }
 .waiting ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.92rem; }
 .nudge {
   margin-top: 32px;

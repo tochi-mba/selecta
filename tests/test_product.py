@@ -43,13 +43,23 @@ def test_arc_has_a_late_peak_and_is_library_feasible():
     assert set(feasible_curve(available, 10)) <= set(available)
 
 
+def test_a_custom_arc_interpolates_its_five_user_stops():
+    arc = [0.0, 1.0, 0.25, 0.75, 0.5]
+    assert target_energy(0.0, custom=arc) == 0.0
+    assert target_energy(0.125, custom=arc) == 0.5
+    assert target_energy(0.5, custom=arc) == 0.25
+    assert target_energy(1.0, custom=arc) == 0.5
+
+
 def test_steering_persists(tmp_path: Path):
     with connection(tmp_path) as conn:
         steer(conn, "more")
         steer(conn, "wordplay", "often")
+        steer(conn, "energy_arc", [10, 40, 90, 60, 20])
         state = get_steering(conn)
     assert state.energy == 1
     assert state.wordplay == "often"
+    assert state.energy_arc == [10, 40, 90, 60, 20]
 
 
 def test_mixing_language_keeps_choices_without_forcing_one_recipe():
@@ -88,6 +98,23 @@ def test_a_bad_steering_request_is_refused_cleanly(tmp_path: Path):
     db.connect(settings.db_path).close()
     client = TestClient(create_app(settings=settings))
     assert client.post("/api/steer", json={"action": "nonsense"}).status_code == 400
+    invalid_arc = client.post("/api/steer", json={"action": "energy_arc", "value": [0, 1]})
+    assert invalid_arc.status_code == 400
+
+
+def test_the_api_saves_and_clears_the_custom_energy_arc(tmp_path: Path):
+    settings = Settings(home=tmp_path)
+    settings.home.mkdir(exist_ok=True)
+    db.connect(settings.db_path).close()
+    client = TestClient(create_app(settings=settings))
+    arc = [15, 35, 95, 70, 25]
+    assert client.post("/api/steer", json={"action": "energy_arc", "value": arc}).json()[
+        "energy_arc"
+    ] == arc
+    assert client.get("/api/status").json()["steering"]["energy_arc"] == arc
+    assert client.post("/api/steer", json={"action": "energy_arc", "value": None}).json()[
+        "energy_arc"
+    ] is None
 
 
 def test_the_page_never_contacts_another_server():
