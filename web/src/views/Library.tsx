@@ -6,6 +6,7 @@ import { ViewProps } from './shared';
 const FILTERS = [
   { name: 'ready', label: 'Ready' },
   { name: 'not_yet', label: 'Not analysed yet' },
+  { name: 'priority', label: 'Priority list' },
   { name: 'set_aside', label: 'Set aside' },
   { name: 'all', label: 'Everything' },
 ];
@@ -57,6 +58,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     const { ahead } = await post<{ ahead: number }>(`/songs/${song.id}/analyse`);
     refreshStatus();
     notify(askedToAnalyse(song.title, ahead));
+  };
+  const setPriority = async (song: SongRow) => {
+    await post(`/songs/${song.id}/priority?priority=${song.priority ? 0 : 100}`);
+    notify(song.priority ? `${song.title} moved to background processing.` : `${song.title} moved to the priority list.`, true);
+    void load();
   };
 
   return (
@@ -127,9 +133,18 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                   )
                 )}
                 {filter !== 'set_aside' && (
-                  <button aria-pressed={song.never} onClick={() => void never(song)} title="Selecta won’t pick this when it builds a mix">
-                    {song.never ? 'Never: on' : 'Never play'}
-                  </button>
+                  <>
+                    <button
+                      aria-pressed={song.priority}
+                      onClick={() => void setPriority(song)}
+                      title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup"
+                    >
+                      {song.priority ? 'Priority: on' : 'Prioritize'}
+                    </button>
+                    <button aria-pressed={song.never} onClick={() => void never(song)} title="Selecta won’t pick this when it builds a mix">
+                      {song.never ? 'Never: on' : 'Never play'}
+                    </button>
+                  </>
                 )}
               </div>
             </li>

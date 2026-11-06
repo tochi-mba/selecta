@@ -401,13 +401,22 @@ def create_app(
                 params.append(ANALYSIS_VERSION)
             elif state == "not_yet":
                 sql += " AND s.is_music=1 AND a.song_id IS NULL"
+            elif state == "priority":
+                sql += " AND s.is_music=1 AND s.processing_priority=100"
             else:
                 sql += " AND s.is_music=1"
             rows = conn.execute(
                 sql + " ORDER BY s.artist,s.title LIMIT ?", (*params, min(limit, 500))
             ).fetchall()
             never = never_played(conn)
-            return [{**dict(row), "never": row["id"] in never} for row in rows]
+            return [
+                {
+                    **dict(row),
+                    "never": row["id"] in never,
+                    "priority": row["processing_priority"] == 100,
+                }
+                for row in rows
+            ]
 
     @app.get("/api/songs/{song_id}")
     def song_detail(song_id: int) -> dict:

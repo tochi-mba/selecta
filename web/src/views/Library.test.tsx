@@ -15,6 +15,7 @@ const row = (id: number, title: string) => ({
   camelot: null,
   lyric_status: null,
   never: false,
+  priority: false,
 });
 
 function show(state = status(), refreshStatus = () => {}, notify: (m: string) => void = () => {}) {
@@ -65,5 +66,18 @@ describe('songs not analysed yet', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Not analysed yet' }));
     expect(screen.queryByRole('button', { name: 'Analyse them all' })).toBeNull();
     expect(screen.getByRole('button', { name: /Analysing now/ })).toBeInTheDocument();
+  });
+
+  it('lets the listener prioritize a song and shows the priority list', async () => {
+    const calls = fakeBackend({
+      'GET /songs': [row(1, 'First')],
+      'POST /songs/1/priority': { song_id: 1, priority: 100 },
+    });
+    show();
+    await screen.findByText('First');
+    await userEvent.click(screen.getByRole('button', { name: 'Prioritize' }));
+    await waitFor(() => expect(calls.some((call) => call.path === '/songs/1/priority?priority=100')).toBe(true));
+    await userEvent.click(screen.getByRole('button', { name: 'Priority list' }));
+    await waitFor(() => expect(calls.some((call) => call.path.includes('state=priority'))).toBe(true));
   });
 });

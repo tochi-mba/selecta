@@ -162,8 +162,8 @@ describe('Pick a feeling', () => {
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],
       'GET /saved': [],
       'GET /songs': [
-        { id: 7, artist: 'Example Artist', title: 'Midnight', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false },
-        { id: 8, artist: 'Unready Artist', title: 'No Cues', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: null, never: false },
+        { id: 7, artist: 'Example Artist', title: 'Midnight', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false },
+        { id: 8, artist: 'Unready Artist', title: 'No Cues', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: null, never: false, priority: false },
       ],
       'POST /steer': { mix_language: 'balanced', target: '7' },
     });

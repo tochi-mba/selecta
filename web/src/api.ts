@@ -76,6 +76,7 @@ export type SongRow = {
   camelot: string | null;
   lyric_status: string | null;
   never: boolean;
+  priority: boolean;
 };
 
 export type SongDetail = {
