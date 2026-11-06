@@ -931,7 +931,7 @@ def test_a_failed_seam_is_remembered_and_can_be_retried(tmp_path):
     shutil.rmtree(store.root)
     fresh = SeamStore(Settings(tmp_path))
     assert fresh.submit(request)["status"] == "failed"
-    assert (request.a, request.b, request.move) in fresh.verdicts().failed
+    assert (request.a, request.b, request.move) in fresh.remembered(fresh=True).failed
     assert not fresh.root.exists(), "a remembered failure must not start another render"
     assert "agreement" not in SeamStore.__dict__, "failure wording stays in plain language"
 
@@ -1010,7 +1010,8 @@ def test_asking_again_after_a_failure_clears_it(tmp_path, monkeypatch):
 
     worker = type("Worker", (), {"stdin": Pipe(), "poll": lambda self: None})()
     store._worker = worker
-    assert store.submit(request)["status"] == "queued"
+    assert store.submit(request)["status"] == "failed", "only asking on purpose tries it again"
+    assert store.submit(request, retry=True)["status"] == "queued"
     assert json.loads(Pipe.written)["request"]["move"] == "cut_on_one"
     assert store.status(request.key)["status"] == "queued"
     assert store.submit(request)["status"] == "queued", "asking twice sends it once"
@@ -1986,12 +1987,13 @@ def test_the_render_skips_what_is_known_to_fail_and_starts_with_what_works(tmp_p
 
     monkeypatch.setattr(store, "_chosen_move", take)
     rendered, *_ = store._best_move(a, b, [])
-    assert asked[0] == "bass_swap_blend" or asked[0] == "tempo_ramp"
+    assert asked[0] == "echo_out"
     assert "filter_sweep" not in asked
     assert rendered.startswith("take of")
 
 
-def test_a_landing_that_worked_is_tried_first_next_time(tmp_path):
+def test_a_landing_that_worked_is_tried_first_next_time(tmp_path, monkeypatch):
+    import selecta.seams as seams_module
     from selecta.render.engine import SongCache
     from selecta.seams import _bar_cue_render
 
@@ -1999,12 +2001,19 @@ def test_a_landing_that_worked_is_tried_first_next_time(tmp_path):
     cache = SongCache()
     request = SeamRequest(a=1, b=2, move="bass_swap_blend")
     pool = enumerate_candidates(a, b, "bass_swap_blend")
-    later = pool[-1]
-    rendered, _report_seen, _why = _bar_cue_render(
-        request, a, b, cache, (later.exit_cue.bar, later.entry_cue.bar, later.bars)
-    )
-    assert rendered.script.meta["exit_bar"] == later.exit_cue.bar
-    assert rendered.script.meta["entry_bar"] == later.entry_cue.bar
+    recipe = seams_module.all_recipes()["bass_swap_blend"]
+    possible = [c for c in pool if recipe.make(a, b, c.exit_cue, c.entry_cue, c.bars) is not None]
+    later = possible[-1]
+    tried = []
+    real_render = seams_module.render
+
+    def noting(script, song_cache):
+        tried.append((script.meta["exit_bar"], script.meta["entry_bar"]))
+        return real_render(script, song_cache)
+
+    monkeypatch.setattr(seams_module, "render", noting)
+    _bar_cue_render(request, a, b, cache, (later.exit_cue.bar, later.entry_cue.bar, later.bars))
+    assert tried[0] == (later.exit_cue.bar, later.entry_cue.bar)
 
 
 def _record(a=1, b=2, style="vocal_ride", passed=True, rating=None, **more):
