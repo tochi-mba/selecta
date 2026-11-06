@@ -54,6 +54,11 @@ def lyric_search(conn: sqlite3.Connection) -> int:
 
 
 def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1000) -> int:
+    """Find coarse tonal-profile cousins, not same-melody matches.
+
+    Averaging chroma across a whole track discards the order of notes. It can support a
+    broad tonal resemblance, but cannot establish that two songs share a melody.
+    """
     found = 0
     for i, a in enumerate(songs):
         if a.chroma_bars is None:
@@ -68,15 +73,19 @@ def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1
             rotations = [float(np.dot(pa, np.roll(pb, shift))) for shift in range(12)]
             similarity = max(rotations)
             if similarity > 0.93:
-                kind = "same_melody" if rotations.index(similarity) else "harmonic_cousin"
+                transpose = rotations.index(similarity)
                 _save(
                     conn,
                     a.id,
                     b.id,
-                    kind,
+                    "tonal_profile_cousin",
                     {
-                        "transpose": rotations.index(similarity),
-                        "reason": "Their bar-level pitch shapes closely match.",
+                        "transpose": transpose,
+                        "method": "whole_track_mean_chroma",
+                        "reason": (
+                            "Their average pitch-class profiles are similar; note order is "
+                            "not compared, so this is not a same-melody claim."
+                        ),
                     },
                     similarity,
                 )
