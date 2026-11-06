@@ -54,7 +54,9 @@ def proposals(
             )
             request = request_from(a_id, b_id, settings)
             state = state_of(request.key)
-            if state.get("status") == "failed":
+            if state.get("status") == "failed" or (
+                state.get("status") == "ready" and state.get("passed") is not True
+            ):
                 continue
             edges[key] = settings
             break
