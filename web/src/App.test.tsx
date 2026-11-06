@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { SetPlayer } from './player';
 import { fakeBackend, seam, songs, status } from './test/backend';
 
 const data = (...items: Parameters<typeof songs>) => ({ mix: songs(...items), name: 'Test mix', can_undo: false });
@@ -85,6 +86,7 @@ describe('an open draft', () => {
 
   beforeEach(() => {
     window.localStorage.clear();
+    vi.spyOn(SetPlayer.prototype, 'playFrom').mockImplementation(async () => {});
   });
 
   it('opens from the list without touching the current mix, and stays open after a reload', async () => {
