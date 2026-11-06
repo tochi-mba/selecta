@@ -7,6 +7,51 @@ import random
 import sqlite3
 import uuid
 
+import numpy as np
+import pyloudnorm as pyln
+
+
+def prepare_comparison(
+    first: np.ndarray, second: np.ndarray, sample_rate: int, target_lufs: float = -18.0
+) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Match excerpt loudness at a shared peak-safe target; never time-stretch a trial.
+
+    Caller must establish matching source cues and context before using these arrays.
+    This checks audio integrity and length, not musical equivalence of those cues.
+    """
+    clips = [np.asarray(clip, dtype=float) for clip in (first, second)]
+    if sample_rate <= 0 or not np.isfinite(target_lufs):
+        raise ValueError("A valid sample rate and loudness target are required")
+    if clips[0].shape != clips[1].shape:
+        raise ValueError("Comparison clips must have identical duration and channel layout")
+    for clip in clips:
+        if clip.ndim != 2 or clip.shape[1] != 2 or len(clip) < sample_rate:
+            raise ValueError("Use stereo excerpts at least one second long")
+        if not np.isfinite(clip).all() or np.max(np.abs(clip)) > 1:
+            raise ValueError("Comparison audio contains non-finite or out-of-range samples")
+    meter = pyln.Meter(sample_rate)
+    loudness = [float(meter.integrated_loudness(clip)) for clip in clips]
+    if not all(np.isfinite(value) for value in loudness):
+        raise ValueError("Silent excerpts cannot be loudness matched")
+    peak_db = [float(20 * np.log10(np.max(np.abs(clip)))) for clip in clips]
+    target = min(
+        target_lufs, *(level - peak - 1 for level, peak in zip(loudness, peak_db, strict=True))
+    )
+    matched = [
+        clip * 10 ** ((target - level) / 20) for clip, level in zip(clips, loudness, strict=True)
+    ]
+    return (
+        matched[0],
+        matched[1],
+        {
+            "sample_rate": sample_rate,
+            "frames": len(clips[0]),
+            "original_lufs": loudness,
+            "target_lufs": target,
+            "sample_peak_ceiling_db": -1.0,
+        },
+    )
+
 
 def initialise(conn: sqlite3.Connection) -> None:
     conn.execute(

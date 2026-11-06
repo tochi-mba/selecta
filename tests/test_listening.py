@@ -1,9 +1,26 @@
 import json
 import sqlite3
 
+import numpy as np
 import pytest
 
-from selecta.listening import create_trials, public_trials, respond
+from selecta.listening import create_trials, prepare_comparison, public_trials, respond
+
+
+def test_comparison_preparation_matches_loudness_and_rejects_invalid_audio():
+    sr = 8000
+    wave = np.sin(np.arange(sr * 2) * 2 * np.pi * 440 / sr) * 0.5
+    stereo = np.column_stack((wave, wave))
+    first, second, report = prepare_comparison(stereo, stereo * 0.1, sr)
+    assert np.allclose(first, second)
+    assert np.max(np.abs(first)) <= 10 ** (-1 / 20)
+    assert report["frames"] == sr * 2
+    with pytest.raises(ValueError, match="identical duration"):
+        prepare_comparison(stereo, stereo[:-1], sr)
+    with pytest.raises(ValueError, match="Silent"):
+        prepare_comparison(stereo, stereo * 0, sr)
+    with pytest.raises(ValueError, match="out-of-range"):
+        prepare_comparison(stereo, stereo * np.nan, sr)
 
 
 def test_trials_hide_conditions_and_leave_unanswered_trials_unanswered():
