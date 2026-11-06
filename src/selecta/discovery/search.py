@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 
 import numpy as np
 
 from selecta.analysis.song import SongInfo
+from selecta.discovery.sequence import harmonic_sequence
 from selecta.lyrics.lrclib import parse_lrc
 from selecta.lyrics.match import LyricLink, SongFacts, discover
 
@@ -53,7 +55,19 @@ def lyric_search(conn: sqlite3.Connection) -> int:
     return len(links)
 
 
-def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1000) -> int:
+def audio_search(
+    conn: sqlite3.Connection,
+    songs: list[SongInfo],
+    limit: int = 1000,
+    before_pair: Callable[[], None] | None = None,
+) -> int:
+    """Find ordered harmonic candidates and coarse tonal-profile cousins.
+
+    Averaging chroma across a whole track discards the order of notes. It can support a
+    broad tonal resemblance, but cannot establish that two songs share a melody.
+    """
+    if limit <= 0:
+        return 0
     found = 0
     for i, a in enumerate(songs):
         if a.chroma_bars is None:
@@ -63,20 +77,51 @@ def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1
         for b in songs[i + 1 :]:
             if b.chroma_bars is None:
                 continue
+            if before_pair is not None:
+                before_pair()
+            sequence = harmonic_sequence(a.chroma_bars, b.chroma_bars)
+            if sequence is not None:
+                a_bar, b_bar = sequence["a_bar"], sequence["b_bar"]
+                if a_bar >= len(a.bar_times) or b_bar >= len(b.bar_times):
+                    sequence = None
+            if sequence is not None:
+                sequence["a_at"] = float(a.bar_times[sequence["a_bar"]])
+                sequence["b_at"] = float(b.bar_times[sequence["b_bar"]])
+                for prefix, song in (("a", a), ("b", b)):
+                    end_bar = sequence[f"{prefix}_bar"] + sequence["bars"]
+                    sequence[f"{prefix}_end"] = float(
+                        song.bar_times[end_bar] if end_bar < len(song.bar_times) else song.duration
+                    )
+                _save(
+                    conn,
+                    a.id,
+                    b.id,
+                    "harmonic_sequence_candidate",
+                    sequence,
+                    sequence["similarity"],
+                )
+                found += 1
+                if found >= limit:
+                    conn.commit()
+                    return found
             pb = b.chroma_bars.mean(axis=0)
             pb /= np.linalg.norm(pb) + 1e-9
             rotations = [float(np.dot(pa, np.roll(pb, shift))) for shift in range(12)]
             similarity = max(rotations)
             if similarity > 0.93:
-                kind = "same_melody" if rotations.index(similarity) else "harmonic_cousin"
+                transpose = rotations.index(similarity)
                 _save(
                     conn,
                     a.id,
                     b.id,
-                    kind,
+                    "tonal_profile_cousin",
                     {
-                        "transpose": rotations.index(similarity),
-                        "reason": "Their bar-level pitch shapes closely match.",
+                        "transpose": transpose,
+                        "method": "whole_track_mean_chroma",
+                        "reason": (
+                            "Their average pitch-class profiles are similar; note order is "
+                            "not compared, so this is not a same-melody claim."
+                        ),
                     },
                     similarity,
                 )

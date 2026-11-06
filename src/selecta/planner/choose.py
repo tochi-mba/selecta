@@ -192,6 +192,8 @@ def _lengths_for(recipe: Recipe, a: SongInfo, b: SongInfo) -> tuple[int, ...]:
     return tuple(length for length in recipe.lengths if length in preferred)
 
 
+SHORT_OVERLAP_BARS = 4
+SHORT_OVERLAP_COST = 0.5
 LEVEL_FALL_FREE_DB = 2.5
 LEVEL_RISE_FREE_DB = 1.5
 
@@ -300,6 +302,9 @@ def _score(
         + 0.10 * (1.0 - key_penalty)
         + 0.10 * vocal_term
     ) * (0.7 + 0.3 * _level_term(a, b, exit_cue, entry_cue, bars))
+    if recipe.beatmatched and bars <= SHORT_OVERLAP_BARS:
+        # all six rated overlaps this short were disliked, against 13 of 16 liked at 8 bars or more
+        score *= SHORT_OVERLAP_COST
     return Candidate(recipe, exit_cue, entry_cue, bars, round(score, 4), tuple(reasons))
 
 

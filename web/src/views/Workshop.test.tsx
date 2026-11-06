@@ -51,7 +51,7 @@ describe('the storage slider', () => {
   it('explains what’s used in plain words', async () => {
     fakeBackend({ 'GET /storage': storage });
     show();
-    expect(await screen.findByText('Selecta is using 4.2 GB. Your drive has 13 GB free.')).toBeInTheDocument();
+    expect(await screen.findByText('Selecta is using 4.20 GB. Your drive has 13 GB free.')).toBeInTheDocument();
   });
 
   it('explains when protected priority stems exceed the selected limit', async () => {

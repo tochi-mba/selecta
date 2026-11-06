@@ -249,6 +249,10 @@ def _ride(
         return None
 
     beat = timing.master_period
+    echo_room_beats = max((handoff - voice_end) / beat, 0.0)
+    echo_room = float(np.clip(echo_room_beats / 2.0, 0.0, 1.0))
+    echo_feedback = 0.15 + 0.25 * echo_room
+    echo_wet = 0.1 + 0.18 * echo_room
     swap = start + max(round(bars * _BAND_LEAVES), 1) * bar * beat
     a_low, b_low = _low_curves(swap, beat)
     rise = fade_in(start, band_gone)
@@ -271,8 +275,8 @@ def _ride(
         ),
         echo=Echo(
             delay_seconds=beat,
-            feedback=0.4,
-            wet=0.28,
+            feedback=echo_feedback,
+            wet=echo_wet,
             return_highpass_hz=220.0,
             damp_lowpass_hz=6500.0,
         ),
@@ -337,6 +341,9 @@ def _ride(
             "handoff": handoff,
             "voice_end": voice_end,
             "beat_limit_ms": _RIDE_BEAT_LIMIT_MS,
+            "echo_room_beats": echo_room_beats,
+            "echo_feedback": echo_feedback,
+            "echo_wet": echo_wet,
         },
     )
 
@@ -388,33 +395,90 @@ def _quick_steps(b: SongInfo, enter_b: float) -> np.ndarray:
 
 @dataclass(frozen=True)
 class RollShape:
-    """How one roll goes, worked out from the two songs rather than fixed.
-
-    Quick repeats need to sit near a fifth of a second, whatever the tempo, so a fast song repeats
-    less and a slow one more. A short phrase repeats twice, a long one once, and a single word goes
-    straight to the stutter.
-    """
+    """Phrase-roll choices scored from the source phrase and both songs' local arrangement."""
 
     phrase_loops: int
     word_hits: int
     fast_hits: int
     phrase_pulses: int
+    energy_lift: float
+    source_density: float
+    acceleration: float
+    bass_midpoint: float
+    bass_mid_level: float
 
 
-def roll_shape(a: SongInfo, b: SongInfo, phrase_a: list[Word]) -> RollShape:
+def _bar_mean(song: SongInfo, values: np.ndarray, start: float, end: float) -> float:
+    if values.size == 0:
+        return 0.5
+    first = int(np.clip(song.bar_at(start), 0, values.size - 1))
+    last = int(np.clip(song.bar_at(end) + 1, first + 1, values.size))
+    return float(np.mean(values[first:last]))
+
+
+def roll_shape(
+    a: SongInfo,
+    b: SongInfo,
+    phrase_a: list[Word],
+    entry_b: float | None = None,
+    available_fast_hits: int | None = None,
+) -> RollShape:
+    """Adapt repeat count, acceleration, and bass arrival to this pair's actual material.
+
+    The source phrase sets the rhythmic span. Local energy and low-band share describe how busy
+    the phrase is; B's energy and bass share describe the landing. A crowded phrase gets less
+    repetition, a sparse phrase into a clear lift can earn one more cycle, and a bass-heavy landing
+    holds B's low end back until later. The available B-side beat grid caps the final stutter.
+    """
     length = phrase_a[-1].end - phrase_a[0].start
     pulses = max(int(np.ceil(length / pulse(a) - 0.1)), 1)
     if len(phrase_a) < 2 or pulses > _MAX_PHRASE_PULSES:
         loops = 0
     else:
         loops = 2 if pulses <= a.beats_per_bar else 1
+
+    source_start, source_end = phrase_a[0].start, phrase_a[-1].end
+    entry = entry_b if entry_b is not None else (b.bar_time(0) if b.bar_times.size else 0.0)
+    source_energy = _bar_mean(a, a.energy_bars, source_start, source_end)
+    source_low = _bar_mean(a, a.low_share_bars, source_start, source_end)
+    entry_energy = _bar_mean(b, b.energy_bars, entry, entry + b.period * b.beats_per_bar * 2)
+    entry_low = _bar_mean(b, b.low_share_bars, entry, entry + b.period * b.beats_per_bar * 2)
+    source_density = float(np.clip(source_energy * 0.7 + source_low * 0.3, 0.0, 1.0))
+    energy_lift = entry_energy - source_energy
+    if energy_lift > 0.18 and source_density < 0.58 and len(phrase_a) >= 2:
+        loops = min(2, loops + 1)
+    elif source_density > 0.66 or energy_lift < -0.16:
+        loops = max(0, loops - 1)
+
     step = b.period / (2 if b.period < _SLOW_BEAT else 4)
     word_step = step * 2
+    word_hits = 4 if word_step <= _TIGHT_STEP else 2
+    if source_density > 0.68 or energy_lift < -0.2:
+        word_hits = max(2, word_hits - 1)
+    elif energy_lift > 0.24 and source_density < 0.48:
+        word_hits = min(5, word_hits + 1)
+
+    fast_hits = _MAX_FAST_HITS if step <= _TIGHT_STEP / 2 else _MAX_FAST_HITS // 2
+    if energy_lift < -0.18:
+        fast_hits = max(2, fast_hits // 2)
+    elif energy_lift > 0.24:
+        fast_hits = min(_MAX_FAST_HITS, fast_hits + 2)
+    if available_fast_hits is not None:
+        choices = [n for n in (2, 4, 6, 8) if n <= available_fast_hits]
+        fast_hits = min(fast_hits, max(choices, default=0))
+
+    acceleration = float(np.clip(1.0 + source_density * 0.65 - energy_lift * 0.9, 0.65, 1.5))
+    bass_heaviness = float(np.clip((entry_low - 0.18) / 0.36, 0.0, 1.0))
     return RollShape(
         phrase_loops=loops,
-        word_hits=4 if word_step <= _TIGHT_STEP else 2,
-        fast_hits=_MAX_FAST_HITS if step <= _TIGHT_STEP / 2 else _MAX_FAST_HITS // 2,
+        word_hits=word_hits,
+        fast_hits=fast_hits,
         phrase_pulses=pulses,
+        energy_lift=energy_lift,
+        source_density=source_density,
+        acceleration=acceleration,
+        bass_midpoint=0.42 + 0.33 * bass_heaviness,
+        bass_mid_level=0.55 - 0.4 * bass_heaviness,
     )
 
 
@@ -444,10 +508,10 @@ def phrase_roll(
     to_output = lambda time: lead + (time - start_song)  # noqa: E731
     phrase_end = to_output(end_song)
 
-    shape = roll_shape(a, b, phrase_a)
     following = a.beats[a.beats >= end_song - 0.08]
     grid = _quick_steps(b, enter_b)
-    if following.size == 0 or grid.size < shape.fast_hits:
+    shape = roll_shape(a, b, phrase_a, phrase_b[0].start, grid.size)
+    if following.size == 0 or shape.fast_hits < 2:
         return None
     fast = grid[-shape.fast_hits :]
     roll_start = to_output(float(following[0]))
@@ -465,7 +529,8 @@ def phrase_roll(
     word_stage = now
     a_step = a.period if a.period < _SLOW_BEAT else a.period / 2
     b_step = 2.0 * float(np.median(np.diff(fast)))
-    for spacing in np.linspace(a_step, b_step, shape.word_hits):
+    progress = np.linspace(0.0, 1.0, shape.word_hits)
+    for spacing in a_step + (b_step - a_step) * progress**shape.acceleration:
         hits.append(_hit(a, voice_a, now, word_start, min(word_length, float(spacing))))
         now += float(spacing)
 
@@ -478,10 +543,14 @@ def phrase_roll(
         room = (next_at - at) * (_LAST_HIT_SHARE if i + 1 == fast.size else 1.0)
         hits.append(_hit(a, voice_a, at, word_start, min(word_length, room), rising))
     ring = hits[-1]
+    echo_room_beats = max((landing - ring.gain.times[-1]) / b.period, 0.0)
+    echo_room = float(np.clip(echo_room_beats / 2.0, 0.0, 1.0))
+    echo_feedback = 0.15 + 0.25 * echo_room
+    echo_wet = 0.1 + 0.18 * echo_room
     ring.echo = Echo(
         delay_seconds=b.period,
-        feedback=0.35,
-        wet=0.3,
+        feedback=echo_feedback,
+        wet=echo_wet,
         return_highpass_hz=220.0,
         damp_lowpass_hz=6500.0,
     )
@@ -508,6 +577,7 @@ def phrase_roll(
         ),
         low=Curve([(word_stage - 0.05, 1.0), (word_stage + 0.05, 0.0)]),
     )
+    bass_middle = fast_stage + (landing - fast_stage) * shape.bass_midpoint
     rises = Part(
         song=b,
         warp=Warp.identity(word_stage, enter_b - bed, bed + _DECLICK),
@@ -524,10 +594,10 @@ def phrase_roll(
         low=Curve(
             [
                 (fast_stage - 0.02, 0.0),
-                (fast_stage, 0.25),
-                (fast_stage + (landing - fast_stage) / 2 - 0.02, 0.25),
-                (fast_stage + (landing - fast_stage) / 2, 0.6),
-                (landing - 0.02, 0.6),
+                (fast_stage, min(shape.bass_mid_level * 0.45, 0.25)),
+                (bass_middle - 0.02, min(shape.bass_mid_level * 0.45, 0.25)),
+                (bass_middle, shape.bass_mid_level),
+                (landing - 0.02, shape.bass_mid_level),
                 (landing, 1.0),
             ]
         ),
@@ -555,6 +625,14 @@ def phrase_roll(
             "word_stage": word_stage,
             "fast_stage": fast_stage,
             "shape": f"{shape.phrase_loops}+{shape.word_hits}+{shape.fast_hits}",
+            "energy_lift": round(shape.energy_lift, 3),
+            "source_density": round(shape.source_density, 3),
+            "acceleration": round(shape.acceleration, 3),
+            "bass_midpoint": round(shape.bass_midpoint, 3),
+            "bass_mid_level": round(shape.bass_mid_level, 3),
+            "echo_room_beats": echo_room_beats,
+            "echo_feedback": echo_feedback,
+            "echo_wet": echo_wet,
         },
     )
 
@@ -614,13 +692,29 @@ def word_exchange(
         hit = _hit(a, voice_a, at, start_a, call, level, speed)
         script.extras.append(hit)
     last = script.extras[-1]
+    last_call_at = float(script.b.warp.output_at(gaps[-1])) - max(near, 0.0) / speed
+    next_line = min(
+        (line.start for line in b.lines if line.start >= gaps[-1] + call),
+        default=None,
+    )
+    room_beats = (
+        max((float(script.b.warp.output_at(next_line)) - (last_call_at + call)) / b.period, 0.0)
+        if next_line is not None
+        else 2.0
+    )
+    room = float(np.clip(room_beats / 2.0, 0.0, 1.0))
+    echo_feedback = 0.15 + 0.25 * room
+    echo_wet = 0.1 + 0.18 * room
     last.echo = Echo(
         delay_seconds=b.period,
-        feedback=0.45,
-        wet=0.35,
+        feedback=echo_feedback,
+        wet=echo_wet,
         return_highpass_hz=220.0,
         damp_lowpass_hz=6500.0,
     )
     last.echo_send = Curve.constant(1.0)
     script.meta["calls"] = len(gaps)
+    script.meta["echo_room_beats"] = room_beats
+    script.meta["echo_feedback"] = echo_feedback
+    script.meta["echo_wet"] = echo_wet
     return script

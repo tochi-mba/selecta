@@ -42,6 +42,9 @@ MEMORY_WEIGHT = 0.5
 ORDER_PASSES = 2
 ORDER_REACH = 6
 ORDER_MUST_GAIN = 0.01
+CLOSE_TEMPO = 0.045
+FAR_KEYS = 5
+SHAKY_GRID = 0.8
 TOO_FAR_APART = 0.3
 """Past this, even at half or double time, nothing can carry two songs but an effect or a cut."""
 MOVE_NAMES = {
@@ -128,26 +131,40 @@ def can_ride(a: SongInfo, b: SongInfo, riders: _Riders) -> bool:
     )
 
 
+def ratings_lean(a: SongInfo, b: SongInfo, overlapping: bool = True) -> float:
+    """How these two look against what 52 rated seams had in common, up to 1. Overlaps within 4% of
+    each other's tempo were liked 11 times in 13, and 2 in 9 beyond that. Songs five or more keys
+    apart were liked 2 in 10, and a beat grid under 0.8 was liked 3 in 13."""
+    lean = 1.0
+    if overlapping and abs(a.bpm / b.bpm - 1.0) > CLOSE_TEMPO:
+        lean *= 0.3
+    if camelot_distance(a.camelot, b.camelot) >= FAR_KEYS:
+        lean *= 0.35
+    if min(a.grid_confidence, b.grid_confidence) < SHAKY_GRID:
+        lean *= 0.45
+    return lean
+
+
 def handoff_quality(a: SongInfo, b: SongInfo, riders: _Riders) -> float:
-    """How good the best move between two songs should sound, going by what the listener rated.
-    Vocal rides were the favourite, blends good, and effects and cuts mostly disliked, and those are
-    all a person gets when a mix picks songs that can't carry anything better. A shaky beat grid is
-    what most often puts beats out of line, so it counts against any move that matches beats."""
+    """How good the best move between two songs should sound, going by what the listener rated."""
     if folded_gap(a, b) > TOO_FAR_APART:
         return -1.0
-    grid = min(a.grid_confidence, b.grid_confidence)
-    if a.beats_per_bar != b.beats_per_bar or grid < BLEND_MIN_GRID:
+    if (
+        a.beats_per_bar != b.beats_per_bar
+        or min(a.grid_confidence, b.grid_confidence) < BLEND_MIN_GRID
+    ):
         return 0.1
-    sure = 0.75 + 0.25 * min((grid - BLEND_MIN_GRID) / (SURE_GRID - BLEND_MIN_GRID), 1.0)
     gap = abs(a.bpm / b.bpm - 1.0)
-    keys = camelot_distance(a.camelot, b.camelot)
     if can_ride(a, b, riders):
-        return sure
-    if gap <= 0.05:
-        return (0.75 if keys <= 3 else 0.55) * sure
+        return ratings_lean(a, b)
     if gap <= BLEND_MAX_GAP:
-        return 0.55 * sure
-    return 0.3 * sure if gap <= 0.3 else 0.1
+        return 0.75 * ratings_lean(a, b)
+    return 0.2 * ratings_lean(a, b, overlapping=False) if gap <= 0.3 else 0.1
+
+
+def what_is_known(a: SongInfo, b: SongInfo, memory: SeamMemory) -> float:
+    """What past renders and ratings say about this hand-over, and about others like it."""
+    return memory.pair_value(a.id, b.id) + memory.learned_fit(a, b) - 1.0
 
 
 class _Cues:
@@ -201,6 +218,8 @@ def plan_set(
     what past renders found, so hand-overs already known to work are worth more."""
     rng = None if seed is None else np.random.default_rng(seed)
     if not songs:
+        if end_id is not None:
+            raise ValueError("Cannot reach the requested destination with an empty library")
         return []
     links = links or set()
     first = next((song for song in songs if song.id == start_id), songs[0])
@@ -235,7 +254,7 @@ def plan_set(
             _quick_score(a, song, progress, energy_range, space, links, arc, energy_arc, link_bonus)
             + steady * handoff_quality(a, song, riders)
             + BELONGING * belongs.get(song.id, 0.0)
-            + MEMORY_WEIGHT * memory.pair_value(a.id, song.id)
+            + MEMORY_WEIGHT * what_is_known(a, song, memory)
         )
 
     beams: list[tuple[float, list[PlannedSong]]] = [
@@ -315,9 +334,13 @@ def plan_set(
             reason = move.recipe.name.replace("_", " ")
         return PlannedSong(song, move.recipe.name, reason)
 
-    return best_order(
-        beams[0][1], pair_score, move_between, separation, keep_last=end_id is not None
-    )
+    result = beams[0][1]
+    if end_id is not None and result[-1].song.id != end_id:
+        raise ValueError(
+            "Could not find a playable route to your destination. "
+            "Try a different start song or mix length."
+        )
+    return best_order(result, pair_score, move_between, separation, keep_last=end_id is not None)
 
 
 def best_order(
@@ -397,10 +420,10 @@ def suggest_next(
             continue
         score = _quick_score(current, song, 0.5, energy_range, space, set())
         score += HANDOFF_WEIGHT * handoff_quality(current, song, riders)
-        score += MEMORY_WEIGHT * memory.pair_value(current.id, song.id)
+        score += MEMORY_WEIGHT * what_is_known(current, song, memory)
         if after is not None:
             score += HANDOFF_WEIGHT * handoff_quality(song, after, riders)
-            score += MEMORY_WEIGHT * memory.pair_value(song.id, after.id)
+            score += MEMORY_WEIGHT * what_is_known(song, after, memory)
         options.append((score + BELONGING * belongs.get(song.id, 0.0), song))
     options.sort(key=lambda item: -item[0])
     cues = _Cues()
@@ -504,13 +527,13 @@ def rank_candidates(
             scores.append(
                 _quick_score(before, song, 0.5, energy_range, space, links)
                 + HANDOFF_WEIGHT * handoff_quality(before, song, riders)
-                + MEMORY_WEIGHT * memory.pair_value(before.id, song.id)
+                + MEMORY_WEIGHT * what_is_known(before, song, memory)
             )
         if after is not None:
             scores.append(
                 _quick_score(song, after, 0.5, energy_range, space, links)
                 + HANDOFF_WEIGHT * handoff_quality(song, after, riders)
-                + MEMORY_WEIGHT * memory.pair_value(song.id, after.id)
+                + MEMORY_WEIGHT * what_is_known(song, after, memory)
             )
         score = float(np.mean(scores)) if scores else 0.0
         score += BELONGING * belongs.get(song.id, 0.0)

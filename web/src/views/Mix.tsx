@@ -258,6 +258,7 @@ function SeamRow(props: {
   const { item, previous, refreshMix, open, onToggle, names, notify } = props;
   const seam = item.seam!;
   const state = seam.state;
+  const plannedBars = state.bars ?? seam.settings.bars;
   const chosen = seam.settings.move ?? 'auto';
   const [hearing, setHearing] = useState(false);
   const busy = state.status === 'queued' || state.status === 'rendering';
@@ -285,7 +286,7 @@ function SeamRow(props: {
           </span>
         </button>
         <div className="seam-actions">
-          {!busy && (
+          {!busy && state.status !== 'failed' && (
             <button onClick={() => void hear()}>
               {state.status === 'ready' ? (hearing ? 'Hide' : 'Hear it') : 'Render and hear'}
             </button>
@@ -299,9 +300,19 @@ function SeamRow(props: {
           <button onClick={onToggle}>{open ? 'Close' : 'Change'}</button>
         </div>
       </div>
+      <div className={`seam-visual ${state.status}`} role="img" aria-label={`${state.status === 'ready' ? 'Ready' : 'Planned'} transition${plannedBars ? ` over ${plannedBars} bars` : '; length not yet determined'} from ${previous.title} into ${item.title}`}>
+        <span className="seam-visual-label">{state.status === 'ready' ? 'Transition' : 'Transition plan'} · {plannedBars ? `${plannedBars} bars` : 'Length pending'}</span>
+        <div className="seam-visual-bars" aria-hidden="true">
+          {Array.from({ length: plannedBars ? Math.min(Math.max(plannedBars, 1), 8) : 1 }, (_, index) => (
+            <i key={index} />
+          ))}
+        </div>
+        <span className="seam-visual-caption"><b>{previous.title}</b><span>→</span><b>{item.title}</b></span>
+      </div>
       {state.status === 'failed' && (
         <p className="warn">
-          {state.error} {!open && <button className="link" onClick={onToggle}>Try another move</button>}
+          Remembered failed attempt: {state.error} {!open && <button className="link" onClick={onToggle}>Try another move</button>}
+          <button className="link" onClick={() => void post(`/mix/${item.position}/render?retry=true`).then(refreshMix)}>Retry this attempt anyway</button>
         </p>
       )}
       {hearing && state.status === 'ready' && <Preview seamKey={state.key} seamAt={state.preview_seam ?? 0} />}
@@ -421,7 +432,8 @@ export function Mix(props: ViewProps) {
     notify(`Added ${song.title}.`, true);
   };
 
-  const waiting = seams.filter((state) => state.status === 'none' || state.status === 'failed').length;
+  const waiting = seams.filter((state) => state.status === 'none').length;
+  const rendering = seams.filter((state) => state.status === 'queued' || state.status === 'rendering').length;
 
   const renderAll = async () => {
     setMixData(await post<MixData>('/mix/render'));
@@ -513,7 +525,7 @@ export function Mix(props: ViewProps) {
           </button>
           {ready < seams.length && (
             <button onClick={() => void renderAll()} disabled={!waiting}>
-              {waiting ? 'Render every seam' : `Rendering ${ready} of ${seams.length}…`}
+              {waiting ? 'Render every seam' : rendering ? `Rendering ${ready} of ${seams.length}…` : 'Change failed transitions to continue'}
             </button>
           )}
           {mix.length > 1 && (

@@ -1,5 +1,8 @@
 # Selecta
 
+Selecta supports the browser's **Install app** action in Chrome and Edge through its web app manifest. Open `http://127.0.0.1:8733/` in your browser and use the install icon in the address bar, or the browser menu's install-app action. Installation creates a standalone browser app; the local Selecta server must be running to access the music library and render mixes.
+
+
 An auto DJ for your own music folder. Point it at a folder and it plays a set in your browser, with transitions chosen and rendered like a really good DJ would, including wordplay cuts where a word in one song hands off to the same word in the next.
 
 It runs entirely on your PC. Your music never leaves your machine, and no audio is ever stored in this repo.

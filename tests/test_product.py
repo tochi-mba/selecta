@@ -194,14 +194,23 @@ def test_storage_budget_and_priority_queue(tmp_path: Path):
     app = create_app(settings, tmp_path / "no-web")
     with connection(tmp_path) as conn:
         conn.executemany(
-            "INSERT INTO songs(id,path,folder,size,mtime,duration,is_music) VALUES(?,?,?,?,?,?,1)",
-            [(1, "one", "", 1, 1, 100), (2, "two", "", 1, 1, 100)],
+            "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
+            "VALUES(?,?,?,?,?,?,?,?,1)",
+            [
+                (1, "one", "", 1, 1, 100, "Artist", "One"),
+                (2, "two", "", 1, 1, 100, "Artist", "Two"),
+            ],
         )
         conn.commit()
     client = TestClient(app)
     assert client.post("/api/storage", json={"budget_gb": 1}).status_code == 200
     assert settings.effective_cache_cap_bytes == 1024**3
     assert client.post("/api/songs/2/priority?priority=100").status_code == 200
+    priority_rows = client.get("/api/songs?state=priority").json()
+    assert [row["id"] for row in priority_rows] == [2]
+    assert priority_rows[0]["priority"] is True
     with connection(tmp_path) as conn:
         rows = db.songs_needing_analysis(conn, 3)
     assert [row["id"] for row in rows] == [2, 1]
+    assert client.post("/api/songs/2/priority?priority=0").status_code == 200
+    assert client.get("/api/songs?state=priority").json() == []

@@ -82,24 +82,6 @@ CREATE TABLE IF NOT EXISTS seam_book (
     UNIQUE(song_a, song_b, kind, payload)
 );
 
-CREATE TABLE IF NOT EXISTS seam_memory (
-    song_a INTEGER NOT NULL,
-    song_b INTEGER NOT NULL,
-    move TEXT NOT NULL,
-    outcome TEXT NOT NULL,
-    why TEXT NOT NULL DEFAULT '',
-    checks TEXT NOT NULL DEFAULT '{}',
-    exit_bar INTEGER,
-    entry_bar INTEGER,
-    bars INTEGER,
-    blamed_song INTEGER,
-    rating TEXT,
-    analysis_version INTEGER NOT NULL,
-    rules_version INTEGER NOT NULL,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (song_a, song_b, move)
-);
-
 CREATE TABLE IF NOT EXISTS ratings (
     id INTEGER PRIMARY KEY,
     seam_id INTEGER REFERENCES seam_book(id) ON DELETE SET NULL,
@@ -141,6 +123,24 @@ def connect(path: Path) -> sqlite3.Connection:
             # the page opens with two requests at once, and the other one may have just added it
             if "duplicate column" not in str(problem):
                 raise
+    legacy = conn.execute(
+        "SELECT id,kind,payload FROM seam_book WHERE kind IN ('same_melody','harmonic_cousin')"
+    ).fetchall()
+    for row in legacy:
+        payload = {
+            "method": "legacy_whole_track_mean_chroma",
+            "legacy_kind": row["kind"],
+            "legacy_payload": row["payload"],
+            "reason": (
+                "Average pitch-profile resemblance; melody and chord order were not verified."
+            ),
+        }
+        conn.execute(
+            "UPDATE seam_book SET kind='tonal_profile_cousin',payload=? WHERE id=?",
+            (json.dumps(payload), row["id"]),
+        )
+    if legacy:
+        conn.commit()
     return conn
 
 

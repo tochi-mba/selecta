@@ -12,8 +12,8 @@ from selecta.planner.choose import choose_transition, enumerate_candidates
 from selecta.planner.fit import TimbreSpace, folded_gap, level_step
 from selecta.render import dsp
 from selecta.render.engine import render
-from selecta.styles.blend import tempo_ramp
-from selecta.styles.exits import echo_out
+from selecta.styles.blend import bass_swap_blend, tempo_ramp
+from selecta.styles.exits import delay_throw, echo_out, reverb_wash
 
 
 def _cue(song, bar, kind="test"):
@@ -38,6 +38,52 @@ def test_echo_out_never_leaves_a_hole_before_the_next_song(tmp_path):
     usable = around.size - around.size % frame
     levels = np.sqrt(np.mean(around[:usable].reshape(-1, frame) ** 2, axis=1))
     assert levels.min() > levels.mean() * 0.1
+
+
+def test_echo_tail_shrinks_when_the_incoming_vocal_arrives_early(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
+    b = song_from_track(tmp_path, "b", make_track(bpm=120, bars=48, seed=2))
+    b.vocals_known = True
+    entry = b.bar_time(8)
+    b.lines = [Line(entry + 0.01, entry + 1.0, "early vocal")]
+    early = echo_out(a, b, _cue(a, 32), _cue(b, 8))
+    b.lines = [Line(entry + b.period * 4, entry + b.period * 5, "later vocal")]
+    spacious = echo_out(a, b, _cue(a, 32), _cue(b, 8))
+    assert early.a.echo.wet < spacious.a.echo.wet
+    assert early.a.echo.feedback < spacious.a.echo.feedback
+
+
+def test_bass_swap_waits_longer_for_a_bass_heavy_incoming_section(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
+    b = song_from_track(tmp_path, "b", make_track(bpm=120, bars=48, seed=2))
+    a.low_share_bars[:] = 0.1
+    b.low_share_bars[:] = 0.8
+    a.energy_bars[:] = 0.2
+    b.energy_bars[:] = 0.8
+    script = bass_swap_blend(a, b, _cue(a, 32), _cue(b, 8), bars=8)
+    assert script is not None
+    assert script.meta["swap_at"] > 0.5
+
+
+def test_delay_and_reverb_tails_leave_room_for_b_s_next_vocal(tmp_path):
+    a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
+    b = song_from_track(tmp_path, "b", make_track(bpm=120, bars=48, seed=2))
+    exit_cue, entry_cue = _cue(a, 32), _cue(b, 8)
+    a.vocals_known = True
+    a.lines = [Line(exit_cue.time - 0.7, exit_cue.time - 0.1, "outgoing word")]
+    b.vocals_known = True
+    b.lines = [Line(entry_cue.time + 0.01, entry_cue.time + 1.0, "early vocal")]
+    tight_delay = delay_throw(a, b, exit_cue, entry_cue)
+    tight_reverb = reverb_wash(a, b, exit_cue, entry_cue)
+    b.lines = [Line(entry_cue.time + b.period * 4, entry_cue.time + b.period * 5, "later vocal")]
+    open_delay = delay_throw(a, b, exit_cue, entry_cue)
+    open_reverb = reverb_wash(a, b, exit_cue, entry_cue)
+    assert tight_delay is not None and open_delay is not None
+    assert tight_reverb is not None and open_reverb is not None
+    assert tight_delay.a.echo.wet < open_delay.a.echo.wet
+    assert tight_delay.a.echo.feedback < open_delay.a.echo.feedback
+    assert tight_reverb.a.wash.wet < open_reverb.a.wash.wet
+    assert tight_reverb.a.wash.decay_seconds < open_reverb.a.wash.decay_seconds
 
 
 def test_audit_fails_a_seam_that_falls_and_stays_down(tmp_path):

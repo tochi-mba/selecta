@@ -51,6 +51,8 @@ type Planned = {
 export class SetPlayer {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
+  private spectrum: Uint8Array<ArrayBuffer> | null = null;
   private songs = new Map<number, Promise<AudioBuffer>>();
   private clips = new Map<string, Promise<AudioBuffer>>();
   private timer: number | null = null;
@@ -60,6 +62,7 @@ export class SetPlayer {
   private requested = new Set<string>();
   private fallenBack = new Set<number>();
   private savedAt = 0;
+  private heard = new Map<number, number>();
   private getMix: () => MixItem[];
   private refreshMix: () => void;
   state: NowState = {
@@ -84,9 +87,21 @@ export class SetPlayer {
     if (!this.context) {
       this.context = new AudioContext({ sampleRate: 44100 });
       this.master = this.context.createGain();
-      this.master.connect(this.context.destination);
+      this.analyser = this.context.createAnalyser();
+      this.analyser.fftSize = 512;
+      this.analyser.smoothingTimeConstant = 0.78;
+      this.spectrum = new Uint8Array(this.analyser.frequencyBinCount);
+      this.master.connect(this.analyser);
+      this.analyser.connect(this.context.destination);
     }
     return this.context;
+  }
+
+  /** The mixed output's frequency bands, sampled only by the visualizer. */
+  getSpectrum(): Uint8Array | null {
+    if (!this.analyser || !this.spectrum) return null;
+    this.analyser.getByteFrequencyData(this.spectrum);
+    return this.spectrum;
   }
 
   private update(changes: Partial<NowState>) {
@@ -154,6 +169,10 @@ export class SetPlayer {
   }
 
   private stopAll() {
+    if (this.current && this.context) {
+      const elapsed = Math.max(0, this.context.currentTime - this.current.startedAt);
+      this.heard.set(this.current.songId, (this.heard.get(this.current.songId) ?? 0) + elapsed);
+    }
     this.silence(this.current);
     this.silence(this.planned?.clip);
     this.silence(this.planned?.next);
@@ -199,7 +218,7 @@ export class SetPlayer {
     this.current = { ...playing, songId: item.song_id, position, startedAt, offset, duration: buffer.duration };
     this.requested.clear();
     this.update({ phase: 'playing', duration: buffer.duration });
-    if (this.timer === null) this.timer = window.setInterval(() => this.tick(), 200);
+    if (this.timer === null) this.timer = window.setInterval(() => this.tick(), 50);
     this.tick();
   }
 
@@ -231,6 +250,8 @@ export class SetPlayer {
       }
     }
     if (mix[current.position + 1]) {
+      const heard = (this.heard.get(current.songId) ?? 0) + Math.max(0, (this.context?.currentTime ?? current.startedAt) - current.startedAt);
+      void post('/playback/skip', { song_id: current.songId, heard_seconds: heard, source_position: this.songTime() }).catch(() => {});
       await this.playFrom(current.position + 1);
       this.update({ notice: seam?.status === 'ready' ? '' : 'That seam wasn’t ready, so this skipped straight on.' });
     }

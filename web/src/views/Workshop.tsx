@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { get, post, Storage } from '../api';
 import { gb, storageWords } from '../lib';
 import { ViewProps } from './shared';
+import { Listening } from './Listening';
 
 const GB = 1024 ** 3;
 
@@ -149,6 +150,7 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
 
       <StoragePanel />
       <MemoryPanel />
+      <Listening />
 
       <section className="panel stack">
         <h2>Add another folder</h2>

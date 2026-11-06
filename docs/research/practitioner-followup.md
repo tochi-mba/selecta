@@ -1,6 +1,6 @@
 # Practitioner check: vocals, stems, and phrase-first choices
 
-Checked 5 November 2026. Forum posts are useful reports of practice, not controlled evidence;
+Checked 6 November 2026. Forum posts are useful reports of practice, not controlled evidence;
 upvotes and individual examples do not establish universal parameters.
 
 - In [a vocal-heavy transition discussion on r/Beatmatch](https://www.reddit.com/r/Beatmatch/comments/1wafkhz/how_to_mixtransition_two_vocally_tracks/),
@@ -105,8 +105,107 @@ upvotes and individual examples do not establish universal parameters.
 - Compare stem quality modes on a small, representative set before changing the separation model or
   defaults. Product manuals describe controls, and forum posts describe individual experience; neither
   substitutes for Selecta's own blind, paired listening measurements.
+- A [June 2026 vocal-transition discussion](https://www.reddit.com/r/Beatmatch/comments/1u03p4g/tips_for_transitions_with_songs_with_vocals/)
+  recommends looping an instrumental entry, swapping EQ at a phrase boundary, and letting only one
+  lyric lead at a time. Contributors also describe purposeful vocal overlap and call-and-response as
+  exceptions that can work when the arrangement supports them. This argues for scoring vocal density
+  and phrase timing, not treating any overlap as automatically bad.
+- A [recent discussion of vocal-heavy hard dance](https://www.reddit.com/r/Beatmatch/comments/1wafkhz/how_to_mixtransition_two_vocally_tracks/)
+  reports that long blends can be the wrong form for dense, short edits: use an instrumental phrase,
+  an intro loop, or a quicker phrase-safe handoff, and audition stem removal because dense effected
+  vocals can leave audible separation artifacts. This is genre-specific testimony, but reinforces
+  that transition length and stem use should depend on the pair and the listener's requested feel.
+- An older [DJ TechTools set-flow discussion](https://forum.djtechtools.com/t/techniques-to-make-your-mix-feel-more-consistent/36273?page=2)
+  describes a coherent set as one where track selection and phrase timing make the whole feel
+  continuous, with a new song taking over when the old one removes a defining part such as its vocal,
+  lead or bass. It supports using arrangement changes and handoff roles alongside BPM and key; it
+  does not establish a measurable threshold.
+- Engine DJ owners describe both [background stem preparation and long analysis queues](https://community.enginedj.com/t/stems-super-slow-analysis-no-progress-indicator/60640),
+  including multi-hour preparation for large libraries. These reports are device- and version-specific,
+  but are consistent with making expensive stems on-demand or priority-first and showing progress
+  instead of implying that the whole library is ready.
 - Let the planner choose transition length and overlap density for each pair. Phrase alignment alone
   does not make a long blend suitable, especially when the incoming arrangement gets busy quickly.
 - Treat an energy arc as a guide that can rise, dip, or peak before the final track; let a listener
   draw it or return to a mix-specific default. A curve shapes sequencing, but does not replace
   listening or a live DJ's judgment when the room calls for a different direction.
+- Keep vocal overlap as a graded, pair-specific choice: sequential lyrics are the safe default, while
+  rehearsed interleaving or call-and-response can be surfaced when timing, arrangement and stems all
+  support it. Never infer that stem removal alone will fix a crowded transition.
+- Treat library-wide stem preparation as a visible, user-budgeted background queue. Reports from
+  standalone DJ ecosystems support showing work and letting people prioritize the tracks they expect
+  to play first; those reports do not predict Selecta's model speed on this PC.
+- In a [May 2026 BPM-transition discussion on r/Beatmatch](https://www.reddit.com/r/Beatmatch/comments/1tapfda/help_how_do_i_transition_in_between_regular_songs/),
+  contributors describe half/double tempo as a useful relationship, gradual tempo changes across
+  several tracks, and clean sequential hand-offs when a forced blend would sound worse. This is
+  anecdotal advice for varied event music, not a guarantee that a half/double pair has compatible
+  meter, groove, or phrase structure. Selecta already folds half/double BPM for some tempo-free
+  landings; it should not treat the arithmetic match as proof that an extended beatmatched blend fits.
+- A [2026 r/Beatmatch phrasing thread](https://www.reddit.com/r/Beatmatch/comments/1vfj09y/phrasing/)
+  describes looping as useful only when the selected phrase actually gives the outgoing track room;
+  another [loop-practice thread](https://www.reddit.com/r/Beatmatch/comments/1ph79jv/do_professional_djs_often_use_loop_when/)
+  warns that habitual looping can distract a DJ from listening ahead. These are personal reports,
+  but they argue for cue-aware, optional loop rolls that solve a specific hand-off, not an effect
+  applied to every pair.
+- In a [DJ TechTools explanation of loop rolls](https://forum.djtechtools.com/t/quick-q/63425),
+  users distinguish a repeating roll effect from an ordinary loop and mention using it to build
+  toward a drop. The technique depends on transport behavior such as slip/flux mode and a prepared
+  drop cue, so an offline render needs to model the source timeline carefully and should never be
+  presented as a plain beat-matched loop.
+- A [DJ TechTools transition discussion](https://forum.djtechtools.com/t/transitions-in-a-mix/51669)
+  describes common 16/32-bar phrases but also notes that some tracks do not follow a regular DJ
+  structure. This supports using detected section and phrase evidence when available, while keeping
+  an auditionable simpler hand-off when that structure is uncertain.
+- In a [September 2026 r/Beatmatch loop discussion](https://www.reddit.com/r/Beatmatch/comments/1w450ls/looping_before_transitioning_a_track/),
+  contributors describe looping a vocal-free part of the outgoing song while the next song is
+  introduced, then releasing it after a few beats. A [separate practical loop thread](https://www.reddit.com/r/Beatmatch/comments/1lebu7k/how_do_you_use_looping/)
+  describes changing loop size from 8 to 4 to 2 beats and waiting for the right phrase to release.
+  These examples support choosing the source and repeat length from its vocal gaps, phrase boundary,
+  and the next song's timing, rather than applying one roll count to every pair.
+- A [looping discussion about 1/2/4-bar lengths](https://www.reddit.com/r/Beatmatch/comments/1afyhvh/using_loops_for_beatmatching_on_cdjs/)
+  notes that loop size trades musical context against the risk of the restart becoming obvious; the
+  roll must also be released on a compatible phrase. A [DJ TechTools explanation of loop rolls](https://forum.djtechtools.com/t/quick-q/63425)
+  distinguishes a roll from an ordinary loop because slip/flux behavior lets the source timeline
+  continue underneath. For Selecta, this implies both a song-aware repeat schedule and explicit
+  landing-cue checks. The sources are practitioners' examples, not a universal numeric recipe.
+- Phrase-roll implementation was therefore changed to derive the contour from local source energy,
+  low-band share, the incoming section's energy and bass share, vocal phrase duration, BPM, and the
+  actual beat-grid runway before B's word. Dense phrases now reduce repetition; an open source into a
+  stronger section can build a longer/faster roll; bass-heavy incoming sections hold the low end
+  back later. Synthetic tests cover contrasting sparse/lift and crowded/heavy pairs, but listening
+  still has to establish whether those adaptations sound musical on real songs.
+- Current practitioner notes on [vocal transitions](https://www.reddit.com/r/Beatmatch/comments/1u03p4g/tips_for_transitions_with_songs_with_vocals/)
+  recommend creating instrumental room or alternating short vocal lines, and describe stem cuts or
+  echo/reverb as options when they solve a specific clash. A separate [effects discussion](https://www.reddit.com/r/Beatmatch/comments/1wtdr7e/how_do_you_use_effects_to_transition/)
+  warns against making effect use habitual; some contributors prefer a short, timed echo or no effect
+  at all. A [filter discussion](https://www.reddit.com/r/Beatmatch/comments/1rgix4w/transition_filtersfx/)
+  describes choosing high-pass or low-pass direction based on which part needs to leave or arrive.
+  These are practitioner anecdotes, not controlled comparisons.
+- The [Pioneer DJM-S11 manual](https://www.pioneer-dj.de/wp-content/uploads/2024/02/Pioneer-DJm-S11-User-Manual.pdf)
+  documents echo as repeated, attenuating delay and its depth control as a balance of dry/effected
+  sound and feedback. This supports treating repeat amount as a meaningful audible control; it does
+  not imply one best value for every transition. Selecta now scales vocal-ride, echo-out, delay-throw
+  and reverb-wash tails against the incoming song's measured lyric runway. Phrase-roll and
+  call-and-response endings also scale their echo to the remaining vocal gap. The blend/roll moves
+  also use phrase timing, stems, local energy or bass information as relevant. Tests check this parameter
+  behavior, while actual sound quality remains a listening question.
+- Serato's official [Stems overview](https://support.serato.com/hc/en-us/articles/5700968326927-Stems-Overview)
+  describes independently controlling vocal, bass, melody, and drum parts; its [Stems guide](https://support.serato.com/hc/en-us/articles/18086920234511-Using-Stems)
+  also documents stem-specific echo and break effects. This supports applying a tail to the isolated
+  vocal or instrument layer that needs it instead of washing the entire mix. Selecta's ride/roll
+  renders already route these echoes on isolated vocal hits; blend moves keep effect-free stems
+  separate. The guide documents product capabilities, not whether any given stem sounds clean.
+- In a [Beatmatch echo/reverb thread](https://www.reddit.com/r/Beatmatch/comments/11t0c8d/help_with_echo_and_reverb/),
+  one practitioner describes a one-beat echo at a low-to-mid depth after lowering the low EQ, while
+  other commenters recommend changing or skipping FX so blends do not all sound alike. Another
+  [effects thread](https://www.reddit.com/r/Beatmatch/comments/199snbt/use_fx/) warns that FX on bass or
+  the whole frequency range can become muddy, while describing reverb as useful for a deliberate
+  buildup. These comments reinforce Selecta's filtered, brief sends and cue-dependent effect amount;
+  they are not universal settings. The low swap in the beatmatched blend also now shifts modestly
+  toward the incoming section when its local energy and bass share call for a later hand-off.
+- A read-only snapshot of the Selecta Preview seam metadata on 6 November 2026 found 23 rated seams:
+  phrase roll 7 Good / 9 Bad; word blend 2 Good; vocal ride 1 Good; echo out 1 Good; word cut 1 Good;
+  delay throw 1 Bad; bass swap blend 1 Bad. All other styles had no rating in this snapshot. The
+  sample is sparse and the labels are subjective. A Bad now excludes only that ordered song pair and
+  rendered style from automatic planning; a Good remains a preference for that exact pair. One Bad
+  rating is not evidence to ban a style library-wide.

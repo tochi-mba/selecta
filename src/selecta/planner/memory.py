@@ -1,35 +1,46 @@
-"""What Selecta has learned from trying transitions, kept for good.
+"""What Selecta has learned from trying transitions.
 
 A rendered seam costs minutes, and everything it finds out is worth keeping: which moves work
 between which two songs and in which direction, where they landed, what fell short, and what the
-listener thought. Finished seams live in a cache that gets cleared, so this lives in the database.
-
-Mixes, fallbacks and suggestions all read it, so each one starts from what's already known rather
-than finding it out again.
+listener thought. Each finished seam's record is kept in the seam history, which outlasts the render
+cache. This reads those records into something a mix, a fallback or a suggestion can ask about, so
+each starts from what's already known rather than finding it out again.
 """
 
 from __future__ import annotations
 
-import json
-import sqlite3
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from pathlib import Path
 
-from selecta.config import ANALYSIS_VERSION
+from selecta.analysis.key import camelot_distance
+from selecta.analysis.song import SongInfo
 
 RULES_VERSION = 1
-"""Raise this when rendering changes enough that past results no longer say what would happen now.
-Ratings always survive it, since a person's opinion of a hand-over doesn't go out of date."""
+"""Raise this when rendering changes enough that past failures no longer say what would happen now.
+Ratings always count, since a person's opinion of a hand-over doesn't go out of date."""
 WORD_TIMED_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
 
 Attempt = tuple[int, int, str]
 
 
+def _taste(good: int, bad: int) -> float:
+    """Around 1. It starts as if two good and two bad had been heard, so a single rating nudges
+    what's wanted rather than swinging it."""
+    return 2.0 * (good + 2.0) / (good + bad + 4.0)
+
+
+def _traits_of_pair(a: SongInfo, b: SongInfo) -> tuple[str, str]:
+    gap = abs(a.bpm / b.bpm - 1.0)
+    tempo = "tempo close" if gap <= 0.04 else "tempo near" if gap <= 0.08 else "tempo far"
+    keys = "keys far" if camelot_distance(a.camelot, b.camelot) >= 5 else "keys fine"
+    return tempo, keys
+
+
 @dataclass
 class SeamMemory:
-    """Everything known so far, ready to ask about. Every pair is one way round, because A into B
-    says nothing about B into A: on the reels the same two songs rated differently each way."""
+    """Everything known so far. Every pair is one way round, because A into B says nothing about B
+    into A: on the reels the same two songs rated differently each way."""
 
     failed: set[Attempt] = field(default_factory=set)
     clean: set[Attempt] = field(default_factory=set)
@@ -43,15 +54,81 @@ class SeamMemory:
     clean_songs: Counter[int] = field(default_factory=Counter)
     good_moves: Counter[str] = field(default_factory=Counter)
     bad_moves: Counter[str] = field(default_factory=Counter)
+    good_traits: Counter[str] = field(default_factory=Counter)
+    bad_traits: Counter[str] = field(default_factory=Counter)
+    _pairs: dict[tuple[int, int], set[Attempt]] | None = field(default=None, repr=False)
+
+    @classmethod
+    def from_states(cls, states: Iterable[dict]) -> SeamMemory:
+        found = cls()
+        for state in states:
+            found.learn(state)
+        return found
+
+    def learn(self, state: dict) -> None:
+        """Take in one seam's record. Failures from older rendering rules don't count against a move
+        now, except word timing, which hasn't changed."""
+        request = state.get("request") or {}
+        a, b = request.get("a"), request.get("b")
+        if a is None or b is None:
+            return
+        self._pairs = None
+        current = state.get("rules") == RULES_VERSION
+        for attempt in state.get("tried") or []:
+            if current or attempt["move"] in WORD_TIMED_MOVES:
+                self.failed.add((a, b, attempt["move"]))
+                if attempt.get("song") is not None:
+                    self.untimed[attempt["song"]] += 1
+        if state.get("status") == "failed":
+            move = request.get("move")
+            if current or move in WORD_TIMED_MOVES:
+                self.failed.add((a, b, move))
+                if state.get("untimed_song") is not None:
+                    self.untimed[state["untimed_song"]] += 1
+        if state.get("status") != "ready":
+            return
+        style = state.get("style")
+        attempt = (a, b, style)
+        (self.clean if state.get("passed") else self.warned).add(attempt)
+        (self.clean_songs if state.get("passed") else self.warned_songs).update((a, b))
+        if style in WORD_TIMED_MOVES:
+            self.timed.update((a, b))
+        if state.get("exit_bar") is not None and state.get("entry_bar") is not None:
+            self.placements[attempt] = (
+                state["exit_bar"],
+                state["entry_bar"],
+                state.get("placed_bars") or 0,
+            )
+        if state.get("rating") == "good":
+            self.liked.add(attempt)
+            self.good_moves[style] += 1
+        elif state.get("rating") == "bad":
+            self.disliked.add(attempt)
+            self.bad_moves[style] += 1
+
+    def read_taste(self, library: Iterable[SongInfo]) -> SeamMemory:
+        """Work out what the listener's ratings have in common, which needs the songs themselves."""
+        songs = {song.id: song for song in library}
+        for group, counted in ((self.liked, self.good_traits), (self.disliked, self.bad_traits)):
+            for a, b, _ in group:
+                if a in songs and b in songs:
+                    counted.update(_traits_of_pair(songs[a], songs[b]))
+        return self
+
+    def learned_fit(self, a: SongInfo, b: SongInfo) -> float:
+        """How the listener's ratings of other seams like this one lean, around 1."""
+        tempo, keys = _traits_of_pair(a, b)
+        return (
+            _taste(self.good_traits[tempo], self.bad_traits[tempo])
+            * _taste(self.good_traits[keys], self.bad_traits[keys])
+        ) ** 0.5
 
     def can_time_words(self, song_id: int) -> bool:
         return self.timed[song_id] > 0 or self.untimed[song_id] == 0
 
     def taste(self, move: str) -> float:
-        """How much the listener's ratings favour this move, around 1. It starts as if two good
-        and two bad had been heard, so a single rating nudges it rather than swings it."""
-        good, bad = self.good_moves[move], self.bad_moves[move]
-        return 2.0 * (good + 2.0) / (good + bad + 4.0)
+        """How much the listener's ratings favour this move, around 1."""
+        return _taste(self.good_moves[move], self.bad_moves[move])
 
     def move_factor(self, a: int, b: int, move: str) -> float:
         """How much more or less to want this move between these two, given what's known. Nought
@@ -72,37 +149,34 @@ class SeamMemory:
     def proven(self, a: int, b: int, move: str) -> bool:
         """Has this move already come out clean, or been liked, between these two?"""
         attempt = (a, b, move)
+        if attempt in self.disliked:
+            return False
         return attempt in self.clean or attempt in self.liked
 
     def pair_value(self, a: int, b: int) -> float:
         """What's known about this hand-over overall, from -1 to 1, or nought if nothing is."""
-        best = 0.0
         attempts = self._by_pair().get((a, b))
         if not attempts:
-            return best
+            return 0.0
         if attempts & self.liked:
             return 1.0
-        if attempts & self.clean:
-            best = 0.5
-        elif attempts & self.warned:
-            best = 0.15
-        if attempts & self.disliked and not best:
+        kept = attempts - self.disliked
+        if kept & self.clean:
+            return 0.5
+        if attempts & self.disliked:
             return -1.0
-        if not best and attempts <= self.failed:
-            return -0.3
-        return best
+        if kept & self.warned:
+            return 0.15
+        return -0.3
 
     def best_known(self, a: int, b: int) -> tuple[str, str] | None:
         """The move most worth mentioning between these two, and how it went."""
-        for attempt in sorted(self._by_pair().get((a, b), ())):
-            if attempt in self.liked:
-                return attempt[2], "liked"
-        for attempt in sorted(self._by_pair().get((a, b), ())):
-            if attempt in self.clean:
-                return attempt[2], "clean"
-        for attempt in sorted(self._by_pair().get((a, b), ())):
-            if attempt in self.disliked:
-                return attempt[2], "disliked"
+        attempts = sorted(self._by_pair().get((a, b), ()))
+        kinds = ((self.liked, "liked"), (self.disliked, "disliked"), (self.clean, "clean"))
+        for wanted, how in kinds:
+            for attempt in attempts:
+                if attempt in wanted:
+                    return attempt[2], how
         return None
 
     def song_value(self, song_id: int) -> float:
@@ -121,8 +195,6 @@ class SeamMemory:
                     self._pairs.setdefault(attempt[:2], set()).add(attempt)
         return self._pairs
 
-    _pairs: dict[tuple[int, int], set[Attempt]] | None = field(default=None, repr=False)
-
     def summary(self) -> dict[str, int]:
         return {
             "tried": len(self.failed | self.clean | self.warned),
@@ -132,124 +204,3 @@ class SeamMemory:
             "liked": len(self.liked),
             "disliked": len(self.disliked),
         }
-
-
-def remember(
-    conn: sqlite3.Connection,
-    a: int,
-    b: int,
-    move: str,
-    outcome: str,
-    why: str = "",
-    checks: dict[str, float] | None = None,
-    placement: tuple[int, int, int] | None = None,
-    blamed: int | None = None,
-) -> None:
-    """Keep what one attempt found. A newer result replaces an older one, but not its rating."""
-    exit_bar, entry_bar, bars = placement or (None, None, None)
-    conn.execute(
-        "INSERT INTO seam_memory(song_a,song_b,move,outcome,why,checks,exit_bar,entry_bar,bars,"
-        "blamed_song,analysis_version,rules_version) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) "
-        "ON CONFLICT(song_a,song_b,move) DO UPDATE SET outcome=excluded.outcome,why=excluded.why,"
-        "checks=excluded.checks,exit_bar=excluded.exit_bar,entry_bar=excluded.entry_bar,"
-        "bars=excluded.bars,blamed_song=excluded.blamed_song,"
-        "analysis_version=excluded.analysis_version,rules_version=excluded.rules_version,"
-        "updated_at=CURRENT_TIMESTAMP",
-        (
-            a,
-            b,
-            move,
-            outcome,
-            why,
-            json.dumps(checks or {}),
-            exit_bar,
-            entry_bar,
-            bars,
-            blamed,
-            ANALYSIS_VERSION,
-            RULES_VERSION,
-        ),
-    )
-    conn.commit()
-
-
-def remember_rating(conn: sqlite3.Connection, a: int, b: int, move: str, rating: str) -> None:
-    """Keep what the listener thought. Clearing a rating forgets the opinion, not the attempt."""
-    conn.execute(
-        "INSERT INTO seam_memory(song_a,song_b,move,outcome,analysis_version,rules_version,rating) "
-        "VALUES(?,?,?,'clean',?,?,?) ON CONFLICT(song_a,song_b,move) DO UPDATE SET "
-        "rating=excluded.rating,updated_at=CURRENT_TIMESTAMP",
-        (a, b, move, ANALYSIS_VERSION, RULES_VERSION, None if rating == "none" else rating),
-    )
-    conn.commit()
-
-
-def load_memory(conn: sqlite3.Connection) -> SeamMemory:
-    found = SeamMemory()
-    for row in conn.execute("SELECT * FROM seam_memory"):
-        attempt = (row["song_a"], row["song_b"], row["move"])
-        if row["rating"] == "good":
-            found.liked.add(attempt)
-            found.good_moves[row["move"]] += 1
-        elif row["rating"] == "bad":
-            found.disliked.add(attempt)
-            found.bad_moves[row["move"]] += 1
-        if row["analysis_version"] != ANALYSIS_VERSION or row["rules_version"] != RULES_VERSION:
-            continue
-        if row["blamed_song"] is not None:
-            found.untimed[row["blamed_song"]] += 1
-        if row["outcome"] == "failed":
-            found.failed.add(attempt)
-            continue
-        (found.clean if row["outcome"] == "clean" else found.warned).add(attempt)
-        counted = found.clean_songs if row["outcome"] == "clean" else found.warned_songs
-        counted.update(attempt[:2])
-        if row["move"] in WORD_TIMED_MOVES:
-            found.timed.update(attempt[:2])
-        if row["exit_bar"] is not None and row["entry_bar"] is not None:
-            found.placements[attempt] = (row["exit_bar"], row["entry_bar"], row["bars"] or 0)
-    return found
-
-
-def fill_from_finished_seams(conn: sqlite3.Connection, root: Path) -> int:
-    """Learn from seams finished before there was a memory, once. Moves that failed under older
-    rules don't count against them now, except word timing, which hasn't changed. Nothing that's
-    already known is replaced."""
-    added = 0
-    if not root.is_dir():
-        return added
-    known = {
-        (row["song_a"], row["song_b"], row["move"])
-        for row in conn.execute("SELECT song_a,song_b,move FROM seam_memory")
-    }
-    for meta in root.glob("*/seam.json"):
-        try:
-            state = json.loads(meta.read_text("utf-8"))
-        except (OSError, ValueError):
-            continue
-        request = state.get("request") or {}
-        a, b = request.get("a"), request.get("b")
-        if a is None or b is None:
-            continue
-        if state.get("status") == "failed":
-            move = request.get("move")
-            if move in WORD_TIMED_MOVES and (a, b, move) not in known:
-                remember(conn, a, b, move, "failed", state.get("error") or "")
-                known.add((a, b, move))
-                added += 1
-        elif state.get("status") == "ready":
-            move = state.get("style")
-            if (a, b, move) in known:
-                continue
-            checks = {
-                check["name"]: check.get("value")
-                for check in state.get("checks") or []
-                if not check.get("passed")
-            }
-            outcome = "clean" if state.get("passed") else "warned"
-            remember(conn, a, b, move, outcome, "", checks)
-            if state.get("rating") in {"good", "bad"}:
-                remember_rating(conn, a, b, move, state["rating"])
-            known.add((a, b, move))
-            added += 1
-    return added
