@@ -1192,7 +1192,7 @@ def create_app(
                 states = [store.status(request.key) for request in seam_requests]
                 if approved:
                     for request, state in zip(seam_requests, states, strict=True):
-                        if state["status"] == "none":
+                        if state["status"] == "none" or store.forget_missing_audio(request.key):
                             store.submit(request)
                 ready = approved and all(request_audio_ready(request) for request in seam_requests)
                 if approved:
