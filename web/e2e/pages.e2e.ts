@@ -67,6 +67,40 @@ for (const colorScheme of ['dark', 'light'] as const) {
   });
 }
 
+test('dialogs and drawers pass the automatic accessibility checks too', async ({ page }) => {
+  const check = async (where: string) => {
+    await page.waitForTimeout(300);
+    const { violations } = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    return violations.flatMap((problem) => problem.nodes.map((node) => `${where}: ${problem.id}: ${String(node.target)}`));
+  };
+  const found: string[] = [];
+  for (const [width, height] of [[1440, 900], [375, 812]]) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/library');
+    await page.getByRole('button', { name: /^Details for Paper Moon/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Paper Moon' })).toBeVisible();
+    found.push(...(await check(`song details at ${width}`)));
+
+    await page.goto('/mix/current/edit');
+    await page.getByRole('button', { name: 'Download audio' }).click();
+    await expect(page.getByRole('dialog', { name: 'Save as an audio file' })).toBeVisible();
+    found.push(...(await check(`export at ${width}`)));
+
+    await page.goto('/mixes');
+    await page.getByRole('button', { name: 'Customize' }).click();
+    await expect(page.getByRole('dialog').first()).toBeVisible();
+    found.push(...(await check(`customize at ${width}`)));
+
+    await page.goto('/listen');
+    await page.keyboard.press('r');
+    await expect(page.getByRole('dialog', { name: 'Requests' })).toBeVisible();
+    found.push(...(await check(`requests at ${width}`)));
+  }
+  expect(found).toEqual([]);
+});
+
 test('reloading any page stays on it', async ({ page }) => {
   for (const address of PAGES) {
     await page.goto(address);

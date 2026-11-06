@@ -23,7 +23,7 @@ Selecta remains an offline/local-first DJ for the user's own music. Listening is
 | ADR and decision | Decision status | Implementation status | Phase |
 |---|---|---|---|
 | [ADR-0001 — Product contract, scope and no-regression guarantees](adr-0001-product-contract-and-parity.md) | Proposed | In progress | 0 |
-| [ADR-0002 — Contextual navigation, routing and persistent player shell](adr-0002-routing-and-shell.md) | Proposed | In progress | 2 |
+| [ADR-0002 — Contextual navigation, routing and persistent player shell](adr-0002-routing-and-shell.md) | Proposed | Implemented | 2 |
 | [ADR-0003 — Semantic design system retaining Selecta's colours](adr-0003-design-tokens-and-brand.md) | Proposed | In progress | 1 |
 | [ADR-0004 — Reusable controls, overlays, status and undo](adr-0004-interaction-primitives-and-notifications.md) | Proposed | In progress | 1 |
 | [ADR-0005 — Typed API state, revisions and optimistic mutation consistency](adr-0005-domain-state-mutations.md) | Proposed | In progress | 3 |
@@ -46,7 +46,7 @@ Selecta remains an offline/local-first DJ for the user's own music. Listening is
 | [ADR-0022 — Rendered FLAC export and artifact lifecycle](adr-0022-flac-export.md) | Proposed | In progress | 6 |
 | [ADR-0023 — WCAG 2.2 AA, screen readers and keyboard conventions](adr-0023-accessibility.md) | Proposed | In progress | 1–12 |
 | [ADR-0024 — Mobile, tablet, wide-screen and high-zoom workspace design](adr-0024-responsive-workspaces.md) | Proposed | In progress | 2–12 |
-| [ADR-0025 — Local-only security, privacy and filesystem boundaries](adr-0025-local-privacy.md) | Proposed | In progress | 3–13 |
+| [ADR-0025 — Local-only security, privacy and filesystem boundaries](adr-0025-local-privacy.md) | Proposed | Implemented | 3–13 |
 | [ADR-0026 — Additive backend contracts, stable identifiers and feature detection](adr-0026-api-compatibility.md) | Proposed | In progress | 3–10 |
 | [ADR-0027 — Truthful AI explanations and musical feedback](adr-0027-explanations-and-feedback.md) | Proposed | In progress | 4–10 |
 | [ADR-0028 — Backend-offline recovery, conflicts and multiple tabs](adr-0028-recovery-and-multitab.md) | Proposed | In progress | 3–12 |

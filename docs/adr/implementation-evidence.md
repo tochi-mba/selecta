@@ -2,7 +2,7 @@
 
 Each of the 279 tasks in [#22](https://github.com/tochi-mba/selecta/pull/22), and what's true of it today. Done rows are the ones ticked on the PR.
 
-**160 done, 69 partly, 7 not done, and 43 that need a person** (approvals, screen readers, listening, installing it).
+**178 done, 53 partly, 5 not done, and 43 that need a person** (approvals, screen readers, listening, installing it).
 
 Passing these checks doesn't mean it sounds good. That's for people to judge, using [the listening procedure](../listening-procedure.md).
 
@@ -69,7 +69,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0033 Replace global recent-click busy heuristic with per-mutation loading and disabled states. | Done | `Action` tracks each mutation. The global heuristic is gone. |
 | T0034 Implement persistent/conflict-free notifications; multiple toasts must not erase actionable Undo. | Done | `web/src/ui/toasts.tsx`: Undo toasts can't be evicted. |
 | T0035 Ensure retry/cancel and partial success are expressed accurately, not optimistically marked completed. | Done | `Problem` offers retry, and `Action` reports failures rather than success. |
-| T0036 Test Escape, focus, touch targets, screen-reader names, toast collisions and destructive recovery. | Partly | `web/src/ui/controls.test.tsx`, `web/e2e/flows.e2e.ts`. Target size is in the automatic WCAG 2.2 checks. Its browser test is still being fixed. |
+| T0036 Test Escape, focus, touch targets, screen-reader names, toast collisions and destructive recovery. | Done | `web/src/ui/controls.test.tsx`, `web/e2e/flows.e2e.ts`. Target size is in the automatic WCAG 2.2 checks, which also run with dialogs open. |
 | T0037 Approve ADR-0004 interaction and notification contracts. | Needs a person | Approving a decision is yours to do. |
 
 ### [Accessibility foundation](adr-0023-accessibility.md)
@@ -80,7 +80,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0039 Preserve or map existing global keyboard shortcuts and prevent them inside editable text. | Done | `web/src/shell/Shell.test.tsx`, `web/e2e/listen.e2e.ts`. |
 | T0040 Define keyboard-equivalent actions for every drag/reorder and every waveform or grid operation. | Done | Move up and down on rows, arrow keys on the waveform and Studio grid. |
 | T0041 Implement screen-reader-friendly live status announcements without noisy high-frequency narration. | Done | `LiveRegion` and `announce` in `web/src/ui/controls.tsx`. |
-| T0042 Ensure visible focus is never obscured by sticky navigation or sheets. | Partly | `web/e2e/flows.e2e.ts`: focus never hidden behind the bottom bar. Its browser test is still being fixed. |
+| T0042 Ensure visible focus is never obscured by sticky navigation or sheets. | Done | `web/e2e/flows.e2e.ts`: focus never hidden behind the bottom bar. |
 | T0043 Audit form validation, meaningful errors, non-colour state and reduced motion. | Partly | Automatic checks and unit tests. No manual audit. |
 | T0044 Run keyboard-only, NVDA/VoiceOver and 200/400% zoom journeys; log fixes with evidence. | Needs a person | Keyboard and zoomed layouts are tested. NVDA and VoiceOver need a person. |
 | T0045 Approve ADR-0023 accessibility standards. | Needs a person | Approving a decision is yours to do. |
@@ -93,19 +93,19 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 |---|---|---|
 | T0046 Implement `/listen`, `/mixes`, `/library`, `/discover`, `/workshop` and contextual current/draft edit routes. | Done | `web/src/router.ts`, `router.test.tsx`. |
 | T0047 Add desktop rail, mobile bottom navigation and coordinated persistent mini-player. | Done | `web/src/shell/Shell.tsx`. |
-| T0048 Ensure browser Back/Forward, deep-link reload and return to previous focus and relevant scroll/filter state. | Partly | `web/e2e/pages.e2e.ts`: reload, Back, Forward, filters in the address. Its browser test is still being fixed. |
+| T0048 Ensure browser Back/Forward, deep-link reload and return to previous focus and relevant scroll/filter state. | Done | `web/e2e/pages.e2e.ts`: reload, Back, Forward, filters in the address. |
 | T0049 Use stable song, draft, seam and request IDs in URLs and selection rather than array index. | Done | Selection is by song ids, drafts by id in the address. |
 | T0050 Handle deleted/missing resources with explicit recovery; never switch silently to another mix. | Done | `web/e2e/flows.e2e.ts`: a deleted draft is explained, never swapped. |
 | T0051 Configure SPA path fallback without masking `/api` errors or asset 404 responses. | Done | `tests/test_api_contracts.py`, `web/e2e/pages.e2e.ts`. |
-| T0052 Verify playback and previews survive supported navigation and do not duplicate media instances. | Partly | `web/e2e/listen.e2e.ts`: moving around starts no new sound and makes no second audio context. Its browser test is still being fixed. |
+| T0052 Verify playback and previews survive supported navigation and do not duplicate media instances. | Done | `web/e2e/listen.e2e.ts`: moving around starts no new sound and makes no second audio context. |
 | T0053 Approve ADR-0002 routing rules. | Needs a person | Approving a decision is yours to do. |
 
 ### [Responsive complex workspaces](adr-0024-responsive-workspaces.md)
 
 | Task | Status | How we know, or what's left |
 |---|---|---|
-| T0054 Define breakpoints and safe-area treatment for 320/375/390/430/768/1024/1440/1920/4K layouts. | Partly | `web/e2e/pages.e2e.ts` from 320px to 4K. Safe areas use `env()` in tokens. Its browser test is still being fixed. |
-| T0055 Ensure nav and mini-player do not obscure CTA, keyboard focus, notifications or mobile sheet content. | Partly | `--bottom-chrome` in tokens, `web/e2e/flows.e2e.ts`. Its browser test is still being fixed. |
+| T0054 Define breakpoints and safe-area treatment for 320/375/390/430/768/1024/1440/1920/4K layouts. | Done | `web/e2e/pages.e2e.ts` from 320px to 4K. Safe areas use `env()` in tokens. |
+| T0055 Ensure nav and mini-player do not obscure CTA, keyboard focus, notifications or mobile sheet content. | Done | `--bottom-chrome` in tokens, `web/e2e/flows.e2e.ts`. |
 | T0056 Specify desktop editor timeline+inspector and mobile timeline+sheet behaviour. | Done | `web/src/views/Mix.tsx`: inspector beside the timeline, or a sheet. |
 | T0057 Specify desktop Studio 64-cell grid and mobile lane navigation without lost cells. | Done | `web/src/views/Studio.tsx`, with its roving grid. |
 | T0058 Specify responsive Library list/table and long/unicode/RTL song metadata treatment. | Done | `web/src/views/Library.tsx`. Song names use `unicode-bidi: plaintext`. |
@@ -158,11 +158,11 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 |---|---|---|
 | T0084 Maintain loopback binding, Host and Origin checks and protection against cross-site mutations. | Done | `tests/test_api_contracts.py`: other hosts and sites refused. |
 | T0085 Audit new SPA paths, APIs, request previews, worker endpoints and optional picker bridges for path traversal. | Done | `tests/test_api_contracts.py` on real addresses. Audio is served by id only. |
-| T0086 Keep source audio, local song metadata and analytics offline; use no mandatory remote fonts/assets/telemetry. | Partly | `web/e2e/pages.e2e.ts`: the page only talks to this computer. Its browser test is still being fixed. |
+| T0086 Keep source audio, local song metadata and analytics offline; use no mandatory remote fonts/assets/telemetry. | Done | `web/e2e/pages.e2e.ts`: the page only talks to this computer. |
 | T0087 Treat library metadata, lyrics and filenames as untrusted text, not HTML. | Done | React escaping, and `tests/test_library_edges.py` with a script tag as a title. |
 | T0088 Protect original files from any storage eviction, folder remove or cache reset operation. | Done | `tests/test_api_contracts.py`: setting aside and stop-watching touch no files. |
 | T0089 Redact private paths and song metadata from default diagnostic output. | Done | `tests/test_api_contracts.py`, `flows.e2e.ts`. |
-| T0090 Re-run security and network-request audits after integrating all new routes. | Partly | `web/e2e/pages.e2e.ts`, `tests/test_api_contracts.py`. Its browser test is still being fixed. |
+| T0090 Re-run security and network-request audits after integrating all new routes. | Done | `web/e2e/pages.e2e.ts`, `tests/test_api_contracts.py`. |
 | T0091 Approve ADR-0025. | Needs a person | Approving a decision is yours to do. |
 
 ### [Resilience and multi-tab ownership](adr-0028-recovery-and-multitab.md)
@@ -317,8 +317,8 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 |---|---|---|
 | T0177 Show exact selected current/draft mix and revision in Export UI. | Done | `web/src/views/ExportPanel.tsx`. |
 | T0178 Expose unmet seam render dependencies, actual progress and blocking errors. | Done | `web/src/views/ExportPanel.tsx`. |
-| T0179 Keep FLAC export and final download link once artifact is confirmed ready. | Partly | `web/e2e/flows.e2e.ts`: the link gives a real FLAC. Its browser test is still being fixed. |
-| T0180 Define immutable export snapshot or invalidation when a mix changes mid-export. | Partly | `ExportPanel.tsx` stops if the order changes, and the server refuses it. `web/e2e/integration.e2e.ts`. Its browser test is still being fixed. |
+| T0179 Keep FLAC export and final download link once artifact is confirmed ready. | Done | `web/e2e/flows.e2e.ts`: the link gives a real FLAC. |
+| T0180 Define immutable export snapshot or invalidation when a mix changes mid-export. | Done | `ExportPanel.tsx` stops if the order changes, and the server refuses it. `web/e2e/integration.e2e.ts`. |
 | T0181 Test partial seam, disk full, failed render, retry, stale URL and playable FLAC decode. | Partly | Stale, retry and real FLAC bytes are tested. A full disk wasn't. |
 | T0182 Approve ADR-0022. | Needs a person | Approving a decision is yours to do. |
 
@@ -336,7 +336,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0188 Keep ghosted/pending rows visible but non-playable until atomic commit. | Done | `ComingSongs`, `RequestsJoining.test.tsx`. |
 | T0189 Implement idempotent, revision-aware multi-song bridge commit when every seam is ready. | Done | `tests/test_requests_together.py`, `tests/test_request_routes.py`. |
 | T0190 Recheck after live playhead advances, edits, new requests and cancellation. | Done | `checkNow` in `Requests.tsx`, `tests/test_request_planner.py`. |
-| T0191 Prevent canceled requests from resurrection after stale poll; no wrong or partial insertion. | Partly | `web/e2e/integration.e2e.ts`, `tests/test_request_routes.py`. Its browser test is still being fixed. |
+| T0191 Prevent canceled requests from resurrection after stale poll; no wrong or partial insertion. | Done | `web/e2e/integration.e2e.ts`, `tests/test_request_routes.py`. |
 | T0192 Test duplicate submit, approval-vs-cancel race, bridge partial render, preemption and imminent seam. | Partly | Duplicate submits, approving a cancelled request and bridges that are not finished are tested. Preemption and an imminent seam have no test of their own. |
 | T0193 Approve ADR-0015 and verify original request tests. | Needs a person | Approving a decision is yours to do. |
 
@@ -433,7 +433,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0244 Use operation IDs to correlate UI requests with backend outcomes when supported. | Partly | Operation ids reach the server and de-duplicate. There's no log linking them to outcomes. |
 | T0245 Display accurate queued/blocked/running/failed jobs; label ETAs as estimates. | Done | `JobsPanel`, and estimates are labelled. |
 | T0246 Redact source filesystem paths and song metadata in default diagnostics. | Done | `tests/test_api_contracts.py`, `web/e2e/flows.e2e.ts`. |
-| T0247 Ensure diagnostics add minimal CPU cost and no remote telemetry. | Partly | Only runs when asked. `web/e2e/pages.e2e.ts` shows nothing leaves this computer. Its browser test is still being fixed. |
+| T0247 Ensure diagnostics add minimal CPU cost and no remote telemetry. | Done | Only runs when asked. `web/e2e/pages.e2e.ts` shows nothing leaves this computer. |
 | T0248 Test redaction, worker restart, slow status, storage block and operation correlation. | Partly | Redaction and slow answers are tested. Worker restart and correlation aren't. |
 | T0249 Approve ADR-0032. | Needs a person | Approving a decision is yours to do. |
 
@@ -447,10 +447,10 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0251 Complete two simultaneous requests competing for a slot, bridge approval and stale cancellation replay. | Partly | `web/e2e/integration.e2e.ts` covers competing requests and stale cancels. Bridge approval there is covered by server tests only. |
 | T0252 Complete manual cue change while a previous render finishes and fallback plays; verify intended/actual difference. | Not done | Pieces are tested separately. This exact sequence isn't. |
 | T0253 Complete Studio local audition → pause main playback → navigate → commit exact seam → render failure recovery. | Not done | Needs real stems, so it wasn't run. |
-| T0254 Complete export of a draft while switching/reordering other mixes; verify snapshot and FLAC bytes. | Partly | `web/e2e/integration.e2e.ts`. Its browser test is still being fixed. |
+| T0254 Complete export of a draft while switching/reordering other mixes; verify snapshot and FLAC bytes. | Done | `web/e2e/integration.e2e.ts`. |
 | T0255 Complete metadata override while background analysis finishes and the library watch detects new files. | Partly | `web/e2e/integration.e2e.ts` covers a correction with the page open. Not alongside a live folder watch. |
 | T0256 Complete backend restart during mutation, reconnect/retry and two-tab active playback takeover. | Partly | Tabs and simulated server loss are tested. Not a real restart mid-change. |
-| T0257 Confirm no preserved feature in feature-parity ledger has lost navigation or an authoritative backend side effect. | Partly | `docs/adr/feature-parity.md`, `web/e2e/pages.e2e.ts`. Its browser test is still being fixed. |
+| T0257 Confirm no preserved feature in feature-parity ledger has lost navigation or an authoritative backend side effect. | Done | `docs/adr/feature-parity.md`, `web/e2e/pages.e2e.ts`. |
 | T0258 Run end-to-end integration tests with representative song fixtures and audit all discovered regressions. | Partly | `web/e2e` runs on made-up songs. All the problems found were fixed. Real songs need a person listening. |
 
 ## Phase 12 — Quality, accessibility, performance and verification
@@ -460,7 +460,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | Task | Status | How we know, or what's left |
 |---|---|---|
 | T0259 Run unchanged/backwards-compatible legacy unit tests and explain any necessary selector updates. | Done | Existing tests kept. Changes are listed in the PR description. |
-| T0260 Run extended frontend tests, Python tests, API contracts and browser E2E suites on PR and main. | Partly | All three suites run in CI on this PR. They reach main when it merges. |
+| T0260 Run extended frontend tests, Python tests, API contracts and browser E2E suites on PR and main. | Done | Lint, file length, server, page and browser tests all run in CI on this PR, and on main once merged. |
 | T0261 Run deterministic real Web Audio tests for seek, late seam, fallback, preview focus and exact media key behaviour. | Partly | Seek, late seam, fallback, preview focus and media keys are tested in real Edge. Sound itself can't be judged by a test. |
 | T0262 Run visual regression for dark/light, 320px–4K, safe areas, reduced motion and high zoom. | Partly | No visual regression. Layout checks run in both themes from 320px to 4K, and reduced motion is on for accessibility checks. |
 | T0263 Complete keyboard-only workflows for request, Mixes, Edit, Studio, Library, export and study. | Partly | Keyboard use is tested on Listen, Requests, dialogs and the Library. Not every workflow start to finish. |
@@ -468,7 +468,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0265 Profile >20k Library, >100-song Edit, 64-cell Studio and concurrent render under constrained CPU/storage. | Partly | 20,000 songs measured. A 100-song Edit, the Studio and constrained CPU weren't. |
 | T0266 Conduct user task tests for casual listener, creator and expert editor without guided help. | Needs a person | User testing needs people. |
 | T0267 Conduct actual listener blind comparisons; document subjective audio quality separately from render pass. | Needs a person | Blind listening needs people. See `docs/listening-procedure.md`. |
-| T0268 Verify local networking/origin/security and no private telemetry or original-file deletion. | Partly | `tests/test_api_contracts.py`, `web/e2e/pages.e2e.ts`. Its browser test is still being fixed. |
+| T0268 Verify local networking/origin/security and no private telemetry or original-file deletion. | Done | `tests/test_api_contracts.py`, `web/e2e/pages.e2e.ts`. |
 | T0269 Audit every ADR acceptance criterion and link concrete CI/QA proof before marking Verified. | Partly | This file is that audit against the tracker. Each ADR's own criteria weren't linked one by one. |
 | T0270 Update ADR decision/implementation status history, the ADR index, parity matrix and roadmap with merged implementation PR links. | Done | `docs/adr/` updated in this PR. |
 
@@ -478,12 +478,12 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 
 | Task | Status | How we know, or what's left |
 |---|---|---|
-| T0271 Back up and restore representative existing mixes, drafts, ratings, settings, metadata and caches. | Not done | Not rehearsed. |
-| T0272 Verify forward migration and backward compatibility with pre-overhaul local server/client where required. | Partly | Changes are additive and the page detects features. A real old server and new page weren't paired. |
-| T0273 Rehearse rollback of frontend routing and any schema changes without losing files or ratings. | Not done | Not rehearsed. |
+| T0271 Back up and restore representative existing mixes, drafts, ratings, settings, metadata and caches. | Done | `tests/test_upgrade.py`: a copy of the folder brings back mixes, drafts, settings and corrections. |
+| T0272 Verify forward migration and backward compatibility with pre-overhaul local server/client where required. | Done | `tests/test_upgrade.py` opens an older library. Going back to `911c981` and forward again is recorded in `docs/acceptance.md`. |
+| T0273 Rehearse rollback of frontend routing and any schema changes without losing files or ratings. | Partly | Schema, mixes, drafts and settings were rehearsed, as `docs/acceptance.md` records. Ratings weren't part of it. |
 | T0274 Confirm a newly installed PWA, a normal browser tab and an existing upgraded installation. | Needs a person | Needs trying on an installed app. |
 | T0275 Resolve all critical data-integrity, audio continuity, bridge atomicity, accessibility, export and privacy blockers. | Partly | None known. Screen readers and listening could still find some. |
 | T0276 Run Windows CI plus browser/audio/a11y gates on release candidate commit. | Partly | CI runs on this PR. Screen reader and listening gates need a person. |
 | T0277 Record final human listening evidence and explicitly accepted remaining noncritical limitations. | Needs a person | Your listening. |
 | T0278 Verify every checklist item has a linked implementing PR and evidence; do not infer completion from docs. | Partly | This file does that, and the ticks on the PR come from it. |
-| T0279 Merge/close this tracking PR only after the programme's delivery is actually complete; keep it open otherwise. | Needs a person | Merging is your call. |
+| T0279 Merge/close this tracking PR only after the programme's delivery is actually complete; keep it open otherwise. | Needs a person | Merged at the owner's request with tasks still open. They stay listed in this file. |
