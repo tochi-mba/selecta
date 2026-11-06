@@ -282,8 +282,8 @@ export function App() {
       : null;
     session.playbackState = now.phase === 'playing' ? 'playing' : now.phase === 'paused' ? 'paused' : 'none';
     const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
-      ['play', () => void player.togglePause()],
-      ['pause', () => void player.togglePause()],
+      ['play', () => { if (now.phase !== 'playing') void player.togglePause(); }],
+      ['pause', () => { if (now.phase === 'playing') void player.togglePause(); }],
       ['nexttrack', () => void player.next()],
       ['previoustrack', () => void player.previous()],
       ['seekto', (details) => { if (details.seekTime !== undefined) void player.seek(details.seekTime); }],

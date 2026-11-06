@@ -391,3 +391,33 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
   .seam-visual { grid-template-columns: minmax(0, 1fr); }
   .seam-visual-caption { grid-column: 1; }
 }
+
+/* a few words about a control, on a resting pointer or on keyboard focus */
+.tooltip-anchor { position: relative; display: inline-flex; }
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: var(--layer-toast);
+  display: none;
+  width: max-content;
+  max-width: min(240px, 60vw);
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.82rem;
+}
+@media (hover: hover) {
+  .tooltip-anchor:hover .tooltip:not([hidden]),
+  .tooltip-anchor:focus-within .tooltip:not([hidden]) { display: block; }
+}
+
+/* a title in Hebrew or Arabic reads the right way round, whatever is next to it */
+.display, .artist, .song-name b, .song-name span, button.song-open, .mini-song, .request-list b {
+  unicode-bidi: plaintext;
+  text-align: left;
+}
+
+.seam-visual-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }

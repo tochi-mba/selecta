@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, Component, ErrorInfo, KeyboardEvent, ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { ButtonHTMLAttributes, cloneElement, Component, ErrorInfo, KeyboardEvent, ReactElement, ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { showProblem } from './toasts';
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
@@ -220,6 +220,26 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
         <div role="menu" className="menu-list" onClick={() => setOpen(false)}>{children}</div>
       )}
     </div>
+  );
+}
+
+/** A few words about a control, for a pointer resting on it or the keyboard reaching it. Escape
+ * puts it away without moving focus, and the pointer can move onto it to read it. */
+export function Tooltip({ text, children }: { text: string; children: ReactElement<{ 'aria-describedby'?: string }> }) {
+  const id = useId();
+  const [dismissed, setDismissed] = useState(false);
+  return (
+    <span
+      className="tooltip-anchor"
+      onMouseLeave={() => setDismissed(false)}
+      onBlur={() => setDismissed(false)}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !dismissed) setDismissed(true);
+      }}
+    >
+      {cloneElement(children, { 'aria-describedby': id })}
+      <span role="tooltip" id={id} className="tooltip" hidden={dismissed}>{text}</span>
+    </span>
   );
 }
 

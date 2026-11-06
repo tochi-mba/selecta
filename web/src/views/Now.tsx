@@ -2,7 +2,7 @@ import { KeyboardEvent, MouseEvent, useContext, useEffect, useMemo, useRef, useS
 import { get, MixData, post, SongDetail } from '../api';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
-import { Action, Skeleton, Status } from '../ui/controls';
+import { Action, Skeleton, Status, Tooltip } from '../ui/controls';
 import { seamFacts } from '../ui/seam';
 import { RequestsContext, RequestTag } from './Requests';
 import { ViewProps } from './shared';
@@ -461,7 +461,9 @@ export function Now(props: ViewProps) {
           <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
           <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
           <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
-          <button onClick={toggleStage} title="F">Fullscreen lyrics</button>
+          <Tooltip text="Shortcut: F">
+            <button onClick={toggleStage}>Fullscreen lyrics</button>
+          </Tooltip>
         </div>
       )}
 
@@ -488,7 +490,9 @@ export function Now(props: ViewProps) {
       {!stage && (
         <>
           <div className="transport">
-            <button aria-label="Previous song" title="P" disabled={idle} onClick={() => void player.previous()}>⏮</button>
+            <Tooltip text="Previous song (P)">
+              <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}>⏮</button>
+            </Tooltip>
             <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
               {now.phase === 'playing'
                 ? 'Pause'
@@ -500,16 +504,22 @@ export function Now(props: ViewProps) {
                       ? `Resume from ${clock(now.songTime)}`
                       : 'Play'}
             </button>
-            <button aria-label="Next song" title="Shift N" disabled={idle || !next} onClick={() => void player.next()}>⏭</button>
+            <Tooltip text="Next song (Shift N)">
+              <button aria-label="Next song" disabled={idle || !next} onClick={() => void player.next()}>⏭</button>
+            </Tooltip>
           </div>
           <div className="transport-more">
-            <button onClick={() => void player.skip()} disabled={idle || !next} title="N">
-              Jump to the transition
-            </button>
+            <Tooltip text="Shortcut: N">
+              <button onClick={() => void player.skip()} disabled={idle || !next}>
+                Jump to the transition
+              </button>
+            </Tooltip>
             <VolumeControl player={player} now={now} />
-            <button onClick={() => openRequests?.()} title="R">
-              Request a song{waiting ? ` (${waiting} waiting)` : ''}
-            </button>
+            <Tooltip text="Shortcut: R">
+              <button onClick={() => openRequests?.()}>
+                Request a song{waiting ? ` (${waiting} waiting)` : ''}
+              </button>
+            </Tooltip>
           </div>
           {now.notice && <p className="notice" role="status">{now.notice}</p>}
 

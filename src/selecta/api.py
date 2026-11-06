@@ -6,6 +6,7 @@ rendering used, at the level the mix uses, plus finished seams, and joins them o
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import io
 import json
@@ -367,6 +368,7 @@ def create_app(
     library_lock = threading.Lock()
 
     finished_operations: dict[str, tuple[int, bytes]] = {}
+    running_operations: dict[str, asyncio.Event] = {}
 
     @app.middleware("http")
     async def same_operation_once(request, call_next):
@@ -375,15 +377,21 @@ def create_app(
         operation = request.headers.get("x-operation-id")
         if not operation or request.method != "POST":
             return await call_next(request)
+        if operation in running_operations:
+            await running_operations[operation].wait()
         known = finished_operations.get(operation)
         if known is not None:
             return Response(known[1], status_code=known[0], media_type="application/json")
-        response = await call_next(request)
-        body = b"".join([chunk async for chunk in response.body_iterator])
-        if response.status_code < 500:
-            finished_operations[operation] = (response.status_code, body)
-            while len(finished_operations) > OPERATIONS_KEPT:
-                del finished_operations[next(iter(finished_operations))]
+        running_operations[operation] = asyncio.Event()
+        try:
+            response = await call_next(request)
+            body = b"".join([chunk async for chunk in response.body_iterator])
+            if response.status_code < 500:
+                finished_operations[operation] = (response.status_code, body)
+                while len(finished_operations) > OPERATIONS_KEPT:
+                    del finished_operations[next(iter(finished_operations))]
+        finally:
+            running_operations.pop(operation).set()
         return Response(
             body,
             status_code=response.status_code,
@@ -737,9 +745,9 @@ def create_app(
                 "a.energy,a.grid_confidence,l.status lyric_status,s.processing_priority "
                 "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
                 "LEFT JOIN lyrics l ON l.song_id=s.id "
-                "WHERE (s.artist LIKE ? OR s.title LIKE ?) AND s.duplicate_of IS NULL"
+                f"WHERE {db.SEARCHING_NAMES} AND s.duplicate_of IS NULL"
             )
-            params: list = [f"%{q}%", f"%{q}%"]
+            params: list = [db.containing(q), db.containing(q)]
             if state == "set_aside":
                 sql += " AND s.is_music=0"
             elif state == "ready":
@@ -805,8 +813,8 @@ def create_app(
         with connect() as conn:
             never = never_played(conn)
             working = set(songs_in_line(conn))
-            conditions = ["(s.artist LIKE ? OR s.title LIKE ?)", "s.duplicate_of IS NULL"]
-            params: list = [f"%{q}%", f"%{q}%"]
+            conditions = [db.SEARCHING_NAMES, "s.duplicate_of IS NULL"]
+            params: list = [db.containing(q), db.containing(q)]
             ready_lyrics = "l.status IN ('synced','instrumental')"
             if state == "set_aside":
                 conditions.append("s.is_music=0")
@@ -950,7 +958,8 @@ def create_app(
             shown = []
             for folder in library_folders(conn):
                 count = conn.execute(
-                    "SELECT COUNT(*) FROM songs WHERE path LIKE ?", (f"{folder}%",)
+                    "SELECT COUNT(*) FROM songs WHERE path LIKE ? ESCAPE '\\'",
+                    (db.escaped(str(folder).rstrip("\\/") + os.sep) + "%",),
                 ).fetchone()[0]
                 shown.append({"path": str(folder), "available": folder.is_dir(), "songs": count})
         return {"folders": shown, "scan": background.scan, "watch_every": WATCH_EVERY_SECONDS}
@@ -961,7 +970,7 @@ def create_app(
         from selecta.library.scan import library_folders
 
         with connect() as conn:
-            keep = [str(f) for f in library_folders(conn) if str(f) != body.folder]
+            keep = [str(f) for f in library_folders(conn) if f != Path(body.folder)]
             db.set_preference(conn, "library_folders", keep)
         return folders()
 
@@ -2240,8 +2249,8 @@ def create_app(
                     "SELECT s.id,s.artist,s.title,s.duration FROM songs s "
                     "LEFT JOIN analysis a ON a.song_id=s.id "
                     "WHERE s.is_music=1 AND s.duplicate_of IS NULL AND a.song_id IS NULL "
-                    "AND (s.artist LIKE ? OR s.title LIKE ?) ORDER BY s.artist,s.title LIMIT 8",
-                    (f"%{q.strip()}%", f"%{q.strip()}%"),
+                    f"AND {db.SEARCHING_NAMES} ORDER BY s.artist,s.title LIMIT 8",
+                    (db.containing(q.strip()), db.containing(q.strip())),
                 ).fetchall()
                 waiting = [
                     {

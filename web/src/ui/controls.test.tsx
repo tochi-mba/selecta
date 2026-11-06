@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Action, Dialog, Menu, Problem, Section, Status } from './controls';
+import { Action, Dialog, Menu, Problem, Section, Status, Tooltip } from './controls';
 import { clearToasts, dismissToast, showProblem, showToast, Toaster } from './toasts';
 
 afterEach(() => clearToasts());
@@ -219,5 +219,23 @@ describe('a page that breaks', () => {
     broken = false;
     fireEvent.click(screen.getByRole('button', { name: 'Start this page again' }));
     expect(screen.getByText('All fine')).toBeInTheDocument();
+  });
+});
+
+describe('a tooltip', () => {
+  it('describes the control to a screen reader as well', () => {
+    render(<Tooltip text="Shortcut: N"><button>Jump</button></Tooltip>);
+    expect(screen.getByRole('button', { name: 'Jump' })).toHaveAccessibleDescription('Shortcut: N');
+  });
+
+  it('goes away with Escape, without moving focus, and comes back next time', () => {
+    render(<Tooltip text="Shortcut: N"><button>Jump</button></Tooltip>);
+    const button = screen.getByRole('button', { name: 'Jump' });
+    button.focus();
+    fireEvent.keyDown(button, { key: 'Escape' });
+    expect(screen.getByRole('tooltip', { hidden: true })).toHaveAttribute('hidden');
+    expect(button).toHaveFocus();
+    fireEvent.blur(button);
+    expect(screen.getByRole('tooltip', { hidden: true })).not.toHaveAttribute('hidden');
   });
 });
