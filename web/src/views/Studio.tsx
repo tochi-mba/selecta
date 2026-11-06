@@ -3,6 +3,8 @@ import { Eta, MixData, MixItem, post } from '../api';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
+import { Action, Problem } from '../ui/controls';
+import { Icon } from '../ui/Icon';
 import { useMixPath } from './mixScope';
 
 type Session = {
@@ -33,8 +35,9 @@ function keepShape(key: string, shape: Shape | null) {
   try {
     if (shape) window.localStorage.setItem(UNSAVED + key, JSON.stringify(shape));
     else window.localStorage.removeItem(UNSAVED + key);
+    return true;
   } catch {
-    // it just won't be there if this is closed before pressing Use this
+    return false;
   }
 }
 
@@ -63,6 +66,9 @@ export function Studio(props: {
   const [changes, setChanges] = useState<string[] | null>(null);
   const [before, setBefore] = useState<Shape | null>(null);
   const [restored, setRestored] = useState(false);
+  const [retained, setRetained] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const applying = useRef(false);
   const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
   const deck = useRef<StemDeck | null>(null);
   const grid = useRef<HTMLDivElement>(null);
@@ -86,6 +92,8 @@ export function Studio(props: {
   useEffect(() => {
     let live = true;
     let timer: number | undefined;
+    setProblem('');
+    setLoaded(false);
     const follow = () => {
       post<Session>(at(`/mix/${position}/studio`))
         .then((next) => {
@@ -103,7 +111,7 @@ export function Studio(props: {
       deck.current = null;
       quiet();
     };
-  }, [position]);
+  }, [position, item.song_id, previous.song_id, attempt]);
 
   useEffect(() => {
     if (session?.status !== 'ready' || deck.current || !session.start_shape) return;
@@ -128,7 +136,7 @@ export function Studio(props: {
     setBefore(null);
     setProblem('');
     deck.current?.setShape(next);
-    if (session?.key) keepShape(session.key, next);
+    if (session?.key) setRetained(keepShape(session.key, next));
   };
   /** Selecta's turn. What was there can be put back, and nothing is final until "Use this". */
   const askSelecta = async (mine: boolean) => {
@@ -141,7 +149,7 @@ export function Studio(props: {
       setBefore(same ? null : shape);
       setShape(answer.shape);
       deck.current?.setShape(answer.shape);
-      if (session?.key) keepShape(session.key, answer.shape);
+      if (session?.key) setRetained(keepShape(session.key, answer.shape));
       setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
     } catch (error) {
       setProblem((error as Error).message);
@@ -152,6 +160,7 @@ export function Studio(props: {
   const putBack = () => {
     if (!before) return;
     setShape(before);
+    if (session?.key) setRetained(keepShape(session.key, before));
     deck.current?.setShape(before);
     setBefore(null);
     setChanges(null);
@@ -186,7 +195,8 @@ export function Studio(props: {
     }
   };
   const use = async () => {
-    if (!shape) return;
+    if (!shape || applying.current) return;
+    applying.current = true;
     setSaving(true);
     deck.current?.stop();
     setPlaying(false);
@@ -200,7 +210,7 @@ export function Studio(props: {
       // the shape stays right here, so nothing's lost by this going wrong
       setProblem((error as Error).message);
       setSaving(false);
-    }
+    } finally { applying.current = false; }
   };
 
   const titles: Record<Side, string> = { a: previous.title, b: item.title };
@@ -208,6 +218,7 @@ export function Studio(props: {
   const failed = problem || (session?.status === 'failed' ? session.error : '');
   const barsPerCell = session?.bars && session.cells ? session.bars / session.cells : 2;
   const columns = session?.cells ?? 8;
+  const dirty = !!shape && JSON.stringify(shape) !== JSON.stringify(session?.shape ?? session?.start_shape);
   const rowCount = SIDES.length * LANES.length;
   const gridKeys = (event: KeyboardEvent<HTMLDivElement>) => {
     const moves: Record<string, [number, number]> = { ArrowRight: [0, 1], ArrowLeft: [0, -1], ArrowDown: [1, 0], ArrowUp: [-1, 0] };
@@ -224,14 +235,14 @@ export function Studio(props: {
   return (
     <section className="studio" aria-label="Stem studio">
       <div className="row wrap studio-head">
-        <h3>Shape this seam yourself</h3>
+        <h3>Shape this transition</h3>
         <button onClick={onClose}>Close</button>
       </div>
-      {failed && <p className="warn" role="alert">{failed}</p>}
+      {failed && (loaded ? <p className="warn" role="alert">{failed}</p> : <Problem retry={() => { deck.current?.close(); deck.current = null; setSession(null); setAttempt((value) => value + 1); }}>{failed}</Problem>)}
       {!failed && preparing && (
         <p className="hint" role="status">
           Separating vocals, drums, bass and melody from both songs.
-          {session?.eta?.late ? ' This is taking longer than usual.' : session?.eta ? ` Estimated time: ${etaRangeWords(session.eta)}.` : ' This may take a few minutes.'} Your mix keeps playing.
+          {session?.eta?.late ? ' This is taking longer than usual.' : session?.eta ? ` Estimated time: ${etaRangeWords(session.eta)}.` : ' This may take a few minutes.'} Your mix keeps playing until you start a preview.
         </p>
       )}
       {!failed && session?.status === 'ready' && !loaded && <p className="hint" role="status">Loading the stems…</p>}
@@ -240,10 +251,13 @@ export function Studio(props: {
           <p className="hint">
             Each square is {barsPerCell} bar{barsPerCell === 1 ? '' : 's'}. Tap one to turn that part on or off. Press a name to hear only that part.
           </p>
+          <p className="hint">Previewing pauses the main mix. After stopping or closing Studio, use the main player to resume it.</p>
+          <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes — not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? '. Your work is kept on this browser when you close Studio.' : ''}</p>
+          {!retained && <p className="warn" role="alert">This browser could not keep a local copy. Apply your changes before closing Studio to keep them.</p>}
           <div className="row wrap">
-            <button className="primary" onClick={() => void playOrStop()}>
-              {playing ? '■ Stop' : '▶ Play it'}
-            </button>
+            <Action className="primary" run={playOrStop}>
+              <Icon name={playing ? 'stop' : 'play'} /> {playing ? 'Stop preview' : 'Play preview'}
+            </Action>
             {soloed && <button onClick={() => void solo(soloed)}>Hear everything again</button>}
           </div>
           <div className="row wrap">
@@ -315,8 +329,8 @@ export function Studio(props: {
             ))}
           </div>
           <div className="row wrap">
-            <button className="primary" disabled={saving} onClick={() => void use()}>
-              {saving ? 'Saving…' : 'Use this'}
+            <button className="primary" disabled={saving || !!asking} onClick={() => void use()}>
+              {saving ? 'Applying…' : 'Apply to this transition'}
             </button>
             {session?.start_shape && (
               <button onClick={() => {

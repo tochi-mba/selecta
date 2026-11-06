@@ -1,14 +1,14 @@
 # Selecta UI/UX polish — implementation checklist
 
-- **Decision status:** Proposed
-- **Implementation status:** Not started
+- **Decision status:** Accepted for implementation by the owner
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Created:** 2026-11-06
 - **Scope:** 143 tasks across 14 new ADRs and 8 phases. **Completed: 0.**
-- **Planning PR:** Documentation only; implementation must not be added to this PR.
+- **Implementation PR:** [#23](https://github.com/tochi-mba/selecta/pull/23). The owner explicitly requested implementation here after the planning phase, with code first, tests afterward, and merge once CI is green.
 
 ## How to use this checklist
 
-1. This is a new programme. Preserve the historical [T-task checklist](implementation-checklist.md) and [its evidence](implementation-evidence.md). Its historical instruction to implement everything on that branch does not apply to this documentation-only PR.
+1. This is a new programme. Preserve the historical [T-task checklist](implementation-checklist.md) and [its evidence](implementation-evidence.md). Its historical instruction to implement everything on that branch is historical; the owner has now authorized implementation on PR #23.
 2. Use stable P-prefixed IDs. Before coding, map inherited unfinished T tasks and existing capability to these P tasks; existing implementation can be reused, but new verification must have evidence.
 3. This committed checklist is the canonical task state. PR bodies link to it rather than becoming an independently maintained second checklist.
 4. Tick a task only when its deliverable and acceptance evidence are recorded in [the evidence ledger](polish-implementation-evidence.md). Runtime tasks require implemented code and relevant tests; partial work remains unchecked.
@@ -34,7 +34,7 @@
 - [ ] P0005 — Map existing feature-parity rows and unfinished T tasks to new P tasks; retain original task IDs and evidence, and identify inherited work without double-counting completion.
 - [ ] P0006 — Write casual-listener, creator and expert-editor task scripts, including desired outcomes and observable errors.
 - [ ] P0007 — Classify findings as P0 integrity/access blockers, P1 task/recovery problems or P2 consistency/detail defects; give each a location, impact and acceptance check.
-- [ ] P0008 — Record decision acceptance separately from implementation progress; keep this planning PR and every runtime task Not started until implementation work exists.
+- [ ] P0008 — Record decision acceptance separately from implementation progress; record the owner’s implementation authorization and move statuses only when work exists.
 - [ ] P0009 — Create an evidence entry for each task when work begins, including implementation PR, commit, test/capture and remaining manual checks; partial tasks remain unchecked.
 - [ ] P0010 — Confirm this programme preserves source music, drafts, ratings, current/draft isolation, audio ownership, bridge consent, FLAC correctness and localhost boundaries.
 

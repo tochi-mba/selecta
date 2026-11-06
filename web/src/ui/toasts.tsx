@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 /** What's been said lately. A message with an Undo stays until its time is up however many others
@@ -14,7 +15,6 @@ export type Toast = {
 
 const SHOWN = 3;
 const PLAIN_MS = 4500;
-const UNDO_MS = 10000;
 const PROBLEM_MS = 8000;
 
 let next = 1;
@@ -42,7 +42,8 @@ export function showToast(message: string, options: { undo?: Toast['undo']; tone
   // make room by dropping the oldest that nothing depends on
   while (all.length > SHOWN) {
     const spare = all.findIndex((item) => !item.undo);
-    all.splice(spare < 0 ? 0 : spare, 1);
+    if (spare < 0) break;
+    all.splice(spare, 1);
   }
   toasts = all;
   changed();
@@ -67,7 +68,8 @@ function ToastRow({ toast }: { toast: Toast }) {
   const timer = useRef<number | null>(null);
   const start = () => {
     if (timer.current !== null) window.clearTimeout(timer.current);
-    const wait = toast.undo ? UNDO_MS : toast.tone === 'problem' ? PROBLEM_MS : PLAIN_MS;
+    if (toast.undo) return;
+    const wait = toast.tone === 'problem' ? PROBLEM_MS : PLAIN_MS;
     timer.current = window.setTimeout(() => dismissToast(toast.id), wait);
   };
   const hold = () => {
@@ -75,7 +77,7 @@ function ToastRow({ toast }: { toast: Toast }) {
     timer.current = null;
   };
   useEffect(() => {
-    start();
+    if (!toast.undo) start();
     return hold;
   }, []);
   const undo = async () => {
@@ -97,7 +99,7 @@ function ToastRow({ toast }: { toast: Toast }) {
     >
       <span>{toast.message}</span>
       {toast.undo && <button onClick={() => void undo()}>Undo</button>}
-      <button className="toast-close" aria-label="Dismiss" onClick={() => dismissToast(toast.id)}>✕</button>
+      <button className="toast-close" aria-label="Dismiss" onClick={() => dismissToast(toast.id)}><Icon name="close" /></button>
     </div>
   );
 }

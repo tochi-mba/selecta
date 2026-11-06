@@ -3,14 +3,15 @@ import { MixItem } from '../api';
 import { NowState, SetPlayer } from '../player';
 import { navigate, Route, savedScroll, useLocationText } from '../router';
 import { LiveRegion } from '../ui/controls';
+import { Icon, type IconName } from '../ui/Icon';
 import { Toaster } from '../ui/toasts';
 
-const PLACES: { path: string; label: string; page: Route['page']; mark: string }[] = [
-  { path: '/listen', label: 'Listen', page: 'listen', mark: '♪' },
-  { path: '/mixes', label: 'Mixes', page: 'mixes', mark: '◫' },
-  { path: '/library', label: 'Library', page: 'library', mark: '≡' },
-  { path: '/discover', label: 'Discover', page: 'discover', mark: '✦' },
-  { path: '/workshop', label: 'Workshop', page: 'workshop', mark: '⚙' },
+const PLACES: { path: string; label: string; page: Route['page']; mark: IconName }[] = [
+  { path: '/listen', label: 'Listen', page: 'listen', mark: 'music' },
+  { path: '/mixes', label: 'Mixes', page: 'mixes', mark: 'mixes' },
+  { path: '/library', label: 'Library', page: 'library', mark: 'library' },
+  { path: '/discover', label: 'Discover', page: 'discover', mark: 'discover' },
+  { path: '/workshop', label: 'Workshop', page: 'workshop', mark: 'settings' },
 ];
 
 /** An ordinary link that doesn't reload the page, so the music keeps going. */
@@ -37,7 +38,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
         aria-pressed={now.muted}
         onClick={() => player.toggleMute()}
       >
-        {now.muted || now.volume === 0 ? '🔇' : '🔊'}
+        <Icon name={now.muted || now.volume === 0 ? 'muted' : 'volume'} />
       </button>
       <input
         type="range"
@@ -59,13 +60,13 @@ function MiniPlayer({ player, now, song, onRequests, waiting }: { player: SetPla
     <aside className="mini" aria-label="Now playing">
       <i className="mini-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
       <button className="round" onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : 'Play'}>
-        {now.phase === 'playing' ? '❚❚' : '▶'}
+        <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
       </button>
       <PageLink to="/listen" className="mini-song">
         <b>{song.title}</b>
         <span>{song.artist} · {clock(now.songTime)} / {clock(now.duration)}</span>
       </PageLink>
-      <button className="mini-next" onClick={() => void player.next()} aria-label="Next song">⏭</button>
+      <button className="mini-next" onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
       <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
         Request{waiting ? <span className="count"> {waiting}</span> : ''}
       </button>
@@ -135,7 +136,7 @@ export function Shell({
             {PLACES.map((item) => (
               <li key={item.page}>
                 <PageLink to={item.path} aria-current={route.page === item.page ? 'page' : undefined}>
-                  <i aria-hidden="true">{item.mark}</i>
+                  <Icon name={item.mark} />
                   <span>{item.label}</span>
                 </PageLink>
               </li>
@@ -143,7 +144,7 @@ export function Shell({
             {hasMix && (
               <li className="nav-context">
                 <PageLink to="/mix/current/edit" aria-current={editing ? 'page' : undefined}>
-                  <i aria-hidden="true">✎</i>
+                  <Icon name="edit" />
                   <span>Edit</span>
                 </PageLink>
               </li>
@@ -153,7 +154,7 @@ export function Shell({
             <button onClick={onRequests} aria-label={waitingRequests ? `Requests, ${waitingRequests} waiting` : 'Requests'}>
               Request a song{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
             </button>
-            <button className="quiet" aria-label="Keyboard shortcuts" onClick={onHelp}>?</button>
+            <button className="quiet" aria-label="Keyboard shortcuts" onClick={onHelp}><Icon name="help" /></button>
           </div>
         </nav>
       )}

@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useCallback, useContext } from 'react';
 
 /** Which draft this part of the page is editing, or null for the current mix. */
 export const MixScope = createContext<number | null>(null);
@@ -11,5 +11,5 @@ export function scoped(path: string, draft: number | null): string {
 
 export function useMixPath(): (path: string) => string {
   const draft = useContext(MixScope);
-  return (path) => scoped(path, draft);
+  return useCallback((path: string) => scoped(path, draft), [draft]);
 }

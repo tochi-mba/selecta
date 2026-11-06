@@ -2,7 +2,9 @@ import { KeyboardEvent, MouseEvent, useContext, useEffect, useMemo, useRef, useS
 import { get, MixData, post, SongDetail } from '../api';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
-import { Action, Skeleton, Status, Tooltip } from '../ui/controls';
+import { Action, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
+import { Icon } from '../ui/Icon';
+import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
 import { RequestsContext, RequestTag } from './Requests';
 import { ViewProps } from './shared';
@@ -256,13 +258,13 @@ function TransitionCountdown({
 
 function MusicVisualizer({ player, active, stage }: { player: ViewProps['player']; active: boolean; stage: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const reduceMotion = useReducedMotion();
   useEffect(() => {
     if (typeof CanvasRenderingContext2D === 'undefined') return;
     const node = canvas.current;
     const context = node?.getContext('2d');
     if (!node || !context) return;
     let frame = 0;
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const accent = getComputedStyle(node).getPropertyValue('--accent').trim() || '#e8ff3a';
     const soft = getComputedStyle(node).getPropertyValue('--ok').trim() || '#9ed46a';
     const gradient = context.createLinearGradient(0, 180, 0, 0);
@@ -305,7 +307,7 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     };
     draw();
     return () => window.cancelAnimationFrame(frame);
-  }, [player, active, stage]);
+  }, [player, active, stage, reduceMotion]);
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label="Live music frequency visualizer" />;
 }
 
@@ -389,6 +391,8 @@ export function Now(props: ViewProps) {
   const item = mix[now.position];
   const next = mix[now.position + 1];
   const [detail, setDetail] = useState<SongDetail | null>(null);
+  const [detailFailed, setDetailFailed] = useState(false);
+  const [detailAttempt, setDetailAttempt] = useState(0);
   const [rated, setRated] = useState('');
   const [problem, setProblem] = useState('');
   const [view, setViewChoice] = useState<ListenView>(savedView);
@@ -406,11 +410,12 @@ export function Now(props: ViewProps) {
     if (!item) return;
     let live = true;
     setDetail(null);
-    get<SongDetail>(`/songs/${item.song_id}`).then((data) => live && setDetail(data)).catch(() => {});
+    setDetailFailed(false);
+    get<SongDetail>(`/songs/${item.song_id}`).then((data) => live && setDetail(data)).catch(() => { if (live) setDetailFailed(true); });
     return () => {
       live = false;
     };
-  }, [item?.song_id]);
+  }, [item?.song_id, detailAttempt]);
 
   useEffect(() => setRated(''), [now.lastSeamKey]);
 
@@ -457,14 +462,14 @@ export function Now(props: ViewProps) {
       <p className="artist">{item?.artist}</p>
 
       {!stage && (
-        <div className="listen-view" role="group" aria-label="What to show">
+        <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
           <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
           <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
           <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
           <Tooltip text="Shortcut: F">
             <button onClick={toggleStage}>Fullscreen lyrics</button>
           </Tooltip>
-        </div>
+        </fieldset>
       )}
 
       {(stage || (view.spectrum && !view.lyrics)) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />}
@@ -480,7 +485,8 @@ export function Now(props: ViewProps) {
         />
       )}
       {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} onSeek={now.inSeam ? undefined : (seconds) => void player.seek(seconds)} />}
-      {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} /> : item && <Skeleton lines={2} label="Loading this song" />}
+      {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>Couldn’t load lyrics and song details. Playback controls are still available.</Problem>}
+      {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
       {stage && (
         <button className="exit-stage" onClick={toggleStage}>
           Exit fullscreen
@@ -491,7 +497,7 @@ export function Now(props: ViewProps) {
         <>
           <div className="transport">
             <Tooltip text="Previous song (P)">
-              <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}>⏮</button>
+              <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>
             </Tooltip>
             <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
               {now.phase === 'playing'
@@ -505,7 +511,7 @@ export function Now(props: ViewProps) {
                       : 'Play'}
             </button>
             <Tooltip text="Next song (Shift N)">
-              <button aria-label="Next song" disabled={idle || !next} onClick={() => void player.next()}>⏭</button>
+              <button aria-label="Next song" disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>
             </Tooltip>
           </div>
           <div className="transport-more">
@@ -524,8 +530,8 @@ export function Now(props: ViewProps) {
           {now.notice && <p className="notice" role="status">{now.notice}</p>}
 
           {now.lastSeamKey && !rated && (
-            <div className="thumbs" role="group" aria-label="Rate that seam">
-              <span>How was that seam?</span>
+            <div className="thumbs" role="group" aria-label="Rate that transition">
+              <span>How was that transition?</span>
               <Action run={() => rate('good')}>Good</Action>
               <Action run={() => rate('bad')}>Bad</Action>
             </div>

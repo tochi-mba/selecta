@@ -1,3 +1,5 @@
+import { Icon } from '../ui/Icon';
+import { Problem, Skeleton } from '../ui/controls';
 import { createContext, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
 import { del, get, MixData, MixItem, post, SongRow } from '../api';
 import { usePreview } from '../audio/focus';
@@ -640,6 +642,7 @@ export function RequestsPanel() {
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<SongRow[] | null>(null);
   const [searchError, setSearchError] = useState('');
+  const [searchAttempt, setSearchAttempt] = useState(0);
   const [finding, setFinding] = useState<number | null>(null);
   const box = useRef<HTMLInputElement>(null);
   const text = query.trim();
@@ -655,7 +658,7 @@ export function RequestsPanel() {
         .catch(() => { if (live) { setMatches([]); setSearchError('Search didn’t work. Try again.'); } });
     }, 200);
     return () => { live = false; window.clearTimeout(timer); };
-  }, [text]);
+  }, [text, searchAttempt]);
 
   if (!state) return null;
   const { requests, error, message, playback, add, cancel, chooseBridge, addAnyway } = state;
@@ -687,6 +690,7 @@ export function RequestsPanel() {
         <h2>Requests</h2>
         {!!requests?.length && <span className="hint">{requests.length} waiting</span>}
       </div>
+      <label htmlFor="request-song-search">Request a song</label>
       <div className="request-search">
         <input
           ref={box}
@@ -701,7 +705,8 @@ export function RequestsPanel() {
         />
         {text && <button onClick={finish}>Done</button>}
       </div>
-      {searchError && <p className="warn" role="alert">{searchError}</p>}
+      {searchError && <Problem retry={() => setSearchAttempt((value) => value + 1)}>{searchError}</Problem>}
+      {text && matches === null && !searchError && <Skeleton variant="library" lines={2} label="Searching your library" />}
       {text && matches && !searchError && matches.length === 0 && <p className="hint">Nothing in your library matches that.</p>}
       {text && !!matches?.length && (
         <ul className="request-results">
@@ -748,11 +753,13 @@ export function RequestsPanel() {
                   aria-label={`Cancel request for ${title}`}
                   onClick={() => void cancel(request)}
                 >
-                  ✕
+                  <Icon name="close" />
                 </button>
                 <p className="request-detail">{words.detail}</p>
                 {stage === 'approve' && (
                   <div className="request-approve">
+                    <p className="hint">Approve this route to add {request.route?.length ?? 0} songs together, including your request:</p>
+                    <ol className="bridge-route" aria-label={`Proposed route to ${title}`}>{request.route?.map((song) => <li key={song.id}>{song.title ?? 'Untitled'}</li>)}</ol>
                     <TransitionPreviews request={request} playback={playback} />
                     <div className="row wrap">
                       <button className="primary" onClick={() => void chooseBridge(request, true)}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}</button>

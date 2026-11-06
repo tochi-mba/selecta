@@ -22,6 +22,8 @@ type Audition = { chords: string[]; bar_starts: number[]; seconds: number; semit
  * to the next pair by itself, so there's nothing to line up and nothing to remember. */
 export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => void; secondsToPrepare?: number }) {
   const [items, setItems] = useState<HarmonicDiscovery[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState('');
   const [skipped, setSkipped] = useState<number[]>([]);
   const [audition, setAudition] = useState<Audition | null>(null);
@@ -34,12 +36,12 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   useEffect(() => {
     let live = true;
     const load = () => get<HarmonicDiscovery[]>('/discoveries').then((rows) => {
-      if (live) { setItems(rows); setError(''); }
+      if (live) { setItems(rows); setLoaded(true); setError(''); }
     }).catch(() => { if (live) setError('Couldn’t load these. Try again in a moment.'); });
     void load();
     const timer = window.setInterval(() => void load(), 15000);
     return () => { live = false; window.clearInterval(timer); };
-  }, []);
+  }, [attempt]);
 
   const waiting = items
     .filter((item) => item.status === 'new')
@@ -81,7 +83,13 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     setStep(index);
     setBar(0);
     player.src = `/api/discoveries/${id}/hear/${['chords', 'a', 'b', 'both'][index]}`;
-    void player.play()?.catch(() => {});
+    const source = player.src;
+    void player.play()?.catch(() => {
+      if (player.src !== source) return;
+      keepGoing.current = false;
+      stop();
+      setError('Couldn’t play this audition. Try the stage again.');
+    });
   };
   const hear = async (target: HarmonicDiscovery, from = 0) => {
     setGetting(true);
@@ -123,6 +131,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   };
   const skip = (target: HarmonicDiscovery) => setSkipped((ids) => [...ids.filter((id) => id !== target.id), target.id]);
 
+  if (!loaded && !error) return <Skeleton variant="pairs" lines={1} label="Finding harmonic discoveries" />;
+  if (!loaded && error) return <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
   if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed.</p>;
   const listening = step !== null;
   return (
@@ -140,6 +150,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         ref={audio}
         preload="none"
         data-testid="excerpt-player"
+        onError={() => { keepGoing.current = false; stop(); setError('This audition clip is unavailable. Prepare it again to retry.'); }}
         onTimeUpdate={(event) => {
           if (!audition) return;
           const at = event.currentTarget.currentTime;
@@ -207,6 +218,9 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 
 function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
   const [move, setMove] = useState(link.move);
+  const [cardError, setCardError] = useState('');
+  const [rendering, setRendering] = useState(false);
+  const renderRequest = useRef(0);
   const [override, setOverride] = useState<SeamState | null>(null);
   const [playing, setPlaying] = useState(false);
   const state = override ?? link.state;
@@ -221,9 +235,15 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
   }, [override]);
 
   const render = async (name: string) => {
+    const request = ++renderRequest.current;
     setMove(name);
-    setPlaying(true);
-    setOverride(await post<SeamState>('/seams', { a: link.a, b: link.b, move: name, phrase: link.phrase }));
+    setCardError('');
+    setRendering(true);
+    try {
+      const result = await post<SeamState>('/seams', { a: link.a, b: link.b, move: name, phrase: link.phrase });
+      if (request === renderRequest.current) { setOverride(result); setPlaying(true); }
+    } catch (error) { if (request === renderRequest.current) setCardError((error as Error).message); }
+    finally { if (request === renderRequest.current) setRendering(false); }
   };
   const rate = async (rating: string) => {
     setOverride(await post<SeamState>(`/seams/${state.key}/rate`, { rating }));
@@ -243,18 +263,19 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
       </p>
       <div className="chips" role="group" aria-label="Which move">
         {link.moves.map((name) => (
-          <button key={name} aria-pressed={move === name} onClick={() => void render(name)}>
+          <button key={name} disabled={rendering} aria-pressed={move === name} onClick={() => void render(name)}>
             {names[name] ?? name}
           </button>
         ))}
       </div>
+      {cardError && <p className="warn" role="alert">{cardError}</p>}
       {state.status === 'failed' && <p className="warn">{state.error}</p>}
       {state.status === 'ready' && !state.passed && <p className="warn">This one has a rough spot. Hear it and decide.</p>}
       <div className="row wrap">
         {state.status === 'ready' ? (
           <button className="primary" onClick={() => setPlaying(!playing)}>{playing ? 'Hide' : 'Play it'}</button>
         ) : (
-          <button className="primary" disabled={busy} onClick={() => void render(move)}>
+          <button className="primary" disabled={busy || rendering} onClick={() => void render(move)}>
             {busy ? 'Rendering…' : state.status === 'failed' ? 'Try again' : 'Render it now'}
           </button>
         )}
@@ -363,16 +384,16 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
               {data.prepared < data.preparing && data.eta ? ` The rest take ${etaWords(data.eta)} of spare time.` : ''}
             </p>
           )}
-          <input
+          <label>Search shared words<input
             className="wide"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Look for a word, like night or love"
             aria-label="Search shared words"
-          />
+          /></label>
           {failed && data === null && <Problem retry={load}>Couldn’t search your lyrics. Nothing’s lost.</Problem>}
           {failed && data !== null && <p className="warn" role="status">Can’t check for new ones right now, so what’s shown may be out of date.</p>}
-          {data === null && !failed && <Skeleton lines={4} label="Searching your lyrics" />}
+          {data === null && !failed && <Skeleton variant="pairs" lines={4} label="Searching your lyrics" />}
           {data?.links.length === 0 && (
             <p className="lede">{query ? `No links on “${query}” yet.` : 'No links yet. Analysing more songs will find more.'}</p>
           )}

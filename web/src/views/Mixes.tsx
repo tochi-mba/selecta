@@ -2,7 +2,7 @@ import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import { get, MixData, MixItem, post, SongRow, VibeCard } from '../api';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { PageLink } from '../shell/Shell';
-import { Action, Dialog, Skeleton } from '../ui/controls';
+import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { Drafts } from './Drafts';
 import { ViewProps } from './shared';
 
@@ -32,6 +32,9 @@ function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<ViewProp
   const [energyArc, setEnergyArc] = useState<number[] | null>(status.steering.energy_arc);
   const [destinationQuery, setDestinationQuery] = useState('');
   const [destinationResults, setDestinationResults] = useState<SongRow[]>([]);
+  const [destinationLoading, setDestinationLoading] = useState(false);
+  const [destinationFailed, setDestinationFailed] = useState(false);
+  const [destinationAttempt, setDestinationAttempt] = useState(0);
   const [destination, setDestination] = useState<{ id: string; label: string } | null>(
     status.steering.target
       ? { id: status.steering.target, label: status.steering.target_label ?? `Song ${status.steering.target}` }
@@ -59,18 +62,23 @@ function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<ViewProp
     const query = destinationQuery.trim();
     if (query.length < 2) {
       setDestinationResults([]);
+      setDestinationLoading(false);
+      setDestinationFailed(false);
       return;
     }
     let live = true;
+    setDestinationLoading(true);
+    setDestinationFailed(false);
+    setDestinationResults([]);
     const timer = window.setTimeout(() => {
       get<SongRow[]>(`/songs?q=${encodeURIComponent(query)}&state=ready&limit=20`)
         .then((rows) => {
           if (live) setDestinationResults(rows.filter((row) => !row.never && ['synced', 'instrumental'].includes(row.lyric_status ?? '')));
         })
-        .catch(() => { if (live) setDestinationResults([]); });
+        .catch(() => { if (live) setDestinationFailed(true); }).finally(() => { if (live) setDestinationLoading(false); });
     }, 120);
     return () => { live = false; window.clearTimeout(timer); };
-  }, [destinationQuery]);
+  }, [destinationQuery, destinationAttempt]);
 
   const chooseMixLanguage = async (value: string) => {
     const previous = mixLanguage;
@@ -171,14 +179,18 @@ function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<ViewProp
             if (event.buttons === 1) drawArcAt(event);
           }}
         >
-          {achievedPoints && <polyline className="achieved" points={achievedPoints} />}
+          
           <polyline points={arcPoints} />
           {arcPreview.map((energy, index) => <circle key={ARC_STOPS[index]} cx={index * 25} cy={38 - energy * 0.34} r="2.2" />)}
         </svg>
         <p className="hint">
           {energyArc === null ? 'Each mix uses its own shape.' : 'The bright line is what you asked for.'}
-          {achieved ? ' The faint line is how your current mix really moves, measured from its songs.' : ''}
+          
         </p>
+        {achievedPoints && <figure className="achieved-arc">
+          <svg className="energy-arc-preview" viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Current mix relative energy, from start to finish"><polyline className="achieved" points={achievedPoints} /></svg>
+          <figcaption className="hint">Current mix: relative energy from its quietest to its most energetic song. This uses this mix’s own range, so it is not a score against your requested arc.</figcaption>
+        </figure>}
         <div className="energy-arc-stops">
           {ARC_STOPS.map((stop, index) => (
             <label key={stop}>
@@ -222,7 +234,9 @@ function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<ViewProp
                 <Action run={() => chooseDestination(song)}>{song.title ?? 'Untitled'} — {song.artist ?? 'Unknown artist'}</Action>
               </li>
             ))}
-            {!destinationResults.length && <li className="hint">No ready songs match yet.</li>}
+            {destinationLoading && <li role="status" className="hint">Searching ready songs…</li>}
+            {destinationFailed && <li><Problem retry={() => setDestinationAttempt((value) => value + 1)}>Couldn’t search ready songs.</Problem></li>}
+            {!destinationLoading && !destinationFailed && !destinationResults.length && <li className="hint">No ready songs match yet.</li>}
           </ul>
         )}
         <p className="hint">If there’s no good way there from the rest of the mix, it finishes as near as it can. Clear it to let each mix decide.</p>
@@ -239,11 +253,16 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const [draftsChanged, setDraftsChanged] = useState(0);
   const [problem, setProblem] = useState('');
   const [customizing, setCustomizing] = useState(false);
+  const [cardsAttempt, setCardsAttempt] = useState(0);
+  const [cardsFailed, setCardsFailed] = useState(false);
   const { counts } = status;
 
   useEffect(() => {
-    get<VibeCard[]>('/vibes').then(setCards).catch((error: Error) => setProblem(error.message));
-  }, [counts.analysed, counts.lyrics, counts.ready]);
+    let live = true;
+    setCardsFailed(false);
+    get<VibeCard[]>('/vibes').then((rows) => { if (live) setCards(rows); }).catch(() => { if (live) setCardsFailed(true); });
+    return () => { live = false; };
+  }, [counts.analysed, counts.lyrics, counts.ready, cardsAttempt]);
 
   const start = async (key: string, name: string, open: boolean) => {
     setBuilding(key);
@@ -317,7 +336,14 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           {readyCount} of {counts.music} songs have the vocal or instrumental cues needed for mixes. Audio analysis is complete for {counts.analysed};
           {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'} You can use your PC as normal while this happens.
         </p>
-        <div className="row">
+        <ol className="readiness-steps" aria-label="Library preparation">
+          <li><span>Music found</span><strong>{counts.music}</strong></li>
+          <li><span>Audio analysed</span><strong>{counts.analysed}</strong></li>
+          <li><span>Ready for mixes</span><strong>{readyCount} / 6 needed</strong></li>
+        </ol>
+        {!left && readyCount < 6 && <p className="hint">Audio analysis is finished. More songs need timed lyrics or instrumental cues before they can mix. Open Library → Needs attention to see each song’s reason.</p>}
+        <div className="row wrap">
+          <button onClick={() => setView('Library')}>Open Library</button>
           {!status.analysis_running && <Action className="primary" run={analyse}>Analyse my songs</Action>}
           {status.analysis_running && <span className="pill rendering">Analysing now</span>}
           <button onClick={() => setView('Workshop')}>See progress</button>
@@ -384,7 +410,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <section>
         <h2 className="section-title">Pick a feeling</h2>
         <p className="hint">Every one is built from your own songs, fresh each time you press play.</p>
-        {!cards && <Skeleton lines={4} label="Finding what your library can do" />}
+        {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when Selecta is available.</Problem>}
+        {!cards && !cardsFailed && <Skeleton variant="cards" lines={4} label="Finding what your library can do" />}
         {GROUPS.map((group) => {
           const inGroup = ready.filter((card) => card.group === group);
           if (!inGroup.length) return null;
@@ -451,7 +478,7 @@ function CurrentMix({ mix, mixName, now, player, setView }: Pick<ViewProps, 'mix
   return (
     <section className="carry-on">
       <div>
-        <p className="eyebrow">{now.phase === 'idle' ? 'Carry on' : 'Playing now'}</p>
+        <p className="eyebrow">{now.phase === 'idle' ? 'Current mix' : now.phase === 'paused' ? 'Paused' : 'Playing now'}</p>
         <h2>{mixName}</h2>
         <p className="soft">{mix.length} songs</p>
       </div>

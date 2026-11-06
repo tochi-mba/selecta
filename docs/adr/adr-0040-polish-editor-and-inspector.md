@@ -1,7 +1,7 @@
 # ADR-0040: Precise editing timeline and context-preserving transition inspector
 
-- **Decision status:** Proposed
-- **Implementation status:** Not started
+- **Decision status:** Accepted (owner requested implementation in PR #23)
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 4 — Editing and Stem Studio
@@ -9,7 +9,7 @@
 - **Dependencies:** ADR-0034 and ADR-0044 foundations, ADR-0035 shared controls and ADR-0036 asynchronous states. Apply ADR-0045 accessibility requirements during implementation.
 - **Checklist:** P0070–P0079 in [polish implementation checklist](polish-implementation-checklist.md).
 
-> Documentation only. Merging this proposal neither accepts the decision nor starts implementation. All runtime tasks remain unchecked.
+> The owner requested implementation in PR #23 after the planning review. Functionality is written first; verification follows. Checkboxes require actual evidence, including any remaining human checks.
 
 ## Context and evidence boundary
 
@@ -48,11 +48,12 @@ A full DAW timeline would substantially expand interaction and rendering scope. 
 
 Every edit has an unmistakable target, selection remains stable, and what will actually play is distinguishable from what the user requested.
 
-Decision status remains Proposed until explicitly accepted or rejected. Implementation progresses Not started → In progress → Implemented → Verified using linked evidence. This documentation PR cannot satisfy runtime tasks. Record partial work and unperformed human checks in [the polish evidence ledger](polish-implementation-evidence.md); do not infer success from a checkbox in the previous programme.
+The owner accepted proceeding with implementation in PR #23. Implementation progresses Not started → In progress → Implemented → Verified using linked evidence. Only implemented and verified work can satisfy runtime tasks. Record partial work and unperformed human checks in [the polish evidence ledger](polish-implementation-evidence.md); do not infer success from a checkbox in the previous programme.
 
 | Date | Decision status | Implementation status | Evidence |
 |---|---|---|---|
-| 2026-11-06 | Proposed | Not started | Documentation-only proposal; no runtime verification claimed |
+| 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
+| 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
 
 ## References
 

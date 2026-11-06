@@ -220,7 +220,11 @@ export function problemKind(error: unknown): ProblemKind {
 }
 
 async function send<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api${path}`, init);
+  // Reads have a recovery deadline. Never abort a mutation and imply it did not happen.
+  const controller = !init?.method || init.method === 'GET' ? new AbortController() : null;
+  const timeout = controller ? window.setTimeout(() => controller.abort(), 20000) : null;
+  try {
+  const response = await fetch(`/api${path}`, controller ? { ...init, signal: controller.signal } : init);
   if (!response.ok) {
     let detail = response.statusText;
     let code = '';
@@ -233,7 +237,13 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(detail, response.status, code);
   }
-  return response.json();
+  return await response.json();
+  } catch (error) {
+    if (controller?.signal.aborted) throw new ApiError('Selecta is taking too long to respond. Try again.', 408, 'read_timeout');
+    throw error;
+  } finally {
+    if (timeout !== null) window.clearTimeout(timeout);
+  }
 }
 
 export const get = <T,>(path: string) => send<T>(path);

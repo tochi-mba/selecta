@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { ApiError, get, MixItem, post, SeamOptions, SeamSettings } from '../api';
 import { clock, etaWords, triedWords } from '../lib';
 import { AudioPreview } from '../ui/AudioPreview';
-import { Action, Status, Workspace } from '../ui/controls';
+import { Action, Problem, Skeleton, Status, Workspace } from '../ui/controls';
 import { seamFacts } from '../ui/seam';
 import { useMixPath } from './mixScope';
 import { Undo } from './shared';
@@ -22,6 +22,7 @@ function SeamEditor(props: {
   const { position, item, previous, refreshMix, notify, onListen, guard, studioOpen: studio, setStudioOpen: setStudio } = props;
   const [options, setOptions] = useState<SeamOptions | null>(null);
   const [problem, setProblem] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const at = useMixPath();
   const settings: SeamSettings = item.seam?.settings ?? {};
   const planned = settings.move ?? 'auto';
@@ -32,13 +33,14 @@ function SeamEditor(props: {
   useEffect(() => {
     let live = true;
     setOptions(null);
+    setProblem('');
     get<SeamOptions>(at(`/mix/${position}/options`))
       .then((data) => live && setOptions(data))
       .catch((error: Error) => live && setProblem(error.message));
     return () => {
       live = false;
     };
-  }, [position, item.song_id, previous.song_id]);
+  }, [position, item.song_id, previous.song_id, attempt]);
 
   const change = async (changes: SeamSettings) => {
     setProblem('');
@@ -54,8 +56,8 @@ function SeamEditor(props: {
     }
   };
 
-  if (problem && !options) return <p className="warn">{problem}</p>;
-  if (!options) return <p className="hint">Working out what’s possible…</p>;
+  if (problem && !options) return <Problem retry={() => setAttempt((value) => value + 1)}>{problem}</Problem>;
+  if (!options) return <Skeleton variant="inspector" label="Working out what’s possible" />;
   if (studio) {
     return (
       <Workspace title={`${previous.title} into ${item.title}`} onClose={() => setStudio(false)}>
@@ -211,11 +213,17 @@ export function SeamInspector(props: {
   const [studio, setStudio] = useState(false);
   const [canStudio, setCanStudio] = useState<SeamOptions['studio'] | null>(null);
   const position = item.position;
+  const tabId = useId();
+  const [capabilityError, setCapabilityError] = useState(false);
+  const [capabilityAttempt, setCapabilityAttempt] = useState(0);
   useEffect(() => {
     let live = true;
-    get<SeamOptions>(at(`/mix/${position}/options`)).then((data) => { if (live) setCanStudio(data.studio ?? null); }).catch(() => {});
+    setCanStudio(null);
+    setCapabilityError(false);
+    setStudio(false);
+    get<SeamOptions>(at(`/mix/${position}/options`)).then((data) => { if (live) setCanStudio(data.studio ?? { available: false, reason: 'This server does not support Stem Studio for this transition.' }); }).catch(() => { if (live) setCapabilityError(true); });
     return () => { live = false; };
-  }, [position, item.song_id, previous.song_id]);
+  }, [position, item.song_id, previous.song_id, capabilityAttempt]);
   const rate = async (rating: string) => {
     await post(`/seams/${state.key}/rate`, { rating: state.rating === rating ? 'none' : rating });
     refreshMix();
@@ -228,11 +236,19 @@ export function SeamInspector(props: {
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       <div className="inspector-tabs" role="tablist" aria-label="This transition">
         {tabs.map(([name, label]) => (
-          <button key={name} role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>{label}</button>
+          <button key={name} role="tab" id={`${tabId}-${name}`} aria-controls={`${tabId}-${name}-panel`} tabIndex={tab === name ? 0 : -1} aria-selected={tab === name} onClick={() => setTab(name)} onKeyDown={(event) => {
+            const index = tabs.findIndex(([value]) => value === name);
+            const target = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : null;
+            if (target === null) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setTab(tabs[target][0]);
+            document.getElementById(`${tabId}-${tabs[target][0]}`)?.focus();
+          }}>{label}</button>
         ))}
       </div>
       {tab === 'listen' && (
-        <div role="tabpanel" aria-label="Listen">
+        <div role="tabpanel" id={`${tabId}-listen-panel`} aria-labelledby={`${tabId}-listen`} tabIndex={0}>
           {state.status === 'ready' ? (
             <>
               {/* keyed by what was rendered, so a clip from before a change can't be mistaken for this one */}
@@ -258,14 +274,14 @@ export function SeamInspector(props: {
         </div>
       )}
       {tab === 'change' && (
-        <div role="tabpanel" aria-label="Change">
+        <div role="tabpanel" id={`${tabId}-change-panel`} aria-labelledby={`${tabId}-change`} tabIndex={0}>
           <SeamEditor position={position} item={item} previous={previous} refreshMix={refreshMix} notify={notify} onListen={onListen} guard={guard} studioOpen={false} setStudioOpen={() => {}} />
         </div>
       )}
       {tab === 'studio' && (
-        <div role="tabpanel" aria-label="Studio">
+        <div role="tabpanel" id={`${tabId}-studio-panel`} aria-labelledby={`${tabId}-studio`} tabIndex={0}>
           <p className="hint">Both songs’ voice, drums, bass and melody on a grid you can hear straight away. Choose exactly what plays when, or let Selecta arrange it.</p>
-          {canStudio && !canStudio.available ? (
+          {capabilityError ? <Problem retry={() => setCapabilityAttempt((value) => value + 1)}>Couldn’t check Studio availability.</Problem> : !canStudio ? <Skeleton variant="inspector" label="Checking Studio availability" /> : !canStudio.available ? (
             <p className="warn">{canStudio.reason}</p>
           ) : (
             <button className="primary" onClick={() => setStudio(true)}>Open the Studio</button>
@@ -274,7 +290,7 @@ export function SeamInspector(props: {
         </div>
       )}
       {tab === 'details' && (
-        <div role="tabpanel" aria-label="Details" className="report">
+        <div role="tabpanel" id={`${tabId}-details-panel`} aria-labelledby={`${tabId}-details`} tabIndex={0} className="report">
           {state.why && <p>{state.why}.</p>}
           {facts.asked && state.label && facts.asked !== state.label && <p className="hint">You chose {facts.asked}. What will play is {state.label}.</p>}
           {leaveAfter !== undefined && <p className="hint">Held back to leave {previous.title} after {clock(leaveAfter)}, so it gets played before moving on.</p>}

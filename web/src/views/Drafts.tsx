@@ -1,3 +1,4 @@
+import { Icon } from '../ui/Icon';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { del, DraftInfo, DraftList, get, post } from '../api';
 import { draftWords, etaRangeWords, length, nth } from '../lib';
@@ -84,7 +85,7 @@ export function Drafts({ notify, openDraft, playDraft, setView }: Props) {
   if (!list) {
     return couldntLoad
       ? <Problem retry={refresh}>Couldn’t load your drafts. They’re still saved.</Problem>
-      : <Skeleton label="Loading your drafts" />;
+      : <Skeleton variant="cards" label="Loading your drafts" />;
   }
   const { drafts, current, out_of_room: outOfRoom } = list;
   const inLine = drafts.filter((draft) => draft.place !== null);
@@ -113,6 +114,7 @@ export function Drafts({ notify, openDraft, playDraft, setView }: Props) {
             : 'Your current mix is done, so these are rendering in order, ahead of everything else.'}
         </p>
       )}
+      {drafts.length === 0 && <div className="empty-state"><h3>A place for your next mix</h3><p>Create a draft or save a copy of your current mix. Editing a draft leaves playback alone.</p></div>}
       {drafts.length > 0 && (
         <ul className="draft-list">
           {drafts.map((draft) => {
@@ -149,8 +151,8 @@ export function Drafts({ notify, openDraft, playDraft, setView }: Props) {
                   {draft.place !== null ? (
                     <span className="line-controls" role="group" aria-label={`${draft.name} in the render line`}>
                       <b className="line-place">{nth(draft.place)} in line</b>
-                      <button aria-label={`Move ${draft.name} up the line`} disabled={draft.place === 1} onClick={() => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step: -1 }))}>↑</button>
-                      <button aria-label={`Move ${draft.name} down the line`} disabled={draft.place === inLine.length} onClick={() => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step: 1 }))}>↓</button>
+                      <button aria-label={`Move ${draft.name} up the line`} disabled={draft.place === 1} onClick={() => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step: -1 }))}><Icon name="up" /></button>
+                      <button aria-label={`Move ${draft.name} down the line`} disabled={draft.place === inLine.length} onClick={() => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step: 1 }))}><Icon name="down" /></button>
                       <button aria-label={`Take ${draft.name} out of the line`} onClick={() => void act(del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</button>
                     </span>
                   ) : (
@@ -162,7 +164,7 @@ export function Drafts({ notify, openDraft, playDraft, setView }: Props) {
                   )}
                   <button aria-label={`Rename ${draft.name}`} onClick={() => setRenaming(draft.id)}>Rename</button>
                   <Action aria-label={`Copy ${draft.name}`} run={() => duplicate(draft)}>Copy</Action>
-                  <Action aria-label={`Delete ${draft.name}`} run={() => remove(draft)}>✕</Action>
+                  <Action className="destructive" aria-label={`Delete ${draft.name}`} run={() => remove(draft)}><Icon name="close" /></Action>
                 </div>
               </li>
             );
