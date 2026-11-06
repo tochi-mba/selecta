@@ -60,6 +60,24 @@ def _order(conn, store):
     return [item["song_id"] for item in mix.read_mix(conn, store)]
 
 
+def test_discovery_review_persists_without_changing_the_mix(conn, tmp_path):
+    payload = json.dumps({"a_at": 2, "b_at": 8, "bars": 8, "transpose": 2})
+    conn.execute(
+        "INSERT INTO seam_book(song_a,song_b,kind,payload,score) VALUES(1,2,?,?,.98)",
+        ("harmonic_sequence_candidate", payload),
+    )
+    conn.commit()
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    candidate = client.get("/api/discoveries").json()[0]
+    assert candidate["payload"]["b_at"] == 8
+    route = f"/api/discoveries/{candidate['id']}/review"
+    assert client.post(route, json={"verdict": "approved"}).status_code == 200
+    assert client.get("/api/discoveries").json()[0]["status"] == "approved"
+    assert conn.execute("SELECT COUNT(*) FROM queue").fetchone()[0] == 0
+    assert client.post(route, json={"verdict": "invalid"}).status_code == 400
+    assert client.post("/api/discoveries/999/review", json={"verdict": "new"}).status_code == 404
+
+
 def test_songs_can_be_added_anywhere_removed_and_reordered(conn, store):
     for song in (1, 2, 3):
         mix.add_song(conn, song)
@@ -613,9 +631,7 @@ def test_intertwined_stem_request_uses_the_shared_audited_seam_path(tmp_path, mo
     monkeypatch.setattr("selecta.seams.audit", lambda _rendered: SimpleNamespace(passed=True))
     store = SeamStore(Settings(tmp_path))
 
-    rendered, _, why = store._chosen_move(
-        SeamRequest(a.id, b.id, "stem_intertwine"), a, b
-    )
+    rendered, _, why = store._chosen_move(SeamRequest(a.id, b.id, "stem_intertwine"), a, b)
 
     assert rendered.script.style == "stem_intertwine"
     assert rendered.script.meta["bars"] == 16

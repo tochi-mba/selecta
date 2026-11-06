@@ -7,6 +7,7 @@ rendering used, at the level the mix uses, plus finished seams, and joins them o
 from __future__ import annotations
 
 import io
+import json
 import os
 import shutil
 import sqlite3
@@ -104,6 +105,10 @@ class SeamSettings(BaseModel):
 class RateRequest(BaseModel):
     rating: str
     note: str = ""
+
+
+class DiscoveryReview(BaseModel):
+    verdict: str
 
 
 class ScanRequest(BaseModel):
@@ -452,8 +457,7 @@ def create_app(
                     "end": line.end,
                     "text": line.text,
                     "words": [
-                        {"start": word.start, "end": word.end}
-                        for word in provisional_words(line)
+                        {"start": word.start, "end": word.end} for word in provisional_words(line)
                     ],
                 }
                 for line in song.lines
@@ -467,6 +471,33 @@ def create_app(
             song = analysed_or_404(conn, song_id)
         audio = audio_io.decode(song.path) * float(10.0 ** (song.gain_db / 20.0))
         return Response(_wav(np.clip(audio, -1.0, 1.0)), media_type="audio/wav")
+
+    @app.get("/api/discoveries")
+    def discoveries(limit: int = 40) -> list[dict]:
+        with connect() as conn:
+            rows = conn.execute(
+                "SELECT d.*,a.artist artist_a,a.title title_a,b.artist artist_b,b.title title_b "
+                "FROM seam_book d JOIN songs a ON a.id=d.song_a JOIN songs b ON b.id=d.song_b "
+                "WHERE d.kind='harmonic_sequence_candidate' AND a.is_music=1 AND b.is_music=1 "
+                "AND a.duplicate_of IS NULL AND b.duplicate_of IS NULL "
+                "ORDER BY d.score DESC,d.id LIMIT ?",
+                (max(0, min(limit, 200)),),
+            ).fetchall()
+            return [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
+
+    @app.post("/api/discoveries/{discovery_id}/review")
+    def review_discovery(discovery_id: int, body: DiscoveryReview) -> dict:
+        if body.verdict not in {"new", "approved", "rejected"}:
+            raise HTTPException(400, "Choose approved, rejected, or new")
+        with connect() as conn:
+            changed = conn.execute(
+                "UPDATE seam_book SET status=? WHERE id=? AND kind='harmonic_sequence_candidate'",
+                (body.verdict, discovery_id),
+            )
+            if not changed.rowcount:
+                raise HTTPException(404, "Discovery not found")
+            conn.commit()
+        return {"id": discovery_id, "status": body.verdict}
 
     @app.post("/api/steer")
     def steering(body: SteerRequest) -> dict:
