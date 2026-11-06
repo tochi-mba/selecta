@@ -1,5 +1,7 @@
 # Selecta
 
+On Windows, Workshop's **Add desktop shortcut** creates a Selecta icon. The launcher reuses the local server when available, otherwise starts it and waits before opening an Edge app window (or your default browser if Edge is unavailable). The shortcut uses this installation's Python environment, so keep the project folder in place. Startup errors appear in a dialog; server output is recorded in `%LOCALAPPDATA%/selecta/desktop-server.log` under the default data location.
+
 An auto DJ for your own music folder. Point it at a folder and it plays a set in your browser, with transitions chosen and rendered like a really good DJ would, including wordplay cuts where a word in one song hands off to the same word in the next.
 
 It runs entirely on your PC. Your music never leaves your machine, and no audio is ever stored in this repo.

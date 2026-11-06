@@ -77,7 +77,7 @@ def launch() -> None:
         settings = load_settings()
         settings.home.mkdir(parents=True, exist_ok=True)
         with (settings.home / "desktop-server.log").open("a", encoding="utf-8") as log:
-            subprocess.Popen(
+            server = subprocess.Popen(
                 [sys.executable, "-m", "selecta.cli", "web", "--no-open", "--port", "8733"],
                 stdin=subprocess.DEVNULL,
                 stdout=log,
@@ -86,6 +86,8 @@ def launch() -> None:
             )
         deadline = time.monotonic() + 60
         while not server_ready():
+            if server.poll() is not None:
+                raise RuntimeError("Selecta stopped during startup; see desktop-server.log")
             if time.monotonic() >= deadline:
                 raise RuntimeError("Selecta did not start; see desktop-server.log")
             time.sleep(0.5)
@@ -97,4 +99,12 @@ def launch() -> None:
 
 
 if __name__ == "__main__":
-    launch()
+    try:
+        launch()
+    except Exception as problem:  # noqa: BLE001 - pythonw has no console for startup errors
+        if sys.platform == "win32":
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(None, str(problem), "Selecta could not open", 0x10)
+        else:
+            raise
