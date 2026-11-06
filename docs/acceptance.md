@@ -15,6 +15,7 @@ This ledger combines measured acceptance runs with the latest live-library snaps
 | Word links | All 583 songs searched in 3.3 s: 12,878 pairs. 896 fit musically across the 172 songs with timing | Machine-found links can still be corny. Only a listener can judge |
 | Word timing | Starts within about 80 ms of what the model hears unguided, on four sung lines read by hand. On speech with known times, a steady 66 to 70 ms offset, unchanged over music, which settling onto the voice removes | No ground truth on singing. Many lines are refused, including *Layla* |
 | Local-only server | Foreign hosts and other sites' changes get 403. A bad request gets 400. The page makes no outside requests | Binds to 127.0.0.1 |
+| Storage and song priority | Workshop shows free and cached storage and lets the user set a cache budget. Library can mark songs for first-priority analysis/stem retention and filter to the priority list; queue-order and API tests cover priority behavior | Priority is binary, not a manually ranked queue; old cache entries without song metadata cannot be tied back to priority songs |
 
 ## Latest live-library snapshot — 5 November 2026, 22:16 UTC
 
@@ -84,7 +85,7 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 
 ## Not built
 
-- Melody, sample, rhythm and shortest-path discovery. The old same-melody search matched everything, and still runs under `selecta discover`, but the app no longer shows it.
+- Temporal melody, sample and rhythm discovery, and shortest-path destination search. The existing audio search only compares whole-track mean chroma; it now reports a coarse tonal-profile resemblance and explicitly does not claim a melody match. The app still does not surface these tonal candidates.
 - The blind listening test. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
 - The typographic word-to-word match cut. Fullscreen Stage mode and approximate current-word focus work, but the lyric highlight has not been validated against sung-word ground truth.
 - Loop rolls on A's band, half and double time, drop swaps and brakes. The placeholders that faked these are gone.
