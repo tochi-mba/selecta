@@ -545,6 +545,17 @@ def create_app(
                 raise HTTPException(400, str(problem)) from problem
         return {"saved": True}
 
+    @app.post("/api/desktop")
+    def desktop_shortcut() -> dict:
+        from selecta.desktop import install_shortcut
+
+        try:
+            return install_shortcut()
+        except (ValueError, OSError, subprocess.SubprocessError) as problem:
+            raise HTTPException(
+                400, f"Could not create the desktop shortcut: {problem}"
+            ) from problem
+
     @app.post("/api/steer")
     def steering(body: SteerRequest) -> dict:
         with connect() as conn:
