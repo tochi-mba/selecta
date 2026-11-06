@@ -129,6 +129,8 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .peaks path { fill: none; stroke-width: 1.5px; }
 .peaks .unplayed { stroke: var(--line); }
 .peaks .played { stroke: var(--ink); }
+.bar-ticks { position: absolute; top: 0; left: 0; right: 0; height: 66px; pointer-events: none; }
+.bar-ticks i { position: absolute; top: 0; height: 66px; width: 1px; background: var(--soft); opacity: 0.18; }
 .sections { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; }
 .sections span {
   position: absolute;
@@ -155,8 +157,32 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .next-song b { font-size: 1.2rem; }
 .next-song span, .next-song small { color: var(--soft); }
 .now.in-seam .display { color: var(--accent); }
+.music-visualizer { display: block; width: 100%; height: 86px; margin: 8px 0 14px; border-radius: 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 5%, transparent), color-mix(in srgb, var(--ok) 5%, transparent)); }
+.handoff { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(110px, 0.7fr) minmax(140px, 2fr) minmax(100px, 1fr); align-items: center; gap: 14px; padding: 14px 16px; margin: 14px 0 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.handoff .eyebrow { display: block; margin: 0 0 4px; }
+.countdown-number { display: grid; align-items: baseline; gap: 3px; }
+.countdown-number strong { font: 900 clamp(2rem, 5vw, 3.2rem) / 0.9 var(--display); font-variant-numeric: tabular-nums; letter-spacing: -0.06em; }
+.countdown-number span, .countdown-meta, .handoff-caption { color: var(--soft); font-size: 0.82rem; }
+.countdown-track { display: flex; gap: 4px; height: 34px; align-items: stretch; }
+.countdown-track span { position: relative; flex: 1 1 0; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-2); }
+.countdown-track span i { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--accent) 55%, transparent); }
+.countdown-track > b { align-self: center; width: 7px; height: 7px; margin-left: 2px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.countdown-meta { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-family: var(--mono); }
+.beat-pips { display: flex; gap: 3px; margin-left: 5px; }
+.beat-pips i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.beat-pips i.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.handoff-next { grid-column: 1 / -1; display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 0.85rem; }
+.handoff-next span { color: var(--soft); }
+.handoff.active { grid-template-columns: 1fr; border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.handoff-progress { height: 10px; overflow: hidden; border-radius: 99px; background: var(--panel-2); }
+.handoff-progress i { display: block; height: 100%; background: var(--accent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 65%, transparent); transition: width 70ms linear; }
+.handoff.pending { grid-template-columns: 1fr auto; }
+.pending-line { height: 3px; grid-column: 1 / -1; overflow: hidden; background: linear-gradient(90deg, var(--accent), var(--ok), transparent); background-size: 200% 100%; animation: pending-flow 2.4s linear infinite; }
+@keyframes pending-flow { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) {
   .lyrics p { transition: none; }
+  .pending-line { animation: none; }
+  .handoff-progress i { transition: none; }
 }
 
 /* Mix */
@@ -183,6 +209,14 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .song-name span { color: var(--soft); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .facts { grid-area: facts; color: var(--soft); font: 0.76rem var(--mono); }
 .song-actions { grid-area: actions; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.seam-visual { display: grid; grid-template-columns: auto minmax(80px, 1fr) auto; align-items: center; gap: 10px; margin: 2px 0 8px 34px; color: var(--soft); }
+.seam-visual-label { font: 0.7rem var(--mono); white-space: nowrap; }
+.seam-visual-bars { display: flex; gap: 3px; height: 17px; }
+.seam-visual-bars i { flex: 1 1 0; border-radius: 2px; background: var(--accent); opacity: 0.48; }
+.seam-visual.ready .seam-visual-bars i { background: var(--ok); opacity: 0.72; }
+.seam-visual-caption { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 0.72rem; }
+.seam-visual-caption b { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 500; }
+.seam-visual-caption span { color: var(--accent); }
 .song-actions button { padding: 4px 9px; min-height: 34px; font-size: 0.86rem; }
 @media (max-width: 620px) {
   .song { grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: 'grip count name' 'grip count facts' 'actions actions actions'; }
@@ -384,6 +418,11 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .stage .lyrics p { font-size: clamp(1.1rem, 2.6vw, 2rem); }
 .stage .lyrics .sung { font-size: clamp(2.4rem, 7vw, 6rem); }
 .stage .display { font-size: clamp(1.4rem, 3vw, 2.4rem); }
+.stage .music-visualizer { height: clamp(110px, 23vh, 240px); margin: 1vh 0 2vh; }
+.stage .handoff { font-size: 1.1rem; padding: 20px 24px; margin: 1vh 0 3vh; }
+.stage .countdown-track { height: clamp(42px, 8vh, 72px); }
+.stage .countdown-number strong { font-size: clamp(3rem, 8vw, 6rem); }
+.stage .handoff-next { font-size: 1rem; }
 .exit-stage { position: fixed; right: 16px; bottom: 16px; opacity: 0.5; }
 .exit-stage:hover, .exit-stage:focus-visible { opacity: 1; }
 
@@ -413,6 +452,14 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .keys dl { margin: 12px 0 16px; display: grid; gap: 8px; }
 .keys dl div { display: flex; gap: 12px; align-items: baseline; }
 .keys dt { min-width: 62px; margin: 0; }
+
+@media (max-width: 560px) {
+  .handoff { grid-template-columns: 1fr; gap: 10px; }
+  .handoff-next { grid-column: 1; }
+  .countdown-track { height: 28px; }
+  .seam-visual { grid-template-columns: auto minmax(40px, 1fr); margin-left: 28px; }
+  .seam-visual-caption { grid-column: 1 / -1; }
+}
 .keys dd { margin: 0; color: var(--soft); }
 kbd { font: 0.82rem var(--mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; }
 

@@ -685,10 +685,14 @@ def test_song_details_include_line_estimated_word_focus_times(tmp_path):
 
     response = TestClient(create_app(settings, tmp_path / "no-web")).get("/api/songs/1")
     assert response.status_code == 200
-    words = response.json()["lines"][0]["words"]
+    detail = response.json()
+    words = detail["lines"][0]["words"]
     assert len(words) == 4
     assert all(word["start"] < word["end"] for word in words)
     assert [word["start"] for word in words] == sorted(word["start"] for word in words)
+    assert detail["bar_times"] == song.bar_times.tolist()
+    assert detail["beat_times"] == song.beats.tolist()
+    assert detail["beats_per_bar"] == song.beats_per_bar
 
 
 def test_destination_steering_persists_and_status_names_the_song(client):

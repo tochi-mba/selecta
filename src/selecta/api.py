@@ -435,6 +435,9 @@ def create_app(
             "bpm": song.bpm,
             "key": song.camelot,
             "peaks": (peaks[:: max(peaks.size // 400, 1)] / 255.0).round(3).tolist(),
+            "bar_times": song.bar_times.tolist(),
+            "beat_times": song.beats.tolist(),
+            "beats_per_bar": song.beats_per_bar,
             "sections": [
                 {
                     "label": section["label"],

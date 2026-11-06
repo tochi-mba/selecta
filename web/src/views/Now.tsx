@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { get, MixData, post, SongDetail } from '../api';
 import { clock } from '../lib';
 import { ViewProps } from './shared';
@@ -52,6 +52,7 @@ function Strip({ detail, time, seamAt }: { detail: SongDetail; time: number; sea
       .join('');
   }, [detail.peaks]);
   const sections = useMemo(() => mergedSections(detail), [detail]);
+  const barTimes = detail.bar_times ?? [];
   const clip = `played-${detail.id}`;
   return (
     <div className="strip" role="img" aria-label={`${clock(time)} of ${clock(detail.duration)}`}>
@@ -64,6 +65,13 @@ function Strip({ detail, time, seamAt }: { detail: SongDetail; time: number; sea
         <path d={shape} className="unplayed" vectorEffect="non-scaling-stroke" />
         <path d={shape} className="played" clipPath={`url(#${clip})`} vectorEffect="non-scaling-stroke" />
       </svg>
+      <div className="bar-ticks" aria-hidden="true">
+        {barTimes
+          .filter((_, index) => index % Math.max(1, Math.ceil(barTimes.length / 24)) === 0)
+          .map((bar, index) => (
+            <i key={index} style={{ left: `${percent(bar)}%` }} />
+          ))}
+      </div>
       <div className="sections">
         {sections.map((section, index) => {
           const width = percent(section.end - section.start);
@@ -81,6 +89,178 @@ function Strip({ detail, time, seamAt }: { detail: SongDetail; time: number; sea
       </span>
     </div>
   );
+}
+
+function upperBound(points: number[], value: number) {
+  let low = 0;
+  let high = points.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (points[middle] <= value) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+function lowerBound(points: number[], value: number) {
+  let low = 0;
+  let high = points.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (points[middle] < value) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+export function transitionCount(detail: SongDetail, time: number, seamAt: number) {
+  const barTimes = detail.bar_times ?? [];
+  const beatTimes = detail.beat_times ?? [];
+  if (barTimes.length < 2 || beatTimes.length === 0) return null;
+  const currentBar = Math.max(0, upperBound(barTimes, time) - 1);
+  const currentBeat = Math.max(0, upperBound(beatTimes, time) - 1);
+  const targetBeat = Math.min(lowerBound(beatTimes, seamAt), beatTimes.length - 1);
+  const barAt = lowerBound(barTimes, seamAt);
+  const candidate = Math.min(barAt, barTimes.length - 1);
+  const previous = Math.max(candidate - 1, 0);
+  const targetBar = Math.abs(barTimes[previous] - seamAt) <= Math.abs(barTimes[candidate] - seamAt)
+    ? previous
+    : candidate;
+  const aligned = Math.abs(barTimes[targetBar] - seamAt) <= 0.12;
+  const nextBarTime = barTimes[currentBar + 1] ?? detail.duration;
+  const barProgress = Math.max(0, Math.min(1, (time - barTimes[currentBar]) / (nextBarTime - barTimes[currentBar])));
+  const currentBarBeat = Math.max(0, upperBound(beatTimes, barTimes[currentBar] + 1e-4) - 1);
+  const beatInBar = Math.min(detail.beats_per_bar ?? 4, Math.max(1, currentBeat - currentBarBeat + 1));
+  return {
+    aligned,
+    bars: Math.max(0, targetBar - currentBar),
+    beats: Math.max(0, targetBeat - currentBeat),
+    barNumber: currentBar + 1,
+    beatInBar,
+    barProgress,
+  };
+}
+
+function TransitionCountdown({
+  detail,
+  time,
+  seamAt,
+  nextTitle,
+  ready,
+  inSeam,
+  switchAt,
+}: {
+  detail: SongDetail;
+  time: number;
+  seamAt: number | null;
+  nextTitle?: string;
+  ready: boolean;
+  inSeam: boolean;
+  switchAt?: number;
+}) {
+  const beatsPerBar = detail.beats_per_bar ?? 4;
+  if (!nextTitle) {
+    return <section className="handoff end-of-set"><span className="eyebrow">Set flow</span><b>Last track</b><span>No transition queued</span></section>;
+  }
+  if (!ready || seamAt === null) {
+    return <section className="handoff pending"><span className="eyebrow">Next transition</span><b>Preparing the hand-off</b><span>{nextTitle}</span><i className="pending-line" /></section>;
+  }
+  if (!detail.bar_times?.length || !detail.beat_times?.length) {
+    return <section className="handoff pending"><span className="eyebrow">Next transition</span><b>Beat grid unavailable</b><span>{nextTitle}</span></section>;
+  }
+  if (inSeam) {
+    const progress = Math.max(0, Math.min(1, (time - seamAt) / Math.max(switchAt ?? 0, 0.01)));
+    return (
+      <section className="handoff active" aria-label={`Transition into ${nextTitle} is playing`}>
+        <div className="handoff-title"><span className="eyebrow">Transition in progress</span><b>{nextTitle}</b></div>
+        <div className="handoff-progress"><i style={{ width: `${progress * 100}%` }} /></div>
+        <span className="handoff-caption">The next song is entering</span>
+      </section>
+    );
+  }
+  const countdown = transitionCount(detail, time, seamAt);
+  if (!countdown) return null;
+  const shownBars = Math.min(countdown.bars, 8);
+  return (
+    <section
+      className="handoff countdown"
+      role="timer"
+      aria-live="off"
+      aria-label={countdown.aligned
+        ? `${countdown.bars} bars until the transition; beat ${countdown.beatInBar} of ${beatsPerBar}`
+        : `${countdown.beats} beats until the transition`}
+    >
+      <div className="countdown-number">
+        <strong>{countdown.aligned ? String(countdown.bars).padStart(2, '0') : String(countdown.beats).padStart(2, '0')}</strong>
+        <span>{countdown.aligned ? 'bars to transition' : 'beats to transition'}</span>
+      </div>
+      <div className="countdown-track" aria-hidden="true">
+        {countdown.aligned && Array.from({ length: shownBars }, (_, index) => (
+          <span className={index === 0 ? 'current-bar' : undefined} key={index}>
+            {index === 0 && <i style={{ width: `${countdown.barProgress * 100}%` }} />}
+          </span>
+        ))}
+        <b />
+      </div>
+      <div className="countdown-meta">
+        {countdown.aligned && <span>Bar {countdown.barNumber} · </span>}
+        <span>Beat {countdown.beatInBar} / {beatsPerBar}</span>
+        <div className="beat-pips" aria-hidden="true">
+          {Array.from({ length: beatsPerBar }, (_, index) => <i className={index + 1 === countdown.beatInBar ? 'on' : undefined} key={index} />)}
+        </div>
+      </div>
+      <div className="handoff-next"><span>Next</span><b>{nextTitle}</b></div>
+    </section>
+  );
+}
+
+function MusicVisualizer({ player, active, stage }: { player: ViewProps['player']; active: boolean; stage: boolean }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (typeof CanvasRenderingContext2D === 'undefined') return;
+    const node = canvas.current;
+    const context = node?.getContext('2d');
+    if (!node || !context) return;
+    let frame = 0;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const accent = getComputedStyle(node).getPropertyValue('--accent').trim() || '#e8ff3a';
+    const soft = getComputedStyle(node).getPropertyValue('--ok').trim() || '#9ed46a';
+    const gradient = context.createLinearGradient(0, 180, 0, 0);
+    gradient.addColorStop(0, accent);
+    gradient.addColorStop(1, soft);
+    const draw = () => {
+      const rect = node.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.round(rect.width * ratio));
+      const height = Math.max(1, Math.round(rect.height * ratio));
+      if (node.width !== width || node.height !== height) {
+        node.width = width;
+        node.height = height;
+      }
+      context.clearRect(0, 0, width, height);
+      const spectrum = active ? player.getSpectrum() : null;
+      const bars = Math.min(72, Math.max(24, Math.floor(width / (ratio * 7))));
+      const gap = 2 * ratio;
+      const barWidth = Math.max(1, (width - gap * (bars - 1)) / bars);
+      context.fillStyle = gradient;
+      for (let index = 0; index < bars; index += 1) {
+        const low = Math.floor((index / bars) ** 2 * (spectrum?.length ?? 1));
+        const high = Math.max(low + 1, Math.floor(((index + 1) / bars) ** 2 * (spectrum?.length ?? 1)));
+        let value = 0;
+        if (spectrum) {
+          for (let bin = low; bin < Math.min(high, spectrum.length); bin += 1) value = Math.max(value, spectrum[bin] / 255);
+        }
+        const amplitude = spectrum ? Math.max(0.035, value ** 0.8) : 0.025;
+        const barHeight = Math.max(2 * ratio, amplitude * height * 0.92);
+        const x = index * (barWidth + gap);
+        context.fillRect(x, (height - barHeight) / 2, barWidth, barHeight);
+      }
+      if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
+    };
+    draw();
+    return () => window.cancelAnimationFrame(frame);
+  }, [player, active, stage]);
+  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label="Live music frequency visualizer" />;
 }
 
 function Lyrics({ detail, time }: { detail: SongDetail; time: number }) {
@@ -179,6 +359,18 @@ export function Now(props: ViewProps) {
       <h1 className="display">{item?.title}</h1>
       <p className="artist">{item?.artist}</p>
 
+      <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />
+      {detail && detail.id === item?.song_id && (
+        <TransitionCountdown
+          detail={detail}
+          time={now.songTime}
+          seamAt={now.seamAt}
+          nextTitle={next?.title}
+          ready={now.nextReady}
+          inSeam={now.inSeam}
+          switchAt={seam?.switch_at}
+        />
+      )}
       {detail && detail.id === item?.song_id && !stage && <Strip detail={detail} time={now.songTime} seamAt={now.seamAt} />}
       {detail && detail.id === item?.song_id && <Lyrics detail={detail} time={now.songTime} />}
       {stage && (

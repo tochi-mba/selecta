@@ -13,6 +13,15 @@ class FakeAudio {
     const param = { setValueAtTime() {}, linearRampToValueAtTime() {}, cancelScheduledValues() {} };
     return { gain: param, connect() {}, disconnect() {} };
   }
+  createAnalyser() {
+    return {
+      fftSize: 0,
+      frequencyBinCount: 256,
+      smoothingTimeConstant: 0,
+      connect() {},
+      getByteFrequencyData(data: Uint8Array) { data.fill(96); },
+    };
+  }
   createBufferSource() {
     return { buffer: null, connect() {}, disconnect() {}, start() {}, stop() {} };
   }

@@ -299,6 +299,15 @@ function SeamRow(props: {
           <button onClick={onToggle}>{open ? 'Close' : 'Change'}</button>
         </div>
       </div>
+      <div className={`seam-visual ${state.status}`} role="img" aria-label={`${state.status === 'ready' ? 'Ready' : 'Planned'} ${state.bars ?? seam.settings.bars ?? 4}-bar transition from ${previous.title} into ${item.title}`}>
+        <span className="seam-visual-label">{state.status === 'ready' ? 'Transition' : 'Transition plan'} · {state.bars ?? seam.settings.bars ?? 4} bars</span>
+        <div className="seam-visual-bars" aria-hidden="true">
+          {Array.from({ length: Math.min(Math.max(state.bars ?? seam.settings.bars ?? 4, 2), 8) }, (_, index) => (
+            <i key={index} />
+          ))}
+        </div>
+        <span className="seam-visual-caption"><b>{previous.title}</b><span>→</span><b>{item.title}</b></span>
+      </div>
       {state.status === 'failed' && (
         <p className="warn">
           {state.error} {!open && <button className="link" onClick={onToggle}>Try another move</button>}
