@@ -10,6 +10,7 @@ import { Now } from './views/Now';
 import { Start } from './views/Start';
 import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
+import { Requests } from './views/Requests';
 import type { Toast, Undo, View } from './views/shared';
 
 const OPEN_DRAFT = 'selecta.openDraft';
@@ -312,6 +313,9 @@ export function App() {
       )}
       {shown === 'Mixes' && <Mixes {...shared} />}
       {shown === 'Now' && <Now {...shared} />}
+      <div className={shown === 'Now' && !stage ? 'page' : undefined}>
+        <Requests playback={{ mix, player, onMix: setMixData }} visible={shown === 'Now' && !stage} />
+      </div>
       {shown === 'Edit' && draftId === null && <Mix {...shared} />}
       {shown === 'Edit' && draftId !== null && !draftData && <main className="page" aria-busy="true" />}
       {shown === 'Edit' && draftId !== null && draftData && (
