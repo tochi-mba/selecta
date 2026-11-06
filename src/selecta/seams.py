@@ -26,6 +26,18 @@ import soundfile as sf
 
 from selecta import db, jobs
 from selecta.analysis.song import Cue, SongInfo, load_song
+from selecta.arrange import (
+    TAKES,
+    WontWork,
+    arc_of,
+    arrangements,
+    as_array,
+    can_arrange,
+    listen,
+    repair,
+    taste_from,
+    why_it_cant,
+)
 from selecta.audit.checks import AuditReport, Check, audit, beat_offset
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
 from selecta.eta import JobClock
@@ -48,6 +60,8 @@ from selecta.render.intertwine import can_intertwine, render_intertwined
 from selecta.render.script import Part, TransitionScript, Warp
 from selecta.stems import prune_cache
 from selecta.studio import (
+    LANES,
+    SIDES,
     clean_shape,
     prepare_session,
     render_shape,
@@ -75,6 +89,10 @@ MOVES: dict[str, tuple[str, str]] = {
     "bass_swap_blend": ("Blend", "Both songs play in time, and they trade the bass halfway."),
     "vocal_ride": ("Vocal ride", "B's band comes in under A's voice, before B starts singing."),
     "stem_studio": ("Your stems", "You chose which stems play when, in the studio."),
+    "stem_arrange": (
+        "Strip and land",
+        "A strips down to its melody, B is teased, then B's bass and drums land.",
+    ),
     "stem_intertwine": (
         "Intertwined stems",
         "Trade drums, bass and harmonic layers over sixteen bars, with vocals taking turns.",
@@ -94,7 +112,7 @@ MOVES: dict[str, tuple[str, str]] = {
     "reverb_wash": ("Reverb wash", "A dissolves into a room as B arrives."),
 }
 WORD_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
-STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine", "stem_studio"}
+STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine", "stem_studio", "stem_arrange"}
 STUDIO_SESSION = "studio_session"
 NOT_IN_THE_CHOOSER = {"stem_studio"}
 
@@ -160,6 +178,8 @@ def _why_unavailable(move: str, a: SongInfo, b: SongInfo, has_link: bool) -> str
         if ride_lines(a, b) is None:
             return "A isn't singing enough near a place it could finish."
         return None
+    if move == "stem_arrange":
+        return why_it_cant(a, b)
     if move == "stem_intertwine":
         return (
             None
@@ -347,6 +367,57 @@ def _bar_cue_render(
     return best
 
 
+def _session_for(
+    settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo
+) -> tuple[Path, dict]:
+    """The stems for this pair laid out, shared with the studio so neither splits them twice."""
+    session_request = SeamRequest(
+        a.id, b.id, STUDIO_SESSION, exit_bar=request.exit_bar, entry_bar=request.entry_bar
+    )
+    folder = settings.renders_dir / "seams" / session_request.key
+    try:
+        session = json.loads((folder / "session.json").read_text("utf-8"))
+    except (OSError, ValueError):
+        return folder, _make_session(settings, session_request, a, b)
+    # the cache can clear files at any time, so a layout on its own isn't enough
+    stems = (folder / f"{side}_{lane}.flac" for side in SIDES for lane in LANES)
+    if not all(stem.exists() for stem in stems):
+        return folder, _make_session(settings, session_request, a, b)
+    return folder, session
+
+
+def _arranged(
+    settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo, memory: SeamMemory
+) -> tuple[Rendered, AuditReport, str]:
+    """Listen to both songs' stems, make the best arrangement it can, render it, check it, and go
+    again with a specific fix for anything that didn't pass."""
+    folder, session = _session_for(settings, request, a, b)
+    hearing = listen(folder, float(session["seconds"]))
+    try:
+        to_try = arrangements(hearing, taste_from(memory), memory.pair_shapes.get((a.id, b.id)))
+    except WontWork as problem:
+        raise CannotRender(str(problem)) from problem
+    why = f"{a.title} strips down to its melody, then {b.title} lands."
+    best = None
+    tried: list[dict] = []
+    while to_try and len(tried) < TAKES:
+        shape = to_try.pop(0)
+        if shape in tried:
+            continue
+        tried.append(shape)
+        rendered = render_shape(a, b, folder, session, shape, style="stem_arrange")
+        rendered.script.meta["arc"] = [round(float(v), 1) for v in arc_of(as_array(shape), hearing)]
+        report = audit(rendered)
+        if report.passed:
+            return rendered, report, why
+        if best is None or _closer(report, best[1]):
+            best = (rendered, report, why)
+        fix = repair(shape, [check.name for check in report.failures], hearing)
+        if fix is not None:
+            to_try.insert(0, fix)
+    return best
+
+
 def _make_session(
     settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo
 ) -> dict:
@@ -369,15 +440,11 @@ def _stem_render(
     cache: SongCache,
 ) -> tuple[Rendered, AuditReport, str]:
     if request.move == "stem_studio":
-        session_request = SeamRequest(
-            a.id, b.id, STUDIO_SESSION, exit_bar=request.exit_bar, entry_bar=request.entry_bar
-        )
-        folder = settings.renders_dir / "seams" / session_request.key
-        try:
-            session = json.loads((folder / "session.json").read_text("utf-8"))
-        except (OSError, ValueError):
-            session = _make_session(settings, session_request, a, b)
-        rendered = render_shape(a, b, folder, session, clean_shape(request.shape))
+        folder, session = _session_for(settings, request, a, b)
+        shape = clean_shape(request.shape)
+        rendered = render_shape(a, b, folder, session, shape)
+        heard = listen(folder, float(session["seconds"]))
+        rendered.script.meta["arc"] = [round(float(v), 1) for v in arc_of(as_array(shape), heard)]
         return rendered, audit(rendered), "You chose which stems play when."
     if request.move == "stem_intertwine":
         try:
@@ -498,7 +565,9 @@ def _switch_at(rendered: Rendered) -> float:
     return float(rendered.script.overlap[1])
 
 
-def fallback_order(a: int, b: int, can_ride: bool, used: Counter[str]) -> list[str]:
+def fallback_order(
+    a: int, b: int, can_ride: bool, used: Counter[str], can_strip: bool = False
+) -> list[str]:
     """What to try when a planned move can't work, with the rest of the mix in mind. Whatever the
     mix has used least comes first, so a fallback doesn't add to what it already has plenty of.
     Reverb stays last of the effects, because the listener doesn't care for it."""
@@ -510,7 +579,8 @@ def fallback_order(a: int, b: int, can_ride: bool, used: Counter[str]) -> list[s
         key=lambda move: (used[move], hashlib.sha1(f"{a}{b}{move}".encode()).digest()),
     )
     ride = ["vocal_ride"] if can_ride else []
-    middle = [*blends, *ride] if rides_full else [*ride, *blends]
+    strip = ["stem_arrange"] if can_strip else []
+    middle = [*blends, *ride, *strip] if rides_full else [*ride, *strip, *blends]
     return [*middle, *effects, "reverb_wash"]
 
 
@@ -911,6 +981,8 @@ class SeamStore:
         return self._save(request, rendered, report, why, fell_back, tried)
 
     def _chosen_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
+        if request.move == "stem_arrange":
+            return _arranged(self.settings, request, a, b, self.memory)
         if request.move in STEM_MOVES:
             if request.move == "stem_intertwine":
                 return _stem_render(self.settings, None, request, a, b, self._cache)
@@ -949,7 +1021,7 @@ class SeamStore:
         can_ride = "word_blend" in modes_for(a, b) and ride_lines(a, b) is not None
         draft = self._running_draft
         used = self.mix_moves() if draft is None else self.draft_moves(draft)
-        moves = fallback_order(a.id, b.id, can_ride, used)
+        moves = fallback_order(a.id, b.id, can_ride, used, can_arrange(a, b))
         if stem_preference == "never":
             moves = [move for move in moves if move not in STEM_MOVES]
         # what's already known to fail isn't worth minutes, and what's known to work goes first
@@ -959,7 +1031,7 @@ class SeamStore:
         )
         held = near
         for move in moves:
-            if move == asked or (move == "vocal_ride" and held is not None):
+            if move == asked or (move in {"vocal_ride", "stem_arrange"} and held is not None):
                 continue  # stems take minutes, which isn't worth it to improve on a near miss
             take = self._take(a, b, move, tried)
             if take is None:
@@ -1006,6 +1078,8 @@ class SeamStore:
             "exit_bar": script.meta.get("exit_bar"),
             "entry_bar": script.meta.get("entry_bar"),
             "placed_bars": script.meta.get("placed_bars"),
+            "shape_used": script.meta.get("shape"),
+            "arc": script.meta.get("arc"),
             "a_source_start": float(script.a_source_start),
             "b_source_end": float(script.b_source_end),
             "duration": float(script.duration),

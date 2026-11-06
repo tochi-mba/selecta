@@ -49,6 +49,8 @@ TOO_FAR_APART = 0.3
 """Past this, even at half or double time, nothing can carry two songs but an effect or a cut."""
 MOVE_NAMES = {
     "vocal_ride": "vocal ride",
+    "stem_arrange": "strip and land",
+    "stem_studio": "shape",
     "bass_swap_blend": "blend",
     "filter_sweep": "filter sweep",
     "tempo_ramp": "tempo ramp",

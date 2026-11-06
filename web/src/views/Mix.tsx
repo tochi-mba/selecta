@@ -176,6 +176,9 @@ function SeamEditor(props: {
         </div>
       )}
       {chosen === 'stem_studio' && <p className="hint">You shaped this one in the studio.</p>}
+      {chosen === 'stem_arrange' && (
+        <p className="hint">Selecta built this from what’s in the stems, and learns from every one you rate. Open the grid to see or change it.</p>
+      )}
       <fieldset>
         <legend>How should this land?</legend>
         <div className="chips moves">

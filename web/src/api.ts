@@ -102,6 +102,7 @@ export type Status = {
     analysis: Eta & { songs: number; after_mix: boolean };
     line: Record<string, number>;
     jobs: Record<string, number>;
+    accuracy?: { jobs: number; typical_miss: number | null };
   };
   scan: { status: string; folder?: string; music?: number; set_aside?: number; error?: string };
 };

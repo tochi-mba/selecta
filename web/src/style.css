@@ -502,6 +502,7 @@ kbd { font: 0.82rem var(--mono); background: var(--panel-2); border: 1px solid v
 .studio-cell[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); }
 .studio-cell.now { outline: 2px solid var(--accent); outline-offset: -1px; }
 .studio-shapes button { font-size: 0.82rem; }
+.studio-changes { margin: 0; padding-left: 18px; color: var(--soft); font-size: 0.9rem; display: grid; gap: 2px; }
 
 .drafts-head { justify-content: space-between; align-items: baseline; }
 .draft-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }

@@ -131,8 +131,8 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
         <p>
           {status.analysis_running
             ? status.mix_rendering
-              ? `Waiting while ${status.mixes_in_line ? 'your mixes render' : 'your mix renders'}, then it carries on. ${left} to go, ${etaRangeWords(status.eta?.analysis)} after that.`
-              : `Working through your songs at low priority, so you can keep using your PC. ${left} to go, ${etaRangeWords(status.eta?.analysis)}.`
+              ? `Waiting while ${status.mixes_in_line ? 'your mixes render' : 'your mix renders'}, then it carries on. ${left} to go, done in ${etaRangeWords(status.eta?.analysis)}.`
+              : `Working through your songs at low priority, so you can keep using your PC. ${left} to go, done in ${etaRangeWords(status.eta?.analysis)}.`
             : left
               ? `${left} song${left === 1 ? '' : 's'} left. ${analysisWords(status.eta?.analysis)}`
               : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}

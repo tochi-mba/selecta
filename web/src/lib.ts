@@ -148,7 +148,7 @@ export function analysisWords(analysis: { seconds: number; low: number; high: nu
   if (!analysis) return 'It runs in the background.';
   const wait = etaRangeWords(analysis);
   return analysis.after_mix
-    ? `It takes ${wait}, and waits until rendering has finished.`
+    ? `It’ll be done in ${wait}, since it waits for rendering to finish first.`
     : `It takes ${wait} in the background.`;
 }
 

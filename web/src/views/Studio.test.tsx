@@ -195,4 +195,66 @@ describe('the seam studio', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('lets Selecta arrange it, and what was there can be put back', async () => {
+    const made = shape(0, 1);
+    const { calls } = open(ready, { 'POST /mix/1/studio/tune': { shape: made, changes: [] } });
+    const cell = await square('Song 2 bass, square 1');
+    expect(cell).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
+    expect(calls.find((call) => call.path.endsWith('/tune'))?.body).toEqual({ shape: null });
+    expect(deck.made[0].setShape).toHaveBeenLastCalledWith(made);
+    expect(screen.getByRole('status')).toHaveTextContent('Selecta arranged this');
+    fireEvent.click(screen.getByRole('button', { name: 'Put it back' }));
+    expect(cell).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
+  it('fine tunes your own grid and says what it changed and why', async () => {
+    const tuned = shape(1, 1);
+    const { calls } = open(ready, {
+      'POST /mix/1/studio/tune': { shape: tuned, changes: ['Turned Song 2’s melody off in square 4, where it clashed with the other song.'] },
+    });
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
+    expect((calls.find((call) => call.path.endsWith('/tune'))?.body as { shape: Shape }).shape.a.vocals[0]).toBe(1);
+    expect(screen.getByRole('status')).toHaveTextContent('where it clashed');
+  });
+
+  it('says so when fine tuning finds nothing to change', async () => {
+    open(ready, { 'POST /mix/1/studio/tune': { shape: shape(1, 0), changes: [] } });
+    await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Nothing to change');
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
+  it('a change of your own clears what fine tuning said', async () => {
+    open(ready, { 'POST /mix/1/studio/tune': { shape: shape(1, 1), changes: ['Something.'] } });
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await screen.findByText('Something.');
+    fireEvent.click(cell);
+    expect(screen.queryByText('Something.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
+  it('explains when Selecta can’t arrange these two, and keeps the grid as it is', async () => {
+    open();
+    const cell = await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Let Selecta arrange it' })).toBeEnabled();
+  });
+
+  it('nothing it does is final until “Use this”', async () => {
+    const { calls } = open(ready, { 'POST /mix/1/studio/tune': { shape: shape(1, 1), changes: ['x'] } });
+    await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await screen.findByText('x');
+    expect(calls.some((call) => call.path.endsWith('/use'))).toBe(false);
+  });
 });

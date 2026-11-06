@@ -173,7 +173,7 @@ describe('how long things will take', () => {
   });
 
   it('explains what analysis is waiting for', () => {
-    expect(analysisWords({ seconds: 3600, low: 3000, high: 4200, after_mix: true })).toContain('waits until rendering');
+    expect(analysisWords({ seconds: 3600, low: 3000, high: 4200, after_mix: true })).toContain('waits for rendering');
     expect(analysisWords({ seconds: 3600, low: 3000, high: 4200, after_mix: false })).toBe('It takes about an hour in the background.');
     expect(analysisWords(undefined)).toBe('It runs in the background.');
   });
