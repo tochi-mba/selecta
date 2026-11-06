@@ -20,6 +20,8 @@ The [Beatmatch EQ discussion](https://www.reddit.com/r/Beatmatch/comments/1w4ok1
 
 ## Runtime verification
 
-The long-running API omitted the newly added beat/bar fields while serving the rebuilt frontend, producing the persistent “Beat grid unavailable” message. After a SQLite backup and server restart on 6 November, the live `/api/songs/140` response returned 66 bar positions, 262 beats, and four beats per bar. Analysis and mix-render requests were resumed. This verifies API availability; browser refresh and playback observation are still required to establish the displayed countdown behavior in that running session.
+The long-running API omitted the newly added beat/bar fields while serving the rebuilt frontend, producing the persistent “Beat grid unavailable” message. After a SQLite backup and server restart on 6 November, the live `/api/songs/140` response returned 66 bar positions, 262 beats, and four beats per bar. Analysis and mix-render requests were resumed.
+
+Live browser verification on the same date: opened Now, pressed Play on WORSHIP, observed 39 bars remaining at bar 1 / beat 3 / playback 0:02, then 36 bars remaining at bar 4 / beat 3 / playback 0:10. Pressed Pause and observed the paused state retaining that position and countdown. The UI also exposed the live frequency visualizer and next song, squabble up. This establishes that the browser receives and advances the countdown with playback. It does not establish beat/downbeat ground-truth accuracy or subjective transition quality. Playback was left paused after verification.
 
 The broader research backlog remains open: local harmonic tension, groove perception, auditory masking, loudness during overlaps, and blind comparisons of adaptive effects need source review and implementation-specific experiments. These notes do not establish subjective quality.
