@@ -125,6 +125,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const filter = useQueryParam('show') ?? 'ready';
   const sort = useQueryParam('sort') ?? 'title';
   const [typed, setTyped] = useState(query);
+  const [searching, setSearching] = useState(true);
+  useEffect(() => setTyped(query), [query]);
   const [rows, setRows] = useState<LibrarySong[] | null>(null);
   const [total, setTotal] = useState(0);
   const [next, setNext] = useState<string | null>(null);
@@ -146,12 +148,13 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     return get<LibraryPage>(url())
       .then((page) => {
         if (mine !== asked.current) return;
+        setSearching(false);
         setRows(page.songs);
         setTotal(page.total);
         setNext(page.next);
         setFailed(false);
       })
-      .catch(() => { if (mine === asked.current) setFailed(true); });
+      .catch(() => { if (mine === asked.current) { setFailed(true); setSearching(false); } });
   }, [url]);
 
   const more = async () => {
@@ -181,8 +184,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   }, [url]);
 
   useEffect(() => {
+    setSearching(true);
     const wait = window.setTimeout(() => void load(), 120);
-    return () => window.clearTimeout(wait);
+    return () => { asked.current += 1; window.clearTimeout(wait); };
   }, [load]);
 
   useEffect(() => {
@@ -242,6 +246,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     <main className="page library" id="main">
       <h1 className="display small">Library</h1>
       <div className="library-find">
+        <label className="library-search">Search your library
         <input
           className="wide"
           value={typed}
@@ -249,6 +254,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           placeholder="Search by artist or title"
           aria-label="Search your library"
         />
+        </label>
         <label className="library-sort">
           Sort by
           <select value={sort} onChange={(event) => setAddressQuery({ sort: event.target.value === 'title' ? null : event.target.value })}>
@@ -275,12 +281,13 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           )}
         </div>
       )}
+      {searching && rows !== null && <p className="hint" role="status">Updating results…</p>}
       {failed && rows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
       {failed && rows !== null && <p className="warn" role="status">Can’t check on your library right now, so what’s shown may be out of date.</p>}
-      {rows === null && !failed && <Skeleton lines={6} label="Loading your songs" />}
+      {rows === null && !failed && <Skeleton variant="library" lines={6} label="Loading your songs" />}
       {rows !== null && <p className="hint library-count" role="status">{rows.length < total ? `Showing ${rows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
-      {rows?.length === 0 && <p className="lede">{query ? `Nothing matches “${query}”.` : 'Nothing here right now.'}</p>}
-      <ul className="rows">
+      {rows?.length === 0 && <section className="empty-state"><h2>{query ? `Nothing matches “${query}”.` : 'No songs in this view'}</h2><p>Try a different title or artist, or show all songs to check their progress.</p><div className="row wrap">{query && <button onClick={() => { setTyped(''); setAddressQuery({ q: null }); }}>Clear search</button>}<button onClick={() => setAddressQuery({ show: 'all' })}>Show all songs</button></div></section>}
+      <ul className="rows" aria-busy={searching}>
         {rows?.map((song) => {
           const ready = song.bpm !== null;
           const facts = READINESS[song.readiness.status] ?? READINESS.queued;
@@ -303,10 +310,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <div className="song-actions">
                 {ready ? (
                   <>
-                    <Action title="Build a mix that starts here" working="Building your mix…" disabled={building} run={() => startFrom(song)}>Start a mix</Action>
-                    <Action working="Adding…" disabled={already} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>
+                    <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => startFrom(song)}>Start a mix</Action>
+                    <Action working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>
                     {now.phase !== 'idle' && (
-                      <Action working="Adding…" disabled={already} run={() => add(song, now.position + 1)}>Play next</Action>
+                      <Action working="Adding…" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next</Action>
                     )}
                   </>
                 ) : (
@@ -318,7 +325,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                   )
                 )}
                 {filter !== 'set_aside' && (
-                  <>
+                  <details><summary aria-label={`More actions for ${song.title ?? 'Untitled'}`}>More</summary><div className="row wrap">
                     <Action
                       aria-pressed={song.priority}
                       run={() => setPriority(song)}
@@ -329,7 +336,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                     <Action aria-pressed={song.never} run={() => never(song)} title="Selecta won’t pick this when it builds a mix">
                       {song.never ? 'Never: on' : 'Never play'}
                     </Action>
-                  </>
+                  </div></details>
                 )}
               </div>
             </li>

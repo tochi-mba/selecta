@@ -1,3 +1,4 @@
+import { Icon } from '../ui/Icon';
 import { DragEvent, FormEvent, useContext, useEffect, useState } from 'react';
 import { ApiError, del, DraftList, get, MixData, MixItem, post, Suggestion } from '../api';
 import { Action, Sheet } from '../ui/controls';
@@ -160,14 +161,14 @@ function SongLine(props: {
           disabled={item.position === 0}
           run={() => act(post<MixData>(at('/mix/move'), { source: item.position, target: item.position - 1 }, guard), `Moved ${item.title} up.`)}
         >
-          ↑
+          <Icon name="up" />
         </Action>
         <Action
           aria-label={`Move ${item.title} down`}
           disabled={item.position === total - 1}
           run={() => act(post<MixData>(at('/mix/move'), { source: item.position, target: item.position + 1 }, guard), `Moved ${item.title} down.`)}
         >
-          ↓
+          <Icon name="down" />
         </Action>
         <Action
           aria-pressed={item.locked}
@@ -176,8 +177,8 @@ function SongLine(props: {
         >
           {item.locked ? 'Locked' : 'Lock'}
         </Action>
-        <Action aria-label={`Remove ${item.title}`} run={() => act(del<MixData>(at(`/mix/songs/${item.position}`), guard), `Removed ${item.title}.`)}>
-          ✕
+        <Action className="destructive" aria-label={`Remove ${item.title}`} run={() => act(del<MixData>(at(`/mix/songs/${item.position}`), guard), `Removed ${item.title}.`)}>
+          <Icon name="close" />
         </Action>
       </div>
     </li>
@@ -349,16 +350,16 @@ export function Mix(props: ViewProps) {
       <header className="mix-head">
         <div>
           <MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} />
-          {inDraft && <p className="eyebrow">Draft</p>}
+          <p className="eyebrow">{inDraft ? 'Draft · saved as you edit' : 'Current mix'}</p>
           <h1 className="display small">{mixName}</h1>
           <p className="lede">
             {mix.length} {mix.length === 1 ? 'song' : 'songs'}, about {length(total)}.
-            {seams.length > 0 && ` ${ready} of ${seams.length} seams are ready.`}
+            {seams.length > 0 && ` ${ready} of ${seams.length} transitions are ready.`}
             {!inDraft && mixEta && mixEta.seams > 0 && (mixEta.late ? ' The rest are taking longer than usual.' : ` The rest take ${etaRangeWords(mixEta)}.`)}
             {inDraft && mixEta && mixEta.seams > 0 && (draftPlace
               ? ` ${nth(draftPlace)} in line. All ready in ${etaRangeWords(mixEta)}.`
               : ` Prioritize it and all of it would be ready in ${etaRangeWords(mixEta)}.`)}
-            {seams.length > 0 && ' Tap any seam to change how it lands.'}
+            {seams.length > 0 && ' Select a transition to hear or change it.'}
           </p>
           {inDraft && <p className="hint">Saved as you go. What’s playing isn’t affected.</p>}
         </div>
@@ -396,19 +397,19 @@ export function Mix(props: ViewProps) {
           )}
           {!inDraft && ready < seams.length && (
             <Action run={renderAll} disabled={!waiting}>
-              {waiting ? 'Render every seam' : rendering ? `Rendering ${ready} of ${seams.length}…` : 'Change failed transitions to continue'}
+              {waiting ? 'Render every transition' : rendering ? `Rendering ${ready} of ${seams.length}…` : 'Change failed transitions to continue'}
             </Action>
           )}
           {mix.length > 1 && <button onClick={() => setExporting(true)}>Download audio</button>}
           {inDraft ? (
             <>
-              <Action working="Deleting…" run={deleteDraft}>Delete</Action>
+              <Action className="destructive" working="Deleting…" run={deleteDraft}>Delete</Action>
               <button onClick={backToCurrent}>Back to current mix</button>
             </>
           ) : (
             <>
               <button onClick={() => setView('Mixes')}>New mix</button>
-              <Action working="Clearing…" run={clear}>Clear</Action>
+              <Action className="destructive" working="Clearing…" run={clear}>Clear</Action>
             </>
           )}
         </div>
@@ -427,7 +428,7 @@ export function Mix(props: ViewProps) {
       <div className={`edit-layout ${selectedIndex > 0 && !narrow ? 'has-inspector' : ''}`}>
       <ol className="timeline" onDragOver={scrollWhileDragging}>
         {mix.map((item, index) => (
-          <FragmentRow key={`${item.song_id}-${index}`}>
+          <FragmentRow key={item.song_id}>
             {index > 0 && (
               <SeamUnlessReplaced
                 inDraft={inDraft}
@@ -504,7 +505,7 @@ export function Mix(props: ViewProps) {
         <aside className="edit-inspector" aria-label="This transition">
           <div className="inspector-head">
             <h2>Transition</h2>
-            <button aria-label="Close" onClick={() => setSelected(null)}>✕</button>
+            <button aria-label="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
           </div>
           {inspector}
         </aside>

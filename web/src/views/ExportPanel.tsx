@@ -68,6 +68,11 @@ export function ExportPanel(props: {
   return (
     <Dialog title="Save as an audio file" onClose={onClose}>
       <p><b>{mixName}</b> <span className="soft">{inDraft ? 'draft' : 'current mix'}, {mix.length} songs. FLAC.</span></p>
+      <ol className="export-stages" aria-label="Export progress">
+        <li aria-current={!saving && !file ? 'step' : undefined}>Prepare transitions{going ? ` — ${ready} of ${seams.length} ready` : ''}</li>
+        <li aria-current={saving ? 'step' : undefined}>Create the FLAC file</li>
+        <li aria-current={file ? 'step' : undefined}>Download your mix</li>
+      </ol>
       <p className="hint">{ready} of {seams.length} transitions ready. {left.length ? 'The rest get rendered first.' : 'Everything’s ready.'}</p>
       {!!left.length && (
         <ul className="export-left">
@@ -87,6 +92,7 @@ export function ExportPanel(props: {
         </button>
       )}
       <p className="hint">Your original songs aren’t touched.</p>
+      <p className="hint">Keep this panel open to receive the download link. Closing it does not cancel work already sent to Selecta. Reopen Download audio and start again if you close before the link appears.</p>
     </Dialog>
   );
 }

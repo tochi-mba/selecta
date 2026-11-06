@@ -1,9 +1,10 @@
+import { ControlGallery } from '../ui/ControlGallery';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Folders, get, Jobs, post, Storage } from '../api';
 import { analysisWords, estimateWords, etaRangeWords, gb, storageWords } from '../lib';
 import type { WorkshopTab } from '../router';
 import { PageLink } from '../shell/Shell';
-import { Action, Problem, Skeleton, Status, StatusKind } from '../ui/controls';
+import { Action, Problem, Skeleton, Status } from '../ui/controls';
 import { ViewProps } from './shared';
 import { Listening } from './Listening';
 
@@ -15,10 +16,12 @@ type Memory = { tried: number; clean: number; warned: number; failed: number; li
 /** What Selecta has learned from rendering, so it's clear why mixes get better as it goes. */
 function MemoryPanel() {
   const [memory, setMemory] = useState<Memory | null>(null);
-  useEffect(() => {
-    get<Memory>('/memory').then(setMemory).catch(() => {});
-  }, []);
-  if (!memory?.tried) return null;
+  const [failed, setFailed] = useState(false);
+  const load = useCallback(() => get<Memory>('/memory').then((value) => { setMemory(value); setFailed(false); }).catch(() => setFailed(true)), []);
+  useEffect(() => { void load(); }, [load]);
+  if (failed) return <Problem retry={load}>Couldn’t load learning history.</Problem>;
+  if (!memory) return <Skeleton variant="metrics" label="Loading learning history" />;
+  if (!memory.tried) return <section className="panel"><h2>Learning starts with listening</h2><p className="hint">Rate transitions after you hear them. Your feedback stays on this PC.</p></section>;
   const rated = memory.liked + memory.disliked;
   return (
     <section className="panel stack">
@@ -40,18 +43,21 @@ function StoragePanel() {
   const [saved, setSaved] = useState(true);
   const [problem, setProblem] = useState('');
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const refresh = () =>
     get<Storage>('/storage').then((data) => {
+      setLoadFailed(false);
       setStorage(data);
       setLimit((current) => current ?? data.budget_bytes / GB);
-    });
+    }).catch(() => setLoadFailed(true));
   useEffect(() => {
     void refresh().catch(() => {});
     const timer = window.setInterval(() => void refresh().catch(() => {}), 15000);
     return () => window.clearInterval(timer);
   }, []);
 
-  if (!storage || limit === null) return <Skeleton label="Working out how much room there is" />;
+  if ((!storage || limit === null) && loadFailed) return <Problem retry={refresh}>Couldn’t read storage information.</Problem>;
+  if (!storage || limit === null) return <Skeleton variant="metrics" label="Working out how much room there is" />;
   const words = storageWords(storage);
   const overBudget = storage.cache_bytes > storage.budget_bytes;
   const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);
@@ -60,10 +66,11 @@ function StoragePanel() {
   const move = (value: number) => {
     setLimit(value);
     setSaved(false);
+    setProblem('');
+    saves.current += 1;
+    const mine = saves.current;
     window.clearTimeout(wait.current);
     wait.current = window.setTimeout(() => {
-      saves.current += 1;
-      const mine = saves.current;
       void post<Storage>('/storage', { budget_gb: value })
         .then((confirmed) => {
           // only the last one moved counts, and it shows what was really saved
@@ -76,10 +83,11 @@ function StoragePanel() {
     }, 400);
   };
 
-  const total = storage.used_bytes + storage.free_bytes;
+  const total = Math.max(1, storage.used_bytes + storage.free_bytes);
   return (
     <section className="panel stack">
       <h2>Storage</h2>
+      {loadFailed && <Problem retry={refresh}>Storage information may be out of date.</Problem>}
       <p>{words.summary}</p>
       <div className="bar-meter" role="img" aria-label={words.summary}>
         <i className="kept" style={{ width: `${(100 * storage.kept_bytes) / total}%` }} />
@@ -104,7 +112,8 @@ function StoragePanel() {
           onChange={(event) => move(Number(event.target.value))}
         />
       </label>
-      {!saved && <p className="hint" role="status">Saving…</p>}
+      {!saved && !problem && <p className="hint" role="status">Saving…</p>}
+      {!saved && problem && <Action run={() => move(limit)}>Retry saving budget</Action>}
       {problem && <p className="warn" role="alert">{problem}</p>}
       <p className="hint">
         {overBudget
@@ -129,7 +138,7 @@ function JobsPanel({ status }: { status: ViewProps['status'] }) {
     const timer = window.setInterval(() => void refresh(), 5000);
     return () => window.clearInterval(timer);
   }, [refresh]);
-  if (!jobs) return failed ? <Problem retry={refresh}>Couldn’t find out what’s running.</Problem> : <Skeleton label="Finding out what’s running" />;
+  if (!jobs) return failed ? <Problem retry={refresh}>Couldn’t find out what’s running.</Problem> : <Skeleton variant="metrics" label="Finding out what’s running" />;
   const left = jobs.mix.queued + jobs.mix.rendering + jobs.mix.none;
   return (
     <section className="panel stack">
@@ -195,8 +204,11 @@ function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status
   const [folder, setFolder] = useState('');
   const [problem, setProblem] = useState('');
   const [list, setList] = useState<Folders | null>(null);
-  const reading = status.scan.status === 'running';
-  const refresh = useCallback(() => get<Folders>('/folders').then(setList).catch(() => {}), []);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const scanPending = useRef(false);
+  const reading = status.scan.status === 'running' || submitting;
+  const refresh = useCallback(() => get<Folders>('/folders').then((value) => { setList(value); setLoadFailed(false); }).catch(() => setLoadFailed(true)), []);
   useEffect(() => {
     void refresh();
   }, [refresh, status.scan.status]);
@@ -207,14 +219,17 @@ function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status
   };
   const scan = async (event: FormEvent) => {
     event.preventDefault();
+    if (scanPending.current || reading || !folder.trim()) return;
+    scanPending.current = true;
+    setSubmitting(true);
     setProblem('');
     try {
-      await post('/scan', { folder });
+      await post('/scan', { folder: folder.trim().replace(/^"|"$/g, '') });
       setFolder('');
       refreshStatus();
     } catch (error) {
       setProblem((error as Error).message);
-    }
+    } finally { scanPending.current = false; setSubmitting(false); }
   };
   const stopWatching = async (path: string) => {
     setList(await post<Folders>('/folders/stop-watching', { folder: path }));
@@ -223,7 +238,8 @@ function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status
   return (
     <section className="panel stack">
       <h2>Your music folders</h2>
-      {list === null && <Skeleton lines={1} label="Looking at your folders" />}
+      {loadFailed && <Problem retry={refresh}>Couldn’t read your watched folders.</Problem>}
+      {list === null && !loadFailed && <Skeleton variant="metrics" lines={1} label="Looking at your folders" />}
       {!!list?.folders.length && (
         <ul className="folder-list">
           {list.folders.map((item) => (
@@ -243,7 +259,8 @@ function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status
         <Action working="Checking…" run={checkNow}>Check now</Action>
       </div>
       <h3>Add another folder</h3>
-      <form className="row" onSubmit={(event) => void scan(event)}>
+      <p className="hint">Copy a folder address from File Explorer. Adding a folder sends artist, title, album and duration to LRCLIB for lyric lookup; audio stays here.</p>
+      <form className="row wrap" onSubmit={(event) => void scan(event)}>
         <input
           value={folder}
           onChange={(event) => setFolder(event.target.value)}
@@ -275,7 +292,7 @@ function Diagnostics() {
     void load();
   }, [load]);
   if (failed) return <Problem retry={load}>The server isn’t answering, which is the first thing to look at. Is Selecta still running?</Problem>;
-  if (!info) return <Skeleton label="Gathering details" />;
+  if (!info) return <Skeleton variant="metrics" label="Gathering details" />;
   const text = JSON.stringify(info, null, 2);
   const canCopy = typeof navigator.clipboard?.writeText === 'function';
   return (
@@ -295,29 +312,6 @@ function Diagnostics() {
         <Action run={load}>Check again</Action>
       </div>
     </section>
-  );
-}
-
-/** Every state a control can be in, in whichever theme this is, for checking the look in one place. */
-function ControlStates() {
-  const kinds: StatusKind[] = ['planned', 'queued', 'working', 'ready', 'warning', 'failed', 'needs-action', 'unavailable'];
-  return (
-    <details className="panel">
-      <summary>Control states, for checking how things look</summary>
-      <div className="row wrap gallery">
-        <button>Default</button>
-        <button className="primary">Primary</button>
-        <button disabled>Disabled</button>
-        <button aria-pressed="true">Pressed</button>
-        <button data-working aria-busy="true">Working</button>
-        <PageLink to="/workshop/diagnostics" className="button">Link as a button</PageLink>
-      </div>
-      <div className="row wrap gallery">
-        {kinds.map((kind) => <Status key={kind} kind={kind} />)}
-      </div>
-      <Skeleton lines={2} label="Example of loading" />
-      <Problem retry={() => {}}>An example of something that couldn’t be loaded.</Problem>
-    </details>
   );
 }
 
@@ -399,7 +393,7 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
         </>
       )}
       {tab === 'diagnostics' && <Diagnostics />}
-      {tab === 'diagnostics' && <ControlStates />}
+      {import.meta.env.DEV && tab === 'diagnostics' && <ControlGallery />}
     </main>
   );
 }

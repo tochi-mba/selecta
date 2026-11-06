@@ -1,7 +1,7 @@
-import { KeyboardEvent, useEffect, useState } from 'react';
+import { KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { get, post, Suggestion } from '../api';
 import { analysingWords, askedToAnalyse } from '../lib';
-import { Action } from '../ui/controls';
+import { Action, Problem, Skeleton } from '../ui/controls';
 import { useMixPath } from './mixScope';
 
 /** What could go at this place in the mix: the best fits first, and the same order when searching. */
@@ -17,23 +17,28 @@ export function Adder(props: {
   const [query, setQuery] = useState('');
   const [songs, setSongs] = useState<Suggestion[] | null>(null);
   const at = useMixPath();
+  const [failed, setFailed] = useState(false);
+  const asked = useRef(0);
 
-  const load = () => {
-    get<{ songs: Suggestion[] }>(at(`/mix/suggest?position=${position}&q=${encodeURIComponent(query)}&limit=${query ? 30 : 8}`))
-      .then((data) => setSongs(data.songs))
-      .catch(() => setSongs([]));
-  };
+  const load = useCallback(() => {
+    const mine = ++asked.current;
+    return get<{ songs: Suggestion[] }>(at(`/mix/suggest?position=${position}&q=${encodeURIComponent(query)}&limit=${query ? 30 : 8}`))
+      .then((data) => { if (mine === asked.current) { setSongs(data.songs); setFailed(false); } })
+      .catch(() => { if (mine === asked.current) setFailed(true); });
+  }, [at, position, query]);
   useEffect(() => {
+    setSongs(null);
+    setFailed(false);
     const wait = window.setTimeout(load, query ? 150 : 0);
-    return () => window.clearTimeout(wait);
-  }, [query, position]);
+    return () => { asked.current += 1; window.clearTimeout(wait); };
+  }, [load]);
 
   // A song being analysed joins the list by itself once it's ready.
   useEffect(() => {
     if (!line.length) return;
     const timer = window.setInterval(load, 4000);
     return () => window.clearInterval(timer);
-  }, [line.length, query, position]);
+  }, [line.length, load]);
 
   const analyse = async (song: Suggestion) => {
     const { ahead, seconds } = await post<{ ahead: number; seconds?: number }>(`/songs/${song.song_id}/analyse`);
@@ -44,7 +49,7 @@ export function Adder(props: {
   const keys = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') onClose();
     const first = songs?.find((song) => song.analysed);
-    if (event.key === 'Enter' && first) onAdd(first);
+    if (event.key === 'Enter' && first) { event.preventDefault(); onAdd(first); }
   };
 
   return (
@@ -61,7 +66,8 @@ export function Adder(props: {
         <button onClick={onClose}>Cancel</button>
       </div>
       <p className="hint">{query ? 'Best fit first' : 'These would fit best here'}</p>
-      {songs === null && <p className="hint">Finding what fits…</p>}
+      {failed && <Problem retry={load}>Couldn’t find songs for this position. Try again.</Problem>}
+      {songs === null && !failed && <Skeleton variant="library" lines={2} label="Finding what fits" />}
       {songs?.length === 0 && <p className="hint">Nothing matches that.</p>}
       <ul className="suggestions">
         {songs?.map((song) => (

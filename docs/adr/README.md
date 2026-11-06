@@ -1,5 +1,13 @@
 # Selecta 2.0 — UI/UX architecture decision records
 
+## New UI/UX polish programme (2026-11-06)
+
+The [polish roadmap and ADR index](polish-roadmap.md) adds ADR-0033–0046 and a separate [143-task implementation checklist](polish-implementation-checklist.md). Every new decision is **Proposed** and every new implementation is **Not started**. This is a documentation-only proposal; it does not reset or complete the older programme below.
+
+See the [polish verification matrix](polish-verification-matrix.md), [evidence ledger](polish-implementation-evidence.md) and [research notes](../research/ui-ux-polish.md). Historical summary statements below belong to the original programme; use its linked evidence and source inspection to reconcile them, not as the status of this new plan.
+
+## Original programme
+
 **Document decision status: Proposed**  
 **Overhaul implementation status: In progress ([#22](https://github.com/tochi-mba/selecta/pull/22))**  
 **Proposed date: 2026-11-06**

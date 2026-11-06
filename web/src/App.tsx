@@ -417,7 +417,7 @@ export function App() {
               <PageLink to="/mixes/mine" className="button primary">See your mixes</PageLink>
             </main>
           )}
-          {route.page === 'edit' && draftId !== null && !draftGone && !draftData && <main className="page" aria-busy="true"><Skeleton label="Opening your draft" /></main>}
+          {route.page === 'edit' && draftId !== null && !draftGone && !draftData && <main className="page" aria-busy="true"><Skeleton variant="timeline" label="Opening your draft" /></main>}
           {route.page === 'edit' && draftId !== null && !draftGone && draftData && (
             <MixScope.Provider value={draftId}>
               <Mix

@@ -1,5 +1,7 @@
 import { ButtonHTMLAttributes, cloneElement, Component, ErrorInfo, KeyboardEvent, ReactElement, ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { showProblem } from './toasts';
+import { Icon } from './Icon';
+export { Skeleton } from './Skeleton';
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
  * until that exact thing has finished, can't be pressed twice meanwhile, and says if it went wrong. */
@@ -36,8 +38,8 @@ export function Action({
     }
   };
   return (
-    <button {...rest} aria-busy={busy || undefined} data-working={busy || undefined} onClick={() => void press()}>
-      {busy && working ? working : children}
+    <button {...rest} aria-disabled={busy || rest.disabled || undefined} aria-busy={busy || undefined} data-working={busy || undefined} onClick={() => void press()}>
+      {working ? <span className="action-labels"><span aria-hidden={busy || undefined} style={{ visibility: busy ? 'hidden' : undefined }}>{children}</span><span aria-hidden={!busy || undefined} style={{ visibility: busy ? undefined : 'hidden' }}>{working}</span></span> : children}
     </button>
   );
 }
@@ -62,14 +64,6 @@ export function Status({ kind, children, title }: { kind: StatusKind; children?:
       <i aria-hidden="true">{STATUS[kind].mark}</i>
       {children ?? STATUS[kind].words}
     </span>
-  );
-}
-
-export function Skeleton({ lines = 3, label = 'Loading' }: { lines?: number; label?: string }) {
-  return (
-    <div className="skeleton" role="status" aria-label={label}>
-      {Array.from({ length: lines }, (_, index) => <i key={index} />)}
-    </div>
   );
 }
 
@@ -107,6 +101,8 @@ export class Section extends Component<{ name: string; children: ReactNode }, { 
 }
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+let openOverlays = 0;
+let previousOverflow = '';
 
 /** Anything that sits on top of the page: focus goes in, stays in, and returns where it was. */
 function Overlay({
@@ -126,9 +122,16 @@ function Overlay({
   const titleId = useId();
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
+    if (openOverlays++ === 0) {
+      previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
     const first = panel.current?.querySelector<HTMLElement>('[data-autofocus]') ?? panel.current;
     first?.focus();
-    return () => { if (before?.isConnected) before.focus(); };
+    return () => {
+      if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
+      if (before?.isConnected) before.focus();
+    };
   }, []);
   const keys = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
@@ -137,7 +140,11 @@ function Overlay({
       return;
     }
     if (event.key !== 'Tab' || !panel.current) return;
-    const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((node) => {
+      if (node.closest('[hidden], [inert]') || node.matches('input[type="hidden"]')) return false;
+      const collapsed = node.closest('details:not([open])');
+      return !collapsed || collapsed.querySelector('summary')?.contains(node);
+    });
     if (!items.length) {
       event.preventDefault();
       return;
@@ -157,7 +164,7 @@ function Overlay({
       <div ref={panel} className="overlay-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
-          <button className="overlay-close" aria-label={`Close ${title}`} onClick={onClose}>✕</button>
+          <button className="overlay-close" aria-label={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
         </header>
         <div className="overlay-body">{children}</div>
         {footer && <footer className="overlay-foot">{footer}</footer>}
@@ -205,19 +212,22 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
       opener.current?.focus();
       return;
     }
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (event.key === 'Tab') { setOpen(false); return; }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    if (!open) { event.preventDefault(); setOpen(true); return; }
     const items = [...(holder.current?.querySelectorAll<HTMLElement>('[role="menu"] button:not([disabled])') ?? [])];
     if (!items.length) return;
     event.preventDefault();
     const at = items.indexOf(document.activeElement as HTMLElement);
-    items[(at + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (at + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[next].focus();
   };
   return (
     <div className={`menu ${className ?? ''}`} ref={holder} onKeyDown={keys}>
       <button ref={opener} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>{label}</button>
       {open && (
         // a press on anything inside closes it, because each item is the end of the job
-        <div role="menu" className="menu-list" onClick={() => setOpen(false)}>{children}</div>
+        <div role="menu" className="menu-list" onClick={() => { setOpen(false); opener.current?.focus(); }}>{children}</div>
       )}
     </div>
   );

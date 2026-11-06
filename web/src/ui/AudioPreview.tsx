@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { releaseAudio, takeAudio } from '../audio/focus';
 
 let nextId = 1;
@@ -7,14 +7,16 @@ let nextId = 1;
  * done, or this goes away, the sound is given back. */
 export function AudioPreview({ src, startAt, autoPlay, label = 'A preview' }: { src: string; startAt?: number; autoPlay?: boolean; label?: string }) {
   const audio = useRef<HTMLAudioElement>(null);
+  const [problem, setProblem] = useState('');
   const id = useRef(`clip-${nextId++}`);
 
   useEffect(() => {
+    setProblem('');
     const element = audio.current;
     if (!element || (!autoPlay && startAt === undefined)) return;
     const go = () => {
       if (startAt !== undefined) element.currentTime = Math.max(0, startAt);
-      if (autoPlay) void Promise.resolve(element.play()).catch(() => {});
+      if (autoPlay) void Promise.resolve(element.play()).catch(() => setProblem('Preview did not start. Press play to try again.'));
     };
     if (element.readyState > 0) go();
     else element.addEventListener('loadedmetadata', go, { once: true });
@@ -30,16 +32,19 @@ export function AudioPreview({ src, startAt, autoPlay, label = 'A preview' }: { 
   }, []);
 
   return (
-    // eslint-disable-next-line jsx-a11y/media-has-caption
+    <div className="preview-region">
     <audio
       ref={audio}
       controls
       src={src}
       className="preview"
       aria-label={label}
-      onPlay={() => takeAudio({ id: id.current, label, stop: () => audio.current?.pause() })}
+      onError={() => { releaseAudio(id.current); setProblem('This preview could not be loaded. Try loading it again.'); }}
+      onPlay={() => { setProblem(''); takeAudio({ id: id.current, label, stop: () => audio.current?.pause() }); }}
       onPause={() => releaseAudio(id.current)}
       onEnded={() => releaseAudio(id.current)}
     />
+    {problem && <div className="warn" role="alert"><p>{problem}</p><button onClick={() => { setProblem(''); audio.current?.load(); }}>Reload preview</button></div>}
+    </div>
   );
 }
