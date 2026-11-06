@@ -464,6 +464,13 @@ export class SetPlayer {
     try {
       buffer = await this.loadSong(item.song_id);
     } catch {
+      // A failed download from an older playback session must not skip or stop
+      // the song the listener has since chosen.
+      if (this.current !== current || this.planned) return;
+      if (this.getMix()[position]?.song_id !== item.song_id) {
+        this.ending = false;
+        return;
+      }
       const following = this.getMix()[position + 1];
       if (following) {
         this.update({ notice: `${item.title} wouldn’t load, so this skipped it.` });

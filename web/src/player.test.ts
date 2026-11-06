@@ -124,6 +124,26 @@ describe('playing through a mix', () => {
 
 
 describe('transition readiness deadlines', () => {
+  it('ignores a failed fallback download after the listener seeks elsewhere', async () => {
+    audioBackend([]);
+    const original = vi.mocked(fetch).getMockImplementation()!;
+    let reject!: (error: Error) => void;
+    const pending = new Promise<Response>((_resolve, fail) => { reject = fail; });
+    vi.mocked(fetch).mockImplementation((url, init) => {
+      if (url === '/api/songs/2/audio') return pending;
+      return original(url, init);
+    });
+    const mix = songs(seam('rendering', 'waiting'));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0, 98);
+    await player.playFrom(0, 10);
+    reject(new Error('download failed'));
+    await settle();
+    expect(player.state.phase).toBe('playing');
+    expect(player.state.position).toBe(0);
+    expect(player.state.notice).toBe('');
+  });
+
   it('loads a completed render without waiting for the whole mix to refresh', async () => {
     audioBackend([]);
     const original = vi.mocked(fetch).getMockImplementation()!;
