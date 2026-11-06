@@ -28,6 +28,7 @@ from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from selecta import audio as audio_io
 from selecta import db, jobs, mix
@@ -85,6 +86,27 @@ VIBE_KEYS = {
 }
 
 
+API_VERSION = 2
+API_FEATURES = [
+    "library_pages",
+    "readiness",
+    "corrections",
+    "pair_insert",
+    "mix_order_guard",
+    "operation_ids",
+    "jobs",
+    "diagnostics",
+    "folders",
+]
+CAMELOT = re.compile(r"^(1[0-2]|[1-9])[AB]$")
+LOWEST_TEMPO, HIGHEST_TEMPO = 40.0, 240.0
+OPERATIONS_KEPT = 200
+SORTS = {
+    "title": "lower(coalesce(s.title,''))",
+    "artist": "lower(coalesce(s.artist,''))",
+    "tempo": "coalesce(o.bpm, a.bpm, -1)",
+    "recent": "-s.id",
+}
 PAGE_ADDRESSES = re.compile(r"^(listen|mixes|mix|library|discover|workshop|listening)(/[\w/-]*)?$")
 
 
@@ -97,8 +119,8 @@ class FreshFiles(StaticFiles):
     async def get_response(self, path, scope):
         try:
             response = await super().get_response(path, scope)
-        except HTTPException as problem:
-            if problem.status_code != 404 or not PAGE_ADDRESSES.match(path):
+        except StarletteHTTPException as problem:
+            if problem.status_code != 404 or not PAGE_ADDRESSES.match(path.replace("\\", "/")):
                 raise
             response = await super().get_response("index.html", scope)
         response.headers["Cache-Control"] = "no-cache"
@@ -139,6 +161,22 @@ class RequestOfferAction(RequestPlayback):
 class BridgeChoice(BaseModel):
     allow: bool
     songs: list[int] | None = None
+
+
+class SongCorrection(BaseModel):
+    """Anything left out is left alone. An explicit null puts that one back to what was detected."""
+
+    bpm: float | None = None
+    camelot: str | None = None
+    is_music: bool | None = None
+    clear: list[str] = []
+
+
+class PairInsert(BaseModel):
+    a: int
+    b: int
+    move: str | None = None
+    phrase: str | None = None
 
 
 class HearWhich(BaseModel):
@@ -328,6 +366,53 @@ def create_app(
     library_cache: dict = {}
     library_lock = threading.Lock()
 
+    finished_operations: dict[str, tuple[int, bytes]] = {}
+
+    @app.middleware("http")
+    async def same_operation_once(request, call_next):
+        """Something important sent twice, because the first answer got lost, gets the first answer
+        back instead of being done again."""
+        operation = request.headers.get("x-operation-id")
+        if not operation or request.method != "POST":
+            return await call_next(request)
+        known = finished_operations.get(operation)
+        if known is not None:
+            return Response(known[1], status_code=known[0], media_type="application/json")
+        response = await call_next(request)
+        body = b"".join([chunk async for chunk in response.body_iterator])
+        if response.status_code < 500:
+            finished_operations[operation] = (response.status_code, body)
+            while len(finished_operations) > OPERATIONS_KEPT:
+                del finished_operations[next(iter(finished_operations))]
+        return Response(
+            body,
+            status_code=response.status_code,
+            headers={k: v for k, v in response.headers.items() if k.lower() != "content-length"},
+        )
+
+    @app.middleware("http")
+    async def what_you_saw_is_what_you_change(request, call_next):
+        """Most edits to a mix say which position they mean. If the mix has changed since the page
+        last looked, that could be a different song, so it stops and says so."""
+        order = request.headers.get("x-mix-order")
+        if order is None or request.method == "GET":
+            return await call_next(request)
+        draft = request.query_params.get("draft")
+        try:
+            with connect() as conn:
+                items = mix._items(conn, int(draft) if draft else None)
+        except (ValueError, mix.NoSuchDraft):
+            return await call_next(request)
+        if order != ",".join(str(item[0]) for item in items):
+            return JSONResponse(
+                {
+                    "detail": "This mix has just changed, so nothing was done.",
+                    "code": "mix_changed",
+                },
+                status_code=409,
+            )
+        return await call_next(request)
+
     @app.middleware("http")
     async def local_only(request, call_next):
         host = request.headers.get("host", "").split(":")[0]
@@ -440,6 +525,7 @@ def create_app(
                 "mix_rendering": jobs.mix_is_rendering(settings.home),
                 "mixes_in_line": len(mix.line_order(conn)),
                 "transitions_ready": len(store.remembered().clean),
+                "api": {"version": API_VERSION, "features": API_FEATURES},
                 "eta": {
                     "analysis": analysis_left(
                         conn,
@@ -659,6 +745,279 @@ def create_app(
                 }
                 for row in rows
             ]
+
+    def readiness_of(row: sqlite3.Row, never: set[int], working: set[int]) -> dict:
+        """Whether a song can go in a mix, by the planner's own rules, and why not if not."""
+        song = row["id"]
+        if not row["is_music"]:
+            return {
+                "status": "set_aside",
+                "reason": row["set_aside_reason"] or "Set aside as probably not music.",
+            }
+        if row["analysis_error"]:
+            return {"status": "needs_attention", "reason": "Selecta couldn’t analyse this file."}
+        if row["analysis_version"] != ANALYSIS_VERSION:
+            if song in working:
+                return {"status": "processing", "reason": "Being analysed now."}
+            return {"status": "queued", "reason": "Waiting to be analysed."}
+        if song in never:
+            return {"status": "excluded", "reason": "You’ve set this to never play."}
+        if row["lyric_status"] in {"synced", "instrumental"}:
+            return {"status": "mix_ready", "reason": ""}
+        if row["lyric_status"] is None:
+            return {"status": "analysed_incomplete", "reason": "Still looking up its lyrics."}
+        return {
+            "status": "analysed_incomplete",
+            "reason": "No timed lyrics, so Selecta can’t tell where the singing is, "
+            "and won’t risk cutting off a line.",
+        }
+
+    @app.get("/api/library")
+    def library_page(
+        q: str = "",
+        state: str = "all",
+        sort: str = "title",
+        limit: int = 100,
+        after: str | None = None,
+    ) -> dict:
+        """A page of the library, with a place to carry on from. The place is the last song's own
+        sort value and id, so songs arriving meanwhile can't make a page repeat or skip any."""
+        order = SORTS.get(sort, SORTS["title"])
+        limit = min(max(limit, 1), 200)
+        with connect() as conn:
+            never = never_played(conn)
+            working = set(songs_in_line(conn))
+            conditions = ["(s.artist LIKE ? OR s.title LIKE ?)", "s.duplicate_of IS NULL"]
+            params: list = [f"%{q}%", f"%{q}%"]
+            ready_lyrics = "l.status IN ('synced','instrumental')"
+            if state == "set_aside":
+                conditions.append("s.is_music=0")
+            elif state == "ready":
+                conditions += ["s.is_music=1", "a.version=?", "a.error IS NULL", ready_lyrics]
+                params.append(ANALYSIS_VERSION)
+            elif state == "not_yet":
+                conditions += ["s.is_music=1", "(a.song_id IS NULL OR a.version<>?)"]
+                params.append(ANALYSIS_VERSION)
+            elif state == "attention":
+                conditions += [
+                    "s.is_music=1",
+                    f"(a.error IS NOT NULL OR (a.version=? AND NOT coalesce({ready_lyrics},0)))",
+                ]
+                params.append(ANALYSIS_VERSION)
+            elif state == "priority":
+                conditions += ["s.is_music=1", "s.processing_priority=100"]
+            else:
+                conditions.append("s.is_music=1")
+            joins = (
+                "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
+                "LEFT JOIN lyrics l ON l.song_id=s.id "
+                "LEFT JOIN song_overrides o ON o.song_id=s.id "
+            )
+            where = " AND ".join(conditions)
+            total = conn.execute(f"SELECT COUNT(*) {joins} WHERE {where}", params).fetchone()[0]  # noqa: S608
+            page_params = list(params)
+            page_where = where
+            if after:
+                try:
+                    value, last = json.loads(after)
+                except ValueError as problem:
+                    raise HTTPException(400, "That page marker isn't valid.") from problem
+                page_where += f" AND ({order}, s.id) > (?, ?)"
+                page_params += [value, last]
+            rows = conn.execute(
+                "SELECT s.id,s.artist,s.title,s.genre,s.duration,s.is_music,s.set_aside_reason,"  # noqa: S608
+                "s.path,s.processing_priority,s.music_override,"
+                "COALESCE(o.bpm,a.bpm) bpm,COALESCE(o.camelot,a.camelot) camelot,"
+                "a.bpm detected_bpm,a.camelot detected_camelot,o.bpm override_bpm,"
+                "o.camelot override_camelot,a.energy,a.grid_confidence,a.error analysis_error,"
+                f"a.version analysis_version,l.status lyric_status,{order} sort_value "
+                f"{joins} WHERE {page_where} ORDER BY {order}, s.id LIMIT ?",
+                [*page_params, limit + 1],
+            ).fetchall()
+            more = len(rows) > limit
+            rows = rows[:limit]
+            shown = [
+                {
+                    "id": row["id"],
+                    "artist": row["artist"],
+                    "title": row["title"],
+                    "genre": row["genre"],
+                    "duration": row["duration"],
+                    "bpm": row["bpm"],
+                    "camelot": row["camelot"],
+                    "detected_bpm": row["detected_bpm"],
+                    "detected_camelot": row["detected_camelot"],
+                    "override_bpm": row["override_bpm"],
+                    "override_camelot": row["override_camelot"],
+                    "music_override": row["music_override"],
+                    "energy": row["energy"],
+                    "grid_confidence": row["grid_confidence"],
+                    "lyric_status": row["lyric_status"],
+                    "never": row["id"] in never,
+                    "priority": row["processing_priority"] == 100,
+                    "readiness": readiness_of(row, never, working)
+                    if Path(row["path"]).exists()
+                    else {"status": "missing", "reason": "The file isn’t where it was."},
+                }
+                for row in rows
+            ]
+            marker = json.dumps([rows[-1]["sort_value"], rows[-1]["id"]]) if more else None
+            return {"songs": shown, "total": total, "next": marker}
+
+    @app.post("/api/songs/{song_id}/correct")
+    def correct_song(song_id: int, body: SongCorrection) -> dict:
+        """Fix what analysis got wrong. What was detected stays as it was, so it can be put back,
+        and analysing the song again can't lose the correction. Only transitions touching this song
+        are made again."""
+        if body.bpm is not None and not LOWEST_TEMPO <= body.bpm <= HIGHEST_TEMPO:
+            raise HTTPException(
+                400, f"Tempo has to be between {LOWEST_TEMPO:.0f} and {HIGHEST_TEMPO:.0f}."
+            )
+        if body.camelot is not None and not CAMELOT.match(body.camelot):
+            raise HTTPException(400, "Key has to be like 8A or 11B.")
+        unknown = set(body.clear) - {"bpm", "camelot", "is_music"}
+        if unknown:
+            raise HTTPException(400, f"Can't clear {', '.join(sorted(unknown))}.")
+        with connect() as conn:
+            row = conn.execute("SELECT id FROM songs WHERE id=?", (song_id,)).fetchone()
+            if row is None:
+                raise HTTPException(404, "That song isn't in your library.")
+            before = conn.execute(
+                "SELECT bpm, camelot FROM song_overrides WHERE song_id=?", (song_id,)
+            ).fetchone()
+            bpm = body.bpm if body.bpm is not None else (before["bpm"] if before else None)
+            camelot = (
+                body.camelot
+                if body.camelot is not None
+                else (before["camelot"] if before else None)
+            )
+            if "bpm" in body.clear:
+                bpm = None
+            if "camelot" in body.clear:
+                camelot = None
+            changed_sound = (bpm, camelot) != (
+                (before["bpm"], before["camelot"]) if before else (None, None)
+            )
+            if bpm is None and camelot is None:
+                conn.execute("DELETE FROM song_overrides WHERE song_id=?", (song_id,))
+            else:
+                conn.execute(
+                    "INSERT INTO song_overrides(song_id,bpm,camelot) VALUES(?,?,?) "
+                    "ON CONFLICT(song_id) DO UPDATE SET bpm=excluded.bpm, "
+                    "camelot=excluded.camelot, "
+                    "updated_at=CURRENT_TIMESTAMP",
+                    (song_id, bpm, camelot),
+                )
+            if body.is_music is not None:
+                conn.execute(
+                    "UPDATE songs SET music_override=?, is_music=?, set_aside_reason=? WHERE id=?",
+                    (
+                        int(body.is_music),
+                        int(body.is_music),
+                        None if body.is_music else "you set this aside",
+                        song_id,
+                    ),
+                )
+            elif "is_music" in body.clear:
+                conn.execute("UPDATE songs SET music_override=NULL WHERE id=?", (song_id,))
+            conn.commit()
+            redone = store.forget_song(song_id) if changed_sound else 0
+            return {"song_id": song_id, "bpm": bpm, "camelot": camelot, "redone": redone}
+
+    @app.get("/api/folders")
+    def folders() -> dict:
+        from selecta.library.scan import library_folders
+
+        with connect() as conn:
+            shown = []
+            for folder in library_folders(conn):
+                count = conn.execute(
+                    "SELECT COUNT(*) FROM songs WHERE path LIKE ?", (f"{folder}%",)
+                ).fetchone()[0]
+                shown.append({"path": str(folder), "available": folder.is_dir(), "songs": count})
+        return {"folders": shown, "scan": background.scan, "watch_every": WATCH_EVERY_SECONDS}
+
+    @app.post("/api/folders/stop-watching")
+    def stop_watching(body: ScanRequest) -> dict:
+        """Stop looking in a folder for new songs. Nothing in it is touched, on disk or here."""
+        from selecta.library.scan import library_folders
+
+        with connect() as conn:
+            keep = [str(f) for f in library_folders(conn) if str(f) != body.folder]
+            db.set_preference(conn, "library_folders", keep)
+        return folders()
+
+    @app.get("/api/jobs")
+    def jobs_now() -> dict:
+        """What the background is really doing, from what's there, with no invented progress."""
+        with connect() as conn:
+            rendering = read_with_windows(conn)
+            seams = [item["seam"]["state"] for item in rendering[1:]]
+            by_status = {
+                status: sum(state["status"] == status for state in seams)
+                for status in ("queued", "rendering", "failed", "none", "ready")
+            }
+            line = mix.line_order(conn)
+            failed = conn.execute(
+                "SELECT s.id, s.title, s.artist FROM analysis a JOIN songs s "
+                "ON s.id=a.song_id WHERE a.error IS NOT NULL ORDER BY a.analysed_at DESC LIMIT 5"
+            ).fetchall()
+            worker = store._worker
+            limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+            full = cache_bytes(settings) >= limit
+            counts = _counts(conn)
+            return {
+                "worker": {
+                    "running": bool(worker and worker.poll() is None),
+                    "rendering_the_mix": jobs.mix_is_rendering(settings.home),
+                },
+                "mix": by_status,
+                "drafts_in_line": len(line),
+                "storage_full": full,
+                "analysis": {
+                    "running": bool(background.analysis and background.analysis.poll() is None),
+                    "paused": bool(background.paused),
+                    "asked_for": len(songs_in_line(conn)),
+                    "left": max(counts["music"] - counts["analysed"], 0),
+                },
+                "failed_seams": [
+                    {
+                        "from": before["title"],
+                        "to": item["title"],
+                        "why": item["seam"]["state"].get("error"),
+                    }
+                    for before, item in zip(rendering, rendering[1:], strict=False)
+                    if item["seam"]["state"]["status"] == "failed"
+                ][:5],
+                "failed_songs": [dict(row) for row in failed],
+                "estimates": "Times are estimates, from how long this PC has been taking.",
+            }
+
+    @app.get("/api/diagnostics")
+    def diagnostics() -> dict:
+        """Enough to help work out what's wrong, with no paths, no song names and nothing sent
+        anywhere. It only leaves this PC if a person copies it somewhere themselves."""
+        with connect() as conn:
+            counts = _counts(conn)
+            errors = conn.execute(
+                "SELECT COUNT(*) FROM analysis WHERE error IS NOT NULL"
+            ).fetchone()[0]
+            line = len(mix.line_order(conn))
+            mix_songs = len(mix._items(conn))
+        worker = store._worker
+        return {
+            "api_version": API_VERSION,
+            "analysis_version": ANALYSIS_VERSION,
+            "python": sys.version.split()[0],
+            "platform": sys.platform,
+            "worker_running": bool(worker and worker.poll() is None),
+            "songs": counts,
+            "analysis_failures": errors,
+            "mix_songs": mix_songs,
+            "drafts_in_line": line,
+            "seam_records": len(store.remembered().clean),
+            "typical_estimate_miss": store.clock.accuracy().get("typical_miss"),
+        }
 
     @app.get("/api/songs/{song_id}")
     def song_detail(song_id: int) -> dict:
@@ -1148,7 +1507,8 @@ def create_app(
         vocal_cues = conn.execute(
             "SELECT COUNT(*) FROM lyrics WHERE status IN ('synced','instrumental')"
         ).fetchone()[0]
-        stamp = (counts["analysed"], vocal_cues, tuple(sorted(never)))
+        corrected = tuple(tuple(row) for row in conn.execute("SELECT * FROM song_overrides"))
+        stamp = (counts["analysed"], vocal_cues, tuple(sorted(never)), corrected)
         with library_lock:
             if library_cache.get("stamp") != stamp:
                 songs = [song for song in load_library(conn, settings) if song.id not in never]
@@ -1751,6 +2111,28 @@ def create_app(
             bridge_searches.pop(request_id, None)
             only_what_requests_need()
             return {"cancelled": cancelled, "requests": request_rows(conn)}
+
+    @app.post("/api/mix/pair")
+    def insert_pair(body: PairInsert, draft: int | None = None) -> dict:
+        """Two songs and the transition between them, into whichever mix is meant, all at once."""
+        with connect() as conn:
+            for song in (body.a, body.b):
+                row = conn.execute(
+                    "SELECT is_music,duplicate_of FROM songs WHERE id=?", (song,)
+                ).fetchone()
+                if row is None or not row["is_music"] or row["duplicate_of"] is not None:
+                    raise HTTPException(409, "One of those songs is no longer in your library.")
+            seam = {
+                key: value for key, value in (("move", body.move), ("phrase", body.phrase)) if value
+            }
+            try:
+                _first, into = mix.add_pair(conn, body.a, body.b, seam, draft)
+            except ValueError as problem:
+                raise HTTPException(409, str(problem)) from problem
+            items = mix.read_mix(conn, store, draft)
+            request = request_from(items[into - 1]["song_id"], items[into]["song_id"], seam)
+            store.submit(request, urgent=False)
+            return mix_payload(conn, draft)
 
     @app.post("/api/mix/songs")
     def add_song(body: AddRequest, draft: int | None = None) -> dict:

@@ -290,6 +290,49 @@ def refine_sections(sections: list[dict], lines: list[Line], bar_times: np.ndarr
     return refined
 
 
+def _at_corrected_tempo(features: dict, sections: list[dict], found: float, right: float):
+    """When analysis heard a song at half or double its real speed, the beats and bars have to
+    change with it, or it would be mixed as if it were still at the wrong speed. A correction that isn't
+    half or double only changes what the tempo is called, since there's no way to know where those
+    beats would fall."""
+    ratio = right / found if found else 1.0
+    beats = features["beats"]
+    bar_arrays = ("energy_bars", "low_share_bars", "chroma_bars", "rms_db_bars", "mfcc_bars")
+    if abs(ratio - 2.0) < 0.1:
+        doubled = np.empty(beats.size * 2 - 1, dtype=beats.dtype)
+        doubled[::2] = beats
+        doubled[1::2] = (beats[:-1] + beats[1:]) / 2
+        changed = {**features, "beats": doubled, "bar_starts": features["bar_starts"] * 2}
+        starts = changed["bar_starts"]
+        whole = np.arange(
+            starts[0], doubled.size, (starts[1] - starts[0]) // 2 if starts.size > 1 else 4
+        )
+        changed["bar_starts"] = whole
+        factor = whole.size / max(starts.size, 1)
+        for name in bar_arrays:
+            if name in features:
+                changed[name] = np.repeat(features[name], 2, axis=0)[: whole.size]
+        return changed, [_scaled_section(section, factor) for section in sections]
+    if abs(ratio - 0.5) < 0.05:
+        starts = features["bar_starts"]
+        halved = beats[::2]
+        whole = (starts[::2] // 2).astype(starts.dtype)
+        changed = {**features, "beats": halved, "bar_starts": whole}
+        for name in bar_arrays:
+            if name in features:
+                changed[name] = features[name][::2][: whole.size]
+        return changed, [_scaled_section(section, 0.5) for section in sections]
+    return features, sections
+
+
+def _scaled_section(section: dict, factor: float) -> dict:
+    return {
+        **section,
+        "start_bar": int(section["start_bar"] * factor),
+        "end_bar": int(section["end_bar"] * factor),
+    }
+
+
 def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> SongInfo:
     row = conn.execute(
         "SELECT s.*, a.bpm, a.constant_tempo, a.grid_confidence, a.beats_per_bar, a.camelot, "
@@ -299,8 +342,11 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
     ).fetchone()
     if row is None:
         raise KeyError(f"song {song_id} hasn't been analysed")
-    features = load_features(settings, song_id)
+    features = dict(load_features(settings, song_id))
     lyric = conn.execute("SELECT * FROM lyrics WHERE song_id = ?", (song_id,)).fetchone()
+    corrected = conn.execute(
+        "SELECT bpm, camelot FROM song_overrides WHERE song_id = ?", (song_id,)
+    ).fetchone()
     lines: list[Line] = []
     vocals_known = False
     instrumental = False
@@ -312,9 +358,19 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
             vocals_known = True
             instrumental = True
 
+    raw_sections = json.loads(row["sections"])
+    bpm = row["bpm"]
+    camelot = row["camelot"]
+    if corrected is not None:
+        camelot = corrected["camelot"] or camelot
+        if corrected["bpm"]:
+            features, raw_sections = _at_corrected_tempo(
+                features, raw_sections, row["bpm"], corrected["bpm"]
+            )
+            bpm = corrected["bpm"]
     bar_starts = features["bar_starts"]
     beats = features["beats"]
-    sections = refine_sections(json.loads(row["sections"]), lines, beats[bar_starts])
+    sections = refine_sections(raw_sections, lines, beats[bar_starts])
     return SongInfo(
         id=row["id"],
         path=row["path"],
@@ -323,14 +379,14 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
         genre=row["genre"],
         family=genre_family(row["genre"]),
         duration=row["duration"],
-        bpm=row["bpm"],
+        bpm=bpm,
         beats=beats,
         bar_starts=bar_starts,
         beats_per_bar=row["beats_per_bar"],
         constant_tempo=bool(row["constant_tempo"]),
         grid_confidence=row["grid_confidence"],
         sections=sections,
-        camelot=row["camelot"],
+        camelot=camelot,
         key_confidence=row["key_confidence"],
         lufs=row["lufs"],
         peak_db=row["peak_db"],

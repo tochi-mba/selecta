@@ -35,6 +35,7 @@ export type MixItem = {
   duration: number;
   bpm: number | null;
   key: string | null;
+  energy?: number | null;
   locked: boolean;
   seam: { settings: SeamSettings; state: SeamState; too_soon?: boolean } | null;
   from_request?: { kind: 'requested' | 'bridge'; for?: string | null };
@@ -245,3 +246,42 @@ export const post = <T,>(path: string, body?: unknown, headers?: Record<string, 
   });
 
 export const del = <T,>(path: string, headers?: Record<string, string>) => send<T>(path, { method: 'DELETE', headers });
+
+export type LibrarySong = {
+  id: number;
+  artist: string | null;
+  title: string | null;
+  genre: string | null;
+  duration: number;
+  bpm: number | null;
+  camelot: string | null;
+  detected_bpm: number | null;
+  detected_camelot: string | null;
+  override_bpm: number | null;
+  override_camelot: string | null;
+  music_override: number | null;
+  energy: number | null;
+  grid_confidence: number | null;
+  lyric_status: string | null;
+  never: boolean;
+  priority: boolean;
+  readiness: { status: string; reason: string };
+};
+
+export type LibraryPage = { songs: LibrarySong[]; total: number; next: string | null };
+
+export type Jobs = {
+  worker: { running: boolean; rendering_the_mix: boolean };
+  mix: { queued: number; rendering: number; failed: number; none: number; ready: number };
+  drafts_in_line: number;
+  storage_full: boolean;
+  analysis: { running: boolean; paused: boolean; asked_for: number; left: number };
+  failed_seams: { from: string; to: string; why?: string }[];
+  failed_songs: { id: number; title: string | null; artist: string | null }[];
+  estimates: string;
+};
+
+export type Folders = {
+  folders: { path: string; available: boolean; songs: number }[];
+  watch_every: number;
+};

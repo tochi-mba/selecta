@@ -46,8 +46,10 @@ def _stored(row: sqlite3.Row) -> list[Item]:
 def _rows(conn: sqlite3.Connection, draft: int | None = None) -> list:
     if draft is None:
         return conn.execute(
-            "SELECT q.*, s.artist, s.title, s.duration, s.genre, a.bpm, a.camelot "
+            "SELECT q.*, s.artist, s.title, s.duration, s.genre, "
+            "COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, a.energy "
             "FROM queue q JOIN songs s ON s.id=q.song_id LEFT JOIN analysis a ON a.song_id=s.id "
+            "LEFT JOIN song_overrides o ON o.song_id=s.id "
             "ORDER BY q.position"
         ).fetchall()
     items = _stored(_draft_row(conn, draft))
@@ -57,8 +59,10 @@ def _rows(conn: sqlite3.Connection, draft: int | None = None) -> list:
     known = {
         row["id"]: row
         for row in conn.execute(
-            "SELECT s.id, s.artist, s.title, s.duration, s.genre, a.bpm, a.camelot "  # noqa: S608
-            f"FROM songs s LEFT JOIN analysis a ON a.song_id=s.id WHERE s.id IN ({marks})",
+            "SELECT s.id, s.artist, s.title, s.duration, s.genre, "  # noqa: S608
+            "COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, a.energy "
+            "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
+            f"LEFT JOIN song_overrides o ON o.song_id=s.id WHERE s.id IN ({marks})",
             [item[0] for item in items],
         )
     }
@@ -138,6 +142,34 @@ def settle_chain(conn: sqlite3.Connection, store: SeamStore, draft: int | None =
             set_seam(conn, index, after, draft)
 
 
+def add_pair(
+    conn: sqlite3.Connection, a: int, b: int, seam: dict, draft: int | None = None
+) -> tuple[int, int]:
+    """Two songs and the transition between them, all at once or not at all. Each song goes in
+    only if it isn't already there, and they end up next to each other, so a failure part way can't leave
+    half of a pair behind. Says where each one is."""
+    items = list(_items(conn, draft))
+    order = [item[0] for item in items]
+    if a == b:
+        raise ValueError("A song can't be paired with itself.")
+    if a in order and b in order:
+        raise ValueError("Those two songs are both in this mix already.")
+    if b in order:
+        place = order.index(b)
+        items.insert(place, (a, None, 0))
+    elif a in order:
+        items.insert(order.index(a) + 1, (b, None, 0))
+    else:
+        items += [(a, None, 0), (b, None, 0)]
+    order = [item[0] for item in items]
+    into = order.index(b)
+    song, _old, locked = items[into]
+    items[into] = (song, json.dumps(seam), locked)
+    remember(conn, "adding a pair", draft)
+    write_order(conn, items, draft)
+    return order.index(a), into
+
+
 def read_mix(conn: sqlite3.Connection, store: SeamStore, draft: int | None = None) -> list[dict]:
     """The songs in order. Each one after the first carries the seam that leads into it."""
     rows = _rows(conn, draft)
@@ -152,6 +184,7 @@ def read_mix(conn: sqlite3.Connection, store: SeamStore, draft: int | None = Non
             "duration": row["duration"],
             "bpm": row["bpm"],
             "key": row["camelot"],
+            "energy": row["energy"],
             "locked": bool(row["locked"]),
             "seam": None,
         }
@@ -207,9 +240,7 @@ def remove_at(conn: sqlite3.Connection, position: int, draft: int | None = None)
         write_order(conn, items, draft)
 
 
-def move_song(
-    conn: sqlite3.Connection, source: int, target: int, draft: int | None = None
-) -> None:
+def move_song(conn: sqlite3.Connection, source: int, target: int, draft: int | None = None) -> None:
     """Move one song. Its old and new neighbours get fresh seams, since those pairs are new."""
     items = _items(conn, draft)
     if not (0 <= source < len(items) and 0 <= target < len(items)) or source == target:
@@ -239,9 +270,7 @@ def replace_at(
     write_order(conn, items, draft)
 
 
-def set_seam(
-    conn: sqlite3.Connection, position: int, seam: dict, draft: int | None = None
-) -> None:
+def set_seam(conn: sqlite3.Connection, position: int, seam: dict, draft: int | None = None) -> None:
     cleaned = {key: value for key, value in seam.items() if value not in (None, "")}
     if draft is None:
         conn.execute("UPDATE queue SET seam=? WHERE position=?", (json.dumps(cleaned), position))

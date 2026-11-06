@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { get, Link, LinkList, MixData, post, SeamState } from '../api';
+import { DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
+import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
+import { PageLink } from '../shell/Shell';
+import { AudioPreview } from '../ui/AudioPreview';
+import { Action, Menu, Problem, Skeleton } from '../ui/controls';
 import { ViewProps } from './shared';
+
+const HARMONIC_OWNER = 'harmonic-discoveries';
 
 type HarmonicDiscovery = {
   id: number; song_a: number; song_b: number; title_a: string; title_b: string;
@@ -14,7 +20,7 @@ type Audition = { chords: string[]; bar_starts: number[]; seconds: number; semit
 /** Songs that may share a chord pattern, one pair at a time. One press plays what Selecta detected:
  * the chords it read, each song with those chords underneath, then both at once. Answering moves on
  * to the next pair by itself, so there's nothing to line up and nothing to remember. */
-export function HarmonicDiscoveries({ onListen, secondsToPrepare }: { onListen?: () => void; secondsToPrepare?: number }) {
+export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => void; secondsToPrepare?: number }) {
   const [items, setItems] = useState<HarmonicDiscovery[]>([]);
   const [error, setError] = useState('');
   const [skipped, setSkipped] = useState<number[]>([]);
@@ -55,17 +61,29 @@ export function HarmonicDiscoveries({ onListen, secondsToPrepare }: { onListen?:
     audio.current?.pause();
     setStep(null);
     setBar(-1);
+    releaseAudio(HARMONIC_OWNER);
   };
+  const quietHere = () => {
+    keepGoing.current = false;
+    audio.current?.pause();
+    setStep(null);
+    setBar(-1);
+  };
+  // leaving the page lets the sound go
+  useEffect(() => () => {
+    audio.current?.pause();
+    releaseAudio(HARMONIC_OWNER);
+  }, []);
   const playStep = (id: number, index: number) => {
     const player = audio.current;
     if (!player) return;
+    takeAudio({ id: HARMONIC_OWNER, label: 'A chord audition', stop: quietHere });
     setStep(index);
     setBar(0);
     player.src = `/api/discoveries/${id}/hear/${['chords', 'a', 'b', 'both'][index]}`;
     void player.play()?.catch(() => {});
   };
   const hear = async (target: HarmonicDiscovery, from = 0) => {
-    onListen?.();
     setGetting(true);
     setError('');
     try {
@@ -105,7 +123,7 @@ export function HarmonicDiscoveries({ onListen, secondsToPrepare }: { onListen?:
   };
   const skip = (target: HarmonicDiscovery) => setSkipped((ids) => [...ids.filter((id) => id !== target.id), target.id]);
 
-  if (!items.length && !error) return null;
+  if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed.</p>;
   const listening = step !== null;
   return (
     <section className="next-up discoveries">
@@ -187,7 +205,7 @@ export function HarmonicDiscoveries({ onListen, secondsToPrepare }: { onListen?:
   );
 }
 
-function LinkCard({ link, onAdd, names, onRated }: { link: Link; onAdd: (link: Link, move: string) => void; names: Record<string, string>; onRated: () => void }) {
+function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
   const [move, setMove] = useState(link.move);
   const [override, setOverride] = useState<SeamState | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -240,7 +258,16 @@ function LinkCard({ link, onAdd, names, onRated }: { link: Link; onAdd: (link: L
             {busy ? 'Rendering…' : state.status === 'failed' ? 'Try again' : 'Render it now'}
           </button>
         )}
-        <button onClick={() => onAdd(link, move)}>Add both to the mix</button>
+        {drafts.length ? (
+          <Menu label="Add both to…">
+            <Action role="menuitem" run={() => onAdd(link, move, null)}>Your current mix</Action>
+            {drafts.map((draft) => (
+              <Action role="menuitem" key={draft.id} run={() => onAdd(link, move, draft.id)}>{draft.name}</Action>
+            ))}
+          </Menu>
+        ) : (
+          <Action working="Adding…" run={() => onAdd(link, move, null)}>Add both to the mix</Action>
+        )}
         {state.status === 'ready' && (
           <span className="pair" role="group" aria-label="Rate this link">
             <button aria-pressed={state.rating === 'good'} onClick={() => void rate('good')}>Good</button>
@@ -249,49 +276,58 @@ function LinkCard({ link, onAdd, names, onRated }: { link: Link; onAdd: (link: L
         )}
       </div>
       {state.status === 'ready' && playing && (
-        <audio
-          controls
-          autoPlay
-          className="preview"
-          src={`/api/seams/${state.key}/preview`}
-          onLoadedMetadata={(event) => {
-            event.currentTarget.currentTime = Math.max(0, (state.preview_seam ?? 0) - 8);
-          }}
-        />
+        <AudioPreview autoPlay src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} label={`${link.title_a} into ${link.title_b}`} />
       )}
     </article>
   );
 }
 
-export function Links({ mix, setMixData, setView, notify, status, now, player, tab = "words" }: ViewProps & { tab?: "words" | "harmonic" }) {
+export function Links({ setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
   const [query, setQuery] = useState('');
   const [data, setData] = useState<LinkList | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [drafts, setDrafts] = useState<{ id: number; name: string }[]>([]);
+  const asked = useRef(0);
 
-  const load = () =>
-    get<LinkList>(`/links?q=${encodeURIComponent(query)}&limit=60`)
-      .then(setData)
-      .catch(() => setData({ links: [], prepared: 0, preparing: 0 }));
+  const load = () => {
+    asked.current += 1;
+    const mine = asked.current;
+    return get<LinkList>(`/links?q=${encodeURIComponent(query)}&limit=60`)
+      .then((next) => {
+        if (mine !== asked.current) return;
+        setData(next);
+        setFailed(false);
+      })
+      .catch(() => { if (mine === asked.current) setFailed(true); });
+  };
 
   useEffect(() => {
+    if (tab !== 'words') return;
     const wait = window.setTimeout(() => void load(), 200);
     return () => window.clearTimeout(wait);
-  }, [query]);
+  }, [query, tab]);
 
   // Selecta prepares links in spare time, so finished ones appear as they land.
   useEffect(() => {
+    if (tab !== 'words') return;
     const timer = window.setInterval(() => void load(), 6000);
     return () => window.clearInterval(timer);
-  }, [query]);
+  }, [query, tab]);
 
-  const add = async (link: Link, move: string) => {
-    const start = mix.length;
-    await post('/mix/songs', { song_id: link.a });
-    await post('/mix/songs', { song_id: link.b });
-    await post(`/mix/${start + 1}/seam`, { move, phrase: link.phrase });
-    await post(`/mix/${start + 1}/render`);
-    setMixData(await get<MixData>('/mix'));
-    notify(`Added “${link.phrase}” to your mix.`, true);
-    setView('Edit');
+  useEffect(() => {
+    get<DraftList>('/drafts').then((list) => setDrafts(list.drafts)).catch(() => {});
+  }, []);
+
+  // both songs and the transition between them go in together, or none of it does
+  const add = async (link: Link, move: string, draft: number | null) => {
+    const answer = await post<MixData>(`/mix/pair${draft === null ? '' : `?draft=${draft}`}`, { a: link.a, b: link.b, move, phrase: link.phrase });
+    if (draft === null) {
+      setMixData(answer);
+      notify(`Added “${link.phrase}” to your mix.`, true);
+      setView('Edit');
+    } else {
+      notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`);
+    }
   };
 
   const worked = data?.links.filter((link) => link.worked) ?? [];
@@ -301,47 +337,53 @@ export function Links({ mix, setMixData, setView, notify, status, now, player, t
       key={`${link.phrase}-${link.a}-${link.b}`}
       link={link}
       names={status.moves}
-      onAdd={(l, m) => void add(l, m)}
+      drafts={drafts}
+      onAdd={add}
       onRated={() => void load()}
     />
   );
 
   return (
-    <main className="page">
-      <h1 className="display small">Words your songs share</h1>
-      <p className="lede">
-        One song ends a line on these words, another opens a line with them, and the music fits too. Selecta prepares the
-        best ones in the background, so they’re ready to play.
-      </p>
-      {data && data.preparing > 0 && (
-        <p className="hint" role="status">
-          {data.prepared} of the best {data.preparing} are ready. Your mix always renders first.
-          {data.prepared < data.preparing && data.eta ? ` The rest take ${etaWords(data.eta)} of spare time.` : ''}
-        </p>
-      )}
-      <input
-        className="wide"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Look for a word, like night or love"
-        aria-label="Search shared words"
-      />
-      {data === null && <p className="hint">Searching your lyrics…</p>}
-      {data?.links.length === 0 && (
-        <p className="lede">{query ? `No links on “${query}” yet.` : 'No links yet. Analysing more songs will find more.'}</p>
-      )}
-      <div className="link-grid">{worked.map(card)}</div>
-      <HarmonicDiscoveries
-        secondsToPrepare={status.eta?.jobs.audition}
-        onListen={() => {
-          if (now.phase === 'playing') void player.togglePause();
-        }}
-      />
-      {didnt.length > 0 && (
-        <details className="didnt">
-          <summary>{didnt.length} didn’t work so well</summary>
-          <div className="link-grid">{didnt.map(card)}</div>
-        </details>
+    <main className="page" id="main">
+      <h1 className="display small">Discover</h1>
+      <nav className="tabs" aria-label="Discover">
+        <PageLink to="/discover" aria-current={tab === 'words' ? 'page' : undefined}>Word connections</PageLink>
+        <PageLink to="/discover/harmonic" aria-current={tab === 'harmonic' ? 'page' : undefined}>Harmonic discoveries</PageLink>
+      </nav>
+      {tab === 'harmonic' && <HarmonicDiscoveries secondsToPrepare={status.eta?.jobs.audition} />}
+      {tab === 'words' && (
+        <>
+          <p className="lede">
+            One song ends a line on these words, another opens a line with them, and the music fits too. Selecta prepares the
+            best ones in the background, so they’re ready to play.
+          </p>
+          {data && data.preparing > 0 && (
+            <p className="hint" role="status">
+              {data.prepared} of the best {data.preparing} are ready. Your mix always renders first.
+              {data.prepared < data.preparing && data.eta ? ` The rest take ${etaWords(data.eta)} of spare time.` : ''}
+            </p>
+          )}
+          <input
+            className="wide"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Look for a word, like night or love"
+            aria-label="Search shared words"
+          />
+          {failed && data === null && <Problem retry={load}>Couldn’t search your lyrics. Nothing’s lost.</Problem>}
+          {failed && data !== null && <p className="warn" role="status">Can’t check for new ones right now, so what’s shown may be out of date.</p>}
+          {data === null && !failed && <Skeleton lines={4} label="Searching your lyrics" />}
+          {data?.links.length === 0 && (
+            <p className="lede">{query ? `No links on “${query}” yet.` : 'No links yet. Analysing more songs will find more.'}</p>
+          )}
+          <div className="link-grid">{worked.map(card)}</div>
+          {didnt.length > 0 && (
+            <details className="didnt">
+              <summary>{didnt.length} didn’t work so well</summary>
+              <div className="link-grid">{didnt.map(card)}</div>
+            </details>
+          )}
+        </>
       )}
     </main>
   );

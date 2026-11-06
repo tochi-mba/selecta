@@ -1,29 +1,43 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { del, DraftInfo, DraftList, get, post } from '../api';
 import { draftWords, etaRangeWords, length, nth } from '../lib';
+import { PageLink } from '../shell/Shell';
+import { Action, Problem, Skeleton, Status, StatusKind } from '../ui/controls';
 import { ViewProps } from './shared';
 
 type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'>;
 
 const CHECK_EVERY_MS = 4000;
 
+function draftStatus(draft: DraftInfo): { kind: StatusKind; words: string } {
+  const words = draftWords(draft);
+  if (draft.songs === 0 || draft.seams === 0) return { kind: 'planned', words };
+  if (draft.rendering) return { kind: 'working', words };
+  if (draft.waiting > 0) return { kind: draft.place !== null ? 'queued' : 'planned', words };
+  if (draft.failed > 0) return { kind: 'warning', words };
+  return { kind: 'ready', words };
+}
+
 /** Mixes being worked on. Nothing here touches what's playing until you press Play. */
 export function Drafts({ notify, openDraft, playDraft, setView }: Props) {
   const [list, setList] = useState<DraftList | null>(null);
   const [problem, setProblem] = useState('');
+  const [couldntLoad, setCouldntLoad] = useState(false);
+  const [renaming, setRenaming] = useState<number | null>(null);
 
   const refresh = useCallback(() => {
-    get<DraftList>('/drafts')
+    return get<DraftList>('/drafts')
       .then((next) => {
         setList(next);
         setProblem('');
+        setCouldntLoad(false);
       })
-      .catch(() => {});
+      .catch(() => setCouldntLoad(true));
   }, []);
 
   useEffect(() => {
-    refresh();
-    const timer = window.setInterval(refresh, CHECK_EVERY_MS);
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), CHECK_EVERY_MS);
     return () => window.clearInterval(timer);
   }, [refresh]);
 
@@ -39,6 +53,11 @@ export function Drafts({ notify, openDraft, playDraft, setView }: Props) {
     const made = await post<{ id: number }>('/drafts', {});
     openDraft?.(made.id);
   };
+  const keepCurrent = async () => {
+    const made = await post<{ id: number; name: string }>('/drafts', { copy_current: true });
+    await refresh();
+    notify(`Saved a copy of your current mix as ${made.name}. What’s playing hasn’t changed.`);
+  };
   const prioritize = async (draft: DraftInfo) => {
     const next = await post<DraftList>(`/drafts/${draft.id}/line`);
     setList(next);
@@ -49,87 +68,105 @@ export function Drafts({ notify, openDraft, playDraft, setView }: Props) {
   };
   const duplicate = async (draft: DraftInfo) => {
     const made = await post<{ name: string }>(`/drafts/${draft.id}/duplicate`);
-    refresh();
+    await refresh();
     notify(`Made a copy: ${made.name}.`);
   };
   const remove = async (draft: DraftInfo) => {
     await del(`/drafts/${draft.id}`);
-    refresh();
+    await refresh();
     notify(`Deleted ${draft.name}.`, async () => {
       await post('/drafts/restore');
-      refresh();
+      await refresh();
     });
   };
 
-  if (!list) return null;
+  // nothing to show yet isn't the same as having no drafts
+  if (!list) {
+    return couldntLoad
+      ? <Problem retry={refresh}>Couldn’t load your drafts. They’re still saved.</Problem>
+      : <Skeleton label="Loading your drafts" />;
+  }
   const { drafts, current, out_of_room: outOfRoom } = list;
   const inLine = drafts.filter((draft) => draft.place !== null);
   return (
     <section className="drafts" aria-label="Your drafts">
       <div className="row wrap drafts-head">
         <h2 className="section-title">Your drafts</h2>
-        <button onClick={() => void startNew().catch((error: Error) => setProblem(error.message))}>New draft</button>
+        <Action working="Starting…" run={startNew}>New draft</Action>
+        <Action working="Saving…" run={keepCurrent} disabled={current.songs === 0}>Save current mix as a draft</Action>
       </div>
       <p className="hint">
         Build a mix without touching what’s playing. Everything saves as you go.
       </p>
       {problem && <p className="warn" role="alert">{problem}</p>}
+      {couldntLoad && <p className="warn" role="status">Can’t check on these right now, so what’s shown may be out of date.</p>}
       {outOfRoom && (
         <p className="warn" role="status">
           Rendering has paused: your stems have reached their storage limit.{' '}
-          <button className="link" onClick={() => setView('Workshop')}>Change the limit in Workshop</button>
+          <PageLink to="/workshop/storage">Change the limit in Workshop</PageLink>
         </p>
       )}
       {inLine.length > 0 && (
         <p className="hint" role="status">
           {current.left > 0
-            ? `Your current mix goes first, with ${current.left} seam${current.left === 1 ? '' : 's'} left (${etaRangeWords(current.eta)}). Then these, in order, ahead of everything else.`
+            ? `Your current mix goes first, with ${current.left} seam${current.left === 1 ? '' : 's'} left (${etaRangeWords(current.eta)}).`
             : 'Your current mix is done, so these are rendering in order, ahead of everything else.'}
         </p>
       )}
       {drafts.length > 0 && (
         <ul className="draft-list">
-          {drafts.map((draft) => (
-            <li key={draft.id} className={draft.place ? 'draft in-line' : 'draft'}>
-              <div className="draft-name">
-                <button className="link draft-open" onClick={() => openDraft?.(draft.id)} aria-label={`Edit ${draft.name}`}>
-                  <b>{draft.name}</b>
-                </button>
-                <span className="soft">
-                  {draft.songs > 0 && `${draft.songs} ${draft.songs === 1 ? 'song' : 'songs'}, about ${length(draft.seconds)}. `}
-                  {draftWords(draft)}
-                </span>
-                {draft.place === null && draft.waiting > 0 && draft.seams > 0 && (
-                  <span className="soft"> Rendering it would take {etaRangeWords({ seconds: draft.to_render, low: draft.to_render, high: draft.to_render })}.</span>
-                )}
-                {draft.missing > 0 && (
-                  <span className="soft"> {draft.missing} {draft.missing === 1 ? 'song has' : 'songs have'} left your library.</span>
-                )}
-              </div>
-              <div className="row wrap draft-actions">
-                <button disabled={draft.songs === 0} title={draft.songs === 0 ? 'Add a song first' : undefined} aria-label={`Play ${draft.name}`} onClick={() => void playDraft?.(draft.id)}>
-                  Play
-                </button>
-                <button aria-label={`Edit ${draft.name}`} onClick={() => openDraft?.(draft.id)}>Edit</button>
-                {draft.place !== null ? (
-                  <span className="line-controls" role="group" aria-label={`${draft.name} in the render line`}>
-                    <b className="line-place">{nth(draft.place)} in line</b>
-                    <button aria-label={`Move ${draft.name} up the line`} disabled={draft.place === 1} onClick={() => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step: -1 }))}>↑</button>
-                    <button aria-label={`Move ${draft.name} down the line`} disabled={draft.place === inLine.length} onClick={() => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step: 1 }))}>↓</button>
-                    <button aria-label={`Take ${draft.name} out of the line`} onClick={() => void act(del<DraftList>(`/drafts/${draft.id}/line`))}>Take out</button>
+          {drafts.map((draft) => {
+            const facts = draftStatus(draft);
+            return (
+              <li key={draft.id} className={draft.place ? 'draft in-line' : 'draft'}>
+                <div className="draft-name">
+                  {renaming === draft.id ? (
+                    <RenameDraft id={draft.id} name={draft.name} onDone={() => { setRenaming(null); void refresh(); }} />
+                  ) : (
+                    <PageLink to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b>{draft.name}</b></PageLink>
+                  )}
+                  <span className="soft">
+                    {draft.songs > 0 && `${draft.songs} ${draft.songs === 1 ? 'song' : 'songs'}, about ${length(draft.seconds)}. `}
                   </span>
-                ) : (
-                  draft.seams > 0 && draft.waiting > 0 && (
-                    <button title="Renders in the background, right after your current mix" aria-label={`Prioritize ${draft.name}`} onClick={() => void prioritize(draft)}>
-                      Prioritize
-                    </button>
-                  )
-                )}
-                <button aria-label={`Copy ${draft.name}`} onClick={() => void duplicate(draft)}>Copy</button>
-                <button aria-label={`Delete ${draft.name}`} onClick={() => void remove(draft)}>✕</button>
-              </div>
-            </li>
-          ))}
+                  <Status kind={facts.kind}>{facts.words}</Status>
+                  {draft.seams > 0 && (
+                    <div className="draft-progress" role="img" aria-label={`${draft.ready} of ${draft.seams} transitions ready`}>
+                      <i style={{ width: `${(100 * draft.ready) / draft.seams}%` }} />
+                    </div>
+                  )}
+                  {draft.place === null && draft.waiting > 0 && draft.seams > 0 && (
+                    <span className="soft"> Rendering it would take {etaRangeWords({ seconds: draft.to_render, low: draft.to_render, high: draft.to_render })}.</span>
+                  )}
+                  {draft.missing > 0 && (
+                    <span className="soft"> {draft.missing} {draft.missing === 1 ? 'song has' : 'songs have'} left your library.</span>
+                  )}
+                </div>
+                <div className="row wrap draft-actions">
+                  <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${draft.name}`} run={() => playDraft?.(draft.id)}>
+                    Play
+                  </Action>
+                  <button aria-label={`Edit ${draft.name}`} onClick={() => openDraft?.(draft.id)}>Edit</button>
+                  {draft.place !== null ? (
+                    <span className="line-controls" role="group" aria-label={`${draft.name} in the render line`}>
+                      <b className="line-place">{nth(draft.place)} in line</b>
+                      <button aria-label={`Move ${draft.name} up the line`} disabled={draft.place === 1} onClick={() => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step: -1 }))}>↑</button>
+                      <button aria-label={`Move ${draft.name} down the line`} disabled={draft.place === inLine.length} onClick={() => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step: 1 }))}>↓</button>
+                      <button aria-label={`Take ${draft.name} out of the line`} onClick={() => void act(del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</button>
+                    </span>
+                  ) : (
+                    draft.seams > 0 && draft.waiting > 0 && (
+                      <Action title="Renders in the background, right after your current mix" aria-label={`Prioritize ${draft.name}`} run={() => prioritize(draft)}>
+                        Prioritize
+                      </Action>
+                    )
+                  )}
+                  <button aria-label={`Rename ${draft.name}`} onClick={() => setRenaming(draft.id)}>Rename</button>
+                  <Action aria-label={`Copy ${draft.name}`} run={() => duplicate(draft)}>Copy</Action>
+                  <Action aria-label={`Delete ${draft.name}`} run={() => remove(draft)}>✕</Action>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

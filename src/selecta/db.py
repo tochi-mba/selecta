@@ -65,6 +65,13 @@ CREATE TABLE IF NOT EXISTS lyrics (
     fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS song_overrides (
+    song_id INTEGER PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
+    bpm REAL,
+    camelot TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS preferences (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,

@@ -288,3 +288,70 @@ button[data-working]::after {
 .tabs a { padding: var(--space-2) var(--space-3); color: var(--text-soft); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs a[aria-current='page'] { color: var(--text); border-bottom-color: var(--accent); }
 .tabs a:hover { color: var(--text); }
+
+.overlay-workspace { padding: var(--space-4); align-items: stretch; justify-content: center; }
+.overlay-workspace .overlay-panel { width: min(1180px, 100%); height: 100%; border-radius: var(--radius); }
+@media (max-width: 760px) { .overlay-workspace { padding: 0; } .overlay-workspace .overlay-panel { border-radius: 0; } }
+
+/* the timeline, with whatever's selected beside it */
+.page.mix { max-width: 1320px; }
+.edit-layout.has-inspector { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: var(--space-5); align-items: start; }
+.edit-inspector {
+  position: sticky;
+  top: var(--space-4);
+  max-height: calc(100vh - var(--space-6) - var(--player-height));
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  padding: var(--space-4);
+  margin-top: 20px;
+}
+.inspector-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.inspector-pair { overflow-wrap: anywhere; margin: var(--space-2) 0; }
+.inspector-tabs { display: flex; gap: var(--space-1); margin: var(--space-3) 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.inspector-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-soft); padding: var(--space-2) var(--space-3); }
+.inspector-tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+.inspector .preview { width: 100%; }
+.inspector .status { white-space: normal; }
+.seam.open { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+.export-left { list-style: none; margin: var(--space-2) 0; padding: 0; display: grid; gap: var(--space-1); max-height: 220px; overflow-y: auto; }
+.export-left .status { white-space: normal; }
+
+/* where a dragged song will land */
+.song.over { box-shadow: 0 -3px 0 0 var(--accent); }
+
+/* Library */
+.page.library { max-width: 1120px; }
+.library-find { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; margin-bottom: var(--space-2); }
+.library-find input.wide { flex: 1 1 260px; margin: 0; width: auto; }
+.library-sort { display: flex; align-items: center; gap: var(--space-2); color: var(--text-soft); font-size: var(--text-sm); }
+.library-sort select { width: auto; }
+.library-count { margin: var(--space-2) 0; }
+.library-more { display: block; margin: var(--space-4) auto; }
+button.song-open { color: var(--text); text-decoration: none; text-align: left; overflow-wrap: anywhere; min-height: 0; }
+button.song-open:hover { text-decoration: underline; }
+.song-readiness { font-size: var(--text-sm); }
+.song-detail-artist { color: var(--text-soft); margin: 0 0 var(--space-2); }
+.song-facts { display: grid; gap: var(--space-1); margin: var(--space-3) 0; }
+.song-facts div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--border); padding: var(--space-1) 0; }
+.song-facts dt { color: var(--text-soft); }
+.song-facts dd { margin: 0; text-align: right; }
+.correct-field { display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.correct-field input { width: 140px; }
+.overlay-body h3 { margin: var(--space-4) 0 var(--space-1); }
+
+/* Workshop */
+.job-list, .job-failures, .folder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.job-list li { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; }
+.job-list .status { white-space: normal; }
+@media (max-width: 560px) { .job-list li { grid-template-columns: 1fr; } }
+.folder-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+.folder-list b { overflow-wrap: anywhere; }
+.folder-list .status { white-space: normal; }
+.diagnostics { font: 0.82rem var(--mono); background: var(--surface-control); border-radius: var(--radius-sm); padding: var(--space-3); overflow-x: auto; margin: 0; }
+
+.choice { display: inline-flex; align-items: center; gap: var(--space-1); padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+.choice input { width: auto; min-height: 0; }
+.choice:has(input:checked) { border-color: var(--accent); }
+.choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }

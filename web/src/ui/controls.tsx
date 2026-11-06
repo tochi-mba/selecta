@@ -118,7 +118,7 @@ function Overlay({
 }: {
   title: string;
   onClose: () => void;
-  kind: 'dialog' | 'sheet' | 'drawer';
+  kind: 'dialog' | 'sheet' | 'drawer' | 'workspace';
   children: ReactNode;
   footer?: ReactNode;
 }) {
@@ -173,6 +173,11 @@ export function Dialog(props: { title: string; onClose: () => void; children: Re
 /** From the side on a wide screen, from the bottom on a phone. */
 export function Drawer(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
   return <Overlay kind="drawer" {...props} />;
+}
+
+/** Nearly the whole screen, for something that needs the room. */
+export function Workspace(props: { title: string; onClose: () => void; children: ReactNode }) {
+  return <Overlay kind="workspace" {...props} />;
 }
 
 export function Sheet(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {

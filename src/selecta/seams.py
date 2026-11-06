@@ -767,6 +767,29 @@ class SeamStore:
             return {"status": "none", "key": key}
         return state
 
+    def forget_song(self, song_id: int) -> int:
+        """A song's analysis was corrected, so what was rendered from the old one no longer stands.
+        Only transitions that touch that song go, and only their records: the songs themselves are
+        never involved. Says how many."""
+        forgotten = 0
+        histories = (self.settings.home / "seam-history").glob("*.json")
+        for meta in [*self.root.glob("*/seam.json"), *histories]:
+            try:
+                request = json.loads(meta.read_text("utf-8")).get("request") or {}
+            except (OSError, ValueError):
+                continue
+            if song_id in {request.get("a"), request.get("b")}:
+                meta.unlink(missing_ok=True)
+                if meta.name == "seam.json":
+                    (meta.parent / "clip.flac").unlink(missing_ok=True)
+                    forgotten += 1
+                key = request.get("key")
+                if key:
+                    with self._lock:
+                        self._states.pop(key, None)
+        self._remembered = None
+        return forgotten
+
     def status_reader(self) -> Callable[[str], dict]:
         """For looking up a lot of seams at once, most of which have never been tried. One look at
         what exists saves asking the disk about each."""
@@ -938,8 +961,8 @@ class SeamStore:
                 facts = meta.stat()
                 stamp = (facts.st_mtime_ns, facts.st_size)
                 known = self._records.get(meta)
-                state = known[1] if known and known[0] == stamp else json.loads(
-                    meta.read_text("utf-8")
+                state = (
+                    known[1] if known and known[0] == stamp else json.loads(meta.read_text("utf-8"))
                 )
             except (OSError, ValueError):
                 continue

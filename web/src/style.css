@@ -526,3 +526,17 @@ kbd { font: 0.82rem var(--mono); background: var(--panel-2); border: 1px solid v
 .why .audit { list-style: none; padding: 0; display: grid; gap: 4px; }
 .why .audit .status { white-space: normal; }
 .next-song .status { white-space: normal; }
+
+.energy-arc-preview .achieved { stroke: var(--soft); stroke-dasharray: 2 2; opacity: 0.7; fill: none; vector-effect: non-scaling-stroke; }
+.draft-progress { height: 4px; margin: 6px 0 2px; border-radius: 99px; background: var(--panel-2); overflow: hidden; max-width: 220px; }
+.draft-progress i { display: block; height: 100%; background: var(--ok); }
+a.draft-open { color: var(--ink); text-decoration: none; }
+a.draft-open:hover { text-decoration: underline; }
+.draft-name .status { white-space: normal; }
+
+.studio-grid { overflow-x: auto; }
+.studio-gridcell { display: contents; }
+.studio-ruler span { font: 0.72rem var(--mono); color: var(--soft); text-align: center; }
+.studio-ruler span.now { color: var(--accent); }
+.studio-lane .studio-name { position: sticky; left: 0; z-index: 1; }
+.studio-side h4 { position: sticky; left: 0; }
