@@ -78,6 +78,34 @@ def test_discovery_review_persists_without_changing_the_mix(conn, tmp_path):
     assert client.post("/api/discoveries/999/review", json={"verdict": "new"}).status_code == 404
 
 
+def test_listening_routes_hide_mapping_and_persist_responses(conn, tmp_path):
+    from selecta.listening import create_trials
+
+    trial = create_trials(
+        conn, "study-1", [{"pair": "1-2", "conditions": ["first-render", "second-render"]}], 42
+    )[0]
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    public = client.get("/api/listening?study=study-1")
+    assert "first-render" not in public.text
+    assert public.json()[0]["id"] == trial
+    assert client.get(f"/api/listening/{trial}/a/audio").status_code == 404
+    for key in ("first-render", "second-render"):
+        folder = Settings(tmp_path).renders_dir / "seams" / key
+        folder.mkdir(parents=True)
+        (folder / "preview.flac").write_bytes(b"opaque audio response")
+    audio = client.get(f"/api/listening/{trial}/a/audio")
+    assert audio.status_code == 200
+    assert audio.content == b"opaque audio response"
+    assert "first-render" not in str(audio.headers)
+    assert "second-render" not in str(audio.headers)
+    response = client.post(
+        f"/api/listening/{trial}/response",
+        json={"listener": "one", "choice": "tie", "setup": "headphones"},
+    )
+    assert response.json() == {"saved": True}
+    assert conn.execute("SELECT choice FROM listening_responses").fetchone()[0] == "tie"
+
+
 def test_songs_can_be_added_anywhere_removed_and_reordered(conn, store):
     for song in (1, 2, 3):
         mix.add_song(conn, song)

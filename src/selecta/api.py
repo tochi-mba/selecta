@@ -111,6 +111,12 @@ class DiscoveryReview(BaseModel):
     verdict: str
 
 
+class ListeningResponse(BaseModel):
+    listener: str
+    choice: str
+    setup: str
+
+
 class ScanRequest(BaseModel):
     folder: str
 
@@ -498,6 +504,46 @@ def create_app(
                 raise HTTPException(404, "Discovery not found")
             conn.commit()
         return {"id": discovery_id, "status": body.verdict}
+
+    @app.get("/api/listening")
+    def listening_trials(study: str) -> list[dict]:
+        from selecta.listening import public_trials
+
+        with connect() as conn:
+            return public_trials(conn, study)
+
+    @app.get("/api/listening/{trial}/{option}/audio")
+    def listening_audio(trial: str, option: str) -> FileResponse:
+        from selecta.listening import initialise
+
+        if option not in {"a", "b"}:
+            raise HTTPException(404)
+        with connect() as conn:
+            initialise(conn)
+            row = conn.execute(
+                "SELECT mapping FROM listening_trials WHERE id=?", (trial,)
+            ).fetchone()
+        if row is None:
+            raise HTTPException(404)
+        key = json.loads(row["mapping"])[option]
+        if not isinstance(key, str) or Path(key).name != key:
+            raise HTTPException(404)
+        root = store.root.resolve()
+        path = (root / key / "preview.flac").resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            raise HTTPException(404, "This trial's audio is unavailable")
+        return FileResponse(path, media_type="audio/flac", filename=f"{option}.flac")
+
+    @app.post("/api/listening/{trial}/response")
+    def listening_response(trial: str, body: ListeningResponse) -> dict:
+        from selecta.listening import respond
+
+        with connect() as conn:
+            try:
+                respond(conn, trial, body.listener, body.choice, body.setup)
+            except ValueError as problem:
+                raise HTTPException(400, str(problem)) from problem
+        return {"saved": True}
 
     @app.post("/api/steer")
     def steering(body: SteerRequest) -> dict:
