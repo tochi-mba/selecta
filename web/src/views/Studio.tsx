@@ -168,8 +168,8 @@ export function Studio(props: {
       {failed && <p className="warn" role="alert">{failed}</p>}
       {!failed && preparing && (
         <p className="hint" role="status">
-          Splitting both songs into voice, drums, bass and melody.
-          {session?.eta ? ` It’ll take ${etaRangeWords(session.eta)}.` : ' The first time takes a few minutes.'} Your mix keeps playing.
+          Separating vocals, drums, bass and melody from both songs.
+          {session?.eta?.late ? ' This is taking longer than usual.' : session?.eta ? ` Estimated time: ${etaRangeWords(session.eta)}.` : ' This may take a few minutes.'} Your mix keeps playing.
         </p>
       )}
       {!failed && session?.status === 'ready' && !loaded && <p className="hint" role="status">Loading the stems…</p>}
