@@ -1,6 +1,6 @@
 # Practitioner check: vocals, stems, and phrase-first choices
 
-Checked 5 November 2026. Forum posts are useful reports of practice, not controlled evidence;
+Checked 6 November 2026. Forum posts are useful reports of practice, not controlled evidence;
 upvotes and individual examples do not establish universal parameters.
 
 - In [a vocal-heavy transition discussion on r/Beatmatch](https://www.reddit.com/r/Beatmatch/comments/1wafkhz/how_to_mixtransition_two_vocally_tracks/),
@@ -105,8 +105,33 @@ upvotes and individual examples do not establish universal parameters.
 - Compare stem quality modes on a small, representative set before changing the separation model or
   defaults. Product manuals describe controls, and forum posts describe individual experience; neither
   substitutes for Selecta's own blind, paired listening measurements.
+- A [June 2026 vocal-transition discussion](https://www.reddit.com/r/Beatmatch/comments/1u03p4g/tips_for_transitions_with_songs_with_vocals/)
+  recommends looping an instrumental entry, swapping EQ at a phrase boundary, and letting only one
+  lyric lead at a time. Contributors also describe purposeful vocal overlap and call-and-response as
+  exceptions that can work when the arrangement supports them. This argues for scoring vocal density
+  and phrase timing, not treating any overlap as automatically bad.
+- A [recent discussion of vocal-heavy hard dance](https://www.reddit.com/r/Beatmatch/comments/1wafkhz/how_to_mixtransition_two_vocally_tracks/)
+  reports that long blends can be the wrong form for dense, short edits: use an instrumental phrase,
+  an intro loop, or a quicker phrase-safe handoff, and audition stem removal because dense effected
+  vocals can leave audible separation artifacts. This is genre-specific testimony, but reinforces
+  that transition length and stem use should depend on the pair and the listener's requested feel.
+- An older [DJ TechTools set-flow discussion](https://forum.djtechtools.com/t/techniques-to-make-your-mix-feel-more-consistent/36273?page=2)
+  describes a coherent set as one where track selection and phrase timing make the whole feel
+  continuous, with a new song taking over when the old one removes a defining part such as its vocal,
+  lead or bass. It supports using arrangement changes and handoff roles alongside BPM and key; it
+  does not establish a measurable threshold.
+- Engine DJ owners describe both [background stem preparation and long analysis queues](https://community.enginedj.com/t/stems-super-slow-analysis-no-progress-indicator/60640),
+  including multi-hour preparation for large libraries. These reports are device- and version-specific,
+  but are consistent with making expensive stems on-demand or priority-first and showing progress
+  instead of implying that the whole library is ready.
 - Let the planner choose transition length and overlap density for each pair. Phrase alignment alone
   does not make a long blend suitable, especially when the incoming arrangement gets busy quickly.
 - Treat an energy arc as a guide that can rise, dip, or peak before the final track; let a listener
   draw it or return to a mix-specific default. A curve shapes sequencing, but does not replace
   listening or a live DJ's judgment when the room calls for a different direction.
+- Keep vocal overlap as a graded, pair-specific choice: sequential lyrics are the safe default, while
+  rehearsed interleaving or call-and-response can be surfaced when timing, arrangement and stems all
+  support it. Never infer that stem removal alone will fix a crowded transition.
+- Treat library-wide stem preparation as a visible, user-budgeted background queue. Reports from
+  standalone DJ ecosystems support showing work and letting people prioritize the tracks they expect
+  to play first; those reports do not predict Selecta's model speed on this PC.
