@@ -1,20 +1,19 @@
 import { type PointerEvent, useEffect, useState } from 'react';
 import { get, MixData, post, SongRow, VibeCard } from '../api';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
+import { Drafts } from './Drafts';
 import { ViewProps } from './shared';
-
-type Saved = { name: string; songs: number };
 
 const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 const ARC_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'];
 const DEFAULT_ARC = [62, 72, 100, 85, 68];
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshStatus }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshStatus, openDraft, playDraft }: ViewProps) {
   const [cards, setCards] = useState<VibeCard[] | null>(null);
-  const [saved, setSaved] = useState<Saved[]>([]);
   const [songs, setSongs] = useState(12);
   const [building, setBuilding] = useState('');
+  const [draftsChanged, setDraftsChanged] = useState(0);
   const [problem, setProblem] = useState('');
   const [mixLanguage, setMixLanguage] = useState(status.steering.mix_language);
   const [stemFrequency, setStemFrequency] = useState(status.steering.stems);
@@ -33,7 +32,6 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
 
   useEffect(() => {
     get<VibeCard[]>('/vibes').then(setCards).catch((error: Error) => setProblem(error.message));
-    get<Saved[]>('/saved').then(setSaved).catch(() => {});
   }, [counts.analysed, counts.lyrics, counts.ready]);
 
   useEffect(() => setMixLanguage(status.steering.mix_language), [status.steering.mix_language]);
@@ -98,21 +96,18 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     }
   };
 
-  const openSaved = async (name: string, play: boolean) => {
-    const data = await post<MixData>('/saved/load', { name });
-    setMixData(data);
-    notify(`Opened ${name}.`, true);
-    if (play) {
-      setView('Now');
-      void player.playFrom(0);
-    } else {
-      setView('Edit');
+  const keepAsDraft = async (key: string) => {
+    setBuilding(key);
+    setProblem('');
+    try {
+      const made = await post<{ id: number; name: string; count: number }>(`/vibes/${key}/build?count=${songs}&as_draft=true`);
+      notify(`Saved ${made.name} as a draft, with ${made.count} songs. Nothing changed in what’s playing.`);
+      setDraftsChanged((times) => times + 1);
+    } catch (error) {
+      setProblem((error as Error).message);
+    } finally {
+      setBuilding('');
     }
-  };
-
-  const remove = async (name: string) => {
-    setSaved(await post<Saved[]>('/saved/delete', { name }));
-    notify(`Deleted ${name}.`);
   };
 
   const analyse = async () => {
@@ -378,28 +373,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </section>
       )}
 
-      {saved.length > 0 && (
-        <section>
-          <h2 className="section-title">Your saved mixes</h2>
-          <ul className="saved">
-            {saved.map((item) => (
-              <li key={item.name}>
-                <div>
-                  <b>{item.name}</b>
-                  <span className="soft"> {item.songs} songs</span>
-                </div>
-                <div className="row">
-                  <button onClick={() => void openSaved(item.name, true)}>Play</button>
-                  <button onClick={() => void openSaved(item.name, false)}>Edit</button>
-                  <button aria-label={`Delete ${item.name}`} onClick={() => void remove(item.name)}>
-                    ✕
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <Drafts key={draftsChanged} notify={notify} openDraft={openDraft} playDraft={playDraft} setView={setView} />
 
       <section>
         <h2 className="section-title">Pick a feeling</h2>
@@ -427,6 +401,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                 </button>
                 <button disabled={!!building} onClick={() => void start(card.key, card.name, true)}>
                   Edit first
+                </button>
+                <button disabled={!!building} aria-label={`Save ${card.name} as a draft`} onClick={() => void keepAsDraft(card.key)}>
+                  Save as draft
                 </button>
                       <small className="soft">
                         {card.songs} songs, up to {length(card.seconds)}

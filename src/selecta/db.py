@@ -93,6 +93,16 @@ CREATE TABLE IF NOT EXISTS ratings (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS drafts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    items TEXT NOT NULL DEFAULT '[]',
+    history TEXT NOT NULL DEFAULT '[]',
+    line INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS queue (
     position INTEGER PRIMARY KEY,
     song_id INTEGER NOT NULL REFERENCES songs(id),
@@ -103,6 +113,23 @@ CREATE TABLE IF NOT EXISTS queue (
     seam TEXT
 );
 """
+
+
+def _saved_mixes_become_drafts(conn: sqlite3.Connection) -> None:
+    """Saved mixes were kept as one preference. They're drafts now, and none is lost or doubled,
+    even if the page's first two requests both get here."""
+    row = conn.execute("SELECT value FROM preferences WHERE key='saved_mixes'").fetchone()
+    if row is None:
+        return
+    for saved in reversed(json.loads(row["value"]) or []):
+        items = json.dumps(saved.get("items") or [])
+        known = conn.execute(
+            "SELECT 1 FROM drafts WHERE name=? AND items=?", (saved["name"], items)
+        ).fetchone()
+        if known is None:
+            conn.execute("INSERT INTO drafts(name,items) VALUES(?,?)", (saved["name"], items))
+    conn.execute("DELETE FROM preferences WHERE key='saved_mixes'")
+    conn.commit()
 
 
 def connect(path: Path) -> sqlite3.Connection:
@@ -123,6 +150,7 @@ def connect(path: Path) -> sqlite3.Connection:
             # the page opens with two requests at once, and the other one may have just added it
             if "duplicate column" not in str(problem):
                 raise
+    _saved_mixes_become_drafts(conn)
     legacy = conn.execute(
         "SELECT id,kind,payload FROM seam_book WHERE kind IN ('same_melody','harmonic_cousin')"
     ).fetchall()

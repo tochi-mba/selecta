@@ -1,8 +1,10 @@
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { del, get, MixData, MixItem, post, SeamOptions, SeamSettings, Suggestion } from '../api';
-import { analysingWords, askedToAnalyse, clock, etaRangeWords, etaWords, length, runningTime, seamStatusWords, triedWords } from '../lib';
+import { FormEvent, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
+import { del, DraftList, get, MixData, MixItem, post, SeamOptions, SeamSettings, Suggestion } from '../api';
+import { analysingWords, askedToAnalyse, clock, etaRangeWords, etaWords, length, nth, runningTime, seamStatusWords, triedWords } from '../lib';
+import { RenameDraft } from './Drafts';
+import { MixScope, useMixPath } from './mixScope';
 import { Studio } from './Studio';
-import { ViewProps } from './shared';
+import { Undo, ViewProps } from './shared';
 
 /** What could go at this place in the mix: the best fits first, and the same order when searching. */
 export function Adder(props: {
@@ -16,9 +18,10 @@ export function Adder(props: {
   const { position, onAdd, onClose, notify, line, refreshStatus } = props;
   const [query, setQuery] = useState('');
   const [songs, setSongs] = useState<Suggestion[] | null>(null);
+  const at = useMixPath();
 
   const load = () => {
-    get<{ songs: Suggestion[] }>(`/mix/suggest?position=${position}&q=${encodeURIComponent(query)}&limit=${query ? 30 : 8}`)
+    get<{ songs: Suggestion[] }>(at(`/mix/suggest?position=${position}&q=${encodeURIComponent(query)}&limit=${query ? 30 : 8}`))
       .then((data) => setSongs(data.songs))
       .catch(() => setSongs([]));
   };
@@ -102,13 +105,14 @@ function SeamEditor(props: {
   item: MixItem;
   previous: MixItem;
   refreshMix: () => void;
-  notify: (message: string, undo?: boolean) => void;
+  notify: (message: string, undo?: Undo) => void;
   onListen?: () => void;
 }) {
   const { position, item, previous, refreshMix, notify, onListen } = props;
   const [options, setOptions] = useState<SeamOptions | null>(null);
   const [problem, setProblem] = useState('');
   const [studio, setStudio] = useState(false);
+  const at = useMixPath();
   const settings: SeamSettings = item.seam?.settings ?? {};
   const planned = settings.move ?? 'auto';
   const state = item.seam?.state;
@@ -118,7 +122,7 @@ function SeamEditor(props: {
   useEffect(() => {
     let live = true;
     setOptions(null);
-    get<SeamOptions>(`/mix/${position}/options`)
+    get<SeamOptions>(at(`/mix/${position}/options`))
       .then((data) => live && setOptions(data))
       .catch((error: Error) => live && setProblem(error.message));
     return () => {
@@ -130,8 +134,8 @@ function SeamEditor(props: {
     setProblem('');
     try {
       // anything the person picks is their choice, so it stops being Selecta's to replace
-      await post(`/mix/${position}/seam`, { ...settings, ...changes, soft: false });
-      await post(`/mix/${position}/render`);
+      await post(at(`/mix/${position}/seam`), { ...settings, ...changes, soft: false });
+      await post(at(`/mix/${position}/render`));
       refreshMix();
       notify('Changed that seam. Rendering it now.', true);
     } catch (error) {
@@ -281,7 +285,7 @@ function SeamRow(props: {
   open: boolean;
   onToggle: () => void;
   names: Record<string, string>;
-  notify: (message: string, undo?: boolean) => void;
+  notify: (message: string, undo?: Undo) => void;
   onListen?: () => void;
 }) {
   const { item, previous, refreshMix, open, onToggle, names, notify, onListen } = props;
@@ -290,13 +294,14 @@ function SeamRow(props: {
   const plannedBars = state.bars ?? seam.settings.bars;
   const chosen = seam.settings.move ?? 'auto';
   const [hearing, setHearing] = useState(false);
+  const at = useMixPath();
   const busy = state.status === 'queued' || state.status === 'rendering';
   const label = state.status === 'ready' ? (state.label ?? names[chosen]) : (names[chosen] ?? chosen);
 
   const hear = async () => {
     setHearing(!hearing || state.status !== 'ready');
     if (state.status !== 'ready') {
-      await post(`/mix/${item.position}/render`);
+      await post(at(`/mix/${item.position}/render`));
       refreshMix();
     }
   };
@@ -342,7 +347,7 @@ function SeamRow(props: {
       {state.status === 'failed' && (
         <p className="warn">
           Remembered failed attempt: {state.error} {!open && <button className="link" onClick={onToggle}>Try another move</button>}
-          <button className="link" onClick={() => void post(`/mix/${item.position}/render?retry=true`).then(refreshMix)}>Retry this attempt anyway</button>
+          <button className="link" onClick={() => void post(at(`/mix/${item.position}/render?retry=true`)).then(refreshMix)}>Retry this attempt anyway</button>
         </p>
       )}
       {hearing && state.status === 'ready' && <Preview seamKey={state.key} seamAt={state.preview_seam ?? 0} />}
@@ -375,10 +380,11 @@ function SongLine(props: {
   onPlay: () => void;
   onDrop: (from: number, to: number) => void;
   playing: boolean;
-  notify: (message: string, undo?: boolean) => void;
+  notify: (message: string, undo?: Undo) => void;
 }) {
   const { item, total, setMixData, onPlay, onDrop, playing, notify } = props;
   const [over, setOver] = useState(false);
+  const at = useMixPath();
   const act = async (call: Promise<MixData>, message?: string) => {
     setMixData(await call);
     if (message) notify(message, true);
@@ -413,25 +419,25 @@ function SongLine(props: {
         <button
           aria-label={`Move ${item.title} up`}
           disabled={item.position === 0}
-          onClick={() => void act(post<MixData>('/mix/move', { source: item.position, target: item.position - 1 }), `Moved ${item.title} up.`)}
+          onClick={() => void act(post<MixData>(at('/mix/move'), { source: item.position, target: item.position - 1 }), `Moved ${item.title} up.`)}
         >
           ↑
         </button>
         <button
           aria-label={`Move ${item.title} down`}
           disabled={item.position === total - 1}
-          onClick={() => void act(post<MixData>('/mix/move', { source: item.position, target: item.position + 1 }), `Moved ${item.title} down.`)}
+          onClick={() => void act(post<MixData>(at('/mix/move'), { source: item.position, target: item.position + 1 }), `Moved ${item.title} down.`)}
         >
           ↓
         </button>
         <button
           aria-pressed={item.locked}
           title="A locked song stays right here when the mix is rebuilt"
-          onClick={() => void act(post<MixData>(`/mix/${item.position}/lock`))}
+          onClick={() => void act(post<MixData>(at(`/mix/${item.position}/lock`)))}
         >
           {item.locked ? 'Locked' : 'Lock'}
         </button>
-        <button aria-label={`Remove ${item.title}`} onClick={() => void act(del<MixData>(`/mix/songs/${item.position}`), `Removed ${item.title}.`)}>
+        <button aria-label={`Remove ${item.title}`} onClick={() => void act(del<MixData>(at(`/mix/songs/${item.position}`)), `Removed ${item.title}.`)}>
           ✕
         </button>
       </div>
@@ -440,10 +446,14 @@ function SongLine(props: {
 }
 
 export function Mix(props: ViewProps) {
-  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta } = props;
+  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta, draftPlace, openDraft, closeDraft, playDraft, renamedDraft } = props;
+  const draftId = useContext(MixScope);
+  const inDraft = draftId !== null;
+  const at = useMixPath();
   const line = status.analysing ?? [];
   const [openSeam, setOpenSeam] = useState<number | null>(null);
-  const [adding, setAdding] = useState<number | null>(null);
+  const [adding, setAdding] = useState<number | null>(inDraft && !mix.length ? 0 : null);
+  const [renaming, setRenaming] = useState(false);
   const [wantFile, setWantFile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exported, setExported] = useState<{ name: string; seconds: number } | null>(null);
@@ -457,7 +467,7 @@ export function Mix(props: ViewProps) {
   const failed = seams.filter((state) => state.status === 'failed').length;
 
   const addSong = async (song: Suggestion, position: number) => {
-    setMixData(await post<MixData>('/mix/songs', { song_id: song.song_id, position }));
+    setMixData(await post<MixData>(at('/mix/songs'), { song_id: song.song_id, position }));
     setAdding(null);
     notify(`Added ${song.title}.`, true);
   };
@@ -466,7 +476,7 @@ export function Mix(props: ViewProps) {
   const rendering = seams.filter((state) => state.status === 'queued' || state.status === 'rendering').length;
 
   const renderAll = async () => {
-    setMixData(await post<MixData>('/mix/render'));
+    setMixData(await post<MixData>(at('/mix/render')));
     notify(`Rendering ${waiting} seam${waiting === 1 ? '' : 's'}, in order, ahead of everything else.`);
   };
 
@@ -474,7 +484,7 @@ export function Mix(props: ViewProps) {
     setProblem('');
     setExported(null);
     setWantFile(true);
-    setMixData(await post<MixData>('/mix/render'));
+    setMixData(await post<MixData>(at('/mix/render')));
   };
 
   // Downloading renders whatever isn't ready, then saves the file by itself.
@@ -489,7 +499,7 @@ export function Mix(props: ViewProps) {
       return;
     }
     setSaving(true);
-    post<{ name: string; seconds: number }>('/mix/export')
+    post<{ name: string; seconds: number }>(at('/mix/export'))
       .then(setExported)
       .catch((error: Error) => setProblem(error.message))
       .finally(() => {
@@ -502,10 +512,46 @@ export function Mix(props: ViewProps) {
     event.preventDefault();
     const clean = name.trim();
     if (!clean) return;
-    await post('/saved', { name: clean });
+    const made = await post<{ name: string }>('/drafts', { name: clean, copy_current: true });
     setNaming(false);
+    notify(`Saved a copy as a draft: ${made.name}. It’s on the Mixes page.`);
+  };
+
+  const prioritize = async (take: boolean) => {
+    const next = await (take ? post<DraftList>(`/drafts/${draftId}/line`) : del<DraftList>(`/drafts/${draftId}/line`));
     refreshMix();
-    notify(`Saved ${clean}. It’s on the Mixes page.`);
+    const placed = next.drafts.find((item) => item.id === draftId);
+    if (!take) notify('Taken out of the line. It won’t render by itself now.');
+    else if (placed?.place) {
+      notify(placed.place === 1 && next.current.left === 0 ? 'Rendering this in the background.' : `This is in line, and will be ready in ${etaRangeWords(placed.eta ?? undefined)}.`);
+    }
+  };
+  const copyDraft = async () => {
+    const made = await post<{ name: string }>(`/drafts/${draftId}/duplicate`);
+    notify(`Made a copy: ${made.name}.`);
+  };
+  const deleteDraft = async () => {
+    const gone = await del<{ name: string }>(`/drafts/${draftId}`);
+    closeDraft?.();
+    setView('Mixes');
+    notify(`Deleted ${gone.name}.`, async () => {
+      const back = await post<{ id: number }>('/drafts/restore');
+      openDraft?.(back.id);
+    });
+  };
+  const renameForm = renaming && inDraft && (
+    <RenameDraft
+      id={draftId}
+      name={mixName}
+      onDone={(name) => {
+        renamedDraft?.(name);
+        setRenaming(false);
+      }}
+    />
+  );
+  const backToCurrent = () => {
+    closeDraft?.();
+    setView('Edit');
   };
 
   const clear = async () => {
@@ -513,6 +559,27 @@ export function Mix(props: ViewProps) {
     setMixData(await post<MixData>('/mix/clear'));
     notify('Cleared the mix.', true);
   };
+
+  if (!mix.length && inDraft) {
+    return (
+      <main className="page mix">
+        <MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} />
+        <p className="eyebrow">Draft</p>
+        <h1 className="display small">{mixName}</h1>
+        <p className="lede">Add the first song. Nothing here touches what’s playing.</p>
+        <div className="row wrap">
+          <button onClick={() => setAdding(0)}>Add a song</button>
+          <button onClick={() => setRenaming(true)}>Rename</button>
+          <button onClick={() => void deleteDraft()}>Delete</button>
+          <button onClick={backToCurrent}>Back to current mix</button>
+        </div>
+        {renameForm}
+        {adding === 0 && (
+          <Adder position={0} onAdd={(song) => void addSong(song, 0)} onClose={() => setAdding(null)} notify={notify} line={line} refreshStatus={refreshStatus} />
+        )}
+      </main>
+    );
+  }
 
   if (!mix.length) {
     return (
@@ -534,15 +601,38 @@ export function Mix(props: ViewProps) {
     <main className="page mix">
       <header className="mix-head">
         <div>
+          <MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} />
+          {inDraft && <p className="eyebrow">Draft</p>}
           <h1 className="display small">{mixName}</h1>
           <p className="lede">
             {mix.length} {mix.length === 1 ? 'song' : 'songs'}, about {length(total)}.
             {seams.length > 0 && ` ${ready} of ${seams.length} seams are ready.`}
-            {mixEta && mixEta.seams > 0 && ` The rest take ${etaRangeWords(mixEta)}.`}
+            {!inDraft && mixEta && mixEta.seams > 0 && ` The rest take ${etaRangeWords(mixEta)}.`}
+            {inDraft && mixEta && mixEta.seams > 0 && (draftPlace
+              ? ` ${nth(draftPlace)} in line. All ready in ${etaRangeWords(mixEta)}.`
+              : ` Prioritize it and all of it would be ready in ${etaRangeWords(mixEta)}.`)}
             {seams.length > 0 && ' Tap any seam to change how it lands.'}
           </p>
+          {inDraft && <p className="hint">Saved as you go. What’s playing isn’t affected.</p>}
         </div>
         <div className="row wrap">
+          {inDraft ? (
+            <>
+              <button className="primary" onClick={() => void playDraft?.(draftId)}>Play this mix</button>
+              {draftPlace ? (
+                <button onClick={() => void prioritize(false)}>Take out of line</button>
+              ) : (
+                waiting > 0 && (
+                  <button title="Renders in the background, right after your current mix" onClick={() => void prioritize(true)}>
+                    Prioritize
+                  </button>
+                )
+              )}
+              <button onClick={() => setRenaming(true)}>Rename</button>
+              <button onClick={() => void copyDraft()}>Copy</button>
+            </>
+          ) : (
+            <>
           <button className="primary" onClick={() => {
             setView('Now');
             void player.playFrom(0);
@@ -553,9 +643,11 @@ export function Mix(props: ViewProps) {
             setName(mixName);
             setNaming(!naming);
           }} aria-expanded={naming}>
-            Save
+            Save a copy
           </button>
-          {ready < seams.length && (
+            </>
+          )}
+          {!inDraft && ready < seams.length && (
             <button onClick={() => void renderAll()} disabled={!waiting}>
               {waiting ? 'Render every seam' : rendering ? `Rendering ${ready} of ${seams.length}…` : 'Change failed transitions to continue'}
             </button>
@@ -565,14 +657,24 @@ export function Mix(props: ViewProps) {
               {saving ? 'Saving file…' : wantFile ? `Rendering ${ready} of ${seams.length}…` : 'Download audio'}
             </button>
           )}
-          <button onClick={() => setView('Mixes')}>New mix</button>
-          <button onClick={() => void clear()}>Clear</button>
+          {inDraft ? (
+            <>
+              <button onClick={() => void deleteDraft()}>Delete</button>
+              <button onClick={backToCurrent}>Back to current mix</button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setView('Mixes')}>New mix</button>
+              <button onClick={() => void clear()}>Clear</button>
+            </>
+          )}
         </div>
       </header>
+      {renameForm}
       {naming && (
         <form className="row" onSubmit={saveMix}>
           <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
-          <button className="primary" disabled={!name.trim()}>Save mix</button>
+          <button className="primary" disabled={!name.trim()}>Save copy</button>
           <button type="button" onClick={() => setNaming(false)}>Cancel</button>
         </form>
       )}
@@ -605,14 +707,18 @@ export function Mix(props: ViewProps) {
               total={mix.length}
               setMixData={setMixData}
               notify={notify}
-              playing={now.phase !== 'idle' && now.position === index}
+              playing={!inDraft && now.phase !== 'idle' && now.position === index}
               onPlay={() => {
+                if (inDraft) {
+                  void playDraft?.(draftId, index);
+                  return;
+                }
                 setView('Now');
                 void player.playFrom(index);
               }}
               onDrop={(from, to) => {
                 if (from !== to) {
-                  void post<MixData>('/mix/move', { source: from, target: to }).then((data) => {
+                  void post<MixData>(at('/mix/move'), { source: from, target: to }).then((data) => {
                     setMixData(data);
                     notify('Moved that song.', true);
                   });
@@ -641,6 +747,32 @@ export function Mix(props: ViewProps) {
         ))}
       </ol>
     </main>
+  );
+}
+
+/** Which mix is being edited, for as soon as there's more than one. */
+function MixSwitcher({ draftId, openDraft, closeDraft }: { draftId: number | null; openDraft?: (id: number) => void; closeDraft: () => void }) {
+  const [list, setList] = useState<DraftList | null>(null);
+  useEffect(() => {
+    get<DraftList>('/drafts').then(setList).catch(() => {});
+  }, [draftId]);
+  if (!list || !list.drafts.length) return null;
+  return (
+    <label className="switcher">
+      Editing
+      <select
+        value={draftId ?? 'current'}
+        onChange={(event) => {
+          if (event.target.value === 'current') closeDraft();
+          else openDraft?.(Number(event.target.value));
+        }}
+      >
+        <option value="current">Current mix: {list.current.name}</option>
+        {list.drafts.map((draft) => (
+          <option key={draft.id} value={draft.id}>Draft: {draft.name}</option>
+        ))}
+      </select>
+    </label>
   );
 }
 

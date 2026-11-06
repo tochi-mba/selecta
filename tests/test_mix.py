@@ -488,20 +488,16 @@ def test_every_change_to_a_mix_can_be_undone(conn, store):
     assert mix.undo(conn) is None
 
 
-def test_saved_mixes_come_back_exactly_as_they_were(conn, store):
+def test_a_mix_kept_as_a_draft_comes_back_exactly_as_it_was(conn, store):
     for song in (1, 2):
         mix.add_song(conn, song)
     mix.set_seam(conn, 1, {"move": "phrase_roll", "phrase": "good news"})
-    mix.save_mix(conn, "For Friday")
+    draft = mix.copy_current(conn, "For Friday")
     mix.write_order(conn, [])
-    assert mix.load_saved(conn, "For Friday")
+    mix.play_draft(conn, draft)
     assert _order(conn, store) == [1, 2]
     assert mix.read_mix(conn, store)[1]["seam"]["settings"]["phrase"] == "good news"
     assert mix.mix_name(conn) == "For Friday"
-    mix.save_mix(conn, "For Friday")
-    assert len(mix.saved_mixes(conn)) == 1, "the same name replaces, it doesn't pile up"
-    assert not mix.delete_saved(conn, "For Friday")
-    assert not mix.load_saved(conn, "For Friday")
 
 
 def _vibe_library(tmp_path):

@@ -48,6 +48,29 @@ export type MixData = {
   can_undo: boolean;
   undone?: string | null;
   eta?: MixEta;
+  draft?: { id: number; place: number | null };
+};
+
+export type DraftInfo = {
+  id: number;
+  name: string;
+  songs: number;
+  seconds: number;
+  seams: number;
+  ready: number;
+  failed: number;
+  waiting: number;
+  rendering: boolean;
+  place: number | null;
+  eta: Eta | null;
+  to_render: number;
+  missing: number;
+};
+
+export type DraftList = {
+  drafts: DraftInfo[];
+  current: { name: string; songs: number; left: number; eta: Eta };
+  out_of_room: boolean;
 };
 
 export type SeamOptions = {
@@ -74,6 +97,7 @@ export type Status = {
   analysis_running: boolean;
   analysing: number[];
   mix_rendering: boolean;
+  mixes_in_line?: number;
   eta?: {
     analysis: Eta & { songs: number; after_mix: boolean };
     line: Record<string, number>;

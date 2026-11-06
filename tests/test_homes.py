@@ -146,8 +146,25 @@ def test_saved_mixes_from_every_folder_are_kept(tmp_path):
     target = tmp_path / "target"
     gather(target, [first, second])
     conn = db.connect(target / "selecta.sqlite")
-    names = [item["name"] for item in db.preference(conn, "saved_mixes")]
+    names = [row["name"] for row in conn.execute("SELECT name FROM drafts")]
     assert sorted(names) == ["Both", "Friday", "Sunday"], "each kept once"
+    conn.close()
+
+
+def test_drafts_from_every_folder_are_kept(tmp_path):
+    first = _home(tmp_path / "first", [1])
+    second = _home(tmp_path / "second", [1])
+    for home, names in ((first, ["Friday", "Both"]), (second, ["Sunday", "Both"])):
+        conn = db.connect(home / "selecta.sqlite")
+        for name in names:
+            conn.execute("INSERT INTO drafts(name,items,line) VALUES(?,'[]',0)", (name,))
+        conn.commit()
+        conn.close()
+    target = tmp_path / "target"
+    gather(target, [first, second])
+    conn = db.connect(target / "selecta.sqlite")
+    rows = conn.execute("SELECT name FROM drafts").fetchall()
+    assert sorted(row["name"] for row in rows) == ["Both", "Friday", "Sunday"]
     conn.close()
 
 

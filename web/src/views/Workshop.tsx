@@ -131,7 +131,7 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
         <p>
           {status.analysis_running
             ? status.mix_rendering
-              ? `Waiting while your mix renders, then it carries on. ${left} to go, ${etaRangeWords(status.eta?.analysis)} after that.`
+              ? `Waiting while ${status.mixes_in_line ? 'your mixes render' : 'your mix renders'}, then it carries on. ${left} to go, ${etaRangeWords(status.eta?.analysis)} after that.`
               : `Working through your songs at low priority, so you can keep using your PC. ${left} to go, ${etaRangeWords(status.eta?.analysis)}.`
             : left
               ? `${left} song${left === 1 ? '' : 's'} left. ${analysisWords(status.eta?.analysis)}`

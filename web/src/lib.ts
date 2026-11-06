@@ -148,7 +148,7 @@ export function analysisWords(analysis: { seconds: number; low: number; high: nu
   if (!analysis) return 'It runs in the background.';
   const wait = etaRangeWords(analysis);
   return analysis.after_mix
-    ? `It takes ${wait}, and waits until your mix has finished rendering.`
+    ? `It takes ${wait}, and waits until rendering has finished.`
     : `It takes ${wait} in the background.`;
 }
 
@@ -163,4 +163,33 @@ export function triedWords(tried: { move: string; why: string }[], names: Record
     const list = moves.length > 1 ? `${moves.slice(0, -1).join(', ')} and ${moves.at(-1)}` : moves[0];
     return `${list} couldn’t work here. ${reason}.`;
   });
+}
+
+export function nth(place: number): string {
+  const tens = place % 100;
+  if (tens >= 11 && tens <= 13) return `${place}th`;
+  return `${place}${['th', 'st', 'nd', 'rd'][place % 10] ?? 'th'}`;
+}
+
+/** Where a draft has got to, in a few words. */
+export function draftWords(draft: {
+  songs: number;
+  seams: number;
+  ready: number;
+  failed: number;
+  waiting: number;
+  rendering: boolean;
+  place: number | null;
+  eta: { seconds: number; low: number; high: number; late?: boolean } | null;
+}): string {
+  if (draft.songs === 0) return 'Empty';
+  if (draft.seams === 0) return 'Add one more song';
+  if (draft.waiting === 0) {
+    if (draft.failed === 0) return 'Ready to play';
+    return `${draft.ready} of ${draft.seams} ready, ${draft.failed} couldn’t be made`;
+  }
+  const done = `${draft.ready} of ${draft.seams} ready`;
+  if (draft.place === null) return done;
+  const wait = etaRangeWords(draft.eta ?? undefined);
+  return draft.rendering ? `Rendering now. ${done}, ${wait} left` : `${done}. All ready in ${wait}`;
 }

@@ -66,7 +66,7 @@ NEAR_MISS = {"beat alignment": 20.0, "level fall": 3.0, "entry level": 1.5}
 """How far past its limit each forgiving check can go, in its own units."""
 MIX_CHECK_SECONDS = 2.0
 # who goes first: what's about to be heard, the rest of the mix, other requests, then spare time
-URGENT, MIX, LATER, PREPARING = range(4)
+URGENT, MIX, LINE, LATER, PREPARING = range(5)
 UNSURE_WORDS = "Selecta can’t tell exactly when these words are sung, so it won’t cut on them."
 PLACEMENTS_TO_TRY = 4
 
@@ -559,6 +559,10 @@ class SeamStore:
         self.next_mix_seam: Callable[[], SeamRequest | None] = lambda: None
         self.keep_for_now: Callable[[], set[str]] = set
         self.mix_moves: Callable[[], Counter[str]] = Counter
+        self.next_line_seam: Callable[[], tuple[int, SeamRequest] | None] = lambda: None
+        self.draft_moves: Callable[[int], Counter[str]] = lambda _draft: Counter()
+        self._running_draft: int | None = None
+        self._line_waiting = False
         self.memory = SeamMemory()
         self.clock = JobClock(settings.home)
         self._remembered: tuple[float, SeamMemory] | None = None
@@ -711,10 +715,11 @@ class SeamStore:
                 meta.unlink(missing_ok=True)
 
     def _next_job(self) -> SeamRequest:
-        """What's about to be heard, then the rest of the mix in order, then anything else a person
-        asked for. Only spare time goes on preparing word links."""
+        """What's about to be heard, then the rest of the mix in order, then the mixes in the render
+        line, then anything else a person asked for. Only spare time goes on word links."""
         while True:
             self._arrived.clear()
+            self._running_draft = None
             active = self.keep_for_now()
             with self._lock:
                 # anything from a mix that's since been replaced goes behind the one now active
@@ -733,6 +738,12 @@ class SeamStore:
             request = self.next_mix_seam()
             if request is not None:
                 self._running_rank = MIX
+                self._running_key = request.key
+                return request
+            in_line = self.next_line_seam()
+            if in_line is not None:
+                self._running_draft, request = in_line
+                self._running_rank = LINE
                 self._running_key = request.key
                 return request
             while True:
@@ -757,7 +768,7 @@ class SeamStore:
         if rank != PREPARING and moment - self._sign_renewed_at > jobs.MIX_SIGN_RENEW_SECONDS:
             self._sign_renewed_at = moment
             jobs.mark_mix_rendering(self.settings.home, True)
-        if rank <= MIX:
+        if rank <= LINE:
             # a seam from a mix that's been replaced stops, however far along it is
             if moment - self._active_checked_at > MIX_CHECK_SECONDS:
                 self._active_checked_at = moment
@@ -776,7 +787,8 @@ class SeamStore:
         if moment - self._mix_checked_at > MIX_CHECK_SECONDS:
             self._mix_checked_at = moment
             self._mix_waiting = self.next_mix_seam() is not None
-        if self._mix_waiting:
+            self._line_waiting = rank > LINE and self.next_line_seam() is not None
+        if self._mix_waiting or self._line_waiting:
             return True
         return rank > LATER and bool(self._later)
 
@@ -935,7 +947,9 @@ class SeamStore:
         nothing else can work, since it's the one the listener likes least. `near` is a near miss
         already in hand."""
         can_ride = "word_blend" in modes_for(a, b) and ride_lines(a, b) is not None
-        moves = fallback_order(a.id, b.id, can_ride, self.mix_moves())
+        draft = self._running_draft
+        used = self.mix_moves() if draft is None else self.draft_moves(draft)
+        moves = fallback_order(a.id, b.id, can_ride, used)
         if stem_preference == "never":
             moves = [move for move in moves if move not in STEM_MOVES]
         # what's already known to fail isn't worth minutes, and what's known to work goes first

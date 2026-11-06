@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analysingWords, analysisWords, askedToAnalyse, clock, etaRangeWords, etaWords, gb, length, loadResume, runningTime, saveResume, seamStatusWords, storageWords, triedWords } from './lib';
+import { analysingWords, analysisWords, askedToAnalyse, clock, draftWords, etaRangeWords, etaWords, gb, length, loadResume, nth, runningTime, saveResume, seamStatusWords, storageWords, triedWords } from './lib';
 import { seam, songs } from './test/backend';
 
 describe('words on screen', () => {
@@ -173,7 +173,7 @@ describe('how long things will take', () => {
   });
 
   it('explains what analysis is waiting for', () => {
-    expect(analysisWords({ seconds: 3600, low: 3000, high: 4200, after_mix: true })).toContain('waits until your mix');
+    expect(analysisWords({ seconds: 3600, low: 3000, high: 4200, after_mix: true })).toContain('waits until rendering');
     expect(analysisWords({ seconds: 3600, low: 3000, high: 4200, after_mix: false })).toBe('It takes about an hour in the background.');
     expect(analysisWords(undefined)).toBe('It runs in the background.');
   });
@@ -181,5 +181,25 @@ describe('how long things will take', () => {
   it('quotes the real wait when a song joins the analysis line', () => {
     expect(askedToAnalyse('Hello', 2, 240)).toBe('Hello is in line, with 2 ahead of it. Ready in about 4 minutes.');
     expect(askedToAnalyse('Hello', 0, 40)).toBe('Analysing Hello. Ready in under a minute.');
+  });
+});
+
+describe('where a draft has got to', () => {
+  const draft = { songs: 12, seams: 11, ready: 0, failed: 0, waiting: 11, rendering: false, place: null as number | null, eta: null as { seconds: number; low: number; high: number } | null };
+  it('names the places in line', () => {
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111].map(nth)).toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '101st', '111th']);
+  });
+  it('says when there is nothing to render yet', () => {
+    expect(draftWords({ ...draft, songs: 0, seams: 0, waiting: 0 })).toBe('Empty');
+    expect(draftWords({ ...draft, songs: 1, seams: 0, waiting: 0 })).toBe('Add one more song');
+  });
+  it('says when it is ready, and is honest about seams that failed', () => {
+    expect(draftWords({ ...draft, ready: 11, waiting: 0 })).toBe('Ready to play');
+    expect(draftWords({ ...draft, ready: 10, failed: 1, waiting: 0 })).toBe('10 of 11 ready, 1 couldn’t be made');
+  });
+  it('only quotes a time once it is in line', () => {
+    expect(draftWords({ ...draft, ready: 3, waiting: 8 })).toBe('3 of 11 ready');
+    expect(draftWords({ ...draft, ready: 3, waiting: 8, place: 2, eta: { seconds: 600, low: 500, high: 700 } })).toBe('3 of 11 ready. All ready in about 10 minutes');
+    expect(draftWords({ ...draft, ready: 3, waiting: 8, place: 1, rendering: true, eta: { seconds: 240, low: 200, high: 300 } })).toBe('Rendering now. 3 of 11 ready, about 4 minutes left');
   });
 });

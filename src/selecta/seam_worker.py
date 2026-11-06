@@ -63,6 +63,48 @@ def _mix_seams(store: SeamStore, settings):
     return next_seam, keep, moves
 
 
+def _line_seams(store: SeamStore, settings):
+    """Mixes waiting in the render line, in their order, once the current mix has nothing left."""
+    conn = db.connect(settings.db_path)
+
+    def pairs(draft: int) -> list[tuple[SeamRequest, str]]:
+        items = mix.read_mix(conn, store, draft)
+        return [
+            (
+                request_from(before["song_id"], item["song_id"], item["seam"]["settings"]),
+                item["seam"]["state"]["status"],
+            )
+            for before, item in zip(items, items[1:], strict=False)
+        ]
+
+    def next_seam() -> tuple[int, SeamRequest] | None:
+        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        for draft in mix.line_order(conn):
+            for request, status in pairs(draft):
+                if status == "none":
+                    # the same limit as the mix: it mustn't delete its own early seams to go on
+                    return None if cache_bytes(settings) >= limit else (draft, request)
+        return None
+
+    def keep() -> set[str]:
+        return {request.key for draft in mix.line_order(conn) for request, _ in pairs(draft)}
+
+    def moves(draft: int) -> Counter[str]:
+        used: Counter[str] = Counter()
+        try:
+            items = mix.read_mix(conn, store, draft)
+        except mix.NoSuchDraft:
+            return used
+        for item in items[1:]:
+            state, settings_now = item["seam"]["state"], item["seam"]["settings"]
+            move = state.get("style") if state["status"] == "ready" else settings_now.get("move")
+            if move and move != "auto":
+                used[move] += 1
+        return used
+
+    return next_seam, keep, moves
+
+
 def _preparer(store: SeamStore, settings):
     """Spare time goes on the best word links, reloading now and then as more songs are analysed."""
     from selecta.discovery.search import lyric_links
@@ -100,7 +142,9 @@ def main() -> None:
         store.next_idle_job = _preparer(store, settings)
     app_input = take_app_input()
     threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()
-    store.next_mix_seam, store.keep_for_now, store.mix_moves = _mix_seams(store, settings)
+    store.next_mix_seam, mix_keys, store.mix_moves = _mix_seams(store, settings)
+    store.next_line_seam, line_keys, store.draft_moves = _line_seams(store, settings)
+    store.keep_for_now = lambda: mix_keys() | line_keys()
     store.run_forever()
 
 
