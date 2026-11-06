@@ -55,6 +55,7 @@ export type Status = {
   steering: {
     mix_language: string;
     stems: string;
+    energy_arc: number[] | null;
     target: string | null;
     target_label?: string | null;
   };

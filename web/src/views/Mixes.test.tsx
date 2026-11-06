@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { VibeCard } from '../api';
 import { SetPlayer } from '../player';
@@ -88,6 +88,32 @@ describe('Pick a feeling', () => {
     fireEvent.change(await screen.findByLabelText('Stem-assisted moves'), { target: { value: 'often' } });
     expect(await screen.findByLabelText('Stem-assisted moves')).toHaveValue('often');
     expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { action?: string; value?: string }).action === 'stems' && (call.body as { value?: string }).value === 'often')).toBe(true);
+  });
+
+  it('lets the listener shape and save a five-stop energy arc', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /saved': [],
+      'POST /steer': { energy_arc: [62, 72, 35, 85, 68] },
+    });
+    show();
+    const middle = await screen.findByRole('slider', { name: 'Energy arc middle' });
+    fireEvent.change(middle, { target: { value: '35' } });
+    expect(middle).toHaveValue('35');
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) =>
+            call.method === 'POST' &&
+            call.path === '/steer' &&
+            (call.body as { action?: string; value?: number[] }).action === 'energy_arc' &&
+            JSON.stringify((call.body as { value?: number[] }).value) ===
+              JSON.stringify([62, 72, 35, 85, 68]),
+        ),
+      ).toBe(true);
+    });
+    expect(screen.getByRole('img', { name: 'Energy shape preview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use each mix’s arc' })).toBeEnabled();
   });
 
   it('lets the listener set a song as the destination for future mixes', async () => {

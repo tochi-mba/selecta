@@ -6,6 +6,8 @@ import { ViewProps } from './shared';
 type Saved = { name: string; songs: number };
 
 const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
+const ARC_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'];
+const DEFAULT_ARC = [62, 72, 100, 85, 68];
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
 export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshStatus }: ViewProps) {
@@ -16,6 +18,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const [problem, setProblem] = useState('');
   const [mixLanguage, setMixLanguage] = useState(status.steering.mix_language);
   const [stemFrequency, setStemFrequency] = useState(status.steering.stems);
+  const [energyArc, setEnergyArc] = useState<number[] | null>(status.steering.energy_arc);
   const [destinationQuery, setDestinationQuery] = useState('');
   const [destinationResults, setDestinationResults] = useState<SongRow[]>([]);
   const [destination, setDestination] = useState<{ id: string; label: string } | null>(
@@ -35,6 +38,15 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
 
   useEffect(() => setMixLanguage(status.steering.mix_language), [status.steering.mix_language]);
   useEffect(() => setStemFrequency(status.steering.stems), [status.steering.stems]);
+  useEffect(() => {
+    if (JSON.stringify(energyArc) === JSON.stringify(status.steering.energy_arc)) return;
+    const timer = window.setTimeout(() => {
+      post('/steer', { action: 'energy_arc', value: energyArc })
+        .then(() => refreshStatus())
+        .catch((error: Error) => setProblem(error.message));
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [energyArc, refreshStatus, status.steering.energy_arc]);
   useEffect(() => {
     setDestination(
       status.steering.target
@@ -157,6 +169,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const waiting = cards?.filter((card) => !card.ready && card.key !== 'christmas') ?? [];
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const readyCount = counts.ready ?? 0;
+  const arcPreview = energyArc ?? DEFAULT_ARC;
+  const arcPoints = arcPreview.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
 
   if (readyCount < 6) {
     return (
@@ -227,6 +241,46 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <p className="hint">
           This steers vocal rides and word hand-offs in new mixes. Selecta uses them only where the pair fits and the render passes its checks.
         </p>
+      </section>
+
+      <section className="energy-arc" aria-label="Energy arc controls">
+        <div className="energy-arc-heading">
+          <div>
+            <label>Energy arc</label>
+            <p className="hint">
+              Shape energy from the opening to the finish. Selecta uses these five stops when choosing song order.
+            </p>
+          </div>
+          <button type="button" onClick={() => setEnergyArc(null)} disabled={energyArc === null}>
+            Use each mix’s arc
+          </button>
+        </div>
+        <svg className="energy-arc-preview" viewBox="0 0 100 40" role="img" aria-label="Energy shape preview">
+          <polyline points={arcPoints} />
+          {arcPreview.map((energy, index) => (
+            <circle key={ARC_STOPS[index]} cx={index * 25} cy={38 - energy * 0.34} r="2.2" />
+          ))}
+        </svg>
+        <div className="energy-arc-stops">
+          {ARC_STOPS.map((stop, index) => (
+            <label key={stop}>
+              <span>{stop}</span>
+              <input
+                aria-label={`Energy arc ${stop.toLowerCase()}`}
+                type="range"
+                min="0"
+                max="100"
+                value={arcPreview[index]}
+                onChange={(event) => {
+                  const next = [...arcPreview];
+                  next[index] = Number(event.target.value);
+                  setEnergyArc(next);
+                }}
+              />
+            </label>
+          ))}
+        </div>
+        <p className="hint">Changes save automatically. Reset to let each mix choose its own energy shape.</p>
       </section>
 
       <section className="destination-control" aria-label="Mix destination">

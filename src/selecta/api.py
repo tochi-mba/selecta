@@ -69,7 +69,7 @@ class FreshFiles(StaticFiles):
 
 class SteerRequest(BaseModel):
     action: str
-    value: str | int | None = None
+    value: str | int | list[int] | None = None
 
 
 class StorageRequest(BaseModel):
@@ -522,6 +522,11 @@ def create_app(
         selected_language = steering.mix_language
         destination = steering.target
         stem_preference = steering.stems
+        energy_arc = (
+            [point / 100 for point in steering.energy_arc]
+            if steering.energy_arc is not None
+            else None
+        )
         try:
             end_id = int(destination) if destination else None
         except ValueError as problem:
@@ -544,6 +549,7 @@ def create_app(
                 mix_language=selected_language if selected_language != "balanced" else None,
                 end_id=end_id,
                 stems=stem_preference,
+                energy_arc=energy_arc,
             )
         except ValueError as problem:
             raise HTTPException(400, str(problem)) from problem

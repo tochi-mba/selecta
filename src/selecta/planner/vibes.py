@@ -12,7 +12,7 @@ hoped to render.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any
 
@@ -420,10 +420,14 @@ def describe(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> di
 
 
 def _opening_song(
-    vibe: Vibe, found: list[SongInfo], traits: dict[int, Traits], rng: np.random.Generator
+    vibe: Vibe,
+    found: list[SongInfo],
+    traits: dict[int, Traits],
+    rng: np.random.Generator,
+    energy_arc: Sequence[float] | None = None,
 ) -> SongInfo:
     """A song near where this mix's energy shape begins, with somewhere to leave it."""
-    start = target_energy(0.0, vibe.arc)
+    start = target_energy(0.0, vibe.arc, energy_arc)
     usable = [song for song in found if song.exit_cues()] or found
     usable.sort(key=lambda song: abs(traits[song.id].energy - start))
     return usable[int(rng.integers(0, min(5, len(usable))))]
@@ -441,6 +445,7 @@ def build_vibe(
     mix_language: str | None = None,
     end_id: int | None = None,
     stems: str = "sometimes",
+    energy_arc: Sequence[float] | None = None,
 ) -> tuple[list[PlannedSong], dict[int, dict]]:
     """Plan a mix for this vibe, and say how each seam should land."""
     found = eligible(vibe, songs, traits)
@@ -453,7 +458,9 @@ def build_vibe(
                 raise ValueError("choose a Christmas song for the Christmas mix destination")
             found.append(destination)
     rng = np.random.default_rng(seed)
-    first = start if start is not None else _opening_song(vibe, found, traits, rng).id
+    first = (
+        start if start is not None else _opening_song(vibe, found, traits, rng, energy_arc).id
+    )
     verdicts = verdicts or Verdicts()
     belongs = {song.id: vibe.belongs(song, traits[song.id]) for song in found}
     top = max(belongs.values(), default=1.0) or 1.0
@@ -474,6 +481,7 @@ def build_vibe(
             for song, value in belongs.items()
         },
         end_id=end_id,
+        energy_arc=energy_arc,
     )
     if end_id is not None and (not planned or planned[-1].song.id != end_id):
         raise ValueError(
