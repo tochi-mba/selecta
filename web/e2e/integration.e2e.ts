@@ -79,7 +79,7 @@ test('saving a draft as a file while another mix is reordered: the file is of th
   const made = await (await request.post('/api/drafts', { data: { name: 'To save' } })).json();
   for (const song of [1, 2]) await request.post(`/api/mix/songs?draft=${made.id}`, { data: { song_id: song } });
   await page.goto(`/mixes/drafts/${made.id}/edit`);
-  await page.getByRole('button', { name: /Save as an audio file|Save/ }).first().click();
+  await page.getByRole('button', { name: 'Download audio' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
   await dialog.locator('button.primary').click();
   await request.post('/api/mix/move', { data: { source: 0, target: 3 } });
@@ -96,7 +96,7 @@ test('changing a draft while it’s being saved stops the save, and says why', a
   const made = await (await request.post('/api/drafts', { data: { name: 'Moving target' } })).json();
   for (const song of [8, 9, 10]) await request.post(`/api/mix/songs?draft=${made.id}`, { data: { song_id: song } });
   await page.goto(`/mixes/drafts/${made.id}/edit`);
-  await page.getByRole('button', { name: /Save as an audio file|Save/ }).first().click();
+  await page.getByRole('button', { name: 'Download audio' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
   await dialog.locator('button.primary').click();
   await request.post(`/api/mix/move?draft=${made.id}`, { data: { source: 0, target: 2 } });

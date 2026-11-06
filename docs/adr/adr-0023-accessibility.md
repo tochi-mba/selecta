@@ -1,10 +1,10 @@
 # ADR-0023: WCAG 2.2 AA, screen readers and keyboard conventions
 
 - **Decision status:** Proposed
-- **Implementation status:** Not started
+- **Implementation status:** In progress ([#22](https://github.com/tochi-mba/selecta/pull/22))
 - **Proposed:** 2026-11-06
 - **Delivery phase:** 1–12
-- **Scope:** Proposed future implementation; no code changes made by this ADR.
+- **Scope:** Implemented in [#22](https://github.com/tochi-mba/selecta/pull/22). See its status above and the evidence file for anything left.
 
 > Merging this proposal does not mean the decision is accepted or the implementation has started. Update both statuses with a PR link and verification evidence when work actually occurs.
 
@@ -43,6 +43,7 @@ Implementation may move to **In progress** only when a linked implementation PR 
 | Date | Decision status | Implementation status | Evidence |
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Documentation-only plan |
+| 2026-11-06 | Proposed | In progress | [#22](https://github.com/tochi-mba/selecta/pull/22), with evidence in [implementation-evidence.md](implementation-evidence.md) |
 
 ## References
 

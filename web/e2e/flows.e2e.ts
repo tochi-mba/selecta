@@ -10,12 +10,12 @@ test.beforeEach(async ({ request }) => {
 test('a slow answer still gets an instant reaction on Start, and it can’t be pressed twice', async ({ page, request }) => {
   await page.goto('/mixes');
   let builds = 0;
-  await page.route('**/api/mix/build*', async (route) => {
+  await page.route('**/api/vibes/*/build*', async (route) => {
     builds += 1;
     await new Promise((resolve) => setTimeout(resolve, 1500));
     await route.continue();
   });
-  const start = page.getByRole('button', { name: /^(Start|Play|Replace)/ }).first();
+  const start = page.locator('.hero').getByRole('button', { name: 'Play', exact: true });
   await start.click();
   await expect(start).toHaveAttribute('aria-busy', 'true', { timeout: 300 });
   await start.click({ force: true }).catch(() => {});
@@ -103,7 +103,7 @@ test('a draft that’s been deleted is explained, and never quietly swapped for 
 test('saving a mix as an audio file makes a real FLAC', async ({ page, request }) => {
   await allRendered(request);
   await page.goto('/mix/current/edit');
-  await page.getByRole('button', { name: /Save as an audio file|Save/ }).first().click();
+  await page.getByRole('button', { name: 'Download audio' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
   await expect(dialog).toBeVisible();
   await dialog.locator('button.primary').click();
@@ -123,9 +123,9 @@ test('the Library: search, song details, a correction that can be put back', asy
   const sheet = page.getByRole('dialog', { name: 'Paper Moon' });
   await expect(sheet).toBeVisible();
   await sheet.getByRole('spinbutton').fill('238');
-  await sheet.getByRole('button', { name: /^Save/ }).click();
+  await sheet.getByRole('button', { name: 'Save correction' }).click();
   await expect(sheet.getByText(/238/).first()).toBeVisible();
-  await sheet.getByRole('button', { name: /what was detected|Put .* back/i }).first().click();
+  await sheet.getByRole('button', { name: 'Use what was measured' }).click();
   await expect(sheet.getByText(/119/).first()).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(sheet).toHaveCount(0);

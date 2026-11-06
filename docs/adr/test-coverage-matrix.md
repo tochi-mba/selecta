@@ -1,7 +1,7 @@
 # Selecta 2.0 — tests, fixtures and edge-case matrix
 
 - **Decision status:** Proposed
-- **Implementation status of new tests:** Not started
+- **Implementation status of new tests:** In progress ([#22](https://github.com/tochi-mba/selecta/pull/22))
 - **Date proposed:** 2026-11-06
 
 Changing markup is not permission to weaken behavioural tests. When a test's selector or label changes, retain the assertion about its durable or audible outcome. All suites below are existing reference points; none are modified by this docs-only PR.
@@ -62,3 +62,17 @@ Widths 320, 375, 390, 430, 768, 1024, 1280, 1440, 1920 and Stage large-screen. Z
 Keep Windows CI Ruff, pytest (coverage ≥70%), pnpm tests and build; extend in later implementation PRs. Link screenshots, traces, real-audio assertions, accessibility findings, manual listening notes, migration and rollback evidence to ADRs and release gates. A passing mocked test is not proof that the music sounds good.
 
 **All proposed test additions: Not started.**
+
+## Added with the implementation
+
+| Suite | Path | Covers |
+|---|---|---|
+| Pages in a real browser | web/e2e/pages.e2e.ts | Every page from 320px to 4K, automatic WCAG 2.2 AA checks in both themes, reloads, Back and Forward, nothing leaving this computer |
+| Playback in a real browser | web/e2e/listen.e2e.ts | Real Web Audio: play, pause, seek, Next, transitions starting exactly as planned, media keys, previews, two tabs, missing audio |
+| Journeys in a real browser | web/e2e/flows.e2e.ts | Editing, drafts, FLAC export, the Library, requests, keyboard use, focus, server loss |
+| Things happening at once | web/e2e/integration.e2e.ts | Draft and current mix isolation, competing requests, late answers, changes during export |
+| Server contracts | tests/test_api_contracts.py | Library pages, corrections, pairs, conflict and repeat protection, jobs, diagnostics, real addresses, local-only checks |
+| Library edges | tests/test_library_edges.py | 20,000 songs, duplicates, Unicode and right-to-left names, search characters, missing data |
+| File length | tests/test_file_length.py | No file over 1,000 lines, also its own CI step |
+
+Browser tests use a synthesized library from tests/e2e_server.py, so no real music is involved. They run muted, in Edge.

@@ -1,7 +1,7 @@
 # Selecta 2.0 — feature-parity ledger
 
 - **Decision status:** Proposed
-- **Implementation status of redesigned features:** Not started
+- **Implementation status of redesigned features:** Implemented, not yet verified by people ([#22](https://github.com/tochi-mba/selecta/pull/22))
 - **Existing app:** behaviour and limitations are documented separately in [acceptance.md](../acceptance.md).
 
 Each feature group below must remain reachable and functionally equivalent through the overhaul. The replacement is not verified until old/new workflows, backend state and audible outcomes are compared.
@@ -39,4 +39,4 @@ Each feature group below must remain reachable and functionally equivalent throu
 8. User can recover from errors and operate essential workflows by keyboard.
 9. No cloud dependency or unauthorized local file access.
 
-**All redesigned feature rows: Not started / unverified.**
+**All redesigned feature rows: built in [#22](https://github.com/tochi-mba/selecta/pull/22). Automated checks are in [implementation-evidence.md](implementation-evidence.md). None are marked Verified, because that needs recorded listening and screen reader evidence.**
