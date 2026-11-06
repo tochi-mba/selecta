@@ -99,6 +99,12 @@ def prepare_comparison(
 
 def initialise(conn: sqlite3.Connection) -> None:
     conn.execute(
+        "CREATE TABLE IF NOT EXISTS listening_quality (trial TEXT NOT NULL, "
+        "listener TEXT NOT NULL, "
+        "option TEXT NOT NULL, grade INTEGER NOT NULL CHECK(grade BETWEEN 1 AND 5), "
+        "tags TEXT NOT NULL, PRIMARY KEY(trial,listener,option))"
+    )
+    conn.execute(
         "CREATE TABLE IF NOT EXISTS listening_trials ("
         "id TEXT PRIMARY KEY, study TEXT NOT NULL, pair TEXT NOT NULL, "
         "mapping TEXT NOT NULL, seed INTEGER NOT NULL)"
@@ -158,7 +164,27 @@ def public_trials(conn: sqlite3.Connection, study: str) -> list[dict]:
     ]
 
 
-def respond(conn: sqlite3.Connection, trial: str, listener: str, choice: str, setup: str) -> None:
+def respond(
+    conn: sqlite3.Connection,
+    trial: str,
+    listener: str,
+    choice: str,
+    setup: str,
+    quality: dict | None = None,
+) -> None:
+    quality = quality or {}
+    allowed_tags = {"beat", "downbeat", "mid-vocal", "key", "energy", "contrast", "cut-off ending"}
+    for option, score in quality.items():
+        if (
+            option not in {"a", "b"}
+            or type(score.get("grade")) is not int
+            or not 1 <= score["grade"] <= 5
+        ):
+            raise ValueError("Each quality grade must be an integer from 1 to 5 for A or B")
+        if not isinstance(score.get("tags", []), list) or any(
+            tag not in allowed_tags for tag in score.get("tags", [])
+        ):
+            raise ValueError("Unknown transition issue tag")
     if choice not in {"a", "b", "tie", "cannot_judge"}:
         raise ValueError("Choose a, b, tie, or cannot_judge")
     if not listener.strip() or not setup.strip():
@@ -174,3 +200,11 @@ def respond(conn: sqlite3.Connection, trial: str, listener: str, choice: str, se
             "updated_at=CURRENT_TIMESTAMP",
             (trial, listener, choice, setup),
         )
+        conn.execute(
+            "DELETE FROM listening_quality WHERE trial=? AND listener=?", (trial, listener)
+        )
+        for option, score in quality.items():
+            conn.execute(
+                "INSERT INTO listening_quality VALUES(?,?,?,?,?)",
+                (trial, listener, option, score["grade"], json.dumps(score.get("tags", []))),
+            )

@@ -115,6 +115,7 @@ class ListeningResponse(BaseModel):
     listener: str
     choice: str
     setup: str
+    quality: dict | None = None
 
 
 class ScanRequest(BaseModel):
@@ -549,7 +550,7 @@ def create_app(
 
         with connect() as conn:
             try:
-                respond(conn, trial, body.listener, body.choice, body.setup)
+                respond(conn, trial, body.listener, body.choice, body.setup, body.quality)
             except ValueError as problem:
                 raise HTTPException(400, str(problem)) from problem
         return {"saved": True}

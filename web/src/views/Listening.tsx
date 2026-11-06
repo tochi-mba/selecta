@@ -10,6 +10,7 @@ export function Listening() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [heard, setHeard] = useState<string[]>([]);
+  const [quality, setQuality] = useState<Record<string, { grade: number; tags: string[] }>>({});
   const a = useRef<HTMLAudioElement>(null);
   const b = useRef<HTMLAudioElement>(null);
   const trial = trials?.[index];
@@ -24,8 +25,8 @@ export function Listening() {
     setBusy(true); setError('');
     a.current?.pause(); b.current?.pause();
     try {
-      await post(`/listening/${trial.id}/response`, { listener, setup, choice });
-      setIndex(index + 1); setHeard([]);
+      await post(`/listening/${trial.id}/response`, { listener, setup, choice, quality });
+      setIndex(index + 1); setHeard([]); setQuality({});
     } catch { setError('Your response was not saved. Try again.'); }
     finally { setBusy(false); }
   };
@@ -47,6 +48,22 @@ export function Listening() {
           setHeard((current) => current.includes(option) ? current : [...current, option]);
         }} onError={() => setError('A comparison clip is unavailable. You can record “cannot judge”.')} />
       </label>)}
+      {(['a', 'b'] as const).map((option) => <fieldset key={option}>
+        <legend>Version {option.toUpperCase()} quality</legend>
+        <select aria-label={`Quality of ${option.toUpperCase()}`} value={quality[option]?.grade ?? ''} onChange={(event) => {
+          const grade = Number(event.target.value);
+          setQuality((current) => ({ ...current, [option]: { grade, tags: current[option]?.tags ?? [] } }));
+        }}>
+          <option value="" disabled>Rate from 1 to 5</option>
+          {[1, 2, 3, 4, 5].map((grade) => <option key={grade} value={grade}>{grade}{grade === 1 ? ' · Bad' : grade === 5 ? ' · Excellent' : ''}</option>)}
+        </select>
+        <label>Issues, if any<select multiple aria-label={`Issues with ${option.toUpperCase()}`} disabled={!quality[option]} value={quality[option]?.tags ?? []} onChange={(event) => {
+          const tags = Array.from(event.target.selectedOptions, (item) => item.value);
+          setQuality((current) => ({ ...current, [option]: { ...current[option], tags } }));
+        }}>
+          {['beat', 'downbeat', 'mid-vocal', 'key', 'energy', 'contrast', 'cut-off ending'].map((tag) => <option key={tag}>{tag}</option>)}
+        </select></label>
+      </fieldset>)}
       <div className="chips" role="group" aria-label="Comparison preference">
         {[['a', 'Prefer A'], ['b', 'Prefer B'], ['tie', 'No preference'], ['cannot_judge', 'Cannot judge']].map(([value, label]) =>
           <button key={value} disabled={busy || !listener.trim() || !setup.trim() || (value !== 'cannot_judge' && heard.length < 2)} onClick={() => void answer(value)}>{label}</button>)}

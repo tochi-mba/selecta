@@ -41,7 +41,14 @@ def test_trials_hide_conditions_and_leave_unanswered_trials_unanswered():
     assert "adaptive" not in json.dumps(public)
     assert conn.execute("SELECT COUNT(*) FROM listening_responses").fetchone()[0] == 0
     respond(conn, ids[0], "listener-1", "tie", "headphones")
+    respond(
+        conn, ids[0], "listener-1", "tie", "headphones", {"a": {"grade": 2, "tags": ["energy"]}}
+    )
+    assert conn.execute("SELECT grade,tags FROM listening_quality").fetchone() == (2, '["energy"]')
+    with pytest.raises(ValueError):
+        respond(conn, ids[0], "listener-1", "a", "headphones", {"b": {"grade": 6}})
     respond(conn, ids[0], "listener-1", "cannot_judge", "headphones")
+    assert conn.execute("SELECT COUNT(*) FROM listening_quality").fetchone()[0] == 0
     assert conn.execute("SELECT choice FROM listening_responses").fetchall() == [("cannot_judge",)]
     with pytest.raises(ValueError):
         respond(conn, ids[0], "listener-1", "adaptive", "headphones")
