@@ -40,7 +40,7 @@ from selecta.arrange import (
 )
 from selecta.audit.checks import AuditReport, Check, audit, beat_offset
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
-from selecta.eta import JobClock
+from selecta.eta import JobClock, combine
 from selecta.lyrics.align import Aligner
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import LyricLink, SongFacts, discover
@@ -49,6 +49,7 @@ from selecta.planner.fit import MAX_FOLDED_GAP, folded_gap
 from selecta.planner.memory import RULES_VERSION, SeamMemory
 from selecta.planner.wordreel import (
     CannotTrust,
+    line_window,
     locate_phrase,
     locate_voice_edge,
     modes_for,
@@ -56,9 +57,9 @@ from selecta.planner.wordreel import (
     ride_lines,
 )
 from selecta.render.engine import Rendered, SongCache, in_context, render
-from selecta.render.intertwine import can_intertwine, render_intertwined
+from selecta.render.intertwine import can_intertwine, intertwine_windows, render_intertwined
 from selecta.render.script import Part, TransitionScript, Warp
-from selecta.stems import prune_cache
+from selecta.stems import prune_cache, seconds_separating, window_is_ready
 from selecta.studio import (
     LANES,
     SIDES,
@@ -115,6 +116,7 @@ WORD_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
 STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine", "stem_studio", "stem_arrange"}
 STUDIO_SESSION = "studio_session"
 NOT_IN_THE_CHOOSER = {"stem_studio"}
+SESSION_MOVES = {"stem_studio", "stem_arrange", STUDIO_SESSION}
 
 
 @dataclass(frozen=True)
@@ -365,6 +367,28 @@ def _bar_cue_render(
     if best is None:
         raise CannotRender("Those cue points don't leave enough room for this move.")
     return best
+
+
+def windows_for(request: SeamRequest, a: SongInfo, b: SongInfo) -> list[tuple[str, float, float]]:
+    """The stretches of song this seam will split, worked out before it starts. A word move takes
+    under a minute with its stems ready and over five without, so this is most of what makes a
+    time estimate right or wrong. A seam left to choose would try a ride first."""
+    if request.move in {"vocal_ride", "auto"}:
+        lines = ride_lines(a, b)
+        pairs = [(a, lines[0]), (b, lines[1])] if lines else []
+    elif request.move in WORD_MOVES:
+        links = links_between(a, b)
+        if request.phrase:
+            links = [link for link in links if link.phrase == request.phrase] or links
+        pairs = [(a, links[0].line_a), (b, links[0].line_b)] if links else []
+    elif request.move == "stem_intertwine":
+        windows = intertwine_windows(a, b)
+        if windows is None:
+            return []
+        return [(a.path, *windows[0]), (b.path, *windows[1])]
+    else:
+        return []
+    return [(song.path, *line_window(song, line)[:2]) for song, line in pairs]
 
 
 def _session_for(
@@ -635,6 +659,9 @@ class SeamStore:
         self._line_waiting = False
         self.memory = SeamMemory()
         self.clock = JobClock(settings.home)
+        self._window_specs: dict[str, list[tuple[str, float, float]]] = {}
+        self.window_totals: dict[str, int] = {}
+        self._quote: float | None = None
         self._remembered: tuple[float, SeamMemory] | None = None
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
         self._worker: subprocess.Popen | None = None
@@ -668,6 +695,37 @@ class SeamStore:
             temporary.replace(target)
         finally:
             temporary.unlink(missing_ok=True)
+
+    def windows_left(self, request: SeamRequest, a: SongInfo, b: SongInfo) -> int:
+        """How many stem windows this seam still has to split. Never gets in the way: an estimate
+        that can't be made better isn't worth a seam failing over."""
+        try:
+            if request.move in SESSION_MOVES:
+                session = SeamRequest(
+                    a.id,
+                    b.id,
+                    STUDIO_SESSION,
+                    exit_bar=request.exit_bar,
+                    entry_bar=request.entry_bar,
+                )
+                folder = self.folder(session.key)
+                laid_out = (folder / "session.json").exists() and all(
+                    (folder / f"{side}_{lane}.flac").exists() for side in SIDES for lane in LANES
+                )
+                if laid_out:
+                    return 0
+                return windows_to_separate(
+                    self.settings, a, b, request.exit_bar, request.entry_bar
+                )
+            specs = self._window_specs.get(request.key)
+            if specs is None:
+                specs = self._window_specs[request.key] = windows_for(request, a, b)
+            return sum(
+                not window_is_ready(self.settings, Path(path), start, length)
+                for path, start, length in specs
+            )
+        except (OSError, ValueError, KeyError, IndexError, AttributeError, TypeError):
+            return 0
 
     def status(self, key: str) -> dict:
         """What's on disk comes first, because that's where the worker reports. Nothing is under
@@ -885,10 +943,15 @@ class SeamStore:
             self._mark_rendering(request)
             self.memory = self.remembered(fresh=True)
             started = time.monotonic()
+            splitting_before = seconds_separating()
+            self._quote = None
             try:
                 self.render_now(conn, request)
                 if request.move != STUDIO_SESSION:
-                    self.clock.record(request.move, time.monotonic() - started)
+                    # the move's own work, since splitting stems is timed and quoted separately
+                    total = time.monotonic() - started
+                    work = max(total - (seconds_separating() - splitting_before), 0.1)
+                    self.clock.record(request.move, work, self._quote, total)
             except jobs.Interrupted:
                 # the mix needed the machine. This simply isn't done yet, so it goes back in line
                 (self.folder(request.key) / "seam.json").unlink(missing_ok=True)
@@ -925,6 +988,9 @@ class SeamStore:
     def render_now(self, conn: sqlite3.Connection, request: SeamRequest) -> dict:
         a = load_song(conn, self.settings, request.a)
         b = load_song(conn, self.settings, request.b)
+        if request.move != STUDIO_SESSION:
+            windows = [self.clock.estimate("stem_window")] * self.windows_left(request, a, b)
+            self._quote = combine([self.clock.estimate(request.move), *windows]).seconds
         if request.move == STUDIO_SESSION:
             windows = windows_to_separate(self.settings, a, b, request.exit_bar, request.entry_bar)
             started = time.monotonic()
