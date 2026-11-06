@@ -8,7 +8,7 @@ type HarmonicDiscovery = {
   payload: { a_at: number; b_at: number; bars: number; transpose: number };
 };
 
-function HarmonicDiscoveries() {
+export function HarmonicDiscoveries() {
   const [items, setItems] = useState<HarmonicDiscovery[]>([]);
   const [error, setError] = useState('');
   useEffect(() => {
