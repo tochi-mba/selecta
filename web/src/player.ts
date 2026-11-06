@@ -57,6 +57,8 @@ export class SetPlayer {
   private timer: number | null = null;
   private current: Current | null = null;
   private planned: Planned | null = null;
+  private layers = new Set<Playing>();
+  private seamTailEnd: number | null = null;
   private ending = false;
   private playGeneration = 0;
   private watchedState: SeamState | null = null;
@@ -156,7 +158,14 @@ export class SetPlayer {
     const gain = context.createGain();
     source.connect(gain);
     gain.connect(this.master!);
-    return { source, gain };
+    const playing = { source, gain };
+    this.layers.add(playing);
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+      this.layers.delete(playing);
+    };
+    return playing;
   }
 
   private silence(playing: Playing | undefined | null) {
@@ -169,6 +178,8 @@ export class SetPlayer {
       /* a layer that hasn't started can't be stopped, and that's fine */
     }
     playing.source.disconnect();
+    playing.gain.disconnect();
+    this.layers.delete(playing);
   }
 
   private stopAll() {
@@ -181,9 +192,10 @@ export class SetPlayer {
       const elapsed = Math.max(0, this.context.currentTime - this.current.startedAt);
       this.heard.set(this.current.songId, (this.heard.get(this.current.songId) ?? 0) + elapsed);
     }
-    this.silence(this.current);
-    this.silence(this.planned?.clip);
-    this.silence(this.planned?.next);
+    // Include the still-audible seam tail after the display has switched to B,
+    // and the outgoing song during a fallback fade.
+    for (const layer of this.layers) this.silence(layer);
+    this.seamTailEnd = null;
     this.current = null;
     this.planned = null;
     this.ending = false;
@@ -342,6 +354,7 @@ export class SetPlayer {
 
     // A planned seam has passed its switch point: B is now the song on screen.
     if (this.planned && now >= this.planned.whenA + this.planned.switchAt) {
+      this.seamTailEnd = this.planned.next.startedAt + SEAM_FADE;
       this.current = this.planned.next;
       const key = this.planned.key;
       this.planned = null;
@@ -366,7 +379,8 @@ export class SetPlayer {
     }
 
     const time = this.songTime();
-    const inSeam = !!this.planned && now >= this.planned.whenA;
+    if (this.seamTailEnd !== null && now >= this.seamTailEnd) this.seamTailEnd = null;
+    const inSeam = (!!this.planned && now >= this.planned.whenA) || this.seamTailEnd !== null;
     this.update({
       position: current.position,
       songTime: time,
@@ -395,7 +409,7 @@ export class SetPlayer {
     // until its actual cue to decode; an early fallback must not steal that cue.
     const upcomingCue = seam?.status === 'ready' && seam.a_source_start !== undefined
       && current.startedAt + seam.a_source_start - current.offset >= now;
-    if (!this.planned && !this.ending && !upcomingCue && left < END_FADE + 0.2 && this.state.phase === 'playing') {
+    if (!inSeam && !this.planned && !this.ending && !upcomingCue && left < END_FADE + 0.2 && this.state.phase === 'playing') {
       this.ending = true;
       void this.fadeInto(nextItem.position);
     }
@@ -421,7 +435,7 @@ export class SetPlayer {
     const whenA = current.startedAt + (seam.a_source_start - current.offset);
     // Web Audio schedules against its own clock. Do not reject decoded audio
     // merely because it arrived inside an arbitrary quarter-second margin.
-    if (whenA < context.currentTime) return; // Never play a transition off its cue.
+    if (whenA < context.currentTime || (this.seamTailEnd !== null && whenA < this.seamTailEnd)) return; // Never play a transition off its cue.
     const clip = this.layer(clipBuffer);
     clip.gain.gain.setValueAtTime(0, whenA);
     clip.gain.gain.linearRampToValueAtTime(1, whenA + SEAM_FADE);

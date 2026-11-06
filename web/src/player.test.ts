@@ -124,6 +124,22 @@ describe('playing through a mix', () => {
 
 
 describe('transition readiness deadlines', () => {
+  it('keeps the seam active after the display handoff and stops its remaining audio', async () => {
+    audioBackend([]);
+    const mix = songs(seam('ready', 'tail', { a_source_start: 20, b_source_end: 40, switch_at: 10 }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    await settle();
+    const clip = FakeAudio.now.sources[1];
+    FakeAudio.now.currentTime = 31;
+    tick(player);
+    expect(player.state.position).toBe(1);
+    expect(player.state.inSeam).toBe(true);
+    player.stop();
+    expect(clip.stop).toHaveBeenCalled();
+    expect(player.state.inSeam).toBe(false);
+  });
+
   it('ignores a failed fallback download after the listener seeks elsewhere', async () => {
     audioBackend([]);
     const original = vi.mocked(fetch).getMockImplementation()!;
