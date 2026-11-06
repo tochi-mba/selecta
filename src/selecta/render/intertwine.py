@@ -105,8 +105,6 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
     a_index = a.beat_index_of_bar(exit_cue.bar - 8)
     b_index = b.beat_index_of_bar(entry_cue.bar)
     beats = 16 * a.beats_per_bar
-    if a_index + beats >= len(a.beats) or b_index + beats >= len(b.beats):
-        raise ValueError("stem transition needs sixteen complete bars on both tracks")
     a_points = a.beats[a_index : a_index + beats + 1]
     b_points = b.beats[b_index : b_index + beats + 1]
     a_start = float(a_points[0])

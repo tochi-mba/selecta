@@ -1,10 +1,19 @@
 import numpy as np
+import pytest
 import soundfile as sf
 from helpers import song_from_track
 from synth import make_track
 
+from selecta.analysis.song import Cue
 from selecta.config import SAMPLE_RATE, Settings
-from selecta.render.intertwine import _curve, _fit, can_intertwine, render_intertwined
+from selecta.render.intertwine import (
+    _curve,
+    _fit,
+    _pair_that_fits,
+    _read,
+    can_intertwine,
+    render_intertwined,
+)
 from selecta.stems import StemWindow
 
 
@@ -33,6 +42,84 @@ def test_intertwine_gate_requires_compatible_tracks_and_sixteen_bars(tmp_path):
     b.bpm = 121
     b.grid_confidence = 0.4
     assert not can_intertwine(a, b)
+
+    b.grid_confidence = 0.95
+    b.camelot = "1A"
+    assert not can_intertwine(a, b)
+
+    b.camelot = "8A"
+    b.beats_per_bar = 3
+    assert not can_intertwine(a, b)
+
+    b.beats_per_bar = 4
+    a.exit_cues = lambda: []
+    assert not can_intertwine(a, b)
+
+    a.exit_cues = lambda: [Cue(32, a.bar_time(32), "phrase", 0.8, 8)]
+    b.entry_cues = lambda: []
+    assert not can_intertwine(a, b)
+
+
+def test_intertwine_gate_skips_cues_without_room_until_it_finds_a_valid_pair(tmp_path):
+    a = song_from_track(tmp_path, "cue-room-a", make_track(bpm=120, bars=64, seed=1))
+    b = song_from_track(tmp_path, "cue-room-b", make_track(bpm=120, bars=64, seed=2))
+    outgoing = [
+        Cue(4, a.bar_time(4), "too early", 1.0, 0),
+        Cue(60, a.bar_time(60), "too late", 0.9, 0),
+        Cue(32, a.bar_time(32), "fits", 0.8, 0),
+    ]
+    incoming = [
+        Cue(56, b.bar_time(56), "too late", 0.9, 0),
+        Cue(0, b.bar_time(0), "fits", 0.8, 0),
+    ]
+    a.exit_cues = lambda: outgoing
+    b.entry_cues = lambda: incoming
+
+    assert _pair_that_fits(a, b) == (outgoing[-1], incoming[-1])
+
+    a.exit_cues = lambda: [Cue(32, a.bar_time(32), "fits", 0.8, 0)]
+    b.entry_cues = lambda: [Cue(56, b.bar_time(56), "too late", 0.9, 0)]
+    assert _pair_that_fits(a, b) is None
+
+
+def test_intertwine_read_rejects_a_wrong_sample_rate(monkeypatch, tmp_path):
+    monkeypatch.setattr("selecta.render.intertwine.sf.read", lambda *_args, **_kwargs: ([], 48000))
+
+    with pytest.raises(ValueError, match="unexpected stem rate 48000"):
+        _read(tmp_path / "wrong-rate.wav")
+
+
+def test_short_stems_are_stretched_before_being_padded(monkeypatch):
+    source = np.ones((SAMPLE_RATE, 2), dtype=np.float32)
+    seen = {}
+
+    def stretch(audio, output, source_points, origin):
+        seen["output"] = output
+        seen["source"] = source_points
+        seen["origin"] = origin
+        return np.full((SAMPLE_RATE * 2, 2), 0.5, dtype=np.float32), 0.0
+
+    monkeypatch.setattr("selecta.render.intertwine.dsp.stretch_to_warp", stretch)
+
+    fitted = _fit(source, 2, speed=1.1)
+
+    assert fitted.shape == (SAMPLE_RATE * 2, 2)
+    assert fitted[0, 0] == 0.5
+    assert np.array_equal(seen["output"], [0, 2])
+    assert np.array_equal(seen["source"], [0, 2.2])
+    assert seen["origin"] == 0
+
+
+def test_intertwined_render_rejects_an_ineligible_pair_before_separating(tmp_path, monkeypatch):
+    a = song_from_track(tmp_path, "ineligible-a", make_track(bpm=120, bars=64, seed=1))
+    b = song_from_track(tmp_path, "ineligible-b", make_track(bpm=130, bars=64, seed=2))
+    monkeypatch.setattr(
+        "selecta.render.intertwine.separate_window",
+        lambda *_: pytest.fail("ineligible pairs must not start stem separation"),
+    )
+
+    with pytest.raises(ValueError, match="tempo, grid, key, or phrase checks"):
+        render_intertwined(Settings(tmp_path), a, b)
 
 
 def test_intertwined_render_swaps_layers_and_vocals_in_the_audio(tmp_path, monkeypatch):
