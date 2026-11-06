@@ -46,6 +46,35 @@ function show(energyArc: number[] | null = null) {
 }
 
 describe('Pick a feeling', () => {
+  it('does not misreport zero mix-ready songs when an older server omits that count', async () => {
+    fakeBackend({ 'GET /vibes': [], 'GET /saved': [] });
+    const oldServerStatus = status();
+    const counts = { ...oldServerStatus.counts };
+    delete counts.ready;
+    const player = new SetPlayer(() => [], () => {});
+    render(
+      <Mixes
+        status={{ ...oldServerStatus, counts }}
+        mix={[]}
+        mixName=""
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={() => {}}
+        refreshStatus={() => {}}
+        player={player}
+        now={player.state}
+        setView={() => {}}
+        notify={() => {}}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    expect(
+      await screen.findByText(/hasn’t reported how many songs have the cues needed for mixes/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/0 of 90 songs have the vocal or instrumental cues needed/)).not.toBeInTheDocument();
+  });
+
   it('waits for six mix-ready songs even when audio analysis has finished on more', async () => {
     fakeBackend({ 'GET /vibes': [], 'GET /saved': [] });
     const player = new SetPlayer(() => [], () => {});

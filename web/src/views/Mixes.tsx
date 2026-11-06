@@ -168,7 +168,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const ready = cards?.filter((card) => card.ready && card.key !== 'pick') ?? [];
   const waiting = cards?.filter((card) => !card.ready && card.key !== 'christmas') ?? [];
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
-  const readyCount = counts.ready ?? 0;
+  const readinessAvailable = Number.isFinite(counts.ready);
+  const readyCount = counts.ready;
   const arcPreview = energyArc ?? DEFAULT_ARC;
   const arcPoints = arcPreview.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
   const drawArcAt = (event: PointerEvent<SVGSVGElement>) => {
@@ -181,6 +182,22 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     next[stop] = energy;
     setEnergyArc(next);
   };
+
+  if (!readinessAvailable) {
+    return (
+      <main className="page">
+        <h1 className="display">Checking your song readiness.</h1>
+        <p className="lede">
+          This running Selecta server hasn’t reported how many songs have the cues needed for mixes.
+          Restart Selecta to refresh this status. Audio analysis is complete for {counts.analysed};
+          {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'}
+        </p>
+        <div className="row">
+          <button onClick={() => setView('Workshop')}>See progress</button>
+        </div>
+      </main>
+    );
+  }
 
   if (readyCount < 6) {
     return (
