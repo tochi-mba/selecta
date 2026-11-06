@@ -5,6 +5,10 @@ on:
     branches: [main, build/v1]
   pull_request:
 
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: windows-latest
