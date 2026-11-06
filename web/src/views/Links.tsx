@@ -17,6 +17,20 @@ function excerptOf(id: number, at: number, end: number | undefined, key: string)
   return { key, src: `/api/songs/${id}/audio`, at, end: end ?? at + EXCERPT_SECONDS };
 }
 
+/** Best first, but a song that's already come up waits its turn, so the list isn't one song. */
+function spreadOut(items: HarmonicDiscovery[]): HarmonicDiscovery[] {
+  const seen = new Set<number>();
+  const fresh: HarmonicDiscovery[] = [];
+  const again: HarmonicDiscovery[] = [];
+  for (const item of items) {
+    const repeat = seen.has(item.song_a) || seen.has(item.song_b);
+    (repeat ? again : fresh).push(item);
+    seen.add(item.song_a);
+    seen.add(item.song_b);
+  }
+  return [...fresh, ...again];
+}
+
 /** Songs that may share a chord pattern, for a person to judge by ear. Each song's matching part
  * plays by itself, with no need to find the place or stop it. Nothing here goes into a mix. */
 export function HarmonicDiscoveries({ onListen }: { onListen?: () => void }) {
@@ -68,7 +82,7 @@ export function HarmonicDiscoveries({ onListen }: { onListen?: () => void }) {
     }
   };
 
-  const waiting = items.filter((item) => item.status === 'new');
+  const waiting = spreadOut(items.filter((item) => item.status === 'new'));
   const answered = items.filter((item) => item.status !== 'new');
   if (!items.length && !error) return null;
   const shown = showAll ? waiting : waiting.slice(0, SHOWN_AT_ONCE);

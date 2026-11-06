@@ -87,6 +87,17 @@ describe('songs that might share chords', () => {
     expect(screen.getByRole('button', { name: /A7/ })).toBeInTheDocument();
   });
 
+  it('doesn’t lead with the same song over and over', async () => {
+    const same = (id: number, title: string) => ({ ...discovery(id, 'Same', title), song_a: 1 });
+    fakeBackend({ 'GET /discoveries': [same(1, 'One'), same(2, 'Two'), discovery(3, 'Other', 'Pair')] });
+    render(<HarmonicDiscoveries />);
+    await open();
+    const titles = screen.getAllByRole('article').map((card) => card.textContent);
+    expect(titles[0]).toContain('One');
+    expect(titles[1]).toContain('Other');
+    expect(titles[2]).toContain('Two');
+  });
+
   it('pauses the mix when a part starts playing', async () => {
     fakeBackend({ 'GET /discoveries': [discovery(7, 'First', 'Second')] });
     const onListen = vi.fn();
