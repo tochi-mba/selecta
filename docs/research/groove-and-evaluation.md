@@ -23,4 +23,6 @@ Report completed trials and listeners, ties, missing answers, per-pair outcomes 
 
 ## Current gate
 
-The listening-study runner and completed paired results are still missing. These notes define the experiment needed; they are not evidence that Selecta wins it. The user's confirmation of the current grid is valuable direct feedback, but does not substitute for comparison of adaptive effects and conventional transitions.
+Trial storage, an anonymous A/B API, Workshop review controls, and a validated audio importer are implemented. Completed paired results are still missing. These notes define the experiment needed; they are not evidence that Selecta wins it. The user's confirmation of the current grid is valuable direct feedback, but does not substitute for comparison of adaptive effects and conventional transitions.
+
+On 6 November, study `listening-01` registered one exploratory comparison of cached phrase-roll variants for ordered song IDs 271 → 154. Both previews have 1,806,087 frames at 44.1 kHz, equal declared source start/end, transition duration and preview offset. Decoded sample differences establish distinct audio, not an improvement. Source revision provenance is unknown and is explicitly recorded as such. Study copies are loudness matched and preserved outside disposable caches. This trial cannot be used as an adaptive-versus-baseline result. It has no recorded response. The currently running server still needs the listening routes deployed before the Workshop can use it.
