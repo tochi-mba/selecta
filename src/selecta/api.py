@@ -118,6 +118,12 @@ class ListeningResponse(BaseModel):
     quality: dict | None = None
 
 
+class SkipFeedback(BaseModel):
+    song_id: int
+    heard_seconds: float
+    source_position: float
+
+
 class ScanRequest(BaseModel):
     folder: str
 
@@ -553,6 +559,31 @@ def create_app(
                 respond(conn, trial, body.listener, body.choice, body.setup, body.quality)
             except ValueError as problem:
                 raise HTTPException(400, str(problem)) from problem
+        return {"saved": True}
+
+    @app.post("/api/playback/skip")
+    def playback_skip(body: SkipFeedback) -> dict:
+        import math
+
+        if not all(
+            math.isfinite(value) and value >= 0
+            for value in (body.heard_seconds, body.source_position)
+        ):
+            raise HTTPException(400, "Listening times must be finite and nonnegative")
+        with connect() as conn:
+            song = db.song_by_id(conn, body.song_id)
+            if song is None:
+                raise HTTPException(404)
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS playback_skips (id INTEGER PRIMARY KEY, "
+                "song_id INTEGER NOT NULL REFERENCES songs(id), heard_seconds REAL NOT NULL, "
+                "source_position REAL NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+            )
+            conn.execute(
+                "INSERT INTO playback_skips(song_id,heard_seconds,source_position) VALUES(?,?,?)",
+                (body.song_id, body.heard_seconds, body.source_position),
+            )
+            conn.commit()
         return {"saved": True}
 
     @app.post("/api/steer")

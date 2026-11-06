@@ -48,6 +48,21 @@ const tick = (player: SetPlayer) => (player as unknown as { tick(): void }).tick
 const settle = () => new Promise((done) => setTimeout(done, 20));
 
 describe('playing through a mix', () => {
+  it('records actual exposure across seeks instead of counting the seek as heard', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    FakeAudio.now.currentTime = 12;
+    await player.playFrom(0, 80);
+    FakeAudio.now.currentTime = 17;
+    await player.skip();
+    const call = vi.mocked(fetch).mock.calls.find(([url]) => url === '/api/playback/skip');
+    const feedback = JSON.parse(call![1]!.body as string);
+    expect(feedback.song_id).toBe(1);
+    expect(feedback.heard_seconds).toBeCloseTo(16.9);
+    expect(feedback.source_position).toBeCloseTo(84.95);
+  });
   let player: SetPlayer;
   beforeEach(() => vi.stubGlobal('AudioContext', FakeAudio));
   afterEach(() => player.stop());

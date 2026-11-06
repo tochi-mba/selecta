@@ -62,6 +62,7 @@ export class SetPlayer {
   private requested = new Set<string>();
   private fallenBack = new Set<number>();
   private savedAt = 0;
+  private heard = new Map<number, number>();
   private getMix: () => MixItem[];
   private refreshMix: () => void;
   state: NowState = {
@@ -168,6 +169,10 @@ export class SetPlayer {
   }
 
   private stopAll() {
+    if (this.current && this.context) {
+      const elapsed = Math.max(0, this.context.currentTime - this.current.startedAt);
+      this.heard.set(this.current.songId, (this.heard.get(this.current.songId) ?? 0) + elapsed);
+    }
     this.silence(this.current);
     this.silence(this.planned?.clip);
     this.silence(this.planned?.next);
@@ -245,6 +250,8 @@ export class SetPlayer {
       }
     }
     if (mix[current.position + 1]) {
+      const heard = (this.heard.get(current.songId) ?? 0) + Math.max(0, (this.context?.currentTime ?? current.startedAt) - current.startedAt);
+      void post('/playback/skip', { song_id: current.songId, heard_seconds: heard, source_position: this.songTime() }).catch(() => {});
       await this.playFrom(current.position + 1);
       this.update({ notice: seam?.status === 'ready' ? '' : 'That seam wasn’t ready, so this skipped straight on.' });
     }
