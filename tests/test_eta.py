@@ -258,8 +258,10 @@ def test_a_mix_estimate_lands_close_once_real_times_exist(tmp_path, seed):
         actual = sum(job() for _ in range(12))
         misses.append(abs(estimate["seconds"] - actual) / actual)
         inside += estimate["low"] <= actual <= estimate["high"]
-    assert statistics.median(misses) < 0.2
-    assert inside / 60 > 0.7
+    # these jobs vary more than real ones on a calm PC, and quoting from the last dozen trades some
+    # of this for following the PC's speed, which is what real jobs showed matters more
+    assert statistics.median(misses) < 0.25
+    assert inside / 60 > 0.5
 
 
 def _song(conn, song_id, duration=200.0, is_music=1, duplicate_of=None):
@@ -632,3 +634,111 @@ def test_the_score_is_of_what_a_person_was_told(tmp_path):
     clock.record("vocal_ride", 30.0, quoted=100.0, total=300.0)
     assert clock.accuracy() == {"jobs": 1, "typical_miss": 3.0}
     assert clock.times()["vocal_ride"] == [30.0], "while its own time leaves out the stems"
+
+
+# ---- recent times count, not old ones
+
+
+REAL_STEM_TIMES = [
+    118, 88, 150, 118, 791, 265, 566, 153, 141, 125, 98, 69, 88, 71, 84, 45, 91, 75, 77, 83,
+    96, 86, 76, 81, 363, 295, 206, 209, 64, 78, 82, 76, 67, 84, 74, 108, 90, 70, 60, 61,
+]  # fmt: skip
+"""Splitting stems on a real PC, in order, through two busy spells and then with everything else
+closed. The old average quoted about 130 s for jobs that were taking 70."""
+
+
+def test_a_quote_follows_a_pc_that_has_freed_up():
+    assert estimate_from(REAL_STEM_TIMES, 120.0).seconds == pytest.approx(76.5, abs=10.0)
+
+
+def test_a_quote_follows_a_pc_that_has_got_busy():
+    busy = [80.0] * 30 + [300.0] * 8
+    assert estimate_from(busy, 120.0).seconds == 300.0
+
+
+def test_a_short_slow_spell_does_not_take_over():
+    assert estimate_from([80.0] * 30 + [300.0] * 4, 120.0).seconds == 80.0
+
+
+def test_over_real_times_recent_ones_beat_the_average_of_all_of_them():
+    def typical_miss(quote):
+        misses = []
+        for index in range(5, len(REAL_STEM_TIMES)):
+            quoted = quote(REAL_STEM_TIMES[:index])
+            actual = REAL_STEM_TIMES[index]
+            misses.append(max(quoted / actual, actual / quoted))
+        return statistics.median(misses)
+
+    recent = typical_miss(lambda times: estimate_from(times, 120.0).seconds)
+    average = typical_miss(statistics.fmean)
+    assert recent < average
+    assert recent < 1.3
+
+
+def _busy_spell(clock):
+    for _ in range(6):
+        clock.record("stem_window", 100.0)
+    for _ in range(8):
+        clock.record("stem_window", 300.0)
+
+
+def test_a_slow_spell_is_not_counted_twice(tmp_path):
+    """A job's own latest times already show the slow spell, so the busy PC adds nothing."""
+    clock = JobClock(tmp_path)
+    _busy_spell(clock)
+    assert clock.load() > 1.5
+    assert clock.estimate("stem_window").seconds == 300.0
+
+
+def test_a_job_with_few_times_of_its_own_goes_by_the_rest_of_the_pc(tmp_path):
+    clock = JobClock(tmp_path)
+    _busy_spell(clock)
+    clock.record("echo_out", 10.0)
+    assert clock.estimate("echo_out").seconds > 10.0 * 1.5
+
+
+def test_a_job_with_enough_times_of_its_own_goes_by_them(tmp_path):
+    clock = JobClock(tmp_path)
+    _busy_spell(clock)
+    for _ in range(5):
+        clock.record("echo_out", 10.0)
+    assert clock.estimate("echo_out").seconds == 10.0
+
+
+def test_what_the_page_quotes_is_the_same_as_the_estimate(tmp_path):
+    clock = JobClock(tmp_path)
+    _busy_spell(clock)
+    recent = clock.recent()
+    assert recent["stem_window"] == clock.estimate("stem_window").seconds
+    assert recent["echo_out"] == round(clock.estimate("echo_out").seconds, 1)
+
+
+def test_time_left_goes_by_recent_jobs(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(20):
+        clock.record("phrase_roll", 600.0)
+    for _ in range(12):
+        clock.record("phrase_roll", 60.0)
+    assert clock.left("phrase_roll", 10.0).seconds == pytest.approx(50.0)
+
+
+def test_changing_how_quotes_work_starts_the_score_again_but_keeps_the_times(tmp_path):
+    (tmp_path / "job-times.json").write_text(
+        json.dumps(
+            {
+                "_version": 2,
+                "_checks": [0.3, 0.3],
+                "_load": [1.0],
+                "vocal_ride": [30.0],
+                "stem_window": [70.0],
+            }
+        ),
+        "utf-8",
+    )
+    clock = JobClock(tmp_path)
+    assert clock.accuracy() == {"jobs": 0, "typical_miss": None}
+    assert clock.times() == {"vocal_ride": [30.0], "stem_window": [70.0]}
+    clock.record("stem_window", 71.0)
+    assert clock.accuracy()["jobs"] == 1
+    assert JobClock(tmp_path).accuracy()["jobs"] == 1, "and it stays started"
+
