@@ -417,7 +417,11 @@ def plan(
 
 
 @app.command()
-def discover(limit: int = typer.Option(1000, help="Maximum audio links to keep per run.")) -> None:
+def discover(
+    limit: int = typer.Option(1000, help="Maximum audio links to keep per sampled run."),
+    exhaustive: bool = typer.Option(False, help="Resume checking every analysed song pair."),
+    pair_limit: int = typer.Option(1000, min=1, help="New pairs per exhaustive run."),
+) -> None:
     """Search the whole analysed library and fill the Seam Book."""
     from selecta.analysis.song import load_song
     from selecta.discovery.search import audio_search, lyric_search
@@ -434,6 +438,18 @@ def discover(limit: int = typer.Option(1000, help="Maximum audio links to keep p
         (ANALYSIS_VERSION,),
     ).fetchall()
     songs = [load_song(conn, settings, row["song_id"]) for row in rows]
+    if exhaustive:
+        from selecta.discovery.sweep import sweep
+
+        progress = sweep(
+            conn, songs, pair_limit, before_pair=lambda: wait_while_mix_renders(settings.home)
+        )
+        console.print(
+            f"Checked {progress['checked']} pairs; reused {progress['cached']}; "
+            f"{progress['remaining']} remain. Added {progress['added']} audio links. "
+            "Run again to continue."
+        )
+        return
     audio_count = audio_search(
         conn, songs, limit, before_pair=lambda: wait_while_mix_renders(settings.home)
     )

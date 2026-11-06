@@ -378,7 +378,8 @@ def test_opening_the_studio_starts_a_session_and_quotes_the_wait(tmp_path, monke
     assert body["status"] == "queued"
     assert sent[-1][0].move == STUDIO_SESSION
     assert sent[-1][1] is True, "someone's waiting at the screen, so it goes first"
-    assert body["eta"]["seconds"] == 60 + 2 * 100
+    # No job history yet: preparation plus two windows at the measured 120-second default.
+    assert body["eta"]["seconds"] == 60 + 2 * 120
     assert body["key"] == sent[-1][0].key
 
 

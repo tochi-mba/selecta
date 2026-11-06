@@ -132,12 +132,24 @@ Packaged desktop apps quietly redirect AppData to a private copy, so one library
 | Stem cache | Whole windows across stems and rendered seams are budgeted together; priority-song stem windows are protected by source metadata | Existing windows created before metadata cannot be mapped to priority songs and remain ordinary eviction candidates |
 | Audit | Fails broken renders and sagging seams, in plain words | Beat check misreads syncopated drums, so rides allow up to 40 ms. Thresholds are starting values |
 
-## Not built
+## Discovery and evaluation: implemented, with acceptance still open
 
-Temporal discovery progress (6 November): audio search now stores eight-bar ordered harmonic-sequence candidates across offsets and fixed transpositions, including exact source start times for audition. Five focused tests cover reordered-profile rejection, held/silent/invalid windows, transposition, offsets, persistence, and limits. A synthetic pair of 96-bar tracks took 0.022 seconds locally. Full-library precision, runtime, audition UI, melody-contour verification and stem consonance remain unverified; candidates are not automatic-set approvals.
+Temporal discovery progress (6 November): audio search stores eight-bar ordered harmonic-sequence candidates across offsets and fixed transpositions, including exact source start times for audition. Sequence tests cover reordered-profile rejection, held/silent/invalid windows, transposition and offsets. Search tests cover persistence and limits. The `/api/discoveries` routes and `web/src/views/Links.tsx` expose harmonic candidates, audio auditions and saved reviews. UI tests cover advancing after a review, preparing the next pair, skipping without rating, and pausing the mix during auditions. These are implementation checks; full-library precision, runtime, melody-contour verification and stem consonance still need evidence. Candidates are not automatic-set approvals.
 
-- Temporal melody, sample and rhythm discovery, and shortest-path destination search. The existing audio search only compares whole-track mean chroma; it now reports a coarse tonal-profile resemblance and explicitly does not claim a melody match. The app still does not surface these tonal candidates.
-- The blind listening test. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
+The blind-comparison infrastructure exists in `src/selecta/listening.py`, `/api/listening`, and the Workshop's `Listening` component. It stores hidden condition assignments, prepared audio, preferences and optional quality grades. Tests cover loudness preparation, invalid audio, hidden identities, missing responses and failed saves. Reopening a study now clears prior quality scores. None of this establishes a listening-test win: the original plan still requires about 60 stratified pairs, baseline comparisons, human responses and a measured bad-transition rate. Missing grades must remain missing rather than count as good transitions.
+
+## Not built or not yet demonstrated
+
+`selecta discover --exhaustive --pair-limit 1000` now checks every analysed song pair in
+resumable batches. It persists positive and negative comparison checkpoints, invalidates them when
+chroma, bar times, artist, duration or matcher version changes, and yields to current mix work
+before each new pair. The command reports remaining pairs; rerun until that count is zero.
+Regression coverage verifies reopening the database, skipping unchanged non-matches and
+rechecking affected pairs after a feature change. A complete real-library sweep has not yet been
+measured. This covers harmonic candidates, not the missing melody, sample or rhythm detectors.
+
+- Verified melody-contour, sample and rhythm discovery, and shortest-path destination search. Audio search includes ordered harmonic matching as well as coarse whole-track mean-chroma candidates. The latter remain outside the audition API and are not melody matches. The default quick search still samples up to 80 partners per song and caps harmonic matches at three per song; full coverage requires the exhaustive command above.
+- Completed blind listening evaluation against the planned baselines. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
 - The typographic word-to-word match cut. Fullscreen Stage mode and approximate current-word focus work, but the lyric highlight has not been validated against sung-word ground truth.
 - Loop rolls on A's band, a dedicated half/double-time transition, drop swaps and brakes. Tempo-free landings already compare half/double BPM relationships, but that alone does not beatmatch a long blend. The placeholders that faked the missing moves are gone.
 - No blind paired listening study yet to measure whether the intertwined transition improves the mix versus a conventional blend on the same pair.

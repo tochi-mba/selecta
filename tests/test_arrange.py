@@ -462,6 +462,23 @@ def test_listening_only_happens_once(tmp_path):
     assert (listen(folder, 8.0).levels == first.levels).all()
 
 
+def test_cached_measurements_validate_notes_and_stem_signatures(tmp_path):
+    import os
+
+    folder = _stems(tmp_path, {"a_drums": -20.0})
+    listen(folder, 8.0)
+    saved = folder / "hearing.json"
+    cached = json.loads(saved.read_text())
+    cached["notes"] = []
+    saved.write_text(json.dumps(cached))
+    assert listen(folder, 8.0).notes.shape == (2, 4, CELLS, 12)
+    stem = folder / "a_drums.flac"
+    stat = stem.stat()
+    os.utime(stem, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000))
+    listen(folder, 8.0)
+    assert json.loads(saved.read_text())["sources"][stem.name][1] == stem.stat().st_mtime_ns
+
+
 @pytest.mark.parametrize("damaged", ["{broken", "[]", '{"levels": [1], "notes": [], "edges": []}'])
 def test_damaged_measurements_are_measured_again(tmp_path, damaged):
     folder = _stems(tmp_path, {"a_drums": -20.0})

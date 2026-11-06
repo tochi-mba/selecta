@@ -16,7 +16,7 @@ export function Listening() {
   const trial = trials?.[index];
   const load = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError('');
-    try { setTrials(await get(`/listening?study=${encodeURIComponent(study)}`)); setIndex(0); setHeard([]); }
+    try { setTrials(await get(`/listening?study=${encodeURIComponent(study)}`)); setIndex(0); setHeard([]); setQuality({}); }
     catch { setError('Could not load this listening study.'); }
     finally { setBusy(false); }
   };
