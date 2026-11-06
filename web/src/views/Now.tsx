@@ -501,6 +501,8 @@ export function Now(props: ViewProps) {
                       : 'Play'}
             </button>
             <button aria-label="Next song" title="Shift N" disabled={idle || !next} onClick={() => void player.next()}>⏭</button>
+          </div>
+          <div className="transport-more">
             <button onClick={() => void player.skip()} disabled={idle || !next} title="N">
               Jump to the transition
             </button>

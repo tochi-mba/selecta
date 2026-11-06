@@ -1,7 +1,8 @@
+import { connectMainPlayer } from '../audio/focus';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fakeBackend } from '../test/backend';
-import { HarmonicDiscoveries } from './Links';
+import { fakeBackend, status as appStatus } from '../test/backend';
+import { HarmonicDiscoveries, Links } from './Links';
 
 const discovery = (id: number, title_a: string, title_b: string, status = 'new') => ({
   id,
@@ -148,10 +149,12 @@ describe('songs that might share chords', () => {
       'GET /discoveries': [discovery(7, 'First', 'Second')],
       'POST /discoveries/7/hear': audition,
     });
-    const onListen = vi.fn();
-    render(<HarmonicDiscoveries onListen={onListen} />);
+    const pause = vi.fn();
+    connectMainPlayer({ isPlaying: () => true, pause, resume: vi.fn() });
+    render(<HarmonicDiscoveries />);
     fireEvent.click(await hearButton());
-    await waitFor(() => expect(onListen).toHaveBeenCalled());
+    await waitFor(() => expect(pause).toHaveBeenCalled());
+    connectMainPlayer(null);
   });
 
   it('stopping really stops, and answering afterwards does not start it again', async () => {
@@ -191,16 +194,63 @@ describe('songs that might share chords', () => {
     expect(await hearButton()).toBeInTheDocument();
   });
 
-  it('stays out of the way when there is nothing to show', async () => {
+  it('says there’s nothing yet when there is nothing to show', async () => {
     fakeBackend({ 'GET /discoveries': [] });
-    const { container } = render(<HarmonicDiscoveries />);
-    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
-    expect(container).toBeEmptyDOMElement();
+    render(<HarmonicDiscoveries />);
+    expect(await screen.findByText(/No chord matches to hear yet/)).toBeInTheDocument();
   });
 
   it('says so when they cannot be loaded', async () => {
     fakeBackend({});
     render(<HarmonicDiscoveries />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t load these');
+  });
+});
+
+describe('adding a pair', () => {
+  const link = { phrase: 'tonight', kind: 'x', a: 1, b: 2, artist_a: 'A', title_a: 'One', artist_b: 'B', title_b: 'Two', line_a: 'all tonight', line_b: 'tonight we go', moves: ['word_cut'], move: 'word_cut', state: { status: 'none', key: 'k' }, worked: true };
+  const props = () => ({ setMixData: vi.fn(), setView: vi.fn(), notify: vi.fn(), status: appStatus(), mix: [], tab: 'words' as const }) as unknown as Parameters<typeof Links>[0];
+  const drafts = (list: { id: number; name: string }[]) => ({ drafts: list, current: {}, out_of_room: false });
+
+  it('goes in as one thing, so half of it can’t be left behind', async () => {
+    const calls = fakeBackend({ 'GET /links': { links: [link], prepared: 0, preparing: 0 }, 'GET /drafts': drafts([]), 'POST /mix/pair': { mix: [], name: 'Mix', can_undo: true } });
+    render(<Links {...props()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add both to the mix' }));
+    await waitFor(() => expect(calls.find((call) => call.path === '/mix/pair')?.body).toEqual({ a: 1, b: 2, move: 'word_cut', phrase: 'tonight' }));
+    expect(calls.filter((call) => call.path === '/mix/songs')).toHaveLength(0);
+  });
+
+  it('can go in a draft instead, and leaves what’s playing alone', async () => {
+    const calls = fakeBackend({ 'GET /links': { links: [link], prepared: 0, preparing: 0 }, 'GET /drafts': drafts([{ id: 7, name: 'Friday' }]), 'POST /mix/pair': { mix: [], name: 'Friday', can_undo: true } });
+    const shown = props();
+    render(<Links {...shown} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add both to…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Friday' }));
+    await waitFor(() => expect(calls.some((call) => call.path === '/mix/pair?draft=7')).toBe(true));
+    expect(shown.setMixData).not.toHaveBeenCalled();
+  });
+});
+
+describe('the two kinds of discovery', () => {
+  const props = (tab: 'words' | 'harmonic') => ({ setMixData: vi.fn(), setView: vi.fn(), notify: vi.fn(), status: appStatus(), mix: [], tab }) as unknown as Parameters<typeof Links>[0];
+
+  it('each have their own address', () => {
+    fakeBackend({ 'GET /links': { links: [], prepared: 0, preparing: 0 }, 'GET /drafts': { drafts: [] } });
+    render(<Links {...props('words')} />);
+    expect(screen.getByRole('link', { name: 'Harmonic discoveries' })).toHaveAttribute('href', '/discover/harmonic');
+    expect(screen.getByRole('link', { name: 'Word connections' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('show only what’s asked for', async () => {
+    fakeBackend({ 'GET /discoveries': [], 'GET /drafts': { drafts: [] } });
+    render(<Links {...props('harmonic')} />);
+    expect(await screen.findByText(/No chord matches/)).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Search shared words' })).toBeNull();
+  });
+
+  it('can’t load isn’t the same as nothing there', async () => {
+    fakeBackend({ 'GET /drafts': { drafts: [] } });
+    render(<Links {...props('words')} />);
+    expect(await screen.findByRole('alert', {}, { timeout: 2000 })).toHaveTextContent('Couldn’t search your lyrics');
   });
 });

@@ -355,3 +355,39 @@ button.song-open:hover { text-decoration: underline; }
 .choice input { width: auto; min-height: 0; }
 .choice:has(input:checked) { border-color: var(--accent); }
 .choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+
+/* nothing on a phone should be wider than the phone */
+.song-name, .seam-line, .seam-visual, .seam, .timeline, .song { min-width: 0; }
+button.song-open { display: block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; padding: 0; }
+.song-name b, .song-name span { max-width: 100%; }
+.seam-visual { max-width: 100%; }
+.seam-visual-bars { min-width: 0; overflow: hidden; }
+.seam-visual-caption { flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .seam { margin-left: 8px; padding-left: 10px; }
+  .seam-visual { margin-left: 0; }
+}
+
+/* Listen: the things you reach for stay in reach */
+.transport-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+@media (max-width: 760px) {
+  .now .transport {
+    position: sticky;
+    bottom: calc(var(--nav-height) + var(--safe-bottom));
+    z-index: var(--layer-sticky);
+    justify-content: center;
+    padding: var(--space-2) 0;
+    margin: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .now .transport .primary.big { flex: 1 1 auto; }
+}
+
+.song-name { grid-template-columns: minmax(0, 1fr); }
+.song-name > * { min-width: 0; }
+button.song-open b { display: block; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .seam-visual { grid-template-columns: minmax(0, 1fr); }
+  .seam-visual-caption { grid-column: 1; }
+}

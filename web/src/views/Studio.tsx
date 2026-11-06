@@ -301,7 +301,8 @@ export function Studio(props: {
                             tabIndex={focusCell.row === row && focusCell.column === index ? 0 : -1}
                             className={`studio-cell ${index === cell ? 'now' : ''}`}
                             aria-pressed={Boolean(value)}
-                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}, bar ${index * barsPerCell + 1}`}
+                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}
+                            title={`Bar ${index * barsPerCell + 1}`}
                             onFocus={() => setFocusCell({ row, column: index })}
                             onClick={() => toggle(side, lane, index)}
                           />

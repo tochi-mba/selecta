@@ -1,6 +1,7 @@
+import { ApiError } from '../api';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SetPlayer } from '../player';
 import { fakeBackend, status } from '../test/backend';
 import { Library } from './Library';
@@ -16,7 +17,18 @@ const row = (id: number, title: string) => ({
   lyric_status: null,
   never: false,
   priority: false,
+  detected_bpm: null,
+  detected_camelot: null,
+  override_bpm: null,
+  override_camelot: null,
+  music_override: null,
+  energy: null,
+  grid_confidence: null,
+  readiness: { status: 'queued', reason: 'Waiting to be analysed.' },
 });
+const page = (...songs: (Omit<ReturnType<typeof row>, 'bpm'> & { bpm: number | null })[]) => ({ songs, total: songs.length, next: null });
+
+beforeEach(() => window.history.pushState({}, '', '/library'));
 
 function show(state = status(), refreshStatus = () => {}, notify: (m: string) => void = () => {}) {
   const player = new SetPlayer(() => [], () => {});
@@ -41,7 +53,7 @@ function show(state = status(), refreshStatus = () => {}, notify: (m: string) =>
 
 describe('songs not analysed yet', () => {
   it('shows each song’s place in one line, so clicks can’t pile up', async () => {
-    fakeBackend({ 'GET /songs': [row(1, 'First'), row(2, 'Second'), row(3, 'Third')] });
+    fakeBackend({ 'GET /library': page(row(1, 'First'), row(2, 'Second'), row(3, 'Third')) });
     show(status({ analysing: [1, 2] }));
     await userEvent.click(screen.getByRole('button', { name: 'Not analysed yet' }));
     expect(await screen.findByRole('button', { name: 'Analysing…' })).toBeDisabled();
@@ -50,7 +62,7 @@ describe('songs not analysed yet', () => {
   });
 
   it('offers the whole lot in one press', async () => {
-    const calls = fakeBackend({ 'GET /songs': [row(1, 'First')], 'POST /analysis/start': { running: true } });
+    const calls = fakeBackend({ 'GET /library': page(row(1, 'First')), 'POST /analysis/start': { running: true } });
     const refreshStatus = vi.fn();
     show(status(), refreshStatus);
     await userEvent.click(screen.getByRole('button', { name: 'Not analysed yet' }));
@@ -61,7 +73,7 @@ describe('songs not analysed yet', () => {
   });
 
   it('doesn’t offer it twice', async () => {
-    fakeBackend({ 'GET /songs': [row(1, 'First')] });
+    fakeBackend({ 'GET /library': page(row(1, 'First')) });
     show(status({ analysis_running: true }));
     await userEvent.click(screen.getByRole('button', { name: 'Not analysed yet' }));
     expect(screen.queryByRole('button', { name: 'Analyse them all' })).toBeNull();
@@ -70,7 +82,7 @@ describe('songs not analysed yet', () => {
 
   it('lets the listener prioritize a song and shows the priority list', async () => {
     const calls = fakeBackend({
-      'GET /songs': [row(1, 'First')],
+      'GET /library': page(row(1, 'First')),
       'POST /songs/1/priority': { song_id: 1, priority: 100 },
     });
     show();
@@ -83,20 +95,21 @@ describe('songs not analysed yet', () => {
 });
 
 describe('starting a mix from a song', () => {
-  const ready = { ...row(1, 'First'), bpm: 120 };
+  const ready = { ...row(1, 'First'), bpm: 120, readiness: { status: 'mix_ready', reason: '' } };
   const backend = (build: () => Promise<Response>) => vi.stubGlobal('fetch', vi.fn((url: string) => (
-    url.includes('/vibes/pick/build') ? build() : Promise.resolve(new Response(JSON.stringify([ready, { ...ready, id: 2, title: 'Second' }]), { status: 200 }))
+    url.includes('/vibes/pick/build') ? build() : Promise.resolve(new Response(JSON.stringify(page(ready, { ...ready, id: 2, title: 'Second' })), { status: 200 }))
   )));
 
-  it('says it’s building straight away, and can’t be pressed twice', async () => {
+  it('says it’s building straight away, and only one can be built at a time', async () => {
     let finish: (value: Response) => void = () => {};
     const build = vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; }));
     backend(build);
     show();
     const buttons = await screen.findAllByRole('button', { name: 'Start a mix' });
     await userEvent.click(buttons[0]);
-    expect(screen.getByRole('button', { name: 'Building your mix…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Building your mix…' })).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('button', { name: 'Start a mix' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Building your mix…' }));
     expect(build).toHaveBeenCalledOnce();
     finish(new Response(JSON.stringify({ mix: [], name: 'Mix', can_undo: false }), { status: 200 }));
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Building your mix…' })).toBeNull());
@@ -110,5 +123,141 @@ describe('starting a mix from a song', () => {
     await userEvent.click(buttons[0]);
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Nothing goes with that.'));
     expect(screen.getAllByRole('button', { name: 'Start a mix' })[0]).toBeEnabled();
+  });
+});
+
+describe('a big library', () => {
+  const many = (from: number, count: number) => Array.from({ length: count }, (_, index) => row(from + index, `Song ${from + index}`));
+
+  it('shows how many there are, and fetches more without losing its place', async () => {
+    const calls = fakeBackend({
+      'GET /library': (_body: unknown, url: string) => (url.includes('after=')
+        ? { songs: many(101, 2), total: 102, next: null }
+        : { songs: many(1, 100), total: 102, next: '["song 100",100]' }),
+    });
+    show();
+    expect(await screen.findByText('Showing 100 of 102 songs.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show more songs' }));
+    expect(await screen.findByText('102 songs.')).toBeInTheDocument();
+    expect(screen.getByText('Song 1')).toBeInTheDocument();
+    expect(screen.getByText('Song 102')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show more songs' })).toBeNull();
+    expect(calls.some((call) => call.path.includes('after=%5B%22song'))).toBe(true);
+  });
+
+  it('a song that turns up on two pages only shows once', async () => {
+    fakeBackend({
+      'GET /library': (_body: unknown, url: string) => (url.includes('after=')
+        ? { songs: many(2, 2), total: 3, next: null }
+        : { songs: many(1, 2), total: 3, next: 'x' }),
+    });
+    show();
+    await screen.findByText('Song 1');
+    await userEvent.click(screen.getByRole('button', { name: 'Show more songs' }));
+    await screen.findByText('Song 3');
+    expect(screen.getAllByText('Song 2')).toHaveLength(1);
+  });
+
+  it('keeps what you were looking for in the address', async () => {
+    fakeBackend({ 'GET /library': page(row(1, 'First')) });
+    show();
+    await screen.findByText('First');
+    await userEvent.click(screen.getByRole('button', { name: 'Priority list' }));
+    expect(window.location.search).toBe('?show=priority');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Sort by' }), 'artist');
+    expect(window.location.search).toContain('sort=artist');
+  });
+
+  it('only the newest search counts, however the answers arrive', async () => {
+    const answers: ((value: Response) => void)[] = [];
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { answers.push(resolve); })));
+    show();
+    await waitFor(() => expect(answers.length).toBeGreaterThan(0));
+    await userEvent.click(screen.getByRole('button', { name: 'Priority list' }));
+    await waitFor(() => expect(answers.length).toBeGreaterThan(1));
+    answers[answers.length - 1](new Response(JSON.stringify(page(row(2, 'Newest'))), { status: 200 }));
+    await screen.findByText('Newest');
+    answers[0](new Response(JSON.stringify(page(row(1, 'Stale'))), { status: 200 }));
+    await new Promise((done) => setTimeout(done, 20));
+    expect(screen.queryByText('Stale')).toBeNull();
+    expect(screen.getByText('Newest')).toBeInTheDocument();
+  });
+
+  it('not being able to load isn’t the same as having no songs', async () => {
+    fakeBackend({});
+    show();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your songs are fine');
+    expect(screen.queryByText(/Nothing here/)).toBeNull();
+  });
+});
+
+describe('whether a song can go in a mix', () => {
+  it.each([
+    ['mix_ready', 'Ready for mixes'],
+    ['analysed_incomplete', 'Not ready for mixes'],
+    ['processing', 'Being analysed'],
+    ['needs_attention', 'Couldn’t be analysed'],
+    ['missing', 'File is missing'],
+  ])('%s says %s', async (state, words) => {
+    fakeBackend({ 'GET /library': page({ ...row(1, 'First'), readiness: { status: state, reason: '' } }) });
+    show();
+    expect(await screen.findByText(words)).toBeInTheDocument();
+  });
+
+  it('gives the reason in the song’s details', async () => {
+    fakeBackend({ 'GET /library': page({ ...row(1, 'First'), readiness: { status: 'analysed_incomplete', reason: 'No timed lyrics.' } }) });
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: 'Details for First' }));
+    expect(await screen.findByText('No timed lyrics.')).toBeInTheDocument();
+  });
+});
+
+describe('correcting a song', () => {
+  const measured = { ...row(1, 'First'), bpm: 80, camelot: '8A', detected_bpm: 80, detected_camelot: '8A', readiness: { status: 'mix_ready', reason: '' } };
+  const open = async (song: unknown = measured, more: Record<string, unknown> = {}) => {
+    const calls = fakeBackend({ 'GET /library': page(song as never), 'POST /songs/1/correct': { redone: 3 }, ...more });
+    const notify = vi.fn();
+    show(status(), () => {}, notify);
+    await userEvent.click(await screen.findByRole('button', { name: 'Details for First' }));
+    const sent = () => calls.find((call) => call.path === '/songs/1/correct')?.body;
+    return { calls, notify, sent };
+  };
+
+  it('double and half fill in what was measured', async () => {
+    await open();
+    await userEvent.click(screen.getByRole('button', { name: 'Double' }));
+    expect(screen.getByRole('spinbutton')).toHaveValue(160);
+    await userEvent.click(screen.getByRole('button', { name: 'Half' }));
+    expect(screen.getByRole('spinbutton')).toHaveValue(40);
+  });
+
+  it('saves what was typed, and says what’ll be made again', async () => {
+    const { sent, notify } = await open();
+    await userEvent.type(screen.getByRole('spinbutton'), '160');
+    await userEvent.click(screen.getByRole('button', { name: 'Save correction' }));
+    await waitFor(() => expect(sent()).toEqual({ bpm: 160, clear: ['camelot'] }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Saved your correction. 3 transitions with this song will be made again.'));
+  });
+
+  it('can go back to what was measured', async () => {
+    const { sent } = await open({ ...measured, bpm: 160, override_bpm: 160 });
+    expect(screen.getByText(/your correction/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Use what was measured' }));
+    await waitFor(() => expect(sent()).toEqual({ clear: ['bpm', 'camelot'] }));
+  });
+
+  it('shows what’s wrong with a value that isn’t allowed, and keeps it there', async () => {
+    const answer = () => { throw new ApiError('Tempo has to be between 40 and 240.', 400); };
+    await open(measured, { 'POST /songs/1/correct': answer });
+    await userEvent.type(screen.getByRole('spinbutton'), '900');
+    await userEvent.click(screen.getByRole('button', { name: 'Save correction' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('between 40 and 240');
+    expect(screen.getByRole('spinbutton')).toHaveValue(900);
+  });
+
+  it('music and not music can be switched, without touching the file', async () => {
+    const { sent } = await open();
+    await userEvent.click(screen.getByRole('button', { name: 'This isn’t music' }));
+    await waitFor(() => expect(sent()).toEqual({ is_music: false }));
   });
 });

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from './api';
 import { App } from './App';
 import { SetPlayer } from './player';
 import { fakeBackend, seam, songs, status } from './test/backend';
@@ -8,6 +9,9 @@ import { fakeBackend, seam, songs, status } from './test/backend';
 const data = (...items: Parameters<typeof songs>) => ({ mix: songs(...items), name: 'Test mix', can_undo: false });
 
 const navigation = async () => within(await screen.findByRole('navigation', { name: 'Main' }));
+
+// every test starts at the front door, and the address is part of what each one checks
+beforeEach(() => window.history.pushState({}, '', '/'));
 
 function backend(mix: () => unknown) {
   return fakeBackend({
@@ -25,7 +29,7 @@ describe('the badges', () => {
       return reads < 4 ? data(seam('none', 'a')) : data(seam('ready', 'a', { duration: 30, a_source_start: 100, b_source_end: 10 }));
     });
     render(<App />);
-    await userEvent.click((await navigation()).getByRole('button', { name: 'Edit' }));
+    await userEvent.click((await navigation()).getByRole('link', { name: 'Edit' }));
     expect(await screen.findByText('Waiting to render')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument(), { timeout: 6000 });
   });
@@ -78,7 +82,7 @@ describe('keyboard shortcuts', () => {
 describe('requests across the app', () => {
   const list = { drafts: [], current: { name: 'Test mix', songs: 2, left: 0, eta: { seconds: 0, low: 0, high: 0 } }, out_of_room: false };
 
-  it('are on the Edit page, and a song a request added is marked there', async () => {
+  it('are a press away on any page, and a song a request added is marked in Edit', async () => {
     const mix = songs(seam('ready', 'a'));
     mix[1].from_request = { kind: 'requested' };
     fakeBackend({
@@ -89,10 +93,11 @@ describe('requests across the app', () => {
       'GET /requests': { requests: [{ id: 7, song_id: 9, title: 'Wanted', artist: 'Artist', status: 'waiting', available: 1 }] },
     });
     render(<App />);
-    fireEvent.click((await navigation()).getByRole('button', { name: 'Edit' }));
+    fireEvent.click((await navigation()).getByRole('link', { name: 'Edit' }));
+    expect(await screen.findByText('Requested')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Requests/ }));
     expect(await screen.findByText('Wanted')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Song requests' })).toBeInTheDocument();
-    expect(screen.getByText('Requested')).toBeInTheDocument();
   });
 
   it('aren’t on pages they’d get in the way of', async () => {
@@ -124,6 +129,7 @@ describe('an open draft', () => {
   });
 
   it('opens from the list without touching the current mix, and stays open after a reload', async () => {
+    window.history.pushState({}, '', '/mixes/mine');
     const calls = fakeBackend({
       'GET /status': status(),
       'GET /vibes': [],
@@ -131,34 +137,49 @@ describe('an open draft', () => {
       'GET /mix': (_body: unknown, url: string) => (url.includes('draft=7') ? friday : current),
     });
     const { unmount } = render(<App />);
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Edit Friday' }))[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Friday' }));
     expect(await screen.findByRole('heading', { name: 'Friday' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/mixes/drafts/7/edit');
     expect(calls.some((call) => call.method !== 'GET')).toBe(false);
     unmount();
     render(<App />);
-    fireEvent.click((await navigation()).getByRole('button', { name: 'Edit' }));
     expect(await screen.findByRole('heading', { name: 'Friday' })).toBeInTheDocument();
   });
 
-  it('falls back to the current mix if the draft has gone', async () => {
-    window.localStorage.setItem('selecta.openDraft', '99');
+  it('says so if the draft has gone, rather than quietly showing another mix', async () => {
+    window.history.pushState({}, '', '/mixes/drafts/99/edit');
     fakeBackend({
       'GET /status': status(),
       'GET /vibes': [],
       'GET /drafts': list([]),
       'GET /mix': (_body: unknown, url: string) => {
-        if (url.includes('draft=99')) throw new Error('gone');
+        if (url.includes('draft=99')) throw new ApiError('gone', 404);
         return current;
       },
     });
     render(<App />);
-    fireEvent.click((await navigation()).getByRole('button', { name: 'Edit' }));
-    expect(await screen.findByRole('heading', { name: 'Current' })).toBeInTheDocument();
-    expect(window.localStorage.getItem('selecta.openDraft')).toBeNull();
+    expect(await screen.findByRole('heading', { name: /That draft isn’t there/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Current' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'See your mixes' })).toHaveAttribute('href', '/mixes/mine');
   });
 
   it('being sent to Edit from another page means the mix that’s playing', async () => {
-    window.localStorage.setItem('selecta.openDraft', '7');
+    window.history.pushState({}, '', '/mixes/drafts/7/edit');
+    fakeBackend({
+      'GET /status': status(),
+      'GET /vibes': [],
+      'GET /drafts': list([{ id: 7, name: 'Friday' }]),
+      'GET /mix': (_body: unknown, url: string) => (url.includes('draft=7') ? friday : current),
+    });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Friday' })).toBeInTheDocument();
+    fireEvent.click((await navigation()).getByRole('link', { name: 'Edit' }));
+    expect(await screen.findByRole('heading', { name: 'Current' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/mix/current/edit');
+  });
+
+  it('playing one goes to Listen, and keeps what was playing in the drafts', async () => {
+    window.history.pushState({}, '', '/mixes/mine');
     fakeBackend({
       'GET /status': status(),
       'GET /vibes': [],
@@ -168,7 +189,8 @@ describe('an open draft', () => {
     });
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Play Friday' }));
-    await waitFor(() => expect(window.localStorage.getItem('selecta.openDraft')).toBeNull());
+    await waitFor(() => expect(window.location.pathname).toBe('/listen'));
     expect(await screen.findByText(/What was playing is kept in your drafts/)).toBeInTheDocument();
   });
 });
+

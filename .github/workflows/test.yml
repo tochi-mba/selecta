@@ -21,6 +21,8 @@ jobs:
         run: choco install ffmpeg --yes --no-progress
       - run: uv sync --locked
       - run: uv run ruff check .
+      - name: No file over 1,000 lines
+        run: uv run pytest tests/test_file_length.py -q
       - run: uv run pytest --cov=selecta --cov-report=term-missing --cov-fail-under=70
       - uses: pnpm/action-setup@v4
         with:

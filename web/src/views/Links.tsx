@@ -315,7 +315,7 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
   }, [query, tab]);
 
   useEffect(() => {
-    get<DraftList>('/drafts').then((list) => setDrafts(list.drafts)).catch(() => {});
+    get<DraftList>('/drafts').then((list) => setDrafts(list.drafts ?? [])).catch(() => {});
   }, []);
 
   // both songs and the transition between them go in together, or none of it does

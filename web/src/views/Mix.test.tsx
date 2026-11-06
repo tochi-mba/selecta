@@ -5,11 +5,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { MixData, MixItem, Status } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, seam, songs, status } from '../test/backend';
-import { Adder, Mix } from './Mix';
+import { Adder } from './Adder';
+import { Mix } from './Mix';
 import { MixScope } from './mixScope';
 import { RequestsContext, RequestsState } from './Requests';
 
-function Harness({ start, state = status(), notify = () => {} }: { start: MixItem[]; state?: Status; notify?: (m: string) => void }) {
+function Harness({ start, state = status(), notify = () => {}, refreshMix = () => {} }: { start: MixItem[]; state?: Status; notify?: (m: string) => void; refreshMix?: () => void }) {
   const [mix, setMix] = useState(start);
   const refs = { mix };
   const player = new SetPlayer(() => refs.mix, () => {});
@@ -19,7 +20,7 @@ function Harness({ start, state = status(), notify = () => {} }: { start: MixIte
       mix={mix}
       mixName="Test mix"
       canUndo={false}
-      refreshMix={() => {}}
+      refreshMix={refreshMix}
       setMixData={(data: MixData) => setMix(data.mix)}
       refreshStatus={() => {}}
       player={player}
@@ -36,9 +37,9 @@ describe('rendering every seam', () => {
   it('does not present remembered failures as ongoing renders', () => {
     render(<Harness start={songs(seam('failed', 'a', { error: 'No safe vocal runway.' }))} />);
     expect(screen.getByRole('button', { name: 'Change failed transitions to continue' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Render and hear' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Render it' })).toBeNull();
     expect(screen.getByText(/Remembered failed attempt/)).toHaveTextContent('No safe vocal runway.');
-    expect(screen.getByRole('button', { name: 'Retry this attempt anyway' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
   });
   it('sends one request and every badge changes straight away', async () => {
     const calls = fakeBackend({
@@ -159,8 +160,9 @@ describe('the options for a seam', () => {
 
   it('says why the stems can’t be shaped, instead of a button that fails', async () => {
     await openSeam(songs(landed('delay_throw')));
-    expect(screen.getByRole('button', { name: 'Shape it yourself with stems' })).toBeDisabled();
-    expect(screen.getByText(/30% apart/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Studio' }));
+    expect(await screen.findByText(/30% apart/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open the Studio' })).toBeNull();
   });
 
   it('opens the studio when the stems can be shaped', async () => {
@@ -170,7 +172,8 @@ describe('the options for a seam', () => {
     });
     render(<Harness start={songs(landed('delay_throw'))} />);
     await userEvent.click(screen.getByRole('button', { name: 'Change' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Shape it yourself with stems' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Studio' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Open the Studio' }));
     expect(await screen.findByRole('region', { name: 'Stem studio' })).toBeInTheDocument();
     expect(calls.some((call) => call.path === '/mix/1/studio')).toBe(true);
   });
@@ -276,7 +279,7 @@ describe('a draft on the Edit page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Move Song 2 up' }));
     await userEvent.click(screen.getAllByRole('button', { name: 'Lock' })[1]);
     await userEvent.click(screen.getByRole('button', { name: 'Remove Song 2' }));
-    await userEvent.click(screen.getAllByRole('button', { name: 'Render and hear' })[0]);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Render it' })[0]);
     await waitFor(() => expect(calls.filter((call) => call.method !== 'GET')).toHaveLength(4));
     for (const call of calls.filter((item) => item.method !== 'GET')) expect(call.path).toContain('draft=7');
   });
@@ -395,12 +398,6 @@ describe('requests on the Edit page', () => {
     add: async () => {}, cancel: async () => {}, chooseBridge: async () => {}, addAnyway: async () => {},
   }) as unknown as RequestsState;
 
-  it('are there for the current mix', () => {
-    render(<RequestsContext.Provider value={state()}><Harness start={songs(seam('ready', 'a'))} /></RequestsContext.Provider>);
-    expect(screen.getByRole('region', { name: 'Song requests' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Request a song' })).toBeInTheDocument();
-  });
-
   it('show up faded in the timeline at the place they’re going', () => {
     const start = songs(seam('ready', 'a'), seam('ready', 'b'));
     const player = new SetPlayer(() => [], () => {});
@@ -446,5 +443,124 @@ describe('requests on the Edit page', () => {
       </RequestsContext.Provider>,
     );
     expect(screen.queryByRole('region', { name: 'Song requests' })).toBeNull();
+  });
+});
+
+describe('what’s selected', () => {
+  const ready = () => seam('ready', 'a', { label: 'Blend', style: 'bass_swap_blend', why: 'Close in tempo', a_source_start: 60, b_source_end: 30, preview_seam: 20, checks: [{ name: 'beat', passed: true, text: 'The beats line up', value: '' }] });
+  const options = { moves: [{ name: 'bass_swap_blend', label: 'Blend', description: '', available: true, reason: null }], exits: [], entries: [], lengths: [], links: [], tempo_gap: 1, keys: ['8A', '8A'] };
+  const pick = async () => {
+    fakeBackend({ 'GET /mix/1/options': options });
+    render(<Harness start={songs(ready())} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Hear it' }));
+  };
+
+  it('opens beside the timeline, for the two songs it’s between', async () => {
+    await pick();
+    const side = screen.getByRole('complementary', { name: 'This transition' });
+    expect(within(side).getByText('Song 1')).toBeInTheDocument();
+    expect(within(side).getByText('Song 2')).toBeInTheDocument();
+    expect(within(side).getByRole('tab', { name: 'Listen' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('plays the exact render, and the same stays selected when others move', async () => {
+    await pick();
+    const side = screen.getByRole('complementary', { name: 'This transition' });
+    expect(side.querySelector('audio')).toHaveAttribute('src', '/api/seams/a/preview');
+  });
+
+  it('has everything about it a tab away', async () => {
+    await pick();
+    await userEvent.click(screen.getByRole('tab', { name: 'Details' }));
+    expect(screen.getByText('Close in tempo.')).toBeInTheDocument();
+    expect(screen.getByText(/✓ The beats line up/)).toBeInTheDocument();
+    expect(screen.getByText(/Leaves Song 1 at 1:00/)).toBeInTheDocument();
+    expect(screen.getByText(/can’t tell you how it sounds/)).toBeInTheDocument();
+  });
+
+  it('closes when told to', async () => {
+    await pick();
+    await userEvent.click(within(screen.getByRole('complementary')).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('complementary')).toBeNull();
+  });
+
+  it('says what you chose and what will really play, if they differ', async () => {
+    const swapped = { settings: { move: 'vocal_ride' }, state: { status: 'ready' as const, key: 'a', passed: true, label: 'Blend', style: 'bass_swap_blend', fell_back: true } };
+    fakeBackend({ 'GET /mix/1/options': options });
+    render(<Harness start={songs(swapped)} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Hear it' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Details' }));
+    expect(screen.getByText(/What will play is Blend/)).toBeInTheDocument();
+  });
+
+  it('says when it’s been held back to give the song a turn', async () => {
+    const held = { settings: { move: 'auto', leave_after: 90 }, state: { status: 'ready' as const, key: 'a', passed: true, label: 'Blend', a_source_start: 95, b_source_end: 30 } };
+    fakeBackend({ 'GET /mix/1/options': options });
+    render(<Harness start={songs(held as never)} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Hear it' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Details' }));
+    expect(screen.getByText(/Held back to leave Song 1 after 1:30/)).toBeInTheDocument();
+  });
+});
+
+describe('changes that could hit the wrong song', () => {
+  it('say which order they saw', async () => {
+    const answer = { mix: songs(seam('ready', 'a')), name: 'Test mix', can_undo: true };
+    const seen: (string | null)[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/drafts')) return new Response(JSON.stringify({ drafts: [] }), { status: 200 });
+      seen.push(new Headers(init?.headers).get('x-mix-order'));
+      return new Response(JSON.stringify(answer), { status: 200 });
+    }));
+    render(<Harness start={songs(seam('ready', 'a'))} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Song 2' }));
+    await waitFor(() => expect(seen).toContain('1,2'));
+  });
+
+  it('stop and catch up if the mix has moved on', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (url.includes('/drafts')
+      ? new Response(JSON.stringify({ drafts: [] }), { status: 200 })
+      : new Response(JSON.stringify({ detail: 'This mix has just changed, so nothing was done.', code: 'mix_changed' }), { status: 409 }))));
+    const refreshMix = vi.fn();
+    render(<Harness start={songs(seam('ready', 'a'))} refreshMix={refreshMix} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Song 2' }));
+    await waitFor(() => expect(refreshMix).toHaveBeenCalled());
+    expect(screen.getByRole('button', { name: 'Remove Song 2' })).toBeInTheDocument();
+  });
+});
+
+describe('saving as a file', () => {
+  const open = async (start = songs(seam('ready', 'a'))) => {
+    render(<Harness start={start} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Download audio' }));
+  };
+
+  it('says exactly which mix, and what it’s waiting on', async () => {
+    fakeBackend({});
+    await open(songs(seam('ready', 'a'), seam('none', 'b')));
+    expect(screen.getByRole('dialog', { name: 'Save as an audio file' })).toHaveTextContent('Test mix');
+    expect(screen.getByText(/1 of 2 transitions ready/)).toBeInTheDocument();
+    expect(screen.getByText(/Into Song 3/)).toBeInTheDocument();
+    expect(screen.getByText(/original songs aren’t touched/)).toBeInTheDocument();
+  });
+
+  it('only offers the file once it really exists', async () => {
+    const calls = fakeBackend({
+      'POST /mix/render': { mix: songs(seam('ready', 'a')), name: 'Test mix', can_undo: false },
+      'POST /mix/export': { name: 'mix.flac', seconds: 300 },
+    });
+    await open();
+    expect(screen.queryByRole('link', { name: /download/ })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Save it' }));
+    expect(await screen.findByRole('link', { name: 'download mix.flac' })).toHaveAttribute('href', '/api/exports/mix.flac');
+    expect(calls.some((call) => call.path === '/mix/export')).toBe(true);
+  });
+
+  it('says so if what’s left can’t be made', async () => {
+    const stuck = songs(seam('failed', 'a', { error: 'No.' }));
+    fakeBackend({ 'POST /mix/render': { mix: stuck, name: 'Test mix', can_undo: false } });
+    await open(stuck);
+    await userEvent.click(screen.getByRole('button', { name: 'Save it' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('couldn’t be made');
   });
 });

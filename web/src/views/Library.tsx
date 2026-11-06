@@ -205,12 +205,20 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     notify(song.never ? `${song.title} can play again.` : `${song.title} won’t be picked for mixes.`);
     await refreshShown();
   };
+  const [building, setBuilding] = useState(false);
   const startFrom = async (song: LibrarySong) => {
-    const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`);
-    setMixData(data);
-    setView('Now');
-    void player.playFrom(0);
-    notify(`A mix starting from ${song.title}.`, true);
+    setBuilding(true);
+    try {
+      const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`);
+      setMixData(data);
+      setView('Now');
+      void player.playFrom(0);
+      notify(`A mix starting from ${song.title}.`, true);
+    } catch (error) {
+      notify((error as Error).message || 'Couldn’t build that mix. Try again.');
+    } finally {
+      setBuilding(false);
+    }
   };
   const left = Math.max(status.counts.music - status.counts.analysed, 0);
   const analyseAll = async () => {
@@ -296,7 +304,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <div className="song-actions">
                 {ready ? (
                   <>
-                    <Action title="Build a mix that starts here" working="Building your mix…" run={() => startFrom(song)}>Start a mix</Action>
+                    <Action title="Build a mix that starts here" working="Building your mix…" disabled={building} run={() => startFrom(song)}>Start a mix</Action>
                     <Action working="Adding…" disabled={already} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>
                     {now.phase !== 'idle' && (
                       <Action working="Adding…" disabled={already} run={() => add(song, now.position + 1)}>Play next</Action>
