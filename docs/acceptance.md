@@ -104,6 +104,8 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 
 ## Not built
 
+Temporal discovery progress (6 November): audio search now stores eight-bar ordered harmonic-sequence candidates across offsets and fixed transpositions, including exact source start times for audition. Five focused tests cover reordered-profile rejection, held/silent/invalid windows, transposition, offsets, persistence, and limits. A synthetic pair of 96-bar tracks took 0.022 seconds locally. Full-library precision, runtime, audition UI, melody-contour verification and stem consonance remain unverified; candidates are not automatic-set approvals.
+
 - Temporal melody, sample and rhythm discovery, and shortest-path destination search. The existing audio search only compares whole-track mean chroma; it now reports a coarse tonal-profile resemblance and explicitly does not claim a melody match. The app still does not surface these tonal candidates.
 - The blind listening test. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
 - The typographic word-to-word match cut. Fullscreen Stage mode and approximate current-word focus work, but the lyric highlight has not been validated against sung-word ground truth.

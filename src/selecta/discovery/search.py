@@ -60,6 +60,8 @@ def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1
     Averaging chroma across a whole track discards the order of notes. It can support a
     broad tonal resemblance, but cannot establish that two songs share a melody.
     """
+    if limit <= 0:
+        return 0
     found = 0
     for i, a in enumerate(songs):
         if a.chroma_bars is None:
@@ -71,6 +73,12 @@ def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1
                 continue
             sequence = harmonic_sequence(a.chroma_bars, b.chroma_bars)
             if sequence is not None:
+                a_bar, b_bar = sequence["a_bar"], sequence["b_bar"]
+                if a_bar >= len(a.bar_times) or b_bar >= len(b.bar_times):
+                    sequence = None
+            if sequence is not None:
+                sequence["a_at"] = float(a.bar_times[sequence["a_bar"]])
+                sequence["b_at"] = float(b.bar_times[sequence["b_bar"]])
                 _save(
                     conn,
                     a.id,
