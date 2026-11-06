@@ -274,8 +274,10 @@ def song_by_id(conn: sqlite3.Connection, song_id: int) -> sqlite3.Row | None:
 def find_songs(conn: sqlite3.Connection, text: str) -> Iterable[sqlite3.Row]:
     like = containing(text)
     return conn.execute(
-        "SELECT s.*, a.bpm, a.camelot, a.grid_confidence FROM songs s "
+        "SELECT s.*, COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, "
+        "a.grid_confidence FROM songs s "
         "LEFT JOIN analysis a ON a.song_id = s.id "
+        "LEFT JOIN song_overrides o ON o.song_id = s.id "
         f"WHERE s.is_music = 1 AND s.duplicate_of IS NULL AND {SEARCHING_NAMES} "
         "ORDER BY s.artist, s.title",
         (like, like),

@@ -250,6 +250,14 @@ def test_a_correction_leaves_what_was_measured_alone(client, conn):
     assert (song["override_bpm"], song["override_camelot"]) == (202.0, "9B")
 
 
+def test_every_song_list_shows_a_correction(client):
+    client.post("/api/songs/1/correct", json={"bpm": 202.0, "camelot": "9B"})
+    found = next(
+        s for s in client.get("/api/songs", params={"state": "all"}).json() if s["id"] == 1
+    )
+    assert (found["bpm"], found["camelot"]) == (202.0, "9B")
+
+
 def test_it_can_be_put_back(client):
     client.post("/api/songs/1/correct", json={"bpm": 202.0, "camelot": "9B"})
     client.post("/api/songs/1/correct", json={"clear": ["bpm", "camelot"]})

@@ -147,6 +147,8 @@ test('the end of the mix comes to a stop, and it can be played again', async ({ 
 
 test('moving around the app leaves the music alone, and the mini-player follows', async ({ page }) => {
   await play(page);
+  // the transition and the next song get scheduled ahead of time, once they've loaded
+  await expect.poll(() => soundsStarted(page), { timeout: 30_000 }).toBe(3);
   const started = await soundsStarted(page);
   const nav = page.getByRole('navigation', { name: 'Main' });
   for (const place of ['Library', 'Mixes', 'Discover', 'Workshop']) {

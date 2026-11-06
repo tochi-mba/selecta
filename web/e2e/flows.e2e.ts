@@ -15,7 +15,7 @@ test('a slow answer still gets an instant reaction on Start, and it can’t be p
     await new Promise((resolve) => setTimeout(resolve, 1500));
     await route.continue();
   });
-  const start = page.locator('.hero').getByRole('button', { name: 'Play', exact: true });
+  const start = page.locator('.hero button.primary');
   await start.click();
   await expect(start).toHaveAttribute('aria-busy', 'true', { timeout: 300 });
   await start.click({ force: true }).catch(() => {});
@@ -136,11 +136,14 @@ test('songs that can’t be mixed say why', async ({ page }) => {
   await page.goto('/library');
   await page.getByRole('group', { name: 'Show' }).getByRole('button', { name: /Set aside/ }).click();
   await expect(page.getByText('Episode 12')).toBeVisible();
-  await expect(page.getByText('Long and talky').first()).toBeVisible();
+  await page.getByRole('button', { name: /^Details for Episode 12/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Episode 12' }).getByText('Long and talky').first()).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.getByRole('textbox', { name: 'Search your library' }).fill('');
   await page.getByRole('group', { name: 'Show' }).getByRole('button', { name: /attention/i }).click();
   await expect(page.getByText('Broken File')).toBeVisible();
-  await expect(page.getByText('couldn’t analyse').first()).toBeVisible();
+  await page.getByRole('button', { name: /^Details for Broken File/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Broken File' }).getByText('couldn’t analyse').first()).toBeVisible();
 });
 
 test('requests: asking, then seeing it find a place, and cancelling for good', async ({ page, request }) => {
@@ -151,7 +154,7 @@ test('requests: asking, then seeing it find a place, and cancelling for good', a
   await drawer.getByRole('button', { name: /Last Call/ }).first().click();
   const yours = drawer.getByRole('list', { name: 'Your requests' });
   await expect(yours.getByText('Last Call')).toBeVisible();
-  await expect(yours.getByText(/Finding a place|Getting ready|Needs your choice|Coming up|Needs attention/).first()).toBeVisible();
+  await expect(drawer.getByText(/Waiting to play|Finding a place|Getting ready|Needs your choice|Coming up|Needs attention/).first()).toBeVisible();
 
   const asked = await (await request.get('/api/requests')).json();
   expect((asked.requests as { title: string }[]).filter((row) => row.title === 'Last Call')).toHaveLength(1);
@@ -167,6 +170,7 @@ test('requests: asking, then seeing it find a place, and cancelling for good', a
 
 test('keyboard alone gets from the top of the page to the content, and dialogs give focus back', async ({ page }) => {
   await page.goto('/library');
+  await expect(nav(page)).toBeVisible();
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Skip to the page' });
   await expect(skip).toBeFocused();

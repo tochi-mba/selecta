@@ -56,9 +56,11 @@ test('a cancelled request that’s answered late doesn’t come back', async ({ 
   const id = asked.id ?? asked.request?.id;
   await page.route('**/api/requests', async (route) => {
     if (route.request().method() === 'GET') {
-      const old = await route.fetch();
+      // an answer read now and delivered late, as a slow check would be
+      const fresh = await route.fetch();
+      const body = await fresh.text();
       await new Promise((resolve) => setTimeout(resolve, 2500));
-      await route.fulfill({ response: old });
+      await route.fulfill({ status: fresh.status(), contentType: 'application/json', body }).catch(() => {});
     } else {
       await route.continue();
     }
@@ -71,6 +73,7 @@ test('a cancelled request that’s answered late doesn’t come back', async ({ 
   await expect(drawer.getByRole('button', { name: 'Cancel request for 日本語の歌' })).toHaveCount(0);
   await page.waitForTimeout(7000);
   await expect(drawer.getByRole('button', { name: 'Cancel request for 日本語の歌' })).toHaveCount(0);
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
   await request.delete(`/api/requests/${id}`).catch(() => {});
 });
 
@@ -111,6 +114,10 @@ test('a correction made while the page is open shows up, and only touches its ow
   const keys = before.mix.slice(1).map((item: { seam: { state: { key: string } } }) => item.seam.state.key);
   const answer = await (await request.post('/api/songs/4/correct', { data: { camelot: '2B' } })).json();
   expect(answer.redone).toBeGreaterThanOrEqual(1);
+  // coming back to the page shows it, as it would after correcting a song in the Library
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await nav.getByRole('link', { name: 'Library', exact: true }).click();
+  await nav.getByRole('link', { name: 'Edit', exact: true }).click();
   await expect(page.getByText('2B').first()).toBeVisible({ timeout: 15_000 });
   const after = await (await request.get('/api/mix')).json();
   expect(after.mix[1].seam.state.key).toBe(keys[0]);

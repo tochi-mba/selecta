@@ -244,7 +244,6 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       <div className="library-find">
         <input
           className="wide"
-          autoFocus
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
           placeholder="Search by artist or title"

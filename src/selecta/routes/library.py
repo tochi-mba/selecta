@@ -198,10 +198,12 @@ def add_routes(app, ctx) -> None:
     def songs(q: str = "", state: str = "all", limit: int = 100) -> list[dict]:
         with connect() as conn:
             sql = (
-                "SELECT s.id,s.artist,s.title,s.genre,s.duration,s.is_music,a.bpm,a.camelot,"
+                "SELECT s.id,s.artist,s.title,s.genre,s.duration,s.is_music,"
+                "COALESCE(o.bpm,a.bpm) bpm,COALESCE(o.camelot,a.camelot) camelot,"
                 "a.energy,a.grid_confidence,l.status lyric_status,s.processing_priority "
                 "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
                 "LEFT JOIN lyrics l ON l.song_id=s.id "
+                "LEFT JOIN song_overrides o ON o.song_id=s.id "
                 f"WHERE {db.SEARCHING_NAMES} AND s.duplicate_of IS NULL"
             )
             params: list = [db.containing(q), db.containing(q)]
