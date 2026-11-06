@@ -36,7 +36,8 @@ export type MixItem = {
   bpm: number | null;
   key: string | null;
   locked: boolean;
-  seam: { settings: SeamSettings; state: SeamState } | null;
+  seam: { settings: SeamSettings; state: SeamState; too_soon?: boolean } | null;
+  from_request?: { kind: 'requested' | 'bridge'; for?: string | null };
 };
 
 export type Eta = { seconds: number; low: number; high: number; late?: boolean };
@@ -98,6 +99,8 @@ export type Status = {
   analysing: number[];
   mix_rendering: boolean;
   mixes_in_line?: number;
+  transitions_ready?: number;
+  new_songs?: { count: number; first: string | null; at: number } | null;
   eta?: {
     analysis: Eta & { songs: number; after_mix: boolean };
     line: Record<string, number>;
@@ -190,6 +193,34 @@ export type Storage = {
   total_bytes: number;
 };
 
+/** The button just pressed, so whatever it sets off can show on it, on every button there is. */
+let pressed: { button: Element; at: number } | null = null;
+const PRESS_WINDOW_MS = 150;
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('button') : null;
+    if (button) pressed = { button, at: performance.now() };
+  }, true);
+}
+
+function showBusy<T>(work: Promise<T>): Promise<T> {
+  const button = pressed && performance.now() - pressed.at < PRESS_WINDOW_MS ? pressed.button : null;
+  if (!button) return work;
+  const change = (by: number) => {
+    const count = Number(button.getAttribute('data-working') ?? 0) + by;
+    if (count > 0) {
+      button.setAttribute('data-working', String(count));
+      button.setAttribute('aria-busy', 'true');
+    } else {
+      button.removeAttribute('data-working');
+      button.removeAttribute('aria-busy');
+    }
+  };
+  change(1);
+  work.then(() => change(-1), () => change(-1));
+  return work;
+}
+
 async function send<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, init);
   if (!response.ok) {
@@ -207,10 +238,10 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
 export const get = <T,>(path: string) => send<T>(path);
 
 export const post = <T,>(path: string, body?: unknown) =>
-  send<T>(path, {
+  showBusy(send<T>(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body ?? {}),
-  });
+  }));
 
-export const del = <T,>(path: string) => send<T>(path, { method: 'DELETE' });
+export const del = <T,>(path: string) => showBusy(send<T>(path, { method: 'DELETE' }));

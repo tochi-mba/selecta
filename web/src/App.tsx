@@ -10,7 +10,7 @@ import { Now } from './views/Now';
 import { Start } from './views/Start';
 import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
-import { Requests } from './views/Requests';
+import { RequestsContext, RequestsPanel, useRequests } from './views/Requests';
 import type { Toast, Undo, View } from './views/shared';
 
 const OPEN_DRAFT = 'selecta.openDraft';
@@ -153,6 +153,17 @@ export function App() {
     void player.playFrom(from);
     setToast({ message: `Now playing ${next.name}. What was playing is kept in your drafts.`, undo: true, id: Date.now() });
   }, [closeDraft, player, setMixData]);
+  const requests = useRequests({ mix, player, onMix: setMixData }, notify);
+  const foundAt = useRef<number | null>(null);
+  useEffect(() => {
+    const found = status?.new_songs;
+    if (!found || found.at === foundAt.current) return;
+    const firstSeen = foundAt.current === null;
+    foundAt.current = found.at;
+    if (firstSeen && Date.now() / 1000 - found.at > 300) return;
+    const what = found.count === 1 ? `a new song, ${found.first}` : `${found.count} new songs`;
+    notify(`Found ${what} in your folder. Adding to your library and analysing.`);
+  }, [status?.new_songs, notify]);
   const [now, setNow] = useState<NowState>(player.state);
   useEffect(() => {
     player.onChange = setNow;
@@ -286,7 +297,7 @@ export function App() {
   };
   const shown: View = view === 'Now' && !mix.length ? 'Mixes' : view;
   return (
-    <>
+    <RequestsContext.Provider value={requests}>
       {!stage && (
         <header className="bar">
           <button className="brand" onClick={() => setView('Mixes')}>
@@ -313,9 +324,7 @@ export function App() {
       )}
       {shown === 'Mixes' && <Mixes {...shared} />}
       {shown === 'Now' && <Now {...shared} />}
-      <div className={shown === 'Now' && !stage ? 'page' : undefined}>
-        <Requests playback={{ mix, player, onMix: setMixData }} visible={shown === 'Now' && !stage} />
-      </div>
+      {shown === 'Now' && !stage && <div className="page"><RequestsPanel /></div>}
       {shown === 'Edit' && draftId === null && <Mix {...shared} />}
       {shown === 'Edit' && draftId !== null && !draftData && <main className="page" aria-busy="true" />}
       {shown === 'Edit' && draftId !== null && draftData && (
@@ -375,6 +384,6 @@ export function App() {
           </div>
         </div>
       )}
-    </>
+    </RequestsContext.Provider>
   );
 }

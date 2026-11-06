@@ -60,7 +60,11 @@ class Placement:
 
 
 def find_placement(
-    a: SongInfo, b: SongInfo, exit_bar: int | None = None, entry_bar: int | None = None
+    a: SongInfo,
+    b: SongInfo,
+    exit_bar: int | None = None,
+    entry_bar: int | None = None,
+    leave_after: float | None = None,
 ) -> Placement | None:
     """Where these two can overlap, longest first. Long overlaps are the ones the listener likes."""
     if abs(a.bpm / b.bpm - 1.0) > MAX_TEMPO_GAP or a.beats_per_bar != b.beats_per_bar:
@@ -74,6 +78,8 @@ def find_placement(
         beats = bars * a.beats_per_bar
         for exit_cue in exits:
             if exit_cue.bar < bars // 2:
+                continue
+            if leave_after is not None and a.bar_time(exit_cue.bar - bars // 2) < leave_after:
                 continue
             if a.beat_index_of_bar(exit_cue.bar - bars // 2) + beats >= len(a.beats):
                 continue

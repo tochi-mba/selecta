@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { get, MixData, post, SongDetail } from '../api';
 import { etaWords, clock } from '../lib';
+import { RequestTag } from './Requests';
 import { ViewProps } from './shared';
 
 const SECTION_WORDS: Record<string, string> = {
@@ -365,6 +366,7 @@ export function Now(props: ViewProps) {
     <main className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''}`}>
       <p className="eyebrow">{eyebrow}</p>
       <h1 className="display">{item?.title}</h1>
+      {item && <RequestTag item={item} />}
       <p className="artist">{item?.artist}</p>
 
       <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />
@@ -427,6 +429,7 @@ export function Now(props: ViewProps) {
               <button className="next-song" onClick={() => setView('Edit')}>
                 <b>{next.title}</b>
                 <span>{next.artist}</span>
+                <RequestTag item={next} />
                 <small>{seamWords}</small>
               </button>
               <div className="chips steer" role="group" aria-label="Change what plays next">

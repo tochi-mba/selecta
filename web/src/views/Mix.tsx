@@ -3,6 +3,7 @@ import { del, DraftList, get, MixData, MixItem, post, SeamOptions, SeamSettings,
 import { analysingWords, askedToAnalyse, clock, etaRangeWords, etaWords, length, nth, runningTime, seamStatusWords, triedWords } from '../lib';
 import { RenameDraft } from './Drafts';
 import { MixScope, useMixPath } from './mixScope';
+import { ComingSongs, RequestsPanel, RequestTag, useRequestComing } from './Requests';
 import { Studio } from './Studio';
 import { Undo, ViewProps } from './shared';
 
@@ -281,6 +282,14 @@ function SeamEditor(props: {
   );
 }
 
+/** A seam a request is about to replace isn't shown, because the request's own transitions are
+ * there in its place. If the request is cancelled, this comes back. */
+function SeamUnlessReplaced(props: Parameters<typeof SeamRow>[0] & { inDraft: boolean }) {
+  const { inDraft, ...row } = props;
+  const replaced = useRequestComing(row.previous.song_id);
+  return !inDraft && replaced ? null : <SeamRow {...row} />;
+}
+
 function SeamRow(props: {
   item: MixItem;
   previous: MixItem;
@@ -315,6 +324,9 @@ function SeamRow(props: {
 
   return (
     <li className={`seam ${open ? 'open' : ''}`}>
+      {item.seam?.too_soon && (
+        <p className="warn seam-too-soon">This leaves {previous.title} before the way into it has finished, so it would be missed. Pick a later place to leave it, or an earlier place to bring it in.</p>
+      )}
       <div className="seam-line">
         <button className="seam-name" onClick={onToggle} aria-expanded={open}>
           <b>{label}</b>
@@ -394,7 +406,7 @@ function SongLine(props: {
   };
   return (
     <li
-      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''}`}
+      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${item.from_request ? 'requested' : ''}`}
       draggable
       onDragStart={(event) => event.dataTransfer.setData('text/plain', String(item.position))}
       onDragOver={(event) => {
@@ -413,6 +425,7 @@ function SongLine(props: {
       <div className="song-name">
         <b>{item.title}</b>
         <span>{item.artist}</span>
+        <RequestTag item={item} />
       </div>
       <small className="facts">
         {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
@@ -674,6 +687,7 @@ export function Mix(props: ViewProps) {
         </div>
       </header>
       {renameForm}
+      {!inDraft && <RequestsPanel />}
       {naming && (
         <form className="row" onSubmit={saveMix}>
           <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
@@ -692,7 +706,8 @@ export function Mix(props: ViewProps) {
         {mix.map((item, index) => (
           <FragmentRow key={`${item.song_id}-${index}`}>
             {index > 0 && (
-              <SeamRow
+              <SeamUnlessReplaced
+                inDraft={inDraft}
                 item={item}
                 previous={mix[index - 1]}
                 refreshMix={refreshMix}
@@ -728,6 +743,7 @@ export function Mix(props: ViewProps) {
                 }
               }}
             />
+            {!inDraft && <ComingSongs afterSongId={item.song_id} />}
             {adding === index + 1 ? (
               <li className="adder-row">
                 <Adder

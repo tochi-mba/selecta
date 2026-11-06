@@ -8,10 +8,14 @@ from selecta.requests import (
     PlacementChanged,
     Slot,
     add_request,
+    bridge_choice,
     cancel_request,
+    choose_bridge,
+    custom_seam,
     find_slot,
     fit_requests,
     insert_ready,
+    marks_for,
     read_requests,
 )
 
@@ -147,9 +151,8 @@ def test_evicted_request_audio_can_be_prepared_again_without_erasing_failures(tm
     assert store.status(request.key)["status"] == "failed"
 
 
-def test_bridge_approval_survives_restart_but_cannot_transfer_to_a_changed_route(tmp_path):
-    from selecta.requests import approve_bridge, bridge_approved
-
+def test_an_answer_about_a_bridge_stands_however_the_route_changes(tmp_path):
+    """Being asked again every time the mix moved on is what made this unusable."""
     path = tmp_path / "approval.sqlite"
     conn = db.connect(path)
     conn.execute(
@@ -158,12 +161,89 @@ def test_bridge_approval_survives_restart_but_cannot_transfer_to_a_changed_route
     )
     conn.commit()
     request = add_request(conn, 1)
-    assert approve_bridge(conn, request, "exact-route-and-mix-snapshot")
+    assert bridge_choice(conn, request) is None, "not asked yet"
+    assert choose_bridge(conn, request, True)
     conn.close()
     conn = db.connect(path)
-    assert bridge_approved(conn, request, "exact-route-and-mix-snapshot")
-    assert not bridge_approved(conn, request, "different-route-or-mix")
+    assert bridge_choice(conn, request) is True, "and it's still yes after a restart"
+    assert choose_bridge(conn, request, False)
+    assert bridge_choice(conn, request) is False, "and a person can change their mind"
     cancel_request(conn, request)
-    assert not bridge_approved(conn, request, "exact-route-and-mix-snapshot")
-    assert not approve_bridge(conn, request, "exact-route-and-mix-snapshot")
+    assert bridge_choice(conn, request) is None
+    assert not choose_bridge(conn, request, True), "a cancelled request can't be answered"
     conn.close()
+
+
+def test_leaving_a_seam_on_auto_is_not_choosing_it():
+    assert not custom_seam(None)
+    assert not custom_seam("{}")
+    assert not custom_seam('{"move": "auto"}')
+    assert not custom_seam('{"move": "auto", "soft": false}'), "what the page saves for Auto"
+    assert not custom_seam('{"move": "echo_out", "soft": true}'), "planned, not chosen"
+    assert not custom_seam('{"move": "echo_out", "from_request": true}'), "a request added it"
+    assert not custom_seam("{not json")
+    assert custom_seam('{"move": "echo_out"}')
+    assert custom_seam('{"move": "echo_out", "soft": false}')
+
+
+# ---- marks on songs a request added
+
+
+def _mix_db(tmp_path, *songs):
+    conn = db.connect(tmp_path / "marks.sqlite")
+    for song in songs:
+        conn.execute(
+            "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
+            "VALUES(?,?,?,?,?,?,?,?,1)",
+            (song, f"{song}.flac", "f", 1, 1.0, 200.0, f"Artist {song}", f"Song {song}"),
+        )
+    conn.commit()
+    return conn
+
+
+def _insert(conn, request_song, slot, order=(1, 2)):
+    current = [(song, None, 0) for song in order]
+    conn.executemany(
+        "INSERT INTO queue(position,song_id,seam,locked) VALUES(?,?,?,?)",
+        [(i, *item) for i, item in enumerate(current)],
+    )
+    conn.commit()
+    request = add_request(conn, request_song)
+    seams = [{"move": "bass_swap_blend"}] * (len(slot.songs) + int(slot.position < len(order)))
+    insert_ready(conn, request, slot, current, 0, seams, approved_bridges=slot.bridges)
+
+
+def test_a_song_a_request_added_is_marked(tmp_path):
+    conn = _mix_db(tmp_path, 1, 2, 9)
+    _insert(conn, 9, Slot(1, (9,)))
+    assert marks_for(conn, [1, 9, 2]) == {9: {"kind": "requested"}}
+
+
+def test_a_bridge_says_which_request_it_leads_to(tmp_path):
+    conn = _mix_db(tmp_path, 1, 2, 8, 9)
+    _insert(conn, 9, Slot(1, (8, 9), (8,)))
+    marks = marks_for(conn, [1, 8, 9, 2])
+    assert marks[9] == {"kind": "requested"}
+    assert marks[8] == {"kind": "bridge", "for": "Song 9"}
+
+
+def test_nothing_is_marked_before_it_has_joined(tmp_path):
+    conn = _mix_db(tmp_path, 1, 2, 9)
+    add_request(conn, 9)
+    assert marks_for(conn, [1, 2]) == {}
+
+
+def test_the_mark_stays_while_the_song_stays(tmp_path):
+    conn = _mix_db(tmp_path, 1, 2, 9)
+    _insert(conn, 9, Slot(1, (9,)))
+    assert marks_for(conn, [9, 1, 2]) == {9: {"kind": "requested"}}, "moved, and still marked"
+    assert marks_for(conn, [9, 1, 2]) == {9: {"kind": "requested"}}, "reading changes nothing"
+
+
+def test_a_song_that_leaves_loses_its_mark_for_good(tmp_path):
+    """The same song in a later mix wasn't requested, it was just chosen."""
+    conn = _mix_db(tmp_path, 1, 2, 9)
+    _insert(conn, 9, Slot(1, (9,)))
+    assert marks_for(conn, [1, 2]) == {}
+    assert marks_for(conn, [1, 2, 9]) == {}
+

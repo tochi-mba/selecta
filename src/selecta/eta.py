@@ -457,10 +457,9 @@ def analysis_left(
     return {**total.as_dict(), "songs": row["songs"], "after_mix": waits_for_mix}
 
 
-def analysis_line_left(
-    conn: sqlite3.Connection, line: list[int], ahead: list[Estimate] | None = None
-) -> dict[int, int]:
-    """For each song waiting to be analysed by request, how long until it's ready."""
+def analysis_line_left(conn: sqlite3.Connection, line: list[int]) -> dict[int, int]:
+    """For each song waiting to be analysed by request, how long until it's ready. Songs asked for
+    by name don't pause for rendering, so there's no wait for that to add."""
     if not line:
         return {}
     rates = analysis_rates(conn)
@@ -473,9 +472,7 @@ def analysis_line_left(
     }
     audio = 0.0
     ready_in = {}
-    waiting = combine(ahead or []).seconds
     for count, song in enumerate(line, 1):
         audio += float(durations.get(song) or 0.0)
-        own = analysis_time(audio, rates, loaded=False, songs=count).seconds
-        ready_in[song] = round(own + waiting)
+        ready_in[song] = round(analysis_time(audio, rates, loaded=False, songs=count).seconds)
     return ready_in

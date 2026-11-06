@@ -287,18 +287,21 @@ def ride_lengths(a: SongInfo, end: float) -> tuple[int, ...]:
     return tuple(fit) or (8, 4)
 
 
-def ride_lines(a: SongInfo, b: SongInfo) -> tuple[Line, Line] | None:
+def ride_lines(
+    a: SongInfo, b: SongInfo, leave_after: float | None = None
+) -> tuple[Line, Line] | None:
     """A line for A's voice to finish on, and the line B's voice should start with.
 
     A has to be singing through the ride, or there's no voice to carry over B's band. B starts best
     on the first line of a chorus, which then lands as A's voice ends.
     """
-    out, into = ride_exit_line(a), ride_entry_line(b)
+    out, into = ride_exit_line(a, leave_after), ride_entry_line(b)
     return (out, into) if out is not None and into is not None else None
 
 
-def ride_exit_line(a: SongInfo) -> Line | None:
-    """The line A's voice is best off finishing a ride on, if it has one."""
+def ride_exit_line(a: SongInfo, leave_after: float | None = None) -> Line | None:
+    """The line A's voice is best off finishing a ride on, if it has one, with the ride starting
+    no sooner than `leave_after`."""
     if not a.lines:
         return None
     ride = RIDE_BARS * a.period * a.beats_per_bar
@@ -306,6 +309,8 @@ def ride_exit_line(a: SongInfo) -> Line | None:
     best_a: tuple[float, Line] | None = None
     for line in a.lines:
         if line.start < 60.0 or a.duration - line.end < 15.0 or len(line.words) < 2:
+            continue
+        if leave_after is not None and line.end - ride < leave_after:
             continue
         sung = a.vocal_seconds(line.end - ride, line.end) / ride
         if sung < MIN_RIDE_SINGING:

@@ -9,7 +9,9 @@ mix.
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import soundfile as sf
@@ -68,10 +70,79 @@ def _rows(conn: sqlite3.Connection, draft: int | None = None) -> list:
     ]
 
 
+SHORTEST_STAY = 30.0
+SHORTEST_STAY_LATE_ON = 8.0
+LAST_EXIT = 12.0
+NO_NEED_YET = 45.0  # nothing leaves a song this early, so a seam yet to be made needn't be told
+
+
+def with_room(
+    settings: dict,
+    a: int,
+    b: int,
+    entered: float | None,
+    duration: float | None,
+    state_of: Callable[[str], dict],
+) -> dict:
+    """The seam out of song A, given where the seam into A lands. Each seam finds its own way out of
+    a song without knowing how the song was entered, so left alone one can start before the other
+    has finished, and the song would go right past it. A seam is left as it is if it fits, and asked
+    to go later if it doesn't. A place someone chose stays theirs, so that one's only flagged."""
+    if entered is None or settings.get("exit_bar") is not None or settings.get("shape"):
+        return settings
+    wanted = entered + SHORTEST_STAY
+    if duration is not None and wanted > duration - LAST_EXIT:
+        wanted = entered + SHORTEST_STAY_LATE_ON
+        if wanted > duration - LAST_EXIT:
+            return settings  # entered right at its end, which nothing later can put right
+    if (settings.get("leave_after") or 0.0) >= wanted - 1.0:
+        return settings
+    state = state_of(request_from(a, b, settings).key)
+    status = state.get("status")
+    if status == "rendering":
+        return settings  # it may well fit, and this comes back round when it's finished
+    if status == "ready" and (state.get("a_source_start") or 0.0) >= wanted:
+        return settings
+    if status != "ready" and wanted <= NO_NEED_YET:
+        return settings
+    return {**settings, "leave_after": float(math.ceil(wanted))}
+
+
+def chain_with_room(
+    chain: Sequence[int],
+    seams: Sequence[dict],
+    entered: float | None,
+    duration_of: Callable[[int], float | None],
+    state_of: Callable[[str], dict],
+) -> list[dict]:
+    """The same, along a run of songs, each seam going by where the one before it lands."""
+    settled: list[dict] = []
+    for a, b, seam in zip(chain, chain[1:], seams, strict=False):
+        settings = with_room(seam, a, b, entered, duration_of(a), state_of)
+        settled.append(settings)
+        state = state_of(request_from(a, b, settings).key)
+        entered = state.get("b_source_end") if state.get("status") == "ready" else None
+    return settled
+
+
+def settle_chain(conn: sqlite3.Connection, store: SeamStore, draft: int | None = None) -> None:
+    """Make sure every song in a mix gets played. Everything that reads a mix asks for this, so it
+    doesn't matter what changed: an edit, a request joining, or a seam finishing."""
+    rows = _rows(conn, draft)
+    durations = {row["song_id"]: row["duration"] for row in rows}
+    seams = [json.loads(row["seam"] or "{}") for row in rows[1:]]
+    chain = [row["song_id"] for row in rows]
+    settled = chain_with_room(chain, seams, None, durations.get, store.status)
+    for index, (before, after) in enumerate(zip(seams, settled, strict=True), start=1):
+        if before is not after:
+            set_seam(conn, index, after, draft)
+
+
 def read_mix(conn: sqlite3.Connection, store: SeamStore, draft: int | None = None) -> list[dict]:
     """The songs in order. Each one after the first carries the seam that leads into it."""
     rows = _rows(conn, draft)
     mix: list[dict] = []
+    entered: float | None = 0.0
     for index, row in enumerate(rows):
         item = {
             "position": index,
@@ -87,7 +158,13 @@ def read_mix(conn: sqlite3.Connection, store: SeamStore, draft: int | None = Non
         if index:
             settings = json.loads(row["seam"] or "{}")
             request = request_from(rows[index - 1]["song_id"], row["song_id"], settings)
-            item["seam"] = {"settings": settings, "state": store.status(request.key)}
+            state = store.status(request.key)
+            item["seam"] = {"settings": settings, "state": state}
+            ready = state.get("status") == "ready"
+            leaves = state.get("a_source_start")
+            if ready and entered is not None and leaves is not None and leaves < entered:
+                item["seam"]["too_soon"] = True
+            entered = state.get("b_source_end") if ready else None
         mix.append(item)
     return mix
 

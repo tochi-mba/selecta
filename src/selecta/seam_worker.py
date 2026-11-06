@@ -39,6 +39,7 @@ def _mix_seams(store: SeamStore, settings):
         ]
 
     def next_seam() -> SeamRequest | None:
+        mix.settle_chain(conn, store)
         waiting = next((request for request, status in pairs() if status == "none"), None)
         # a mix bigger than the limit would delete its own early seams to make room for later ones
         limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
@@ -80,6 +81,7 @@ def _line_seams(store: SeamStore, settings):
     def next_seam() -> tuple[int, SeamRequest] | None:
         limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
         for draft in mix.line_order(conn):
+            mix.settle_chain(conn, store, draft)
             for request, status in pairs(draft):
                 if status == "none":
                     # the same limit as the mix: it mustn't delete its own early seams to go on
@@ -106,20 +108,60 @@ def _line_seams(store: SeamStore, settings):
 
 
 def _preparer(store: SeamStore, settings):
-    """Spare time goes on the best word links, reloading now and then as more songs are analysed."""
+    """Spare time goes on the best word links, then the best transitions in the whole library, at
+    the lowest priority there is, giving way to anything else the moment it's asked for. It looks
+    again now and then, as more songs are analysed."""
     from selecta.discovery.search import lyric_links
-    from selecta.planner.prepare import best_links, next_to_prepare
+    from selecta.planner.prepare import (
+        USE_OF_STORAGE,
+        best_links,
+        best_transitions,
+        next_to_prepare,
+        next_transition,
+    )
     from selecta.planner.reel import load_library
+    from selecta.request_planner import PairBook
 
-    state = {"at": 0.0, "ranked": None}
+    state = {"at": 0.0, "ranked": None, "pairs": [], "library": {}, "stems": "never"}
+    # the app keeps its own, and two writers to one file would only lose each other's work
+    book = PairBook(settings.home / "pair-book-spare.json")
+
+    def reload() -> None:
+        conn = db.connect(settings.db_path)
+        songs = load_library(conn, settings)
+        never = set(db.preference(conn, "never_play", []))
+        allowed = {
+            row[0]
+            for row in conn.execute(
+                "SELECT id FROM songs WHERE is_music=1 AND duplicate_of IS NULL"
+            )
+        } - never
+        state["ranked"] = best_links(lyric_links(conn), songs)
+        state["pairs"] = best_transitions(songs, store.memory, book, allowed)
+        state["library"] = {song.id: song for song in songs}
+        state["stems"] = db.preference(conn, "steering", {}).get("stems", "sometimes")
+        state["at"] = time.monotonic()
+        conn.close()
 
     def next_job() -> SeamRequest | None:
         if state["ranked"] is None or time.monotonic() - state["at"] > RELOAD_EVERY_SECONDS:
-            conn = db.connect(settings.db_path)
-            state["ranked"] = best_links(lyric_links(conn), load_library(conn, settings))
-            state["at"] = time.monotonic()
-            conn.close()
-        return next_to_prepare(*state["ranked"], store.status, store.memory)
+            reload()
+        link = next_to_prepare(*state["ranked"], store.status, store.memory)
+        if link is not None:
+            return link
+        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        if cache_bytes(settings) >= USE_OF_STORAGE * limit:
+            return None
+        request = next_transition(
+            state["pairs"],
+            state["library"],
+            book,
+            store.status_reader(),
+            store.memory,
+            state["stems"],
+        )
+        book.save()
+        return request
 
     return next_job
 
@@ -128,7 +170,14 @@ def _read_requests(store: SeamStore, app_input: TextIO) -> None:
     for line in app_input:
         if line.strip():
             message = json.loads(line)
-            store.ask(SeamRequest(**message["request"]), urgent=message["urgent"])
+            if "drop" in message:
+                store.drop_requests(message["drop"])
+                continue
+            store.ask(
+                SeamRequest(**message["request"]),
+                urgent=message["urgent"],
+                after=message.get("after"),
+            )
     kill_tree_of_children()
     os._exit(0)
 

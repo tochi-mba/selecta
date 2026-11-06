@@ -59,6 +59,7 @@ export class SetPlayer {
   private planned: Planned | null = null;
   private layers = new Set<Playing>();
   private seamTailEnd: number | null = null;
+  private passed = new Set<string>();
   private ending = false;
   private playGeneration = 0;
   private watchedState: SeamState | null = null;
@@ -399,6 +400,7 @@ export class SetPlayer {
       return;
     }
     if (seam) this.requestSeam(nextItem, seam);
+    this.watchForPassing(nextItem, seam, time, inSeam);
     if (!this.planned && seam?.status === 'ready') {
       this.loadSong(nextItem.song_id).catch(() => {});
       void this.plan(current, nextItem, seam);
@@ -413,6 +415,21 @@ export class SetPlayer {
       this.ending = true;
       void this.fadeInto(nextItem.position);
     }
+  }
+
+  /** A seek or a resume can land past the way out, which can't be used from here. Rather than run
+   * on to the end and fade, ask for another way out further on. */
+  private watchForPassing(nextItem: MixItem, seam: SeamState | undefined, time: number, inSeam: boolean) {
+    if (seam?.status !== 'ready' || seam.a_source_start === undefined || time <= seam.a_source_start + 0.5) return;
+    if (this.planned || inSeam || this.ending || this.state.phase !== 'playing' || this.passed.has(seam.key)) return;
+    this.passed.add(seam.key);
+    post<{ moved: boolean }>(`/mix/${nextItem.position}/leave-later`, { after: time })
+      .then(({ moved }) => {
+        if (!moved) return;
+        this.update({ notice: 'That transition has gone by, so Selecta is making another further on.' });
+        this.refreshMix();
+      })
+      .catch(() => {});
   }
 
   private async plan(current: Current, nextItem: MixItem, seam: SeamState) {

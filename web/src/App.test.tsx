@@ -75,6 +75,40 @@ describe('keyboard shortcuts', () => {
   });
 });
 
+describe('requests across the app', () => {
+  const list = { drafts: [], current: { name: 'Test mix', songs: 2, left: 0, eta: { seconds: 0, low: 0, high: 0 } }, out_of_room: false };
+
+  it('are on the Edit page, and a song a request added is marked there', async () => {
+    const mix = songs(seam('ready', 'a'));
+    mix[1].from_request = { kind: 'requested' };
+    fakeBackend({
+      'GET /status': status(),
+      'GET /mix': { mix, name: 'Test mix', can_undo: false },
+      'GET /vibes': [],
+      'GET /drafts': list,
+      'GET /requests': { requests: [{ id: 7, song_id: 9, title: 'Wanted', artist: 'Artist', status: 'waiting', available: 1 }] },
+    });
+    render(<App />);
+    fireEvent.click((await navigation()).getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByText('Wanted')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Song requests' })).toBeInTheDocument();
+    expect(screen.getByText('Requested')).toBeInTheDocument();
+  });
+
+  it('aren’t on pages they’d get in the way of', async () => {
+    fakeBackend({
+      'GET /status': status(),
+      'GET /mix': { mix: songs(seam('ready', 'a')), name: 'Test mix', can_undo: false },
+      'GET /vibes': [],
+      'GET /drafts': list,
+      'GET /requests': { requests: [] },
+    });
+    render(<App />);
+    await screen.findByText('Pick a feeling');
+    expect(screen.queryByRole('region', { name: 'Song requests' })).toBeNull();
+  });
+});
+
 describe('an open draft', () => {
   const list = (drafts: { id: number; name: string }[]) => ({
     drafts: drafts.map((draft) => ({ songs: 2, seconds: 400, seams: 1, ready: 0, failed: 0, waiting: 1, rendering: false, place: null, eta: null, to_render: 60, missing: 0, ...draft })),

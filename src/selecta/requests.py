@@ -15,10 +15,17 @@ class PlacementChanged(ValueError):
 
 
 def custom_seam(raw: str | None) -> bool:
+    """Did a person choose this transition, so a request shouldn't replace it? Leaving it on Auto
+    isn't choosing, whatever else is saved with it, and neither is a seam a request added."""
     if not raw:
         return False
-    settings = json.loads(raw)
-    return bool(settings and settings != {"move": "auto"} and not settings.get("soft"))
+    try:
+        settings = json.loads(raw)
+    except ValueError:
+        return False
+    if not settings or settings.get("soft") or settings.get("from_request"):
+        return False
+    return settings.get("move", "auto") != "auto"
 
 
 def initialise(conn: sqlite3.Connection) -> None:
@@ -33,9 +40,21 @@ def initialise(conn: sqlite3.Connection) -> None:
     conn.execute("""CREATE TABLE IF NOT EXISTS request_bridge_approvals (
         request_id INTEGER PRIMARY KEY, signature TEXT NOT NULL
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS request_marks (
+        song_id INTEGER PRIMARY KEY, kind TEXT NOT NULL, for_song INTEGER
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS request_routes (
+        request_id INTEGER PRIMARY KEY, songs TEXT NOT NULL
+    )""")
 
 
-def approve_bridge(conn: sqlite3.Connection, request_id: int, signature: str) -> bool:
+def choose_bridge(
+    conn: sqlite3.Connection, request_id: int, allow: bool, songs: Sequence[int] | None = None
+) -> bool:
+    """Say whether this request may use an extra song to get into the mix. It's a yes or no for the
+    request, because the spot can change as the mix moves on, and being asked again each time isn't
+    what anyone who answered wants. Naming the songs holds it to those: nobody who agreed to one
+    bridge should hear a different one join without being asked."""
     initialise(conn)
     with conn:
         waiting = conn.execute(
@@ -45,21 +64,57 @@ def approve_bridge(conn: sqlite3.Connection, request_id: int, signature: str) ->
             return False
         conn.execute(
             "INSERT OR REPLACE INTO request_bridge_approvals VALUES(?,?)",
-            (request_id, signature),
+            (request_id, "yes" if allow else "no"),
         )
+        conn.execute("DELETE FROM request_routes WHERE request_id=?", (request_id,))
+        if allow and songs:
+            conn.execute(
+                "INSERT INTO request_routes VALUES(?,?)", (request_id, json.dumps(list(songs)))
+            )
     return True
 
 
-def bridge_approved(conn: sqlite3.Connection, request_id: int, signature: str) -> bool:
+def chosen_route(conn: sqlite3.Connection, request_id: int) -> list[int] | None:
+    """The exact songs someone agreed to for this request, in playing order, if they did."""
     initialise(conn)
-    return (
+    row = conn.execute(
+        "SELECT songs FROM request_routes WHERE request_id=?", (request_id,)
+    ).fetchone()
+    return json.loads(row[0]) if row else None
+
+
+def songs_in_chosen_routes(conn: sqlite3.Connection, leaving_out: int | None = None) -> set[int]:
+    """Every song someone has agreed to use, for any request still waiting."""
+    initialise(conn)
+    rows = conn.execute(
+        "SELECT r.request_id,r.songs FROM request_routes r JOIN song_requests q "
+        "ON q.id=r.request_id WHERE q.status='waiting'"
+    ).fetchall()
+    return {
+        song for row in rows if row[0] != leaving_out for song in json.loads(row[1])
+    }
+
+
+def bridge_choice(conn: sqlite3.Connection, request_id: int) -> bool | None:
+    """Yes, no, or not asked yet. Anything but a no from before counts as a yes."""
+    initialise(conn)
+    row = conn.execute(
+        "SELECT a.signature FROM request_bridge_approvals a JOIN song_requests r "
+        "ON r.id=a.request_id WHERE a.request_id=? AND r.status='waiting'",
+        (request_id,),
+    ).fetchone()
+    return None if row is None else row[0] != "no"
+
+
+def mark_added(conn: sqlite3.Connection, request_id: int, song_id: int) -> None:
+    """A person put a requested song in the mix themselves, so it's no longer waiting."""
+    initialise(conn)
+    with conn:
+        conn.execute("UPDATE song_requests SET status='scheduled' WHERE id=?", (request_id,))
         conn.execute(
-            "SELECT 1 FROM request_bridge_approvals a JOIN song_requests r ON r.id=a.request_id "
-            "WHERE a.request_id=? AND a.signature=? AND r.status='waiting'",
-            (request_id, signature),
-        ).fetchone()
-        is not None
-    )
+            "INSERT OR REPLACE INTO request_marks(song_id,kind,for_song) VALUES(?,?,NULL)",
+            (song_id, "requested"),
+        )
 
 
 def add_request(conn: sqlite3.Connection, song_id: int) -> int:
@@ -68,6 +123,11 @@ def add_request(conn: sqlite3.Connection, song_id: int) -> int:
     if row is None or not row[0] or row[1] is not None:
         raise ValueError("Choose a music track that is still in your library")
     initialise(conn)
+    waiting_itself = conn.execute(
+        "SELECT 1 FROM song_requests WHERE song_id=? AND status='waiting'", (song_id,)
+    ).fetchone()
+    if not waiting_itself and song_id in songs_in_chosen_routes(conn):
+        raise ValueError("That song is already on its way as a bridge, so it’s coming anyway.")
     with conn:
         conn.execute("INSERT OR IGNORE INTO song_requests(song_id) VALUES(?)", (song_id,))
         return conn.execute(
@@ -96,6 +156,27 @@ def read_requests(conn: sqlite3.Connection) -> list[dict]:
         WHERE r.status='waiting' ORDER BY r.id""")
     names = [column[0] for column in rows.description]
     return [dict(zip(names, row, strict=True)) for row in rows]
+
+
+def marks_for(conn: sqlite3.Connection, song_ids: Sequence[int]) -> dict[int, dict]:
+    """Which songs in the current mix a request put there. A mark belongs to that song being in the
+    mix, so it goes when the song leaves, and the same song in a later mix isn't called a request.
+    It's kept by song, so it survives the song being moved or its seam being changed."""
+    initialise(conn)
+    rows = conn.execute(
+        "SELECT m.song_id,m.kind,m.for_song,s.title FROM request_marks m "
+        "LEFT JOIN songs s ON s.id=m.for_song"
+    ).fetchall()
+    present = set(song_ids)
+    gone = [row[0] for row in rows if row[0] not in present]
+    if gone:
+        with conn:
+            conn.executemany("DELETE FROM request_marks WHERE song_id=?", [(s,) for s in gone])
+    return {
+        row[0]: {"kind": row[1], "for": row[3]} if row[1] == "bridge" else {"kind": row[1]}
+        for row in rows
+        if row[0] in present
+    }
 
 
 @dataclass(frozen=True)
@@ -181,10 +262,34 @@ def insert_ready(
             [(i, *item) for i, item in enumerate(current[:position] + incoming + tail)],
         )
         conn.execute("UPDATE song_requests SET status='scheduled' WHERE id=?", (request_id,))
+        conn.execute(
+            "INSERT OR REPLACE INTO request_marks(song_id,kind,for_song) VALUES(?,?,NULL)",
+            (request[0], "requested"),
+        )
+        conn.executemany(
+            "INSERT OR REPLACE INTO request_marks(song_id,kind,for_song) VALUES(?,?,?)",
+            [(bridge, "bridge", request[0]) for bridge in slot.bridges],
+        )
         conn.commit()
     except BaseException:
         conn.rollback()
         raise
+
+
+def open_spots(
+    order: Sequence[int],
+    protected_through: int,
+    *,
+    locked: Iterable[int] = (),
+    custom_seams: Iterable[int] = (),
+    taken: Iterable[int] = (),
+) -> list[int]:
+    """Where a song could still go, earliest first. A lock holds its absolute position, so a song
+    has to go after the last locked one. A chosen transition can't be replaced by an automatic one,
+    and a spot another request is on its way into belongs to that request."""
+    first = max(protected_through + 1, max(locked, default=-1) + 1, 1)
+    closed = {*custom_seams, *taken}
+    return [position for position in range(first, len(order) + 1) if position not in closed]
 
 
 def find_slot(
@@ -196,24 +301,32 @@ def find_slot(
     locked: Iterable[int] = (),
     custom_seams: Iterable[int] = (),
     bridge_songs: Iterable[int] = (),
+    taken: Iterable[int] = (),
+    route: Sequence[int] | None = None,
 ) -> Slot | None:
     """Prefer the earliest direct fit; only then propose one extra bridge song.
 
-    A lock holds its absolute position, so insertion must follow the last locked song.
-    A custom incoming seam cannot be replaced by an automatic request. Both new edges must
-    fit, including the return to the planned set. A bridge is a proposal, never consent.
-    The caller supplies musical feasibility and must revalidate playback before committing.
+    Both new edges must fit, including the return to the planned set. A bridge is a proposal,
+    never consent. With `route`, it's those exact songs in that order or nothing. The caller
+    supplies musical feasibility and must revalidate playback before committing.
     """
     if not order or requested in order or protected_through < 0:
         return None
-    first = max(protected_through + 1, max(locked, default=-1) + 1, 1)
-    preserved = set(custom_seams)
-    positions = [position for position in range(first, len(order) + 1) if position not in preserved]
+    positions = open_spots(
+        order, protected_through, locked=locked, custom_seams=custom_seams, taken=taken
+    )
 
     def works(position: int, songs: tuple[int, ...]) -> bool:
         chain = (order[position - 1], *songs, *order[position : position + 1])
         return all(fits(a, b) for a, b in zip(chain, chain[1:], strict=False))
 
+    if route is not None:
+        songs = tuple(route)
+        extra = tuple(song for song in songs if song != requested)
+        for position in positions:
+            if works(position, songs):
+                return Slot(position, songs, extra)
+        return None
     for position in positions:
         if works(position, (requested,)):
             return Slot(position, (requested,))

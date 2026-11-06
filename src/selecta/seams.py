@@ -64,6 +64,7 @@ from selecta.studio import (
     LANES,
     SIDES,
     clean_shape,
+    find_placement,
     prepare_session,
     render_shape,
     why_no_studio,
@@ -80,8 +81,9 @@ RIDES_BEFORE_OTHERS = 0.35
 NEAR_MISS = {"beat alignment": 20.0, "level fall": 3.0, "entry level": 1.5}
 """How far past its limit each forgiving check can go, in its own units."""
 MIX_CHECK_SECONDS = 2.0
-# who goes first: what's about to be heard, the rest of the mix, other requests, then spare time
-URGENT, MIX, LINE, LATER, PREPARING = range(5)
+# who goes first: what's about to be heard, a song someone asked for once whatever plays before it
+# is done, the rest of the mix, mixes in the render line, other requests, then spare time
+URGENT, REQUEST, MIX, LINE, LATER, PREPARING = range(6)
 UNSURE_WORDS = "Selecta can’t tell exactly when these words are sung, so it won’t cut on them."
 PLACEMENTS_TO_TRY = 4
 
@@ -132,12 +134,16 @@ class SeamRequest:
     """Selecta chose this move, not the person, so if it doesn't pass, use whatever does."""
     shape: str | None = None
     """For the Seam Studio: which stems play when, as a person chose them."""
+    leave_after: float | None = None
+    """The seam into A lands this late, so this one can't start any sooner. Seconds into A."""
 
     @property
     def key(self) -> str:
         fields = asdict(self)
-        if fields["shape"] is None:
-            del fields["shape"]  # seams from before the studio keep their keys, and their audio
+        # seams from before these existed keep their keys, and their audio
+        for name in ("shape", "leave_after"):
+            if fields[name] is None:
+                del fields[name]
         text = json.dumps([fields, ANALYSIS_VERSION, RENDER_VERSION], sort_keys=True)
         return hashlib.sha256(text.encode()).hexdigest()[:20]
 
@@ -311,6 +317,18 @@ def tighten_beats(rendered: Rendered, cache: SongCache) -> tuple[Rendered, Audit
     return (second, second_report) if _closer(second_report, report) else (rendered, report)
 
 
+def _exits_after(a: SongInfo, leave_after: float | None) -> list | None:
+    """Every place A could finish once it has played for long enough, or None for no limit."""
+    if leave_after is None:
+        return None
+    found = [cue for cue in a.exit_cues() if a.bar_time(cue.bar) >= leave_after]
+    return found or a._exit_cues_after(leave_after, True)
+
+
+def _too_soon(script: TransitionScript, request: SeamRequest) -> bool:
+    return request.leave_after is not None and script.a_source_start < request.leave_after
+
+
 def _bar_cue_render(
     request: SeamRequest,
     a: SongInfo,
@@ -319,7 +337,7 @@ def _bar_cue_render(
     worked_before: tuple[int, int, int] | None = None,
 ) -> tuple[Rendered, AuditReport, str]:
     recipe = all_recipes()[request.move]
-    pool = enumerate_candidates(a, b, request.move)
+    pool = enumerate_candidates(a, b, request.move, exits=_exits_after(a, request.leave_after))
     if request.bars is not None and recipe.beatmatched:
         narrowed = [c for c in pool if c.bars == request.bars]
         pool = narrowed or pool
@@ -349,15 +367,20 @@ def _bar_cue_render(
                 pool,
                 key=lambda c: (c.exit_cue.bar, c.entry_cue.bar, c.bars) != worked_before,
             )
+        # with a limit, plenty of these won't get as far as being tried, so they don't count
         tries = [
             (item.exit_cue, item.entry_cue, item.bars, "; ".join(item.reasons))
-            for item in pool[:PLACEMENTS_TO_TRY]
+            for item in (pool if request.leave_after is not None else pool[:PLACEMENTS_TO_TRY])
         ]
     best = None
+    placed = 0
     for exit_cue, entry_cue, bars, why in tries:
         script = recipe.make(a, b, exit_cue, entry_cue, bars)
-        if script is None:
+        if script is None or _too_soon(script, request):
             continue
+        if placed == PLACEMENTS_TO_TRY:
+            break
+        placed += 1
         script.meta.update(exit_bar=exit_cue.bar, entry_bar=entry_cue.bar, placed_bars=bars)
         rendered, report = tighten_beats(render(script, cache), cache)
         if report.passed:
@@ -415,6 +438,11 @@ def _arranged(
 ) -> tuple[Rendered, AuditReport, str]:
     """Listen to both songs' stems, make the best arrangement it can, render it, check it, and go
     again with a specific fix for anything that didn't pass."""
+    if request.leave_after is not None and request.exit_bar is None:
+        place = find_placement(a, b, leave_after=request.leave_after)
+        if place is None:
+            raise CannotRender("There's nowhere late enough in the song to do this.")
+        request = replace(request, exit_bar=place.exit_cue.bar)
     folder, session = _session_for(settings, request, a, b)
     hearing = listen(folder, float(session["seconds"]))
     try:
@@ -510,7 +538,7 @@ def _stem_render(
             "Drums and harmonic beds cross; bass swaps once; vocals take turns.",
         )
     if request.move == "vocal_ride":
-        lines = ride_lines(a, b)
+        lines = ride_lines(a, b, request.leave_after)
         if lines is None:
             raise CannotRender("A isn't singing enough near a place it could finish.")
         edge_a = locate_voice_edge(settings, a, lines[0], at_end=True)
@@ -534,6 +562,8 @@ def _stem_render(
         links = links_between(a, b)
         if request.phrase:
             links = [link for link in links if link.phrase == request.phrase] or links
+        if request.leave_after is not None:
+            links = [link for link in links if link.line_a.start >= request.leave_after]
         if not links:
             raise CannotRender("These two songs don't share a phrase to hand over on.")
         link = links[0]
@@ -640,6 +670,9 @@ class SeamStore:
         self._states: dict[str, dict] = {}
         self._urgent: deque[SeamRequest] = deque()
         self._later: deque[SeamRequest] = deque()
+        self._requested: deque[tuple[SeamRequest, list[str]]] = deque()
+        self._request_keys: set[str] = set()
+        self._request_waiting = False
         self._arrived = threading.Event()
         self._running_rank = PREPARING
         self._mix_checked_at = 0.0
@@ -654,6 +687,7 @@ class SeamStore:
         self.next_line_seam: Callable[[], tuple[int, SeamRequest] | None] = lambda: None
         self.draft_moves: Callable[[int], Counter[str]] = lambda _draft: Counter()
         self._running_draft: int | None = None
+        self._running_requested: tuple[SeamRequest, list[str]] | None = None
         self._line_waiting = False
         self.memory = SeamMemory()
         self.clock = JobClock(settings.home)
@@ -661,6 +695,8 @@ class SeamStore:
         self.window_totals: dict[str, int] = {}
         self._quote: float | None = None
         self._remembered: tuple[float, SeamMemory] | None = None
+        self._records: dict[Path, tuple[tuple[int, int], dict]] = {}
+        self._asked_by_requests: set[str] = set()
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
         self._worker: subprocess.Popen | None = None
         self.prepare_links = False
@@ -731,6 +767,19 @@ class SeamStore:
             return {"status": "none", "key": key}
         return state
 
+    def status_reader(self) -> Callable[[str], dict]:
+        """For looking up a lot of seams at once, most of which have never been tried. One look at
+        what exists saves asking the disk about each."""
+        known: set[str] = set()
+        for folder, ending in ((self.root, ""), (self.settings.home / "seam-history", ".json")):
+            try:
+                known |= {entry.name.removesuffix(ending) for entry in os.scandir(folder)}
+            except OSError:
+                pass  # nothing has been rendered yet
+        with self._lock:
+            known |= set(self._states)
+        return lambda key: self.status(key) if key in known else {"status": "none", "key": key}
+
     def _last_known(self, key: str) -> dict:
         meta = self.folder(key) / "seam.json"
         if meta.exists():
@@ -775,7 +824,13 @@ class SeamStore:
             self._states.pop(key, None)
         return True
 
-    def submit(self, request: SeamRequest, urgent: bool = False, retry: bool = False) -> dict:
+    def submit(
+        self,
+        request: SeamRequest,
+        urgent: bool = False,
+        retry: bool = False,
+        after: list[str] | None = None,
+    ) -> dict:
         """Ask the worker for a seam. Anything done or under way stays as it is. Urgent is for a
         seam in the mix that a person just tapped or is about to hear: it goes ahead of the rest of
         the mix, even a seam already waiting. Nothing outside the mix is ever urgent."""
@@ -793,9 +848,35 @@ class SeamStore:
             self._states[key] = state
         self.start()
         assert self._worker is not None and self._worker.stdin is not None
-        self._worker.stdin.write(json.dumps({"request": asdict(request), "urgent": urgent}) + "\n")
+        message = {"request": asdict(request), "urgent": urgent}
+        if after is not None:
+            message["after"] = after
+            with self._lock:
+                self._asked_by_requests.add(key)
+        self._worker.stdin.write(json.dumps(message) + "\n")
         self._worker.stdin.flush()
         return state
+
+    def keep_requested(self, wanted: set[str]) -> None:
+        """Requests go ahead of the rest of the mix, so what they've stopped needing mustn't. Plans
+        change whenever the mix does, and a transition nobody's waiting for has no business holding
+        up one that somebody is. If it comes back, it's asked for again from where it got to."""
+        with self._lock:
+            gone = self._asked_by_requests - wanted
+            if not gone:
+                return
+            self._asked_by_requests -= gone
+            for key in gone:
+                if self._states.get(key, {}).get("status") == "queued":
+                    del self._states[key]
+        if self._worker is None or self._worker.poll() is not None:
+            return
+        assert self._worker.stdin is not None
+        try:
+            self._worker.stdin.write(json.dumps({"drop": sorted(gone)}) + "\n")
+            self._worker.stdin.flush()
+        except OSError:
+            pass  # it's stopped, so it isn't working on any of them
 
     def start(self) -> None:
         """Start the worker if it isn't running, which also begins spare-time preparing."""
@@ -817,15 +898,31 @@ class SeamStore:
 
     # ---- the rest runs in the worker process
 
-    def ask(self, request: SeamRequest, urgent: bool = False) -> None:
+    def ask(
+        self, request: SeamRequest, urgent: bool = False, after: list[str] | None = None
+    ) -> None:
+        """Take a job. `after` marks one for a song someone requested: it goes once those seams,
+        the ones that will be heard before it, are done, and ahead of the rest of the mix."""
         with self._lock:
             self._urgent = deque(item for item in self._urgent if item.key != request.key)
             self._later = deque(item for item in self._later if item.key != request.key)
-            if urgent:
+            self._requested = deque(i for i in self._requested if i[0].key != request.key)
+            if after is not None and not urgent:
+                self._requested.append((request, list(after)))
+                self._request_keys.add(request.key)
+            elif urgent:
                 self._urgent.appendleft(request)
             else:
                 self._later.append(request)
         self._arrived.set()
+
+    def drop_requests(self, keys: Iterable[str]) -> None:
+        """Stop waiting to do these for a request. One already being rendered finishes, since it
+        costs nothing to keep and might well be wanted again."""
+        gone = set(keys)
+        with self._lock:
+            self._requested = deque(item for item in self._requested if item[0].key not in gone)
+            self._request_keys -= gone
 
     def remembered(self, fresh: bool = False) -> SeamMemory:
         """Everything finished seams have shown, including ones the render cache has cleared. It's
@@ -835,12 +932,20 @@ class SeamStore:
             return self._remembered[1]
         states: dict[str, dict] = {}
         histories = (self.settings.home / "seam-history").glob("*.json")
+        records: dict[Path, tuple[tuple[int, int], dict]] = {}
         for meta in [*self.root.glob("*/seam.json"), *histories]:
             try:
-                state = json.loads(meta.read_text("utf-8"))
+                facts = meta.stat()
+                stamp = (facts.st_mtime_ns, facts.st_size)
+                known = self._records.get(meta)
+                state = known[1] if known and known[0] == stamp else json.loads(
+                    meta.read_text("utf-8")
+                )
             except (OSError, ValueError):
                 continue
+            records[meta] = (stamp, state)  # a file that hasn't changed needn't be read again
             states.setdefault(state.get("key", str(meta)), state)
+        self._records = records
         memory = SeamMemory.from_states(states.values())
         self._remembered = (now, memory)
         return memory
@@ -856,9 +961,34 @@ class SeamStore:
             except (OSError, ValueError):
                 meta.unlink(missing_ok=True)
 
+    def _next_requested(
+        self, whatever_is_ahead: bool = False
+    ) -> tuple[SeamRequest, list[str]] | None:
+        """The first request whose turn has come: nothing that plays before it is still unfinished.
+        Only seams still in the mix hold one up, since the mix may have changed since it was asked
+        for, and with `whatever_is_ahead` nothing does, because the mix can't go any further just
+        now and a request mustn't wait for something that isn't coming."""
+        with self._lock:
+            waiting = list(self._requested)
+        active = self.keep_for_now()
+        unfinished = {"none", "queued", "rendering"}
+        for item in waiting:
+            request, after = item
+            if self.status(request.key)["status"] in {"ready", "failed"}:
+                with self._lock:
+                    self._requested = deque(i for i in self._requested if i is not item)
+                continue
+            if whatever_is_ahead:
+                return item
+            ahead = [key for key in after if not active or key in active]
+            if not any(self.status(key)["status"] in unfinished for key in ahead):
+                return item
+        return None
+
     def _next_job(self) -> SeamRequest:
         """What's about to be heard, then the rest of the mix in order, then the mixes in the render
-        line, then anything else a person asked for. Only spare time goes on word links."""
+        line, then anything else a person asked for. Spare time goes on word links and the library's
+        best transitions."""
         while True:
             self._arrived.clear()
             self._running_draft = None
@@ -878,6 +1008,14 @@ class SeamStore:
                         return request
                     self._later.append(request)
             request = self.next_mix_seam()
+            requested = self._next_requested(whatever_is_ahead=request is None)
+            if requested is not None:
+                with self._lock:
+                    self._requested = deque(i for i in self._requested if i is not requested)
+                self._running_requested = requested
+                self._running_rank = REQUEST
+                self._running_key = ""
+                return requested[0]
             if request is not None:
                 self._running_rank = MIX
                 self._running_key = request.key
@@ -930,7 +1068,8 @@ class SeamStore:
             self._mix_checked_at = moment
             self._mix_waiting = self.next_mix_seam() is not None
             self._line_waiting = rank > LINE and self.next_line_seam() is not None
-        if self._mix_waiting or self._line_waiting:
+            self._request_waiting = self._next_requested() is not None
+        if self._mix_waiting or self._line_waiting or self._request_waiting:
             return True
         return rank > LATER and bool(self._later)
 
@@ -972,6 +1111,9 @@ class SeamStore:
                 if self._running_rank == LATER:
                     with self._lock:
                         self._later.appendleft(request)
+                if self._running_rank == REQUEST and self._running_requested is not None:
+                    with self._lock:
+                        self._requested.appendleft(self._running_requested)
                 continue
             except CannotTrust as problem:
                 self._save_failure(request, UNSURE_WORDS, problem.song_id)
@@ -979,7 +1121,7 @@ class SeamStore:
                 self._save_failure(request, str(problem))
             except Exception as problem:  # noqa: BLE001 - a failed seam must not end the worker
                 self._save_failure(request, f"Something went wrong: {problem}")
-            prune_cache(self.settings, {request.key} | self.keep_for_now())
+            prune_cache(self.settings, {request.key} | self.keep_for_now() | self._request_keys)
 
     def _save_failure(
         self, request: SeamRequest, error: str, untimed_song: int | None = None
@@ -1057,10 +1199,17 @@ class SeamStore:
                 request.move,
                 near,
                 stem_preference=stem_preference,
+                leave_after=request.leave_after,
             )
         return self._save(request, rendered, report, why, fell_back, tried)
 
     def _chosen_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
+        take = self._render_move(request, a, b)
+        if _too_soon(take[0].script, request):
+            raise CannotRender("This move's place in the song has gone by before it gets there.")
+        return take
+
+    def _render_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
         if request.move == "stem_arrange":
             return _arranged(self.settings, request, a, b, self.memory)
         if request.move in STEM_MOVES:
@@ -1074,10 +1223,12 @@ class SeamStore:
             return _bar_cue_render(request, a, b, self._cache, place)
         raise CannotRender(f"There's no move called {request.move}.")
 
-    def _take(self, a: SongInfo, b: SongInfo, move: str, tried: list[dict]):
+    def _take(
+        self, a: SongInfo, b: SongInfo, move: str, tried: list[dict], leave_after: float | None
+    ):
         """Render one move, noting why if it can't be done at all."""
         try:
-            return self._chosen_move(SeamRequest(a.id, b.id, move), a, b)
+            return self._chosen_move(SeamRequest(a.id, b.id, move, leave_after=leave_after), a, b)
         except CannotTrust as problem:
             tried.append({"move": move, "why": UNSURE_WORDS, "song": problem.song_id})
         except CannotRender as problem:
@@ -1092,6 +1243,7 @@ class SeamStore:
         asked: str = "auto",
         near: tuple | None = None,
         stem_preference: str = "sometimes",
+        leave_after: float | None = None,
     ):
         """The move that best suits these two and the rest of the mix, taken clean if at all
         possible. None of the seams rated so far with a warning were liked, so any clean take beats
@@ -1113,7 +1265,7 @@ class SeamStore:
         for move in moves:
             if move == asked or (move in {"vocal_ride", "stem_arrange"} and held is not None):
                 continue  # stems take minutes, which isn't worth it to improve on a near miss
-            take = self._take(a, b, move, tried)
+            take = self._take(a, b, move, tried, leave_after)
             if take is None:
                 continue
             rendered, report, why = take
@@ -1126,7 +1278,9 @@ class SeamStore:
             rendered, report, why, move = held
             tried[:] = [attempt for attempt in tried if attempt["move"] != move]
             return rendered, report, why, asked not in {"auto", move}
-        choice = choose_transition(a, b, "cut_on_one", cache=self._cache)
+        choice = choose_transition(
+            a, b, "cut_on_one", cache=self._cache, exits=_exits_after(a, leave_after) or None
+        )
         why = "; ".join(choice.candidate.reasons)
         return choice.rendered, choice.report, why, True
 
@@ -1167,6 +1321,7 @@ class SeamStore:
             "preview_seam": float(clip_at + script.overlap[0]),
             "bars": int(script.meta.get("bars", 0) or 0),
             "passed": report.passed,
+            "near_miss": not report.passed and good_enough(report),
             "checks": _plain_checks(report),
         }
         (folder / "seam.json").write_text(json.dumps(result, indent=1), "utf-8")
@@ -1197,6 +1352,7 @@ def request_from(a: int, b: int, seam: dict | None) -> SeamRequest:
         phrase=seam.get("phrase"),
         soft=bool(seam.get("soft", False)),
         shape=seam.get("shape"),
+        leave_after=seam.get("leave_after"),
     )
 
 

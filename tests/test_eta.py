@@ -519,12 +519,6 @@ def test_nothing_left_to_analyse_means_no_wait(conn):
     assert analysis_left(conn, True, True, [Estimate(600.0, 400.0, 900.0)])["seconds"] == 0
 
 
-def test_a_song_asked_for_waits_behind_rendering_too(conn):
-    _song(conn, 1, 100.0)
-    alone = analysis_line_left(conn, [1])[1]
-    assert analysis_line_left(conn, [1], [Estimate(300.0, 200.0, 400.0)])[1] == alone + 300
-
-
 def test_the_clock_keeps_score_of_how_far_out_it_was(tmp_path):
     clock = JobClock(tmp_path)
     assert clock.accuracy() == {"jobs": 0, "typical_miss": None}
