@@ -1,6 +1,7 @@
 import json
 
 import numpy as np
+import pytest
 
 from selecta import db
 from selecta.analysis.song import SongInfo
@@ -213,4 +214,26 @@ def test_exhaustive_sweep_resumes_remembers_nonmatches_and_invalidates_changes(t
     changed = sweep(conn, songs, 10)
     assert changed['checked'] == 2
     assert changed['cached'] == 1
+    conn.close()
+
+
+def test_exhaustive_sweep_does_not_checkpoint_an_interrupted_pair(tmp_path):
+    path = tmp_path / 'interrupted.sqlite'
+    conn = db.connect(path)
+    _insert_songs(conn, 1, 2, 3)
+    songs = [_song(i, np.zeros((8, 12))) for i in (1, 2, 3)]
+    calls = 0
+
+    def interrupt():
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise InterruptedError('stop requested')
+
+    with pytest.raises(InterruptedError):
+        sweep(conn, songs, 10, interrupt)
+    conn.close()
+    conn = db.connect(path)
+    assert conn.execute('SELECT COUNT(*) FROM discovery_comparisons').fetchone()[0] == 1
+    assert sweep(conn, songs, 10) == dict(checked=2, cached=1, remaining=0, added=0)
     conn.close()
