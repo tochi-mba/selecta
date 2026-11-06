@@ -127,11 +127,6 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
       </section>
 
       <StoragePanel />
-      <section className="panel stack">
-        <h2>Open from your desktop</h2>
-        <p>Add a Selecta icon to your Windows desktop. It starts Selecta when needed and opens an app window.</p>
-        <button onClick={() => void post('/desktop').then(() => notify('Selecta shortcut added to your desktop.')).catch(() => notify('Could not create the desktop shortcut. Try again.'))}>Add desktop shortcut</button>
-      </section>
       <Listening />
 
       <section className="panel stack">
