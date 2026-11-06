@@ -25,7 +25,6 @@ export type NowState = {
 };
 
 const SEAM_FADE = 0.03;
-const HEADROOM = 0.25;
 const KEEP_SONGS = 3;
 const END_FADE = 3;
 const LOAD_NEXT_WITHIN = 45;
@@ -59,6 +58,7 @@ export class SetPlayer {
   private current: Current | null = null;
   private planned: Planned | null = null;
   private ending = false;
+  private playGeneration = 0;
   private requested = new Set<string>();
   private fallenBack = new Set<number>();
   private savedAt = 0;
@@ -169,6 +169,7 @@ export class SetPlayer {
   }
 
   private stopAll() {
+    this.playGeneration += 1;
     if (this.current && this.context) {
       const elapsed = Math.max(0, this.context.currentTime - this.current.startedAt);
       this.heard.set(this.current.songId, (this.heard.get(this.current.songId) ?? 0) + elapsed);
@@ -201,16 +202,20 @@ export class SetPlayer {
     const item = mix[position];
     if (!item) return;
     this.stopAll();
+    const generation = this.playGeneration;
     const context = this.audio();
     await context.resume();
+    if (generation !== this.playGeneration) return;
     this.update({ phase: 'loading', position, songTime: offset, duration: item.duration, notice: '', inSeam: false });
     let buffer: AudioBuffer;
     try {
       buffer = await this.loadSong(item.song_id);
     } catch (error) {
+      if (generation !== this.playGeneration) return;
       this.update({ phase: 'idle', notice: (error as Error).message });
       return;
     }
+    if (generation !== this.playGeneration) return;
     const playing = this.layer(buffer);
     const startedAt = context.currentTime + 0.05;
     playing.gain.gain.setValueAtTime(1, startedAt);
@@ -345,7 +350,11 @@ export class SetPlayer {
     }
     const left = current.duration - time;
     if (left < LOAD_NEXT_WITHIN) this.loadSong(nextItem.song_id).catch(() => {});
-    if (!this.planned && !this.ending && left < END_FADE + 0.2 && this.state.phase === 'playing') {
+    // A ready seam may start within the normal fallback window. Give its audio
+    // until its actual cue to decode; an early fallback must not steal that cue.
+    const upcomingCue = seam?.status === 'ready' && seam.a_source_start !== undefined
+      && current.startedAt + seam.a_source_start - current.offset >= now;
+    if (!this.planned && !this.ending && !upcomingCue && left < END_FADE + 0.2 && this.state.phase === 'playing') {
       this.ending = true;
       void this.fadeInto(nextItem.position);
     }
@@ -362,8 +371,15 @@ export class SetPlayer {
       return;
     }
     if (this.planned || this.current !== current) return;
+    const liveMix = this.getMix();
+    const livePosition = liveMix.findIndex((item) => item.song_id === current.songId);
+    const liveNext = liveMix[livePosition + 1];
+    if (livePosition < 0 || liveNext?.song_id !== nextItem.song_id
+      || liveNext.seam?.state.key !== seam.key || liveNext.seam.state.status !== 'ready') return;
     const whenA = current.startedAt + (seam.a_source_start - current.offset);
-    if (whenA < context.currentTime + HEADROOM) return; // too late: the song plays on and fades over
+    // Web Audio schedules against its own clock. Do not reject decoded audio
+    // merely because it arrived inside an arbitrary quarter-second margin.
+    if (whenA < context.currentTime) return; // Never play a transition off its cue.
     const clip = this.layer(clipBuffer);
     clip.gain.gain.setValueAtTime(0, whenA);
     clip.gain.gain.linearRampToValueAtTime(1, whenA + SEAM_FADE);
@@ -416,7 +432,21 @@ export class SetPlayer {
       }
       return;
     }
-    if (this.current !== current) return;
+    if (this.current !== current || this.planned) return;
+    const liveMix = this.getMix();
+    const livePosition = liveMix.findIndex((entry) => entry.song_id === current.songId);
+    if (livePosition < 0 || liveMix[position]?.song_id !== item.song_id || position <= livePosition) {
+      this.ending = false;
+      return;
+    }
+    // Rendering can finish while the fallback song downloads. Let the next tick
+    // schedule that seam instead of committing a competing fade.
+    const liveSeam = liveMix[livePosition + 1]?.seam?.state;
+    if (liveSeam?.status === 'ready' && liveSeam.a_source_start !== undefined
+      && current.startedAt + liveSeam.a_source_start - current.offset >= context.currentTime) {
+      this.ending = false;
+      return;
+    }
     const playing = this.layer(buffer);
     const at = Math.max(context.currentTime + 0.05, current.startedAt + (current.duration - current.offset) - END_FADE);
     playing.gain.gain.setValueAtTime(0, at);

@@ -6,6 +6,7 @@ class FakeAudio {
   static now: FakeAudio;
   currentTime = 0;
   destination = {};
+  sources: { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }[] = [];
   constructor() {
     FakeAudio.now = this;
   }
@@ -23,7 +24,9 @@ class FakeAudio {
     };
   }
   createBufferSource() {
-    return { buffer: null, connect() {}, disconnect() {}, start() {}, stop() {} };
+    const source = { buffer: null, connect() {}, disconnect() {}, start: vi.fn(), stop: vi.fn() };
+    this.sources.push(source);
+    return source;
   }
   async decodeAudioData() {
     return { duration: 100 };
@@ -116,5 +119,61 @@ describe('playing through a mix', () => {
     tick(player);
     tick(player);
     expect(calls.filter((call) => call.path === '/mix/1/render')).toHaveLength(1);
+  });
+});
+
+
+describe('transition readiness deadlines', () => {
+  let player: SetPlayer;
+  beforeEach(() => vi.stubGlobal('AudioContext', FakeAudio));
+  afterEach(() => player.stop());
+  it.each([0.2, 0.01, 0])('uses audio ready %s seconds before the cue', async (lead) => {
+    audioBackend([]);
+    const mix = songs(seam('rendering', 'late'));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    FakeAudio.now.currentTime = 80.05 - lead;
+    mix[1].seam = seam('ready', 'late', { a_source_start: 80, b_source_end: 20, switch_at: 10 });
+    tick(player);
+    await settle();
+    expect(FakeAudio.now.sources).toHaveLength(3);
+    expect(FakeAudio.now.sources[1].start).toHaveBeenCalledWith(80.05);
+  });
+  it('does not start a seam after its cue', async () => {
+    audioBackend([]);
+    player = new SetPlayer(() => songs(seam('ready', 'late', { a_source_start: 80, b_source_end: 20 })), () => {});
+    await player.playFrom(0, 81);
+    await settle();
+    expect(FakeAudio.now.sources).toHaveLength(1);
+  });
+  it('preserves a ready cue inside the end-fade window', async () => {
+    audioBackend([]);
+    player = new SetPlayer(() => songs(seam('ready', 'late', { a_source_start: 99, b_source_end: 20, switch_at: 10 })), () => {});
+    await player.playFrom(0, 98);
+    await settle();
+    expect(player.state.position).toBe(0);
+    expect(player.state.notice).not.toContain('faded');
+    expect(FakeAudio.now.sources).toHaveLength(3);
+    expect(FakeAudio.now.sources[1].start).toHaveBeenCalledWith(1.05);
+  });
+  it.each(['edit', 'stop', 'seek'])('discards an in-flight seam after %s', async (action) => {
+    audioBackend([]);
+    const original = vi.mocked(fetch).getMockImplementation()!;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      if (String(url).includes('/clip')) await gate;
+      return original(url, init);
+    });
+    const mix = songs(seam('ready', 'old', { a_source_start: 80, b_source_end: 20 }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    if (action === 'edit') mix[1].seam = seam('rendering', 'replacement');
+    if (action === 'stop') player.stop();
+    if (action === 'seek') await player.playFrom(0, 90);
+    const before = FakeAudio.now.sources.length;
+    release();
+    await settle();
+    expect(FakeAudio.now.sources).toHaveLength(before);
   });
 });
