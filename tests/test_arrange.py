@@ -11,6 +11,7 @@ import soundfile as sf
 from helpers import song_from_track
 from synth import make_track
 
+import selecta.seam_making as seam_making
 import selecta.seams as seams_module
 import selecta.studio as studio_module
 from selecta.arrange import (
@@ -778,7 +779,7 @@ def test_a_shape_made_for_this_pair_is_what_gets_rendered(arranged):
 def test_when_it_can_not_work_it_says_why_so_the_next_move_gets_tried(arranged, monkeypatch):
     settings, a, b, _made = arranged
     monkeypatch.setattr(
-        seams_module,
+        seam_making,
         "listen",
         lambda _folder, _seconds: _hearing(b_drums=[QUIET] * CELLS, b_bass=[QUIET] * CELLS),
     )
@@ -794,7 +795,7 @@ def _report(*names):
 def test_it_goes_again_with_a_fix_when_a_take_fails_its_checks(arranged, monkeypatch):
     settings, a, b, _made = arranged
     reports = [_report("harmony"), _report()]
-    monkeypatch.setattr(seams_module, "audit", lambda _rendered: reports.pop(0))
+    monkeypatch.setattr(seam_making, "audit", lambda _rendered: reports.pop(0))
     rendered, report, _why = _arranged(
         settings, SeamRequest(1, 2, "stem_arrange"), a, b, SeamMemory()
     )
@@ -810,11 +811,11 @@ def test_it_gives_up_after_a_few_takes_and_keeps_the_closest(arranged, monkeypat
         takes.append(rendered)
         return _report("harmony", "quiet time")
 
-    monkeypatch.setattr(seams_module, "audit", never_passes)
+    monkeypatch.setattr(seam_making, "audit", never_passes)
     rendered, report, _why = _arranged(
         settings, SeamRequest(1, 2, "stem_arrange"), a, b, SeamMemory()
     )
-    assert 1 <= len(takes) <= seams_module.TAKES
+    assert 1 <= len(takes) <= seam_making.TAKES
     assert not report.passed
     assert rendered is takes[0]
 
@@ -898,7 +899,7 @@ def test_a_near_miss_is_not_worth_minutes_of_splitting_stems(tmp_path, monkeypat
     a, b = _pair(tmp_path)
     asked = []
 
-    def take(_a, _b, move, _tried):
+    def take(_a, _b, move, _tried, _leave_after=None):
         asked.append(move)
         return None
 

@@ -126,10 +126,9 @@ describe('your drafts', () => {
   });
 
   it('says when rendering has stopped for lack of room, and where to fix it', async () => {
-    const { setView } = show(list([draft(1, { place: 1, eta: { seconds: 100, low: 80, high: 120 } })], { out_of_room: true }));
+    show(list([draft(1, { place: 1, eta: { seconds: 100, low: 80, high: 120 } })], { out_of_room: true }));
     expect(await screen.findByText(/storage limit/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Change the limit in Workshop' }));
-    expect(setView).toHaveBeenCalledWith('Workshop');
+    expect(screen.getByRole('link', { name: 'Change the limit in Workshop' })).toHaveAttribute('href', '/workshop/storage');
   });
 
   it('deleting asks nothing, and can be undone', async () => {
@@ -148,11 +147,11 @@ describe('your drafts', () => {
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Made a copy: Draft 1 copy.'));
   });
 
-  it('stays quiet if the list can’t be read, rather than breaking the page', async () => {
+  it('says so if the list can’t be read, rather than looking as if there are no drafts', async () => {
     fakeBackend({});
-    const { container } = render(<Drafts notify={vi.fn()} setView={vi.fn()} />);
-    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
-    expect(container).toBeEmptyDOMElement();
+    render(<Drafts notify={vi.fn()} setView={vi.fn()} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('They’re still saved');
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
   it('updates by itself while rendering', async () => {

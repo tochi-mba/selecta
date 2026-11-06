@@ -1,0 +1,122 @@
+/* Selecta's look, in one place. The colours are the ones it's always had: warm black, cream, lime,
+   request blue and warning orange. Everything else refers to what a colour means, not what it is. */
+:root {
+  color-scheme: dark;
+
+  /* the raw palette */
+  --bg: #100f0c;
+  --panel: #1a1814;
+  --panel-2: #24211b;
+  --line: #3a362c;
+  --ink: #f4f0e4;
+  --soft: #a8a292;
+  --accent: #e8ff3a;
+  --accent-ink: #14140a;
+  --warn: #ff7a4d;
+  --ok: #9ed46a;
+  --request: #6fd3ff;
+
+  /* what things mean */
+  --surface: var(--bg);
+  --surface-raised: var(--panel);
+  --surface-control: var(--panel-2);
+  --surface-overlay: color-mix(in srgb, var(--bg) 72%, transparent);
+  --border: var(--line);
+  --border-strong: var(--soft);
+  --text: var(--ink);
+  --text-soft: var(--soft);
+  --focus: var(--accent);
+  --status-ready: var(--ok);
+  --status-working: var(--accent);
+  --status-planned: var(--soft);
+  --status-warning: var(--warn);
+  --status-failed: var(--warn);
+  --status-action: var(--accent);
+  --status-unavailable: var(--soft);
+  --status-request: var(--request);
+
+  /* type */
+  --display: 'Arial Black', 'Helvetica Neue', Impact, system-ui, sans-serif;
+  --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.5rem;
+
+  /* space */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius: 10px;
+  --radius-sm: 8px;
+  --radius-pill: 99px;
+
+  /* movement */
+  --motion-fast: 120ms;
+  --motion-slow: 240ms;
+
+  /* what sits on top of what */
+  --layer-sticky: 5;
+  --layer-nav: 20;
+  --layer-player: 30;
+  --layer-sheet: 40;
+  --layer-dialog: 50;
+  --layer-toast: 60;
+
+  /* the shell's own shape, so nothing else ends up underneath it */
+  --rail-width: 196px;
+  --nav-height: 58px;
+  --player-height: 0px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-chrome: calc(var(--player-height) + var(--space-3));
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+    --bg: #f5f2e9;
+    --panel: #fffdf6;
+    --panel-2: #ece8db;
+    --line: #d5cfbd;
+    --ink: #16140e;
+    --soft: #6a6555;
+    --accent: #2b2a14;
+    --accent-ink: #f5f2e9;
+    --warn: #b93d10;
+    --ok: #3f7a1a;
+    --request: #086a93;
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f5f2e9;
+  --panel: #fffdf6;
+  --panel-2: #ece8db;
+  --line: #d5cfbd;
+  --ink: #16140e;
+  --soft: #6a6555;
+  --accent: #2b2a14;
+  --accent-ink: #f5f2e9;
+  --warn: #b93d10;
+  --ok: #3f7a1a;
+  --request: #086a93;
+}
+
+html {
+  /* a focused control is never left hiding behind the sticky bars */
+  scroll-padding-top: var(--space-6);
+  scroll-padding-bottom: calc(var(--bottom-chrome) + var(--nav-height) + var(--space-4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-slow: 0ms;
+  }
+}

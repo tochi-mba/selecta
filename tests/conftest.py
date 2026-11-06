@@ -7,6 +7,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from mix_helpers import client, conn, store  # noqa: E402, F401
+
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--slow", action="store_true", help="Also run tests that load models.")

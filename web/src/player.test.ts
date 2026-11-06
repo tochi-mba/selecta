@@ -280,3 +280,131 @@ describe('going past the way out of a song', () => {
     expect(asked()).toHaveLength(0);
   });
 });
+
+describe('the transport', () => {
+  let player: SetPlayer;
+  beforeEach(() => {
+    vi.stubGlobal('AudioContext', FakeAudio);
+    window.localStorage.clear();
+  });
+  afterEach(() => {
+    player?.stop();
+    vi.unstubAllGlobals();
+  });
+  const skipped = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls.filter(([url]) => url.includes('/playback/skip'));
+
+  it('Next goes straight to the next song, and says it was skipped', async () => {
+    audioBackend([]);
+    const mix = songs(seam('ready', 'a', { a_source_start: 80, b_source_end: 10, switch_at: 5 }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0, 20);
+    await player.next();
+    expect(player.state.position).toBe(1);
+    expect(player.state.songTime).toBe(0);
+    expect(skipped()).toHaveLength(1);
+  });
+
+  it('jumping to the transition isn’t the same thing: it stays in the song', async () => {
+    audioBackend([]);
+    const mix = songs(seam('ready', 'a', { a_source_start: 80, b_source_end: 10, switch_at: 5 }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0, 20);
+    await player.skip();
+    expect(player.state.position).toBe(0);
+    expect(player.state.songTime).toBe(72);
+  });
+
+  it('Next at the end of the mix does nothing', async () => {
+    audioBackend([]);
+    const mix = songs();
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0, 20);
+    await player.next();
+    expect(player.state.position).toBe(0);
+  });
+
+  it('Previous restarts a song that’s been going a while, or goes back if it’s only just begun', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(1, 50);
+    FakeAudio.now.currentTime = 10;
+    await player.previous();
+    expect(player.state.position).toBe(1);
+    expect(player.state.songTime).toBe(0);
+    await player.previous();
+    expect(player.state.position).toBe(0);
+  });
+
+  it('seeking moves within the song, and stays inside it', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    await player.seek(40);
+    expect(player.state.songTime).toBe(40);
+    expect(player.state.position).toBe(0);
+    await player.seek(-5);
+    expect(player.state.songTime).toBe(0);
+    await player.seek(100000);
+    expect(player.state.songTime).toBeLessThan(100);
+  });
+
+  it('seeking while paused stays paused', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    await player.togglePause();
+    await player.seek(40);
+    expect(player.state.phase).toBe('paused');
+    expect(player.state.songTime).toBe(40);
+  });
+
+  it('a transition already sounding can’t be taken back', async () => {
+    audioBackend([]);
+    const mix = songs(seam('ready', 'a', { a_source_start: 30, b_source_end: 10, switch_at: 20 }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0, 28);
+    tick(player);
+    await settle();
+    FakeAudio.now.currentTime = 5;
+    tick(player);
+    await player.seek(10);
+    expect(player.state.notice).toMatch(/transition is playing/i);
+    await player.next();
+    expect(player.state.notice).toMatch(/Already on the way/);
+  });
+
+  it('volume and mute remember what they were', async () => {
+    audioBackend([]);
+    player = new SetPlayer(() => songs(), () => {});
+    player.setVolume(0.4);
+    player.toggleMute();
+    expect(player.state.muted).toBe(true);
+    expect(player.state.volume).toBe(0.4);
+    player.toggleMute();
+    expect(player.state.volume).toBe(0.4);
+    const later = new SetPlayer(() => songs(), () => {});
+    expect(later.state.volume).toBe(0.4);
+  });
+
+  it('volume can’t go out of range', () => {
+    player = new SetPlayer(() => songs(), () => {});
+    player.setVolume(7);
+    expect(player.state.volume).toBe(1);
+    player.setVolume(-3);
+    expect(player.state.volume).toBe(0);
+  });
+
+  it('pausing for a preview doesn’t count as someone pressing pause', async () => {
+    audioBackend([]);
+    const mix = songs();
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    await player.pause();
+    expect(player.state.phase).toBe('paused');
+    await player.resume();
+    expect(player.state.phase).toBe('playing');
+  });
+});

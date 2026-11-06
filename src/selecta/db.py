@@ -65,6 +65,13 @@ CREATE TABLE IF NOT EXISTS lyrics (
     fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS song_overrides (
+    song_id INTEGER PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
+    bpm REAL,
+    camelot TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS preferences (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -113,6 +120,22 @@ CREATE TABLE IF NOT EXISTS queue (
     seam TEXT
 );
 """
+
+
+def escaped(text: str) -> str:
+    """Text for LIKE ... ESCAPE, so that a % or _ in it means itself."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def containing(text: str) -> str:
+    """The pattern for finding this text anywhere in a column, with LIKE ? ESCAPE."""
+    return f"%{escaped(text)}%"
+
+
+# Takes two containing(text) parameters. A song with no tags can still be found.
+SEARCHING_NAMES = (
+    "(coalesce(s.artist,'') LIKE ? ESCAPE '\\' OR coalesce(s.title,'') LIKE ? ESCAPE '\\')"
+)
 
 
 def _saved_mixes_become_drafts(conn: sqlite3.Connection) -> None:
@@ -249,11 +272,13 @@ def song_by_id(conn: sqlite3.Connection, song_id: int) -> sqlite3.Row | None:
 
 
 def find_songs(conn: sqlite3.Connection, text: str) -> Iterable[sqlite3.Row]:
-    like = f"%{text}%"
+    like = containing(text)
     return conn.execute(
-        "SELECT s.*, a.bpm, a.camelot, a.grid_confidence FROM songs s "
+        "SELECT s.*, COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, "
+        "a.grid_confidence FROM songs s "
         "LEFT JOIN analysis a ON a.song_id = s.id "
-        "WHERE s.is_music = 1 AND s.duplicate_of IS NULL AND (s.title LIKE ? OR s.artist LIKE ?) "
+        "LEFT JOIN song_overrides o ON o.song_id = s.id "
+        f"WHERE s.is_music = 1 AND s.duplicate_of IS NULL AND {SEARCHING_NAMES} "
         "ORDER BY s.artist, s.title",
         (like, like),
     ).fetchall()

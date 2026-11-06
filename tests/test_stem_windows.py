@@ -11,6 +11,7 @@ from synth import make_track
 
 import selecta.planner.wordreel as wordreel
 import selecta.render.intertwine as intertwine
+import selecta.seam_making as seam_making
 import selecta.seams as seams_module
 from selecta.config import Settings
 from selecta.lyrics.lrclib import Line
@@ -68,7 +69,7 @@ def test_a_line_at_the_very_start_does_not_go_before_the_song(tmp_path):
 
 def test_a_ride_needs_a_window_in_each_song(tmp_path, monkeypatch):
     a, b = _song(tmp_path, "a", LINES, 1), _song(tmp_path, "b", LINES, 2)
-    monkeypatch.setattr(seams_module, "ride_lines", lambda *_: (LINES[0], LINES[1]))
+    monkeypatch.setattr(seam_making, "ride_lines", lambda *_: (LINES[0], LINES[1]))
     windows = windows_for(SeamRequest(1, 2, "vocal_ride"), a, b)
     assert [window[0] for window in windows] == [a.path, b.path]
     assert windows[0][1:] == line_window(a, LINES[0])[:2]
@@ -77,7 +78,7 @@ def test_a_ride_needs_a_window_in_each_song(tmp_path, monkeypatch):
 
 def test_a_ride_that_can_not_happen_needs_nothing(tmp_path, monkeypatch):
     a, b = _song(tmp_path, "a", LINES, 1), _song(tmp_path, "b", LINES, 2)
-    monkeypatch.setattr(seams_module, "ride_lines", lambda *_: None)
+    monkeypatch.setattr(seam_making, "ride_lines", lambda *_: None)
     assert windows_for(SeamRequest(1, 2, "vocal_ride"), a, b) == []
 
 
@@ -89,7 +90,7 @@ def test_a_word_move_needs_the_windows_for_its_phrase(tmp_path, monkeypatch):
         SimpleNamespace(phrase="other", line_a=LINES[1], line_b=LINES[1]),
         SimpleNamespace(phrase="good news", line_a=LINES[0], line_b=LINES[0]),
     ]
-    monkeypatch.setattr(seams_module, "links_between", lambda *_: links)
+    monkeypatch.setattr(seam_making, "links_between", lambda *_: links)
     windows = windows_for(SeamRequest(1, 2, "word_cut", phrase="good news"), a, b)
     assert windows[0][1:] == line_window(a, LINES[0])[:2]
 
@@ -125,7 +126,7 @@ def _split(settings, path, start, length):
 
 def test_it_counts_what_is_still_to_split_and_notices_when_one_is_done(tmp_path, monkeypatch):
     a, b = _song(tmp_path, "a", LINES, 1), _song(tmp_path, "b", LINES, 2)
-    monkeypatch.setattr(seams_module, "ride_lines", lambda *_: (LINES[0], LINES[1]))
+    monkeypatch.setattr(seam_making, "ride_lines", lambda *_: (LINES[0], LINES[1]))
     store = _store(tmp_path)
     request = SeamRequest(1, 2, "vocal_ride")
     assert store.windows_left(request, a, b) == 2
@@ -143,7 +144,7 @@ def test_working_out_the_windows_only_happens_once(tmp_path, monkeypatch):
         calls.append(1)
         return LINES[0], LINES[1]
 
-    monkeypatch.setattr(seams_module, "ride_lines", lines)
+    monkeypatch.setattr(seam_making, "ride_lines", lines)
     store = _store(tmp_path)
     for _ in range(4):
         store.windows_left(SeamRequest(1, 2, "vocal_ride"), a, b)
@@ -168,7 +169,7 @@ def test_a_laid_out_session_needs_no_stems(tmp_path):
 
 def test_a_song_that_has_moved_counts_as_not_split_and_breaks_nothing(tmp_path, monkeypatch):
     a, b = _song(tmp_path, "a", LINES, 1), _song(tmp_path, "b", LINES, 2)
-    monkeypatch.setattr(seams_module, "ride_lines", lambda *_: (LINES[0], LINES[1]))
+    monkeypatch.setattr(seam_making, "ride_lines", lambda *_: (LINES[0], LINES[1]))
     Path(a.path).unlink()
     assert not window_is_ready(Settings(tmp_path), Path(a.path), 1.0, 2.0)
     assert _store(tmp_path).windows_left(SeamRequest(1, 2, "vocal_ride"), a, b) == 2
@@ -180,7 +181,7 @@ def test_an_estimate_problem_never_stops_a_seam(tmp_path, monkeypatch):
     def broken(*_):
         raise ValueError("no")
 
-    monkeypatch.setattr(seams_module, "ride_lines", broken)
+    monkeypatch.setattr(seam_making, "ride_lines", broken)
     assert _store(tmp_path).windows_left(SeamRequest(1, 2, "vocal_ride"), a, b) == 0
 
 

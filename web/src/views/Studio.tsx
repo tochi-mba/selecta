@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { Eta, MixData, MixItem, post } from '../api';
+import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
 import { useMixPath } from './mixScope';
@@ -18,6 +19,24 @@ type Session = {
 
 const LANE_WORDS: Record<Lane, string> = { vocals: 'Voice', drums: 'Drums', bass: 'Bass', other: 'Melody' };
 const WAIT_MS = 2000;
+const UNSAVED = 'selecta.studio.';
+
+function savedShape(key: string): Shape | null {
+  try {
+    return JSON.parse(window.localStorage.getItem(UNSAVED + key) ?? 'null');
+  } catch {
+    return null;
+  }
+}
+
+function keepShape(key: string, shape: Shape | null) {
+  try {
+    if (shape) window.localStorage.setItem(UNSAVED + key, JSON.stringify(shape));
+    else window.localStorage.removeItem(UNSAVED + key);
+  } catch {
+    // it just won't be there if this is closed before pressing Use this
+  }
+}
 
 /** Both songs' voice, drums, bass and melody on one grid. Tap a square and it's heard straight away.
  * Press a name to hear only that part. Nothing is rendered until "Use this". */
@@ -29,8 +48,9 @@ export function Studio(props: {
   onUsed: (data: MixData) => void;
   onListen?: () => void;
   notify: (message: string) => void;
+  guard?: Record<string, string>;
 }) {
-  const { position, item, previous, onClose, onUsed, onListen, notify } = props;
+  const { position, item, previous, onClose, onUsed, notify, guard } = props;
   const [session, setSession] = useState<Session | null>(null);
   const [shape, setShape] = useState<Shape | null>(null);
   const [problem, setProblem] = useState('');
@@ -42,8 +62,26 @@ export function Studio(props: {
   const [asking, setAsking] = useState('');
   const [changes, setChanges] = useState<string[] | null>(null);
   const [before, setBefore] = useState<Shape | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
   const deck = useRef<StemDeck | null>(null);
+  const grid = useRef<HTMLDivElement>(null);
   const at = useMixPath();
+  const owner = useRef({
+    id: `studio-${position}-${item.song_id}`,
+    label: 'The Studio',
+    stop: () => {
+      deck.current?.stop();
+      setPlaying(false);
+      setCell(-1);
+    },
+  });
+  const listen = () => takeAudio(owner.current);
+  // stopping here doesn't bring the mix back: someone working in the Studio isn't done listening
+  const quiet = () => {
+    mainPlayerTouched();
+    releaseAudio(owner.current.id);
+  };
 
   useEffect(() => {
     let live = true;
@@ -63,12 +101,17 @@ export function Studio(props: {
       window.clearTimeout(timer);
       deck.current?.close();
       deck.current = null;
+      quiet();
     };
   }, [position]);
 
   useEffect(() => {
     if (session?.status !== 'ready' || deck.current || !session.start_shape) return;
-    const chosen = session.shape ?? session.start_shape;
+    const committed = session.shape ?? session.start_shape;
+    // what you were working on is still here, even after leaving the page or a failed render
+    const unsaved = savedShape(session.key);
+    const chosen = unsaved ?? committed;
+    setRestored(!!unsaved && JSON.stringify(unsaved) !== JSON.stringify(committed));
     const made = new StemDeck(session.seconds ?? 1, session.cells ?? 8, chosen);
     made.onCell = setCell;
     deck.current = made;
@@ -85,6 +128,7 @@ export function Studio(props: {
     setBefore(null);
     setProblem('');
     deck.current?.setShape(next);
+    if (session?.key) keepShape(session.key, next);
   };
   /** Selecta's turn. What was there can be put back, and nothing is final until "Use this". */
   const askSelecta = async (mine: boolean) => {
@@ -97,6 +141,7 @@ export function Studio(props: {
       setBefore(same ? null : shape);
       setShape(answer.shape);
       deck.current?.setShape(answer.shape);
+      if (session?.key) keepShape(session.key, answer.shape);
       setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
     } catch (error) {
       setProblem((error as Error).message);
@@ -122,8 +167,9 @@ export function Studio(props: {
       deck.current.stop();
       setPlaying(false);
       setCell(-1);
+      quiet();
     } else {
-      onListen?.();
+      listen();
       await deck.current.play();
       setPlaying(true);
     }
@@ -134,7 +180,7 @@ export function Studio(props: {
     setSoloed(next);
     deck.current.solo(next);
     if (next && !playing) {
-      onListen?.();
+      listen();
       await deck.current.play();
       setPlaying(true);
     }
@@ -144,11 +190,14 @@ export function Studio(props: {
     setSaving(true);
     deck.current?.stop();
     setPlaying(false);
+    quiet();
     try {
-      onUsed(await post<MixData>(at(`/mix/${position}/studio/use`), { shape }));
+      onUsed(await post<MixData>(at(`/mix/${position}/studio/use`), { shape }, guard));
+      if (session?.key) keepShape(session.key, null);
       notify('Rendering your version. It’ll play in the mix when it’s ready.');
       onClose();
     } catch (error) {
+      // the shape stays right here, so nothing's lost by this going wrong
       setProblem((error as Error).message);
       setSaving(false);
     }
@@ -158,6 +207,19 @@ export function Studio(props: {
   const preparing = !session || session.status === 'none' || session.status === 'queued' || session.status === 'rendering';
   const failed = problem || (session?.status === 'failed' ? session.error : '');
   const barsPerCell = session?.bars && session.cells ? session.bars / session.cells : 2;
+  const columns = session?.cells ?? 8;
+  const rowCount = SIDES.length * LANES.length;
+  const gridKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const moves: Record<string, [number, number]> = { ArrowRight: [0, 1], ArrowLeft: [0, -1], ArrowDown: [1, 0], ArrowUp: [-1, 0] };
+    let next = moves[event.key] ? { row: focusCell.row + moves[event.key][0], column: focusCell.column + moves[event.key][1] } : null;
+    if (event.key === 'Home') next = { row: focusCell.row, column: 0 };
+    if (event.key === 'End') next = { row: focusCell.row, column: columns - 1 };
+    if (!next) return;
+    event.preventDefault();
+    const moved = { row: Math.min(Math.max(next.row, 0), rowCount - 1), column: Math.min(Math.max(next.column, 0), columns - 1) };
+    setFocusCell(moved);
+    grid.current?.querySelector<HTMLElement>(`[data-cell="${moved.row}-${moved.column}"]`)?.focus();
+  };
 
   return (
     <section className="studio" aria-label="Stem studio">
@@ -205,40 +267,66 @@ export function Studio(props: {
               </button>
             ))}
           </div>
-          {SIDES.map((side) => (
-            <div className="studio-side" key={side}>
-              <h4>{titles[side]}</h4>
-              {LANES.map((lane) => {
-                const name = `${side}_${lane}`;
-                return (
-                  <div className="studio-lane" key={name}>
-                    <button
-                      className="studio-name"
-                      aria-pressed={soloed === name}
-                      aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}`}
-                      onClick={() => void solo(name)}
-                    >
-                      {LANE_WORDS[lane]}
-                    </button>
-                    {shape[side][lane].map((value, index) => (
-                      <button
-                        key={index}
-                        className={`studio-cell ${index === cell ? 'now' : ''}`}
-                        aria-pressed={Boolean(value)}
-                        aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}
-                        onClick={() => toggle(side, lane, index)}
-                      />
-                    ))}
-                  </div>
-                );
-              })}
+          {restored && <p className="hint" role="status">This is what you were working on before. Start again to go back to what’s in the mix.</p>}
+          <p className="hint">Arrow keys move around the grid, and Space turns a square on or off.</p>
+          <div className="studio-grid" role="grid" aria-label={`Stems for ${titles.a} and ${titles.b}`} ref={grid} onKeyDown={gridKeys}>
+            <div className="studio-lane studio-ruler" role="row" aria-label="Bars">
+              <span className="studio-name" role="columnheader">Bar</span>
+              {Array.from({ length: columns }, (_, index) => (
+                <span key={index} role="columnheader" className={index === cell ? 'now' : undefined}>{index * barsPerCell + 1}</span>
+              ))}
             </div>
-          ))}
+            {SIDES.map((side, sideIndex) => (
+              <div className="studio-side" key={side} role="rowgroup" aria-label={titles[side]}>
+                <h4>{titles[side]}</h4>
+                {LANES.map((lane, laneIndex) => {
+                  const name = `${side}_${lane}`;
+                  const row = sideIndex * LANES.length + laneIndex;
+                  return (
+                    <div className="studio-lane" key={name} role="row">
+                      <span role="rowheader" className="studio-gridcell">
+                        <button
+                          className="studio-name"
+                          aria-pressed={soloed === name}
+                          aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}`}
+                          onClick={() => void solo(name)}
+                        >
+                          {LANE_WORDS[lane]}
+                        </button>
+                      </span>
+                      {shape[side][lane].map((value, index) => (
+                        <span role="gridcell" className="studio-gridcell" key={index}>
+                          <button
+                            data-cell={`${row}-${index}`}
+                            tabIndex={focusCell.row === row && focusCell.column === index ? 0 : -1}
+                            className={`studio-cell ${index === cell ? 'now' : ''}`}
+                            aria-pressed={Boolean(value)}
+                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}
+                            title={`Bar ${index * barsPerCell + 1}`}
+                            onFocus={() => setFocusCell({ row, column: index })}
+                            onClick={() => toggle(side, lane, index)}
+                          />
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
           <div className="row wrap">
             <button className="primary" disabled={saving} onClick={() => void use()}>
               {saving ? 'Saving…' : 'Use this'}
             </button>
-            {session?.start_shape && <button onClick={() => change((session.shape ?? session.start_shape) as Shape)}>Start again</button>}
+            {session?.start_shape && (
+              <button onClick={() => {
+                change((session.shape ?? session.start_shape) as Shape);
+                keepShape(session.key, null);
+                setRestored(false);
+              }}>
+                Start again
+              </button>
+            )}
           </div>
         </>
       )}

@@ -1,7 +1,9 @@
 import { createContext, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
 import { del, get, MixData, MixItem, post, SongRow } from '../api';
+import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
 import { SetPlayer } from '../player';
+import { AudioPreview } from '../ui/AudioPreview';
 
 type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
@@ -40,6 +42,21 @@ const CAN_FORCE = new Set<Stage>(['searching', 'no_cues']);
 // what a bridge needs: a song Selecta knows its way around, and a mix to lead from
 const CAN_BRIDGE = new Set<Stage>(['searching', 'approve', 'preparing', 'waiting']);
 const WATCH_MS = 1500;
+// what needs you comes first, then what's closest to happening
+const GROUP_ORDER: Record<Stage, number> = {
+  approve: 0,
+  ready: 1,
+  preparing: 2,
+  analysing: 2,
+  adding: 3,
+  searching: 3,
+  waiting: 3,
+  no_mix: 3,
+  no_cues: 4,
+  never: 4,
+  unavailable: 4,
+  in_mix: 5,
+};
 const EXTRA_WORDS: Record<number, string> = { 1: 'one extra song', 2: 'two extra songs', 3: 'three extra songs' };
 
 function playingNow(playback?: Playback): boolean {
@@ -77,22 +94,22 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
     case 'adding':
       return { label: 'Adding', tone: 'active', detail: 'Saving your request.' };
     case 'unavailable':
-      return { label: 'Not in your library', tone: 'stuck', detail: 'It’s gone from your library, so it can’t join.' };
+      return { label: 'Needs attention', tone: 'stuck', detail: 'It’s gone from your library, so it can’t join.' };
     case 'never':
-      return { label: 'Set to never play', tone: 'stuck', detail: 'You’ve set this song to never play. Change that in your Library and it can join.' };
+      return { label: 'Needs attention', tone: 'stuck', detail: 'You’ve set this song to never play. Change that in your Library and it can join.' };
     case 'in_mix':
       return { label: 'In your mix', tone: 'quiet', detail: 'This song is already in your mix.' };
     case 'analysing':
-      return { label: 'Analysing', tone: 'active', detail: `Selecta needs to listen to it first.${wait}` };
+      return { label: 'Getting ready', tone: 'active', detail: `Selecta needs to listen to it first.${wait}` };
     case 'no_cues':
-      return { label: 'Can’t place it', tone: 'stuck', detail: 'No lyrics were found for it, so Selecta can’t tell where the singing is and won’t risk cutting off a line.' };
+      return { label: 'Needs attention', tone: 'stuck', detail: 'No lyrics were found for it, so Selecta can’t tell where the singing is and won’t risk cutting off a line.' };
     case 'no_mix':
       return { label: 'Waiting for a mix', tone: 'quiet', detail: 'Start a mix and Selecta will find a spot.' };
     case 'waiting':
       return { label: 'Waiting to play', tone: 'quiet', detail: 'Selecta finds a spot for it while your mix is playing.' };
     case 'searching':
       return {
-        label: 'Looking for a spot',
+        label: 'Finding a place',
         tone: 'quiet',
         detail: row.behind
           ? `It would go in the same spot as ${row.behind}, so it’s waiting for that to join first. Then it finds its own.`
@@ -104,14 +121,14 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
       };
     case 'approve':
       return {
-        label: 'Needs your OK',
+        label: 'Needs your choice',
         tone: 'attention',
         detail: `${row.bridge_lost ? 'The bridge you chose stopped fitting. ' : ''}Getting to it takes ${EXTRA_WORDS[extras.length] ?? 'one extra song'}${extraNames ? `: ${extraNames}` : ''}.`,
       };
     case 'preparing':
-      return { label: 'Getting it ready', tone: 'active', detail: `${place}${together}${wait}` };
+      return { label: 'Getting ready', tone: 'active', detail: `${place}${together}${wait}` };
     case 'ready':
-      return { label: 'Joining now', tone: 'active', detail: place };
+      return { label: 'Coming up', tone: 'active', detail: place };
   }
 }
 
@@ -209,13 +226,14 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       try {
         const data = await post<RequestList>('/requests/consider', body);
         if (!live || seen !== changes.current) return;
-        setRequests(data.requests);
+        setRequests(data.requests.filter((request) => !leaving.current.has(request.id)));
         if (data.settled?.length) told.current?.(`${data.settled.join(' and ')} is in your mix now, so that request is done.`);
         const ready = data.requests.find((request) => request.ready && request.offer);
         const fresh = playbackBody();
         if (!ready || !fresh || JSON.stringify(fresh.order) !== JSON.stringify(body.order)) return;
         // Use the current audio position after planning, which may have taken several seconds.
-        const changed = await post<MixData>('/requests/insert', { ...fresh, offer: ready.offer });
+        // sent once, whatever happens to the answer, so it can't join twice
+        const changed = await post<MixData>('/requests/insert', { ...fresh, offer: ready.offer }, { 'x-operation-id': `join-${ready.offer}` });
         if (!live) return;
         latest.current?.onMix(changed);
         const words = `${ready.title ?? 'Your request'} joined your mix${ready.after ? ` after ${ready.after}` : ''}.`;
@@ -252,7 +270,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       return get<RequestList>('/requests').then((data) => {
         if (!live || seen !== changes.current) return;
         setError((words) => (words.startsWith('Couldn’t load') ? '' : words));
-        setRequests((before) => data.requests.map((row) => ({ ...before?.find((old) => old.id === row.id), ...row })));
+        setRequests((before) => data.requests
+          .filter((row) => !leaving.current.has(row.id))
+          .map((row) => ({ ...before?.find((old) => old.id === row.id), ...row })));
       }).catch(() => { if (live) setError('Couldn’t load your requests. They’re still saved.'); });
     };
     void refresh();
@@ -378,7 +398,7 @@ export function useRequestComing(afterSongId: number | undefined): boolean {
 const SEAM_WORDS: Record<string, string> = { ready: 'Ready', rendering: 'Rendering…', queued: 'In line', failed: 'Trying another way' };
 
 /** A transition on the way in: faded until it's done, then solid, and ready to hear. */
-function ComingSeam({ item, onListen }: { item: Transition; onListen: () => void }) {
+function ComingSeam({ item }: { item: Transition }) {
   const [hearing, setHearing] = useState(false);
   const done = item.status === 'ready';
   return (
@@ -391,12 +411,11 @@ function ComingSeam({ item, onListen }: { item: Transition; onListen: () => void
         <span className="seam-visual-caption"><b>{item.from}</b><span>→</span><b>{item.to}</b></span>
         {done && (
           <div className="seam-actions">
-            <button onClick={() => { if (!hearing) onListen(); setHearing(!hearing); }}>{hearing ? 'Hide' : 'Hear it'}</button>
+            <button onClick={() => setHearing(!hearing)}>{hearing ? 'Hide' : 'Hear it'}</button>
           </div>
         )}
       </div>
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      {hearing && done && <audio autoPlay controls className="preview" src={`/api/seams/${item.key}/preview`} />}
+      {hearing && done && <AudioPreview autoPlay src={`/api/seams/${item.key}/preview`} label={`${item.from} into ${item.to}`} />}
     </li>
   );
 }
@@ -410,9 +429,6 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
   const coming = comingAfter(state, afterSongId);
   if (!state || !coming.length) return null;
   const { playback, cancel } = state;
-  const listen = () => {
-    if (playback?.player.state.phase === 'playing') void playback.player.togglePause();
-  };
   return (
     <>
       {coming.map((request) => {
@@ -440,7 +456,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
               <button aria-label={`Cancel request for ${title}`} title="Cancel this request" onClick={() => void cancel(request)}>Cancel</button>
             </div>
             <ol className="coming-rows">
-              {seams[0] && <ComingSeam item={seams[0]} onListen={listen} />}
+              {seams[0] && <ComingSeam item={seams[0]} />}
               {songs.map((song, index) => {
                 const bridge = song.id !== request.song_id;
                 return (
@@ -455,7 +471,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
                       </div>
                       <small className="facts">Not playable yet</small>
                     </li>
-                    {seams[index + 1] && <ComingSeam item={seams[index + 1]} onListen={listen} />}
+                    {seams[index + 1] && <ComingSeam item={seams[index + 1]} />}
                   </FragmentRows>
                 );
               })}
@@ -553,39 +569,28 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
 
 /** Hear what you'd be agreeing to. Pressing shows straight away, renders if it has to, and plays by
  * itself as soon as it's ready. */
-function TransitionPreviews({ request, playback }: { request: RequestRow; playback?: Playback }) {
-  const [playing, setPlaying] = useState('');
+function TransitionPreviews({ request }: { request: RequestRow; playback?: Playback }) {
+  const preview = usePreview();
   const [wanted, setWanted] = useState('');
   const [problem, setProblem] = useState('');
-  const audio = useRef<HTMLAudioElement>(null);
   const transitions = request.transitions ?? [];
-
-  const play = (key: string) => {
-    const player = audio.current;
-    setWanted('');
-    if (!player) return;
-    if (playback?.player.state.phase === 'playing') void playback.player.togglePause();
-    player.src = `/api/seams/${key}/preview`;
-    setPlaying(key);
-    void player.play()?.catch(() => setPlaying(''));
-  };
-  const stop = () => {
-    audio.current?.pause();
-    setPlaying('');
-    setWanted('');
+  const named = (key: string) => {
+    const item = transitions.find((transition) => transition.key === key);
+    return item ? `${item.from} into ${item.to}` : 'A transition';
   };
   const hear = async (item: Transition) => {
     setProblem('');
-    if (playing === item.key || wanted === item.key) {
-      stop();
+    if (preview.playing === item.key || wanted === item.key) {
+      preview.stop();
+      setWanted('');
       return;
     }
-    audio.current?.pause();
-    setPlaying('');
     if (item.status === 'ready') {
-      play(item.key);
+      setWanted('');
+      preview.play(item.key, `/api/seams/${item.key}/preview`, named(item.key));
       return;
     }
+    preview.stop();
     setWanted(item.key);
     try {
       await post(`/requests/${request.id}/hear`, { keys: [item.key] });
@@ -601,8 +606,10 @@ function TransitionPreviews({ request, playback }: { request: RequestRow; playba
     const timer = window.setInterval(() => {
       void get<{ status: string; error?: string }>(`/seams/${wanted}`).then((state) => {
         if (!live) return;
-        if (state.status === 'ready') play(wanted);
-        else if (state.status === 'failed') {
+        if (state.status === 'ready') {
+          setWanted('');
+          preview.play(wanted, `/api/seams/${wanted}/preview`, named(wanted));
+        } else if (state.status === 'failed') {
           setWanted('');
           setProblem('That transition didn’t work, so Selecta will find another way in.');
         }
@@ -614,17 +621,15 @@ function TransitionPreviews({ request, playback }: { request: RequestRow; playba
   if (!transitions.length) return null;
   return (
     <div className="request-previews">
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <audio ref={audio} preload="none" onEnded={() => setPlaying('')} />
       {transitions.map((item) => (
         <div className="request-preview" key={item.key}>
           <span className="request-pair"><b>{item.from}</b> → <b>{item.to}</b></span>
-          <button aria-label={`Hear ${item.from} into ${item.to}`} aria-pressed={playing === item.key} onClick={() => void hear(item)}>
-            {playing === item.key ? '■ Stop' : wanted === item.key ? 'Getting it ready…' : '▶ Hear'}
+          <button aria-label={`Hear ${item.from} into ${item.to}`} aria-pressed={preview.playing === item.key} onClick={() => void hear(item)}>
+            {preview.playing === item.key ? '■ Stop' : wanted === item.key ? 'Getting it ready…' : '▶ Hear'}
           </button>
         </div>
       ))}
-      {problem && <p className="warn" role="alert">{problem}</p>}
+      {(problem || preview.problem) && <p className="warn" role="alert">{problem || preview.problem}</p>}
     </div>
   );
 }
@@ -724,7 +729,7 @@ export function RequestsPanel() {
       )}
       {!!requests?.length && (
         <ul className="request-list" aria-label="Your requests">
-          {requests.map((request) => {
+          {[...requests].sort((a, b) => GROUP_ORDER[stageOf(a, playback)] - GROUP_ORDER[stageOf(b, playback)]).map((request) => {
             const stage = stageOf(request, playback);
             const words = requestWords(request, stage);
             const title = request.title ?? 'Unavailable song';
@@ -767,10 +772,11 @@ export function RequestsPanel() {
                       </button>
                     )}
                     {CAN_FORCE.has(stage) && (
-                      <button title="Puts it in the mix now. The transition may be rough." onClick={() => void addAnyway(request)}>
+                      <button onClick={() => void addAnyway(request)}>
                         Play it anyway
                       </button>
                     )}
+                    {CAN_FORCE.has(stage) && <small className="hint">Play it anyway puts it in soon, and the transition may be rough.</small>}
                   </div>
                 )}
                 {finding === request.id && CAN_BRIDGE.has(stage) && (

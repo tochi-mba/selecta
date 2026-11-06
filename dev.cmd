@@ -186,6 +186,7 @@ def test() -> int:
         ("Types", [pnpm, "exec", "tsc", "--noEmit"], WEB),
         ("Site tests", [pnpm, "test"], WEB),
         ("Site build", [pnpm, "build"], WEB),
+        ("Browser tests", [pnpm, "e2e"], WEB),
     ):
         say(f"--- {words}")
         if subprocess.run(command, cwd=folder, check=False).returncode != 0:

@@ -104,6 +104,7 @@ describe('Pick a feeling', () => {
       'POST /steer': { mix_language: 'seamless' },
     });
     show();
+    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
     const select = await screen.findByLabelText('Transition feel');
     fireEvent.change(select, { target: { value: 'seamless' } });
     expect(await screen.findByRole('combobox', { name: 'Transition feel' })).toHaveValue('seamless');
@@ -116,6 +117,7 @@ describe('Pick a feeling', () => {
       'POST /steer': { mix_language: 'balanced', stems: 'often', target: null },
     });
     show();
+    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
     fireEvent.change(await screen.findByLabelText('Stem-assisted moves'), { target: { value: 'often' } });
     expect(await screen.findByLabelText('Stem-assisted moves')).toHaveValue('often');
     expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { action?: string; value?: string }).action === 'stems' && (call.body as { value?: string }).value === 'often')).toBe(true);
@@ -127,6 +129,7 @@ describe('Pick a feeling', () => {
       'POST /steer': { energy_arc: [62, 72, 35, 85, 68] },
     });
     show();
+    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
     const middle = await screen.findByRole('slider', { name: 'Energy arc middle' });
     fireEvent.change(middle, { target: { value: '35' } });
     expect(middle).toHaveValue('35');
@@ -168,6 +171,7 @@ describe('Pick a feeling', () => {
       'POST /steer': { energy_arc: null },
     });
     show([20, 40, 80, 60, 30]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Use each mix’s arc' }));
     await waitFor(() => {
       expect(
@@ -192,6 +196,7 @@ describe('Pick a feeling', () => {
       'POST /steer': { mix_language: 'balanced', target: '7' },
     });
     show();
+    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
     fireEvent.change(await screen.findByLabelText('Take me to'), { target: { value: 'midnight' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Midnight — Example Artist' }));
     expect(await screen.findByText('Midnight — Example Artist')).toBeInTheDocument();
@@ -276,5 +281,32 @@ describe('a feeling kept as a draft', () => {
     expect(calls.find((call) => call.method === 'POST')?.path).toContain('as_draft=true');
     expect(setMixData).not.toHaveBeenCalled();
     expect(notify.mock.calls[0][0]).toContain('Nothing changed in what’s playing');
+  });
+});
+
+describe('browsing and my mixes', () => {
+  it('browsing says roughly how long, because that’s all it can promise', async () => {
+    fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', '')] });
+    show();
+    expect(await screen.findByRole('button', { name: 'About 30 min' })).toBeInTheDocument();
+    expect(screen.getByText(/How long it really runs depends/)).toBeInTheDocument();
+  });
+
+  it('how mixes get built stays out of the way until it’s wanted, and says it’s for new mixes', async () => {
+    fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', '')] });
+    show();
+    await screen.findByRole('button', { name: 'Customize' });
+    expect(screen.queryByLabelText('Transition feel')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Customize' }));
+    expect(screen.getByText(/They don’t change a mix you’ve already got/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByLabelText('Transition feel')).toBeNull();
+  });
+
+  it('says why a preset can’t be played yet', async () => {
+    fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', ''), { ...card('rap', 'Rap run', ''), ready: false, needs: 4, group: 'The sound' }] });
+    show();
+    expect(await screen.findByText('needs 4 more')).toBeInTheDocument();
+    expect(screen.getByText(/analysed and have timed lyrics/)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { MixItem, post, SeamState } from './api';
+import { mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { saveResume } from './lib';
 
 /** Plays a mix with no gaps, by scheduling finished audio on the sound card's own clock.
@@ -22,6 +23,8 @@ export type NowState = {
   notice: string;
   nextReady: boolean;
   lastSeamKey: string | null;
+  volume: number;
+  muted: boolean;
 };
 
 const SEAM_FADE = 0.03;
@@ -30,6 +33,18 @@ const END_FADE = 3;
 const LOAD_NEXT_WITHIN = 45;
 const SKIP_LEAD = 8;
 const SAVE_EVERY = 5;
+const RESTART_WITHIN = 4;
+const SOUND_KEY = 'selecta.sound';
+
+function savedSound(): { volume: number; muted: boolean } {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(SOUND_KEY) ?? '{}');
+    const volume = typeof saved.volume === 'number' ? Math.min(Math.max(saved.volume, 0), 1) : 1;
+    return { volume, muted: saved.muted === true };
+  } catch {
+    return { volume: 1, muted: false };
+  }
+}
 
 type Playing = { source: AudioBufferSourceNode; gain: GainNode };
 type Current = Playing & {
@@ -50,6 +65,7 @@ type Planned = {
 export class SetPlayer {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
+  private output: GainNode | null = null;
   private analyser: AnalyserNode | null = null;
   private spectrum: Uint8Array<ArrayBuffer> | null = null;
   private songs = new Map<number, Promise<AudioBuffer>>();
@@ -81,6 +97,7 @@ export class SetPlayer {
     notice: '',
     nextReady: false,
     lastSeamKey: null,
+    ...savedSound(),
   };
   onChange: (state: NowState) => void = () => {};
 
@@ -97,10 +114,33 @@ export class SetPlayer {
       this.analyser.fftSize = 512;
       this.analyser.smoothingTimeConstant = 0.78;
       this.spectrum = new Uint8Array(this.analyser.frequencyBinCount);
+      // volume comes after the analyser, so turning it down doesn't flatten the visualizer
+      this.output = this.context.createGain();
+      this.output.gain.value = this.state.muted ? 0 : this.state.volume;
       this.master.connect(this.analyser);
-      this.analyser.connect(this.context.destination);
+      this.analyser.connect(this.output);
+      this.output.connect(this.context.destination);
     }
     return this.context;
+  }
+
+  private applySound() {
+    if (this.output) this.output.gain.value = this.state.muted ? 0 : this.state.volume;
+    try {
+      window.localStorage.setItem(SOUND_KEY, JSON.stringify({ volume: this.state.volume, muted: this.state.muted }));
+    } catch {
+      // it just won't be remembered next time
+    }
+  }
+
+  setVolume(volume: number) {
+    this.update({ volume: Math.min(Math.max(volume, 0), 1), muted: volume <= 0 ? this.state.muted : false });
+    this.applySound();
+  }
+
+  toggleMute() {
+    this.update({ muted: !this.state.muted });
+    this.applySound();
   }
 
   /** The mixed output's frequency bands, sampled only by the visualizer. */
@@ -247,7 +287,91 @@ export class SetPlayer {
     this.tick();
   }
 
+  /** Pause or carry on because something else needs the sound, not because anyone asked. */
+  async pause() {
+    if (this.state.phase !== 'playing' || !this.context) return;
+    await this.context.suspend();
+    this.update({ phase: 'paused' });
+  }
+
+  async resume() {
+    if (this.state.phase !== 'paused' || !this.context) return;
+    await this.context.resume();
+    this.update({ phase: 'playing' });
+  }
+
+  /** Is a transition being heard right now? What's already sounding can't be taken back. */
+  private transitionIsLive(): boolean {
+    const now = this.context?.currentTime ?? 0;
+    return (!!this.planned && now >= this.planned.whenA) || this.seamTailEnd !== null;
+  }
+
+  /** The next song, straight away. Not the same as jumping to the transition, which still plays it. */
+  async next() {
+    mainPlayerTouched();
+    stopPreviewsOnly();
+    const current = this.current;
+    // pressed again while the last press is still loading: carry on from where that was going
+    if (!current && this.state.phase !== 'loading') return;
+    const position = current ? this.getMix().findIndex((item) => item.song_id === current.songId) : this.state.position;
+    const following = this.getMix()[position + 1];
+    if (!following) return;
+    if (!current) {
+      await this.playFrom(position + 1);
+      return;
+    }
+    if (this.transitionIsLive()) {
+      this.update({ notice: `Already on the way into ${following.title}.` });
+      return;
+    }
+    const heard = (this.heard.get(current.songId) ?? 0) + Math.max(0, (this.context?.currentTime ?? current.startedAt) - current.startedAt);
+    void post('/playback/skip', { song_id: current.songId, heard_seconds: heard, source_position: this.songTime() }).catch(() => {});
+    await this.playFrom(position + 1);
+  }
+
+  /** Back to the start of this song, or to the song before if it has only just begun. */
+  async previous() {
+    mainPlayerTouched();
+    stopPreviewsOnly();
+    const current = this.current;
+    if (!current) {
+      if (this.state.phase === 'idle' || this.state.phase === 'loading') await this.playFrom(Math.max(this.state.position - 1, 0));
+      return;
+    }
+    if (this.transitionIsLive()) {
+      this.update({ notice: 'A transition is playing. This can go back once it’s finished.' });
+      return;
+    }
+    const position = this.getMix().findIndex((item) => item.song_id === current.songId);
+    if (this.songTime() > RESTART_WITHIN || position <= 0) await this.seek(0);
+    else await this.playFrom(position - 1);
+  }
+
+  /** Move within this song. A transition already sounding has to finish first. Past the way out,
+   * the player asks for another further on rather than playing one late. */
+  async seek(seconds: number) {
+    mainPlayerTouched();
+    const current = this.current;
+    if (!current) {
+      if (this.state.phase === 'idle') this.update({ songTime: Math.max(seconds, 0) });
+      else if (this.state.phase === 'loading') await this.playFrom(this.state.position, Math.max(seconds, 0));
+      return;
+    }
+    if (this.transitionIsLive()) {
+      this.update({ notice: 'A transition is playing. This can move once it’s finished.' });
+      return;
+    }
+    const wasPaused = this.state.phase === 'paused';
+    const position = this.getMix().findIndex((item) => item.song_id === current.songId);
+    if (position < 0) return;
+    const target = Math.min(Math.max(seconds, 0), Math.max(current.duration - 1, 0));
+    await this.playFrom(position, target);
+    if (wasPaused) await this.pause();
+  }
+
   async togglePause() {
+    mainPlayerTouched();
+    stopPreviewsOnly();
     const context = this.audio();
     if (this.state.phase === 'playing') {
       await context.suspend();
@@ -262,6 +386,7 @@ export class SetPlayer {
 
   /** Jump to just before the next seam. Past that point, or with no seam ready, go straight on. */
   async skip() {
+    mainPlayerTouched();
     const mix = this.getMix();
     const current = this.current;
     if (!current) return;
@@ -283,6 +408,7 @@ export class SetPlayer {
   }
 
   stop() {
+    mainPlayerTouched();
     this.stopAll();
     if (this.timer !== null) {
       window.clearInterval(this.timer);

@@ -1,3 +1,4 @@
+import { connectMainPlayer } from '../audio/focus';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBackend, songs } from '../test/backend';
@@ -113,12 +114,15 @@ describe('the seam studio', () => {
   });
 
   it('play and stop, and it pauses the mix when it plays', async () => {
-    const { onListen } = open();
+    const pause = vi.fn();
+    connectMainPlayer({ isPlaying: () => true, pause, resume: vi.fn() });
+    open();
     await square('Song 1 voice, square 1');
     fireEvent.click(screen.getByRole('button', { name: '▶ Play it' }));
     expect(await screen.findByRole('button', { name: '■ Stop' })).toBeInTheDocument();
     expect(deck.made[0].play).toHaveBeenCalled();
-    expect(onListen).toHaveBeenCalled();
+    expect(pause).toHaveBeenCalled();
+    connectMainPlayer(null);
     fireEvent.click(screen.getByRole('button', { name: '■ Stop' }));
     expect(deck.made[0].stop).toHaveBeenCalled();
     expect(await screen.findByRole('button', { name: '▶ Play it' })).toBeInTheDocument();

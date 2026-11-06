@@ -85,8 +85,9 @@ def load_library(conn: sqlite3.Connection, settings: Settings) -> list[SongInfo]
     rows = conn.execute(
         "SELECT a.song_id,a.version,a.analysed_at,a.bpm,a.grid_confidence,a.camelot,a.energy,"
         "length(a.sections),s.title,s.artist,s.genre,s.duration,s.mtime,"
-        "l.status,l.fetched_at,length(l.synced) "
+        "l.status,l.fetched_at,length(l.synced),o.bpm,o.camelot "
         "FROM analysis a JOIN songs s ON s.id=a.song_id LEFT JOIN lyrics l ON l.song_id=a.song_id "
+        "LEFT JOIN song_overrides o ON o.song_id=a.song_id "
         "WHERE a.error IS NULL AND a.bpm IS NOT NULL AND a.version = "
         "(SELECT MAX(version) FROM analysis) ORDER BY a.song_id"
     ).fetchall()

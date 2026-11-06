@@ -25,7 +25,7 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
   };
 
   return (
-    <main className="page start">
+    <main className="page start" id="main">
       <h1 className="display">Where’s your music?</h1>
       <p className="lede">
         Selecta reads the folder, sets aside anything that isn’t music, and works out how your songs fit

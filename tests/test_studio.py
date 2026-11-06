@@ -275,6 +275,7 @@ def test_seams_from_before_the_studio_keep_their_keys():
     plain = SeamRequest(1, 2, "echo_out")
     fields = asdict(plain)
     del fields["shape"]
+    del fields["leave_after"]
     text = json.dumps([fields, ANALYSIS_VERSION, RENDER_VERSION], sort_keys=True)
     assert plain.key == hashlib.sha256(text.encode()).hexdigest()[:20]
 
@@ -370,7 +371,7 @@ def _load_two_song_mix(client):
 
 def test_opening_the_studio_starts_a_session_and_quotes_the_wait(tmp_path, monkeypatch):
     client, _settings, sent = _mix_client(tmp_path, monkeypatch)
-    monkeypatch.setattr("selecta.api.windows_to_separate", lambda *_args: 2)
+    monkeypatch.setattr("selecta.routes.discover.windows_to_separate", lambda *_args: 2)
     _load_two_song_mix(client)
     answer = client.post("/api/mix/1/studio")
     assert answer.status_code == 200
@@ -385,7 +386,7 @@ def test_opening_the_studio_starts_a_session_and_quotes_the_wait(tmp_path, monke
 
 def test_asking_again_while_it_waits_does_not_start_another(tmp_path, monkeypatch):
     client, _settings, sent = _mix_client(tmp_path, monkeypatch)
-    monkeypatch.setattr("selecta.api.windows_to_separate", lambda *_args: 2)
+    monkeypatch.setattr("selecta.routes.discover.windows_to_separate", lambda *_args: 2)
     _load_two_song_mix(client)
     client.post("/api/mix/1/studio")
     count = len(sent)
