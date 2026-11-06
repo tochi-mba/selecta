@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { get, MixData, post, SongRow } from '../api';
-import { analysingWords, askedToAnalyse, clock } from '../lib';
+import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
 import { ViewProps } from './shared';
 
 const FILTERS = [
@@ -55,9 +55,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     notify('Analysing the rest of your library in the background.');
   };
   const analyse = async (song: SongRow) => {
-    const { ahead } = await post<{ ahead: number }>(`/songs/${song.id}/analyse`);
+    const { ahead, seconds } = await post<{ ahead: number; seconds?: number }>(`/songs/${song.id}/analyse`);
     refreshStatus();
-    notify(askedToAnalyse(song.title, ahead));
+    notify(askedToAnalyse(song.title, ahead, seconds));
   };
   const setPriority = async (song: SongRow) => {
     await post(`/songs/${song.id}/priority?priority=${song.priority ? 0 : 100}`);
@@ -86,7 +86,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {filter === 'not_yet' && left > 0 && (
         <div className="row wrap analyse-all">
           <span className="hint">
-            {left} song{left === 1 ? '' : 's'} left, about {Math.ceil((left * 25) / 3600)} hour{left * 25 > 3600 ? 's' : ''} in the background.
+            {left} song{left === 1 ? '' : 's'} left. {analysisWords(status.eta?.analysis)}
           </span>
           {status.analysis_running ? (
             <button onClick={() => setView('Workshop')}>Analysing now, see progress</button>
@@ -129,6 +129,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                   filter !== 'set_aside' && (
                     <button disabled={line.includes(song.id)} onClick={() => void analyse(song)}>
                       {analysingWords(line, song.id)}
+                      {status.eta?.line[song.id] !== undefined && `, ${etaWords(status.eta.line[song.id])}`}
                     </button>
                   )
                 )}

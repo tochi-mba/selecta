@@ -1,6 +1,6 @@
 import { type PointerEvent, useEffect, useState } from 'react';
 import { get, MixData, post, SongRow, VibeCard } from '../api';
-import { length, SET_LENGTHS } from '../lib';
+import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
 
 type Saved = { name: string; songs: number };
@@ -457,7 +457,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <section className="nudge">
           <p>
             <b>{counts.analysed} of {counts.music} songs have audio analysis; {counts.ready ?? 0} are ready for mixes.</b> The rest will mean better mixes and many more
-            word links. It takes about {Math.ceil((left * 25) / 3600)} hour{left * 25 > 3600 ? 's' : ''} in the background.
+            word links. {analysisWords(status.eta?.analysis)}
           </p>
           {status.analysis_running ? (
             <button onClick={() => setView('Workshop')}>Analysing now, see progress</button>

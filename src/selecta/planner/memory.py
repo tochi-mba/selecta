@@ -88,6 +88,8 @@ class SeamMemory:
         if state.get("status") != "ready":
             return
         style = state.get("style")
+        if not style:
+            return  # a Seam Studio session is stems laid out, not a move that was tried
         attempt = (a, b, style)
         (self.clean if state.get("passed") else self.warned).add(attempt)
         (self.clean_songs if state.get("passed") else self.warned_songs).update((a, b))

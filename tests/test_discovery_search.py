@@ -4,7 +4,7 @@ import numpy as np
 
 from selecta import db
 from selecta.analysis.song import SongInfo
-from selecta.discovery.search import audio_search
+from selecta.discovery.search import MOST_PER_SONG, audio_search, spread_out
 
 
 def _song(song_id: int, chroma: np.ndarray | None) -> SongInfo:
@@ -12,7 +12,7 @@ def _song(song_id: int, chroma: np.ndarray | None) -> SongInfo:
     return SongInfo(
         id=song_id,
         path=f"{song_id}.wav",
-        artist="Artist",
+        artist=f"Artist {song_id}",
         title=f"Song {song_id}",
         genre=None,
         family="other",
@@ -115,3 +115,82 @@ def test_audio_search_skips_missing_chroma_and_honors_limit(tmp_path):
     assert checkpoints == [True]
     assert conn.execute("SELECT COUNT(*) FROM seam_book").fetchone()[0] == 1
     conn.close()
+
+
+def _chroma(seed: int, bars: int = 32) -> np.ndarray:
+    """Every song shares this chord loop, so every pair could match."""
+    roots = [0, 5, 7, 9]
+    rows = np.zeros((bars, 12), dtype=float)
+    for bar in range(bars):
+        root = roots[bar % 4]
+        rows[bar, [root, (root + 4) % 12, (root + 7) % 12]] = 1.0
+    return rows + np.random.default_rng(seed).random(rows.shape) * 0.01
+
+
+def test_one_song_cannot_take_over_the_chord_list(tmp_path):
+    """An earlier search walked the library in order, so the first song was on every row."""
+    conn = db.connect(tmp_path / "selecta.sqlite")
+    ids = list(range(1, 41))
+    _insert_songs(conn, *ids)
+    songs = [_song(song_id, _chroma(song_id)) for song_id in ids]
+    audio_search(conn, songs, limit=60, seed=3)
+    rows = conn.execute(
+        "SELECT song_a,song_b FROM seam_book WHERE kind='harmonic_sequence_candidate'"
+    ).fetchall()
+    assert len(rows) >= 20
+    appearances: dict[int, int] = {}
+    for row in rows:
+        for song in (row["song_a"], row["song_b"]):
+            appearances[song] = appearances.get(song, 0) + 1
+    assert max(appearances.values()) <= MOST_PER_SONG
+    assert len(appearances) >= 25, "the matches should come from across the library"
+
+
+def test_two_songs_by_one_artist_are_not_a_discovery(tmp_path):
+    conn = db.connect(tmp_path / "selecta.sqlite")
+    _insert_songs(conn, 1, 2)
+    first, second = _song(1, _chroma(1)), _song(2, _chroma(2))
+    first.artist = "Stevie Wonder"
+    second.artist = "Stevie Wonder feat. Someone"
+    assert audio_search(conn, [first, second], limit=10, seed=1) == 0
+
+
+def test_the_search_order_changes_between_runs_unless_seeded(tmp_path):
+    runs = iter(range(10))
+
+    def order(seed):
+        conn = db.connect(tmp_path / f"{next(runs)}.sqlite")
+        ids = list(range(1, 21))
+        _insert_songs(conn, *ids)
+        audio_search(conn, [_song(i, _chroma(i)) for i in ids], limit=5, seed=seed)
+        return [tuple(row) for row in conn.execute("SELECT song_a,song_b FROM seam_book")]
+
+    assert order(1) == order(1)
+    assert order(1) != order(2)
+
+
+def _row(song_a, song_b, artist_a=None, artist_b=None):
+    return {
+        "song_a": song_a,
+        "song_b": song_b,
+        "artist_a": artist_a or f"Artist {song_a}",
+        "artist_b": artist_b or f"Artist {song_b}",
+    }
+
+
+def test_the_list_leads_with_a_new_song_and_artist_on_every_row():
+    rows = [_row(1, song) for song in range(2, 8)] + [_row(10, 11), _row(12, 13)]
+    shown = spread_out(rows, 8)
+    assert [(row["song_a"], row["song_b"]) for row in shown[:3]] == [(1, 2), (10, 11), (12, 13)]
+    assert len(shown) == 8, "nothing is thrown away while there's room"
+
+
+def test_the_same_artist_waits_behind_new_ones():
+    rows = [_row(1, 2, "Stevie", "Someone"), _row(3, 4, "Stevie", "Other"), _row(5, 6)]
+    assert [row["song_a"] for row in spread_out(rows, 3)] == [1, 5, 3]
+
+
+def test_the_list_respects_its_limit_and_copes_with_nothing():
+    assert spread_out([], 5) == []
+    assert len(spread_out([_row(1, song) for song in range(2, 9)], 3)) == 3
+    assert spread_out([_row(1, 2)], 0) == []

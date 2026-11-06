@@ -1,6 +1,7 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { del, get, MixData, MixItem, post, SeamOptions, SeamSettings, Suggestion } from '../api';
-import { analysingWords, askedToAnalyse, clock, length, runningTime, seamStatusWords, triedWords } from '../lib';
+import { analysingWords, askedToAnalyse, clock, etaRangeWords, etaWords, length, runningTime, seamStatusWords, triedWords } from '../lib';
+import { Studio } from './Studio';
 import { ViewProps } from './shared';
 
 /** What could go at this place in the mix: the best fits first, and the same order when searching. */
@@ -34,9 +35,9 @@ export function Adder(props: {
   }, [line.length, query, position]);
 
   const analyse = async (song: Suggestion) => {
-    const { ahead } = await post<{ ahead: number }>(`/songs/${song.song_id}/analyse`);
+    const { ahead, seconds } = await post<{ ahead: number; seconds?: number }>(`/songs/${song.song_id}/analyse`);
     refreshStatus();
-    notify(askedToAnalyse(song.title, ahead));
+    notify(askedToAnalyse(song.title, ahead, seconds));
   };
 
   const keys = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -102,12 +103,17 @@ function SeamEditor(props: {
   previous: MixItem;
   refreshMix: () => void;
   notify: (message: string, undo?: boolean) => void;
+  onListen?: () => void;
 }) {
-  const { position, item, previous, refreshMix, notify } = props;
+  const { position, item, previous, refreshMix, notify, onListen } = props;
   const [options, setOptions] = useState<SeamOptions | null>(null);
   const [problem, setProblem] = useState('');
+  const [studio, setStudio] = useState(false);
   const settings: SeamSettings = item.seam?.settings ?? {};
-  const chosen = settings.move ?? 'auto';
+  const planned = settings.move ?? 'auto';
+  const state = item.seam?.state;
+  // once a seam has rendered, the move to show is the one you're hearing, even if another was planned
+  const chosen = state?.status === 'ready' && state.style ? state.style : planned;
 
   useEffect(() => {
     let live = true;
@@ -135,6 +141,19 @@ function SeamEditor(props: {
 
   if (problem && !options) return <p className="warn">{problem}</p>;
   if (!options) return <p className="hint">Working out what’s possible…</p>;
+  if (studio) {
+    return (
+      <Studio
+        position={position}
+        item={item}
+        previous={previous}
+        onClose={() => setStudio(false)}
+        onUsed={() => refreshMix()}
+        onListen={onListen}
+        notify={notify}
+      />
+    );
+  }
 
   const move = options.moves.find((option) => option.name === chosen);
   const blends = ['bass_swap_blend', 'filter_sweep'].includes(chosen);
@@ -144,6 +163,15 @@ function SeamEditor(props: {
   const off = options.moves.filter((option) => !option.available);
   return (
     <div className="editor stack">
+      {options.studio && (
+        <div className="row wrap">
+          <button disabled={!options.studio.available} onClick={() => setStudio(true)}>
+            Shape it yourself with stems
+          </button>
+          {!options.studio.available && <span className="hint">{options.studio.reason}</span>}
+        </div>
+      )}
+      {chosen === 'stem_studio' && <p className="hint">You shaped this one in the studio.</p>}
       <fieldset>
         <legend>How should this land?</legend>
         <div className="chips moves">
@@ -254,8 +282,9 @@ function SeamRow(props: {
   onToggle: () => void;
   names: Record<string, string>;
   notify: (message: string, undo?: boolean) => void;
+  onListen?: () => void;
 }) {
-  const { item, previous, refreshMix, open, onToggle, names, notify } = props;
+  const { item, previous, refreshMix, open, onToggle, names, notify, onListen } = props;
   const seam = item.seam!;
   const state = seam.state;
   const plannedBars = state.bars ?? seam.settings.bars;
@@ -283,6 +312,7 @@ function SeamRow(props: {
           <b>{label}</b>
           <span className={`pill ${state.status} ${state.status === 'ready' && !state.passed ? 'warned' : ''}`}>
             {seamStatusWords(state.status, state.passed)}
+            {state.eta !== undefined && `, ${etaWords(state.eta)}`}
           </span>
         </button>
         <div className="seam-actions">
@@ -333,7 +363,7 @@ function SeamRow(props: {
           </ul>
         </div>
       )}
-      {open && <SeamEditor position={item.position} item={item} previous={previous} refreshMix={refreshMix} notify={notify} />}
+      {open && <SeamEditor position={item.position} item={item} previous={previous} refreshMix={refreshMix} notify={notify} onListen={onListen} />}
     </li>
   );
 }
@@ -410,7 +440,7 @@ function SongLine(props: {
 }
 
 export function Mix(props: ViewProps) {
-  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus } = props;
+  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta } = props;
   const line = status.analysing ?? [];
   const [openSeam, setOpenSeam] = useState<number | null>(null);
   const [adding, setAdding] = useState<number | null>(null);
@@ -507,7 +537,9 @@ export function Mix(props: ViewProps) {
           <h1 className="display small">{mixName}</h1>
           <p className="lede">
             {mix.length} {mix.length === 1 ? 'song' : 'songs'}, about {length(total)}.
-            {seams.length > 0 && ` ${ready} of ${seams.length} seams are ready. Tap any seam to change how it lands.`}
+            {seams.length > 0 && ` ${ready} of ${seams.length} seams are ready.`}
+            {mixEta && mixEta.seams > 0 && ` The rest take ${etaRangeWords(mixEta)}.`}
+            {seams.length > 0 && ' Tap any seam to change how it lands.'}
           </p>
         </div>
         <div className="row wrap">
@@ -563,6 +595,9 @@ export function Mix(props: ViewProps) {
                 notify={notify}
                 open={openSeam === index}
                 onToggle={() => setOpenSeam(openSeam === index ? null : index)}
+                onListen={() => {
+                  if (now.phase === 'playing') void player.togglePause();
+                }}
               />
             )}
             <SongLine

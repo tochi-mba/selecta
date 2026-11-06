@@ -1,4 +1,4 @@
-import { MixData, MixItem, Status } from '../api';
+import { MixEta, MixData, MixItem, Status } from '../api';
 import { NowState, SetPlayer } from '../player';
 
 export type View = 'Mixes' | 'Now' | 'Edit' | 'Library' | 'Words' | 'Workshop';
@@ -10,6 +10,7 @@ export type ViewProps = {
   mix: MixItem[];
   mixName: string;
   canUndo: boolean;
+  mixEta?: MixEta;
   refreshMix: () => void;
   setMixData: (data: MixData) => void;
   refreshStatus: () => void;

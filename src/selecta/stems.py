@@ -9,6 +9,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,6 +18,7 @@ import soundfile as sf
 
 from selecta import jobs
 from selecta.config import SAMPLE_RATE, Settings
+from selecta.eta import JobClock
 
 MIN_CACHE_BYTES = 512 * 1024**2
 FREE_SPACE_RESERVE = 2 * 1024**3
@@ -86,7 +88,11 @@ def _prune(
 
 def cache_roots(settings: Settings) -> list[Path]:
     """Everything Selecta can make again: separated stems and finished seams."""
-    return [settings.home / "stems", settings.renders_dir / "seams"]
+    return [
+        settings.home / "stems",
+        settings.renders_dir / "seams",
+        settings.renders_dir / "auditions",
+    ]
 
 
 def cache_bytes(settings: Settings) -> int:
@@ -189,6 +195,19 @@ def separate_audio(audio: np.ndarray) -> dict[str, np.ndarray]:
         }
 
 
+def _window_folder(settings: Settings, source: Path, start: float, duration: float) -> Path:
+    key = hashlib.sha256(
+        f"{source.resolve()}:{source.stat().st_mtime}:{start:.3f}:{duration:.3f}".encode()
+    ).hexdigest()[:20]
+    return settings.home / "stems" / key
+
+
+def window_is_ready(settings: Settings, source: Path, start: float, duration: float) -> bool:
+    """Whether separating this window would be instant, because it's already been done."""
+    folder = _window_folder(settings, source, start, duration)
+    return all((folder / f"{name}.wav").exists() for name in ("vocals", "drums", "bass", "other"))
+
+
 def separate_window(
     settings: Settings, source: Path, start: float, duration: float = 46.0
 ) -> StemWindow:
@@ -224,7 +243,9 @@ def separate_window(
         check=True,
         capture_output=True,
     )
+    started = time.monotonic()
     produced = run_demucs(excerpt, target)
+    JobClock(settings.home).record("stem_window", time.monotonic() - started)
     for name, destination in paths.__dict__.items():
         shutil.move(str(produced / f"{name}.wav"), destination)
     excerpt.unlink(missing_ok=True)

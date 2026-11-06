@@ -48,6 +48,7 @@ export function status(more: Partial<Status> = {}): Status {
     analysis_running: false,
     analysing: [],
     mix_rendering: false,
+    eta: { analysis: { seconds: 3600, low: 3000, high: 4200, songs: 40, after_mix: false }, line: {}, jobs: { audition: 6 } },
     scan: { status: 'idle' },
     ...more,
   };

@@ -191,6 +191,7 @@ export function App() {
     mix,
     mixName: data.name,
     canUndo: data.can_undo,
+    mixEta: data.eta,
     refreshMix,
     setMixData,
     refreshStatus,
