@@ -371,6 +371,7 @@ def listen(
 def web(
     port: int = typer.Option(8733),
     open_browser: bool = typer.Option(True, "--open/--no-open"),
+    reload: bool = typer.Option(False, "--reload", help="Restart as the code changes."),
 ) -> None:
     """Open the local Selecta web app."""
     import webbrowser
@@ -380,7 +381,15 @@ def web(
     url = f"http://127.0.0.1:{port}/"
     if open_browser:
         webbrowser.open(url)
-    uvicorn.run("selecta.api:serve", factory=True, host="127.0.0.1", port=port, log_level="warning")
+    uvicorn.run(
+        "selecta.api:serve",
+        factory=True,
+        host="127.0.0.1",
+        port=port,
+        log_level="warning",
+        reload=reload,
+        reload_dirs=[str(Path(__file__).parent)] if reload else None,
+    )
 
 
 @app.command()
