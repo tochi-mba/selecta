@@ -12,6 +12,7 @@ from selecta.listening import (
     public_trials,
     register_comparison,
     respond,
+    study_summary,
 )
 
 
@@ -39,12 +40,19 @@ def test_trials_hide_conditions_and_leave_unanswered_trials_unanswered():
     public = public_trials(conn, "held-out")
     assert public == [{"id": ids[0], "options": ["a", "b"]}]
     assert "adaptive" not in json.dumps(public)
+    assert study_summary(conn, "held-out")["trials_without_any_response"] == 1
+    assert study_summary(conn, "held-out")["conditions"] == {}
     assert conn.execute("SELECT COUNT(*) FROM listening_responses").fetchone()[0] == 0
     respond(conn, ids[0], "listener-1", "tie", "headphones")
     respond(
         conn, ids[0], "listener-1", "tie", "headphones", {"a": {"grade": 2, "tags": ["energy"]}}
     )
     assert conn.execute("SELECT grade,tags FROM listening_quality").fetchone() == (2, '["energy"]')
+    summary = study_summary(conn, "held-out")
+    assert summary["missing_version_grades_in_responses"] == 1
+    assert list(summary["conditions"].values()) == [
+        {"rated": 1, "bad": 1, "bad_transition_rate": 1.0}
+    ]
     with pytest.raises(ValueError):
         respond(conn, ids[0], "listener-1", "a", "headphones", {"b": {"grade": 6}})
     respond(conn, ids[0], "listener-1", "cannot_judge", "headphones")

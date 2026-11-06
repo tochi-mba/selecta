@@ -453,6 +453,15 @@ def listening_import(manifest: Path) -> None:
     console.print(f"Registered {len(trials)} comparison. Open study {data['study']} in Workshop.")
 
 
+@app.command("listening-report")
+def listening_report(study: str) -> None:
+    """Report recorded grades and bad-transition rates without filling missing answers."""
+    from selecta.listening import study_summary
+
+    _, conn = _open()
+    console.print_json(data=study_summary(conn, study))
+
+
 @app.command("set-mix")
 def set_mix(
     output: Path = typer.Option(Path("out/selecta-set.wav"), "--output", "-o"),

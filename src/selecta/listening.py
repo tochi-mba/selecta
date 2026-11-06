@@ -172,11 +172,14 @@ def respond(
     setup: str,
     quality: dict | None = None,
 ) -> None:
-    quality = quality or {}
+    quality = {} if quality is None else quality
+    if not isinstance(quality, dict):
+        raise ValueError("Quality ratings must be keyed by a or b")
     allowed_tags = {"beat", "downbeat", "mid-vocal", "key", "energy", "contrast", "cut-off ending"}
     for option, score in quality.items():
         if (
             option not in {"a", "b"}
+            or not isinstance(score, dict)
             or type(score.get("grade")) is not int
             or not 1 <= score["grade"] <= 5
         ):
@@ -208,3 +211,42 @@ def respond(
                 "INSERT INTO listening_quality VALUES(?,?,?,?,?)",
                 (trial, listener, option, score["grade"], json.dumps(score.get("tags", []))),
             )
+
+
+def study_summary(conn: sqlite3.Connection, study: str) -> dict:
+    """Descriptive counts; repeated listeners are not independent experiments."""
+    initialise(conn)
+    trials = conn.execute(
+        "SELECT id,mapping FROM listening_trials WHERE study=?", (study,)
+    ).fetchall()
+    conditions, listeners = {}, set()
+    choices = {"a": 0, "b": 0, "tie": 0, "cannot_judge": 0}
+    unanswered = missing = 0
+    for trial, mapping_json in trials:
+        mapping = json.loads(mapping_json)
+        responses = conn.execute(
+            "SELECT listener,choice FROM listening_responses WHERE trial=?", (trial,)
+        ).fetchall()
+        unanswered += not responses
+        for listener, choice in responses:
+            listeners.add(listener)
+            choices[choice] += 1
+            grades = conn.execute(
+                "SELECT option,grade FROM listening_quality WHERE trial=? AND listener=?",
+                (trial, listener),
+            ).fetchall()
+            missing += 2 - len(grades)
+            for option, grade in grades:
+                result = conditions.setdefault(mapping[option], {"rated": 0, "bad": 0})
+                result["rated"] += 1
+                result["bad"] += grade <= 2
+    for result in conditions.values():
+        result["bad_transition_rate"] = result["bad"] / result["rated"]
+    return {
+        "trials": len(trials),
+        "trials_without_any_response": unanswered,
+        "listeners": len(listeners),
+        "choices": choices,
+        "missing_version_grades_in_responses": missing,
+        "conditions": conditions,
+    }
