@@ -4,8 +4,9 @@ Every job's real time is kept, so estimates start as guesses and quickly become 
 Four things keep them honest, each from comparing estimates with what really happened on this PC:
 
 - One real time counts as much as the starting guess, and after that the guess fades quickly.
-- How busy the PC is right now counts. The same song took 30 s idle and 12 minutes under load, so
-  recent jobs running slow make every estimate longer until things calm down.
+- Recent times count, not old ones. The same song took 30 s idle and 12 minutes under load, and
+  stems took 238 s on a swamped PC and 70 s once it was free, so a job is quoted from its latest
+  times. A job with too few times of its own goes by how the PC's other jobs have been running.
 - A job that's already running is judged by how long jobs like it took when they ran this long. If
   it has outlasted all the quick ones, it's one of the slow ones, whatever the average says is left.
 - Whatever has to finish first is counted, so a wait behind rendering is part of the time quoted.
@@ -28,6 +29,9 @@ from selecta.config import ANALYSIS_VERSION
 
 KEEP = 40
 """Only recent times count, so estimates follow changes in the machine and the code."""
+RECENT_TIMES = 12
+"""Walking forward through 150 real jobs, the middle of the last 12 came closest for one job and
+held up for a dozen: typically 1.15 times out, against 1.25 for the average of all of them."""
 TRUST_AFTER = 5
 """With fewer times than this, the starting guess still counts as one more time."""
 LOAD_AFTER = 5
@@ -53,7 +57,7 @@ STEADY_JOBS = {
 }
 """Jobs whose time says how busy the PC is. A word move takes 50 s with its stems ready and 330 s
 without, which says nothing about the PC, so those don't count."""
-FILE_VERSION = 2
+FILE_VERSION = 3
 VERSION_KEY = "_version"
 LOAD_KEY = "_load"
 CHECKS_KEY = "_checks"
@@ -135,17 +139,19 @@ def _quantile(ordered: list[float], share: float) -> float:
 
 
 def estimate_from(samples: Iterable[float], guess: float) -> Estimate:
-    """An expected time and likely range, from past times and a guess to fall back on."""
-    ordered = sorted(value for value in samples if value > 0 and math.isfinite(value))
-    count = len(ordered)
+    """An expected time and likely range, from past times, oldest first, and a guess to fall back
+    on. It's the middle of the latest times, so it follows the PC's speed and one stall can't move
+    it."""
+    times = [value for value in samples if value > 0 and math.isfinite(value)]
+    count = len(times)
     if count == 0:
         return Estimate(guess, guess * 0.5, guess * 2.0, 0)
-    trim = count // 10
-    kept = ordered[trim : count - trim]
-    expected = sum(kept) / len(kept)
+    latest = times[-RECENT_TIMES:]
+    ordered = sorted(latest)
+    expected = statistics.median(latest)
     low, high = _quantile(ordered, 0.1), _quantile(ordered, 0.9)
     if count < TRUST_AFTER:
-        expected = (sum(kept) + guess) / (len(kept) + 1)
+        expected = (sum(times) + guess) / (count + 1)
         low, high = min(low, expected * 0.6), max(high, expected * 1.6)
     return Estimate(expected, min(low, expected), max(high, expected), count)
 
@@ -210,10 +216,14 @@ class JobClock:
             return {}
         if not isinstance(loaded, dict):
             return {}
-        if loaded.get(VERSION_KEY) != FILE_VERSION:
+        version = loaded.get(VERSION_KEY, 1)
+        if version < 2:
             # older times for these moves had stems being split mixed in, so they can't be used
-            gone = {*WINDOWED_MOVES, "auto", CHECKS_KEY}
+            gone = {*WINDOWED_MOVES, "auto"}
             loaded = {kind: times for kind, times in loaded.items() if kind not in gone}
+        if version < FILE_VERSION:
+            # the score is of what a person was told, so it starts again when the quoting changes
+            loaded = {kind: times for kind, times in loaded.items() if kind != CHECKS_KEY}
         return loaded
 
     def times(self) -> dict[str, list[float]]:
@@ -258,9 +268,15 @@ class JobClock:
             return 1.0
         return max(QUICKEST_LOAD, min(load, SLOWEST_LOAD))
 
+    def _load_for(self, times: list[float]) -> float:
+        """Enough times of its own already show how the PC is doing, and counting that again as a
+        busy PC would quote a slow spell twice over."""
+        return 1.0 if len(times) >= TRUST_AFTER else self.load()
+
     def estimate(self, kind: str) -> Estimate:
         guess = GUESSES.get(kind, UNKNOWN_JOB_GUESS)
-        return _scaled(estimate_from(self.times().get(kind, []), guess), self.load())
+        times = self.times().get(kind, [])
+        return _scaled(estimate_from(times, guess), self._load_for(times))
 
     def left(self, kind: str, elapsed: float) -> Estimate:
         """What's left of a job that has run this long. Among past jobs that ran at least this long,
@@ -268,8 +284,9 @@ class JobClock:
         estimate = self.estimate(kind)
         if elapsed <= 0:
             return estimate
-        load = self.load()
-        longer = [time * load - elapsed for time in self.times().get(kind, [])]
+        times = self.times().get(kind, [])
+        load = self._load_for(times)
+        longer = [time * load - elapsed for time in times[-RECENT_TIMES:]]
         longer = [time for time in longer if time > 0]
         if not longer:
             return still_to_go(estimate, elapsed)
@@ -285,16 +302,7 @@ class JobClock:
 
     def recent(self) -> dict[str, float]:
         """The expected time for each kind of job, for the page to quote."""
-        times = self.times()
-        load = self.load()
-        return {
-            kind: round(
-                estimate_from(times.get(kind, []), GUESSES.get(kind, UNKNOWN_JOB_GUESS)).seconds
-                * load,
-                1,
-            )
-            for kind in {*GUESSES, *times}
-        }
+        return {kind: round(self.estimate(kind).seconds, 1) for kind in {*GUESSES, *self.times()}}
 
     def accuracy(self) -> dict:
         """How far out recent estimates really were: how many times too long or too short."""
