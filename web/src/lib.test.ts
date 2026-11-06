@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analysingWords, askedToAnalyse, clock, gb, length, loadResume, runningTime, saveResume, seamStatusWords, storageWords } from './lib';
+import { analysingWords, askedToAnalyse, clock, gb, length, loadResume, runningTime, saveResume, seamStatusWords, storageWords, triedWords } from './lib';
 import { seam, songs } from './test/backend';
 
 describe('words on screen', () => {
@@ -89,5 +89,30 @@ describe('resuming', () => {
   it('has nothing to offer past the end of the last song', () => {
     saveResume({ songId: 3, position: 2, time: 500 });
     expect(loadResume(mix)).toBeNull();
+  });
+});
+
+describe('what was tried on a seam', () => {
+  const names = { filter_sweep: 'Filter sweep', bass_swap_blend: 'Blend', tempo_ramp: 'Tempo ramp' };
+
+  it('says each reason once, with one full stop', () => {
+    const far = 'The songs are 45% apart in tempo, too far to play together.';
+    expect(
+      triedWords(
+        [
+          { move: 'filter_sweep', why: far },
+          { move: 'bass_swap_blend', why: far },
+          { move: 'tempo_ramp', why: 'A 45% tempo gap is too wide' },
+        ],
+        names,
+      ),
+    ).toEqual([
+      'Filter sweep and Blend couldn’t work here. The songs are 45% apart in tempo, too far to play together.',
+      'Tempo ramp couldn’t work here. A 45% tempo gap is too wide.',
+    ]);
+  });
+
+  it('has nothing to say when nothing went wrong', () => {
+    expect(triedWords([], names)).toEqual([]);
   });
 });

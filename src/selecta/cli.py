@@ -462,6 +462,49 @@ def listening_report(study: str) -> None:
     console.print_json(data=study_summary(conn, study))
 
 
+@app.command("gather-data")
+def gather_data() -> None:
+    """Bring data from every older Selecta folder on this PC into the one in use. Safe to repeat."""
+    from selecta.homes import gather
+
+    settings = load_settings()
+    sources = gather(settings.home)
+    console.print(f"Everything is now in {settings.home}", highlight=False, soft_wrap=True)
+    for source in sources:
+        console.print(f"  brought in {source}", highlight=False, soft_wrap=True)
+
+
+@app.command()
+def ratings(
+    as_json: bool = typer.Option(False, "--json", help="Print everything as JSON."),
+) -> None:
+    """Every Good and Bad clicked, across every data folder on this PC, and what they share."""
+    from selecta.eval.feedback import all_rated, as_dicts, known_homes, patterns
+
+    settings = load_settings()
+    homes = known_homes(settings.home)
+    rated = all_rated(homes)
+    if as_json:
+        console.print_json(data={"ratings": as_dicts(rated), "patterns": patterns(rated)})
+        return
+    good = sum(item.good for item in rated)
+    console.print(f"{len(rated)} rated seams in {len(homes)} data folders: {good} Good.")
+    for home in homes:
+        console.print(f"  {home}", highlight=False, soft_wrap=True)
+    for item in sorted(rated, key=lambda r: (r.move, not r.good)):
+        word = "GOOD" if item.good else "BAD "
+        console.print(
+            f"{word} {item.move:16} {item.bars:2} bars, {item.gap:5.1%} apart, keys {item.keys}, "
+            f"{item.a[:30]} > {item.b[:30]}" + (f" ({item.note})" if item.note else ""),
+            highlight=False,
+            soft_wrap=True,
+        )
+    for table, rows in patterns(rated).items():
+        console.print(f"\n{table}")
+        for row, (liked, disliked) in rows.items():
+            console.print(f"  {row:24} {liked:3} Good {disliked:3} Bad", highlight=False)
+
+
 @app.command("set-mix")
 def set_mix(
     output: Path = typer.Option(Path("out/selecta-set.wav"), "--output", "-o"),

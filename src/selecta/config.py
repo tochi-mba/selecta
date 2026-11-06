@@ -12,11 +12,10 @@ ANALYSIS_VERSION = 3
 
 
 def default_home() -> Path:
+    """The user's own folder, not AppData: packaged desktop apps quietly redirect AppData to a
+    private copy, which split one library into a separate folder for each app that started it."""
     override = os.environ.get("SELECTA_HOME")
-    if override:
-        return Path(override)
-    local = os.environ.get("LOCALAPPDATA")
-    return Path(local) / "selecta" if local else Path.home() / ".selecta"
+    return Path(override) if override else Path.home() / ".selecta"
 
 
 @dataclass(frozen=True)

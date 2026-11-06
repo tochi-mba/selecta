@@ -1,6 +1,6 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { del, get, MixData, MixItem, post, SeamOptions, SeamSettings, Suggestion } from '../api';
-import { analysingWords, askedToAnalyse, clock, length, runningTime, seamStatusWords } from '../lib';
+import { analysingWords, askedToAnalyse, clock, length, runningTime, seamStatusWords, triedWords } from '../lib';
 import { ViewProps } from './shared';
 
 /** What could go at this place in the mix: the best fits first, and the same order when searching. */
@@ -319,9 +319,9 @@ function SeamRow(props: {
       {open && state.status === 'ready' && (
         <div className="report">
           {state.why && <p className="hint">{state.why}.</p>}
-          {state.tried?.map((attempt) => (
-            <p className="hint" key={attempt.move}>
-              {names[attempt.move] ?? attempt.move} couldn’t work here. {attempt.why}.
+          {triedWords(state.tried ?? [], names).map((line) => (
+            <p className="hint" key={line}>
+              {line}
             </p>
           ))}
           <ul>

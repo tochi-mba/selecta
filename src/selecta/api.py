@@ -685,7 +685,7 @@ def create_app(
                 phrases_of(conn),
                 min(count, 100),
                 start,
-                verdicts=store.verdicts(),
+                memory=store.remembered().read_taste(songs),
                 mix_language=selected_language if selected_language != "balanced" else None,
                 end_id=end_id,
                 stems=stem_preference,
@@ -812,6 +812,7 @@ def create_app(
                 nearby_artists={
                     _artist(by_id[item["song_id"]]) for item in close if item["song_id"] in by_id
                 },
+                memory=store.remembered().read_taste(songs),
             )
             if text:
                 ranked = [
@@ -920,6 +921,7 @@ def create_app(
                 library.get(items[position + 1]["song_id"]) if position + 1 < len(items) else None
             )
             belongs = belonging(mix.mix_name(conn), songs, traits)
+            known = store.remembered().read_taste(songs)
             pick = None
             for pool in (fresh, songs):
                 pick = pick or suggest_next(
@@ -931,6 +933,7 @@ def create_app(
                     items[position]["song_id"],
                     after=following,
                     belongs=belongs,
+                    memory=known,
                 )
             if pick is None:
                 raise HTTPException(404, "Nothing else fits here yet. Analysing more songs helps.")
@@ -1026,9 +1029,22 @@ def create_app(
         if body.rating not in {"good", "bad", "none"}:
             raise HTTPException(400, "rating must be good, bad or none")
         try:
-            return store.rate(Path(key).name, body.rating, body.note)
+            state = store.rate(Path(key).name, body.rating, body.note)
         except CannotRender as problem:
             raise HTTPException(400, str(problem)) from problem
+        return state
+
+    @app.get("/api/memory")
+    def what_it_remembers() -> dict:
+        return store.remembered().summary()
+
+    @app.get("/api/memory/ratings")
+    def every_rating() -> dict:
+        """Every Good and Bad in every data folder on this PC, and what they have in common."""
+        from selecta.eval.feedback import all_rated, as_dicts, known_homes, patterns
+
+        rated = all_rated(known_homes(settings.home))
+        return {"ratings": as_dicts(rated), "patterns": patterns(rated)}
 
     # ---- word links across the whole library
 
@@ -1114,4 +1130,7 @@ def create_app(
 
 def serve() -> FastAPI:
     """The app as `selecta web` runs it. Only this starts the worker, not importing the file."""
+    from selecta.homes import gather_if_needed
+
+    gather_if_needed(load_settings().home)
     return create_app(prepare_links=True)

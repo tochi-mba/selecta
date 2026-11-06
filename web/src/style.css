@@ -466,3 +466,16 @@ kbd { font: 0.82rem var(--mono); background: var(--panel-2); border: 1px solid v
 .vibe-group { margin-top: 26px; }
 .vibe-group > .eyebrow { margin: 0 0 10px; }
 .card .how { color: var(--soft); font: 0.76rem var(--mono); }
+
+.discoveries > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.discoveries > summary h2 { display: inline; margin: 0; }
+.discoveries > summary .hint { margin: 0; }
+.discovery { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-top: 10px; display: grid; gap: 10px; justify-items: start; }
+.discovery-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 8px; width: 100%; }
+.discovery-part { display: flex; align-items: center; gap: 10px; text-align: left; min-width: 0; }
+.discovery-part[aria-pressed='true'] { border-color: var(--accent); }
+.discovery-part span:last-child { display: grid; min-width: 0; }
+.discovery-part b, .discovery-part small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discovery-part small { color: var(--soft); }
+.answered { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.answered li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--soft); }

@@ -18,13 +18,23 @@ from typing import Any
 
 import numpy as np
 
+from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
 from selecta.lyrics.lrclib import clean_artist
 from selecta.planner.arc import target_energy
-from selecta.planner.beam import PlannedSong, plan_set
+from selecta.planner.beam import (
+    CLOSE_TEMPO,
+    FAR_KEYS,
+    LINK_BONUS,
+    WORDPLAY_LINK_BONUS,
+    PlannedSong,
+    plan_set,
+    ratings_lean,
+)
 from selecta.planner.choose import enumerate_candidates
+from selecta.planner.memory import SeamMemory
 from selecta.planner.moods import THEMES, is_english, is_seasonal, read_lyrics
-from selecta.planner.wordreel import Verdicts, modes_for, ride_lines
+from selecta.planner.wordreel import modes_for, ride_lines
 from selecta.render.intertwine import can_intertwine
 from selecta.styles.wordplay import felt_bpm
 
@@ -43,13 +53,13 @@ MOVE_WEIGHTS: dict[str, dict[str, float]] = {
     "balanced": {
         "bass_swap_blend": 2.5,
         "filter_sweep": 2.0,
-        "tempo_ramp": 0.7,
-        "delay_throw": 0.5,
-        "echo_out": 0.4,
+        "tempo_ramp": 0.4,
+        "delay_throw": 0.3,
+        "echo_out": 0.5,
     },
-    "seamless": {"bass_swap_blend": 2.5, "filter_sweep": 2.0, "tempo_ramp": 0.8},
-    "punchy": {"cut_on_one": 1.0, "echo_out": 1.0, "delay_throw": 1.0, "bass_swap_blend": 1.0},
-    "wordplay": {"bass_swap_blend": 2.0, "filter_sweep": 1.5, "tempo_ramp": 0.5},
+    "seamless": {"bass_swap_blend": 2.5, "filter_sweep": 2.0, "tempo_ramp": 0.5},
+    "punchy": {"cut_on_one": 1.0, "echo_out": 1.2, "delay_throw": 0.6, "bass_swap_blend": 1.0},
+    "wordplay": {"bass_swap_blend": 2.0, "filter_sweep": 1.5, "tempo_ramp": 0.3},
 }
 RIDE_WEIGHT = {"balanced": 3.0, "seamless": 3.0, "wordplay": 1.5, "punchy": 1.5}
 MAX_SHARE = {
@@ -73,10 +83,12 @@ FAMILIES = {
     "vocal_ride": "voice",
     "stem_intertwine": "blend",
 }
+ROLL_GAP = 0.1
+ROLL_SHOWCASE_GAP = 0.5
+BLEND_SHOWCASE_GAP = 0.08
 OVER_SHARE = 0.05
-WARNED_BEFORE = 0.25
-WARNING_COST = 0.15
-"""Songs behind past warnings get picked a little less, up to three warnings' worth."""
+SONG_RECORD_WEIGHT = 0.3
+"""Songs that keep rendering badly get picked a little less, and clean ones a little more."""
 RECENT_PENALTY = 0.45
 SAME_FAMILY_PENALTY = 0.35
 MOVE_WORDS = {
@@ -441,7 +453,7 @@ def build_vibe(
     count: int = DEFAULT_SONGS,
     start: int | None = None,
     seed: int | None = None,
-    verdicts: Verdicts | None = None,
+    memory: SeamMemory | None = None,
     mix_language: str | None = None,
     end_id: int | None = None,
     stems: str = "sometimes",
@@ -458,10 +470,8 @@ def build_vibe(
                 raise ValueError("choose a Christmas song for the Christmas mix destination")
             found.append(destination)
     rng = np.random.default_rng(seed)
-    first = (
-        start if start is not None else _opening_song(vibe, found, traits, rng, energy_arc).id
-    )
-    verdicts = verdicts or Verdicts()
+    first = start if start is not None else _opening_song(vibe, found, traits, rng, energy_arc).id
+    memory = memory or SeamMemory()
     belongs = {song.id: vibe.belongs(song, traits[song.id]) for song in found}
     top = max(belongs.values(), default=1.0) or 1.0
     language = mix_language or vibe.language
@@ -477,9 +487,11 @@ def build_vibe(
         seed=int(rng.integers(0, 2**31)),
         steady=vibe.steady,
         belongs={
-            song: value / top - WARNING_COST * min(verdicts.warned_songs[song], 3)
+            song: value / top + SONG_RECORD_WEIGHT * memory.song_value(song)
             for song, value in belongs.items()
         },
+        link_bonus=WORDPLAY_LINK_BONUS if vibe.wordplay else LINK_BONUS,
+        memory=memory,
         end_id=end_id,
         energy_arc=energy_arc,
     )
@@ -488,50 +500,60 @@ def build_vibe(
             "No valid transition route reaches that song in this mix. Clear the destination or "
             "choose a different mix."
         )
-    return planned, seam_choices(selected_vibe, planned, phrases, rng, verdicts, stems)
+    return planned, seam_choices(selected_vibe, planned, phrases, rng, memory, stems)
 
 
-def _word_move(a: SongInfo, b: SongInfo, verdicts: Verdicts) -> str | None:
+def _word_move_suits(name: str, a: SongInfo, b: SongInfo, showcase: bool) -> bool:
+    """What the ratings showed: rolls were liked 3 in 4 within 10% of each other's tempo and 4 in 14
+    beyond it, and only once in six across five or more keys. Word blends overlap, so they need
+    tempos as close as any overlap does. A mix all about wordplay can stretch further."""
+    gap = abs(a.bpm / b.bpm - 1.0)
+    if camelot_distance(a.camelot, b.camelot) >= FAR_KEYS:
+        return False
+    if name == "phrase_roll":
+        return gap <= (ROLL_SHOWCASE_GAP if showcase else ROLL_GAP)
+    if name in {"word_blend", "word_exchange"}:
+        return gap <= CLOSE_TEMPO or (showcase and gap <= BLEND_SHOWCASE_GAP)
+    return True
+
+
+def _word_move(a: SongInfo, b: SongInfo, memory: SeamMemory, showcase: bool = False) -> str | None:
     """A word hand-off these two can really carry. It needs both sets of words timed, which only
     works in English and has already failed on some songs."""
     if not (is_english(a) and is_english(b)):
         return None
-    if not (verdicts.can_time_words(a.id) and verdicts.can_time_words(b.id)):
+    if not (memory.can_time_words(a.id) and memory.can_time_words(b.id)):
         return None
     options = [
         name
         for name in modes_for(a, b)
-        if name in WORD_MOVES and (a.id, b.id, name) not in verdicts.failed
+        if name in WORD_MOVES
+        and memory.move_factor(a.id, b.id, name) > 0
+        and _word_move_suits(name, a, b, showcase)
     ]
-    proven = [name for name in options if (a.id, b.id, name) in verdicts.worked]
+    proven = [name for name in options if memory.proven(a.id, b.id, name)]
     return (proven or options or [None])[0]
 
 
 def _moves_that_fit(
-    vibe: Vibe, a: SongInfo, b: SongInfo, verdicts: Verdicts, stems: str = "sometimes"
+    vibe: Vibe, a: SongInfo, b: SongInfo, memory: SeamMemory, stems: str = "sometimes"
 ) -> list[tuple[str, float]]:
     """Moves these two songs can carry, and how much to favour each."""
     options: list[tuple[str, float]] = []
-    if stems != "never" and (
-        (a.id, b.id, "vocal_ride") not in verdicts.failed
-        and "word_blend" in modes_for(a, b)
-        and ride_lines(a, b)
-    ):
+    overlap_lean, other_lean = ratings_lean(a, b), ratings_lean(a, b, overlapping=False)
+    ride = memory.move_factor(a.id, b.id, "vocal_ride")
+    if stems != "never" and ride > 0 and "word_blend" in modes_for(a, b) and ride_lines(a, b):
         ride_weight = RIDE_WEIGHT[vibe.language] * (1.5 if stems == "often" else 1.0)
-        options.append(("vocal_ride", ride_weight))
-    if (
-        stems != "never"
-        and (a.id, b.id, "stem_intertwine") not in verdicts.failed
-        and can_intertwine(a, b)
-    ):
-        options.append(("stem_intertwine", 0.35 if stems == "sometimes" else 1.3))
+        options.append(("vocal_ride", ride_weight * ride * overlap_lean))
+    intertwine = memory.move_factor(a.id, b.id, "stem_intertwine")
+    if stems != "never" and intertwine > 0 and can_intertwine(a, b):
+        options.append(("stem_intertwine", (0.35 if stems == "sometimes" else 1.3) * intertwine))
     exits, entries = a.exit_cues()[:3], b.entry_cues()[:4]
     for name, weight in MOVE_WEIGHTS[vibe.language].items():
-        if (a.id, b.id, name) in verdicts.failed:
-            continue
-        if enumerate_candidates(a, b, name, exits=exits, entries=entries):
-            warned = (a.id, b.id, name) in verdicts.warned
-            options.append((name, weight * (WARNED_BEFORE if warned else 1.0)))
+        known = memory.move_factor(a.id, b.id, name)
+        if known > 0 and enumerate_candidates(a, b, name, exits=exits, entries=entries):
+            lean = overlap_lean if name in {"bass_swap_blend", "filter_sweep"} else other_lean
+            options.append((name, weight * known * lean))
     return options
 
 
@@ -564,7 +586,7 @@ def seam_choices(
     planned: list[PlannedSong],
     phrases: dict[tuple[int, int], str],
     rng: np.random.Generator | None = None,
-    verdicts: Verdicts | None = None,
+    memory: SeamMemory | None = None,
     stems: str = "sometimes",
 ) -> dict[int, dict]:
     """The move into each song, chosen from what fits and what the mix has already used, so no two
@@ -572,7 +594,7 @@ def seam_choices(
     timed, and stay rare unless the mix is all about them. Every choice is soft: if it doesn't work
     out when it's rendered, the seam uses the next best thing, and a cut only as a last resort."""
     rng = rng or np.random.default_rng()
-    verdicts = verdicts or Verdicts()
+    memory = memory or SeamMemory()
     seams: dict[int, dict] = {}
     since_word = WORD_SPACING
     history: list[str] = []
@@ -582,13 +604,13 @@ def seam_choices(
         phrase = phrases.get((before.song.id, item.song.id))
         word_spacing = 2 if stems == "often" else WORD_SPACING
         if stems != "never" and phrase and (vibe.wordplay or since_word >= word_spacing):
-            move = _word_move(before.song, item.song, verdicts)
+            move = _word_move(before.song, item.song, memory, vibe.wordplay)
             if move:
                 seams[item.song.id] = {"move": move, "phrase": phrase, "soft": True}
                 since_word = 0
                 history.append(move)
                 continue
-        options = _moves_that_fit(vibe, before.song, item.song, verdicts, stems)
+        options = _moves_that_fit(vibe, before.song, item.song, memory, stems)
         move = _choose_move(options, history, total, rng)
         if move is None:
             continue

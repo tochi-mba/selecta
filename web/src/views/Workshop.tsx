@@ -7,6 +7,28 @@ import { Listening } from './Listening';
 const GB = 1024 ** 3;
 
 /** The limit moves the moment the slider does. Saving waits until the slider stops. */
+type Memory = { tried: number; clean: number; warned: number; failed: number; liked: number; disliked: number };
+
+/** What Selecta has learned from rendering, so it's clear why mixes get better as it goes. */
+function MemoryPanel() {
+  const [memory, setMemory] = useState<Memory | null>(null);
+  useEffect(() => {
+    get<Memory>('/memory').then(setMemory).catch(() => {});
+  }, []);
+  if (!memory?.tried) return null;
+  const rated = memory.liked + memory.disliked;
+  return (
+    <section className="panel stack">
+      <h2>What it’s learned</h2>
+      <p>
+        Selecta remembers {memory.tried} hand-over{memory.tried === 1 ? '' : 's'} it has tried: {memory.clean} came out clean,{' '}
+        {memory.warned} with a warning, and {memory.failed} that can’t work.
+        {rated > 0 && ` You’ve rated ${rated}.`} Mixes and suggestions use all of this, and it stays even when old seams are cleared to save space.
+      </p>
+    </section>
+  );
+}
+
 function StoragePanel() {
   const [storage, setStorage] = useState<Storage | null>(null);
   const [limit, setLimit] = useState<number | null>(null);
@@ -127,6 +149,7 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
       </section>
 
       <StoragePanel />
+      <MemoryPanel />
       <Listening />
 
       <section className="panel stack">

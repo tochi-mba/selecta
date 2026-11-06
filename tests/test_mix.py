@@ -1,6 +1,7 @@
 """The mix a person edits: songs in order, with a seam between each pair."""
 
 import json
+import shutil
 import time
 from pathlib import Path
 
@@ -16,8 +17,14 @@ from selecta.analysis.pipeline import features_path
 from selecta.api import create_app
 from selecta.config import ANALYSIS_VERSION, Settings
 from selecta.lyrics.lrclib import Line
-from selecta.planner.beam import ARTIST_SEPARATION, plan_set, suggest_next
+from selecta.planner.beam import (
+    ARTIST_SEPARATION,
+    WORDPLAY_LINK_BONUS,
+    plan_set,
+    suggest_next,
+)
 from selecta.planner.choose import enumerate_candidates
+from selecta.planner.memory import RULES_VERSION, SeamMemory
 from selecta.seams import (
     MIX,
     PREPARING,
@@ -295,7 +302,13 @@ def test_shared_phrases_pull_a_wordplay_plan_towards_them(tmp_path):
     # Exercise link scoring independently of the grid-confidence gate.
     first.grid_confidence = close.grid_confidence = linked.grid_confidence = 0.95
     without = plan_set([first, close, linked], first.id, 2)
-    with_link = plan_set([first, close, linked], first.id, 2, links={(first.id, linked.id)})
+    with_link = plan_set(
+        [first, close, linked],
+        first.id,
+        2,
+        links={(first.id, linked.id)},
+        link_bonus=WORDPLAY_LINK_BONUS,
+    )
     assert without[1].song.id == close.id
     assert with_link[1].song.id == linked.id
     assert with_link[1].reason == "shares a phrase"
@@ -624,7 +637,7 @@ def test_word_handoffs_stay_rare_unless_the_mix_is_about_them(tmp_path):
 
 def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, monkeypatch):
     from selecta.planner import vibes
-    from selecta.planner.wordreel import Verdicts
+    from selecta.planner.memory import SeamMemory
 
     a = _song(tmp_path, "stem-a", "First")
     b = _song(tmp_path, "stem-b", "Second")
@@ -634,9 +647,9 @@ def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, mon
     monkeypatch.setattr(vibes, "can_intertwine", lambda *_: True)
     vibe = vibes.BY_KEY["pick"]
 
-    never = vibes._moves_that_fit(vibe, a, b, Verdicts(), "never")
-    sometimes = dict(vibes._moves_that_fit(vibe, a, b, Verdicts(), "sometimes"))
-    often = dict(vibes._moves_that_fit(vibe, a, b, Verdicts(), "often"))
+    never = vibes._moves_that_fit(vibe, a, b, SeamMemory(), "never")
+    sometimes = dict(vibes._moves_that_fit(vibe, a, b, SeamMemory(), "sometimes"))
+    often = dict(vibes._moves_that_fit(vibe, a, b, SeamMemory(), "often"))
 
     assert "vocal_ride" not in dict(never)
     assert often["vocal_ride"] > sometimes["vocal_ride"]
@@ -646,7 +659,7 @@ def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, mon
         vibe,
         a,
         b,
-        Verdicts(failed={(a.id, b.id, "stem_intertwine")}),
+        SeamMemory(failed={(a.id, b.id, "stem_intertwine")}),
         "often",
     )
     assert "stem_intertwine" not in dict(failed)
@@ -918,7 +931,7 @@ def test_a_failed_seam_is_remembered_and_can_be_retried(tmp_path):
     shutil.rmtree(store.root)
     fresh = SeamStore(Settings(tmp_path))
     assert fresh.submit(request)["status"] == "failed"
-    assert (request.a, request.b, request.move) in fresh.verdicts().failed
+    assert (request.a, request.b, request.move) in fresh.remembered(fresh=True).failed
     assert not fresh.root.exists(), "a remembered failure must not start another render"
     assert "agreement" not in SeamStore.__dict__, "failure wording stays in plain language"
 
@@ -952,8 +965,9 @@ def test_bad_rating_survives_audio_eviction_without_claiming_audio_is_ready(tmp_
     shutil.rmtree(folder)
     fresh = SeamStore(Settings(tmp_path))
     assert fresh.status(request.key)["status"] == "none"
-    assert (1, 2, "vocal_ride") in fresh.verdicts().failed
-    assert (1, 2, "vocal_ride") not in fresh.verdicts().worked
+    known = fresh.remembered(fresh=True)
+    assert known.move_factor(1, 2, "vocal_ride") == 0.0
+    assert not known.proven(1, 2, "vocal_ride")
     saved = json.loads((tmp_path / "seam-history" / f"{request.key}.json").read_text())
     assert saved["note"] == "Voice clashes"
 
@@ -996,7 +1010,8 @@ def test_asking_again_after_a_failure_clears_it(tmp_path, monkeypatch):
 
     worker = type("Worker", (), {"stdin": Pipe(), "poll": lambda self: None})()
     store._worker = worker
-    assert store.submit(request)["status"] == "queued"
+    assert store.submit(request)["status"] == "failed", "only asking on purpose tries it again"
+    assert store.submit(request, retry=True)["status"] == "queued"
     assert json.loads(Pipe.written)["request"]["move"] == "cut_on_one"
     assert store.status(request.key)["status"] == "queued"
     assert store.submit(request)["status"] == "queued", "asking twice sends it once"
@@ -1365,8 +1380,8 @@ def test_lyrics_tell_a_sad_song_from_a_party_song(tmp_path):
 
 
 def test_a_song_not_in_english_gets_no_word_handoffs_but_can_still_ride(tmp_path):
+    from selecta.planner.memory import SeamMemory
     from selecta.planner.vibes import _word_move
-    from selecta.planner.wordreel import Verdicts
 
     track = make_track(bpm=120, bars=64, seed=1)
     a = song_from_track(tmp_path, "a", track)
@@ -1374,22 +1389,22 @@ def test_a_song_not_in_english_gets_no_word_handoffs_but_can_still_ride(tmp_path
     a.id, b.id = 1, 2
     a.lines = [Line(10.0, 12.0, "you and me in the night")]
     b.lines = [Line(10.0, 12.0, "you and me in the night")]
-    assert _word_move(a, b, Verdicts()) is not None
+    assert _word_move(a, b, SeamMemory()) is not None
     b.lines = [Line(10.0, 12.0, "wetin dey happen abeg oga")]
-    assert _word_move(a, b, Verdicts()) is None
+    assert _word_move(a, b, SeamMemory()) is None
 
 
 def test_a_move_that_failed_on_two_songs_isnt_planned_again(tmp_path):
+    from selecta.planner.memory import SeamMemory
     from selecta.planner.vibes import BY_KEY, _moves_that_fit
-    from selecta.planner.wordreel import Verdicts
 
     track = make_track(bpm=120, bars=64, seed=1)
     a = song_from_track(tmp_path, "a", track)
     b = song_from_track(tmp_path, "b", track)
     a.id, b.id = 1, 2
-    fresh = [name for name, _ in _moves_that_fit(BY_KEY["pick"], a, b, Verdicts())]
+    fresh = [name for name, _ in _moves_that_fit(BY_KEY["pick"], a, b, SeamMemory())]
     assert "bass_swap_blend" in fresh
-    known = Verdicts(failed={(1, 2, "bass_swap_blend")})
+    known = SeamMemory(failed={(1, 2, "bass_swap_blend")})
     assert "bass_swap_blend" not in [
         name for name, _ in _moves_that_fit(BY_KEY["pick"], a, b, known)
     ]
@@ -1504,9 +1519,6 @@ def test_a_seam_says_what_was_tried_before_what_it_landed_on(tmp_path, monkeypat
     assert state["status"] == "ready"
     assert state["style"] != "cut_on_one", "two songs at the same tempo can always blend"
     assert state["tried"][0]["move"] == "vocal_ride"
-    verdicts = store.verdicts()
-    assert (1, 2, "vocal_ride") in verdicts.failed
-    assert (1, 2, state["style"]) in verdicts.worked
 
 
 def test_a_bad_human_rating_overrides_a_passed_audit_for_that_pair(tmp_path):
@@ -1529,16 +1541,16 @@ def test_a_bad_human_rating_overrides_a_passed_audit_for_that_pair(tmp_path):
         "utf-8",
     )
 
-    verdicts = store.verdicts()
+    known = store.remembered(fresh=True)
 
-    assert (1, 2, "phrase_roll") in verdicts.failed
-    assert (1, 2, "phrase_roll") not in verdicts.worked
+    assert known.move_factor(1, 2, "phrase_roll") == 0.0
+    assert not known.proven(1, 2, "phrase_roll")
 
     a, b = _two_songs(tmp_path)
     a.bpm, b.bpm = 120.0, 145.0
     a.lines = [Line(20.0, 22.0, "good morning world")]
     b.lines = [Line(20.0, 22.0, "good morning world")]
-    assert _word_move(a, b, verdicts) is None, "the rated-bad phrase roll must not be planned again"
+    assert _word_move(a, b, known) is None, "the rated-bad phrase roll must not be planned again"
 
 
 def test_seams_an_old_fallback_swapped_get_another_chance(tmp_path):
@@ -1580,7 +1592,7 @@ def _same_songs(tmp_path, count):
         song = song_from_track(tmp_path, f"m{i}", track, genre="Pop")
         song.id = i + 1
         song.lines = [
-            Line(66.0 + j * 4.0, 69.5 + j * 4.0, "you and me in the night") for j in range(10)
+            Line(30.0 + j * 4.0, 33.5 + j * 4.0, "you and me in the night") for j in range(20)
         ]
         songs.append(song)
     return [PlannedSong(song, "bass_swap_blend", "") for song in songs]
@@ -1701,19 +1713,6 @@ def test_a_clean_take_beats_a_near_miss(tmp_path, monkeypatch):
     assert report.passed
 
 
-def test_a_near_miss_blend_beats_a_clean_effect(tmp_path, monkeypatch):
-    """By ear a blend a little off still beats an echo. The warning stays, so it isn't hidden."""
-    store = SeamStore(Settings(tmp_path))
-    a, b = _two_songs(tmp_path)
-    near = _report(("beat alignment", 30.0, 20.0))
-    _takes(store, monkeypatch, {"filter_sweep": near, "echo_out": _report()})
-    tried: list[dict] = []
-    rendered, report, _why, _fell_back = store._best_move(a, b, tried)
-    assert rendered == "take of filter_sweep"
-    assert not report.passed
-    assert "filter_sweep" not in {attempt["move"] for attempt in tried}
-
-
 def test_a_planned_near_miss_is_kept_if_nothing_comes_out_cleaner(tmp_path, monkeypatch):
     store = SeamStore(Settings(tmp_path))
     a, b = _two_songs(tmp_path)
@@ -1749,12 +1748,12 @@ def test_a_steady_beat_gap_is_closed_with_a_second_take(tmp_path):
 
 
 def test_a_warning_counts_against_a_move_and_its_songs(tmp_path):
+    from selecta.planner.memory import SeamMemory
     from selecta.planner.vibes import BY_KEY, _moves_that_fit
-    from selecta.planner.wordreel import Verdicts
 
     a, b = _two_songs(tmp_path)
-    clean = dict(_moves_that_fit(BY_KEY["pick"], a, b, Verdicts()))
-    known = Verdicts(warned={(1, 2, "bass_swap_blend")})
+    clean = dict(_moves_that_fit(BY_KEY["pick"], a, b, SeamMemory()))
+    known = SeamMemory(warned={(1, 2, "bass_swap_blend")})
     warned = dict(_moves_that_fit(BY_KEY["pick"], a, b, known))
     assert warned["bass_swap_blend"] < clean["bass_swap_blend"]
 
@@ -1816,3 +1815,357 @@ def test_suggestions_say_what_will_happen(tmp_path):
     ramp = _song(tmp_path, "ramp", "Ramp", bpm=100.0, camelot="8A")
     ranked = rank_candidates(now, None, [now, ramp], {now.id})
     assert ranked[0].reason == "A tempo ramp gets there"
+
+
+def test_what_went_well_is_wanted_more_and_what_didnt_not_at_all():
+    from selecta.planner.memory import SeamMemory
+
+    known = SeamMemory(
+        liked={(1, 2, "filter_sweep")},
+        clean={(1, 2, "vocal_ride")},
+        warned={(1, 2, "tempo_ramp")},
+        failed={(1, 2, "echo_out")},
+        disliked={(1, 2, "delay_throw")},
+    )
+    factor = known.move_factor
+    assert factor(1, 2, "echo_out") == 0.0
+    assert factor(1, 2, "delay_throw") == 0.0
+    assert factor(1, 2, "filter_sweep") > factor(1, 2, "vocal_ride") > factor(1, 2, "unknown")
+    assert factor(1, 2, "unknown") > factor(1, 2, "tempo_ramp") > 0.0
+
+
+def test_taste_moves_slowly_with_ratings():
+    from collections import Counter
+
+    from selecta.planner.memory import SeamMemory
+
+    assert SeamMemory().taste("echo_out") == 1.0
+    one = SeamMemory(bad_moves=Counter({"echo_out": 1})).taste("echo_out")
+    many = SeamMemory(bad_moves=Counter({"echo_out": 8})).taste("echo_out")
+    assert 0.6 < one < 1.0
+    assert many < one
+    assert SeamMemory(good_moves=Counter({"vocal_ride": 4})).taste("vocal_ride") > 1.0
+
+
+def test_a_songs_record_rises_and_falls():
+    from collections import Counter
+
+    from selecta.planner.memory import SeamMemory
+
+    known = SeamMemory(
+        clean_songs=Counter({1: 4, 3: 1}),
+        warned_songs=Counter({2: 3, 3: 1}),
+    )
+    assert known.song_value(9) == 0.0
+    assert known.song_value(1) > 0
+    assert known.song_value(2) < 0
+    assert known.song_value(1) > known.song_value(3) > known.song_value(2)
+
+
+def test_a_plan_prefers_a_hand_over_it_knows_works(tmp_path):
+    from selecta.planner.memory import SeamMemory
+
+    first = _song(tmp_path, "a", "First")
+    usual = _song(tmp_path, "b", "Second")
+    proven = _song(tmp_path, "c", "Third", bpm=124.0, camelot="9A")
+    songs = [first, usual, proven]
+    assert plan_set(songs, first.id, 2)[1].song.id == usual.id
+    known = SeamMemory(liked={(first.id, proven.id, "bass_swap_blend")})
+    assert plan_set(songs, first.id, 2, memory=known)[1].song.id == proven.id
+
+
+def test_a_plan_avoids_a_hand_over_the_listener_rated_bad(tmp_path):
+    from selecta.planner.memory import SeamMemory
+
+    first = _song(tmp_path, "a", "First")
+    disliked = _song(tmp_path, "b", "Second")
+    other = _song(tmp_path, "c", "Third", bpm=122.0)
+    songs = [first, disliked, other]
+    known = SeamMemory(disliked={(first.id, disliked.id, "bass_swap_blend")})
+    assert plan_set(songs, first.id, 2, memory=known)[1].song.id == other.id
+
+
+def test_a_better_order_is_found_by_swapping_songs(tmp_path):
+    from selecta.planner.beam import PlannedSong, best_order
+
+    songs = [_song(tmp_path, f"s{i}", f"Artist {i}") for i in range(4)]
+    a, b, c, d = songs
+    path = [PlannedSong(song, "bass_swap_blend", "") for song in songs]
+    good = {(a.id, c.id), (c.id, b.id), (b.id, d.id)}
+
+    def pair_score(x, y, _progress):
+        return 1.0 if (x.id, y.id) in good else 0.0
+
+    def move_between(_x, y):
+        return PlannedSong(y, "bass_swap_blend", "")
+
+    order = best_order(path, pair_score, move_between, separation=1)
+    assert [item.song.id for item in order] == [a.id, c.id, b.id, d.id]
+    assert order[0] is path[0], "the first song stays, since someone may have chosen it"
+
+
+def test_a_better_order_still_keeps_artists_apart(tmp_path):
+    from selecta.planner.beam import PlannedSong, best_order
+
+    a = _song(tmp_path, "a", "One")
+    b = _song(tmp_path, "b", "Two")
+    c = _song(tmp_path, "c", "One")
+    d = _song(tmp_path, "d", "Three")
+    path = [PlannedSong(song, "bass_swap_blend", "") for song in (a, b, c, d)]
+
+    def tempting(x, y, _progress):
+        return 5.0 if (x.id, y.id) == (a.id, c.id) else 0.0
+
+    order = best_order(path, tempting, lambda _x, y: PlannedSong(y, "x", ""), separation=1)
+    artists = [item.song.artist for item in order]
+    assert all(x != y for x, y in zip(artists, artists[1:], strict=False))
+
+
+def test_a_jump_nothing_can_bridge_counts_against_a_pair(tmp_path):
+    from selecta.planner.beam import _Riders, handoff_quality
+
+    worship = _song(tmp_path, "w", "Worship", bpm=96.0, camelot="7A")
+    morale = _song(tmp_path, "m", "Morale", bpm=139.0, camelot="9A")
+    near = _song(tmp_path, "n", "Near", bpm=99.0, camelot="7A")
+    double = _song(tmp_path, "d", "Double", bpm=192.0, camelot="7A")
+    riders = _Riders()
+    assert handoff_quality(worship, morale, riders) < 0
+    assert handoff_quality(worship, near, riders) > 0
+    assert handoff_quality(worship, double, riders) > 0, "double time isn't a jump"
+    songs = [worship, morale, near]
+    assert plan_set(songs, worship.id, 2)[1].song.id == near.id
+
+
+def test_suggestions_lead_with_what_is_known(tmp_path):
+    from selecta.planner.beam import rank_candidates
+    from selecta.planner.memory import SeamMemory
+
+    now = _song(tmp_path, "now", "Now", bpm=120.0, camelot="8A")
+    usual = _song(tmp_path, "usual", "Usual", bpm=120.0, camelot="8A")
+    liked = _song(tmp_path, "liked", "Liked", bpm=126.0, camelot="10A")
+    clean = _song(tmp_path, "clean", "Clean", bpm=128.0, camelot="11A")
+    bad = _song(tmp_path, "bad", "Bad", bpm=120.0, camelot="8A")
+    known = SeamMemory(
+        liked={(now.id, liked.id, "filter_sweep")},
+        clean={(now.id, clean.id, "vocal_ride")},
+        disliked={(now.id, bad.id, "bass_swap_blend")},
+    )
+    ranked = rank_candidates(now, None, [now, usual, liked, clean, bad], {now.id}, memory=known)
+    assert ranked[0].song.id == liked.id
+    assert ranked[0].reason == "You rated this filter sweep Good"
+    assert ranked[-1].song.id == bad.id
+    assert ranked[-1].reason == "You rated this blend Bad"
+    words = {item.song.id: item.reason for item in ranked}
+    assert words[clean.id] == "Already tried: a clean vocal ride"
+
+
+def test_bigger_and_calmer_use_what_is_known(tmp_path):
+    from selecta.planner.memory import SeamMemory
+
+    current = _song(tmp_path, "now", "Now")
+    usual = _song(tmp_path, "usual", "Usual")
+    proven = _song(tmp_path, "proven", "Proven", bpm=125.0, camelot="9A")
+    known = SeamMemory(clean={(current.id, proven.id, "vocal_ride")})
+    songs = [current, usual, proven]
+    assert suggest_next(current, songs, set(), set(), memory=known).id == proven.id
+
+
+def test_the_render_skips_what_is_known_to_fail_and_starts_with_what_works(tmp_path, monkeypatch):
+    from selecta.planner.memory import SeamMemory
+
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    store.memory = SeamMemory(
+        failed={(1, 2, "filter_sweep")},
+        clean={(1, 2, "echo_out")},
+    )
+    asked = []
+
+    def take(request, _a, _b):
+        asked.append(request.move)
+        return f"take of {request.move}", _report(), "why"
+
+    monkeypatch.setattr(store, "_chosen_move", take)
+    rendered, *_ = store._best_move(a, b, [])
+    assert asked[0] == "echo_out"
+    assert "filter_sweep" not in asked
+    assert rendered.startswith("take of")
+
+
+def test_a_landing_that_worked_is_tried_first_next_time(tmp_path, monkeypatch):
+    import selecta.seams as seams_module
+    from selecta.render.engine import SongCache
+    from selecta.seams import _bar_cue_render
+
+    a, b = _two_songs(tmp_path)
+    cache = SongCache()
+    request = SeamRequest(a=1, b=2, move="bass_swap_blend")
+    pool = enumerate_candidates(a, b, "bass_swap_blend")
+    recipe = seams_module.all_recipes()["bass_swap_blend"]
+    possible = [c for c in pool if recipe.make(a, b, c.exit_cue, c.entry_cue, c.bars) is not None]
+    later = possible[-1]
+    tried = []
+    real_render = seams_module.render
+
+    def noting(script, song_cache):
+        tried.append((script.meta["exit_bar"], script.meta["entry_bar"]))
+        return real_render(script, song_cache)
+
+    monkeypatch.setattr(seams_module, "render", noting)
+    _bar_cue_render(request, a, b, cache, (later.exit_cue.bar, later.entry_cue.bar, later.bars))
+    assert tried[0] == (later.exit_cue.bar, later.entry_cue.bar)
+
+
+def _record(a=1, b=2, style="vocal_ride", passed=True, rating=None, **more):
+    return {
+        "status": "ready",
+        "key": f"{a}-{b}-{style}",
+        "style": style,
+        "passed": passed,
+        "rating": rating,
+        "rules": RULES_VERSION,
+        "request": {"a": a, "b": b, "move": style},
+        **more,
+    }
+
+
+def test_memory_reads_what_seams_found():
+    known = SeamMemory.from_states(
+        [
+            _record(exit_bar=40, entry_bar=8, placed_bars=8),
+            _record(style="filter_sweep", tried=[{"move": "echo_out", "why": "no"}]),
+            _record(a=3, b=4, style="bass_swap_blend", passed=False),
+            {
+                "status": "failed",
+                "untimed_song": 6,
+                "rules": RULES_VERSION,
+                "request": {"a": 5, "b": 6, "move": "word_cut"},
+            },
+        ]
+    )
+    assert known.proven(1, 2, "vocal_ride")
+    assert (1, 2, "echo_out") in known.failed
+    assert (3, 4, "bass_swap_blend") in known.warned
+    assert (5, 6, "word_cut") in known.failed
+    assert not known.can_time_words(6)
+    assert known.placements[(1, 2, "vocal_ride")] == (40, 8, 8)
+
+
+def test_memory_only_knows_one_direction():
+    known = SeamMemory.from_states([_record(style="bass_swap_blend", rating="good")])
+    assert known.pair_value(1, 2) == 1.0
+    assert known.pair_value(2, 1) == 0.0
+
+
+def test_a_failure_under_older_rules_doesnt_count_but_a_rating_always_does():
+    old_ride = {"status": "failed", "request": {"a": 1, "b": 2, "move": "vocal_ride"}}
+    old_words = {"status": "failed", "request": {"a": 3, "b": 4, "move": "phrase_roll"}}
+    disliked = _record(a=5, b=6, style="bass_swap_blend", rating="bad")
+    del disliked["rules"]
+    known = SeamMemory.from_states([old_ride, old_words, disliked])
+    assert (1, 2, "vocal_ride") not in known.failed, "rides no longer need word timing"
+    assert (3, 4, "phrase_roll") in known.failed, "word timing hasn't changed"
+    assert (5, 6, "bass_swap_blend") in known.disliked
+
+
+def test_what_the_listener_rates_shapes_what_comes_next(tmp_path):
+    close = _song(tmp_path, "a", "A", bpm=120.0, camelot="8A")
+    near = _song(tmp_path, "b", "B", bpm=121.0, camelot="8A")
+    far_a = _song(tmp_path, "c", "C", bpm=120.0, camelot="8A")
+    far_b = _song(tmp_path, "d", "D", bpm=128.0, camelot="8A")
+    states = [
+        _record(a=close.id, b=near.id, style="filter_sweep", rating="good"),
+        _record(a=far_a.id, b=far_b.id, style="bass_swap_blend", rating="bad"),
+    ]
+    known = SeamMemory.from_states(states).read_taste([close, near, far_a, far_b])
+    assert known.learned_fit(close, near) > 1.0 > known.learned_fit(far_a, far_b)
+    assert SeamMemory().learned_fit(close, near) == 1.0
+
+
+def test_a_render_is_remembered(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    monkeypatch.setattr("selecta.seams.load_song", lambda _c, _s, song: {1: a, 2: b}[song])
+    state = store.render_now(None, SeamRequest(a=1, b=2, move="vocal_ride", soft=True))
+    known = store.remembered(fresh=True)
+    assert (1, 2, "vocal_ride") in known.failed, "these songs have no lyrics to ride on"
+    assert (1, 2, state["style"]) in (known.clean if state["passed"] else known.warned)
+    shutil.rmtree(store.folder(state["key"]))
+    assert (1, 2, state["style"]) in store.remembered(fresh=True).clean | (
+        store.remembered(fresh=True).warned
+    ), "it outlasts the render cache"
+
+
+def test_the_memory_route_reports_what_it_knows(client, tmp_path):
+    history = tmp_path / "seam-history"
+    history.mkdir(exist_ok=True)
+    (history / "k.json").write_text(json.dumps(_record(rating="good")), "utf-8")
+    import time as clock
+
+    clock.sleep(0)
+    summary = client.get("/api/memory").json()
+    assert summary["liked"] == 1
+    assert summary["clean"] == 1
+
+
+def test_a_clean_effect_beats_a_near_miss_blend(tmp_path, monkeypatch):
+    """None of the seams rated so far with a warning were liked, whatever the move."""
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    near = _report(("beat alignment", 30.0, 20.0))
+    _takes(store, monkeypatch, {"filter_sweep": near, "echo_out": _report()})
+    tried: list[dict] = []
+    rendered, report, _why, _fell_back = store._best_move(a, b, tried)
+    assert rendered == "take of echo_out"
+    assert report.passed
+
+
+def test_a_near_miss_is_kept_over_a_cut(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    near = _report(("beat alignment", 30.0, 20.0))
+    _takes(store, monkeypatch, {"filter_sweep": near})
+    tried: list[dict] = []
+    rendered, report, *_ = store._best_move(a, b, tried)
+    assert rendered == "take of filter_sweep"
+    assert not report.passed
+    assert "filter_sweep" not in {attempt["move"] for attempt in tried}
+
+
+def test_the_ratings_steer_what_gets_planned(tmp_path):
+    from selecta.planner.beam import ratings_lean
+
+    a = _song(tmp_path, "a", "A", bpm=120.0, camelot="8A")
+    close = _song(tmp_path, "b", "B", bpm=122.0, camelot="9A")
+    apart = _song(tmp_path, "c", "C", bpm=128.0, camelot="9A")
+    far_key = _song(tmp_path, "d", "D", bpm=120.0, camelot="2A")
+    a.grid_confidence = close.grid_confidence = apart.grid_confidence = 0.98
+    far_key.grid_confidence = 0.98
+    assert ratings_lean(a, close) == 1.0
+    assert ratings_lean(a, apart) < 0.5, "overlaps 4 to 8% apart were liked 2 times in 9"
+    assert ratings_lean(a, apart, overlapping=False) == 1.0
+    assert ratings_lean(a, far_key) < 0.5, "five or more keys apart was liked 2 times in 10"
+    close.grid_confidence = 0.7
+    assert ratings_lean(a, close) < 0.5, "a shaky grid was liked 3 times in 13"
+
+
+def test_a_four_bar_overlap_is_a_last_choice(tmp_path):
+    a, b = _two_songs(tmp_path)
+    pool = enumerate_candidates(a, b, "bass_swap_blend")
+    assert pool, "these two can blend"
+    assert pool[0].bars > 4, "all six rated overlaps this short were disliked"
+
+
+def test_rolls_only_go_where_they_were_liked(tmp_path):
+    from selecta.planner.vibes import _word_move_suits
+
+    a = _song(tmp_path, "a", "A", bpm=120.0, camelot="8A")
+    near = _song(tmp_path, "b", "B", bpm=128.0, camelot="9A")
+    far = _song(tmp_path, "c", "C", bpm=150.0, camelot="9A")
+    wrong_key = _song(tmp_path, "d", "D", bpm=120.0, camelot="2A")
+    assert _word_move_suits("phrase_roll", a, near, showcase=False)
+    assert not _word_move_suits("phrase_roll", a, far, showcase=False)
+    assert _word_move_suits("phrase_roll", a, far, showcase=True), (
+        "a wordplay mix stretches further"
+    )
+    assert not _word_move_suits("phrase_roll", a, wrong_key, showcase=True)
