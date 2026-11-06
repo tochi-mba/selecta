@@ -1459,7 +1459,7 @@ def test_a_cut_is_the_last_thing_tried(tmp_path, monkeypatch):
     tried: list[dict] = []
     rendered, report, _why, fell_back = store._best_move(a, b, tried, "vocal_ride")
     assert "cut_on_one" not in asked
-    assert asked[0] in {"filter_sweep", "bass_swap_blend", "tempo_ramp"}
+    assert asked[0] in {"stem_arrange", "filter_sweep", "bass_swap_blend", "tempo_ramp"}
     assert asked[-1] == "reverb_wash", "the listener likes reverb least, so it's the last effect"
     assert {item["move"] for item in tried} == set(asked)
     assert rendered.script.style == "cut_on_one"
