@@ -25,7 +25,6 @@ export type NowState = {
 };
 
 const SEAM_FADE = 0.03;
-const HEADROOM = 0.25;
 const KEEP_SONGS = 3;
 const END_FADE = 3;
 const LOAD_NEXT_WITHIN = 45;
@@ -58,7 +57,13 @@ export class SetPlayer {
   private timer: number | null = null;
   private current: Current | null = null;
   private planned: Planned | null = null;
+  private layers = new Set<Playing>();
+  private seamTailEnd: number | null = null;
   private ending = false;
+  private playGeneration = 0;
+  private watchedState: SeamState | null = null;
+  private stateRead: AbortController | null = null;
+  private stateReadAt = -Infinity;
   private requested = new Set<string>();
   private fallenBack = new Set<number>();
   private savedAt = 0;
@@ -153,7 +158,14 @@ export class SetPlayer {
     const gain = context.createGain();
     source.connect(gain);
     gain.connect(this.master!);
-    return { source, gain };
+    const playing = { source, gain };
+    this.layers.add(playing);
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+      this.layers.delete(playing);
+    };
+    return playing;
   }
 
   private silence(playing: Playing | undefined | null) {
@@ -166,16 +178,24 @@ export class SetPlayer {
       /* a layer that hasn't started can't be stopped, and that's fine */
     }
     playing.source.disconnect();
+    playing.gain.disconnect();
+    this.layers.delete(playing);
   }
 
   private stopAll() {
+    this.playGeneration += 1;
+    this.stateRead?.abort();
+    this.stateRead = null;
+    this.watchedState = null;
+    this.stateReadAt = -Infinity;
     if (this.current && this.context) {
       const elapsed = Math.max(0, this.context.currentTime - this.current.startedAt);
       this.heard.set(this.current.songId, (this.heard.get(this.current.songId) ?? 0) + elapsed);
     }
-    this.silence(this.current);
-    this.silence(this.planned?.clip);
-    this.silence(this.planned?.next);
+    // Include the still-audible seam tail after the display has switched to B,
+    // and the outgoing song during a fallback fade.
+    for (const layer of this.layers) this.silence(layer);
+    this.seamTailEnd = null;
     this.current = null;
     this.planned = null;
     this.ending = false;
@@ -201,16 +221,20 @@ export class SetPlayer {
     const item = mix[position];
     if (!item) return;
     this.stopAll();
+    const generation = this.playGeneration;
     const context = this.audio();
     await context.resume();
+    if (generation !== this.playGeneration) return;
     this.update({ phase: 'loading', position, songTime: offset, duration: item.duration, notice: '', inSeam: false });
     let buffer: AudioBuffer;
     try {
       buffer = await this.loadSong(item.song_id);
     } catch (error) {
+      if (generation !== this.playGeneration) return;
       this.update({ phase: 'idle', notice: (error as Error).message });
       return;
     }
+    if (generation !== this.playGeneration) return;
     const playing = this.layer(buffer);
     const startedAt = context.currentTime + 0.05;
     playing.gain.gain.setValueAtTime(1, startedAt);
@@ -291,6 +315,37 @@ export class SetPlayer {
     }
   }
 
+  /** Watch only the imminent seam, independently of the slower whole-mix UI poll. */
+  private watchSeam(current: Current, nextItem: MixItem, seam: SeamState) {
+    if (seam.status === 'ready' || seam.status === 'failed' || this.stateRead
+      || performance.now() - this.stateReadAt < 100) return;
+    const controller = new AbortController();
+    this.stateRead = controller;
+    this.stateReadAt = performance.now();
+    const timeout = window.setTimeout(() => controller.abort(), 2000);
+    void fetch(`/api/seams/${encodeURIComponent(seam.key)}`, { signal: controller.signal, cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const fresh = await response.json() as SeamState;
+        const mix = this.getMix();
+        const position = mix.findIndex((item) => item.song_id === current.songId);
+        const next = mix[position + 1];
+        if (controller.signal.aborted || this.current !== current || position < 0
+          || next?.song_id !== nextItem.song_id || next.seam?.state.key !== seam.key
+          || fresh.key !== seam.key) return;
+        if (fresh.status === 'ready') {
+          this.watchedState = fresh;
+          void this.plan(current, next, fresh);
+          this.refreshMix();
+        }
+      })
+      .catch(() => { /* Retry while the original song continues playing. */ })
+      .finally(() => {
+        window.clearTimeout(timeout);
+        if (this.stateRead === controller) this.stateRead = null;
+      });
+  }
+
   private tick() {
     const context = this.context;
     if (!context || !this.current || this.state.phase === 'paused') return;
@@ -299,6 +354,7 @@ export class SetPlayer {
 
     // A planned seam has passed its switch point: B is now the song on screen.
     if (this.planned && now >= this.planned.whenA + this.planned.switchAt) {
+      this.seamTailEnd = this.planned.next.startedAt + SEAM_FADE;
       this.current = this.planned.next;
       const key = this.planned.key;
       this.planned = null;
@@ -313,14 +369,18 @@ export class SetPlayer {
     const found = mix.findIndex((item) => item.song_id === current.songId);
     if (found >= 0) current.position = found;
     const nextItem = mix[current.position + 1];
-    const seam: SeamState | undefined = nextItem?.seam?.state;
+    const listedSeam = nextItem?.seam?.state;
+    if (this.watchedState?.key !== listedSeam?.key) this.watchedState = null;
+    const seam: SeamState | undefined = this.watchedState ?? listedSeam;
+    if (nextItem && seam && !this.planned) this.watchSeam(current, nextItem, seam);
 
     if (this.planned && (!seam || seam.key !== this.planned.key) && now < this.planned.whenA - 0.1) {
       this.unplan();
     }
 
     const time = this.songTime();
-    const inSeam = !!this.planned && now >= this.planned.whenA;
+    if (this.seamTailEnd !== null && now >= this.seamTailEnd) this.seamTailEnd = null;
+    const inSeam = (!!this.planned && now >= this.planned.whenA) || this.seamTailEnd !== null;
     this.update({
       position: current.position,
       songTime: time,
@@ -345,7 +405,11 @@ export class SetPlayer {
     }
     const left = current.duration - time;
     if (left < LOAD_NEXT_WITHIN) this.loadSong(nextItem.song_id).catch(() => {});
-    if (!this.planned && !this.ending && left < END_FADE + 0.2 && this.state.phase === 'playing') {
+    // A ready seam may start within the normal fallback window. Give its audio
+    // until its actual cue to decode; an early fallback must not steal that cue.
+    const upcomingCue = seam?.status === 'ready' && seam.a_source_start !== undefined
+      && current.startedAt + seam.a_source_start - current.offset >= now;
+    if (!inSeam && !this.planned && !this.ending && !upcomingCue && left < END_FADE + 0.2 && this.state.phase === 'playing') {
       this.ending = true;
       void this.fadeInto(nextItem.position);
     }
@@ -362,8 +426,16 @@ export class SetPlayer {
       return;
     }
     if (this.planned || this.current !== current) return;
+    const liveMix = this.getMix();
+    const livePosition = liveMix.findIndex((item) => item.song_id === current.songId);
+    const liveNext = liveMix[livePosition + 1];
+    if (livePosition < 0 || liveNext?.song_id !== nextItem.song_id
+      || liveNext.seam?.state.key !== seam.key
+      || (liveNext.seam.state.status !== 'ready' && this.watchedState?.key !== seam.key)) return;
     const whenA = current.startedAt + (seam.a_source_start - current.offset);
-    if (whenA < context.currentTime + HEADROOM) return; // too late: the song plays on and fades over
+    // Web Audio schedules against its own clock. Do not reject decoded audio
+    // merely because it arrived inside an arbitrary quarter-second margin.
+    if (whenA < context.currentTime || (this.seamTailEnd !== null && whenA < this.seamTailEnd)) return; // Never play a transition off its cue.
     const clip = this.layer(clipBuffer);
     clip.gain.gain.setValueAtTime(0, whenA);
     clip.gain.gain.linearRampToValueAtTime(1, whenA + SEAM_FADE);
@@ -406,6 +478,13 @@ export class SetPlayer {
     try {
       buffer = await this.loadSong(item.song_id);
     } catch {
+      // A failed download from an older playback session must not skip or stop
+      // the song the listener has since chosen.
+      if (this.current !== current || this.planned) return;
+      if (this.getMix()[position]?.song_id !== item.song_id) {
+        this.ending = false;
+        return;
+      }
       const following = this.getMix()[position + 1];
       if (following) {
         this.update({ notice: `${item.title} wouldn’t load, so this skipped it.` });
@@ -416,7 +495,22 @@ export class SetPlayer {
       }
       return;
     }
-    if (this.current !== current) return;
+    if (this.current !== current || this.planned) return;
+    const liveMix = this.getMix();
+    const livePosition = liveMix.findIndex((entry) => entry.song_id === current.songId);
+    if (livePosition < 0 || liveMix[position]?.song_id !== item.song_id || position <= livePosition) {
+      this.ending = false;
+      return;
+    }
+    // Rendering can finish while the fallback song downloads. Let the next tick
+    // schedule that seam instead of committing a competing fade.
+    const listedSeam = liveMix[livePosition + 1]?.seam?.state;
+    const liveSeam = this.watchedState?.key === listedSeam?.key ? this.watchedState : listedSeam;
+    if (liveSeam?.status === 'ready' && liveSeam.a_source_start !== undefined
+      && current.startedAt + liveSeam.a_source_start - current.offset >= context.currentTime) {
+      this.ending = false;
+      return;
+    }
     const playing = this.layer(buffer);
     const at = Math.max(context.currentTime + 0.05, current.startedAt + (current.duration - current.offset) - END_FADE);
     playing.gain.gain.setValueAtTime(0, at);

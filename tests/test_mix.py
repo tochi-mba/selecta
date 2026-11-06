@@ -90,6 +90,7 @@ def test_prepared_request_requires_ready_audio_fresh_mix_and_bridge_consent(
         ]
 
     monkeypatch.setattr("selecta.request_planner.proposals", propose)
+    monkeypatch.setattr(SeamStore, "submit", lambda *args, **kwargs: {"status": "queued"})
     ready = False
     monkeypatch.setattr(
         SeamStore,

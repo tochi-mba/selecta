@@ -407,6 +407,9 @@ export function Now(props: ViewProps) {
             <button onClick={toggleStage} title="F">
               Fullscreen lyrics
             </button>
+            <button onClick={() => document.getElementById('request-song-search')?.focus()}>
+              Request a song
+            </button>
           </div>
           {now.notice && <p className="notice" role="status">{now.notice}</p>}
 

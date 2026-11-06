@@ -120,7 +120,7 @@ export function Requests(props: {
   return <section className="panel stack" aria-label="Song requests">
     <h2>Requests</h2>
     <p>Ask for a song without interrupting the mix. Requests wait for a place that fits.</p>
-    <label>Request a song<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Song or artist" /></label>
+    <label>Request a song<input id="request-song-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Song or artist" /></label>
     {matches.length > 0 && <ul className="suggestions">{matches.map(song => {
       const pending = requests?.some(request => request.song_id === song.id);
       return <li key={song.id}><button disabled={busy || pending} onClick={() => void add(song)}>

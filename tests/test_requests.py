@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 import pytest
@@ -116,4 +117,53 @@ def test_ready_insertion_is_atomic_and_rejects_stale_or_unapproved_plans(tmp_pat
     ]
     assert read_requests(conn) == []
     assert db.preference(conn, "mix_undo", [])[-1]["items"] == [list(item) for item in before]
+    conn.close()
+
+
+def test_evicted_request_audio_can_be_prepared_again_without_erasing_failures(tmp_path):
+    from selecta.config import Settings
+    from selecta.seams import SeamRequest, SeamStore
+
+    store = SeamStore(Settings(tmp_path))
+    request = SeamRequest(1, 2, "bass_swap_blend")
+    folder = store.folder(request.key)
+    folder.mkdir(parents=True)
+    state = dict(
+        key=request.key,
+        status="ready",
+        request={"move": request.move},
+        style=request.move,
+        passed=True,
+        tried=[],
+    )
+    (folder / "seam.json").write_text(json.dumps(state))
+    store._remember(state)
+    store._states[request.key] = state
+    assert store.forget_missing_audio(request.key)
+    assert store.status(request.key)["status"] == "none"
+    assert (tmp_path / "seam-history" / f"{request.key}.json").exists()
+    (folder / "seam.json").write_text(json.dumps({**state, "status": "failed"}))
+    assert not store.forget_missing_audio(request.key)
+    assert store.status(request.key)["status"] == "failed"
+
+
+def test_bridge_approval_survives_restart_but_cannot_transfer_to_a_changed_route(tmp_path):
+    from selecta.requests import approve_bridge, bridge_approved
+
+    path = tmp_path / "approval.sqlite"
+    conn = db.connect(path)
+    conn.execute(
+        "INSERT INTO songs(id,path,folder,size,mtime,duration) VALUES(1,?, ?,1,0,100)",
+        ("track.wav", ""),
+    )
+    conn.commit()
+    request = add_request(conn, 1)
+    assert approve_bridge(conn, request, "exact-route-and-mix-snapshot")
+    conn.close()
+    conn = db.connect(path)
+    assert bridge_approved(conn, request, "exact-route-and-mix-snapshot")
+    assert not bridge_approved(conn, request, "different-route-or-mix")
+    cancel_request(conn, request)
+    assert not bridge_approved(conn, request, "exact-route-and-mix-snapshot")
+    assert not approve_bridge(conn, request, "exact-route-and-mix-snapshot")
     conn.close()

@@ -442,9 +442,7 @@ def _arranged(
     return best
 
 
-def _make_session(
-    settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo
-) -> dict:
+def _make_session(settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo) -> dict:
     """Lay out a pair's stems for the studio, and keep the layout beside them."""
     folder = settings.renders_dir / "seams" / request.key
     try:
@@ -714,9 +712,7 @@ class SeamStore:
                 )
                 if laid_out:
                     return 0
-                return windows_to_separate(
-                    self.settings, a, b, request.exit_bar, request.entry_bar
-                )
+                return windows_to_separate(self.settings, a, b, request.exit_bar, request.entry_bar)
             specs = self._window_specs.get(request.key)
             if specs is None:
                 specs = self._window_specs[request.key] = windows_for(request, a, b)
@@ -760,6 +756,24 @@ class SeamStore:
 
     def _worker_has_gone(self) -> bool:
         return self._worker is not None and self._worker.poll() is not None
+
+    def forget_missing_audio(self, key: str) -> bool:
+        """Forget a completed clip whose disposable audio was evicted, retaining its history.
+
+        Failed renders keep their negative cache. Studio preparation has stems rather than
+        a clip, so this is only for playable transitions.
+        """
+        state = self.status(key)
+        if (
+            state.get("status") != "ready"
+            or (state.get("request") or {}).get("move") == STUDIO_SESSION
+            or (self.folder(key) / "clip.flac").is_file()
+        ):
+            return False
+        (self.folder(key) / "seam.json").unlink(missing_ok=True)
+        with self._lock:
+            self._states.pop(key, None)
+        return True
 
     def submit(self, request: SeamRequest, urgent: bool = False, retry: bool = False) -> dict:
         """Ask the worker for a seam. Anything done or under way stays as it is. Urgent is for a

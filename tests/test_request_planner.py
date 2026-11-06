@@ -26,6 +26,15 @@ def test_waiting_request_does_not_block_fit_and_known_failures_are_not_retried(m
     assert len(result[1]["plan"]["seams"]) == 2
     failed = proposals(requests, order, songs, 1, memory, lambda key: {"status": "failed"})
     assert all(row["plan"] is None for row in failed)
+    warned = proposals(
+        requests,
+        order,
+        songs,
+        1,
+        memory,
+        lambda key: {"status": "ready", "passed": False},
+    )
+    assert all(row["plan"] is None for row in warned)
     assert order == [(1, None, 0), (2, None, 0), (3, None, 0)]
 
 
