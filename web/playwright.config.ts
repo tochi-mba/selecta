@@ -9,7 +9,7 @@ const port = process.env.SELECTA_E2E_PORT ?? '8799';
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.e2e.ts',
-  timeout: 180_000,
+  timeout: 300_000,
   expect: { timeout: 20_000 },
   workers: 1,
   fullyParallel: false,

@@ -165,6 +165,20 @@ measured. This covers harmonic candidates, not the missing melody, sample or rhy
 - Loop rolls on A's band, a dedicated half/double-time transition, drop swaps and brakes. Tempo-free landings already compare half/double BPM relationships, but that alone does not beatmatch a long blend. The placeholders that faked the missing moves are gone.
 - No blind paired listening study yet to measure whether the intertwined transition improves the mix versus a conventional blend on the same pair.
 
+## Selecta 2.0 pages and server contracts
+
+Measured on 6 November, with a library synthesized by `tests/e2e_server.py`, in headless Edge.
+
+| What | Evidence | Known limits |
+|---|---|---|
+| A transition starts where it was planned | In real Web Audio, A hands over within 10 ms of the rendered exit, and B starts as the clip ends, at the place the clip reached | Timing only. It says nothing about how it sounds |
+| Pages at every size | No sideways scroll on any page from 320 px to 4K, in landscape, or at widths equal to 200% and 400% zoom | A real on-screen keyboard wasn't tried |
+| Automatic accessibility checks | Every page passes axe's WCAG 2.2 AA rules in both themes at desktop and phone width | Automatic checks only. NVDA and VoiceOver haven't been tried |
+| A large library | 20,000 songs all reachable by paging, with the slowest page under 2 s | Measured in tests with made-up rows, not a real 20,000-song scan |
+| Nothing leaves this computer | Every page's requests stay on this computer | Lyric lookups by the server still go to lrclib.net unless turned off |
+
+Each task in the Selecta 2.0 tracker is listed in [implementation-evidence.md](adr/implementation-evidence.md), including what's only partly done.
+
 ## Still needs a person
 
 - Whether anything sounds good, especially the moves not yet heard.

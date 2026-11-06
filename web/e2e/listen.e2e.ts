@@ -150,13 +150,13 @@ test('moving around the app leaves the music alone, and the mini-player follows'
   const started = await soundsStarted(page);
   const nav = page.getByRole('navigation', { name: 'Main' });
   for (const place of ['Library', 'Mixes', 'Discover', 'Workshop']) {
-    await nav.getByRole('link', { name: place }).click();
+    await nav.getByRole('link', { name: place, exact: true }).click();
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
     await page.waitForTimeout(300);
   }
   expect(await soundsStarted(page)).toBe(started);
   expect(await audioStates(page)).toEqual(['running']);
-  await nav.getByRole('link', { name: 'Listen' }).click();
+  await nav.getByRole('link', { name: 'Listen', exact: true }).click();
   await expect(title(page)).toHaveText('Morning Light');
   expect(await soundsStarted(page)).toBe(started);
   expect((await page.evaluate(() => window.audioSpy.contexts.length))).toBe(1);
@@ -224,7 +224,7 @@ test('media keys do what they say', async ({ page }) => {
 
 test('a preview takes the sound, and gives it back when it’s done', async ({ page }) => {
   await play(page);
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Edit' }).click();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Edit', exact: true }).click();
   await page.getByRole('button', { name: 'Hear it' }).first().click();
   const preview = page.locator('audio.preview').first();
   await expect(preview).toBeVisible();

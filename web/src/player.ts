@@ -311,10 +311,15 @@ export class SetPlayer {
     mainPlayerTouched();
     stopPreviewsOnly();
     const current = this.current;
-    if (!current) return;
-    const position = this.getMix().findIndex((item) => item.song_id === current.songId);
+    // pressed again while the last press is still loading: carry on from where that was going
+    if (!current && this.state.phase !== 'loading') return;
+    const position = current ? this.getMix().findIndex((item) => item.song_id === current.songId) : this.state.position;
     const following = this.getMix()[position + 1];
     if (!following) return;
+    if (!current) {
+      await this.playFrom(position + 1);
+      return;
+    }
     if (this.transitionIsLive()) {
       this.update({ notice: `Already on the way into ${following.title}.` });
       return;
@@ -330,7 +335,7 @@ export class SetPlayer {
     stopPreviewsOnly();
     const current = this.current;
     if (!current) {
-      if (this.state.phase === 'idle') await this.playFrom(Math.max(this.state.position - 1, 0));
+      if (this.state.phase === 'idle' || this.state.phase === 'loading') await this.playFrom(Math.max(this.state.position - 1, 0));
       return;
     }
     if (this.transitionIsLive()) {
@@ -349,6 +354,7 @@ export class SetPlayer {
     const current = this.current;
     if (!current) {
       if (this.state.phase === 'idle') this.update({ songTime: Math.max(seconds, 0) });
+      else if (this.state.phase === 'loading') await this.playFrom(this.state.position, Math.max(seconds, 0));
       return;
     }
     if (this.transitionIsLive()) {

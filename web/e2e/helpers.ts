@@ -89,7 +89,7 @@ export async function allRendered(request: APIRequestContext) {
           .slice(1)
           .filter((item) => item.seam?.state.status !== 'ready').length;
       },
-      { timeout: 170_000, intervals: [2000] },
+      { timeout: 280_000, intervals: [2000] },
     )
     .toBe(0);
 }

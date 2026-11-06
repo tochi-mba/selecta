@@ -38,3 +38,13 @@ jobs:
         working-directory: web
       - run: pnpm build
         working-directory: web
+      - name: Browser tests, in Edge, muted
+        run: pnpm e2e
+        working-directory: web
+      - name: Keep what the browser tests saw when one fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: web/test-results
+          if-no-files-found: ignore

@@ -74,7 +74,15 @@ Or one piece at a time:
 uv run pytest
 cd web
 pnpm test
+pnpm e2e
 ```
+
+`pnpm e2e` runs the browser tests. They open real pages in Edge against a real server, with a small
+library synthesized by `tests/e2e_server.py`, so no real music is involved, and they run muted. Run
+`pnpm build` first, since they test the built site.
+
+No file in the project goes over 1,000 lines. `tests/test_file_length.py` enforces it, and CI runs it
+as its own step. When a file gets close, split it by what the pieces do.
 
 Use `selecta beat-check` to verify beats, downbeats and keys by ear before analysing the whole
 library. Use `selecta discover` after lyrics are ready to fill the Found screen's Seam Book.
