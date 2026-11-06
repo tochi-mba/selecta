@@ -88,6 +88,8 @@ def test_audio_search_skips_missing_chroma_and_honors_limit(tmp_path):
         _song(4, profile.copy()),
     ]
 
-    assert audio_search(conn, songs, limit=1) == 1
+    checkpoints = []
+    assert audio_search(conn, songs, limit=1, before_pair=lambda: checkpoints.append(True)) == 1
+    assert checkpoints == [True]
     assert conn.execute("SELECT COUNT(*) FROM seam_book").fetchone()[0] == 1
     conn.close()

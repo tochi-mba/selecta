@@ -421,15 +421,22 @@ def discover(limit: int = typer.Option(1000, help="Maximum audio links to keep p
     """Search the whole analysed library and fill the Seam Book."""
     from selecta.analysis.song import load_song
     from selecta.discovery.search import audio_search, lyric_search
+    from selecta.jobs import lowest_priority, wait_while_mix_renders
 
     settings, conn = _open()
+    lowest_priority()
+    wait_while_mix_renders(settings.home)
     lyric_count = lyric_search(conn)
     rows = conn.execute(
-        "SELECT song_id FROM analysis WHERE version=? AND error IS NULL ORDER BY song_id",
+        "SELECT a.song_id FROM analysis a JOIN songs s ON s.id=a.song_id "
+        "WHERE a.version=? AND a.error IS NULL AND s.is_music=1 "
+        "AND s.duplicate_of IS NULL ORDER BY a.song_id",
         (ANALYSIS_VERSION,),
     ).fetchall()
     songs = [load_song(conn, settings, row["song_id"]) for row in rows]
-    audio_count = audio_search(conn, songs, limit)
+    audio_count = audio_search(
+        conn, songs, limit, before_pair=lambda: wait_while_mix_renders(settings.home)
+    )
     console.print(f"Found {lyric_count} lyric links and {audio_count} audio links.")
 
 

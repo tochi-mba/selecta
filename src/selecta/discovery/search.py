@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 
 import numpy as np
 
@@ -54,7 +55,12 @@ def lyric_search(conn: sqlite3.Connection) -> int:
     return len(links)
 
 
-def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1000) -> int:
+def audio_search(
+    conn: sqlite3.Connection,
+    songs: list[SongInfo],
+    limit: int = 1000,
+    before_pair: Callable[[], None] | None = None,
+) -> int:
     """Find ordered harmonic candidates and coarse tonal-profile cousins.
 
     Averaging chroma across a whole track discards the order of notes. It can support a
@@ -71,6 +77,8 @@ def audio_search(conn: sqlite3.Connection, songs: list[SongInfo], limit: int = 1
         for b in songs[i + 1 :]:
             if b.chroma_bars is None:
                 continue
+            if before_pair is not None:
+                before_pair()
             sequence = harmonic_sequence(a.chroma_bars, b.chroma_bars)
             if sequence is not None:
                 a_bar, b_bar = sequence["a_bar"], sequence["b_bar"]
