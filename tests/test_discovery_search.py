@@ -94,6 +94,8 @@ def test_ordered_harmonic_candidate_persists_audition_cues_and_honors_zero_limit
     payload = json.loads(row["payload"])
     assert (payload["a_at"], payload["b_at"], payload["bars"]) == (0, 6, 8)
     assert payload["transpose"] == 10
+    assert payload["a_end"] > payload["a_at"]
+    assert payload["b_end"] > payload["b_at"]
     conn.close()
 
 

@@ -87,6 +87,11 @@ def audio_search(
             if sequence is not None:
                 sequence["a_at"] = float(a.bar_times[sequence["a_bar"]])
                 sequence["b_at"] = float(b.bar_times[sequence["b_bar"]])
+                for prefix, song in (("a", a), ("b", b)):
+                    end_bar = sequence[f"{prefix}_bar"] + sequence["bars"]
+                    sequence[f"{prefix}_end"] = float(
+                        song.bar_times[end_bar] if end_bar < len(song.bar_times) else song.duration
+                    )
                 _save(
                     conn,
                     a.id,

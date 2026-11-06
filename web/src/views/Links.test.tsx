@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fakeBackend } from '../test/backend';
 import { HarmonicDiscoveries } from './Links';
 
@@ -14,6 +14,11 @@ describe('harmonic discovery auditions', () => {
     fireEvent.loadedMetadata(audio);
     expect(audio.currentTime).toBe(30);
     expect(audio).toHaveAttribute('src', '/api/songs/2/audio');
+    const pause = vi.spyOn(audio, 'pause').mockImplementation(() => {});
+    audio.currentTime = 51;
+    fireEvent.timeUpdate(audio);
+    expect(pause).toHaveBeenCalledOnce();
+    expect(audio.currentTime).toBe(30);
     expect(screen.getByText(/comparison transposes B by -2/)).toBeInTheDocument();
     const approve = screen.getByRole('button', { name: 'Interesting connection' });
     fireEvent.click(approve);

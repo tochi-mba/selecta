@@ -5,14 +5,20 @@ import { ViewProps } from './shared';
 type HarmonicDiscovery = {
   id: number; song_a: number; song_b: number; title_a: string; title_b: string;
   artist_a: string; artist_b: string; status: string;
-  payload: { a_at: number; b_at: number; bars: number; transpose: number };
+  payload: { a_at: number; b_at: number; a_end?: number; b_end?: number; bars: number; transpose: number };
 };
 
 export function HarmonicDiscoveries() {
   const [items, setItems] = useState<HarmonicDiscovery[]>([]);
   const [error, setError] = useState('');
   useEffect(() => {
-    get<HarmonicDiscovery[]>('/discoveries').then(setItems).catch(() => setError('Could not load harmonic discoveries.'));
+    let live = true;
+    const load = () => get<HarmonicDiscovery[]>('/discoveries').then((rows) => {
+      if (live) { setItems(rows); setError(''); }
+    }).catch(() => { if (live) setError('Could not load harmonic discoveries.'); });
+    void load();
+    const timer = window.setInterval(() => void load(), 15000);
+    return () => { live = false; window.clearInterval(timer); };
   }, []);
   const review = async (item: HarmonicDiscovery, verdict: string) => {
     try {
@@ -29,9 +35,12 @@ export function HarmonicDiscoveries() {
     {items.map((item) => <article className="panel" key={item.id}>
       <h3>{item.title_a} → {item.title_b}</h3>
       <p className="hint">{item.payload.bars} matched bars · comparison transposes B by {item.payload.transpose > 6 ? item.payload.transpose - 12 : item.payload.transpose} semitones. Playback below keeps the original pitch.</p>
-      {[{ id: item.song_a, title: item.title_a, artist: item.artist_a, at: item.payload.a_at }, { id: item.song_b, title: item.title_b, artist: item.artist_b, at: item.payload.b_at }].map((song) => <div key={song.id}>
+      {[{ id: item.song_a, title: item.title_a, artist: item.artist_a, at: item.payload.a_at, end: item.payload.a_end }, { id: item.song_b, title: item.title_b, artist: item.artist_b, at: item.payload.b_at, end: item.payload.b_end }].map((song) => <div key={song.id}>
         <p>{song.artist} · {song.title}</p>
-        <audio controls preload="none" aria-label={`Audition ${song.title}`} src={`/api/songs/${song.id}/audio`} onLoadedMetadata={(event) => { event.currentTarget.currentTime = song.at; }} />
+        <audio controls preload="none" aria-label={`Audition ${song.title}`} src={`/api/songs/${song.id}/audio`} onLoadedMetadata={(event) => { event.currentTarget.currentTime = song.at; }} onTimeUpdate={(event) => {
+          const audio = event.currentTarget;
+          if (audio.currentTime >= (song.end ?? song.at + 20)) { audio.pause(); audio.currentTime = song.at; }
+        }} />
       </div>)}
       <div className="chips" role="group" aria-label={`Review ${item.title_a} and ${item.title_b}`}>
         <button aria-pressed={item.status === 'approved'} onClick={() => void review(item, item.status === 'approved' ? 'new' : 'approved')}>Interesting connection</button>
