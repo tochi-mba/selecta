@@ -124,6 +124,26 @@ describe('playing through a mix', () => {
 
 
 describe('transition readiness deadlines', () => {
+  it('loads a completed render without waiting for the whole mix to refresh', async () => {
+    audioBackend([]);
+    const original = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      if (url === '/api/seams/late') return new Response(JSON.stringify({
+        status: 'ready', key: 'late', a_source_start: 80, b_source_end: 20, switch_at: 10,
+      }));
+      return original(url, init);
+    });
+    const mix = songs(seam('rendering', 'late'));
+    const refresh = vi.fn();
+    player = new SetPlayer(() => mix, refresh);
+    await player.playFrom(0, 79.9);
+    await settle();
+    expect(mix[1].seam?.state.status).toBe('rendering');
+    expect(refresh).toHaveBeenCalled();
+    expect(FakeAudio.now.sources).toHaveLength(3);
+    expect(FakeAudio.now.sources[1].start.mock.calls[0][0]).toBeCloseTo(0.15);
+  });
+
   let player: SetPlayer;
   beforeEach(() => vi.stubGlobal('AudioContext', FakeAudio));
   afterEach(() => player.stop());

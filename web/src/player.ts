@@ -59,6 +59,9 @@ export class SetPlayer {
   private planned: Planned | null = null;
   private ending = false;
   private playGeneration = 0;
+  private watchedState: SeamState | null = null;
+  private stateRead: AbortController | null = null;
+  private stateReadAt = -Infinity;
   private requested = new Set<string>();
   private fallenBack = new Set<number>();
   private savedAt = 0;
@@ -170,6 +173,10 @@ export class SetPlayer {
 
   private stopAll() {
     this.playGeneration += 1;
+    this.stateRead?.abort();
+    this.stateRead = null;
+    this.watchedState = null;
+    this.stateReadAt = -Infinity;
     if (this.current && this.context) {
       const elapsed = Math.max(0, this.context.currentTime - this.current.startedAt);
       this.heard.set(this.current.songId, (this.heard.get(this.current.songId) ?? 0) + elapsed);
@@ -296,6 +303,37 @@ export class SetPlayer {
     }
   }
 
+  /** Watch only the imminent seam, independently of the slower whole-mix UI poll. */
+  private watchSeam(current: Current, nextItem: MixItem, seam: SeamState) {
+    if (seam.status === 'ready' || seam.status === 'failed' || this.stateRead
+      || performance.now() - this.stateReadAt < 100) return;
+    const controller = new AbortController();
+    this.stateRead = controller;
+    this.stateReadAt = performance.now();
+    const timeout = window.setTimeout(() => controller.abort(), 2000);
+    void fetch(`/api/seams/${encodeURIComponent(seam.key)}`, { signal: controller.signal, cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const fresh = await response.json() as SeamState;
+        const mix = this.getMix();
+        const position = mix.findIndex((item) => item.song_id === current.songId);
+        const next = mix[position + 1];
+        if (controller.signal.aborted || this.current !== current || position < 0
+          || next?.song_id !== nextItem.song_id || next.seam?.state.key !== seam.key
+          || fresh.key !== seam.key) return;
+        if (fresh.status === 'ready') {
+          this.watchedState = fresh;
+          void this.plan(current, next, fresh);
+          this.refreshMix();
+        }
+      })
+      .catch(() => { /* Retry while the original song continues playing. */ })
+      .finally(() => {
+        window.clearTimeout(timeout);
+        if (this.stateRead === controller) this.stateRead = null;
+      });
+  }
+
   private tick() {
     const context = this.context;
     if (!context || !this.current || this.state.phase === 'paused') return;
@@ -318,7 +356,10 @@ export class SetPlayer {
     const found = mix.findIndex((item) => item.song_id === current.songId);
     if (found >= 0) current.position = found;
     const nextItem = mix[current.position + 1];
-    const seam: SeamState | undefined = nextItem?.seam?.state;
+    const listedSeam = nextItem?.seam?.state;
+    if (this.watchedState?.key !== listedSeam?.key) this.watchedState = null;
+    const seam: SeamState | undefined = this.watchedState ?? listedSeam;
+    if (nextItem && seam && !this.planned) this.watchSeam(current, nextItem, seam);
 
     if (this.planned && (!seam || seam.key !== this.planned.key) && now < this.planned.whenA - 0.1) {
       this.unplan();
@@ -375,7 +416,8 @@ export class SetPlayer {
     const livePosition = liveMix.findIndex((item) => item.song_id === current.songId);
     const liveNext = liveMix[livePosition + 1];
     if (livePosition < 0 || liveNext?.song_id !== nextItem.song_id
-      || liveNext.seam?.state.key !== seam.key || liveNext.seam.state.status !== 'ready') return;
+      || liveNext.seam?.state.key !== seam.key
+      || (liveNext.seam.state.status !== 'ready' && this.watchedState?.key !== seam.key)) return;
     const whenA = current.startedAt + (seam.a_source_start - current.offset);
     // Web Audio schedules against its own clock. Do not reject decoded audio
     // merely because it arrived inside an arbitrary quarter-second margin.
@@ -441,7 +483,8 @@ export class SetPlayer {
     }
     // Rendering can finish while the fallback song downloads. Let the next tick
     // schedule that seam instead of committing a competing fade.
-    const liveSeam = liveMix[livePosition + 1]?.seam?.state;
+    const listedSeam = liveMix[livePosition + 1]?.seam?.state;
+    const liveSeam = this.watchedState?.key === listedSeam?.key ? this.watchedState : listedSeam;
     if (liveSeam?.status === 'ready' && liveSeam.a_source_start !== undefined
       && current.startedAt + liveSeam.a_source_start - current.offset >= context.currentTime) {
       this.ending = false;
