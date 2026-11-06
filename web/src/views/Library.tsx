@@ -41,12 +41,21 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     notify(song.never ? `${song.title} can play again.` : `${song.title} won’t be picked for mixes.`);
     void load();
   };
+  const [building, setBuilding] = useState<number | null>(null);
   const startFrom = async (song: SongRow) => {
-    const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`);
-    setMixData(data);
-    setView('Now');
-    void player.playFrom(0);
-    notify(`A mix starting from ${song.title}.`, true);
+    if (building !== null) return;
+    setBuilding(song.id);
+    try {
+      const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`);
+      setMixData(data);
+      setView('Now');
+      void player.playFrom(0);
+      notify(`A mix starting from ${song.title}.`, true);
+    } catch (error) {
+      notify((error as Error).message || 'Couldn’t build that mix. Try again.');
+    } finally {
+      setBuilding(null);
+    }
   };
   const left = Math.max(status.counts.music - status.counts.analysed, 0);
   const analyseAll = async () => {
@@ -112,7 +121,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <div className="song-actions">
                 {ready ? (
                   <>
-                    <button onClick={() => void startFrom(song)} title="Build a mix that starts here">Start a mix</button>
+                    <button disabled={building !== null} onClick={() => void startFrom(song)} title="Build a mix that starts here">
+                      {building === song.id ? 'Building your mix…' : 'Start a mix'}
+                    </button>
                     <button onClick={() => void add(song)} disabled={mix.some((item) => item.song_id === song.id)}>
                       {mix.some((item) => item.song_id === song.id) ? 'In the mix' : 'Add'}
                     </button>

@@ -7,6 +7,7 @@ import { SetPlayer } from '../player';
 import { fakeBackend, seam, songs, status } from '../test/backend';
 import { Adder, Mix } from './Mix';
 import { MixScope } from './mixScope';
+import { RequestsContext, RequestsState } from './Requests';
 
 function Harness({ start, state = status(), notify = () => {} }: { start: MixItem[]; state?: Status; notify?: (m: string) => void }) {
   const [mix, setMix] = useState(start);
@@ -361,5 +362,89 @@ describe('the current mix and drafts', () => {
     render(<Harness start={songs(seam('ready', 'a'))} />);
     await waitFor(() => expect(calls.some((call) => call.path === '/drafts')).toBe(true));
     expect(screen.queryByRole('combobox')).toBeNull();
+  });
+});
+
+describe('songs a request added', () => {
+  const added = () => {
+    const mix = songs(seam('ready', 'a'), seam('ready', 'b'));
+    mix[1].from_request = { kind: 'requested' };
+    mix[2].from_request = { kind: 'bridge', for: 'Song 2' };
+    return mix;
+  };
+
+  it('stand out in the mix, and say why they’re there', () => {
+    render(<Harness start={added()} />);
+    const requested = screen.getByText('Requested').closest('li');
+    expect(requested).toHaveClass('requested');
+    expect(requested).toHaveTextContent('Song 2');
+    expect(screen.getByText('Bridge to Song 2').closest('li')).toHaveClass('requested');
+  });
+
+  it('other songs look as they always have', () => {
+    const { container } = render(<Harness start={added()} />);
+    expect(container.querySelectorAll('li.song')).toHaveLength(3);
+    expect(container.querySelectorAll('li.song.requested')).toHaveLength(2);
+    expect(container.querySelector('li.song')).not.toHaveClass('requested');
+  });
+});
+
+describe('requests on the Edit page', () => {
+  const state = (requests: unknown[] = []) => ({
+    requests, error: '', message: '',
+    add: async () => {}, cancel: async () => {}, chooseBridge: async () => {}, addAnyway: async () => {},
+  }) as unknown as RequestsState;
+
+  it('are there for the current mix', () => {
+    render(<RequestsContext.Provider value={state()}><Harness start={songs(seam('ready', 'a'))} /></RequestsContext.Provider>);
+    expect(screen.getByRole('region', { name: 'Song requests' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Request a song' })).toBeInTheDocument();
+  });
+
+  it('show up faded in the timeline at the place they’re going', () => {
+    const start = songs(seam('ready', 'a'), seam('ready', 'b'));
+    const player = new SetPlayer(() => [], () => {});
+    (player as unknown as { state: { phase: string } }).state.phase = 'playing';
+    const coming = { id: 7, song_id: 9, title: 'Wanted', artist: 'Artist', status: 'waiting', available: 1, stage: 'preparing', after_id: 2 };
+    const { container } = render(
+      <RequestsContext.Provider value={{ ...state([coming]), playback: { mix: start, player, onMix: () => {} } }}>
+        <Harness start={start} />
+      </RequestsContext.Provider>,
+    );
+    const rows = [...container.querySelectorAll('ol.timeline li.song')].map((row) => row.querySelector('b')?.textContent);
+    expect(rows).toEqual(['Song 1', 'Song 2', 'Wanted', 'Song 3']);
+    expect(container.querySelector('li.song.coming')).toHaveTextContent('Wanted');
+  });
+
+  it('take over from the transition they’ll replace, which comes back if they’re cancelled', () => {
+    const start = songs(seam('ready', 'a'), seam('ready', 'b'));
+    const player = new SetPlayer(() => [], () => {});
+    (player as unknown as { state: { phase: string } }).state.phase = 'playing';
+    const coming = { id: 7, song_id: 9, title: 'Wanted', artist: 'Artist', status: 'waiting', available: 1, stage: 'preparing', after_id: 2 };
+    const playback = { mix: start, player, onMix: () => {} };
+    const { container, rerender } = render(
+      <RequestsContext.Provider value={{ ...state([coming]), playback }}><Harness start={start} /></RequestsContext.Provider>,
+    );
+    expect(container.querySelectorAll('ol.timeline > li.seam')).toHaveLength(1);
+    rerender(<RequestsContext.Provider value={{ ...state([]), playback }}><Harness start={start} /></RequestsContext.Provider>);
+    expect(container.querySelectorAll('ol.timeline > li.seam')).toHaveLength(2);
+  });
+
+  it('aren’t shown on a draft, since requests only join what’s playing', () => {
+    fakeBackend({});
+    const player = new SetPlayer(() => [], () => {});
+    render(
+      <RequestsContext.Provider value={state()}>
+        <MixScope.Provider value={7}>
+          <Mix
+            status={status()} mix={songs(seam('none', 'a'))} mixName="Friday" canUndo={false}
+            refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+            player={player} now={player.state} setView={() => {}} notify={() => {}}
+            stage={false} toggleStage={() => {}} draftPlace={null}
+          />
+        </MixScope.Provider>
+      </RequestsContext.Provider>,
+    );
+    expect(screen.queryByRole('region', { name: 'Song requests' })).toBeNull();
   });
 });

@@ -81,3 +81,34 @@ describe('songs not analysed yet', () => {
     await waitFor(() => expect(calls.some((call) => call.path.includes('state=priority'))).toBe(true));
   });
 });
+
+describe('starting a mix from a song', () => {
+  const ready = { ...row(1, 'First'), bpm: 120 };
+  const backend = (build: () => Promise<Response>) => vi.stubGlobal('fetch', vi.fn((url: string) => (
+    url.includes('/vibes/pick/build') ? build() : Promise.resolve(new Response(JSON.stringify([ready, { ...ready, id: 2, title: 'Second' }]), { status: 200 }))
+  )));
+
+  it('says it’s building straight away, and can’t be pressed twice', async () => {
+    let finish: (value: Response) => void = () => {};
+    const build = vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; }));
+    backend(build);
+    show();
+    const buttons = await screen.findAllByRole('button', { name: 'Start a mix' });
+    await userEvent.click(buttons[0]);
+    expect(screen.getByRole('button', { name: 'Building your mix…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Start a mix' })).toBeDisabled();
+    expect(build).toHaveBeenCalledOnce();
+    finish(new Response(JSON.stringify({ mix: [], name: 'Mix', can_undo: false }), { status: 200 }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Building your mix…' })).toBeNull());
+  });
+
+  it('says why if it couldn’t, and can be tried again', async () => {
+    const notify = vi.fn();
+    backend(async () => new Response(JSON.stringify({ detail: 'Nothing goes with that.' }), { status: 400 }));
+    show(status(), () => {}, notify);
+    const buttons = await screen.findAllByRole('button', { name: 'Start a mix' });
+    await userEvent.click(buttons[0]);
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Nothing goes with that.'));
+    expect(screen.getAllByRole('button', { name: 'Start a mix' })[0]).toBeEnabled();
+  });
+});

@@ -104,6 +104,20 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
     refreshStatus();
     notify(status.analysis_running ? 'Paused. It’ll pick up where it left off.' : 'Analysing in the background.');
   };
+  const [checking, setChecking] = useState(false);
+  const checkNow = async () => {
+    setChecking(true);
+    try {
+      const { new: found } = await post<{ new: number }>('/library/check');
+      refreshStatus();
+      notify(found ? `Found ${found} new ${found === 1 ? 'song' : 'songs'}. Analysing them now.` : 'No new songs yet. Anything still copying in is checked again shortly.');
+    } catch (error) {
+      notify((error as Error).message);
+    } finally {
+      setChecking(false);
+    }
+  };
+
   const scan = async (event: FormEvent) => {
     event.preventDefault();
     setProblem('');
@@ -164,6 +178,10 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
           <button disabled={!folder.trim() || reading}>{reading ? 'Reading…' : 'Read folder'}</button>
         </form>
         {problem && <p className="warn" role="alert">{problem}</p>}
+        <div className="row wrap">
+          <span className="hint">New songs added to your folder show up by themselves within a minute or so.</span>
+          <button disabled={checking} onClick={() => void checkNow()}>{checking ? 'Checking…' : 'Check now'}</button>
+        </div>
         {status.scan.status === 'done' && (
           <p className="hint">
             Read {status.scan.folder}: {status.scan.music} songs, {status.scan.set_aside} set aside. Analysing them now.

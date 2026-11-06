@@ -372,9 +372,10 @@ def choose_transition(
     style: str | None = None,
     cache: SongCache | None = None,
     max_repairs: int = MAX_REPAIRS,
+    exits: list[Cue] | None = None,
 ) -> Choice:
     cache = cache or SongCache()
-    pool = enumerate_candidates(a, b, style)
+    pool = enumerate_candidates(a, b, style, exits=exits)
     tried: set[tuple] = set()
     attempts: list[Attempt] = []
     candidate = pool[0] if pool else None

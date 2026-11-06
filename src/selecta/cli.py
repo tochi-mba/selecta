@@ -91,7 +91,8 @@ def analyse(
         console.print("Nothing to analyse.")
         return
     if low_priority:
-        (lowest_priority if from_app else lower_priority)()
+        # a song someone asked for by name doesn't sit behind everything else on the PC
+        (lowest_priority if from_app and not song else lower_priority)()
 
     started = time.perf_counter()
     analysers = Analysers.load(settings, beat_model)

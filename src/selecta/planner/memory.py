@@ -80,6 +80,11 @@ class SeamMemory:
             return
         self._pairs = None
         current = state.get("rules") == RULES_VERSION
+        if request.get("leave_after") is not None:
+            # failing only says there's no room that late in A, not that these two don't work
+            if state.get("status") == "failed":
+                return
+            state = {**state, "tried": []}
         for attempt in state.get("tried") or []:
             if current or attempt["move"] in WORD_TIMED_MOVES:
                 self.failed.add((a, b, attempt["move"]))

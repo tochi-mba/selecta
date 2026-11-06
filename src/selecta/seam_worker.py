@@ -39,6 +39,7 @@ def _mix_seams(store: SeamStore, settings):
         ]
 
     def next_seam() -> SeamRequest | None:
+        mix.settle_chain(conn, store)
         waiting = next((request for request, status in pairs() if status == "none"), None)
         # a mix bigger than the limit would delete its own early seams to make room for later ones
         limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
@@ -80,6 +81,7 @@ def _line_seams(store: SeamStore, settings):
     def next_seam() -> tuple[int, SeamRequest] | None:
         limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
         for draft in mix.line_order(conn):
+            mix.settle_chain(conn, store, draft)
             for request, status in pairs(draft):
                 if status == "none":
                     # the same limit as the mix: it mustn't delete its own early seams to go on
@@ -128,7 +130,14 @@ def _read_requests(store: SeamStore, app_input: TextIO) -> None:
     for line in app_input:
         if line.strip():
             message = json.loads(line)
-            store.ask(SeamRequest(**message["request"]), urgent=message["urgent"])
+            if "drop" in message:
+                store.drop_requests(message["drop"])
+                continue
+            store.ask(
+                SeamRequest(**message["request"]),
+                urgent=message["urgent"],
+                after=message.get("after"),
+            )
     kill_tree_of_children()
     os._exit(0)
 

@@ -76,20 +76,38 @@ def _artist_of_name(name: str) -> set[str]:
     return {clean_artist(name.split(" - ")[0]).casefold()}
 
 
+_LOADED: dict[Path, dict[int, tuple[tuple, SongInfo]]] = {}
+
+
 def load_library(conn: sqlite3.Connection, settings: Settings) -> list[SongInfo]:
+    """Every song that can be mixed. Reading them all takes seconds, and this is asked for again
+    every time one more song is analysed, so only songs that have changed are read."""
     rows = conn.execute(
-        "SELECT song_id FROM analysis WHERE error IS NULL AND bpm IS NOT NULL AND version = "
-        "(SELECT MAX(version) FROM analysis) ORDER BY song_id"
+        "SELECT a.song_id,a.version,a.analysed_at,a.bpm,a.grid_confidence,a.camelot,a.energy,"
+        "length(a.sections),s.title,s.artist,s.genre,s.duration,s.mtime,"
+        "l.status,l.fetched_at,length(l.synced) "
+        "FROM analysis a JOIN songs s ON s.id=a.song_id LEFT JOIN lyrics l ON l.song_id=a.song_id "
+        "WHERE a.error IS NULL AND a.bpm IS NOT NULL AND a.version = "
+        "(SELECT MAX(version) FROM analysis) ORDER BY a.song_id"
     ).fetchall()
+    before = _LOADED.get(settings.home, {})
+    loaded: dict[int, tuple[tuple, SongInfo]] = {}
     songs: list[SongInfo] = []
     for row in rows:
-        try:
-            song = load_song(conn, settings, row["song_id"])
-        except OSError:
-            continue
+        song_id, stamp = row[0], tuple(row)
+        known = before.get(song_id)
+        if known is not None and known[0] == stamp:
+            song = known[1]
+        else:
+            try:
+                song = load_song(conn, settings, song_id)
+            except OSError:
+                continue
+        loaded[song_id] = (stamp, song)
         if not song.vocals_known and not song.instrumental:
             continue
         songs.append(song)
+    _LOADED[settings.home] = loaded
     return songs
 
 

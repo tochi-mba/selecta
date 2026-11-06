@@ -115,7 +115,8 @@ def test_prepared_request_requires_ready_audio_fresh_mix_and_bridge_consent(
     if bridges:
         assert offer["needs_approval"]
         assert client.post("/api/requests/insert", json=action).status_code == 409
-        assert client.post("/api/requests/approve", json=action).status_code == 200
+        answer = client.post(f"/api/requests/{request_id}/bridge", json={"allow": True})
+        assert answer.status_code == 200
         offer = client.post("/api/requests/consider", json=playback).json()["requests"][0]
     assert offer["ready"]
     assert client.post("/api/requests/insert", json={**action, "position": 1}).status_code == 409

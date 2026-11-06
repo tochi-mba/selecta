@@ -233,3 +233,50 @@ describe('transition readiness deadlines', () => {
     expect(FakeAudio.now.sources).toHaveLength(before);
   });
 });
+
+describe('going past the way out of a song', () => {
+  let player: SetPlayer;
+  beforeEach(() => {
+    vi.stubGlobal('AudioContext', FakeAudio);
+  });
+  afterEach(() => {
+    player?.stop();
+    vi.unstubAllGlobals();
+  });
+
+  const asked = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls
+    .filter(([url]) => url.includes('leave-later'));
+
+  it('asks for another further on, once', async () => {
+    audioBackend([]);
+    const mix = songs(seam('ready', 'gone', { a_source_start: 30, b_source_end: 10, switch_at: 5 }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0, 50);
+    tick(player);
+    tick(player);
+    await settle();
+    expect(asked()).toHaveLength(1);
+    expect(asked()[0][0]).toBe('/api/mix/1/leave-later');
+    expect(JSON.parse(asked()[0][1]?.body as string).after).toBeGreaterThanOrEqual(50);
+  });
+
+  it('leaves it alone while the way out is still ahead', async () => {
+    audioBackend([]);
+    const mix = songs(seam('ready', 'ahead', { a_source_start: 80, b_source_end: 10, switch_at: 5 }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0, 50);
+    tick(player);
+    await settle();
+    expect(asked()).toHaveLength(0);
+  });
+
+  it('leaves it alone while it isn’t ready, since it might land anywhere', async () => {
+    audioBackend([]);
+    const mix = songs(seam('rendering', 'pending', { a_source_start: 30 }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0, 50);
+    tick(player);
+    await settle();
+    expect(asked()).toHaveLength(0);
+  });
+});

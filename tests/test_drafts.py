@@ -13,7 +13,7 @@ from selecta import db, mix
 from selecta.api import create_app
 from selecta.config import ANALYSIS_VERSION, Settings
 from selecta.eta import JobClock, mix_time_left, time_ahead
-from selecta.seams import LATER, LINE, MIX, PREPARING, URGENT, SeamRequest, SeamStore
+from selecta.seams import LATER, LINE, MIX, PREPARING, REQUEST, URGENT, SeamRequest, SeamStore
 
 
 def _song_row(conn, song_id):
@@ -526,6 +526,156 @@ def test_a_line_seam_chooses_its_moves_with_its_own_mix_in_mind(store, tmp_path)
     store._running_draft = None
     store._best_move(a, b, [])
     assert looked_at == [5, "current"]
+
+
+# ---- a request's seams
+
+
+def _statuses(store, states):
+    real = store.status
+    store.status = lambda key: {"status": states[key]} if key in states else real(key)
+
+
+def test_a_request_goes_ahead_of_the_rest_of_the_mix(store):
+    _ready_worker(store)
+    store.next_mix_seam = lambda: _request(1)
+    store.ask(_request(5), after=[])
+    assert store._next_job() == _request(5)
+    assert store._running_rank == REQUEST
+    assert store._next_job() == _request(1), "and the mix carries on straight after"
+
+
+def test_what_is_heard_before_a_request_goes_first(store):
+    _ready_worker(store)
+    before = _request(1)
+    states = {before.key: "none"}
+    _statuses(store, states)
+    store.next_mix_seam = lambda: before
+    store.ask(_request(5), after=[before.key])
+    assert store._next_job() == before
+    assert store._running_rank == MIX
+    states[before.key] = "ready"
+    assert store._next_job() == _request(5)
+    assert store._running_rank == REQUEST
+
+
+def test_a_seam_that_could_not_be_made_does_not_hold_a_request_up(store):
+    _ready_worker(store)
+    before = _request(1)
+    _statuses(store, {before.key: "failed"})
+    store.ask(_request(5), after=[before.key])
+    assert store._next_job() == _request(5)
+
+
+def test_what_is_about_to_be_heard_still_beats_a_request(store):
+    _ready_worker(store)
+    store.ask(_request(5), after=[])
+    store.ask(_request(1), urgent=True)
+    assert store._next_job() == _request(1)
+    assert store._running_rank == URGENT
+
+
+def test_requests_go_in_the_order_they_came(store):
+    _ready_worker(store)
+    store.ask(_request(5), after=[])
+    store.ask(_request(6), after=[])
+    assert store._next_job() == _request(5)
+    assert store._next_job() == _request(6)
+
+
+def test_a_request_goes_ahead_of_the_line_and_other_work(store):
+    _ready_worker(store)
+    store.next_line_seam = lambda: (5, _request(2))
+    store.next_idle_job = lambda: _request(9)
+    store.ask(_request(3))
+    store.ask(_request(7), after=[])
+    assert store._next_job() == _request(7)
+    assert store._running_rank == REQUEST
+
+
+def test_a_request_seam_is_never_treated_as_left_over_from_an_old_mix(store):
+    """It isn't in the mix yet, which is exactly why it's being rendered."""
+    _ready_worker(store)
+    store.ask(_request(7), after=[])
+    store._next_job()
+    store.keep_for_now = lambda: {"something in the mix"}
+    store._active_checked_at = 0.0
+    assert store._give_way() is False
+
+
+def test_a_request_seam_stops_for_what_is_about_to_be_heard(store):
+    _ready_worker(store)
+    store.ask(_request(7), after=[])
+    store._next_job()
+    store.ask(_request(1), urgent=True)
+    assert store._give_way() is True
+
+
+def test_a_request_seam_does_not_stop_for_the_rest_of_the_mix(store):
+    _ready_worker(store)
+    store.ask(_request(7), after=[])
+    store._next_job()
+    store.next_mix_seam = lambda: _request(1)
+    store._mix_checked_at = 0.0
+    assert store._give_way() is False
+
+
+def test_a_seam_in_progress_finishes_rather_than_stopping_for_a_request(store):
+    """Stopping one partway through a stem split would throw away minutes to save seconds."""
+    _running(store, MIX)
+    store.ask(_request(7), after=[])
+    assert store._give_way() is False
+
+
+def test_lesser_work_stops_for_a_request(store):
+    for rank in (LINE, LATER, PREPARING):
+        _running(store, rank)
+        store.ask(_request(7), after=[])
+        assert store._give_way() is True
+
+
+def test_a_request_already_finished_is_dropped(store):
+    _ready_worker(store)
+    done = _request(7)
+    _statuses(store, {done.key: "ready"})
+    store.ask(done, after=[])
+    store.next_idle_job = lambda: _request(9)
+    assert store._next_job() == _request(9)
+
+
+def test_a_request_never_waits_on_a_seam_that_left_the_mix(store):
+    """It would have waited forever, since nothing would ever render it."""
+    _ready_worker(store)
+    gone = _request(1)
+    _statuses(store, {gone.key: "none"})
+    store.keep_for_now = lambda: {"what is in the mix now"}
+    store.ask(_request(5), after=[gone.key])
+    assert store._next_job() == _request(5)
+
+
+def test_a_request_never_waits_on_a_mix_that_cannot_go_further(store):
+    """The mix stops at the storage limit, and that mustn't leave a request stuck behind it."""
+    _ready_worker(store)
+    before = _request(1)
+    _statuses(store, {before.key: "none"})
+    store.keep_for_now = lambda: {before.key}
+    store.next_mix_seam = lambda: None
+    store.ask(_request(5), after=[before.key])
+    assert store._next_job() == _request(5)
+
+
+def test_a_request_seam_that_failed_is_dropped(store):
+    _ready_worker(store)
+    done = _request(7)
+    _statuses(store, {done.key: "failed"})
+    store.ask(done, after=[])
+    store.next_idle_job = lambda: _request(9)
+    assert store._next_job() == _request(9)
+
+
+def test_a_finished_request_seam_is_kept_until_it_joins(store):
+    store.ask(_request(7), after=[])
+    assert _request(7).key in store._request_keys
 
 
 # ---- how long it will take
