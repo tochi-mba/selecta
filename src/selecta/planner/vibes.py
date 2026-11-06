@@ -12,8 +12,8 @@ hoped to render.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 import numpy as np
@@ -26,6 +26,7 @@ from selecta.planner.choose import enumerate_candidates
 from selecta.planner.memory import SeamMemory
 from selecta.planner.moods import THEMES, is_english, is_seasonal, read_lyrics
 from selecta.planner.wordreel import modes_for, ride_lines
+from selecta.render.intertwine import can_intertwine
 from selecta.styles.wordplay import felt_bpm
 
 MIN_SONGS = 6
@@ -54,6 +55,7 @@ MOVE_WEIGHTS: dict[str, dict[str, float]] = {
 RIDE_WEIGHT = {"balanced": 3.0, "seamless": 3.0, "wordplay": 1.5, "punchy": 1.5}
 MAX_SHARE = {
     "vocal_ride": 0.35,
+    "stem_intertwine": 0.3,
     "bass_swap_blend": 0.4,
     "filter_sweep": 0.3,
     "tempo_ramp": 0.25,
@@ -70,6 +72,7 @@ FAMILIES = {
     "echo_out": "effect",
     "cut_on_one": "effect",
     "vocal_ride": "voice",
+    "stem_intertwine": "blend",
 }
 OVER_SHARE = 0.05
 SONG_RECORD_WEIGHT = 0.3
@@ -417,10 +420,14 @@ def describe(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> di
 
 
 def _opening_song(
-    vibe: Vibe, found: list[SongInfo], traits: dict[int, Traits], rng: np.random.Generator
+    vibe: Vibe,
+    found: list[SongInfo],
+    traits: dict[int, Traits],
+    rng: np.random.Generator,
+    energy_arc: Sequence[float] | None = None,
 ) -> SongInfo:
     """A song near where this mix's energy shape begins, with somewhere to leave it."""
-    start = target_energy(0.0, vibe.arc)
+    start = target_energy(0.0, vibe.arc, energy_arc)
     usable = [song for song in found if song.exit_cues()] or found
     usable.sort(key=lambda song: abs(traits[song.id].energy - start))
     return usable[int(rng.integers(0, min(5, len(usable))))]
@@ -435,19 +442,34 @@ def build_vibe(
     start: int | None = None,
     seed: int | None = None,
     memory: SeamMemory | None = None,
+    mix_language: str | None = None,
+    end_id: int | None = None,
+    stems: str = "sometimes",
+    energy_arc: Sequence[float] | None = None,
 ) -> tuple[list[PlannedSong], dict[int, dict]]:
     """Plan a mix for this vibe, and say how each seam should land."""
     found = eligible(vibe, songs, traits)
+    if end_id is not None:
+        destination = next((song for song in songs if song.id == end_id), None)
+        if destination is None:
+            raise ValueError(f"destination song {end_id} is not available in the mix-ready library")
+        if all(song.id != end_id for song in found):
+            if vibe.seasonal:
+                raise ValueError("choose a Christmas song for the Christmas mix destination")
+            found.append(destination)
     rng = np.random.default_rng(seed)
-    first = start if start is not None else _opening_song(vibe, found, traits, rng).id
+    first = start if start is not None else _opening_song(vibe, found, traits, rng, energy_arc).id
     memory = memory or SeamMemory()
     belongs = {song.id: vibe.belongs(song, traits[song.id]) for song in found}
     top = max(belongs.values(), default=1.0) or 1.0
+    language = mix_language or vibe.language
+    selected_vibe = replace(vibe, language=language)
     planned = plan_set(
         found,
         first,
         count,
-        mix_language=vibe.language,
+        mix_language=language,
+        stems=stems,
         links=set(phrases) if vibe.wordplay or vibe.key == "pick" else set(),
         arc=vibe.arc,
         seed=int(rng.integers(0, 2**31)),
@@ -458,8 +480,15 @@ def build_vibe(
         },
         link_bonus=WORDPLAY_LINK_BONUS if vibe.wordplay else LINK_BONUS,
         memory=memory,
+        end_id=end_id,
+        energy_arc=energy_arc,
     )
-    return planned, seam_choices(vibe, planned, phrases, rng, memory)
+    if end_id is not None and (not planned or planned[-1].song.id != end_id):
+        raise ValueError(
+            "No valid transition route reaches that song in this mix. Clear the destination or "
+            "choose a different mix."
+        )
+    return planned, seam_choices(selected_vibe, planned, phrases, rng, memory, stems)
 
 
 def _word_move(a: SongInfo, b: SongInfo, memory: SeamMemory) -> str | None:
@@ -479,13 +508,17 @@ def _word_move(a: SongInfo, b: SongInfo, memory: SeamMemory) -> str | None:
 
 
 def _moves_that_fit(
-    vibe: Vibe, a: SongInfo, b: SongInfo, memory: SeamMemory
+    vibe: Vibe, a: SongInfo, b: SongInfo, memory: SeamMemory, stems: str = "sometimes"
 ) -> list[tuple[str, float]]:
     """Moves these two songs can carry, and how much to favour each."""
     options: list[tuple[str, float]] = []
     ride = memory.move_factor(a.id, b.id, "vocal_ride")
-    if ride > 0 and "word_blend" in modes_for(a, b) and ride_lines(a, b):
-        options.append(("vocal_ride", RIDE_WEIGHT[vibe.language] * ride))
+    if stems != "never" and ride > 0 and "word_blend" in modes_for(a, b) and ride_lines(a, b):
+        ride_weight = RIDE_WEIGHT[vibe.language] * (1.5 if stems == "often" else 1.0)
+        options.append(("vocal_ride", ride_weight * ride))
+    intertwine = memory.move_factor(a.id, b.id, "stem_intertwine")
+    if stems != "never" and intertwine > 0 and can_intertwine(a, b):
+        options.append(("stem_intertwine", (0.35 if stems == "sometimes" else 1.3) * intertwine))
     exits, entries = a.exit_cues()[:3], b.entry_cues()[:4]
     for name, weight in MOVE_WEIGHTS[vibe.language].items():
         known = memory.move_factor(a.id, b.id, name)
@@ -524,6 +557,7 @@ def seam_choices(
     phrases: dict[tuple[int, int], str],
     rng: np.random.Generator | None = None,
     memory: SeamMemory | None = None,
+    stems: str = "sometimes",
 ) -> dict[int, dict]:
     """The move into each song, chosen from what fits and what the mix has already used, so no two
     mixes run the same way and no one move takes over. Word hand-offs go where a real link can be
@@ -538,14 +572,15 @@ def seam_choices(
     for before, item in zip(planned, planned[1:], strict=False):
         since_word += 1
         phrase = phrases.get((before.song.id, item.song.id))
-        if phrase and (vibe.wordplay or since_word >= WORD_SPACING):
+        word_spacing = 2 if stems == "often" else WORD_SPACING
+        if stems != "never" and phrase and (vibe.wordplay or since_word >= word_spacing):
             move = _word_move(before.song, item.song, memory)
             if move:
                 seams[item.song.id] = {"move": move, "phrase": phrase, "soft": True}
                 since_word = 0
                 history.append(move)
                 continue
-        options = _moves_that_fit(vibe, before.song, item.song, memory)
+        options = _moves_that_fit(vibe, before.song, item.song, memory, stems)
         move = _choose_move(options, history, total, rng)
         if move is None:
             continue

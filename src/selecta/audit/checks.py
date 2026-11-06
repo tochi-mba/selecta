@@ -147,16 +147,18 @@ def _vocal_overlap(script: TransitionScript, count: int) -> Check | None:
         )
     time_step = 0.05
     times = np.arange(script.overlap[0], script.overlap[1], time_step)
+    vocal_gains = script.meta.get("vocal_gains", {})
 
-    def singing(part: Part) -> np.ndarray:
+    def singing(part: Part, side: str) -> np.ndarray:
         source = np.asarray(part.warp.source_at(times))
-        audible = np.interp(times, part.gain.times, part.gain.values) >= 0.25
+        gain = vocal_gains.get(side, part.gain)
+        audible = np.interp(times, gain.times, gain.values) >= 0.25
         mask = np.zeros(times.size, dtype=bool)
         for line in part.song.lines:
             mask |= (source >= line.start) & (source <= line.end)
         return mask & audible
 
-    seconds = float((singing(script.a) & singing(script.b)).sum() * time_step)
+    seconds = float((singing(script.a, "a") & singing(script.b, "b")).sum() * time_step)
     return Check(
         "vocal overlap",
         seconds <= VOCAL_OVERLAP_LIMIT,
@@ -174,12 +176,24 @@ def _phrase_integrity(script: TransitionScript) -> Check:
         exit_source = float(script.a.warp.source_at(script.meta["cut"]))
     if script.meta.get("wordplay"):
         return Check("phrase integrity", True, 0.0, 0.0, "", detail="cut on aligned words")
-    a_midline = a.vocals_known and any(
+    vocal_gains = script.meta.get("vocal_gains", {})
+    def gain_at(side: str, part: Part, time: float) -> float:
+        gain = vocal_gains.get(side)
+        if gain is None:
+            return 1.0
+        return float(np.interp(time, gain.times, gain.values))
+    a_midline = (
+        gain_at("a", script.a, script.overlap[1]) >= 0.25
+        and a.vocals_known
+        and any(
         line.start + 0.2 < exit_source < line.end - 0.2 for line in a.lines
+        )
     )
     entry_source = float(script.b.warp.source[0])
-    b_midline = b.vocals_known and any(
-        line.start + 0.2 < entry_source < line.end - 0.2 for line in b.lines
+    b_midline = (
+        gain_at("b", script.b, script.overlap[0]) >= 0.25
+        and b.vocals_known
+        and any(line.start + 0.2 < entry_source < line.end - 0.2 for line in b.lines)
     )
     return Check(
         "phrase integrity",

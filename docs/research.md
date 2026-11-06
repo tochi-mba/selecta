@@ -10,6 +10,7 @@ Researched in November 2026, before any code was written. This page is the summa
 | [auto-dj-systems.md](research/auto-dj-systems.md) | Academic systems, commercial products, how transitions get evaluated |
 | [music-analysis.md](research/music-analysis.md) | Beats, key, structure, stems and lyric alignment on a CPU-only laptop |
 | [ui-ux.md](research/ui-ux.md) | Interface patterns, steering, trust, web platform limits |
+| [practitioner-followup.md](research/practitioner-followup.md) | 2026 practitioner forum check on phrase choices, vocal overlap, and selective stem use |
 
 **How far to trust this.** Measured evidence is thin and skews heavily to house and trance. Nothing measured covers pop, rap, Latin or Asian pop mixing, and I found no measured study of wordplay at all. Much of the practice lives in video I couldn't read. So most numbers in the plan are starting values to tune by ear, not established facts.
 
@@ -18,6 +19,7 @@ Researched in November 2026, before any code was written. This page is the summa
 **Automatic systems aren't as good as people yet.**
 - The best published result on pop scored 5.6 out of 10 against 6.7 for a human, and a plain crossfade scored 4.7 (DJustify 2026, a preprint).
 - The gap to a human grew to 1.9 points among listeners with DJ experience.
+- DJustify's separate three-minute story-set test found no detectable gap from a human DJ on story or transition ratings, while story planning improved coherence over its no-story ablation. This is not proof of equivalence: that comparison used 99 listeners and a 400-track pool, and the no-story condition also differed in opener policy.
 - A system that did respectably on drum and bass scored 4.0 on pop, so dance-tuned systems transfer badly.
 
 **Cue and pairing choices seem to matter more than effect curves.**

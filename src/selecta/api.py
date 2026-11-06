@@ -70,7 +70,7 @@ class FreshFiles(StaticFiles):
 
 class SteerRequest(BaseModel):
     action: str
-    value: str | int | None = None
+    value: str | int | list[int] | None = None
 
 
 class StorageRequest(BaseModel):
@@ -256,9 +256,26 @@ def create_app(
     @app.get("/api/status")
     def status() -> dict:
         with connect() as conn:
+            songs, _ = library_now(conn)
+            counts = _counts(conn)
+            counts["ready"] = len(songs)
+            steering = get_steering(conn).__dict__
+            target_song = (
+                conn.execute(
+                    "SELECT artist,title FROM songs WHERE id=?", (steering["target"],)
+                ).fetchone()
+                if steering["target"]
+                else None
+            )
+            steering["target_label"] = (
+                f"{target_song['artist'] or 'Unknown artist'} — "
+                f"{target_song['title'] or 'Untitled'}"
+                if target_song
+                else None
+            )
             return {
-                "counts": _counts(conn),
-                "steering": get_steering(conn).__dict__,
+                "counts": counts,
+                "steering": steering,
                 "queue": queue(conn),
                 "moves": {name: label for name, (label, _) in MOVES.items()},
                 "analysis_running": bool(
@@ -396,6 +413,7 @@ def create_app(
     @app.get("/api/songs/{song_id}")
     def song_detail(song_id: int) -> dict:
         from selecta.analysis.pipeline import load_features
+        from selecta.lyrics.align import provisional_words
 
         with connect() as conn:
             song = analysed_or_404(conn, song_id)
@@ -418,7 +436,15 @@ def create_app(
                 for section in song.sections
             ],
             "lines": [
-                {"start": line.start, "end": line.end, "text": line.text} for line in song.lines
+                {
+                    "start": line.start,
+                    "end": line.end,
+                    "text": line.text,
+                    "words": [
+                        {"start": word.start, "end": word.end} for word in provisional_words(line)
+                    ],
+                }
+                for line in song.lines
             ],
         }
 
@@ -469,7 +495,11 @@ def create_app(
         from selecta.planner.vibes import traits_of
 
         never = never_played(conn)
-        stamp = (_counts(conn)["analysed"], tuple(sorted(never)))
+        counts = _counts(conn)
+        vocal_cues = conn.execute(
+            "SELECT COUNT(*) FROM lyrics WHERE status IN ('synced','instrumental')"
+        ).fetchone()[0]
+        stamp = (counts["analysed"], vocal_cues, tuple(sorted(never)))
         with library_lock:
             if library_cache.get("stamp") != stamp:
                 songs = [song for song in load_library(conn, settings) if song.id not in never]
@@ -498,15 +528,41 @@ def create_app(
         songs, traits = library_now(conn)
         if len(eligible(vibe, songs, traits)) < MIN_SONGS:
             raise HTTPException(400, f"{vibe.name} needs more analysed songs.")
-        planned, seams = build_vibe(
-            vibe,
-            songs,
-            traits,
-            phrases_of(conn),
-            min(count, 100),
-            start,
-            memory=load_memory(conn),
+        steering = get_steering(conn)
+        selected_language = steering.mix_language
+        destination = steering.target
+        stem_preference = steering.stems
+        energy_arc = (
+            [point / 100 for point in steering.energy_arc]
+            if steering.energy_arc is not None
+            else None
         )
+        try:
+            end_id = int(destination) if destination else None
+        except ValueError as problem:
+            raise HTTPException(
+                400, "Choose a destination song from your analysed library."
+            ) from problem
+        if end_id is not None and all(song.id != end_id for song in songs):
+            raise HTTPException(
+                400, "That destination is no longer mix-ready. Choose another song."
+            )
+        try:
+            planned, seams = build_vibe(
+                vibe,
+                songs,
+                traits,
+                phrases_of(conn),
+                min(count, 100),
+                start,
+                memory=load_memory(conn),
+                mix_language=selected_language if selected_language != "balanced" else None,
+                end_id=end_id,
+                stems=stem_preference,
+                energy_arc=energy_arc,
+            )
+        except ValueError as problem:
+            raise HTTPException(400, str(problem)) from problem
         mix.remember(conn, f"changing to {vibe.name}")
         mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
         mix.set_mix_name(conn, vibe.name)

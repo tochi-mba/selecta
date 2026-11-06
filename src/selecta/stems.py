@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -48,23 +50,36 @@ def _window_dirs(root: Path) -> list[tuple[Path, int, float]]:
         files = [p for p in folder.rglob("*") if p.is_file()]
         if files:
             size = sum(p.stat().st_size for p in files)
-            found.append((folder, size, max(p.stat().st_atime for p in files)))
+            marker = folder / "window.json"
+            touched = marker.stat().st_mtime if marker.exists() else max(
+                p.stat().st_atime for p in files
+            )
+            found.append((folder, size, touched))
     return found
 
 
-def _prune(root: Path | list[Path], cap: int, keep: set[str] | None = None) -> None:
+def _prune(
+    root: Path | list[Path],
+    cap: int,
+    keep: set[str] | None = None,
+    protect: set[str] | None = None,
+) -> None:
     """Delete whole windows, oldest first, since one missing stem makes the rest useless.
 
-    Windows named in `keep` go only once nothing else is left to delete.
+    Active windows named in `keep` survive this trim. Priority windows named in `protect` are
+    never evicted; the cache can temporarily exceed its target if those alone exceed the budget.
     """
     keep = keep or set()
+    protect = protect or set()
     roots = [root] if isinstance(root, Path) else root
     windows = [window for place in roots if place.is_dir() for window in _window_dirs(place)]
     total = sum(size for _, size, _ in windows)
-    ordered = sorted(windows, key=lambda w: (w[0].name in keep, w[2]))
+    ordered = sorted(windows, key=lambda w: (w[0].name in keep or w[0].name in protect, w[2]))
     for folder, size, _ in ordered:
         if total <= cap:
             break
+        if folder.name in keep or folder.name in protect:
+            continue
         shutil.rmtree(folder, ignore_errors=True)
         total -= size
 
@@ -89,10 +104,37 @@ def largest_cache_bytes(settings: Settings) -> int:
     return max(MIN_CACHE_BYTES, cache_bytes(settings) + free - FREE_SPACE_RESERVE)
 
 
+def _priority_window_names(settings: Settings) -> set[str]:
+    """Find cached stem windows belonging to songs the user marked as priority."""
+    root = settings.home / "stems"
+    if not root.is_dir() or not settings.db_path.is_file():
+        return set()
+    try:
+        with sqlite3.connect(settings.db_path) as conn:
+            paths = {
+                str(Path(path).resolve())
+                for (path,) in conn.execute(
+                    "SELECT path FROM songs WHERE processing_priority=100 AND is_music=1"
+                )
+            }
+    except sqlite3.Error:
+        return set()
+    protected = set()
+    for folder in root.iterdir():
+        marker = folder / "window.json"
+        try:
+            source = str(Path(json.loads(marker.read_text("utf-8"))["source"]).resolve())
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+        if source in paths:
+            protected.add(folder.name)
+    return protected
+
+
 def prune_cache(settings: Settings, keep: set[str] | None = None) -> None:
     """Keep the cache under the person's limit, and never let it fill the drive."""
     cap = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
-    _prune(cache_roots(settings), cap, keep)
+    _prune(cache_roots(settings), cap, keep, _priority_window_names(settings))
 
 
 def run_demucs(wav: Path, out_dir: Path) -> Path:
@@ -157,6 +199,9 @@ def separate_window(
     target = settings.home / "stems" / key
     paths = StemWindow(*(target / f"{name}.wav" for name in ("vocals", "drums", "bass", "other")))
     if all(path.exists() for path in paths.__dict__.values()):
+        marker = target / "window.json"
+        if marker.exists():
+            marker.touch()
         return paths
     target.mkdir(parents=True, exist_ok=True)
     excerpt = target / "window.wav"
@@ -183,5 +228,9 @@ def separate_window(
     for name, destination in paths.__dict__.items():
         shutil.move(str(produced / f"{name}.wav"), destination)
     excerpt.unlink(missing_ok=True)
+    (target / "window.json").write_text(
+        json.dumps({"source": str(source.resolve()), "start": start, "duration": duration}),
+        "utf-8",
+    )
     prune_cache(settings, {target.name})
     return paths

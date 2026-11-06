@@ -71,7 +71,7 @@ MODE_PAYOFF = {"word_blend": 1.0, "word_exchange": 0.95, "phrase_roll": 0.85, "w
 
 RIDE_BARS = 4
 RIDE_LENGTHS = (16, 12, 8, 4)
-MIN_RIDE_SINGING = 0.35
+MIN_RIDE_SINGING = 0.5
 
 
 class CannotTrust(ValueError):

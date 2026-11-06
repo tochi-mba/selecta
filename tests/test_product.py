@@ -3,11 +3,13 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+import numpy as np
 from fastapi.testclient import TestClient
 
 from selecta import db
+from selecta.analysis.pipeline import features_path
 from selecta.api import create_app
-from selecta.config import Settings
+from selecta.config import ANALYSIS_VERSION, Settings
 from selecta.eval.ratings import results, save_rating
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import SongFacts, discover, normalise
@@ -41,13 +43,23 @@ def test_arc_has_a_late_peak_and_is_library_feasible():
     assert set(feasible_curve(available, 10)) <= set(available)
 
 
+def test_a_custom_arc_interpolates_its_five_user_stops():
+    arc = [0.0, 1.0, 0.25, 0.75, 0.5]
+    assert target_energy(0.0, custom=arc) == 0.0
+    assert target_energy(0.125, custom=arc) == 0.5
+    assert target_energy(0.5, custom=arc) == 0.25
+    assert target_energy(1.0, custom=arc) == 0.5
+
+
 def test_steering_persists(tmp_path: Path):
     with connection(tmp_path) as conn:
         steer(conn, "more")
         steer(conn, "wordplay", "often")
+        steer(conn, "energy_arc", [10, 40, 90, 60, 20])
         state = get_steering(conn)
     assert state.energy == 1
     assert state.wordplay == "often"
+    assert state.energy_arc == [10, 40, 90, 60, 20]
 
 
 def test_mixing_language_keeps_choices_without_forcing_one_recipe():
@@ -86,6 +98,23 @@ def test_a_bad_steering_request_is_refused_cleanly(tmp_path: Path):
     db.connect(settings.db_path).close()
     client = TestClient(create_app(settings=settings))
     assert client.post("/api/steer", json={"action": "nonsense"}).status_code == 400
+    invalid_arc = client.post("/api/steer", json={"action": "energy_arc", "value": [0, 1]})
+    assert invalid_arc.status_code == 400
+
+
+def test_the_api_saves_and_clears_the_custom_energy_arc(tmp_path: Path):
+    settings = Settings(home=tmp_path)
+    settings.home.mkdir(exist_ok=True)
+    db.connect(settings.db_path).close()
+    client = TestClient(create_app(settings=settings))
+    arc = [15, 35, 95, 70, 25]
+    assert client.post("/api/steer", json={"action": "energy_arc", "value": arc}).json()[
+        "energy_arc"
+    ] == arc
+    assert client.get("/api/status").json()["steering"]["energy_arc"] == arc
+    assert client.post("/api/steer", json={"action": "energy_arc", "value": None}).json()[
+        "energy_arc"
+    ] is None
 
 
 def test_the_page_never_contacts_another_server():
@@ -114,6 +143,50 @@ def test_api_rejects_foreign_hosts_and_persists_controls(tmp_path: Path):
     changed = client.post("/api/steer", json={"action": "more"})
     assert changed.json()["energy"] == 1
     assert client.get("/api/status", headers={"host": "attacker.example"}).status_code == 403
+
+
+def test_status_distinguishes_analysed_songs_from_mix_ready_and_refreshes_after_lyrics(
+    tmp_path: Path,
+):
+    settings = Settings(tmp_path)
+    with connection(tmp_path) as conn:
+        for song_id in (1, 2):
+            conn.execute(
+                "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
+                "VALUES(?,?,?,1,1,64,?,?,1)",
+                (song_id, f"{song_id}.flac", "music", f"Artist {song_id}", f"Song {song_id}"),
+            )
+            conn.execute(
+                "INSERT INTO analysis(song_id,version,bpm,camelot,grid_confidence,beats_per_bar,"
+                "constant_tempo,key_confidence,lufs,peak_db,energy,sections) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                (song_id, ANALYSIS_VERSION, 120, "8A", 0.95, 4, 1, 0.9, -14, -2, 0.5, "[]"),
+            )
+            path = features_path(settings, song_id)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            np.savez(
+                path,
+                beats=np.arange(0, 128, dtype=np.float32) * 0.5,
+                bar_starts=np.arange(0, 128, 4),
+                energy_bars=np.full(32, 0.5, dtype=np.float32),
+                low_share_bars=np.full(32, 0.3, dtype=np.float32),
+                chroma_bars=np.zeros((32, 12), dtype=np.float32),
+                rms_db_bars=np.full(32, -14, dtype=np.float32),
+                mfcc_bars=np.zeros((32, 20), dtype=np.float32),
+            )
+        conn.execute("INSERT INTO lyrics(song_id,status) VALUES(1,'instrumental')")
+        conn.commit()
+
+    client = TestClient(create_app(settings, tmp_path / "no-web"))
+    before = client.get("/api/status").json()["counts"]
+    assert before["analysed"] == 2
+    assert before["ready"] == 1
+
+    with connection(tmp_path) as conn:
+        conn.execute("INSERT INTO lyrics(song_id,status) VALUES(2,'instrumental')")
+        conn.commit()
+    after = client.get("/api/status").json()["counts"]
+    assert after["ready"] == 2
 
 
 def test_storage_budget_and_priority_queue(tmp_path: Path):

@@ -52,7 +52,13 @@ export type SeamOptions = {
 
 export type Status = {
   counts: Record<string, number>;
-  steering: { mix_language: string };
+  steering: {
+    mix_language: string;
+    stems: string;
+    energy_arc: number[] | null;
+    target: string | null;
+    target_label?: string | null;
+  };
   moves: Record<string, string>;
   analysis_running: boolean;
   analysing: number[];
@@ -81,7 +87,7 @@ export type SongDetail = {
   key: string;
   peaks: number[];
   sections: { label: string; start: number; end: number }[];
-  lines: { start: number; end: number; text: string }[];
+  lines: { start: number; end: number; text: string; words?: { start: number; end: number }[] }[];
 };
 
 export type Link = {

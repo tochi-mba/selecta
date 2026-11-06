@@ -260,6 +260,9 @@ def test_audit_catches_two_singers_and_a_mid_line_cut(tmp_path):
     assert "vocal overlap" in failures
     assert "phrase integrity" in failures
 
+    script.meta["vocal_gains"] = {"a": Curve.constant(0), "b": Curve.constant(0)}
+    assert checks._phrase_integrity(script).passed
+
 
 def test_audit_catches_a_low_end_fight(pair):
     a, b = pair

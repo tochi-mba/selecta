@@ -167,6 +167,7 @@ def test_a_shared_phrase_opens_up_the_word_moves(tmp_path):
     assert moves["word_cut"]["available"]
     assert moves["phrase_roll"]["available"]
     assert moves["word_blend"]["available"]
+    assert moves["stem_intertwine"]["available"]
 
 
 def _song(tmp_path, name, artist, bpm=120.0, energy=0.5, camelot="8A"):
@@ -202,10 +203,30 @@ def test_a_plan_is_quick_and_never_repeats_a_song(tmp_path):
     assert len(ids) == len(set(ids)) == 12
 
 
+def test_a_plan_can_reach_a_requested_destination(tmp_path):
+    songs = [_song(tmp_path, f"destination-{i}", f"Artist {i}") for i in range(16)]
+    planned = plan_set(songs, songs[0].id, 6, end_id=songs[-1].id)
+    assert len(planned) == 6
+    assert planned[0].song.id == songs[0].id
+    assert planned[-1].song.id == songs[-1].id
+    assert len({item.song.id for item in planned}) == 6
+
+
+def test_a_destination_cannot_also_be_the_explicit_start(tmp_path):
+    songs = [_song(tmp_path, f"destination-conflict-{i}", f"Artist {i}") for i in range(4)]
+    with pytest.raises(ValueError, match="start song and destination are the same"):
+        plan_set(songs, songs[0].id, 3, end_id=songs[0].id)
+    assert plan_set(songs, count=1, end_id=songs[1].id)[0].song.id == songs[1].id
+    with pytest.raises(ValueError, match="one-song mix cannot start and finish"):
+        plan_set(songs, songs[0].id, 1, end_id=songs[1].id)
+
+
 def test_shared_phrases_pull_a_wordplay_plan_towards_them(tmp_path):
     first = _song(tmp_path, "a", "First")
     close = _song(tmp_path, "b", "Second", bpm=120.0)
     linked = _song(tmp_path, "c", "Third", bpm=128.0, camelot="10A")
+    # Exercise link scoring independently of the grid-confidence gate.
+    first.grid_confidence = close.grid_confidence = linked.grid_confidence = 0.95
     without = plan_set([first, close, linked], first.id, 2)
     with_link = plan_set(
         [first, close, linked],
@@ -448,6 +469,65 @@ def test_each_vibe_only_uses_songs_that_fit_it(tmp_path):
     assert {item.song.id for item in planned} <= {song.id for song in peak}
 
 
+def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypatch):
+    from selecta.planner import vibes
+
+    songs, traits = _vibe_library(tmp_path)
+    seen = {}
+
+    def plan_set(*_args, **kwargs):
+        seen["language"] = kwargs["mix_language"]
+        seen["stems"] = kwargs["stems"]
+        seen["energy_arc"] = kwargs.get("energy_arc")
+        return []
+
+    def seam_choices(vibe, *_args):
+        seen["seam_language"] = vibe.language
+        return {}
+
+    monkeypatch.setattr(vibes, "plan_set", plan_set)
+    monkeypatch.setattr(vibes, "seam_choices", seam_choices)
+    vibes.build_vibe(vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1)
+    assert seen["language"] == "seamless"
+    assert seen["seam_language"] == "seamless"
+    vibes.build_vibe(vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1, mix_language="punchy")
+    assert seen["language"] == "punchy"
+    assert seen["seam_language"] == "punchy"
+    vibes.build_vibe(
+        vibes.BY_KEY["peak"],
+        songs,
+        traits,
+        {},
+        6,
+        seed=1,
+        stems="never",
+        energy_arc=[0.1, 0.4, 0.9, 0.6, 0.2],
+    )
+    assert seen["stems"] == "never"
+    assert seen["energy_arc"] == [0.1, 0.4, 0.9, 0.6, 0.2]
+
+
+def test_building_a_vibe_ends_on_the_requested_song(tmp_path):
+    from selecta.planner.vibes import BY_KEY, build_vibe
+
+    songs, traits = _vibe_library(tmp_path)
+    destination = songs[-1]
+    planned, _ = build_vibe(
+        BY_KEY["slow_burn"], songs, traits, {}, 6, seed=4, end_id=destination.id
+    )
+    assert len(planned) == 6
+    assert planned[-1].song.id == destination.id
+    assert planned[-1].reason == "your requested destination"
+
+
+def test_destination_does_not_break_seasonal_mix_rules(tmp_path):
+    from selecta.planner.vibes import BY_KEY, build_vibe
+
+    songs, traits = _vibe_library(tmp_path)
+    with pytest.raises(ValueError, match="choose a Christmas song"):
+        build_vibe(BY_KEY["christmas"], songs, traits, {}, 6, end_id=songs[0].id)
+
+
 def test_a_vibe_with_too_few_songs_says_how_many_it_needs(tmp_path):
     from selecta.planner.vibes import BY_KEY, describe
 
@@ -481,6 +561,78 @@ def test_word_handoffs_stay_rare_unless_the_mix_is_about_them(tmp_path):
     assert positions[1] - positions[0] >= 4
 
 
+def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, monkeypatch):
+    from selecta.planner import vibes
+    from selecta.planner.memory import SeamMemory
+
+    a = _song(tmp_path, "stem-a", "First")
+    b = _song(tmp_path, "stem-b", "Second")
+    monkeypatch.setattr(vibes, "modes_for", lambda *_: {"word_blend"})
+    monkeypatch.setattr(vibes, "ride_lines", lambda *_: (object(), object()))
+    monkeypatch.setattr(vibes, "enumerate_candidates", lambda *_args, **_kwargs: [object()])
+    monkeypatch.setattr(vibes, "can_intertwine", lambda *_: True)
+    vibe = vibes.BY_KEY["pick"]
+
+    never = vibes._moves_that_fit(vibe, a, b, SeamMemory(), "never")
+    sometimes = dict(vibes._moves_that_fit(vibe, a, b, SeamMemory(), "sometimes"))
+    often = dict(vibes._moves_that_fit(vibe, a, b, SeamMemory(), "often"))
+
+    assert "vocal_ride" not in dict(never)
+    assert often["vocal_ride"] > sometimes["vocal_ride"]
+    assert "stem_intertwine" not in dict(never)
+    assert often["stem_intertwine"] > sometimes["stem_intertwine"]
+    failed = vibes._moves_that_fit(
+        vibe,
+        a,
+        b,
+        SeamMemory(failed={(a.id, b.id, "stem_intertwine")}),
+        "often",
+    )
+    assert "stem_intertwine" not in dict(failed)
+
+
+def test_intertwined_stem_request_uses_the_shared_audited_seam_path(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from selecta.render.script import Curve
+
+    a = _song(tmp_path, "intertwine-render-a", "First")
+    b = _song(tmp_path, "intertwine-render-b", "Second")
+    exit_cue, entry_cue = a.exit_cues()[0], b.entry_cues()[0]
+    a_index = a.beat_index_of_bar(exit_cue.bar - 8)
+    b_index = b.beat_index_of_bar(entry_cue.bar)
+    a_points = a.beats[a_index : a_index + 65]
+    b_points = b.beats[b_index : b_index + 65]
+    start = float(a_points[0])
+    duration = float(a_points[-1] - start)
+    empty = np.zeros((int(round(duration * SR)), 2), dtype=np.float32)
+    result = SimpleNamespace(
+        audio=empty,
+        a_start=start,
+        b_end=float(b_points[-1]),
+        exit_cue=exit_cue,
+        entry_cue=entry_cue,
+        a_dry=empty,
+        b_dry=empty,
+        b_points=b_points,
+        a_vocal=Curve.constant(1),
+        b_vocal=Curve.constant(0),
+        a_drums=Curve.constant(1),
+        b_drums=Curve.constant(1),
+    )
+    monkeypatch.setattr("selecta.seams.render_intertwined", lambda *_: result)
+    monkeypatch.setattr("selecta.seams.audit", lambda _rendered: SimpleNamespace(passed=True))
+    store = SeamStore(Settings(tmp_path))
+
+    rendered, _, why = store._chosen_move(SeamRequest(a.id, b.id, "stem_intertwine"), a, b)
+
+    assert rendered.script.style == "stem_intertwine"
+    assert rendered.script.meta["bars"] == 16
+    assert rendered.script.a_source_start == start
+    assert abs(rendered.script.b_source_end - b_points[-1]) < 1e-6
+    assert "vocals take turns" in why
+
+
 def test_building_a_vibe_starts_on_a_song_it_can_leave(tmp_path):
     from selecta.planner.vibes import BY_KEY, build_vibe
 
@@ -497,6 +649,73 @@ def test_the_vibes_route_lists_cards_and_refuses_a_mix_with_too_few_songs(client
     assert {card["key"] for card in cards} >= {"pick", "late_night", "afro_heat"}
     assert client.post("/api/vibes/afro_heat/build").status_code == 400
     assert client.post("/api/vibes/nonsense/build").status_code == 404
+
+
+def test_song_details_include_line_estimated_word_focus_times(tmp_path):
+    from selecta import db
+
+    settings = Settings(tmp_path)
+    conn = db.connect(settings.db_path)
+    track = make_track(bpm=120, bars=16, seed=41)
+    song = song_from_track(tmp_path, "lyric-detail", track)
+    _song_row(conn, 1, "Test Artist", "Timed Line", song.path)
+    db.save_analysis(
+        conn,
+        1,
+        {
+            "version": ANALYSIS_VERSION,
+            "bpm": song.bpm,
+            "camelot": "8A",
+            "lufs": -14.0,
+            "peak_db": -2.0,
+            "energy": 0.5,
+            "sections": json.dumps(song.sections),
+            "beats_per_bar": 4,
+            "grid_confidence": 0.95,
+            "constant_tempo": 1,
+            "key_confidence": 0.9,
+        },
+    )
+    features = features_path(settings, 1)
+    features.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(
+        features,
+        beats=song.beats,
+        bar_starts=song.bar_starts,
+        peaks=np.ones(100),
+        energy_bars=song.energy_bars,
+        low_share_bars=song.low_share_bars,
+        chroma_bars=np.zeros((song.bar_starts.size, 12)),
+        rms_db_bars=np.zeros(song.bar_starts.size),
+        mfcc_bars=np.zeros((song.bar_starts.size, 20)),
+    )
+    db.save_lyrics(conn, 1, "synced", "[00:01.00]Hello bright city lights", None)
+    conn.close()
+
+    response = TestClient(create_app(settings, tmp_path / "no-web")).get("/api/songs/1")
+    assert response.status_code == 200
+    words = response.json()["lines"][0]["words"]
+    assert len(words) == 4
+    assert all(word["start"] < word["end"] for word in words)
+    assert [word["start"] for word in words] == sorted(word["start"] for word in words)
+
+
+def test_destination_steering_persists_and_status_names_the_song(client):
+    response = client.post("/api/steer", json={"action": "take_me_to", "value": 2})
+    assert response.status_code == 200
+    assert response.json()["target"] == "2"
+    status = client.get("/api/status").json()
+    assert status["steering"]["target_label"] == "Artist 2 — Song 2"
+    invalid = client.post("/api/steer", json={"action": "take_me_to", "value": "unknown"})
+    assert invalid.status_code == 400
+
+
+def test_stem_frequency_steering_persists_and_validates(client):
+    response = client.post("/api/steer", json={"action": "stems", "value": "never"})
+    assert response.status_code == 200
+    assert response.json()["stems"] == "never"
+    assert client.get("/api/status").json()["steering"]["stems"] == "never"
+    assert client.post("/api/steer", json={"action": "stems", "value": "always"}).status_code == 400
 
 
 def test_the_cache_never_fills_the_drive_or_outgrows_its_limit(tmp_path, monkeypatch):
@@ -530,6 +749,38 @@ def test_stems_and_seams_share_one_limit(tmp_path):
     stems._prune(stems.cache_roots(settings), 1500, keep={"seam"})
     assert (settings.renders_dir / "seams" / "seam").exists()
     assert not (tmp_path / "stems" / "window").exists()
+
+
+def test_cache_pruning_keeps_stems_for_priority_songs_even_over_budget(tmp_path):
+    from selecta import stems
+
+    settings = Settings(tmp_path)
+    settings.home.mkdir(exist_ok=True)
+    conn = db.connect(settings.db_path)
+    source = tmp_path / "priority.flac"
+    source.touch()
+    conn.execute(
+        "INSERT INTO songs(id,path,folder,size,mtime,duration,processing_priority) "
+        "VALUES(1,?,?,?,?,?,100)",
+        (str(source), str(tmp_path), 1, 1.0, 100.0),
+    )
+    conn.commit()
+    conn.close()
+
+    root = tmp_path / "stems"
+    protected = root / "priority-window"
+    ordinary = root / "ordinary-window"
+    protected.mkdir(parents=True)
+    ordinary.mkdir()
+    (protected / "window.json").write_text(json.dumps({"source": str(source)}))
+    (ordinary / "vocals.wav").write_bytes(b"a" * 100)
+    (protected / "vocals.wav").write_bytes(b"p" * 100)
+    priority_names = stems._priority_window_names(settings)
+
+    stems._prune(root, 100, protect=priority_names)
+
+    assert protected.exists()
+    assert not ordinary.exists()
 
 
 def test_storage_says_what_can_be_remade_and_keeps_the_limit_possible(tmp_path):
@@ -1092,6 +1343,58 @@ def test_a_cut_is_the_last_thing_tried(tmp_path, monkeypatch):
     assert fell_back
 
 
+def test_stems_never_also_removes_vocal_rides_from_fallbacks(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    track = make_track(bpm=120, bars=64, seed=1)
+    a = song_from_track(tmp_path, "no-stems-a", track)
+    b = song_from_track(tmp_path, "no-stems-b", track)
+    a.id, b.id = 1, 2
+    asked = []
+
+    def nothing_works(request, _a, _b):
+        asked.append(request.move)
+        raise CannotRender("not here")
+
+    monkeypatch.setattr("selecta.seams.ride_lines", lambda *_: (object(), object()))
+    monkeypatch.setattr(store, "_chosen_move", nothing_works)
+    store._best_move(a, b, [], stem_preference="never")
+
+    assert "vocal_ride" not in asked
+
+
+def test_stems_never_skips_old_soft_planned_stem_moves(tmp_path, monkeypatch):
+    from selecta.session import steer
+
+    connection = db.connect(tmp_path / "steering.sqlite")
+    steer(connection, "stems", "never")
+    a = _song(tmp_path, "stale-stem-a", "First")
+    b = _song(tmp_path, "stale-stem-b", "Second")
+    monkeypatch.setattr("selecta.seams.load_song", lambda _c, _s, song: {a.id: a, b.id: b}[song])
+    store = SeamStore(Settings(tmp_path))
+    attempted = []
+    seen = {}
+
+    def chosen(request, *_songs):
+        attempted.append(request.move)
+        raise AssertionError("a stale automatic stem choice should not render")
+
+    def fallback(_a, _b, tried, asked, near, stem_preference):
+        seen["tried"] = tried
+        seen["preference"] = stem_preference
+        return None, None, "fallback", True
+
+    monkeypatch.setattr(store, "_chosen_move", chosen)
+    monkeypatch.setattr(store, "_best_move", fallback)
+    monkeypatch.setattr(store, "_save", lambda _request, *_args: {"status": "ready"})
+
+    store.render_now(connection, SeamRequest(a.id, b.id, "vocal_ride", soft=True))
+
+    assert not attempted
+    assert seen["preference"] == "never"
+    assert seen["tried"][0]["why"] == "Stem-assisted moves are set to Never."
+    connection.close()
+
+
 def test_a_seam_says_what_was_tried_before_what_it_landed_on(tmp_path, monkeypatch):
     store = SeamStore(Settings(tmp_path))
     track = make_track(bpm=120, bars=64, seed=1)
@@ -1157,6 +1460,8 @@ def test_no_one_move_takes_over_a_mix_even_when_every_song_could_ride(tmp_path):
     from selecta.planner.vibes import BY_KEY, seam_choices
 
     planned = _same_songs(tmp_path, 13)
+    for item in planned:
+        item.song.grid_confidence = 0.95
     for seed in range(8):
         seams = seam_choices(BY_KEY["pick"], planned, {}, np.random.default_rng(seed))
         moves = [seams[item.song.id]["move"] for item in planned[1:]]

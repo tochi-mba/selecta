@@ -6,7 +6,7 @@ real transition, which keeps planning fast enough to run while someone waits.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -84,12 +84,13 @@ def _quick_score(
     space: TimbreSpace | None,
     linked: set[tuple[int, int]],
     arc: str = "slow_burn",
+    energy_arc: Sequence[float] | None = None,
     link_bonus: float = LINK_BONUS,
 ) -> float:
     """How promising a pair looks, from numbers already to hand."""
     low, high = energy_range
     level = (b.energy - low) / max(high - low, 1e-6)
-    fit = 1.0 - abs(level - target_energy(progress, arc))
+    fit = 1.0 - abs(level - target_energy(progress, arc, energy_arc))
     tempo = max(0.0, 1.0 - folded_gap(a, b) / 0.2)
     key = 1.0 - min(camelot_distance(a.camelot, b.camelot), 4) / 4.0
     distance = space.distance(a, b) if space is not None else None
@@ -188,6 +189,8 @@ def plan_set(
     belongs: dict[int, float] | None = None,
     link_bonus: float = LINK_BONUS,
     memory: SeamMemory | None = None,
+    end_id: int | None = None,
+    energy_arc: Sequence[float] | None = None,
 ) -> list[PlannedSong]:
     """A set of up to `count` songs from `songs`, starting at `start_id`, following the energy
     shape `arc`. `links` holds pairs that share a phrase, which get a head start. With a `seed`,
@@ -201,6 +204,20 @@ def plan_set(
         return []
     links = links or set()
     first = next((song for song in songs if song.id == start_id), songs[0])
+    destination = next((song for song in songs if song.id == end_id), None)
+    if end_id is not None and destination is None:
+        raise ValueError(f"destination song {end_id} is not in the planning library")
+    if destination is not None and count == 1:
+        if start_id is not None and start_id != destination.id:
+            raise ValueError("a one-song mix cannot start and finish on different songs")
+        first = destination
+    elif destination is not None and first.id == destination.id:
+        if start_id is not None:
+            raise ValueError("the start song and destination are the same")
+        opening_options = [song for song in songs if song.id != destination.id]
+        if not opening_options:
+            raise ValueError("a destination mix needs at least two songs")
+        first = opening_options[0]
     allowed = styles_for_language(mix_language, stems)
     space = TimbreSpace.fit(songs)
     energies = np.array([song.energy for song in songs])
@@ -215,7 +232,7 @@ def plan_set(
     def pair_score(a: SongInfo, song: SongInfo, progress: float) -> float:
         """How good it is for this song to follow that one, at this point in the mix."""
         return (
-            _quick_score(a, song, progress, energy_range, space, links, arc, link_bonus)
+            _quick_score(a, song, progress, energy_range, space, links, arc, energy_arc, link_bonus)
             + steady * handoff_quality(a, song, riders)
             + BELONGING * belongs.get(song.id, 0.0)
             + MEMORY_WEIGHT * memory.pair_value(a.id, song.id)
@@ -231,14 +248,24 @@ def plan_set(
             current = path[-1].song
             used = {item.song.id for item in path}
             recent = {_artist(item.song) for item in path[-separation:]}
+            is_destination_step = end_id is not None and step == min(count, len(songs)) - 1
             options = [
                 (
                     pair_score(current, song, progress),
                     song,
                 )
                 for song in songs
-                if song.id not in used and _artist(song) not in recent
+                if song.id not in used
+                and _artist(song) not in recent
+                and (end_id is None or song.id != end_id or is_destination_step)
+                and (not is_destination_step or song.id == end_id)
             ]
+            if is_destination_step and destination is not None and destination.id not in used:
+                # A requested destination is allowed to override the usual artist-spacing rule.
+                # The listener explicitly asked to reach this song; the route still scores its
+                # handoff and searches alternative bridges earlier in the beam.
+                options = [(score, song) for score, song in options if song.id != destination.id]
+                options.append((pair_score(current, destination, progress), destination))
             if rng is not None:
                 options = [
                     (score + float(rng.normal(0.0, FRESHNESS)), song) for score, song in options
@@ -257,9 +284,13 @@ def plan_set(
                     continue
                 kept += 1
                 reason = (
-                    "shares a phrase"
-                    if (current.id, song.id) in links
-                    else move.recipe.name.replace("_", " ")
+                    "your requested destination"
+                    if song.id == end_id
+                    else (
+                        "shares a phrase"
+                        if (current.id, song.id) in links
+                        else move.recipe.name.replace("_", " ")
+                    )
                 )
                 expanded.append(
                     (
@@ -276,12 +307,17 @@ def plan_set(
         move = _best_move(a, song, allowed, cues) or _best_move(a, song, None, cues)
         if move is None:
             return None
-        reason = (
-            "shares a phrase" if (a.id, song.id) in links else move.recipe.name.replace("_", " ")
-        )
+        if song.id == end_id:
+            reason = "your requested destination"
+        elif (a.id, song.id) in links:
+            reason = "shares a phrase"
+        else:
+            reason = move.recipe.name.replace("_", " ")
         return PlannedSong(song, move.recipe.name, reason)
 
-    return best_order(beams[0][1], pair_score, move_between, separation)
+    return best_order(
+        beams[0][1], pair_score, move_between, separation, keep_last=end_id is not None
+    )
 
 
 def best_order(
@@ -289,12 +325,15 @@ def best_order(
     pair_score: Callable[[SongInfo, SongInfo, float], float],
     move_between: Callable[[SongInfo, SongInfo], PlannedSong | None],
     separation: int,
+    keep_last: bool = False,
 ) -> list[PlannedSong]:
     """Take a finished plan and try it in other orders, keeping any that hands over better. The
     search above only looks a step or two ahead, so it can walk into a bad pairing that a simple
-    swap would have avoided. The first song stays where it is, since someone may have chosen it."""
+    swap would have avoided. The first song stays where it is, since someone may have chosen it,
+    and so does the last if it's the destination someone asked for."""
     songs = [item.song for item in path]
     count = len(songs)
+    movable = count - 1 if keep_last else count
 
     def total(order: list[SongInfo]) -> float:
         last = max(count - 1, 1)
@@ -310,8 +349,8 @@ def best_order(
     best = total(songs)
     for _ in range(ORDER_PASSES):
         improved = False
-        for i in range(1, count - 1):
-            for j in range(i + 1, min(i + ORDER_REACH, count)):
+        for i in range(1, movable - 1):
+            for j in range(i + 1, min(i + ORDER_REACH, movable)):
                 order = list(songs)
                 order[i], order[j] = order[j], order[i]
                 score = total(order)

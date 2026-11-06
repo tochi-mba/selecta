@@ -42,8 +42,8 @@ export function songs(...seams: (MixItem['seam'] | undefined)[]): MixItem[] {
 
 export function status(more: Partial<Status> = {}): Status {
   return {
-    counts: { total: 100, music: 90, set_aside: 10, analysed: 50, lyrics: 40 },
-    steering: { mix_language: 'balanced' },
+    counts: { total: 100, music: 90, set_aside: 10, analysed: 50, ready: 40, lyrics: 40 },
+    steering: { mix_language: 'balanced', stems: 'sometimes', energy_arc: null, target: null, target_label: null },
     moves: { bass_swap_blend: 'Blend', cut_on_one: 'Cut' },
     analysis_running: false,
     analysing: [],

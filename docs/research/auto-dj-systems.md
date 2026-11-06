@@ -51,10 +51,13 @@ Rule-based systems remain competitive. Learned effects have not beaten simple ba
 | [DJ AI 2025](https://research.sabanciuniv.edu/52373/1/AI_DJ_AM2025.pdf) [S, weak] | MERT picks segments, MusicGen generates audio, ±2 BPM rule | 20 listeners, 10 pairs | Preferred 70.5% over a fixed 10 s crossfade | Weak baseline; chroma metrics are not perceptual; only looks at the last 30 s |
 | [DJustify 2026](https://arxiv.org/html/2610.33434) [S, preprint] | LLM plans next track, cues and technique; acoustic checker triggers up to 4 repairs | 400 pop tracks, 103 listeners, 1 to 10 scale | Human 6.7, DJustify 5.6, crossfade 4.7, Mosaikbox 4.0 | Below human; checker improves reliability, not the mean |
 
+[DJustify's story-set test](https://arxiv.org/html/2610.33434) adds evidence beyond its fixed-pair transition test: 99 listeners rated three-minute sets. Story-driven sets scored about 1.9 points higher on story coherence than the no-story ablation, while neither story nor transition ratings showed a detectable difference from the human-DJ condition. That is not an equivalence result. Story and human sets shared a prescribed opener, but the no-story ablation chose its opening song randomly, so that comparison includes an opener-policy difference. The study uses a 400-track pool and short prompted sets; it does not establish parity on hour-long sets or other libraries and cultures.
+
 [UnmixDB](https://zenodo.org/records/1422385/files/schwarz-fourer-ismir2018late-breaking-unmixdb.pdf) [S] is reverse-engineering ground truth built from generated mixes. It uses beat-aligned linear fades, so it holds no human cue or EQ decisions.
 
 ### Inferences
 - The strongest single comparison: swapping DJustify's cue selection for Bittner's cues lost 0.75 of its 0.89-point lead over crossfade. With DJtransGAN's tie against linear fades, this suggests cues and pairing matter more than effect curves. No study tests this directly.
+- DJustify provides a useful architecture pattern: propose multiple cue/technique plans, render, apply acoustic gates, and repair specific failures. Its checker rescued two severe mid-vocal cuts but did not significantly raise average quality; reliability and perceived quality need separate measures.
 - Mosaikbox scoring 4.0 on pop, after a respectable result on DnB, shows how badly EDM-tuned systems can transfer. Its authors note it was run outside its domain.
 
 ### Gaps

@@ -46,6 +46,7 @@ function StoragePanel() {
 
   if (!storage || limit === null) return null;
   const words = storageWords(storage);
+  const overBudget = storage.cache_bytes > storage.budget_bytes;
   const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);
   const smallest = storage.smallest_budget_bytes / GB;
 
@@ -81,8 +82,10 @@ function StoragePanel() {
         />
       </label>
       <p className="hint">
-        When it’s full, Selecta deletes the ones it used longest ago, and makes them again if they’re needed. It always
-        leaves at least 2 GB free. Your music is never touched. The most it can use right now is {gb(storage.largest_budget_bytes)}.
+        {overBudget
+          ? 'Priority-song stem windows are protected, so they can temporarily put the cache over its limit. Lower a song’s priority to make its windows eligible for removal.'
+          : 'When it’s full, Selecta removes the oldest cache items that are not protected by song priority. It makes them again if needed.'}{' '}
+        It always leaves at least 2 GB free. Your music is never touched. The most it can use right now is {gb(storage.largest_budget_bytes)}.
       </p>
     </section>
   );
@@ -116,7 +119,8 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
     <main className="page">
       <h1 className="display small">Workshop</h1>
       <div className="metrics">
-        <div><strong>{counts.analysed}</strong><span>ready to mix</span></div>
+        <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
+        <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
         <div><strong>{left}</strong><span>still to analyse</span></div>
         <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>
         <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
@@ -131,7 +135,7 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
               : `Working through your songs at low priority, so you can keep using your PC. ${left} to go.`
             : left
               ? `${left} song${left === 1 ? '' : 's'} left, about ${hours < 1 ? `${Math.ceil(hours * 60)} minutes` : `${Math.ceil(hours)} hours`} in the background. More songs means better mixes and more word links.`
-              : 'Every song is ready.'}
+              : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
         </p>
         {left > 0 && (
           <div className="row wrap">
