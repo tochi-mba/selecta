@@ -870,6 +870,13 @@ def test_a_failed_seam_is_remembered_and_can_be_retried(tmp_path):
     again = SeamStore(Settings(tmp_path)).status(request.key)
     assert again["status"] == "failed"
     assert again["error"] == "It didn't work."
+    import shutil
+
+    shutil.rmtree(store.root)
+    fresh = SeamStore(Settings(tmp_path))
+    assert fresh.submit(request)["status"] == "failed"
+    assert (request.a, request.b, request.move) in fresh.verdicts().failed
+    assert not fresh.root.exists(), "a remembered failure must not start another render"
     assert "agreement" not in SeamStore.__dict__, "failure wording stays in plain language"
 
 
