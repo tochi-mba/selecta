@@ -106,6 +106,21 @@ def test_listening_routes_hide_mapping_and_persist_responses(conn, tmp_path):
     assert conn.execute("SELECT choice FROM listening_responses").fetchone()[0] == "tie"
 
 
+def test_skip_feedback_preserves_exposure_and_does_not_edit_queue(conn, tmp_path):
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    payload = {"song_id": 1, "heard_seconds": 16.9, "source_position": 84.95}
+    assert client.post("/api/playback/skip", json=payload).json() == {"saved": True}
+    row = conn.execute("SELECT * FROM playback_skips").fetchone()
+    assert row["heard_seconds"] == pytest.approx(16.9)
+    assert row["source_position"] == pytest.approx(84.95)
+    assert conn.execute("SELECT COUNT(*) FROM queue").fetchone()[0] == 0
+    assert (
+        client.post("/api/playback/skip", json={**payload, "heard_seconds": -1}).status_code == 400
+    )
+    assert client.post("/api/playback/skip", json={**payload, "song_id": 999}).status_code == 404
+    assert conn.execute("SELECT COUNT(*) FROM playback_skips").fetchone()[0] == 1
+
+
 def test_songs_can_be_added_anywhere_removed_and_reordered(conn, store):
     for song in (1, 2, 3):
         mix.add_song(conn, song)
