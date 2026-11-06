@@ -320,6 +320,37 @@ def test_a_rolls_shape_comes_from_its_own_tracks(tmp_path):
     assert roll_shape(fast, fast, words(0.3, 0.4)).phrase_loops == 2
 
 
+def test_phrase_roll_changes_its_contour_for_a_sparse_lift_vs_a_crowded_drop(tmp_path):
+    def words(*lengths, at=40.0):
+        result = []
+        for length in lengths:
+            result.append(Word("word", at, at + length, 0.9))
+            at += length
+        return result
+
+    sparse = song_from_track(tmp_path, "sparse", make_track(bpm=128, bars=8, seed=3))
+    crowded = song_from_track(tmp_path, "crowded", make_track(bpm=128, bars=8, seed=4))
+    lift = song_from_track(tmp_path, "lift", make_track(bpm=128, bars=8, seed=5))
+    drop = song_from_track(tmp_path, "drop", make_track(bpm=128, bars=8, seed=6))
+    sparse.energy_bars[:] = 0.2
+    sparse.low_share_bars[:] = 0.08
+    crowded.energy_bars[:] = 0.9
+    crowded.low_share_bars[:] = 0.5
+    lift.energy_bars[:] = 0.9
+    lift.low_share_bars[:] = 0.2
+    drop.energy_bars[:] = 0.2
+    drop.low_share_bars[:] = 0.55
+    phrase = words(0.3, 0.4)
+
+    open_roll = roll_shape(sparse, lift, phrase)
+    restrained_roll = roll_shape(crowded, drop, phrase)
+
+    assert open_roll != restrained_roll
+    assert open_roll.phrase_loops > restrained_roll.phrase_loops
+    assert open_roll.acceleration < restrained_roll.acceleration
+    assert open_roll.bass_mid_level > restrained_roll.bass_mid_level
+
+
 def test_a_roll_brings_the_bass_in_steps_not_all_at_once(word_pair):
     """How DJs build it: a little bass, more bass, most of it, then all of it on the landing."""
     a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair

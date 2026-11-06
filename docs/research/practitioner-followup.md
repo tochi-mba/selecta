@@ -135,3 +135,42 @@ upvotes and individual examples do not establish universal parameters.
 - Treat library-wide stem preparation as a visible, user-budgeted background queue. Reports from
   standalone DJ ecosystems support showing work and letting people prioritize the tracks they expect
   to play first; those reports do not predict Selecta's model speed on this PC.
+- In a [May 2026 BPM-transition discussion on r/Beatmatch](https://www.reddit.com/r/Beatmatch/comments/1tapfda/help_how_do_i_transition_in_between_regular_songs/),
+  contributors describe half/double tempo as a useful relationship, gradual tempo changes across
+  several tracks, and clean sequential hand-offs when a forced blend would sound worse. This is
+  anecdotal advice for varied event music, not a guarantee that a half/double pair has compatible
+  meter, groove, or phrase structure. Selecta already folds half/double BPM for some tempo-free
+  landings; it should not treat the arithmetic match as proof that an extended beatmatched blend fits.
+- A [2026 r/Beatmatch phrasing thread](https://www.reddit.com/r/Beatmatch/comments/1vfj09y/phrasing/)
+  describes looping as useful only when the selected phrase actually gives the outgoing track room;
+  another [loop-practice thread](https://www.reddit.com/r/Beatmatch/comments/1ph79jv/do_professional_djs_often_use_loop_when/)
+  warns that habitual looping can distract a DJ from listening ahead. These are personal reports,
+  but they argue for cue-aware, optional loop rolls that solve a specific hand-off, not an effect
+  applied to every pair.
+- In a [DJ TechTools explanation of loop rolls](https://forum.djtechtools.com/t/quick-q/63425),
+  users distinguish a repeating roll effect from an ordinary loop and mention using it to build
+  toward a drop. The technique depends on transport behavior such as slip/flux mode and a prepared
+  drop cue, so an offline render needs to model the source timeline carefully and should never be
+  presented as a plain beat-matched loop.
+- A [DJ TechTools transition discussion](https://forum.djtechtools.com/t/transitions-in-a-mix/51669)
+  describes common 16/32-bar phrases but also notes that some tracks do not follow a regular DJ
+  structure. This supports using detected section and phrase evidence when available, while keeping
+  an auditionable simpler hand-off when that structure is uncertain.
+- In a [September 2026 r/Beatmatch loop discussion](https://www.reddit.com/r/Beatmatch/comments/1w450ls/looping_before_transitioning_a_track/),
+  contributors describe looping a vocal-free part of the outgoing song while the next song is
+  introduced, then releasing it after a few beats. A [separate practical loop thread](https://www.reddit.com/r/Beatmatch/comments/1lebu7k/how_do_you_use_looping/)
+  describes changing loop size from 8 to 4 to 2 beats and waiting for the right phrase to release.
+  These examples support choosing the source and repeat length from its vocal gaps, phrase boundary,
+  and the next song's timing, rather than applying one roll count to every pair.
+- A [looping discussion about 1/2/4-bar lengths](https://www.reddit.com/r/Beatmatch/comments/1afyhvh/using_loops_for_beatmatching_on_cdjs/)
+  notes that loop size trades musical context against the risk of the restart becoming obvious; the
+  roll must also be released on a compatible phrase. A [DJ TechTools explanation of loop rolls](https://forum.djtechtools.com/t/quick-q/63425)
+  distinguishes a roll from an ordinary loop because slip/flux behavior lets the source timeline
+  continue underneath. For Selecta, this implies both a song-aware repeat schedule and explicit
+  landing-cue checks. The sources are practitioners' examples, not a universal numeric recipe.
+- Phrase-roll implementation was therefore changed to derive the contour from local source energy,
+  low-band share, the incoming section's energy and bass share, vocal phrase duration, BPM, and the
+  actual beat-grid runway before B's word. Dense phrases now reduce repetition; an open source into a
+  stronger section can build a longer/faster roll; bass-heavy incoming sections hold the low end
+  back later. Synthetic tests cover contrasting sparse/lift and crowded/heavy pairs, but listening
+  still has to establish whether those adaptations sound musical on real songs.

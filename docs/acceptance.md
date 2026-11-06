@@ -44,6 +44,12 @@ The older measured mix and word-link counts below are historical results; this r
 
 The new rules were set from these same ratings, so only further reels can test them.
 
+Phrase rolls now vary repetition count, acceleration, and bass arrival with the outgoing vocal span,
+local energy and low-band share, the incoming section's energy and bass share, and how much of B's
+beat grid is available before its word. Synthetic tests cover a sparse source into a stronger lift
+and a crowded source into a bass-heavy section. These checks show pair-dependent behavior, not that
+the effect sounds right; real-song listening is still needed.
+
 ## Rendering
 
 | What | Measured |
@@ -88,7 +94,7 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 - Temporal melody, sample and rhythm discovery, and shortest-path destination search. The existing audio search only compares whole-track mean chroma; it now reports a coarse tonal-profile resemblance and explicitly does not claim a melody match. The app still does not surface these tonal candidates.
 - The blind listening test. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
 - The typographic word-to-word match cut. Fullscreen Stage mode and approximate current-word focus work, but the lyric highlight has not been validated against sung-word ground truth.
-- Loop rolls on A's band, half and double time, drop swaps and brakes. The placeholders that faked these are gone.
+- Loop rolls on A's band, a dedicated half/double-time transition, drop swaps and brakes. Tempo-free landings already compare half/double BPM relationships, but that alone does not beatmatch a long blend. The placeholders that faked the missing moves are gone.
 - No blind paired listening study yet to measure whether the intertwined transition improves the mix versus a conventional blend on the same pair.
 
 ## Still needs a person
