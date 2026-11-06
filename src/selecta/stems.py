@@ -202,9 +202,20 @@ def _window_folder(settings: Settings, source: Path, start: float, duration: flo
     return settings.home / "stems" / key
 
 
+_separating = [0.0]
+
+
+def seconds_separating() -> float:
+    """How long this process has spent splitting stems, so a job can tell it from its other work."""
+    return _separating[0]
+
+
 def window_is_ready(settings: Settings, source: Path, start: float, duration: float) -> bool:
     """Whether separating this window would be instant, because it's already been done."""
-    folder = _window_folder(settings, source, start, duration)
+    try:
+        folder = _window_folder(settings, source, start, duration)
+    except OSError:
+        return False
     return all((folder / f"{name}.wav").exists() for name in ("vocals", "drums", "bass", "other"))
 
 
@@ -245,7 +256,9 @@ def separate_window(
     )
     started = time.monotonic()
     produced = run_demucs(excerpt, target)
-    JobClock(settings.home).record("stem_window", time.monotonic() - started)
+    took = time.monotonic() - started
+    _separating[0] += took
+    JobClock(settings.home).record("stem_window", took)
     for name, destination in paths.__dict__.items():
         shutil.move(str(produced / f"{name}.wav"), destination)
     excerpt.unlink(missing_ok=True)

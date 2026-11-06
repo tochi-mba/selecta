@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analysingWords, analysisWords, askedToAnalyse, clock, draftWords, etaRangeWords, etaWords, gb, length, loadResume, nth, runningTime, saveResume, seamStatusWords, storageWords, triedWords } from './lib';
+import { analysingWords, analysisWords, askedToAnalyse, clock, draftWords, estimateWords, etaRangeWords, etaWords, gb, length, loadResume, nth, runningTime, saveResume, seamStatusWords, storageWords, triedWords } from './lib';
 import { seam, songs } from './test/backend';
 
 describe('words on screen', () => {
@@ -201,5 +201,17 @@ describe('where a draft has got to', () => {
     expect(draftWords({ ...draft, ready: 3, waiting: 8 })).toBe('3 of 11 ready');
     expect(draftWords({ ...draft, ready: 3, waiting: 8, place: 2, eta: { seconds: 600, low: 500, high: 700 } })).toBe('3 of 11 ready. All ready in about 10 minutes');
     expect(draftWords({ ...draft, ready: 3, waiting: 8, place: 1, rendering: true, eta: { seconds: 240, low: 200, high: 300 } })).toBe('Rendering now. 3 of 11 ready, about 4 minutes left');
+  });
+});
+
+describe('how far out estimates have been', () => {
+  it('waits until there is enough to say', () => {
+    expect(estimateWords(undefined)).toBe('');
+    expect(estimateWords({ jobs: 0, typical_miss: null })).toBe('');
+    expect(estimateWords({ jobs: 4, typical_miss: 1.3 })).toBe('');
+  });
+  it('says how far out they have really been', () => {
+    expect(estimateWords({ jobs: 20, typical_miss: 1.3 })).toContain('about 30%');
+    expect(estimateWords({ jobs: 20, typical_miss: 1.05 })).toBe('Time estimates have been close lately.');
   });
 });

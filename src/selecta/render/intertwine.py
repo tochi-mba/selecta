@@ -97,6 +97,20 @@ def _layers(stems: StemWindow, seconds: float, speed: float = 1.0) -> dict[str, 
     return {name: _fit(_read(path), seconds, speed) for name, path in stems.__dict__.items()}
 
 
+def intertwine_windows(
+    a: SongInfo, b: SongInfo
+) -> tuple[tuple[float, float], tuple[float, float]] | None:
+    """The stretch of each song this move would split, or None if it can't be done."""
+    cues = _pair_that_fits(a, b)
+    if cues is None:
+        return None
+    exit_cue, entry_cue = cues
+    a_index = a.beat_index_of_bar(exit_cue.bar - 8)
+    a_points = a.beats[a_index : a_index + 16 * a.beats_per_bar + 1]
+    window = float(a_points[-1] - a_points[0]) + 5.0
+    return (float(a_points[0]), window), (entry_cue.time, window * (a.bpm / b.bpm))
+
+
 def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwined:
     cues = _pair_that_fits(a, b)
     if cues is None:

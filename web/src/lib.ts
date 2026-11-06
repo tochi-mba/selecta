@@ -193,3 +193,11 @@ export function draftWords(draft: {
   const wait = etaRangeWords(draft.eta ?? undefined);
   return draft.rendering ? `Rendering now. ${done}, ${wait} left` : `${done}. All ready in ${wait}`;
 }
+
+/** How far out time estimates have really been lately, once there's enough to say. */
+export function estimateWords(accuracy: { jobs: number; typical_miss: number | null } | undefined): string {
+  if (!accuracy || accuracy.jobs < 5 || accuracy.typical_miss === null) return '';
+  const percent = Math.round((accuracy.typical_miss - 1) * 100);
+  if (percent < 10) return 'Time estimates have been close lately.';
+  return `Time estimates have typically been out by about ${percent}% lately, and they keep learning.`;
+}

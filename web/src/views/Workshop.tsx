@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { get, post, Storage } from '../api';
-import { analysisWords, etaRangeWords, gb, storageWords } from '../lib';
+import { analysisWords, estimateWords, etaRangeWords, gb, storageWords } from '../lib';
 import { ViewProps } from './shared';
 import { Listening } from './Listening';
 
@@ -137,6 +137,7 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
               ? `${left} song${left === 1 ? '' : 's'} left. ${analysisWords(status.eta?.analysis)}`
               : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
         </p>
+        {estimateWords(status.eta?.accuracy) && <p className="hint">{estimateWords(status.eta?.accuracy)}</p>}
         {left > 0 && (
           <div className="row wrap">
             <button className={status.analysis_running ? '' : 'primary'} onClick={() => void toggle()}>

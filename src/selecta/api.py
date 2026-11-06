@@ -311,12 +311,39 @@ def create_app(
             if not db.is_analysed(conn, song, ANALYSIS_VERSION)
         ]
 
+    def read_with_windows(conn: sqlite3.Connection, draft: int | None = None) -> list[dict]:
+        """A mix, with how many stems each unfinished seam still has to split, which is what most
+        decides how long it will take. Songs that can't be looked at just get the usual estimate."""
+        items = mix.read_mix(conn, store, draft)
+        waiting = [
+            (before, item)
+            for before, item in zip(items, items[1:], strict=False)
+            if item["seam"]["state"]["status"] in {"none", "queued", "rendering"}
+        ]
+        if not waiting:
+            return items
+        try:
+            songs, _ = library_now(conn)
+        except (OSError, ValueError, KeyError, AttributeError, TypeError):
+            return items
+        by_id = {song.id: song for song in songs}
+        for before, item in waiting:
+            a, b = by_id.get(before["song_id"]), by_id.get(item["song_id"])
+            if a is None or b is None:
+                continue
+            request = request_from(before["song_id"], item["song_id"], item["seam"]["settings"])
+            left = store.windows_left(request, a, b)
+            total = max(store.window_totals.get(request.key, 0), left)
+            store.window_totals[request.key] = total
+            item["seam"]["state"].update(windows=left, windows_total=total)
+        return items
+
     def rendering_ahead(conn: sqlite3.Connection) -> list:
         """Analysis waits while mixes render, so that wait is part of how long it will take."""
         if not jobs.mix_is_rendering(settings.home):
             return []
-        mixes = [mix.read_mix(conn, store)]
-        mixes += [mix.read_mix(conn, store, draft) for draft in mix.line_order(conn)]
+        mixes = [read_with_windows(conn)]
+        mixes += [read_with_windows(conn, draft) for draft in mix.line_order(conn)]
         return time_ahead(mixes, store.clock)[0]
 
     @app.get("/api/status")
@@ -798,7 +825,7 @@ def create_app(
     # ---- the mix: songs in order, with an editable seam between each pair
 
     def mix_payload(conn: sqlite3.Connection, draft: int | None = None) -> dict:
-        items = mix.read_mix(conn, store, draft)
+        items = read_with_windows(conn, draft)
         payload = {
             "mix": items,
             "name": mix.mix_name(conn, draft),
@@ -809,7 +836,7 @@ def create_app(
         line = mix.line_order(conn)
         before = line[: line.index(draft)] if draft in line else line
         ahead, seen = time_ahead(
-            [mix.read_mix(conn, store), *(mix.read_mix(conn, store, other) for other in before)],
+            [read_with_windows(conn), *(read_with_windows(conn, other) for other in before)],
             store.clock,
         )
         eta = mix_time_left(items, store.clock, ahead=ahead, seen=seen)
@@ -859,13 +886,13 @@ def create_app(
 
     def drafts_payload(conn: sqlite3.Connection) -> dict:
         rows = {row["id"]: row for row in mix.all_drafts(conn)}
-        items = {draft: mix.read_mix(conn, store, draft) for draft in rows}
+        items = {draft: read_with_windows(conn, draft) for draft in rows}
         for draft in mix.line_order(conn):
             # a mix with nothing left to render has had its turn
             if not any(seam_unfinished(item) for item in items[draft]):
                 mix.leave_line(conn, draft)
         line = mix.line_order(conn)
-        current = mix.read_mix(conn, store)
+        current = read_with_windows(conn)
         ahead = [current]
         places: dict[int, tuple[int, dict]] = {}
         for index, draft in enumerate(line):

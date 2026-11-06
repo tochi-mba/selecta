@@ -32,6 +32,11 @@ The first screen asks where your music is, then reads it and analyses it in the 
 mix on the Mixes page and press play. Its seams start rendering by themselves, ahead of everything
 else, and you can change how any song hands over to the next on the Edit page.
 
+Drafts let you build another mix without touching what's playing. **Prioritize** one and it renders
+in the background once the current mix is done. On any seam, **Shape it yourself with stems** puts
+both songs' voice, drums, bass and melody on a grid you can hear instantly, and Selecta can arrange
+it or fine tune yours. Rate what you make, and it learns from that.
+
 To run the tests:
 
 ```bash

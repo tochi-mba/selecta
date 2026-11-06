@@ -53,6 +53,8 @@ STEADY_JOBS = {
 }
 """Jobs whose time says how busy the PC is. A word move takes 50 s with its stems ready and 330 s
 without, which says nothing about the PC, so those don't count."""
+FILE_VERSION = 2
+VERSION_KEY = "_version"
 LOAD_KEY = "_load"
 CHECKS_KEY = "_checks"
 KEEP_CHECKS = 40
@@ -71,6 +73,16 @@ MODEL_LOAD_SECONDS = 15.0
 ANALYSIS_RATE_GUESS = 0.15
 """Seconds of work per second of audio, until there are real analysis times to go on."""
 RECENT_ANALYSES = 100
+WINDOWED_MOVES = {
+    "vocal_ride",
+    "word_blend",
+    "word_exchange",
+    "phrase_roll",
+    "word_cut",
+    "stem_intertwine",
+    "stem_arrange",
+}
+"""Moves that split stems. Their times here leave out the splitting, which is timed on its own."""
 GUESSES = {
     "cut_on_one": 5.0,
     "echo_out": 10.0,
@@ -79,14 +91,14 @@ GUESSES = {
     "bass_swap_blend": 40.0,
     "filter_sweep": 30.0,
     "tempo_ramp": 30.0,
-    "vocal_ride": 300.0,
-    "word_blend": 120.0,
-    "word_exchange": 200.0,
-    "phrase_roll": 150.0,
-    "word_cut": 100.0,
-    "stem_intertwine": 300.0,
-    "auto": 150.0,
-    "stem_arrange": 300.0,
+    "vocal_ride": 35.0,
+    "word_blend": 70.0,
+    "word_exchange": 80.0,
+    "phrase_roll": 50.0,
+    "word_cut": 45.0,
+    "stem_intertwine": 40.0,
+    "auto": 40.0,
+    "stem_arrange": 35.0,
     "stem_studio": 15.0,
     "studio_session": 60.0,
     "stem_window": 120.0,
@@ -95,6 +107,7 @@ GUESSES = {
 }
 """Measured on a four-core laptop, so a new PC isn't far out from the very first job."""
 UNKNOWN_JOB_GUESS = 120.0
+STEMS_PER_MOVE = 2
 
 
 @dataclass(frozen=True)
@@ -195,18 +208,30 @@ class JobClock:
             loaded = json.loads(self.path.read_text("utf-8"))
         except (OSError, ValueError):
             return {}
-        return loaded if isinstance(loaded, dict) else {}
+        if not isinstance(loaded, dict):
+            return {}
+        if loaded.get(VERSION_KEY) != FILE_VERSION:
+            # older times for these moves had stems being split mixed in, so they can't be used
+            gone = {*WINDOWED_MOVES, "auto", CHECKS_KEY}
+            loaded = {kind: times for kind, times in loaded.items() if kind not in gone}
+        return loaded
 
     def times(self) -> dict[str, list[float]]:
         return {kind: v for kind, v in self._everything().items() if not kind.startswith("_")}
 
-    def record(self, kind: str, seconds: float) -> None:
+    def record(
+        self, kind: str, seconds: float, quoted: float | None = None, total: float | None = None
+    ) -> None:
+        """Keep a job's time. `quoted` and `total` are what the whole job was quoted at and really
+        took, when `seconds` is only part of it, so the score kept is of what a person was told."""
         if not (0 < seconds <= LONGEST_BELIEVABLE) or not math.isfinite(seconds):
             return
         stored = self._everything()
+        stored[VERSION_KEY] = FILE_VERSION
         before = stored.get(kind, [])
-        quoted = self.estimate(kind).seconds
-        checks = [*stored.get(CHECKS_KEY, []), round(seconds / max(quoted, 0.1), 3)]
+        told = quoted if quoted else self.estimate(kind).seconds
+        really = total if quoted and total else seconds
+        checks = [*stored.get(CHECKS_KEY, []), round(really / max(told, 0.1), 3)]
         stored[CHECKS_KEY] = checks[-KEEP_CHECKS:]
         if kind in STEADY_JOBS and len(before) >= LOAD_AFTER:
             usual = statistics.median(before)
@@ -286,11 +311,23 @@ def _unfinished(item: dict) -> bool:
 
 
 def _seam_estimate(item: dict, clock: JobClock, now: float) -> Estimate:
+    """A seam's own work, plus any stems it still has to split. The app says how many that is, since
+    it knows which are already done. Without that, a stem move is assumed to need both songs'."""
     state = item["seam"]["state"]
     kind = item["seam"]["settings"].get("move") or "auto"
+    windows = state.get("windows")
+    if windows is None:
+        windows = STEMS_PER_MOVE if kind in WINDOWED_MOVES else 0
+    work = clock.estimate(kind)
+    splitting = clock.estimate("stem_window")
     if state["status"] == "rendering" and state.get("started_at"):
-        return clock.left(kind, now - float(state["started_at"]))
-    return clock.estimate(kind)
+        elapsed = now - float(state["started_at"])
+        done = max(int(state.get("windows_total", windows)) - windows, 0)
+        into_this_part = max(elapsed - done * splitting.seconds, 0.0)
+        if windows == 0:
+            return clock.left(kind, into_this_part)
+        return still_to_go(combine([work, *[splitting] * windows]), into_this_part)
+    return combine([work, *[splitting] * windows])
 
 
 def _in_turn(items: list[dict]) -> list[dict]:
