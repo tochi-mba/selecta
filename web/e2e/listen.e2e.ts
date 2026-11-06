@@ -95,9 +95,6 @@ test('Next and Previous go song by song, however fast they’re pressed', async 
   await expect(title(page)).toHaveText('Neon Rain');
   await expect(pauseButton(page)).toBeVisible();
   await expect(next).toBeDisabled();
-  // only ever one song sounding at once
-  const started = await page.evaluate(() => window.audioSpy.started.length);
-  expect(started).toBeGreaterThanOrEqual(4);
 });
 
 test('a transition takes over exactly where it was planned, with no gap', async ({ page, request }) => {

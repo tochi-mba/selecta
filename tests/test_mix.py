@@ -684,8 +684,8 @@ def test_intertwined_stem_request_uses_the_shared_audited_seam_path(tmp_path, mo
         a_drums=Curve.constant(1),
         b_drums=Curve.constant(1),
     )
-    monkeypatch.setattr("selecta.seams.render_intertwined", lambda *_: result)
-    monkeypatch.setattr("selecta.seams.audit", lambda _rendered: SimpleNamespace(passed=True))
+    monkeypatch.setattr("selecta.seam_making.render_intertwined", lambda *_: result)
+    monkeypatch.setattr("selecta.seam_making.audit", lambda _rendered: SimpleNamespace(passed=True))
     store = SeamStore(Settings(tmp_path))
 
     rendered, _, why = store._chosen_move(SeamRequest(a.id, b.id, "stem_intertwine"), a, b)

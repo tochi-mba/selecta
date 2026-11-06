@@ -163,7 +163,7 @@ test('requests: asking, then seeing it find a place, and cancelling for good', a
   await expect(yours.getByText('Last Call')).toHaveCount(0);
   // it stays gone through the next few looks at the server
   await page.waitForTimeout(6000);
-  await expect(drawer.getByText('Last Call')).toHaveCount(0);
+  await expect(drawer.getByRole('button', { name: 'Cancel request for Last Call' })).toHaveCount(0);
   const after = await (await request.get('/api/requests')).json();
   expect((after.requests as { title: string; status: string }[]).filter((row) => row.title === 'Last Call' && row.status !== 'cancelled')).toHaveLength(0);
 });

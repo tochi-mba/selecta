@@ -691,7 +691,7 @@ def test_stems_never_also_removes_vocal_rides_from_fallbacks(tmp_path, monkeypat
         asked.append(request.move)
         raise CannotRender("not here")
 
-    monkeypatch.setattr("selecta.seams.ride_lines", lambda *_: (object(), object()))
+    monkeypatch.setattr("selecta.seam_making.ride_lines", lambda *_: (object(), object()))
     monkeypatch.setattr(store, "_chosen_move", nothing_works)
     store._best_move(a, b, [], stem_preference="never")
 

@@ -434,7 +434,7 @@ def test_the_render_skips_what_is_known_to_fail_and_starts_with_what_works(tmp_p
 
 
 def test_a_landing_that_worked_is_tried_first_next_time(tmp_path, monkeypatch):
-    import selecta.seams as seams_module
+    import selecta.seam_making as seams_module
     from selecta.render.engine import SongCache
     from selecta.seams import _bar_cue_render
 
