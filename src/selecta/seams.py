@@ -28,6 +28,7 @@ from selecta import db, jobs
 from selecta.analysis.song import Cue, SongInfo, load_song
 from selecta.audit.checks import AuditReport, Check, audit, beat_offset
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
+from selecta.eta import JobClock
 from selecta.lyrics.align import Aligner
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import LyricLink, SongFacts, discover
@@ -46,6 +47,13 @@ from selecta.render.engine import Rendered, SongCache, in_context, render
 from selecta.render.intertwine import can_intertwine, render_intertwined
 from selecta.render.script import Part, TransitionScript, Warp
 from selecta.stems import prune_cache
+from selecta.studio import (
+    clean_shape,
+    prepare_session,
+    render_shape,
+    why_no_studio,
+    windows_to_separate,
+)
 from selecta.styles import all_recipes
 from selecta.styles.wordplay import phrase_roll, vocal_ride, word_blend, word_cut, word_exchange
 
@@ -66,6 +74,7 @@ MOVES: dict[str, tuple[str, str]] = {
     "auto": ("Let Selecta pick", "The best move for these two songs that passes its checks."),
     "bass_swap_blend": ("Blend", "Both songs play in time, and they trade the bass halfway."),
     "vocal_ride": ("Vocal ride", "B's band comes in under A's voice, before B starts singing."),
+    "stem_studio": ("Your stems", "You chose which stems play when, in the studio."),
     "stem_intertwine": (
         "Intertwined stems",
         "Trade drums, bass and harmonic layers over sixteen bars, with vocals taking turns.",
@@ -85,7 +94,9 @@ MOVES: dict[str, tuple[str, str]] = {
     "reverb_wash": ("Reverb wash", "A dissolves into a room as B arrives."),
 }
 WORD_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
-STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine"}
+STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine", "stem_studio"}
+STUDIO_SESSION = "studio_session"
+NOT_IN_THE_CHOOSER = {"stem_studio"}
 
 
 @dataclass(frozen=True)
@@ -99,10 +110,15 @@ class SeamRequest:
     phrase: str | None = None
     soft: bool = False
     """Selecta chose this move, not the person, so if it doesn't pass, use whatever does."""
+    shape: str | None = None
+    """For the Seam Studio: which stems play when, as a person chose them."""
 
     @property
     def key(self) -> str:
-        text = json.dumps([asdict(self), ANALYSIS_VERSION, RENDER_VERSION], sort_keys=True)
+        fields = asdict(self)
+        if fields["shape"] is None:
+            del fields["shape"]  # seams from before the studio keep their keys, and their audio
+        text = json.dumps([fields, ANALYSIS_VERSION, RENDER_VERSION], sort_keys=True)
         return hashlib.sha256(text.encode()).hexdigest()[:20]
 
 
@@ -174,6 +190,8 @@ def seam_options(a: SongInfo, b: SongInfo) -> dict:
     links = links_between(a, b)
     moves = []
     for name, (label, description) in MOVES.items():
+        if name in NOT_IN_THE_CHOOSER:
+            continue
         reason = _why_unavailable(name, a, b, bool(links))
         moves.append(
             {
@@ -184,8 +202,10 @@ def seam_options(a: SongInfo, b: SongInfo) -> dict:
                 "reason": reason,
             }
         )
+    studio_reason = why_no_studio(a, b)
     return {
         "moves": moves,
+        "studio": {"available": studio_reason is None, "reason": studio_reason},
         "exits": [
             {"bar": cue.bar, "time": round(cue.time, 2), "kind": cue.kind}
             for cue in sorted(a.exit_cues()[:12], key=lambda c: c.time)
@@ -327,6 +347,19 @@ def _bar_cue_render(
     return best
 
 
+def _make_session(
+    settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo
+) -> dict:
+    """Lay out a pair's stems for the studio, and keep the layout beside them."""
+    folder = settings.renders_dir / "seams" / request.key
+    try:
+        session = prepare_session(settings, a, b, folder, request.exit_bar, request.entry_bar)
+    except (ValueError, OSError, RuntimeError) as problem:
+        raise CannotRender(str(problem)) from problem
+    (folder / "session.json").write_text(json.dumps(session), "utf-8")
+    return session
+
+
 def _stem_render(
     settings: Settings,
     aligner: Aligner | None,
@@ -335,6 +368,17 @@ def _stem_render(
     b: SongInfo,
     cache: SongCache,
 ) -> tuple[Rendered, AuditReport, str]:
+    if request.move == "stem_studio":
+        session_request = SeamRequest(
+            a.id, b.id, STUDIO_SESSION, exit_bar=request.exit_bar, entry_bar=request.entry_bar
+        )
+        folder = settings.renders_dir / "seams" / session_request.key
+        try:
+            session = json.loads((folder / "session.json").read_text("utf-8"))
+        except (OSError, ValueError):
+            session = _make_session(settings, session_request, a, b)
+        rendered = render_shape(a, b, folder, session, clean_shape(request.shape))
+        return rendered, audit(rendered), "You chose which stems play when."
     if request.move == "stem_intertwine":
         try:
             transition = render_intertwined(settings, a, b)
@@ -516,6 +560,7 @@ class SeamStore:
         self.keep_for_now: Callable[[], set[str]] = set
         self.mix_moves: Callable[[], Counter[str]] = Counter
         self.memory = SeamMemory()
+        self.clock = JobClock(settings.home)
         self._remembered: tuple[float, SeamMemory] | None = None
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
         self._worker: subprocess.Popen | None = None
@@ -675,6 +720,11 @@ class SeamStore:
                 # anything from a mix that's since been replaced goes behind the one now active
                 while self._urgent:
                     request = self._urgent.popleft()
+                    if request.move == STUDIO_SESSION:
+                        # someone's waiting at the studio, and it isn't part of any mix
+                        self._running_rank = URGENT
+                        self._running_key = ""
+                        return request
                     if not active or request.key in active:
                         self._running_rank = URGENT
                         self._running_key = request.key
@@ -712,7 +762,9 @@ class SeamStore:
             if moment - self._active_checked_at > MIX_CHECK_SECONDS:
                 self._active_checked_at = moment
                 active = self.keep_for_now()
-                self._running_is_stale = bool(active) and self._running_key not in active
+                self._running_is_stale = (
+                    bool(active) and bool(self._running_key) and self._running_key not in active
+                )
             if self._running_is_stale:
                 return True
         if rank <= URGENT:
@@ -731,7 +783,12 @@ class SeamStore:
     def _mark_rendering(self, request: SeamRequest) -> None:
         folder = self.folder(request.key)
         folder.mkdir(parents=True, exist_ok=True)
-        state = {"status": "rendering", "key": request.key, "request": asdict(request)}
+        state = {
+            "status": "rendering",
+            "key": request.key,
+            "request": asdict(request),
+            "started_at": time.time(),
+        }
         (folder / "seam.json").write_text(json.dumps(state), "utf-8")
 
     def run_forever(self) -> None:
@@ -745,8 +802,11 @@ class SeamStore:
             self._sign_renewed_at = time.monotonic()
             self._mark_rendering(request)
             self.memory = self.remembered(fresh=True)
+            started = time.monotonic()
             try:
                 self.render_now(conn, request)
+                if request.move != STUDIO_SESSION:
+                    self.clock.record(request.move, time.monotonic() - started)
             except jobs.Interrupted:
                 # the mix needed the machine. This simply isn't done yet, so it goes back in line
                 (self.folder(request.key) / "seam.json").unlink(missing_ok=True)
@@ -783,6 +843,22 @@ class SeamStore:
     def render_now(self, conn: sqlite3.Connection, request: SeamRequest) -> dict:
         a = load_song(conn, self.settings, request.a)
         b = load_song(conn, self.settings, request.b)
+        if request.move == STUDIO_SESSION:
+            windows = windows_to_separate(self.settings, a, b, request.exit_bar, request.entry_bar)
+            started = time.monotonic()
+            session = _make_session(self.settings, request, a, b)
+            splitting = windows * self.clock.estimate("stem_window").seconds
+            self.clock.record(STUDIO_SESSION, max(time.monotonic() - started - splitting, 1.0))
+            state = {
+                **session,
+                "status": "ready",
+                "key": request.key,
+                "request": asdict(request),
+                "tried": [],
+                "rules": RULES_VERSION,
+            }
+            (self.folder(request.key) / "seam.json").write_text(json.dumps(state), "utf-8")
+            return state
         fell_back = False
         tried: list[dict] = []
         rendered: Rendered | None = None
@@ -952,6 +1028,7 @@ def request_from(a: int, b: int, seam: dict | None) -> SeamRequest:
         entry_bar=seam.get("entry_bar"),
         phrase=seam.get("phrase"),
         soft=bool(seam.get("soft", False)),
+        shape=seam.get("shape"),
     )
 
 

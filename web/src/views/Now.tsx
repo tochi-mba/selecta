@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { get, MixData, post, SongDetail } from '../api';
-import { clock } from '../lib';
+import { etaWords, clock } from '../lib';
 import { ViewProps } from './shared';
 
 const SECTION_WORDS: Record<string, string> = {
@@ -353,11 +353,13 @@ export function Now(props: ViewProps) {
       ? `${seam.label}, ready`
       : seam?.status === 'failed'
         ? 'That move won’t work here. Selecta will pick another.'
-        : seam?.status === 'none'
-          ? idle
-            ? 'Waiting to render'
-            : 'Getting the seam ready…'
-          : 'Rendering the seam…';
+        : seam?.eta !== undefined
+          ? `The seam will be ready in ${etaWords(seam.eta)}`
+          : seam?.status === 'none'
+            ? idle
+              ? 'Waiting to render'
+              : 'Getting the seam ready…'
+            : 'Rendering the seam…';
 
   return (
     <main className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''}`}>

@@ -116,3 +116,98 @@ describe('the song adder', () => {
     expect(await screen.findByRole('button', { name: 'Waiting, 1 ahead' })).toBeDisabled();
   });
 });
+
+describe('the options for a seam', () => {
+  const options = {
+    moves: [
+      { name: 'auto', label: 'Let Selecta choose', description: '', available: true, reason: null, blends: false, rides: false, uses_cues: false, uses_phrase: false },
+      { name: 'vocal_ride', label: 'Vocal ride', description: '', available: true, reason: null, blends: true, rides: true, uses_cues: true, uses_phrase: false },
+      { name: 'delay_throw', label: 'Delay throw', description: '', available: true, reason: null, blends: false, rides: false, uses_cues: true, uses_phrase: false },
+    ],
+    exits: [],
+    entries: [],
+    lengths: [],
+    links: [],
+    studio: { available: false, reason: 'These two are 30% apart in tempo.' },
+    tempo_gap: 2,
+    keys: ['8A', '9A'],
+  };
+  const landed = (style: string, status: 'ready' | 'rendering' = 'ready') => ({
+    settings: { move: 'vocal_ride' },
+    state: { status, key: 'a', passed: true, style, label: 'Delay throw', fell_back: true, tried: [] },
+  });
+  const openSeam = async (start: MixItem[]) => {
+    fakeBackend({ 'GET /mix/1/options': options });
+    render(<Harness start={start} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Change' }));
+    return screen.findByRole('group', { name: 'How should this land?' });
+  };
+
+  it('highlights the move you are actually hearing, even when another was planned', async () => {
+    const group = await openSeam(songs(landed('delay_throw')));
+    expect(within(group).getByRole('button', { name: /Delay throw/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(group).getByRole('button', { name: /Vocal ride/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('highlights the plan until something has landed', async () => {
+    const group = await openSeam(songs(landed('delay_throw', 'rendering')));
+    expect(within(group).getByRole('button', { name: /Vocal ride/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(group).getByRole('button', { name: /Delay throw/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('says why the stems can’t be shaped, instead of a button that fails', async () => {
+    await openSeam(songs(landed('delay_throw')));
+    expect(screen.getByRole('button', { name: 'Shape it yourself with stems' })).toBeDisabled();
+    expect(screen.getByText(/30% apart/)).toBeInTheDocument();
+  });
+
+  it('opens the studio when the stems can be shaped', async () => {
+    const calls = fakeBackend({
+      'GET /mix/1/options': { ...options, studio: { available: true, reason: null } },
+      'POST /mix/1/studio': { status: 'queued', key: 'k', eta: { seconds: 60, low: 40, high: 90 } },
+    });
+    render(<Harness start={songs(landed('delay_throw'))} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Change' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Shape it yourself with stems' }));
+    expect(await screen.findByRole('region', { name: 'Stem studio' })).toBeInTheDocument();
+    expect(calls.some((call) => call.path === '/mix/1/studio')).toBe(true);
+  });
+});
+
+describe('how long the mix will take', () => {
+  const data = (over: Record<string, unknown>) => (
+    <Mix
+      status={status()}
+      mix={songs(seam('none', 'a'), seam('none', 'b'))}
+      mixName="Test mix"
+      canUndo={false}
+      refreshMix={() => {}}
+      setMixData={() => {}}
+      refreshStatus={() => {}}
+      player={new SetPlayer(() => [], () => {})}
+      now={new SetPlayer(() => [], () => {}).state}
+      setView={() => {}}
+      notify={() => {}}
+      stage={false}
+      toggleStage={() => {}}
+      {...over}
+    />
+  );
+
+  it('says how long what is left will take', () => {
+    render(data({ mixEta: { seconds: 300, low: 240, high: 360, seams: 2 } }));
+    expect(screen.getByText(/The rest take about 5 minutes/)).toBeInTheDocument();
+  });
+
+  it('says nothing about time when it is all rendered', () => {
+    render(data({ mixEta: { seconds: 0, low: 0, high: 0, seams: 0 } }));
+    expect(screen.queryByText(/The rest take/)).toBeNull();
+  });
+
+  it('shows when each waiting seam should be ready', () => {
+    const waiting = songs(seam('queued', 'a', { eta: 40 }), seam('queued', 'b', { eta: 200 }));
+    render(data({ mix: waiting }));
+    expect(screen.getByText(/under a minute/)).toBeInTheDocument();
+    expect(screen.getByText(/about 3 minutes/)).toBeInTheDocument();
+  });
+});

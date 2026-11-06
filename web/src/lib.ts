@@ -111,10 +111,45 @@ export function analysingWords(line: number[], songId: number): string {
   return place === 0 ? 'Analysing…' : `Waiting, ${place} ahead`;
 }
 
-export function askedToAnalyse(title: string | null, ahead: number): string {
+export function askedToAnalyse(title: string | null, ahead: number, seconds?: number): string {
   const name = title ?? 'That song';
-  if (ahead === 0) return `Analysing ${name}. It’s usually ready in about a minute.`;
-  return `${name} is in line, with ${ahead} ahead of it.`;
+  const wait = seconds === undefined ? '' : ` Ready in ${etaWords(seconds)}.`;
+  if (ahead === 0) return `Analysing ${name}.${wait || ' It’s usually ready in about a minute.'}`;
+  return `${name} is in line, with ${ahead} ahead of it.${wait}`;
+}
+
+/** A wait in words. Precise enough to plan around, and never more precise than the estimate is. */
+export function etaWords(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '';
+  if (seconds < 15) return 'a few seconds';
+  if (seconds < 45) return 'under a minute';
+  if (seconds < 90) return 'about a minute';
+  const minutes = seconds / 60;
+  if (minutes < 10) return `about ${Math.round(minutes)} minutes`;
+  if (minutes < 55) return `about ${Math.round(minutes / 5) * 5} minutes`;
+  if (minutes < 90) return 'about an hour';
+  return `about ${Math.round(minutes / 30) / 2} hours`;
+}
+
+/** The same, saying so when the honest answer is a range or the job has run long. */
+export function etaRangeWords(eta: { seconds: number; low: number; high: number; late?: boolean } | undefined): string {
+  if (!eta) return '';
+  if (eta.late) return 'taking longer than usual';
+  const wide = eta.seconds >= 120 && eta.low > 0 && eta.high / eta.low > 2.5;
+  if (!wide) return etaWords(eta.seconds);
+  const low = Math.round(eta.low / 60);
+  const high = Math.round(eta.high / 60);
+  if (high < 90) return `${Math.max(low, 1)} to ${high} minutes`;
+  return `${Math.round(eta.low / 1800) / 2} to ${Math.round(eta.high / 1800) / 2} hours`;
+}
+
+/** What's left to analyse, in a sentence, including waiting for the mix. */
+export function analysisWords(analysis: { seconds: number; low: number; high: number; after_mix: boolean } | undefined): string {
+  if (!analysis) return 'It runs in the background.';
+  const wait = etaRangeWords(analysis);
+  return analysis.after_mix
+    ? `It takes ${wait}, and waits until your mix has finished rendering.`
+    : `It takes ${wait} in the background.`;
 }
 
 /** Moves that couldn't work on a seam, one line per reason, so nothing is said three times. */

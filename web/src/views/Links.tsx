@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { get, Link, LinkList, MixData, post, SeamState } from '../api';
+import { etaWords } from '../lib';
 import { ViewProps } from './shared';
 
 type HarmonicDiscovery = {
@@ -8,39 +9,21 @@ type HarmonicDiscovery = {
   payload: { a_at: number; b_at: number; a_end?: number; b_end?: number; bars: number; transpose: number };
 };
 
-type Excerpt = { key: string; src: string; at: number; end: number };
+type Audition = { chords: string[]; bar_starts: number[]; seconds: number; semitones: number };
 
-const EXCERPT_SECONDS = 20;
-const SHOWN_AT_ONCE = 5;
-
-function excerptOf(id: number, at: number, end: number | undefined, key: string): Excerpt {
-  return { key, src: `/api/songs/${id}/audio`, at, end: end ?? at + EXCERPT_SECONDS };
-}
-
-/** Best first, but a song that's already come up waits its turn, so the list isn't one song. */
-function spreadOut(items: HarmonicDiscovery[]): HarmonicDiscovery[] {
-  const seen = new Set<number>();
-  const fresh: HarmonicDiscovery[] = [];
-  const again: HarmonicDiscovery[] = [];
-  for (const item of items) {
-    const repeat = seen.has(item.song_a) || seen.has(item.song_b);
-    (repeat ? again : fresh).push(item);
-    seen.add(item.song_a);
-    seen.add(item.song_b);
-  }
-  return [...fresh, ...again];
-}
-
-/** Songs that may share a chord pattern, for a person to judge by ear. Each song's matching part
- * plays by itself, with no need to find the place or stop it. Nothing here goes into a mix. */
-export function HarmonicDiscoveries({ onListen }: { onListen?: () => void }) {
+/** Songs that may share a chord pattern, one pair at a time. One press plays what Selecta detected:
+ * the chords it read, each song with those chords underneath, then both at once. Answering moves on
+ * to the next pair by itself, so there's nothing to line up and nothing to remember. */
+export function HarmonicDiscoveries({ onListen, secondsToPrepare }: { onListen?: () => void; secondsToPrepare?: number }) {
   const [items, setItems] = useState<HarmonicDiscovery[]>([]);
   const [error, setError] = useState('');
-  const [showAll, setShowAll] = useState(false);
-  const [playing, setPlaying] = useState('');
+  const [skipped, setSkipped] = useState<number[]>([]);
+  const [audition, setAudition] = useState<Audition | null>(null);
+  const [getting, setGetting] = useState(false);
+  const [step, setStep] = useState<number | null>(null);
+  const [bar, setBar] = useState(-1);
   const audio = useRef<HTMLAudioElement>(null);
-  const queue = useRef<Excerpt[]>([]);
-  const current = useRef<Excerpt | null>(null);
+  const keepGoing = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -52,48 +35,86 @@ export function HarmonicDiscoveries({ onListen }: { onListen?: () => void }) {
     return () => { live = false; window.clearInterval(timer); };
   }, []);
 
+  const waiting = items
+    .filter((item) => item.status === 'new')
+    .sort((a, b) => Number(skipped.includes(a.id)) - Number(skipped.includes(b.id)));
+  const answered = items.filter((item) => item.status !== 'new');
+  const item = waiting[0];
+  const following = waiting[1];
+
+  const steps = item
+    ? [
+        { key: 'chords', label: 'The chords Selecta heard' },
+        { key: 'a', label: `${item.title_a}, with those chords` },
+        { key: 'b', label: `${item.title_b}, moved to the same key and speed` },
+        { key: 'both', label: 'Both at once' },
+      ]
+    : [];
+
   const stop = () => {
-    queue.current = [];
-    current.current = null;
     audio.current?.pause();
-    setPlaying('');
+    setStep(null);
+    setBar(-1);
   };
-  const playNext = () => {
-    const next = queue.current.shift();
-    if (!next || !audio.current) return stop();
-    current.current = next;
-    setPlaying(next.key);
-    audio.current.src = next.src;
-    void audio.current.play()?.catch(() => {});
+  const playStep = (id: number, index: number) => {
+    const player = audio.current;
+    if (!player) return;
+    setStep(index);
+    setBar(0);
+    player.src = `/api/discoveries/${id}/hear/${['chords', 'a', 'b', 'both'][index]}`;
+    void player.play()?.catch(() => {});
   };
-  const listen = (excerpts: Excerpt[]) => {
+  const hear = async (target: HarmonicDiscovery, from = 0) => {
     onListen?.();
-    queue.current = excerpts;
-    playNext();
-  };
-  const review = async (item: HarmonicDiscovery, verdict: string) => {
-    if (playing.startsWith(`${item.id}-`)) stop();
+    setGetting(true);
+    setError('');
     try {
-      await post(`/discoveries/${item.id}/review`, { verdict });
-      setItems((rows) => rows.map((row) => (row.id === item.id ? { ...row, status: verdict } : row)));
+      const info = await post<Audition>(`/discoveries/${target.id}/hear`);
+      setAudition(info);
+      keepGoing.current = true;
+      playStep(target.id, from);
+    } catch (problem) {
+      setError((problem as Error).message);
+    } finally {
+      setGetting(false);
+    }
+  };
+
+  // the next pair is ready the moment it's needed
+  useEffect(() => {
+    if (audition && following) void post(`/discoveries/${following.id}/hear`).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audition, following?.id]);
+
+  // a new pair starts by itself once someone's listening
+  useEffect(() => {
+    setAudition(null);
+    stop();
+    if (keepGoing.current && item) void hear(item);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id]);
+
+  const review = async (target: HarmonicDiscovery, verdict: string) => {
+    try {
+      await post(`/discoveries/${target.id}/review`, { verdict });
+      setItems((rows) => rows.map((row) => (row.id === target.id ? { ...row, status: verdict } : row)));
       setError('');
     } catch {
       setError('Couldn’t save that. Try again.');
     }
   };
+  const skip = (target: HarmonicDiscovery) => setSkipped((ids) => [...ids.filter((id) => id !== target.id), target.id]);
 
-  const waiting = spreadOut(items.filter((item) => item.status === 'new'));
-  const answered = items.filter((item) => item.status !== 'new');
   if (!items.length && !error) return null;
-  const shown = showAll ? waiting : waiting.slice(0, SHOWN_AT_ONCE);
+  const listening = step !== null;
   return (
-    <details className="next-up discoveries" onToggle={(event) => { if (!event.currentTarget.open) stop(); }}>
-      <summary>
+    <section className="next-up discoveries">
+      <div className="row wrap discoveries-head">
         <h2>Songs that might share chords</h2>
-        <span className="hint">{waiting.length} to listen to</span>
-      </summary>
+        {waiting.length > 0 && <span className="hint">{waiting.length} to hear</span>}
+      </div>
       <p className="hint">
-        Selecta thinks these parts use the same chord pattern. Play them and see if you hear it. They won’t go into a mix.
+        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. These won’t go into a mix.
       </p>
       {error && <p role="alert" className="warn">{error}</p>}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -101,72 +122,68 @@ export function HarmonicDiscoveries({ onListen }: { onListen?: () => void }) {
         ref={audio}
         preload="none"
         data-testid="excerpt-player"
-        onLoadedMetadata={(event) => {
-          if (current.current) event.currentTarget.currentTime = current.current.at;
-        }}
         onTimeUpdate={(event) => {
-          if (current.current && event.currentTarget.currentTime >= current.current.end) playNext();
+          if (!audition) return;
+          const at = event.currentTarget.currentTime;
+          setBar(audition.bar_starts.filter((start) => start <= at).length - 1);
         }}
-        onEnded={playNext}
+        onEnded={() => {
+          if (step !== null && item && step + 1 < steps.length) playStep(item.id, step + 1);
+          else stop();
+        }}
       />
-      {shown.map((item) => {
-        const first = excerptOf(item.song_a, item.payload.a_at, item.payload.a_end, `${item.id}-a`);
-        const second = excerptOf(item.song_b, item.payload.b_at, item.payload.b_end, `${item.id}-b`);
-        const parts = [
-          { excerpt: first, title: item.title_a, artist: item.artist_a },
-          { excerpt: second, title: item.title_b, artist: item.artist_b },
-        ];
-        const steps = item.payload.transpose > 6 ? 12 - item.payload.transpose : item.payload.transpose;
-        return (
-          <article className="discovery" key={item.id}>
-            <div className="discovery-parts">
-              {parts.map(({ excerpt, title, artist }) => (
-                <button
-                  key={excerpt.key}
-                  className="discovery-part"
-                  aria-pressed={playing === excerpt.key}
-                  onClick={() => (playing === excerpt.key ? stop() : listen([excerpt]))}
-                >
-                  <span aria-hidden="true">{playing === excerpt.key ? '■' : '▶'}</span>
-                  <span>
-                    <b>{title}</b>
-                    <small>{artist}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <button onClick={() => listen([first, second])}>Play one after the other</button>
-            {steps !== 0 && (
-              <p className="hint">They’re in different keys, so listen for the pattern rather than the exact notes.</p>
-            )}
-            <div className="row wrap" role="group" aria-label={`Do ${item.title_a} and ${item.title_b} sound connected?`}>
-              <span>Hear a connection?</span>
-              <button onClick={() => void review(item, 'approved')}>Yes</button>
-              <button onClick={() => void review(item, 'rejected')}>No</button>
-            </div>
-          </article>
-        );
-      })}
-      {waiting.length > shown.length && (
-        <button onClick={() => setShowAll(true)}>Show {waiting.length - shown.length} more</button>
+      {item && (
+        <article className="discovery">
+          <h3>
+            {item.title_a} <span className="soft">and</span> {item.title_b}
+          </h3>
+          <p className="hint">{item.artist_a} · {item.artist_b}</p>
+          <button className="primary" disabled={getting} onClick={() => (listening ? (keepGoing.current = false, stop()) : void hear(item))}>
+            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? '■ Stop' : '▶ Hear what Selecta heard'}
+          </button>
+          {audition && (
+            <>
+              <ol className="discovery-steps">
+                {steps.map((entry, index) => (
+                  <li key={entry.key}>
+                    <button aria-current={step === index ? 'step' : undefined} onClick={() => playStep(item.id, index)}>
+                      {entry.label}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              <div className="chord-strip" role="img" aria-label={`The chords Selecta heard: ${audition.chords.join(', ')}`}>
+                {audition.chords.map((chord, index) => (
+                  <span key={index} className={index === bar ? 'now' : ''}>{chord}</span>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="row wrap" role="group" aria-label={`Do ${item.title_a} and ${item.title_b} sound connected?`}>
+            <span>Hear a connection?</span>
+            <button onClick={() => void review(item, 'approved')}>Yes</button>
+            <button onClick={() => void review(item, 'rejected')}>No</button>
+            {following && <button onClick={() => skip(item)}>Skip for now</button>}
+          </div>
+        </article>
       )}
-      {waiting.length === 0 && items.length > 0 && <p className="hint">You’ve listened to them all.</p>}
+      {!item && items.length > 0 && <p className="hint">You’ve heard them all.</p>}
       {answered.length > 0 && (
         <details className="didnt">
           <summary>{answered.length} you’ve answered</summary>
           <ul className="answered">
-            {answered.map((item) => (
-              <li key={item.id}>
+            {answered.map((row) => (
+              <li key={row.id}>
                 <span>
-                  {item.title_a} and {item.title_b}: {item.status === 'approved' ? 'connected' : 'not connected'}
+                  {row.title_a} and {row.title_b}: {row.status === 'approved' ? 'connected' : 'not connected'}
                 </span>
-                <button onClick={() => void review(item, 'new')}>Change</button>
+                <button onClick={() => void review(row, 'new')}>Change</button>
               </li>
             ))}
           </ul>
         </details>
       )}
-    </details>
+    </section>
   );
 }
 
@@ -298,7 +315,8 @@ export function Links({ mix, setMixData, setView, notify, status, now, player }:
       </p>
       {data && data.preparing > 0 && (
         <p className="hint" role="status">
-          {data.prepared} of the best {data.preparing} are ready. Your mix always renders first.{data.prepared < data.preparing ? ' More are on the way.' : ''}
+          {data.prepared} of the best {data.preparing} are ready. Your mix always renders first.
+          {data.prepared < data.preparing && data.eta ? ` The rest take ${etaWords(data.eta)} of spare time.` : ''}
         </p>
       )}
       <input
@@ -314,6 +332,7 @@ export function Links({ mix, setMixData, setView, notify, status, now, player }:
       )}
       <div className="link-grid">{worked.map(card)}</div>
       <HarmonicDiscoveries
+        secondsToPrepare={status.eta?.jobs.audition}
         onListen={() => {
           if (now.phase === 'playing') void player.togglePause();
         }}

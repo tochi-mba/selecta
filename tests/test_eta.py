@@ -1,0 +1,387 @@
+"""Estimates have to be believable, so these hold them to what real jobs would do."""
+
+from __future__ import annotations
+
+import json
+import math
+import random
+import statistics
+
+import pytest
+
+from selecta import db
+from selecta.config import ANALYSIS_VERSION
+from selecta.eta import (
+    ANALYSIS_RATE_GUESS,
+    GUESSES,
+    KEEP,
+    LONGEST_BELIEVABLE,
+    MODEL_LOAD_SECONDS,
+    MOOD,
+    Estimate,
+    JobClock,
+    analysis_left,
+    analysis_line_left,
+    analysis_rates,
+    analysis_time,
+    combine,
+    estimate_from,
+    mix_time_left,
+    still_to_go,
+)
+
+
+def test_with_no_history_a_job_uses_its_guess_and_says_how_unsure_it_is():
+    estimate = estimate_from([], 100.0)
+    assert estimate.seconds == 100.0
+    assert estimate.low == 50.0
+    assert estimate.high == 200.0
+    assert estimate.samples == 0
+
+
+def test_real_times_take_over_from_the_guess_gradually():
+    guess = 100.0
+    answers = [estimate_from([40.0] * count, guess).seconds for count in range(1, 6)]
+    assert answers == sorted(answers, reverse=True), "each real time should move it further"
+    assert answers[0] == pytest.approx(88.0)
+    assert answers[-1] == pytest.approx(40.0), "after a few real times the guess no longer counts"
+
+
+def test_one_stall_does_not_skew_the_estimate():
+    """A PC going to sleep halfway through a render once shouldn't change every estimate after."""
+    assert estimate_from([60.0] * 19 + [3000.0], 100.0).seconds == pytest.approx(60.0)
+
+
+def test_nonsense_times_are_ignored():
+    assert estimate_from([0.0, -5.0, math.nan, math.inf, 30.0] * 5, 100.0).seconds == pytest.approx(
+        30.0
+    )
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_the_answer_always_sits_inside_its_range(seed):
+    rng = random.Random(seed)
+    for count in range(0, 45):
+        samples = [rng.lognormvariate(4, 0.8) for _ in range(count)]
+        estimate = estimate_from(samples, 90.0)
+        assert 0 < estimate.low <= estimate.seconds <= estimate.high
+
+
+def test_jobs_in_a_row_add_up():
+    one = Estimate(100.0, 50.0, 200.0)
+    total = combine([one] * 4)
+    assert total.seconds == 400.0
+    assert total.low < total.seconds < total.high
+
+
+def test_a_range_grows_more_slowly_than_the_total_but_keeps_room_for_a_busy_pc():
+    unsure = Estimate(100.0, 20.0, 300.0)
+    assert combine([unsure] * 4).high - 400.0 == pytest.approx(400.0), "not 800"
+    steady = combine([Estimate(100.0, 90.0, 110.0)] * 100)
+    assert steady.high == pytest.approx(steady.seconds * (1 + MOOD))
+    assert steady.low == pytest.approx(steady.seconds * (1 - MOOD))
+
+
+def test_combining_one_job_or_none():
+    one = Estimate(100.0, 50.0, 200.0)
+    assert combine([one]) == one
+    assert combine([]).seconds == 0.0
+
+
+def test_a_range_never_goes_below_zero():
+    assert combine([Estimate(10.0, 0.0, 500.0)] * 2).low >= 0.0
+
+
+def test_one_late_job_makes_the_whole_line_late():
+    assert combine([Estimate(1, 1, 1), Estimate(1, 1, 1, late=True)]).late
+
+
+def test_a_running_job_counts_down():
+    estimate = Estimate(100.0, 50.0, 200.0)
+    assert still_to_go(estimate, 0.0) == estimate
+    assert still_to_go(estimate, -4.0) == estimate, "a clock change can't add to the wait"
+    assert still_to_go(estimate, 30.0).seconds == 70.0
+
+
+def test_a_countdown_only_ever_goes_down():
+    estimate = Estimate(100.0, 50.0, 200.0)
+    left = [still_to_go(estimate, float(elapsed)).seconds for elapsed in range(0, 400)]
+    assert left == sorted(left, reverse=True)
+
+
+def test_a_running_job_never_claims_to_be_finished():
+    estimate = Estimate(100.0, 50.0, 200.0)
+    assert still_to_go(estimate, 99.0).seconds == 10.0
+    assert still_to_go(estimate, 500.0).seconds == 10.0
+    assert still_to_go(Estimate(5.0, 2.0, 9.0), 500.0).seconds == 3.0
+
+
+def test_a_job_running_past_its_range_says_so():
+    estimate = Estimate(100.0, 50.0, 200.0)
+    assert not still_to_go(estimate, 200.0).late
+    assert still_to_go(estimate, 201.0).late
+
+
+def test_a_countdown_stays_a_sensible_range_at_every_moment():
+    estimate = Estimate(100.0, 50.0, 200.0)
+    for elapsed in range(0, 600, 7):
+        left = still_to_go(estimate, float(elapsed))
+        assert 0 < left.low <= left.seconds <= left.high
+
+
+def test_real_times_last_between_runs(tmp_path):
+    JobClock(tmp_path).record("echo_out", 12.0)
+    JobClock(tmp_path).record("echo_out", 14.0)
+    assert JobClock(tmp_path).times()["echo_out"] == [12.0, 14.0]
+    assert not list(tmp_path.glob("*.tmp")), "no half-written files are left behind"
+
+
+def test_only_recent_times_count(tmp_path):
+    clock = JobClock(tmp_path)
+    for second in range(1, KEEP + 11):
+        clock.record("echo_out", float(second))
+    kept = clock.times()["echo_out"]
+    assert len(kept) == KEEP
+    assert kept[-1] == float(KEEP + 10)
+    assert kept[0] == 11.0
+
+
+@pytest.mark.parametrize("seconds", [0.0, -1.0, LONGEST_BELIEVABLE + 1, math.nan, math.inf])
+def test_impossible_times_are_not_kept(tmp_path, seconds):
+    clock = JobClock(tmp_path)
+    clock.record("echo_out", seconds)
+    assert clock.times() == {}
+
+
+@pytest.mark.parametrize("contents", ["{broken", "[1, 2]", "", "null"])
+def test_a_damaged_file_only_loses_the_history(tmp_path, contents):
+    (tmp_path / "job-times.json").write_text(contents, "utf-8")
+    clock = JobClock(tmp_path)
+    assert clock.estimate("echo_out").seconds == GUESSES["echo_out"]
+    clock.record("echo_out", 9.0)
+    assert clock.times() == {"echo_out": [9.0]}
+
+
+def test_a_job_it_has_never_heard_of_still_gets_an_answer(tmp_path):
+    assert JobClock(tmp_path).estimate("something_new").seconds > 0
+
+
+def test_every_job_kind_can_be_quoted(tmp_path):
+    clock = JobClock(tmp_path)
+    clock.record("something_new", 5.0)
+    recent = clock.recent()
+    assert set(GUESSES) <= set(recent)
+    assert "something_new" in recent
+
+
+def _item(status, move="echo_out", **state):
+    return {"seam": {"settings": {"move": move}, "state": {"status": status, **state}}}
+
+
+def test_an_empty_or_finished_mix_has_nothing_left(tmp_path):
+    clock = JobClock(tmp_path)
+    assert mix_time_left([], clock)["seconds"] == 0
+    assert mix_time_left([{"seam": None}, _item("ready"), _item("failed")], clock) == {
+        "seconds": 0,
+        "low": 0,
+        "high": 0,
+        "late": False,
+        "seams": 0,
+    }
+
+
+def test_each_seam_is_quoted_with_the_ones_ahead_of_it(tmp_path):
+    clock = JobClock(tmp_path)
+    clock.record("echo_out", 30.0)
+    for _ in range(5):
+        clock.record("vocal_ride", 200.0)
+    for _ in range(4):
+        clock.record("echo_out", 30.0)
+    items = [_item("none"), _item("queued", "vocal_ride"), _item("none")]
+    left = mix_time_left(items, clock)
+    etas = [item["seam"]["state"]["eta"] for item in items]
+    assert etas == [30, 230, 260]
+    assert left["seconds"] == 260
+    assert left["seams"] == 3
+
+
+def test_the_seam_rendering_now_goes_first_and_counts_from_when_it_began(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(5):
+        clock.record("echo_out", 100.0)
+    now = 10_000.0
+    waiting = _item("queued")
+    running = _item("rendering", started_at=now - 40.0)
+    mix_time_left([waiting, running], clock, now)
+    assert running["seam"]["state"]["eta"] == 60
+    assert waiting["seam"]["state"]["eta"] == 160
+
+
+def test_a_seam_that_has_run_long_makes_the_mix_say_so(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(5):
+        clock.record("echo_out", 100.0)
+    now = 10_000.0
+    assert mix_time_left([_item("rendering", started_at=now - 900.0)], clock, now)["late"]
+
+
+def test_ready_and_failed_seams_get_no_estimate(tmp_path):
+    items = [_item("ready"), _item("failed")]
+    mix_time_left(items, JobClock(tmp_path))
+    assert all("eta" not in item["seam"]["state"] for item in items)
+
+
+def test_a_mix_with_automatic_seams_is_still_estimated(tmp_path):
+    item = {"seam": {"settings": {}, "state": {"status": "none"}}}
+    assert mix_time_left([item], JobClock(tmp_path))["seconds"] == GUESSES["auto"]
+
+
+@pytest.mark.parametrize("seed", range(3))
+def test_a_mix_estimate_lands_close_once_real_times_exist(tmp_path, seed):
+    """Jobs like real ones: mostly similar, sometimes much slower. Rendering a dozen more after
+    learning from twenty should come out near what they really take."""
+    rng = random.Random(seed)
+    home = tmp_path / str(seed)
+    clock = JobClock(home)
+
+    def job():
+        return rng.lognormvariate(math.log(40), 0.5)
+
+    misses, inside = [], 0
+    for _ in range(20):
+        clock.record("echo_out", job())
+    for _ in range(60):
+        items = [_item("none") for _ in range(12)]
+        estimate = mix_time_left(items, clock)
+        actual = sum(job() for _ in range(12))
+        misses.append(abs(estimate["seconds"] - actual) / actual)
+        inside += estimate["low"] <= actual <= estimate["high"]
+    assert statistics.median(misses) < 0.2
+    assert inside / 60 > 0.7
+
+
+def _song(conn, song_id, duration=200.0, is_music=1, duplicate_of=None):
+    conn.execute(
+        "INSERT INTO songs(id,path,folder,size,mtime,duration,is_music,duplicate_of) "
+        "VALUES(?,?,?,?,?,?,?,?)",
+        (song_id, f"{song_id}.mp3", "f", 1, 1.0, duration, is_music, duplicate_of),
+    )
+
+
+def _analysed(conn, song_id, total, duration=200.0, at="2026-01-01 00:00:00", **columns):
+    _song(conn, song_id, duration)
+    values = {
+        "song_id": song_id,
+        "version": ANALYSIS_VERSION,
+        "timings": json.dumps({"total": total}),
+        "analysed_at": at,
+        **columns,
+    }
+    names = ",".join(values)
+    marks = ",".join("?" * len(values))
+    conn.execute(f"INSERT INTO analysis({names}) VALUES({marks})", tuple(values.values()))  # noqa: S608
+
+
+@pytest.fixture
+def conn(tmp_path):
+    return db.connect(tmp_path / "selecta.sqlite")
+
+
+def test_a_long_song_is_quoted_longer_than_a_short_one():
+    rates = [0.2] * 20
+    assert analysis_time(420.0, rates, True).seconds == pytest.approx(
+        2 * analysis_time(210.0, rates, True).seconds
+    )
+
+
+def test_loading_the_models_costs_once():
+    rates = [0.2] * 20
+    idle = analysis_time(100.0, rates, loaded=False).seconds
+    assert idle - analysis_time(100.0, rates, loaded=True).seconds == MODEL_LOAD_SECONDS
+
+
+def test_with_no_history_analysis_uses_its_starting_rate():
+    assert analysis_time(100.0, [], True).seconds == pytest.approx(100.0 * ANALYSIS_RATE_GUESS)
+
+
+def test_one_song_is_judged_by_the_typical_rate_and_many_by_the_average():
+    """Slow songs are rare and very slow. They barely affect one song's likely time, but a run of
+    hundreds really will include them."""
+    rates = [0.1] * 18 + [1.0] * 2
+    assert analysis_time(100.0, rates, True, songs=1).seconds == pytest.approx(10.0, abs=0.5)
+    assert analysis_time(100.0, rates, True, songs=100).seconds == pytest.approx(19.0)
+
+
+def test_a_long_run_keeps_room_for_a_busy_pc():
+    estimate = analysis_time(1000.0, [0.2] * 50, True, songs=500)
+    assert estimate.high == pytest.approx(estimate.seconds * (1 + MOOD))
+    assert estimate.low == pytest.approx(estimate.seconds * (1 - MOOD))
+
+
+def test_analysis_rates_come_from_the_latest_songs(conn):
+    for song_id in range(1, 151):
+        day = 1 if song_id > 50 else 2  # the lowest ids were analysed most recently
+        _analysed(conn, song_id, 10.0 if day == 2 else 100.0, at=f"2026-01-0{day} 00:00:00")
+    rates = analysis_rates(conn)
+    assert len(rates) == 100
+    assert rates.count(10.0 / 200.0) == 50
+
+
+def test_songs_that_failed_or_have_odd_timings_do_not_count(conn):
+    _analysed(conn, 1, 20.0)
+    _analysed(conn, 2, 20.0, error="no")
+    _analysed(conn, 3, 0.0)
+    _song(conn, 4)
+    conn.execute(
+        "INSERT INTO analysis(song_id,version,timings) VALUES(4,?,?)", (ANALYSIS_VERSION, "{bad")
+    )
+    _song(conn, 5)
+    conn.execute(
+        "INSERT INTO analysis(song_id,version,timings) VALUES(5,?,?)", (ANALYSIS_VERSION, "{}")
+    )
+    assert analysis_rates(conn) == [0.1]
+
+
+def test_what_is_left_only_counts_music_that_still_needs_it(conn):
+    _analysed(conn, 1, 20.0)
+    _song(conn, 2, 300.0)
+    _song(conn, 3, 100.0)
+    _song(conn, 4, 900.0, is_music=0)
+    _song(conn, 5, 900.0, duplicate_of=2)
+    _song(conn, 6, 400.0)
+    conn.execute(
+        "INSERT INTO analysis(song_id,version,timings) VALUES(6,?,?)",
+        (ANALYSIS_VERSION - 1, json.dumps({"total": 80.0})),
+    )
+    left = analysis_left(conn, running=True, waits_for_mix=False)
+    assert left["songs"] == 3, "an old analysis has to be redone, but audiobooks and copies don't"
+    assert left["seconds"] > 0
+
+
+def test_finished_library_has_nothing_left(conn):
+    _analysed(conn, 1, 20.0)
+    left = analysis_left(conn, running=False, waits_for_mix=False)
+    assert left["songs"] == 0
+    assert left["after_mix"] is False
+
+
+def test_waiting_for_the_mix_is_reported(conn):
+    _song(conn, 1)
+    assert analysis_left(conn, running=False, waits_for_mix=True)["after_mix"] is True
+
+
+def test_songs_in_line_wait_for_the_ones_ahead(conn):
+    for song_id in range(1, 21):
+        _analysed(conn, song_id, 40.0)
+    _song(conn, 30, 100.0)
+    _song(conn, 31, 300.0)
+    ready_in = analysis_line_left(conn, [30, 31])
+    assert ready_in[30] == round(MODEL_LOAD_SECONDS + 100.0 * 0.2)
+    assert ready_in[31] == round(MODEL_LOAD_SECONDS + 400.0 * 0.2)
+    assert analysis_line_left(conn, []) == {}
+
+
+def test_a_song_with_no_length_does_not_break_the_line(conn):
+    _song(conn, 1, 0.0)
+    loading = round(MODEL_LOAD_SECONDS)
+    assert analysis_line_left(conn, [1, 99]) == {1: loading, 99: loading}

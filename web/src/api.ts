@@ -14,6 +14,7 @@ export type SeamState = {
   preview_seam?: number;
   bars?: number;
   rating?: string;
+  eta?: number;
   tried?: { move: string; why: string }[];
   checks?: { name: string; passed: boolean; text: string; value: string }[];
 };
@@ -38,13 +39,23 @@ export type MixItem = {
   seam: { settings: SeamSettings; state: SeamState } | null;
 };
 
-export type MixData = { mix: MixItem[]; name: string; can_undo: boolean; undone?: string | null };
+export type Eta = { seconds: number; low: number; high: number; late?: boolean };
+export type MixEta = Eta & { seams: number };
+
+export type MixData = {
+  mix: MixItem[];
+  name: string;
+  can_undo: boolean;
+  undone?: string | null;
+  eta?: MixEta;
+};
 
 export type SeamOptions = {
   moves: { name: string; label: string; description: string; available: boolean; reason: string | null }[];
   exits: { bar: number; time: number; kind: string }[];
   entries: { bar: number; time: number; kind: string }[];
   lengths: number[];
+  studio?: { available: boolean; reason: string | null };
   links: { phrase: string; line_a: string; line_b: string; score: number }[];
   tempo_gap: number;
   keys: string[];
@@ -63,6 +74,11 @@ export type Status = {
   analysis_running: boolean;
   analysing: number[];
   mix_rendering: boolean;
+  eta?: {
+    analysis: Eta & { songs: number; after_mix: boolean };
+    line: Record<string, number>;
+    jobs: Record<string, number>;
+  };
   scan: { status: string; folder?: string; music?: number; set_aside?: number; error?: string };
 };
 
@@ -111,7 +127,7 @@ export type Link = {
   worked: boolean;
 };
 
-export type LinkList = { links: Link[]; prepared: number; preparing: number };
+export type LinkList = { links: Link[]; prepared: number; preparing: number; eta?: number };
 
 export type VibeCard = {
   key: string;

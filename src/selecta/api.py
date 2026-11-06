@@ -29,8 +29,12 @@ from pydantic import BaseModel
 from selecta import audio as audio_io
 from selecta import db, jobs, mix
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings, load_settings
+from selecta.discovery.hearing import STEPS, audition_folder, make_audition
+from selecta.discovery.search import spread_out
+from selecta.eta import analysis_left, analysis_line_left, combine, mix_time_left, still_to_go
 from selecta.seams import (
     MOVES,
+    STUDIO_SESSION,
     CannotRender,
     SeamRequest,
     SeamStore,
@@ -39,6 +43,7 @@ from selecta.seams import (
 )
 from selecta.session import get_steering, queue, steer
 from selecta.stems import MIN_CACHE_BYTES, cache_bytes, largest_cache_bytes, prune_cache
+from selecta.studio import LANES, SIDES, clean_shape, why_no_studio, windows_to_separate
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "testserver"}
 LINKS_KEEP_SECONDS = 600.0
@@ -95,11 +100,16 @@ class MoveRequest(BaseModel):
 
 class SeamSettings(BaseModel):
     move: str = "auto"
+    shape: str | None = None
     bars: int | None = None
     exit_bar: int | None = None
     entry_bar: int | None = None
     phrase: str | None = None
     soft: bool = False
+
+
+class StudioShape(BaseModel):
+    shape: dict
 
 
 class RateRequest(BaseModel):
@@ -300,6 +310,15 @@ def create_app(
                 ),
                 "analysing": songs_in_line(conn),
                 "mix_rendering": jobs.mix_is_rendering(settings.home),
+                "eta": {
+                    "analysis": analysis_left(
+                        conn,
+                        bool(background.analysis and background.analysis.poll() is None),
+                        jobs.mix_is_rendering(settings.home),
+                    ),
+                    "line": analysis_line_left(conn, songs_in_line(conn)),
+                    "jobs": store.clock.recent(),
+                },
                 "scan": background.scan,
             }
 
@@ -499,10 +518,113 @@ def create_app(
                 "FROM seam_book d JOIN songs a ON a.id=d.song_a JOIN songs b ON b.id=d.song_b "
                 "WHERE d.kind='harmonic_sequence_candidate' AND a.is_music=1 AND b.is_music=1 "
                 "AND a.duplicate_of IS NULL AND b.duplicate_of IS NULL "
-                "ORDER BY d.score DESC,d.id LIMIT ?",
-                (max(0, min(limit, 200)),),
+                "ORDER BY d.score DESC,d.id"
             ).fetchall()
-            return [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
+        found = [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
+        wanted = max(0, min(limit, 200))
+        waiting = [row for row in found if row["status"] == "new"]
+        answered = [row for row in found if row["status"] != "new"]
+        return [*spread_out(waiting, wanted), *answered]
+
+    def discovery_at(discovery_id: int):
+        with connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM seam_book WHERE id=? AND kind='harmonic_sequence_candidate'",
+                (discovery_id,),
+            ).fetchone()
+            if row is None:
+                raise HTTPException(404, "Discovery not found")
+            return (
+                analysed_or_404(conn, row["song_a"]),
+                analysed_or_404(conn, row["song_b"]),
+                json.loads(row["payload"]),
+            )
+
+    @app.post("/api/discoveries/{discovery_id}/hear")
+    def hear_discovery(discovery_id: int) -> dict:
+        """Make what Selecta detected audible. The first time takes a few seconds."""
+        a, b, payload = discovery_at(discovery_id)
+        already = (audition_folder(settings, discovery_id) / "info.json").exists()
+        started = time.monotonic()
+        try:
+            info = make_audition(settings, discovery_id, a, b, payload)
+        except (KeyError, ValueError, OSError, RuntimeError) as problem:
+            raise HTTPException(400, "Couldn't make that one audible.") from problem
+        if not already:
+            store.clock.record("audition", time.monotonic() - started)
+        return info
+
+    @app.get("/api/discoveries/{discovery_id}/hear/{step}")
+    def discovery_step(discovery_id: int, step: str) -> FileResponse:
+        path = audition_folder(settings, discovery_id) / f"{step}.flac"
+        if step not in STEPS or not path.exists():
+            raise HTTPException(404)
+        return FileResponse(path, media_type="audio/flac")
+
+    # ---- the Seam Studio
+
+    def studio_request_at(conn: sqlite3.Connection, position: int) -> tuple:
+        request = seam_request_at(conn, position)
+        session = SeamRequest(
+            request.a,
+            request.b,
+            STUDIO_SESSION,
+            exit_bar=request.exit_bar,
+            entry_bar=request.entry_bar,
+        )
+        return request, session
+
+    @app.post("/api/mix/{position}/studio")
+    def open_studio(position: int) -> dict:
+        """Lay out both songs' stems for this seam, or say how long that has left. Asking again is
+        how the page follows its progress."""
+        with connect() as conn:
+            request, session = studio_request_at(conn, position)
+            a, b = analysed_or_404(conn, request.a), analysed_or_404(conn, request.b)
+        reason = why_no_studio(a, b)
+        if reason:
+            raise HTTPException(400, reason)
+        state = store.status(session.key)
+        if state["status"] == "none":
+            state = store.submit(session, urgent=True)
+        if state["status"] == "ready":
+            chosen = clean_shape(request.shape) if request.shape else None
+            return {**state, "key": session.key, "shape": chosen}
+        windows = windows_to_separate(settings, a, b, session.exit_bar, session.entry_bar)
+        estimate = combine(
+            [store.clock.estimate(STUDIO_SESSION)]
+            + [store.clock.estimate("stem_window")] * windows
+        )
+        if state.get("started_at"):
+            estimate = still_to_go(estimate, time.time() - float(state["started_at"]))
+        return {**state, "key": session.key, "eta": estimate.as_dict()}
+
+    @app.get("/api/studio/{key}/{side}/{lane}")
+    def studio_stem(key: str, side: str, lane: str) -> FileResponse:
+        path = store.folder(Path(key).name) / f"{side}_{lane}.flac"
+        if side not in SIDES or lane not in LANES or not path.exists():
+            raise HTTPException(404)
+        return FileResponse(path, media_type="audio/flac")
+
+    @app.post("/api/mix/{position}/studio/use")
+    def use_studio_shape(position: int, body: StudioShape) -> dict:
+        """Render the shape a person settled on, and make it this seam."""
+        with connect() as conn:
+            request, _ = studio_request_at(conn, position)
+            shape = json.dumps(clean_shape(body.shape), sort_keys=True)
+            mix.remember(conn, "changing that seam")
+            mix.set_seam(
+                conn,
+                position,
+                {
+                    "move": "stem_studio",
+                    "shape": shape,
+                    "exit_bar": request.exit_bar,
+                    "entry_bar": request.entry_bar,
+                },
+            )
+            store.submit(seam_request_at(conn, position), urgent=True)
+            return mix_payload(conn)
 
     @app.post("/api/discoveries/{discovery_id}/review")
     def review_discovery(discovery_id: int, body: DiscoveryReview) -> dict:
@@ -601,10 +723,12 @@ def create_app(
     # ---- the mix: songs in order, with an editable seam between each pair
 
     def mix_payload(conn: sqlite3.Connection) -> dict:
+        items = mix.read_mix(conn, store)
         return {
-            "mix": mix.read_mix(conn, store),
+            "mix": items,
             "name": mix.mix_name(conn),
             "can_undo": bool(db.preference(conn, "mix_undo", [])),
+            "eta": mix_time_left(items, store.clock),
         }
 
     @app.get("/api/mix")
@@ -876,7 +1000,13 @@ def create_app(
                 return {"song_id": song_id, "ahead": 0, "analysing": songs_in_line(conn)}
             background.ask_for(song_id)
             line = songs_in_line(conn)
-        return {"song_id": song_id, "ahead": line.index(song_id), "analysing": line}
+            seconds = analysis_line_left(conn, line).get(song_id)
+        return {
+            "song_id": song_id,
+            "ahead": line.index(song_id),
+            "analysing": line,
+            "seconds": seconds,
+        }
 
     @app.post("/api/mix/{position}/lock")
     def lock_song(position: int) -> dict:
@@ -984,11 +1114,18 @@ def create_app(
     @app.post("/api/mix/export")
     def export() -> dict:
         name = f"selecta-mix-{time.strftime('%Y%m%d-%H%M%S')}.flac"
+        started = time.monotonic()
         with connect() as conn:
+            songs_in_mix = len(mix.read_mix(conn, store))
             try:
-                return mix.export_mix(conn, settings, store, settings.home / "exports" / name)
+                exported_mix = mix.export_mix(
+                    conn, settings, store, settings.home / "exports" / name
+                )
             except ValueError as problem:
                 raise HTTPException(400, str(problem)) from problem
+        per_song = (time.monotonic() - started) / max(songs_in_mix, 1)
+        store.clock.record("export_per_song", per_song)
+        return exported_mix
 
     @app.get("/api/exports/{name}")
     def exported(name: str) -> FileResponse:
@@ -1120,6 +1257,10 @@ def create_app(
             "links": shown[: min(limit, 200)],
             "prepared": prepared,
             "preparing": min(LINKS_TO_PREPARE, len(unique)),
+            "eta": round(
+                max(min(LINKS_TO_PREPARE, len(unique)) - prepared, 0)
+                * store.clock.estimate("word_blend").seconds
+            ),
         }
 
     root = web_dir or Path(__file__).parents[2] / "web" / "dist"

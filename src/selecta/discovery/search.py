@@ -3,15 +3,51 @@
 from __future__ import annotations
 
 import json
+import random
 import sqlite3
+from collections import Counter
 from collections.abc import Callable
 
 import numpy as np
 
 from selecta.analysis.song import SongInfo
 from selecta.discovery.sequence import harmonic_sequence
-from selecta.lyrics.lrclib import parse_lrc
+from selecta.lyrics.lrclib import clean_artist, parse_lrc
 from selecta.lyrics.match import LyricLink, SongFacts, discover
+
+COMPARED_PER_SONG = 80
+MOST_PER_SONG = 3
+"""A song can match many others, and three of them is plenty to hear."""
+
+
+def spread_out(rows: list[dict], limit: int) -> list[dict]:
+    """Best first, but as varied as it can be: a new song and new artist on every row while there
+    are any, then songs that have come up once, then whatever's left."""
+    chosen: list[dict] = []
+    left = list(rows)
+
+    def names(row: dict) -> tuple[str, str]:
+        return clean_artist(row["artist_a"]).casefold(), clean_artist(row["artist_b"]).casefold()
+
+    seen_songs: set[int] = set()
+    seen_artists: set[str] = set()
+    for strict in (True, False):
+        later = []
+        for row in left:
+            if len(chosen) >= limit:
+                break
+            songs = {row["song_a"], row["song_b"]}
+            repeat = bool(songs & seen_songs) or (
+                strict and bool(set(names(row)) & seen_artists)
+            )
+            if repeat:
+                later.append(row)
+                continue
+            chosen.append(row)
+            seen_songs |= songs
+            seen_artists |= set(names(row))
+        left = later
+    return [*chosen, *left][:limit]
 
 
 def _save(conn: sqlite3.Connection, a: int, b: int, kind: str, payload: dict, score: float) -> None:
@@ -60,6 +96,7 @@ def audio_search(
     songs: list[SongInfo],
     limit: int = 1000,
     before_pair: Callable[[], None] | None = None,
+    seed: int | None = None,
 ) -> int:
     """Find ordered harmonic candidates and coarse tonal-profile cousins.
 
@@ -69,65 +106,91 @@ def audio_search(
     if limit <= 0:
         return 0
     found = 0
-    for i, a in enumerate(songs):
-        if a.chroma_bars is None:
+    # Walking the library in order spent every search on the first few songs, so one song's name
+    # filled the whole list. Each song now gets its turn, against a random sample of the others.
+    rng = random.Random(seed)
+    usable = [index for index, song in enumerate(songs) if song.chroma_bars is not None]
+    order = list(usable)
+    rng.shuffle(order)
+    compared: set[tuple[int, int]] = set()
+    matches: Counter[int] = Counter()
+    partners = {}
+    for i in order:
+        others = [j for j in usable if j != i]
+        rng.shuffle(others)
+        partners[i] = others[:COMPARED_PER_SONG]
+    # one comparison per song, round and round, so stopping early still leaves everyone a turn
+    pairs = [
+        (i, partners[i][turn])
+        for turn in range(COMPARED_PER_SONG)
+        for i in order
+        if turn < len(partners[i])
+    ]
+    sequences = cousins = 0
+    for i, j in pairs:
+        pair = (min(i, j), max(i, j))
+        if pair in compared:
+            continue
+        compared.add(pair)
+        a, b = songs[pair[0]], songs[pair[1]]
+        if clean_artist(a.artist).casefold() == clean_artist(b.artist).casefold():
             continue
         pa = a.chroma_bars.mean(axis=0)
         pa /= np.linalg.norm(pa) + 1e-9
-        for b in songs[i + 1 :]:
-            if b.chroma_bars is None:
-                continue
-            if before_pair is not None:
-                before_pair()
-            sequence = harmonic_sequence(a.chroma_bars, b.chroma_bars)
-            if sequence is not None:
-                a_bar, b_bar = sequence["a_bar"], sequence["b_bar"]
-                if a_bar >= len(a.bar_times) or b_bar >= len(b.bar_times):
-                    sequence = None
-            if sequence is not None:
-                sequence["a_at"] = float(a.bar_times[sequence["a_bar"]])
-                sequence["b_at"] = float(b.bar_times[sequence["b_bar"]])
-                for prefix, song in (("a", a), ("b", b)):
-                    end_bar = sequence[f"{prefix}_bar"] + sequence["bars"]
-                    sequence[f"{prefix}_end"] = float(
-                        song.bar_times[end_bar] if end_bar < len(song.bar_times) else song.duration
-                    )
-                _save(
-                    conn,
-                    a.id,
-                    b.id,
-                    "harmonic_sequence_candidate",
-                    sequence,
-                    sequence["similarity"],
+        if before_pair is not None:
+            before_pair()
+        full = max(matches[pair[0]], matches[pair[1]]) >= MOST_PER_SONG
+        sequence = None if full else harmonic_sequence(a.chroma_bars, b.chroma_bars)
+        if sequence is not None:
+            a_bar, b_bar = sequence["a_bar"], sequence["b_bar"]
+            if a_bar >= len(a.bar_times) or b_bar >= len(b.bar_times):
+                sequence = None
+        if sequence is not None:
+            sequence["a_at"] = float(a.bar_times[sequence["a_bar"]])
+            sequence["b_at"] = float(b.bar_times[sequence["b_bar"]])
+            for prefix, song in (("a", a), ("b", b)):
+                end_bar = sequence[f"{prefix}_bar"] + sequence["bars"]
+                sequence[f"{prefix}_end"] = float(
+                    song.bar_times[end_bar] if end_bar < len(song.bar_times) else song.duration
                 )
-                found += 1
-                if found >= limit:
-                    conn.commit()
-                    return found
-            pb = b.chroma_bars.mean(axis=0)
-            pb /= np.linalg.norm(pb) + 1e-9
-            rotations = [float(np.dot(pa, np.roll(pb, shift))) for shift in range(12)]
-            similarity = max(rotations)
-            if similarity > 0.93:
-                transpose = rotations.index(similarity)
-                _save(
-                    conn,
-                    a.id,
-                    b.id,
-                    "tonal_profile_cousin",
-                    {
-                        "transpose": transpose,
-                        "method": "whole_track_mean_chroma",
-                        "reason": (
-                            "Their average pitch-class profiles are similar; note order is "
-                            "not compared, so this is not a same-melody claim."
-                        ),
-                    },
-                    similarity,
-                )
-                found += 1
-                if found >= limit:
-                    conn.commit()
-                    return found
+            _save(
+                conn,
+                a.id,
+                b.id,
+                "harmonic_sequence_candidate",
+                sequence,
+                sequence["similarity"],
+            )
+            matches.update(pair)
+            found += 1
+            sequences += 1
+            if sequences >= limit:
+                conn.commit()
+                return found
+        pb = b.chroma_bars.mean(axis=0)
+        pb /= np.linalg.norm(pb) + 1e-9
+        rotations = [float(np.dot(pa, np.roll(pb, shift))) for shift in range(12)]
+        similarity = max(rotations)
+        if similarity > 0.93 and cousins < limit:
+            transpose = rotations.index(similarity)
+            _save(
+                conn,
+                a.id,
+                b.id,
+                "tonal_profile_cousin",
+                {
+                    "transpose": transpose,
+                    "method": "whole_track_mean_chroma",
+                    "reason": (
+                        "Their average pitch-class profiles are similar; note order is "
+                        "not compared, so this is not a same-melody claim."
+                    ),
+                },
+                similarity,
+            )
+            cousins += 1
+            found += 1
+            if found >= limit and not sequences:
+                break
     conn.commit()
     return found

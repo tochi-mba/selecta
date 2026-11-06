@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { get, post, Storage } from '../api';
-import { gb, storageWords } from '../lib';
+import { analysisWords, etaRangeWords, gb, storageWords } from '../lib';
 import { ViewProps } from './shared';
 import { Listening } from './Listening';
 
@@ -97,7 +97,6 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
   const [folder, setFolder] = useState('');
   const [problem, setProblem] = useState('');
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
-  const hours = (left * 25) / 3600;
   const reading = status.scan.status === 'running';
 
   const toggle = async () => {
@@ -132,10 +131,10 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
         <p>
           {status.analysis_running
             ? status.mix_rendering
-              ? `Waiting while your mix renders, then it carries on. ${left} to go.`
-              : `Working through your songs at low priority, so you can keep using your PC. ${left} to go.`
+              ? `Waiting while your mix renders, then it carries on. ${left} to go, ${etaRangeWords(status.eta?.analysis)} after that.`
+              : `Working through your songs at low priority, so you can keep using your PC. ${left} to go, ${etaRangeWords(status.eta?.analysis)}.`
             : left
-              ? `${left} song${left === 1 ? '' : 's'} left, about ${hours < 1 ? `${Math.ceil(hours * 60)} minutes` : `${Math.ceil(hours)} hours`} in the background. More songs means better mixes and more word links.`
+              ? `${left} song${left === 1 ? '' : 's'} left. ${analysisWords(status.eta?.analysis)}`
               : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
         </p>
         {left > 0 && (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analysingWords, askedToAnalyse, clock, gb, length, loadResume, runningTime, saveResume, seamStatusWords, storageWords, triedWords } from './lib';
+import { analysingWords, analysisWords, askedToAnalyse, clock, etaRangeWords, etaWords, gb, length, loadResume, runningTime, saveResume, seamStatusWords, storageWords, triedWords } from './lib';
 import { seam, songs } from './test/backend';
 
 describe('words on screen', () => {
@@ -114,5 +114,72 @@ describe('what was tried on a seam', () => {
 
   it('has nothing to say when nothing went wrong', () => {
     expect(triedWords([], names)).toEqual([]);
+  });
+});
+
+describe('how long things will take', () => {
+  it.each([
+    [0, 'a few seconds'],
+    [14, 'a few seconds'],
+    [15, 'under a minute'],
+    [44, 'under a minute'],
+    [45, 'about a minute'],
+    [89, 'about a minute'],
+    [90, 'about 2 minutes'],
+    [240, 'about 4 minutes'],
+    [599, 'about 10 minutes'],
+    [600, 'about 10 minutes'],
+    [1320, 'about 20 minutes'],
+    [3299, 'about 55 minutes'],
+    [3300, 'about an hour'],
+    [5399, 'about an hour'],
+    [5400, 'about 1.5 hours'],
+    [14400, 'about 4 hours'],
+  ])('%i seconds reads as %s', (seconds, words) => {
+    expect(etaWords(seconds)).toBe(words);
+  });
+
+  it('never gets longer as a wait counts down', () => {
+    const minutes = (words: string) => {
+      if (words === 'a few seconds') return 0.1;
+      if (words === 'under a minute') return 0.5;
+      const number = Number(/[\d.]+/.exec(words)?.[0] ?? 1);
+      return words.includes('hour') ? number * 60 : number;
+    };
+    let last = Infinity;
+    for (let seconds = 20000; seconds >= 0; seconds -= 7) {
+      const now = minutes(etaWords(seconds));
+      expect(now).toBeLessThanOrEqual(last);
+      last = now;
+    }
+  });
+
+  it('says nothing when there is nothing to go on', () => {
+    expect(etaWords(undefined)).toBe('');
+    expect(etaWords(null)).toBe('');
+    expect(etaWords(Number.NaN)).toBe('');
+    expect(etaRangeWords(undefined)).toBe('');
+  });
+
+  it('gives a range only when it is honestly unsure', () => {
+    expect(etaRangeWords({ seconds: 300, low: 240, high: 360 })).toBe('about 5 minutes');
+    expect(etaRangeWords({ seconds: 360, low: 120, high: 600 })).toBe('2 to 10 minutes');
+    expect(etaRangeWords({ seconds: 14400, low: 7200, high: 25200 })).toBe('2 to 7 hours');
+    expect(etaRangeWords({ seconds: 50, low: 5, high: 100 })).toBe('about a minute');
+  });
+
+  it('says when a job has run long rather than counting down to nothing', () => {
+    expect(etaRangeWords({ seconds: 5, low: 3, high: 8, late: true })).toBe('taking longer than usual');
+  });
+
+  it('explains what analysis is waiting for', () => {
+    expect(analysisWords({ seconds: 3600, low: 3000, high: 4200, after_mix: true })).toContain('waits until your mix');
+    expect(analysisWords({ seconds: 3600, low: 3000, high: 4200, after_mix: false })).toBe('It takes about an hour in the background.');
+    expect(analysisWords(undefined)).toBe('It runs in the background.');
+  });
+
+  it('quotes the real wait when a song joins the analysis line', () => {
+    expect(askedToAnalyse('Hello', 2, 240)).toBe('Hello is in line, with 2 ahead of it. Ready in about 4 minutes.');
+    expect(askedToAnalyse('Hello', 0, 40)).toBe('Analysing Hello. Ready in under a minute.');
   });
 });
