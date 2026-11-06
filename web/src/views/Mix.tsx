@@ -286,7 +286,7 @@ function SeamRow(props: {
           </span>
         </button>
         <div className="seam-actions">
-          {!busy && (
+          {!busy && state.status !== 'failed' && (
             <button onClick={() => void hear()}>
               {state.status === 'ready' ? (hearing ? 'Hide' : 'Hear it') : 'Render and hear'}
             </button>
@@ -432,7 +432,8 @@ export function Mix(props: ViewProps) {
     notify(`Added ${song.title}.`, true);
   };
 
-  const waiting = seams.filter((state) => state.status === 'none' || state.status === 'failed').length;
+  const waiting = seams.filter((state) => state.status === 'none').length;
+  const rendering = seams.filter((state) => state.status === 'queued' || state.status === 'rendering').length;
 
   const renderAll = async () => {
     setMixData(await post<MixData>('/mix/render'));
@@ -524,7 +525,7 @@ export function Mix(props: ViewProps) {
           </button>
           {ready < seams.length && (
             <button onClick={() => void renderAll()} disabled={!waiting}>
-              {waiting ? 'Render every seam' : `Rendering ${ready} of ${seams.length}…`}
+              {waiting ? 'Render every seam' : rendering ? `Rendering ${ready} of ${seams.length}…` : 'Change failed transitions to continue'}
             </button>
           )}
           {mix.length > 1 && (

@@ -885,7 +885,7 @@ def create_app(
         with connect() as conn:
             items = mix.read_mix(conn, store)
             for before, item in zip(items, items[1:], strict=False):
-                if item["seam"]["state"]["status"] in {"none", "failed"}:
+                if item["seam"]["state"]["status"] == "none":
                     store.submit(
                         request_from(before["song_id"], item["song_id"], item["seam"]["settings"])
                     )
