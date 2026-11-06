@@ -80,6 +80,10 @@ Sixteen mixes under four headings: the moment, the mood, the sound and the journ
 | Length | Mixes reach the length asked for wherever enough songs exist. Small pools relax how far apart an artist must be, rather than stopping short |
 | Seasonal songs | Christmas songs only play in the Christmas mix, which appears once there are enough of them |
 
+On 6 November 2026, ten four-song mini-sets were exported to `Music/Selecta Mixes Stem Refresh 2026-11-06`.
+All 40 source tracks are unique; all 30 transitions passed the seam audit, and every MP3 decoded without
+errors. This establishes file integrity and automated checks, not that a person has approved the sound.
+
 Vocal rides now find where a voice stops and starts from the separated vocal itself, so they work in any language. Moves that need exact words still rely on an English-only timing model, so those are planned only for English songs, and only where timing hasn't already failed. Past results are read back before planning, so a move that failed on two songs isn't planned for them again.
 
 The planned shares above are what's asked for. What it sounds like, and how often a planned move survives rendering, needs more listening and more real renders.
