@@ -228,7 +228,13 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     const gradient = context.createLinearGradient(0, 180, 0, 0);
     gradient.addColorStop(0, accent);
     gradient.addColorStop(1, soft);
-    const draw = () => {
+    let lastDraw = -Infinity;
+    const draw = (timestamp = 0) => {
+      if (active && !reduceMotion && timestamp - lastDraw < 1000 / 30) {
+        frame = window.requestAnimationFrame(draw);
+        return;
+      }
+      lastDraw = timestamp;
       const rect = node.getBoundingClientRect();
       const ratio = window.devicePixelRatio || 1;
       const width = Math.max(1, Math.round(rect.width * ratio));
