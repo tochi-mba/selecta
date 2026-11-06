@@ -136,19 +136,20 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
     a_vocal = _curve(count, [(0, 1), (14, 1), (16, 0)])
     b_vocal = _curve(count, [(0, 0), (16, 0), (18, 1)])
 
-    gain = 10.0 ** (min(a.gain_db, b.gain_db) / 20.0)
+    gain_a = 10.0 ** (a.gain_db / 20.0)
+    gain_b = 10.0 ** (b.gain_db / 20.0)
     a_dry = (
         layers_a["drums"] * a_drums
         + layers_a["bass"] * a_bass
         + layers_a["other"] * a_other
         + layers_a["vocals"] * a_vocal
-    ) * gain
+    ) * gain_a
     b_dry = (
         layers_b["drums"] * b_drums
         + layers_b["bass"] * b_bass
         + layers_b["other"] * b_other
         + layers_b["vocals"] * b_vocal
-    ) * gain
+    ) * gain_b
     mixed = dsp.limit(a_dry + b_dry)
     return Intertwined(
         mixed,

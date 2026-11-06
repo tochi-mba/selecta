@@ -65,6 +65,22 @@ upvotes and individual examples do not establish universal parameters.
   describes preparing and checking complex stem transitions at home before using them in a set.
   This makes offline render-and-audition a better fit for Selecta's CPU-limited machine than promising
   low-latency live separation, while preserving a per-pair fallback if the isolated parts sound weak.
+- In [a discussion of long blends versus quick mixes](https://www.reddit.com/r/Beatmatch/comments/ydk1x9/),
+  DJs describe phrase matching as important for short handoffs, while long blends need selective EQ
+  changes as new parts appear. A [2025 discussion about the seamless blend](https://www.reddit.com/r/Beatmatch/comments/1n7u8mz/)
+  notes that shorter, vocal-heavy, and cross-genre tracks can leave too little room for an extended
+  overlap; people disagree about whether long blends should be the default. A [2026 long-blend
+  thread](https://www.reddit.com/r/Beatmatch/comments/1tu5x1g/) recommends ending a blend once a clash
+  becomes audible and warns against letting the basslines compete. These are practitioner reports,
+  not controlled listening results, but they reinforce that transition length and overlap density
+  need to be chosen per pair.
+- The [Hybrid Spectrogram and Waveform Separation paper](https://arxiv.org/abs/2111.03600) reports
+  both objective separation scores and a human evaluation on its benchmark. Its listeners still gave
+  the tested outputs a moderate quality score, despite improvements over earlier systems. An [AES
+  perceptual evaluation of commercial models](https://aes.org/publications/elibrary/elibrary-page/?id=23177)
+  focuses on heavily processed electronic material, where conventional model benchmarks may not
+  predict listener preference. These studies support testing separated layers in the intended music
+  and mix context; neither certifies the quality of Selecta's chosen model or specific tracks.
 
 ## Product implications
 
@@ -75,10 +91,12 @@ upvotes and individual examples do not establish universal parameters.
 - Keep track selection and energy shape ahead of transition novelty; test destination-oriented
   planning as a user-controlled journey rather than treating every handoff as a trick.
 - Make auditioning and the compute/artifact trade-off visible before expensive separation.
-- Validate each stem arrangement on its actual song pair. Fixed-position vocal fades do not meet
-  that bar and remain an implementation gap.
+- Validate each stem arrangement on its actual song pair. The current 16-bar curves are fixed
+  positions, not arrangement-aware break detection, and have not yet been judged by ear.
 - Treat artifact checks as a veto: if a separated component sounds exposed or unstable, use the full
   track and a non-stem cue instead. Repeating the same stem choreography should carry a variety cost.
 - Compare stem quality modes on a small, representative set before changing the separation model or
   defaults. Product manuals describe controls, and forum posts describe individual experience; neither
   substitutes for Selecta's own blind, paired listening measurements.
+- Let the planner choose transition length and overlap density for each pair. Phrase alignment alone
+  does not make a long blend suitable, especially when the incoming arrangement gets busy quickly.
