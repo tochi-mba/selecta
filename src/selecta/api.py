@@ -6,6 +6,7 @@ rendering used, at the level the mix uses, plus finished seams, and joins them o
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -109,6 +110,17 @@ class BuildRequest(BaseModel):
 class AddRequest(BaseModel):
     song_id: int
     position: int | None = None
+
+
+class RequestPlayback(BaseModel):
+    order: list[int]
+    position: int
+    phase: str
+    seconds_left: float
+
+
+class RequestOfferAction(RequestPlayback):
+    offer: str
 
 
 class MoveRequest(BaseModel):
@@ -664,8 +676,7 @@ def create_app(
             return {**state, "key": session.key, "shape": chosen}
         windows = windows_to_separate(settings, a, b, session.exit_bar, session.entry_bar)
         estimate = combine(
-            [store.clock.estimate(STUDIO_SESSION)]
-            + [store.clock.estimate("stem_window")] * windows
+            [store.clock.estimate(STUDIO_SESSION)] + [store.clock.estimate("stem_window")] * windows
         )
         if state.get("started_at"):
             estimate = still_to_go(estimate, time.time() - float(state["started_at"]))
@@ -1122,6 +1133,137 @@ def create_app(
             mix.set_mix_name(conn, "Your mix")
             return mix_payload(conn)
 
+    request_offers: dict[str, dict] = {}
+    request_approvals: set[str] = set()
+    request_guard = threading.Lock()
+
+    def request_audio_ready(request: SeamRequest) -> bool:
+        state = store.status(request.key)
+        return (
+            state.get("status") == "ready"
+            and state.get("passed") is True
+            and (store.folder(request.key) / "clip.flac").is_file()
+        )
+
+    def request_snapshot(conn, body: RequestPlayback):
+        items = mix._items(conn)
+        order = [item[0] for item in items]
+        if order != body.order or not 0 <= body.position < len(order):
+            raise HTTPException(409, "The mix changed. Reconsidering requests.")
+        if body.phase not in {"playing", "paused"}:
+            raise HTTPException(409, "Requests wait until a mix is playing or paused.")
+        if not np.isfinite(body.seconds_left) or body.seconds_left < 8:
+            raise HTTPException(409, "The next handover is too close. Waiting for a safe place.")
+        return items, min(body.position + 1, len(order) - 1)
+
+    @app.post("/api/requests/consider")
+    def consider_requests(body: RequestPlayback) -> dict:
+        from selecta.request_planner import proposals
+
+        with request_guard, connect() as conn:
+            rows = song_requests.read_requests(conn)
+            if not rows:
+                return {"requests": []}
+            items, protected = request_snapshot(conn, body)
+            songs, _traits = library_now(conn)
+            found = proposals(rows, items, songs, protected, store.remembered(), store.status)
+            now_time = time.time()
+            for key in list(request_offers):
+                if request_offers[key]["expires"] < now_time:
+                    del request_offers[key]
+            request_approvals.intersection_update(request_offers)
+            for row in found:
+                plan = row.get("plan")
+                if plan is None:
+                    continue
+                signature = hashlib.sha256(
+                    json.dumps([items, row["id"], plan], sort_keys=True).encode()
+                ).hexdigest()
+                approved = not plan["bridges"] or signature in request_approvals
+                chain = [
+                    items[plan["position"] - 1][0],
+                    *plan["songs"],
+                    *[item[0] for item in items[plan["position"] : plan["position"] + 1]],
+                ]
+                seam_requests = [
+                    request_from(a, b, seam)
+                    for a, b, seam in zip(chain, chain[1:], plan["seams"], strict=False)
+                ]
+                states = [store.status(request.key) for request in seam_requests]
+                if approved:
+                    for request, state in zip(seam_requests, states, strict=True):
+                        if state["status"] == "none":
+                            store.submit(request)
+                ready = approved and all(request_audio_ready(request) for request in seam_requests)
+                if approved:
+                    row["reason"] = (
+                        "Ready to join the mix."
+                        if ready
+                        else "Preparing both handovers. The playing mix stays ahead."
+                    )
+                row.update(
+                    offer=signature,
+                    ready=ready,
+                    needs_approval=not approved,
+                    route=[
+                        {"id": sid, "title": next((s.title for s in songs if s.id == sid), "Song")}
+                        for sid in plan["songs"]
+                    ],
+                )
+                request_offers[signature] = dict(
+                    request_id=row["id"],
+                    plan=plan,
+                    items=items,
+                    seams=seam_requests,
+                    expires=now_time + 15,
+                )
+            return {"requests": found}
+
+    @app.post("/api/requests/approve")
+    def approve_request_route(body: RequestOfferAction) -> dict:
+        with request_guard, connect() as conn:
+            items, protected = request_snapshot(conn, body)
+            offer = request_offers.get(body.offer)
+            if (
+                offer is None
+                or offer["expires"] < time.time()
+                or offer["items"] != items
+                or offer["plan"]["position"] <= protected
+            ):
+                raise HTTPException(409, "This route changed. Choose a fresh proposal.")
+            request_approvals.add(body.offer)
+            return {"approved": True}
+
+    @app.post("/api/requests/insert")
+    def insert_request(body: RequestOfferAction) -> dict:
+        with request_guard, connect() as conn:
+            items, protected = request_snapshot(conn, body)
+            offer = request_offers.get(body.offer)
+            if offer is None or offer["expires"] < time.time() or offer["items"] != items:
+                raise HTTPException(409, "The prepared placement changed. Finding another.")
+            plan = offer["plan"]
+            if plan["bridges"] and body.offer not in request_approvals:
+                raise HTTPException(409, "Approve the bridge route first.")
+            if not all(request_audio_ready(request) for request in offer["seams"]):
+                raise HTTPException(409, "Both handovers must finish and pass their checks first.")
+            slot = song_requests.Slot(
+                plan["position"], tuple(plan["songs"]), tuple(plan["bridges"])
+            )
+            try:
+                song_requests.insert_ready(
+                    conn,
+                    offer["request_id"],
+                    slot,
+                    items,
+                    protected,
+                    plan["seams"],
+                    approved_bridges=slot.bridges,
+                )
+            except song_requests.PlacementChanged as problem:
+                raise HTTPException(409, str(problem)) from problem
+            request_offers.pop(body.offer, None)
+            return mix_payload(conn)
+
     @app.get("/api/requests")
     def get_song_requests() -> dict:
         with connect() as conn:
@@ -1134,6 +1276,8 @@ def create_app(
                 request_id = song_requests.add_request(conn, body.song_id)
             except ValueError as problem:
                 raise HTTPException(400, str(problem)) from problem
+            if not db.is_analysed(conn, body.song_id, ANALYSIS_VERSION):
+                background.ask_for(body.song_id)
             return {"id": request_id, "requests": song_requests.read_requests(conn)}
 
     @app.delete("/api/requests/{request_id}")

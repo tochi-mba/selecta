@@ -14,6 +14,13 @@ class PlacementChanged(ValueError):
     """A prepared request no longer matches the live mix; leave it waiting."""
 
 
+def custom_seam(raw: str | None) -> bool:
+    if not raw:
+        return False
+    settings = json.loads(raw)
+    return bool(settings and settings != {"move": "auto"} and not settings.get("soft"))
+
+
 def initialise(conn: sqlite3.Connection) -> None:
     conn.execute("""CREATE TABLE IF NOT EXISTS song_requests (
         id INTEGER PRIMARY KEY,
@@ -119,10 +126,8 @@ def insert_ready(
                 raise PlacementChanged("A requested song is no longer available.")
         if len(seams) != len(slot.songs) + int(position < len(current)):
             raise ValueError("Every changed handover needs a prepared seam")
-        if position < len(current) and current[position][1]:
-            settings = json.loads(current[position][1])
-            if settings and settings != {"move": "auto"}:
-                raise PlacementChanged("That would replace a chosen transition.")
+        if position < len(current) and custom_seam(current[position][1]):
+            raise PlacementChanged("That would replace a chosen transition.")
         history = db.preference(conn, "mix_undo", [])
         history.append(
             dict(

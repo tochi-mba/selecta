@@ -9,7 +9,7 @@ from selecta.analysis.song import SongInfo
 from selecta.planner.beam import _Cues, _Riders, handoff_quality
 from selecta.planner.choose import enumerate_candidates
 from selecta.planner.memory import SeamMemory
-from selecta.requests import find_slot
+from selecta.requests import custom_seam, find_slot
 from selecta.seams import request_from
 
 
@@ -26,8 +26,6 @@ def proposals(
     Requests do not earn a forced cut just because they were requested. Only compatible
     handovers with real cues are proposed, and actual rendered audits remain the final gate.
     """
-    import json
-
     library = {song.id: song for song in songs}
     order = [item[0] for item in items]
     riders, cues = _Riders(), _Cues()
@@ -63,11 +61,7 @@ def proposals(
         return edges[key]
 
     locked = [i for i, item in enumerate(items) if item[2]]
-    custom = [
-        i
-        for i, item in enumerate(items)
-        if item[1] and json.loads(item[1]) not in ({}, {"move": "auto"})
-    ]
+    custom = [i for i, item in enumerate(items) if custom_seam(item[1])]
     results = []
     for row in rows:
         song_id = row["song_id"]

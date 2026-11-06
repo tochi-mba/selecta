@@ -67,19 +67,77 @@ def _order(conn, store):
     return [item["song_id"] for item in mix.read_mix(conn, store)]
 
 
+@pytest.mark.parametrize("bridges", [[], [5]])
+def test_prepared_request_requires_ready_audio_fresh_mix_and_bridge_consent(
+    conn, tmp_path, monkeypatch, bridges
+):
+    mix.write_order(conn, [(1, None, 0), (2, None, 0), (3, None, 0)])
+    monkeypatch.setattr("selecta.planner.reel.load_library", lambda *args: [])
+    route = [*bridges, 4]
+
+    def propose(rows, *args):
+        return [
+            {
+                **row,
+                "plan": dict(
+                    position=2,
+                    songs=route,
+                    bridges=bridges,
+                    seams=[{"move": "bass_swap_blend"}] * (len(route) + 1),
+                ),
+            }
+            for row in rows
+        ]
+
+    monkeypatch.setattr("selecta.request_planner.proposals", propose)
+    ready = False
+    monkeypatch.setattr(
+        SeamStore,
+        "status",
+        lambda self, key: dict(key=key, status="ready" if ready else "queued", passed=ready),
+    )
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    request_id = client.post("/api/requests", json={"song_id": 4}).json()["id"]
+    playback = dict(order=[1, 2, 3], position=0, phase="playing", seconds_left=100)
+    offer = client.post("/api/requests/consider", json=playback).json()["requests"][0]
+    action = {**playback, "offer": offer["offer"]}
+    assert client.post("/api/requests/insert", json=action).status_code == 409
+    ready = True
+    assert client.post("/api/requests/insert", json=action).status_code == 409
+    chain = [2, *route, 3]
+    for a, b in zip(chain, chain[1:], strict=False):
+        key = request_from(a, b, {"move": "bass_swap_blend"}).key
+        folder = Settings(tmp_path).renders_dir / "seams" / key
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "clip.flac").write_bytes(b"test prepared clip")
+    offer = client.post("/api/requests/consider", json=playback).json()["requests"][0]
+    if bridges:
+        assert offer["needs_approval"]
+        assert client.post("/api/requests/insert", json=action).status_code == 409
+        assert client.post("/api/requests/approve", json=action).status_code == 200
+        offer = client.post("/api/requests/consider", json=playback).json()["requests"][0]
+    assert offer["ready"]
+    assert client.post("/api/requests/insert", json={**action, "position": 1}).status_code == 409
+    result = client.post("/api/requests/insert", json=action)
+    assert result.status_code == 200
+    assert [item["song_id"] for item in result.json()["mix"]] == [1, 2, *route, 3]
+    assert client.delete(f"/api/requests/{request_id}").json()["cancelled"] is False
+    assert client.post("/api/requests/insert", json=action).status_code == 409
+
+
 def test_song_request_routes_keep_unanalysed_intent_without_changing_mix(conn, tmp_path):
-    conn.execute('DELETE FROM analysis WHERE song_id=1')
+    conn.execute("DELETE FROM analysis WHERE song_id=1")
     conn.commit()
     client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
-    added = client.post('/api/requests', json={'song_id': 1})
+    added = client.post("/api/requests", json={"song_id": 1})
     assert added.status_code == 200
-    request_id = added.json()['id']
-    assert client.post('/api/requests', json={'song_id': 1}).json()['id'] == request_id
-    assert len(client.get('/api/requests').json()['requests']) == 1
-    assert conn.execute('SELECT COUNT(*) FROM queue').fetchone()[0] == 0
-    assert client.post('/api/requests', json={'song_id': 9999}).status_code == 400
-    assert client.delete(f'/api/requests/{request_id}').json()['cancelled']
-    assert client.get('/api/requests').json()['requests'] == []
+    request_id = added.json()["id"]
+    assert client.post("/api/requests", json={"song_id": 1}).json()["id"] == request_id
+    assert len(client.get("/api/requests").json()["requests"]) == 1
+    assert conn.execute("SELECT COUNT(*) FROM queue").fetchone()[0] == 0
+    assert client.post("/api/requests", json={"song_id": 9999}).status_code == 400
+    assert client.delete(f"/api/requests/{request_id}").json()["cancelled"]
+    assert client.get("/api/requests").json()["requests"] == []
 
 
 def test_discovery_review_persists_without_changing_the_mix(conn, tmp_path):
