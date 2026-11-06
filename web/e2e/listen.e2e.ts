@@ -101,13 +101,15 @@ test('a transition takes over exactly where it was planned, with no gap', async 
   await play(page);
   const { mix } = await (await request.get('/api/mix')).json();
   const seam = mix[1].seam.state;
+  // what's started from the jump on is this transition. The next one may get scheduled straight after
+  const earlier = await soundsStarted(page);
   await page.getByRole('button', { name: 'Jump to the transition' }).click();
   await expect(page.getByText('Jumped to just before the seam.')).toBeVisible();
   await expect(title(page)).toHaveText('Slow Tide', { timeout: 150_000 });
   await expect(page.getByRole('group', { name: 'Rate that seam' })).toBeVisible();
 
   const started = await page.evaluate(() => window.audioSpy.started);
-  const [song, clip, after] = started.slice(-3);
+  const [song, clip, after] = started.slice(earlier);
   // A stops where the plan said it would
   expect(clip.when - song.when + song.offset).toBeCloseTo(seam.a_source_start, 2);
   expect(clip.when).toBeGreaterThan(clip.at);
