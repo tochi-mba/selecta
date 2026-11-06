@@ -82,7 +82,7 @@ test('saving a draft as a file while another mix is reordered: the file is of th
   await page.getByRole('button', { name: /Save as an audio file|Save/ }).first().click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
   await dialog.locator('button.primary').click();
-  await request.post('/api/mix/move', { data: { from_position: 0, to_position: 3 } });
+  await request.post('/api/mix/move', { data: { source: 0, target: 3 } });
   const link = dialog.getByRole('link');
   await expect(link).toBeVisible({ timeout: 170_000 });
   const bytes = await (await request.get((await link.getAttribute('href'))!)).body();
@@ -99,7 +99,7 @@ test('changing a draft while it’s being saved stops the save, and says why', a
   await page.getByRole('button', { name: /Save as an audio file|Save/ }).first().click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
   await dialog.locator('button.primary').click();
-  await request.post(`/api/mix/move?draft=${made.id}`, { data: { from_position: 0, to_position: 2 } });
+  await request.post(`/api/mix/move?draft=${made.id}`, { data: { source: 0, target: 2 } });
   await expect(dialog.getByText(/changed while it was getting ready/)).toBeVisible({ timeout: 30_000 });
   await request.delete(`/api/drafts/${made.id}`);
 });

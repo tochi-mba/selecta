@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-import selecta.api as api_module
+from selecta import api_common as api_module
 from selecta import db
 from selecta import requests as song_requests
 from selecta.api import create_app
@@ -728,13 +728,15 @@ def _wait_for(done, seconds=5.0):
 
 def test_new_songs_appear_before_their_lyrics_are_looked_up(library, monkeypatch):
     """Lyrics for a hundred songs take minutes, and that shouldn't hold up seeing them."""
-    client, root, _ran = library
+    client, root, ran = library
     release = threading.Event()
     monkeypatch.setattr(api_module.subprocess, "run", lambda *_a, **_k: release.wait(5))
     _flac(root / "two.flac", "Two")
     assert client.post("/api/library/check").json() == {"new": 1}
     assert client.get("/api/status").json()["counts"]["total"] == 2
     release.set()
+    # finish here, so it can't turn up in the next test
+    _wait_for(lambda: any(step[0] == "analyse" for step in ran))
 
 
 def test_nothing_new_does_nothing(library):

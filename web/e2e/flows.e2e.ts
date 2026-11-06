@@ -46,7 +46,7 @@ test('a change to a mix that’s moved on stops, says so, and touches nothing', 
     if (route.request().method() === 'GET') await new Promise((resolve) => setTimeout(resolve, 8000));
     await route.continue();
   });
-  await request.post('/api/mix/move', { data: { from_position: 0, to_position: 3 } });
+  await request.post('/api/mix/move', { data: { source: 0, target: 3 } });
   await page.getByRole('button', { name: 'Remove Paper Moon' }).click();
   await expect(page.getByText('This mix has just changed, so nothing was done.').first()).toBeVisible();
   const { mix } = await (await request.get('/api/mix')).json();

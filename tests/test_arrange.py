@@ -898,7 +898,7 @@ def test_a_near_miss_is_not_worth_minutes_of_splitting_stems(tmp_path, monkeypat
     a, b = _pair(tmp_path)
     asked = []
 
-    def take(_a, _b, move, _tried):
+    def take(_a, _b, move, _tried, _leave_after=None):
         asked.append(move)
         return None
 

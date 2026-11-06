@@ -8,7 +8,6 @@ while the browser plays: it only ever receives finished audio.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import sqlite3
@@ -19,637 +18,125 @@ import threading
 import time
 from collections import Counter, deque
 from collections.abc import Callable, Iterable
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict
 from pathlib import Path
 
 import soundfile as sf
 
 from selecta import db, jobs
-from selecta.analysis.song import Cue, SongInfo, load_song
-from selecta.arrange import (
-    TAKES,
-    WontWork,
-    arc_of,
-    arrangements,
-    as_array,
-    can_arrange,
-    listen,
-    repair,
-    taste_from,
-    why_it_cant,
-)
-from selecta.audit.checks import AuditReport, Check, audit, beat_offset
-from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
+from selecta.analysis.song import SongInfo, load_song
+from selecta.arrange import can_arrange
+from selecta.audit.checks import AuditReport
+from selecta.config import SAMPLE_RATE, Settings
 from selecta.eta import JobClock, combine
 from selecta.lyrics.align import Aligner
-from selecta.lyrics.lrclib import Line
-from selecta.lyrics.match import LyricLink, SongFacts, discover
-from selecta.planner.choose import choose_transition, enumerate_candidates, tempo_gap
-from selecta.planner.fit import MAX_FOLDED_GAP, folded_gap
+from selecta.planner.choose import choose_transition
 from selecta.planner.memory import RULES_VERSION, SeamMemory
-from selecta.planner.wordreel import (
-    CannotTrust,
-    line_window,
-    locate_phrase,
-    locate_voice_edge,
-    modes_for,
-    ride_lengths,
-    ride_lines,
+from selecta.planner.wordreel import CannotTrust, modes_for, ride_lines
+from selecta.render.engine import Rendered, SongCache, in_context
+from selecta.seam_kinds import (
+    CHECK_WORDS,
+    MOVES,
+    NEAR_MISS,
+    NOT_IN_THE_CHOOSER,
+    PLACEMENTS_TO_TRY,
+    PREVIEW_SECONDS,
+    RENDER_VERSION,
+    RIDES_BEFORE_OTHERS,
+    SESSION_MOVES,
+    STEM_MOVES,
+    STUDIO_SESSION,
+    UNSURE_WORDS,
+    WORD_MOVES,
+    CannotRender,
+    SeamRequest,
+    _plain_checks,
+    _what_failed,
+    failed_checks,
+    fallback_order,
+    good_enough,
+    line_from,
+    request_from,
 )
-from selecta.render.engine import Rendered, SongCache, in_context, render
-from selecta.render.intertwine import can_intertwine, intertwine_windows, render_intertwined
-from selecta.render.script import Part, TransitionScript, Warp
+from selecta.seam_making import (
+    _arranged,
+    _bar_cue_render,
+    _chosen_cue,
+    _closer,
+    _exits_after,
+    _make_session,
+    _session_for,
+    _stem_render,
+    _switch_at,
+    _too_soon,
+    _why_unavailable,
+    links_between,
+    seam_options,
+    tighten_beats,
+    windows_for,
+)
 from selecta.stems import prune_cache, seconds_separating, window_is_ready
-from selecta.studio import (
-    LANES,
-    SIDES,
-    clean_shape,
-    find_placement,
-    prepare_session,
-    render_shape,
-    why_no_studio,
-    windows_to_separate,
-)
-from selecta.styles import all_recipes
-from selecta.styles.wordplay import phrase_roll, vocal_ride, word_blend, word_cut, word_exchange
+from selecta.studio import LANES, SIDES, windows_to_separate
 
-RENDER_VERSION = 2
-PREVIEW_SECONDS = 12.0
+__all__ = [
+    "CHECK_WORDS",
+    "CannotRender",
+    "LATER",
+    "LINE",
+    "MIX",
+    "MOVES",
+    "NEAR_MISS",
+    "NOT_IN_THE_CHOOSER",
+    "PLACEMENTS_TO_TRY",
+    "PREPARING",
+    "PREVIEW_SECONDS",
+    "RENDER_VERSION",
+    "REQUEST",
+    "RIDES_BEFORE_OTHERS",
+    "SESSION_MOVES",
+    "STEM_MOVES",
+    "STUDIO_SESSION",
+    "SeamRequest",
+    "SeamStore",
+    "UNSURE_WORDS",
+    "URGENT",
+    "WORD_MOVES",
+    "_arranged",
+    "_bar_cue_render",
+    "_chosen_cue",
+    "_closer",
+    "_exits_after",
+    "_make_session",
+    "_plain_checks",
+    "_session_for",
+    "_stem_render",
+    "_switch_at",
+    "_too_soon",
+    "_what_failed",
+    "_why_unavailable",
+    "failed_checks",
+    "fallback_order",
+    "good_enough",
+    "line_from",
+    "links_between",
+    "request_from",
+    "seam_options",
+    "tighten_beats",
+    "windows_for",
+]
+
+
 IDLE_CHECK_SECONDS = 3.0
+
 MEMORY_SECONDS = 5.0
-RIDES_BEFORE_OTHERS = 0.35
-NEAR_MISS = {"beat alignment": 20.0, "level fall": 3.0, "entry level": 1.5}
+
 """How far past its limit each forgiving check can go, in its own units."""
+
 MIX_CHECK_SECONDS = 2.0
+
 # who goes first: what's about to be heard, a song someone asked for once whatever plays before it
 # is done, the rest of the mix, mixes in the render line, other requests, then spare time
 URGENT, REQUEST, MIX, LINE, LATER, PREPARING = range(6)
-UNSURE_WORDS = "Selecta can’t tell exactly when these words are sung, so it won’t cut on them."
-PLACEMENTS_TO_TRY = 4
-
-MOVES: dict[str, tuple[str, str]] = {
-    "auto": ("Let Selecta pick", "The best move for these two songs that passes its checks."),
-    "bass_swap_blend": ("Blend", "Both songs play in time, and they trade the bass halfway."),
-    "vocal_ride": ("Vocal ride", "B's band comes in under A's voice, before B starts singing."),
-    "stem_studio": ("Your stems", "You chose which stems play when, in the studio."),
-    "stem_arrange": (
-        "Strip and land",
-        "A strips down to its melody, B is teased, then B's bass and drums land.",
-    ),
-    "stem_intertwine": (
-        "Intertwined stems",
-        "Trade drums, bass and harmonic layers over sixteen bars, with vocals taking turns.",
-    ),
-    "filter_sweep": ("Filter sweep", "A filters away upward as B opens up."),
-    "tempo_ramp": ("Tempo ramp", "Both songs drift to a shared speed for a short overlap."),
-    "word_blend": ("Word blend", "A vocal ride that hands over on a phrase both songs share."),
-    "word_exchange": (
-        "Call and response",
-        "The voices trade a phrase over B's band until B keeps it.",
-    ),
-    "phrase_roll": ("Phrase roll", "A's phrase repeats, faster and faster, into B singing it."),
-    "word_cut": ("Word cut", "A sets a phrase up, and B sings it."),
-    "cut_on_one": ("Cut", "A clean cut onto B's downbeat."),
-    "echo_out": ("Echo out", "A's last beat rings on as B lands under it."),
-    "delay_throw": ("Delay throw", "A's last word is thrown into a delay as B slams in."),
-    "reverb_wash": ("Reverb wash", "A dissolves into a room as B arrives."),
-}
-WORD_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
-STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine", "stem_studio", "stem_arrange"}
-STUDIO_SESSION = "studio_session"
-NOT_IN_THE_CHOOSER = {"stem_studio"}
-SESSION_MOVES = {"stem_studio", "stem_arrange", STUDIO_SESSION}
-
-
-@dataclass(frozen=True)
-class SeamRequest:
-    a: int
-    b: int
-    move: str = "auto"
-    bars: int | None = None
-    exit_bar: int | None = None
-    entry_bar: int | None = None
-    phrase: str | None = None
-    soft: bool = False
-    """Selecta chose this move, not the person, so if it doesn't pass, use whatever does."""
-    shape: str | None = None
-    """For the Seam Studio: which stems play when, as a person chose them."""
-    leave_after: float | None = None
-    """The seam into A lands this late, so this one can't start any sooner. Seconds into A."""
-
-    @property
-    def key(self) -> str:
-        fields = asdict(self)
-        # seams from before these existed keep their keys, and their audio
-        for name in ("shape", "leave_after"):
-            if fields[name] is None:
-                del fields[name]
-        text = json.dumps([fields, ANALYSIS_VERSION, RENDER_VERSION], sort_keys=True)
-        return hashlib.sha256(text.encode()).hexdigest()[:20]
-
-
-class CannotRender(ValueError):
-    """This move can't work on these two songs. The message says why, in plain words."""
-
-
-def links_between(a: SongInfo, b: SongInfo) -> list[LyricLink]:
-    """Places where A can finish a line on a phrase that B opens a line with."""
-    if not (a.lines and b.lines):
-        return []
-    found = discover(
-        {a.id: a.lines, b.id: b.lines},
-        facts={
-            a.id: SongFacts(a.artist, a.title, a.duration),
-            b.id: SongFacts(b.artist, b.title, b.duration),
-        },
-        keep_all_pairs=True,
-    )
-    return [link for link in found if link.song_a == a.id and link.song_b == b.id]
-
-
-def _why_unavailable(move: str, a: SongInfo, b: SongInfo, has_link: bool) -> str | None:
-    gap = tempo_gap(a, b)
-    if move in WORD_MOVES and not has_link:
-        return "These two songs don't share a phrase at a line end and a line start."
-    modes = modes_for(a, b)
-    if move in WORD_MOVES and move not in modes:
-        if move == "phrase_roll":
-            if a.family == "rock":
-                return "A stutter fights a rock song, so this one's out."
-            return "B feels much slower than A, so a roll would promise a drop it can't deliver."
-        if move == "word_cut":
-            return f"The songs are {gap:.0%} apart in tempo, too far for a bare cut to carry."
-        return f"The songs are {gap:.0%} apart in tempo or too far apart in key to play together."
-    if move == "vocal_ride":
-        if "word_blend" not in modes:
-            return f"The songs are {gap:.0%} apart in tempo or too far apart in key."
-        if ride_lines(a, b) is None:
-            return "A isn't singing enough near a place it could finish."
-        return None
-    if move == "stem_arrange":
-        return why_it_cant(a, b)
-    if move == "stem_intertwine":
-        return (
-            None
-            if can_intertwine(a, b)
-            else (
-                "This needs a close tempo and key, reliable beat grids, and sixteen bars of room."
-            )
-        )
-    if move in WORD_MOVES or move == "auto":
-        return None
-    if not enumerate_candidates(a, b, move):
-        if move in {"bass_swap_blend", "filter_sweep"}:
-            if gap > 0.08:
-                return f"The songs are {gap:.0%} apart in tempo, too far to play together."
-            return "One song's beat grid is unsure, or a vocal or key would clash."
-        if move == "tempo_ramp":
-            if gap < 0.05:
-                return "The tempos are already close, so a normal blend does this better."
-            return f"A {gap:.0%} tempo gap is too wide, or a vocal or key would clash."
-        if folded_gap(a, b) > MAX_FOLDED_GAP:
-            return f"The songs are {folded_gap(a, b):.0%} apart in tempo, too far to cut across."
-        return "B has no strong place to land at a level that matches A."
-    return None
-
-
-def seam_options(a: SongInfo, b: SongInfo) -> dict:
-    """Everything a person could choose for this seam, with a reason for anything ruled out."""
-    links = links_between(a, b)
-    moves = []
-    for name, (label, description) in MOVES.items():
-        if name in NOT_IN_THE_CHOOSER:
-            continue
-        reason = _why_unavailable(name, a, b, bool(links))
-        moves.append(
-            {
-                "name": name,
-                "label": label,
-                "description": description,
-                "available": reason is None,
-                "reason": reason,
-            }
-        )
-    studio_reason = why_no_studio(a, b)
-    return {
-        "moves": moves,
-        "studio": {"available": studio_reason is None, "reason": studio_reason},
-        "exits": [
-            {"bar": cue.bar, "time": round(cue.time, 2), "kind": cue.kind}
-            for cue in sorted(a.exit_cues()[:12], key=lambda c: c.time)
-        ],
-        "entries": [
-            {"bar": cue.bar, "time": round(cue.time, 2), "kind": cue.kind}
-            for cue in sorted(b.entry_cues()[:12], key=lambda c: c.time)
-        ],
-        "lengths": [4, 8, 16, 32],
-        "links": [
-            {
-                "phrase": link.phrase,
-                "line_a": link.line_a.text,
-                "line_b": link.line_b.text,
-                "score": link.score,
-            }
-            for link in links[:8]
-        ],
-        "tempo_gap": round(tempo_gap(a, b) * 100, 1),
-        "keys": [a.camelot, b.camelot],
-    }
-
-
-CHECK_WORDS = {
-    "beat alignment": ("Beats line up", "Beats drift apart"),
-    "vocal overlap": ("Vocals take turns", "Two voices clash"),
-    "phrase integrity": ("Nothing cut mid-line", "A line gets cut off"),
-    "quiet time": ("No gap in the sound", "There's a quiet gap"),
-    "entry level": ("B doesn't jump out", "B comes in too loud"),
-    "level fall": ("The level holds up", "The level drops after the seam"),
-    "low end clash": ("Clean low end", "Two bass lines fight"),
-    "harmony": ("Keys sit together", "The keys clash"),
-    "true peak": ("No clipping", "It clips"),
-    "stretch": ("Tempo change is gentle", "Tempo is stretched too far"),
-}
-
-
-def _plain_checks(report: AuditReport) -> list[dict]:
-    return [
-        {
-            "name": check.name,
-            "passed": check.passed,
-            "text": CHECK_WORDS.get(check.name, (check.name, check.name))[0 if check.passed else 1],
-            "value": f"{check.value}{check.unit}",
-        }
-        for check in report.checks
-    ]
-
-
-def _chosen_cue(song: SongInfo, bar: int) -> Cue:
-    return Cue(bar, song.bar_time(bar), "chosen", 0.5, 0)
-
-
-def _closer(report: AuditReport, than: AuditReport) -> bool:
-    """Is this take nearer to clean than that one?"""
-    miss = lambda r: (len(r.failures), sum(c.value - c.limit for c in r.failures))  # noqa: E731
-    return miss(report) < miss(than)
-
-
-def tighten_beats(rendered: Rendered, cache: SongCache) -> tuple[Rendered, AuditReport]:
-    """The render measures exactly how far apart the beats landed, so a steady gap can be closed
-    with a second take rather than warned about. A live DJ only gets the one."""
-    report = audit(rendered)
-    if not any(check.name == "beat alignment" for check in report.failures):
-        return rendered, report
-    offset = beat_offset(rendered)
-    if offset is None:
-        return rendered, report
-    script = rendered.script
-    b = script.b.song
-
-    def later(part: Part) -> Part:
-        if part.song is not b:
-            return part
-        return replace(part, warp=Warp(part.warp.output, part.warp.source - offset))
-
-    second = render(
-        replace(script, b=later(script.b), extras=[later(part) for part in script.extras]), cache
-    )
-    second_report = audit(second)
-    return (second, second_report) if _closer(second_report, report) else (rendered, report)
-
-
-def _exits_after(a: SongInfo, leave_after: float | None) -> list | None:
-    """Every place A could finish once it has played for long enough, or None for no limit."""
-    if leave_after is None:
-        return None
-    found = [cue for cue in a.exit_cues() if a.bar_time(cue.bar) >= leave_after]
-    return found or a._exit_cues_after(leave_after, True)
-
-
-def _too_soon(script: TransitionScript, request: SeamRequest) -> bool:
-    return request.leave_after is not None and script.a_source_start < request.leave_after
-
-
-def _bar_cue_render(
-    request: SeamRequest,
-    a: SongInfo,
-    b: SongInfo,
-    cache: SongCache,
-    worked_before: tuple[int, int, int] | None = None,
-) -> tuple[Rendered, AuditReport, str]:
-    recipe = all_recipes()[request.move]
-    pool = enumerate_candidates(a, b, request.move, exits=_exits_after(a, request.leave_after))
-    if request.bars is not None and recipe.beatmatched:
-        narrowed = [c for c in pool if c.bars == request.bars]
-        pool = narrowed or pool
-    if request.exit_bar is not None:
-        pool = [c for c in pool if c.exit_cue.bar == request.exit_bar] or pool
-    if request.entry_bar is not None:
-        pool = [c for c in pool if c.entry_cue.bar == request.entry_bar] or pool
-    if not pool and request.exit_bar is None and request.entry_bar is None:
-        raise CannotRender(_why_unavailable(request.move, a, b, False) or "No place to do this.")
-    if request.exit_bar is not None or request.entry_bar is not None or not pool:
-        default_bars = request.bars or (recipe.lengths[0] if recipe.beatmatched else 0)
-        best = pool[0] if pool else None
-        exit_cue = (
-            _chosen_cue(a, request.exit_bar) if request.exit_bar is not None else best.exit_cue
-        )
-        entry_cue = (
-            _chosen_cue(b, request.entry_bar) if request.entry_bar is not None else best.entry_cue
-        )
-        bars = request.bars or (best.bars if best else default_bars)
-        tries = [
-            (exit_cue, entry_cue, bars, "; ".join(best.reasons) if best else "your cue points")
-        ]
-    else:
-        if worked_before is not None:
-            # where this move landed well last time is the first place to try it this time
-            pool = sorted(
-                pool,
-                key=lambda c: (c.exit_cue.bar, c.entry_cue.bar, c.bars) != worked_before,
-            )
-        # with a limit, plenty of these won't get as far as being tried, so they don't count
-        tries = [
-            (item.exit_cue, item.entry_cue, item.bars, "; ".join(item.reasons))
-            for item in (pool if request.leave_after is not None else pool[:PLACEMENTS_TO_TRY])
-        ]
-    best = None
-    placed = 0
-    for exit_cue, entry_cue, bars, why in tries:
-        script = recipe.make(a, b, exit_cue, entry_cue, bars)
-        if script is None or _too_soon(script, request):
-            continue
-        if placed == PLACEMENTS_TO_TRY:
-            break
-        placed += 1
-        script.meta.update(exit_bar=exit_cue.bar, entry_bar=entry_cue.bar, placed_bars=bars)
-        rendered, report = tighten_beats(render(script, cache), cache)
-        if report.passed:
-            return rendered, report, why
-        if best is None or _closer(report, best[1]):
-            best = (rendered, report, why)
-    if best is None:
-        raise CannotRender("Those cue points don't leave enough room for this move.")
-    return best
-
-
-def windows_for(request: SeamRequest, a: SongInfo, b: SongInfo) -> list[tuple[str, float, float]]:
-    """The stretches of song this seam will split, worked out before it starts. A word move takes
-    under a minute with its stems ready and over five without, so this is most of what makes a
-    time estimate right or wrong. A seam left to choose would try a ride first."""
-    if request.move in {"vocal_ride", "auto"}:
-        lines = ride_lines(a, b)
-        pairs = [(a, lines[0]), (b, lines[1])] if lines else []
-    elif request.move in WORD_MOVES:
-        links = links_between(a, b)
-        if request.phrase:
-            links = [link for link in links if link.phrase == request.phrase] or links
-        pairs = [(a, links[0].line_a), (b, links[0].line_b)] if links else []
-    elif request.move == "stem_intertwine":
-        windows = intertwine_windows(a, b)
-        if windows is None:
-            return []
-        return [(a.path, *windows[0]), (b.path, *windows[1])]
-    else:
-        return []
-    return [(song.path, *line_window(song, line)[:2]) for song, line in pairs]
-
-
-def _session_for(
-    settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo
-) -> tuple[Path, dict]:
-    """The stems for this pair laid out, shared with the studio so neither splits them twice."""
-    session_request = SeamRequest(
-        a.id, b.id, STUDIO_SESSION, exit_bar=request.exit_bar, entry_bar=request.entry_bar
-    )
-    folder = settings.renders_dir / "seams" / session_request.key
-    try:
-        session = json.loads((folder / "session.json").read_text("utf-8"))
-    except (OSError, ValueError):
-        return folder, _make_session(settings, session_request, a, b)
-    # the cache can clear files at any time, so a layout on its own isn't enough
-    stems = (folder / f"{side}_{lane}.flac" for side in SIDES for lane in LANES)
-    if not all(stem.exists() for stem in stems):
-        return folder, _make_session(settings, session_request, a, b)
-    return folder, session
-
-
-def _arranged(
-    settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo, memory: SeamMemory
-) -> tuple[Rendered, AuditReport, str]:
-    """Listen to both songs' stems, make the best arrangement it can, render it, check it, and go
-    again with a specific fix for anything that didn't pass."""
-    if request.leave_after is not None and request.exit_bar is None:
-        place = find_placement(a, b, leave_after=request.leave_after)
-        if place is None:
-            raise CannotRender("There's nowhere late enough in the song to do this.")
-        request = replace(request, exit_bar=place.exit_cue.bar)
-    folder, session = _session_for(settings, request, a, b)
-    hearing = listen(folder, float(session["seconds"]))
-    try:
-        to_try = arrangements(hearing, taste_from(memory), memory.pair_shapes.get((a.id, b.id)))
-    except WontWork as problem:
-        raise CannotRender(str(problem)) from problem
-    why = f"{a.title} strips down to its melody, then {b.title} lands."
-    best = None
-    tried: list[dict] = []
-    while to_try and len(tried) < TAKES:
-        shape = to_try.pop(0)
-        if shape in tried:
-            continue
-        tried.append(shape)
-        rendered = render_shape(a, b, folder, session, shape, style="stem_arrange")
-        rendered.script.meta["arc"] = [round(float(v), 1) for v in arc_of(as_array(shape), hearing)]
-        report = audit(rendered)
-        if report.passed:
-            return rendered, report, why
-        if best is None or _closer(report, best[1]):
-            best = (rendered, report, why)
-        fix = repair(shape, [check.name for check in report.failures], hearing)
-        if fix is not None:
-            to_try.insert(0, fix)
-    return best
-
-
-def _make_session(settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo) -> dict:
-    """Lay out a pair's stems for the studio, and keep the layout beside them."""
-    folder = settings.renders_dir / "seams" / request.key
-    try:
-        session = prepare_session(settings, a, b, folder, request.exit_bar, request.entry_bar)
-    except (ValueError, OSError, RuntimeError) as problem:
-        raise CannotRender(str(problem)) from problem
-    (folder / "session.json").write_text(json.dumps(session), "utf-8")
-    return session
-
-
-def _stem_render(
-    settings: Settings,
-    aligner: Aligner | None,
-    request: SeamRequest,
-    a: SongInfo,
-    b: SongInfo,
-    cache: SongCache,
-) -> tuple[Rendered, AuditReport, str]:
-    if request.move == "stem_studio":
-        folder, session = _session_for(settings, request, a, b)
-        shape = clean_shape(request.shape)
-        rendered = render_shape(a, b, folder, session, shape)
-        heard = listen(folder, float(session["seconds"]))
-        rendered.script.meta["arc"] = [round(float(v), 1) for v in arc_of(as_array(shape), heard)]
-        return rendered, audit(rendered), "You chose which stems play when."
-    if request.move == "stem_intertwine":
-        try:
-            transition = render_intertwined(settings, a, b)
-        except (ValueError, OSError, RuntimeError) as problem:
-            raise CannotRender(str(problem)) from problem
-        duration = transition.audio.shape[0] / SAMPLE_RATE
-        output_beats = a.beats[
-            a.beat_index_of_bar(transition.exit_cue.bar - 8) : a.beat_index_of_bar(
-                transition.exit_cue.bar - 8
-            )
-            + 16 * a.beats_per_bar
-            + 1
-        ]
-        output = output_beats - transition.a_start
-        script = TransitionScript(
-            style="stem_intertwine",
-            duration=duration,
-            a=Part(
-                a,
-                Warp.identity(0.0, transition.a_start, duration),
-                gain=transition.a_drums,
-            ),
-            b=Part(
-                b,
-                Warp(output, transition.b_points),
-                gain=transition.b_drums,
-            ),
-            overlap=(0.0, duration),
-            expects_beats_aligned=True,
-            meta={
-                "period": a.period,
-                "bars": 16,
-                "vocal_gains": {"a": transition.a_vocal, "b": transition.b_vocal},
-            },
-        )
-        rendered = Rendered(script, transition.audio, transition.a_dry, transition.b_dry)
-        return (
-            rendered,
-            audit(rendered),
-            "Drums and harmonic beds cross; bass swaps once; vocals take turns.",
-        )
-    if request.move == "vocal_ride":
-        lines = ride_lines(a, b, request.leave_after)
-        if lines is None:
-            raise CannotRender("A isn't singing enough near a place it could finish.")
-        edge_a = locate_voice_edge(settings, a, lines[0], at_end=True)
-        edge_b = locate_voice_edge(settings, b, lines[1], at_end=False)
-        script = None
-        for bars in [request.bars] if request.bars else ride_lengths(a, edge_a.words[0].end):
-            script = vocal_ride(
-                a,
-                b,
-                edge_a.words[0],
-                edge_b.words[0],
-                edge_a.voice,
-                edge_a.band,
-                edge_b.band,
-                bars,
-            )
-            if script is not None:
-                break
-        why = f"“{lines[0].text}” rides B's band, then “{lines[1].text}”"
-    else:
-        links = links_between(a, b)
-        if request.phrase:
-            links = [link for link in links if link.phrase == request.phrase] or links
-        if request.leave_after is not None:
-            links = [link for link in links if link.line_a.start >= request.leave_after]
-        if not links:
-            raise CannotRender("These two songs don't share a phrase to hand over on.")
-        link = links[0]
-        phrase_a = locate_phrase(settings, aligner, a, link.line_a, link.phrase, at_end=True)
-        phrase_b = locate_phrase(settings, aligner, b, link.line_b, link.phrase, at_end=False)
-        why = f"“{link.line_a.text}” into “{link.line_b.text}”"
-        if request.move == "phrase_roll":
-            script = phrase_roll(
-                a, b, phrase_a.words, phrase_b.words, phrase_a.voice, phrase_a.band, phrase_b.band
-            )
-        elif request.move == "word_exchange":
-            script = None
-            for bars in [request.bars] if request.bars else ride_lengths(a, phrase_a.words[-1].end):
-                script = word_exchange(
-                    a,
-                    b,
-                    phrase_a.words,
-                    phrase_b.words,
-                    phrase_a.voice,
-                    phrase_a.band,
-                    phrase_b.band,
-                    bars,
-                )
-                if script is not None:
-                    break
-        elif request.move == "word_cut":
-            script = word_cut(a, b, phrase_a.words, phrase_b.words, phrase_b.band)
-        else:
-            script = None
-            for bars in [request.bars] if request.bars else ride_lengths(a, phrase_a.words[-1].end):
-                script = word_blend(
-                    a,
-                    b,
-                    phrase_a.words,
-                    phrase_b.words,
-                    phrase_a.voice,
-                    phrase_a.band,
-                    phrase_b.band,
-                    bars,
-                )
-                if script is not None:
-                    break
-    if script is None:
-        raise CannotRender("The beats and the words don't line up for this move here.")
-    rendered, report = tighten_beats(render(script, cache), cache)
-    return rendered, report, why
-
-
-def _switch_at(rendered: Rendered) -> float:
-    """When the listener's attention moves to B, in seconds into the clip."""
-    return float(rendered.script.overlap[1])
-
-
-def fallback_order(
-    a: int, b: int, can_ride: bool, used: Counter[str], can_strip: bool = False
-) -> list[str]:
-    """What to try when a planned move can't work, with the rest of the mix in mind. Whatever the
-    mix has used least comes first, so a fallback doesn't add to what it already has plenty of.
-    Reverb stays last of the effects, because the listener doesn't care for it."""
-    total = sum(used.values())
-    rides_full = used["vocal_ride"] >= max(1.0, RIDES_BEFORE_OTHERS * total)
-    blends = sorted(("filter_sweep", "bass_swap_blend", "tempo_ramp"), key=lambda move: used[move])
-    effects = sorted(
-        ("delay_throw", "echo_out"),
-        key=lambda move: (used[move], hashlib.sha1(f"{a}{b}{move}".encode()).digest()),
-    )
-    ride = ["vocal_ride"] if can_ride else []
-    strip = ["stem_arrange"] if can_strip else []
-    middle = [*blends, *ride, *strip] if rides_full else [*ride, *strip, *blends]
-    return [*middle, *effects, "reverb_wash"]
-
-
-def good_enough(report: AuditReport) -> bool:
-    """Passed, or only a near miss on checks that have proved stricter than the ear. None of the
-    measurements told good seams from bad on the listening reels, and the beat check misreads
-    syncopated drums, so a near miss is worth far more than falling back to a cut."""
-    for check in report.failures:
-        slack = NEAR_MISS.get(check.name)
-        if slack is None or check.value > check.limit + slack:
-            return False
-    return True
-
-
-def _what_failed(report: AuditReport) -> str:
-    names = ", ".join(check.name for check in report.failures)
-    return f"It didn't pass: {names}"
 
 
 def _swapped_by_old_fallback(state: dict) -> bool:
@@ -1361,27 +848,3 @@ class SeamStore:
         (self.folder(key) / "seam.json").write_text(json.dumps(status, indent=1), "utf-8")
         self._remember(status)
         return status
-
-
-def request_from(a: int, b: int, seam: dict | None) -> SeamRequest:
-    seam = seam or {}
-    return SeamRequest(
-        a=a,
-        b=b,
-        move=seam.get("move") or "auto",
-        bars=seam.get("bars"),
-        exit_bar=seam.get("exit_bar"),
-        entry_bar=seam.get("entry_bar"),
-        phrase=seam.get("phrase"),
-        soft=bool(seam.get("soft", False)),
-        shape=seam.get("shape"),
-        leave_after=seam.get("leave_after"),
-    )
-
-
-def failed_checks(checks: Iterable[Check]) -> list[str]:
-    return [check.name for check in checks if not check.passed]
-
-
-def line_from(data: list) -> Line:
-    return Line(float(data[0]), float(data[1]), str(data[2]))

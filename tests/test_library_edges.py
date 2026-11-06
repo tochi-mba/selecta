@@ -1,4 +1,4 @@
-"""The library at its awkward edges: a very large one, songs with odd names, songs missing things."""
+"""The library at its awkward edges: very large, songs with odd names, songs missing things."""
 
 from __future__ import annotations
 
@@ -94,7 +94,7 @@ def test_songs_with_the_same_name_are_kept_apart(client, conn):
         "Beyoncé — Déjà Vu",
         "🔥 Fire 🔥",
         "<script>alert(1)</script>",
-        "O'Neil \"Live\"",
+        'O\'Neil "Live"',
     ],
 )
 def test_any_name_comes_back_exactly_as_it_is_and_can_be_searched_for(client, conn, title):

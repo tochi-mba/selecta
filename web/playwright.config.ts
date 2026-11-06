@@ -4,6 +4,7 @@ import { defineConfig } from '@playwright/test';
 // tests/e2e_server.py. Edge is already on every Windows machine, so there's nothing big to download.
 // Muted, so running these never plays through anyone's speakers.
 const python = process.env.SELECTA_PYTHON ?? 'uv run python';
+const port = process.env.SELECTA_E2E_PORT ?? '8799';
 
 export default defineConfig({
   testDir: './e2e',
@@ -16,7 +17,7 @@ export default defineConfig({
   reporter: [['list']],
   outputDir: './test-results',
   use: {
-    baseURL: 'http://127.0.0.1:8799',
+    baseURL: `http://127.0.0.1:${port}`,
     channel: 'msedge',
     headless: true,
     launchOptions: { args: ['--mute-audio'] },
@@ -24,8 +25,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: `${python} ../tests/e2e_server.py 8799`,
-    url: 'http://127.0.0.1:8799/api/status',
+    command: `${python} ../tests/e2e_server.py ${port}`,
+    url: `http://127.0.0.1:${port}/api/status`,
     reuseExistingServer: false,
     timeout: 180_000,
     stdout: 'ignore',

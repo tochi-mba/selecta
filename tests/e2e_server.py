@@ -1,11 +1,12 @@
 """A real Selecta with a small made-up library, for the browser tests in web/e2e.
 
 Every song is synthesized here, so no real music is involved. Analysis is written directly from what
-the synthesis used, because the pages don't need the models to be tested. Rendering is the real thing.
+the synthesis used, because the pages don't need the models to be tested. Rendering is real.
 """
 
 from __future__ import annotations
 
+import atexit
 import json
 import os
 import shutil
@@ -26,6 +27,7 @@ from selecta.analysis.features import waveform_peaks  # noqa: E402
 from selecta.analysis.pipeline import features_path  # noqa: E402
 from selecta.api import create_app  # noqa: E402
 from selecta.config import ANALYSIS_VERSION, Settings  # noqa: E402
+from selecta.session import steer  # noqa: E402
 
 LONG_TITLE = (
     "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A "
@@ -163,6 +165,8 @@ def build(home: Path) -> Settings:
         (cursor.lastrowid, ANALYSIS_VERSION, "couldn't read it"),
     )
     db.set_preference(conn, "library_folders", [str(music)])
+    # splitting stems needs the big model, which isn't what these tests are about
+    steer(conn, "stems", "never")
     conn.commit()
     for song_id in (1, 2, 3, 4):
         mix.add_song(conn, song_id)
@@ -173,9 +177,9 @@ def build(home: Path) -> Settings:
 
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8799
-    home = Path(tempfile.gettempdir()) / "selecta-e2e"
-    shutil.rmtree(home, ignore_errors=True)
-    home.mkdir(parents=True)
+    # its own folder every time, so a copy that's still shutting down can't get in the way
+    home = Path(tempfile.mkdtemp(prefix="selecta-e2e-"))
+    atexit.register(shutil.rmtree, home, ignore_errors=True)
     os.environ["SELECTA_HOME"] = str(home)
     settings = build(home)
     app = create_app(settings, ROOT / "web" / "dist", prepare_links=False)

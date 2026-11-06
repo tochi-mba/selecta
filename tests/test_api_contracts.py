@@ -1,4 +1,4 @@
-"""What Selecta 2.0's pages rely on the server for. Everything here sits alongside the older routes."""
+"""What Selecta 2.0's pages rely on the server for, alongside the older routes."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ import httpx
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+from starlette.applications import Starlette
+from starlette.routing import Mount
 
 from selecta import db, mix
 from selecta.analysis.song import _at_corrected_tempo
@@ -18,15 +20,25 @@ from selecta.api import FreshFiles, create_app
 from selecta.config import ANALYSIS_VERSION, Settings
 from selecta.planner import reel
 from selecta.seams import SeamStore
-from starlette.applications import Starlette
-from starlette.routing import Mount
 
 
-def _add(conn, song_id, title=None, artist="Someone", music=1, lyrics="synced", analysed=True, path=None):
+def _add(
+    conn, song_id, title=None, artist="Someone", music=1, lyrics="synced", analysed=True, path=None
+):
     conn.execute(
         "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
         "VALUES(?,?,?,?,?,?,?,?,?)",
-        (song_id, path or _a_real_file(song_id), "f", 1, 1.0, 200.0, artist, title or f"Song {song_id:03d}", music),
+        (
+            song_id,
+            path or _a_real_file(song_id),
+            "f",
+            1,
+            1.0,
+            200.0,
+            artist,
+            title or f"Song {song_id:03d}",
+            music,
+        ),
     )
     if analysed:
         conn.execute(
@@ -70,11 +82,15 @@ def client(settings, conn, tmp_path, monkeypatch):
     conn.commit()
 
     def load_song(_conn, _settings, song_id):
-        return SimpleNamespace(id=song_id, title=f"Song {song_id}", vocals_known=True, bpm=120.0, duration=200.0)
+        return SimpleNamespace(
+            id=song_id, title=f"Song {song_id}", vocals_known=True, bpm=120.0, duration=200.0
+        )
 
     monkeypatch.setattr("selecta.analysis.song.load_song", load_song)
     monkeypatch.setattr("selecta.planner.reel.load_library", lambda _conn, _settings: [])
-    monkeypatch.setattr(SeamStore, "submit", lambda self, request, **_k: {"status": "queued", "key": request.key})
+    monkeypatch.setattr(
+        SeamStore, "submit", lambda self, request, **_k: {"status": "queued", "key": request.key}
+    )
     return TestClient(create_app(settings, tmp_path / "no-web"))
 
 
@@ -111,7 +127,9 @@ def test_a_song_arriving_mid_way_can_not_make_a_page_repeat_or_skip(client, conn
     first = client.get("/api/library", params={"limit": 3, "state": "all"}).json()
     _add(conn, 50, title="Aaa new")
     conn.commit()
-    second = client.get("/api/library", params={"limit": 3, "state": "all", "after": first["next"]}).json()
+    second = client.get(
+        "/api/library", params={"limit": 3, "state": "all", "after": first["next"]}
+    ).json()
     assert _titles(second) == ["Song 004", "Song 005", "Song 006"]
     assert second["total"] == 8
 
@@ -147,7 +165,10 @@ def test_a_page_is_never_enormous(client, conn):
     for song_id in range(100, 400):
         _add(conn, song_id)
     conn.commit()
-    assert len(client.get("/api/library", params={"limit": 100000, "state": "all"}).json()["songs"]) == 200
+    assert (
+        len(client.get("/api/library", params={"limit": 100000, "state": "all"}).json()["songs"])
+        == 200
+    )
 
 
 def test_search_finds_songs_beyond_the_first_page(client, conn):
@@ -155,7 +176,9 @@ def test_search_finds_songs_beyond_the_first_page(client, conn):
         _add(conn, song_id)
     _add(conn, 900, title="Zzz findable")
     conn.commit()
-    assert _titles(client.get("/api/library", params={"q": "findable", "state": "all"}).json()) == ["Zzz findable"]
+    assert _titles(client.get("/api/library", params={"q": "findable", "state": "all"}).json()) == [
+        "Zzz findable"
+    ]
 
 
 def test_ready_means_what_the_planner_means(client, conn):
@@ -172,12 +195,18 @@ def test_ready_means_what_the_planner_means(client, conn):
 def test_needs_attention_finds_what_can_not_be_mixed(client, conn):
     _add(conn, 21, title="Unlyriced", lyrics="missing")
     conn.execute(
-        "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) VALUES(30,?,?,1,1.0,200.0,'A','Broken',1)",
+        "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
+        "VALUES(30,?,?,1,1.0,200.0,'A','Broken',1)",
         (_a_real_file(30), "f"),
     )
-    conn.execute("INSERT INTO analysis(song_id,version,error) VALUES(30,?,'bad file')", (ANALYSIS_VERSION,))
+    conn.execute(
+        "INSERT INTO analysis(song_id,version,error) VALUES(30,?,'bad file')", (ANALYSIS_VERSION,)
+    )
     conn.commit()
-    assert set(_titles(client.get("/api/library", params={"state": "attention"}).json())) == {"Unlyriced", "Broken"}
+    assert set(_titles(client.get("/api/library", params={"state": "attention"}).json())) == {
+        "Unlyriced",
+        "Broken",
+    }
 
 
 @pytest.mark.parametrize(
@@ -239,7 +268,10 @@ def test_one_part_can_be_changed_without_losing_the_other(client):
 def test_analysing_the_song_again_can_not_lose_it(client, conn):
     client.post("/api/songs/1/correct", json={"bpm": 202.0})
     conn.execute("DELETE FROM analysis WHERE song_id=1")
-    conn.execute("INSERT INTO analysis(song_id,version,bpm,camelot) VALUES(1,?,99.0,'1A')", (ANALYSIS_VERSION,))
+    conn.execute(
+        "INSERT INTO analysis(song_id,version,bpm,camelot) VALUES(1,?,99.0,'1A')",
+        (ANALYSIS_VERSION,),
+    )
     conn.commit()
     song = client.get("/api/library", params={"q": "Song 001", "state": "all"}).json()["songs"][0]
     assert song["bpm"] == 202.0
@@ -248,7 +280,14 @@ def test_analysing_the_song_again_can_not_lose_it(client, conn):
 
 @pytest.mark.parametrize(
     "body",
-    [{"bpm": 900}, {"bpm": 5}, {"camelot": "13A"}, {"camelot": "8C"}, {"camelot": "<script>"}, {"clear": ["title"]}],
+    [
+        {"bpm": 900},
+        {"bpm": 5},
+        {"camelot": "13A"},
+        {"camelot": "8C"},
+        {"camelot": "<script>"},
+        {"clear": ["title"]},
+    ],
 )
 def test_nonsense_is_refused_and_nothing_changes(client, body):
     assert client.post("/api/songs/1/correct", json=body).status_code == 400
@@ -275,7 +314,9 @@ def test_only_transitions_with_that_song_are_made_again(client, settings):
     for a, b, key in ((1, 2, "touches"), (3, 4, "doesnt")):
         folder = store.folder(key)
         folder.mkdir(parents=True)
-        (folder / "seam.json").write_text(json.dumps({"status": "ready", "key": key, "request": {"a": a, "b": b}}), "utf-8")
+        (folder / "seam.json").write_text(
+            json.dumps({"status": "ready", "key": key, "request": {"a": a, "b": b}}), "utf-8"
+        )
         (folder / "clip.flac").write_bytes(b"x")
     answer = client.post("/api/songs/1/correct", json={"bpm": 202.0}).json()
     assert answer["redone"] == 1
@@ -287,7 +328,9 @@ def test_correcting_nothing_about_the_sound_makes_nothing_again(client, settings
     store = SeamStore(settings)
     folder = store.folder("touches")
     folder.mkdir(parents=True)
-    (folder / "seam.json").write_text(json.dumps({"status": "ready", "key": "touches", "request": {"a": 1, "b": 2}}), "utf-8")
+    (folder / "seam.json").write_text(
+        json.dumps({"status": "ready", "key": "touches", "request": {"a": 1, "b": 2}}), "utf-8"
+    )
     assert client.post("/api/songs/1/correct", json={"is_music": True}).json()["redone"] == 0
     assert (folder / "seam.json").exists()
 
@@ -324,7 +367,9 @@ def test_half_time_means_half_the_beats_and_every_bar_still_exists():
 
 def test_any_other_correction_only_changes_what_the_tempo_is_called():
     features = _features()
-    changed, sections = _at_corrected_tempo(features, [{"start_bar": 0, "end_bar": 2}], 100.0, 103.0)
+    changed, sections = _at_corrected_tempo(
+        features, [{"start_bar": 0, "end_bar": 2}], 100.0, 103.0
+    )
     assert changed is features
     assert sections == [{"start_bar": 0, "end_bar": 2}]
 
@@ -362,7 +407,9 @@ def _fill(conn, *songs, draft=None):
 
 
 def test_a_pair_goes_in_together_with_the_transition_between_them(client):
-    answer = client.post("/api/mix/pair", json={"a": 4, "b": 5, "move": "echo_out", "phrase": "night"})
+    answer = client.post(
+        "/api/mix/pair", json={"a": 4, "b": 5, "move": "echo_out", "phrase": "night"}
+    )
     assert answer.status_code == 200
     assert _order(client) == [4, 5]
     assert answer.json()["mix"][1]["seam"]["settings"] == {"move": "echo_out", "phrase": "night"}
@@ -458,7 +505,9 @@ def test_sent_twice_at_the_same_moment_it_still_only_happens_once(client):
         transport = httpx.ASGITransport(app=client.app)
         async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1") as browser:
             sends = [
-                browser.post("/api/drafts", json={"name": "Friday"}, headers={"x-operation-id": "one"})
+                browser.post(
+                    "/api/drafts", json={"name": "Friday"}, headers={"x-operation-id": "one"}
+                )
                 for _ in range(2)
             ]
             return await asyncio.gather(*sends)
@@ -469,20 +518,31 @@ def test_sent_twice_at_the_same_moment_it_still_only_happens_once(client):
 
 
 def test_different_operations_each_happen(client):
-    first = client.post("/api/drafts", json={"name": "Friday"}, headers={"x-operation-id": "one"}).json()
-    second = client.post("/api/drafts", json={"name": "Friday"}, headers={"x-operation-id": "two"}).json()
+    first = client.post(
+        "/api/drafts", json={"name": "Friday"}, headers={"x-operation-id": "one"}
+    ).json()
+    second = client.post(
+        "/api/drafts", json={"name": "Friday"}, headers={"x-operation-id": "two"}
+    ).json()
     assert first["id"] != second["id"]
 
 
 def test_without_an_id_nothing_is_remembered(client):
     named = {"name": "Friday"}
-    assert client.post("/api/drafts", json=named).json()["id"] != client.post("/api/drafts", json=named).json()["id"]
+    assert (
+        client.post("/api/drafts", json=named).json()["id"]
+        != client.post("/api/drafts", json=named).json()["id"]
+    )
 
 
 def test_a_refusal_is_remembered_too_rather_than_being_tried_again(client):
     headers = {"x-operation-id": "bad"}
-    assert client.post("/api/songs/1/correct", json={"bpm": 900}, headers=headers).status_code == 400
-    assert client.post("/api/songs/1/correct", json={"bpm": 120}, headers=headers).status_code == 400
+    assert (
+        client.post("/api/songs/1/correct", json={"bpm": 900}, headers=headers).status_code == 400
+    )
+    assert (
+        client.post("/api/songs/1/correct", json={"bpm": 120}, headers=headers).status_code == 400
+    )
 
 
 # ---- what's going on
@@ -499,9 +559,13 @@ def test_jobs_say_what_is_really_there(client, conn):
 
 def test_jobs_name_what_failed_but_not_where_it_lives(client, conn):
     conn.execute(
-        "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) VALUES(30,'C:/secret/file.flac','f',1,1.0,200.0,'A','Broken',1)"
+        "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
+        "VALUES(30,'C:/secret/file.flac','f',1,1.0,200.0,'A','Broken',1)"
     )
-    conn.execute("INSERT INTO analysis(song_id,version,error) VALUES(30,?,'C:/secret/file.flac is bad')", (ANALYSIS_VERSION,))
+    conn.execute(
+        "INSERT INTO analysis(song_id,version,error) VALUES(30,?,'C:/secret/file.flac is bad')",
+        (ANALYSIS_VERSION,),
+    )
     conn.commit()
     text = client.get("/api/jobs").text
     assert "Broken" in text
@@ -510,7 +574,8 @@ def test_jobs_name_what_failed_but_not_where_it_lives(client, conn):
 
 def test_diagnostics_have_no_paths_or_song_names(client, conn, settings):
     conn.execute(
-        "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) VALUES(31,'C:/secret/x.flac','f',1,1.0,200.0,'Private Artist','Private Title',1)"
+        "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
+        "VALUES(31,'C:/secret/x.flac','f',1,1.0,200.0,'Private Artist','Private Title',1)"
     )
     conn.commit()
     text = client.get("/api/diagnostics").text
@@ -528,7 +593,10 @@ def test_status_says_what_this_server_can_do(client):
 def test_folders_say_whether_they_can_be_found(client, conn, tmp_path):
     db.set_preference(conn, "library_folders", [str(tmp_path), "Z:/gone"])
     conn.commit()
-    found = {folder["path"]: folder["available"] for folder in client.get("/api/folders").json()["folders"]}
+    found = {
+        folder["path"]: folder["available"]
+        for folder in client.get("/api/folders").json()["folders"]
+    }
     assert found == {str(tmp_path): True, str(Path("Z:/gone")): False}
 
 
@@ -553,7 +621,17 @@ def site(tmp_path):
 
 @pytest.mark.parametrize(
     "address",
-    ["listen", "mixes", "mixes/mine", "mix/current/edit", "mixes/drafts/7/edit", "library", "discover/harmonic", "workshop/storage", "listening"],
+    [
+        "listen",
+        "mixes",
+        "mixes/mine",
+        "mix/current/edit",
+        "mixes/drafts/7/edit",
+        "library",
+        "discover/harmonic",
+        "workshop/storage",
+        "listening",
+    ],
 )
 def test_reloading_any_page_gets_the_app(site, address):
     answer = site.get(f"/{address}")
@@ -561,7 +639,9 @@ def test_reloading_any_page_gets_the_app(site, address):
     assert answer.text == "the app"
 
 
-@pytest.mark.parametrize("address", ["nope", "api/nope", "listen.js", "assets/app.js", "library/x.y"])
+@pytest.mark.parametrize(
+    "address", ["nope", "api/nope", "listen.js", "assets/app.js", "library/x.y"]
+)
 def test_anything_else_is_really_not_found(site, address):
     assert site.get(f"/{address}").status_code == 404
 
@@ -599,16 +679,23 @@ def test_other_hosts_get_nothing(client, method, address):
     assert answer.status_code == 403
 
 
-@pytest.mark.parametrize("address", ["/api/songs/1/correct", "/api/mix/pair", "/api/folders/stop-watching"])
+@pytest.mark.parametrize(
+    "address", ["/api/songs/1/correct", "/api/mix/pair", "/api/folders/stop-watching"]
+)
 def test_other_sites_can_not_change_anything(client, address):
-    assert client.post(address, headers={"origin": "https://evil.example"}, json={}).status_code == 403
+    assert (
+        client.post(address, headers={"origin": "https://evil.example"}, json={}).status_code == 403
+    )
 
 
 # ---- analysis carries on by itself
 
 
 def test_a_pause_is_remembered_across_a_restart(client, conn, monkeypatch):
-    monkeypatch.setattr("subprocess.Popen", lambda *_a, **_k: SimpleNamespace(poll=lambda: None, terminate=lambda: None))
+    monkeypatch.setattr(
+        "subprocess.Popen",
+        lambda *_a, **_k: SimpleNamespace(poll=lambda: None, terminate=lambda: None),
+    )
     client.post("/api/analysis/stop")
     assert db.preference(conn, "analysis_paused", False) is True
     client.post("/api/analysis/start")

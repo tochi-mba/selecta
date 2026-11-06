@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from test_mix import _two_songs
+from mix_helpers import _two_songs
 
 from selecta import db, mix
 from selecta.config import ANALYSIS_VERSION, Settings

@@ -43,7 +43,7 @@ def _too_long(names: list[str], root: Path = ROOT, limit: int = MOST_LINES) -> d
 
 def test_no_file_is_over_a_thousand_lines():
     found = _too_long(_every_file())
-    assert not found, f"Split these by what they do, so each is {MOST_LINES} lines or fewer: {found}"
+    assert not found, f"Split these by what they do, to {MOST_LINES} lines or fewer: {found}"
 
 
 def test_the_rule_catches_a_long_file(tmp_path):
