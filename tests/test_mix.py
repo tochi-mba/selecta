@@ -162,6 +162,7 @@ def test_a_shared_phrase_opens_up_the_word_moves(tmp_path):
     assert moves["word_cut"]["available"]
     assert moves["phrase_roll"]["available"]
     assert moves["word_blend"]["available"]
+    assert moves["stem_intertwine"]["available"]
 
 
 def _song(tmp_path, name, artist, bpm=120.0, energy=0.5, camelot="8A"):
@@ -465,6 +466,7 @@ def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypa
 
     def plan_set(*_args, **kwargs):
         seen["language"] = kwargs["mix_language"]
+        seen["stems"] = kwargs["stems"]
         return []
 
     def seam_choices(vibe, *_args):
@@ -479,6 +481,10 @@ def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypa
     vibes.build_vibe(vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1, mix_language="punchy")
     assert seen["language"] == "punchy"
     assert seen["seam_language"] == "punchy"
+    vibes.build_vibe(
+        vibes.BY_KEY["peak"], songs, traits, {}, 6, seed=1, stems="never"
+    )
+    assert seen["stems"] == "never"
 
 
 def test_building_a_vibe_ends_on_the_requested_song(tmp_path):
@@ -535,6 +541,80 @@ def test_word_handoffs_stay_rare_unless_the_mix_is_about_them(tmp_path):
     assert positions[1] - positions[0] >= 4
 
 
+def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, monkeypatch):
+    from selecta.planner import vibes
+    from selecta.planner.wordreel import Verdicts
+
+    a = _song(tmp_path, "stem-a", "First")
+    b = _song(tmp_path, "stem-b", "Second")
+    monkeypatch.setattr(vibes, "modes_for", lambda *_: {"word_blend"})
+    monkeypatch.setattr(vibes, "ride_lines", lambda *_: (object(), object()))
+    monkeypatch.setattr(vibes, "enumerate_candidates", lambda *_args, **_kwargs: [object()])
+    monkeypatch.setattr(vibes, "can_intertwine", lambda *_: True)
+    vibe = vibes.BY_KEY["pick"]
+
+    never = vibes._moves_that_fit(vibe, a, b, Verdicts(), "never")
+    sometimes = dict(vibes._moves_that_fit(vibe, a, b, Verdicts(), "sometimes"))
+    often = dict(vibes._moves_that_fit(vibe, a, b, Verdicts(), "often"))
+
+    assert "vocal_ride" not in dict(never)
+    assert often["vocal_ride"] > sometimes["vocal_ride"]
+    assert "stem_intertwine" not in dict(never)
+    assert often["stem_intertwine"] > sometimes["stem_intertwine"]
+    failed = vibes._moves_that_fit(
+        vibe,
+        a,
+        b,
+        Verdicts(failed={(a.id, b.id, "stem_intertwine")}),
+        "often",
+    )
+    assert "stem_intertwine" not in dict(failed)
+
+
+def test_intertwined_stem_request_uses_the_shared_audited_seam_path(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from selecta.render.script import Curve
+
+    a = _song(tmp_path, "intertwine-render-a", "First")
+    b = _song(tmp_path, "intertwine-render-b", "Second")
+    exit_cue, entry_cue = a.exit_cues()[0], b.entry_cues()[0]
+    a_index = a.beat_index_of_bar(exit_cue.bar - 8)
+    b_index = b.beat_index_of_bar(entry_cue.bar)
+    a_points = a.beats[a_index : a_index + 65]
+    b_points = b.beats[b_index : b_index + 65]
+    start = float(a_points[0])
+    duration = float(a_points[-1] - start)
+    empty = np.zeros((int(round(duration * SR)), 2), dtype=np.float32)
+    result = SimpleNamespace(
+        audio=empty,
+        a_start=start,
+        b_end=float(b_points[-1]),
+        exit_cue=exit_cue,
+        entry_cue=entry_cue,
+        a_dry=empty,
+        b_dry=empty,
+        b_points=b_points,
+        a_vocal=Curve.constant(1),
+        b_vocal=Curve.constant(0),
+        a_drums=Curve.constant(1),
+        b_drums=Curve.constant(1),
+    )
+    monkeypatch.setattr("selecta.seams.render_intertwined", lambda *_: result)
+    monkeypatch.setattr("selecta.seams.audit", lambda _rendered: SimpleNamespace(passed=True))
+    store = SeamStore(Settings(tmp_path))
+
+    rendered, _, why = store._chosen_move(
+        SeamRequest(a.id, b.id, "stem_intertwine"), a, b
+    )
+
+    assert rendered.script.style == "stem_intertwine"
+    assert rendered.script.meta["bars"] == 16
+    assert rendered.script.a_source_start == start
+    assert abs(rendered.script.b_source_end - b_points[-1]) < 1e-6
+    assert "vocals take turns" in why
+
+
 def test_building_a_vibe_starts_on_a_song_it_can_leave(tmp_path):
     from selecta.planner.vibes import BY_KEY, build_vibe
 
@@ -561,6 +641,14 @@ def test_destination_steering_persists_and_status_names_the_song(client):
     assert status["steering"]["target_label"] == "Artist 2 — Song 2"
     invalid = client.post("/api/steer", json={"action": "take_me_to", "value": "unknown"})
     assert invalid.status_code == 400
+
+
+def test_stem_frequency_steering_persists_and_validates(client):
+    response = client.post("/api/steer", json={"action": "stems", "value": "never"})
+    assert response.status_code == 200
+    assert response.json()["stems"] == "never"
+    assert client.get("/api/status").json()["steering"]["stems"] == "never"
+    assert client.post("/api/steer", json={"action": "stems", "value": "always"}).status_code == 400
 
 
 def test_the_cache_never_fills_the_drive_or_outgrows_its_limit(tmp_path, monkeypatch):
@@ -1186,6 +1274,58 @@ def test_a_cut_is_the_last_thing_tried(tmp_path, monkeypatch):
     assert {item["move"] for item in tried} == set(asked)
     assert rendered.script.style == "cut_on_one"
     assert fell_back
+
+
+def test_stems_never_also_removes_vocal_rides_from_fallbacks(tmp_path, monkeypatch):
+    store = SeamStore(Settings(tmp_path))
+    track = make_track(bpm=120, bars=64, seed=1)
+    a = song_from_track(tmp_path, "no-stems-a", track)
+    b = song_from_track(tmp_path, "no-stems-b", track)
+    a.id, b.id = 1, 2
+    asked = []
+
+    def nothing_works(request, _a, _b):
+        asked.append(request.move)
+        raise CannotRender("not here")
+
+    monkeypatch.setattr("selecta.seams.ride_lines", lambda *_: (object(), object()))
+    monkeypatch.setattr(store, "_chosen_move", nothing_works)
+    store._best_move(a, b, [], stem_preference="never")
+
+    assert "vocal_ride" not in asked
+
+
+def test_stems_never_skips_old_soft_planned_stem_moves(tmp_path, monkeypatch):
+    from selecta.session import steer
+
+    connection = db.connect(tmp_path / "steering.sqlite")
+    steer(connection, "stems", "never")
+    a = _song(tmp_path, "stale-stem-a", "First")
+    b = _song(tmp_path, "stale-stem-b", "Second")
+    monkeypatch.setattr("selecta.seams.load_song", lambda _c, _s, song: {a.id: a, b.id: b}[song])
+    store = SeamStore(Settings(tmp_path))
+    attempted = []
+    seen = {}
+
+    def chosen(request, *_songs):
+        attempted.append(request.move)
+        raise AssertionError("a stale automatic stem choice should not render")
+
+    def fallback(_a, _b, tried, asked, near, stem_preference):
+        seen["tried"] = tried
+        seen["preference"] = stem_preference
+        return None, None, "fallback", True
+
+    monkeypatch.setattr(store, "_chosen_move", chosen)
+    monkeypatch.setattr(store, "_best_move", fallback)
+    monkeypatch.setattr(store, "_save", lambda _request, *_args: {"status": "ready"})
+
+    store.render_now(connection, SeamRequest(a.id, b.id, "vocal_ride", soft=True))
+
+    assert not attempted
+    assert seen["preference"] == "never"
+    assert seen["tried"][0]["why"] == "Stem-assisted moves are set to Never."
+    connection.close()
 
 
 def test_a_seam_says_what_was_tried_before_what_it_landed_on(tmp_path, monkeypatch):

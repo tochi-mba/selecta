@@ -78,6 +78,18 @@ describe('Pick a feeling', () => {
     expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { value?: string }).value === 'seamless')).toBe(true);
   });
 
+  it('lets the listener set how often new mixes use stem-assisted moves', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /saved': [],
+      'POST /steer': { mix_language: 'balanced', stems: 'often', target: null },
+    });
+    show();
+    fireEvent.change(await screen.findByLabelText('Stem-assisted moves'), { target: { value: 'often' } });
+    expect(await screen.findByLabelText('Stem-assisted moves')).toHaveValue('often');
+    expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { action?: string; value?: string }).action === 'stems' && (call.body as { value?: string }).value === 'often')).toBe(true);
+  });
+
   it('lets the listener set a song as the destination for future mixes', async () => {
     const calls = fakeBackend({
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],

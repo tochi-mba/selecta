@@ -42,12 +42,13 @@ from selecta.planner.wordreel import (
     ride_lines,
 )
 from selecta.render.engine import Rendered, SongCache, in_context, render
-from selecta.render.script import Part, Warp
+from selecta.render.intertwine import can_intertwine, render_intertwined
+from selecta.render.script import Part, TransitionScript, Warp
 from selecta.stems import prune_cache
 from selecta.styles import all_recipes
 from selecta.styles.wordplay import phrase_roll, vocal_ride, word_blend, word_cut, word_exchange
 
-RENDER_VERSION = 1
+RENDER_VERSION = 2
 PREVIEW_SECONDS = 12.0
 IDLE_CHECK_SECONDS = 3.0
 RIDES_BEFORE_OTHERS = 0.35
@@ -65,6 +66,10 @@ MOVES: dict[str, tuple[str, str]] = {
     "auto": ("Let Selecta pick", "The best move for these two songs that passes its checks."),
     "bass_swap_blend": ("Blend", "Both songs play in time, and they trade the bass halfway."),
     "vocal_ride": ("Vocal ride", "B's band comes in under A's voice, before B starts singing."),
+    "stem_intertwine": (
+        "Intertwined stems",
+        "Trade drums, bass and harmonic layers over sixteen bars, with vocals taking turns.",
+    ),
     "filter_sweep": ("Filter sweep", "A filters away upward as B opens up."),
     "tempo_ramp": ("Tempo ramp", "Both songs drift to a shared speed for a short overlap."),
     "word_blend": ("Word blend", "A vocal ride that hands over on a phrase both songs share."),
@@ -80,7 +85,7 @@ MOVES: dict[str, tuple[str, str]] = {
     "reverb_wash": ("Reverb wash", "A dissolves into a room as B arrives."),
 }
 WORD_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
-STEM_MOVES = WORD_MOVES | {"vocal_ride"}
+STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine"}
 
 
 @dataclass(frozen=True)
@@ -139,6 +144,10 @@ def _why_unavailable(move: str, a: SongInfo, b: SongInfo, has_link: bool) -> str
         if ride_lines(a, b) is None:
             return "A isn't singing enough near a place it could finish."
         return None
+    if move == "stem_intertwine":
+        return None if can_intertwine(a, b) else (
+            "This needs a close tempo and key, reliable beat grids, and sixteen bars of room."
+        )
     if move in WORD_MOVES or move == "auto":
         return None
     if not enumerate_candidates(a, b, move):
@@ -305,12 +314,50 @@ def _bar_cue_render(
 
 def _stem_render(
     settings: Settings,
-    aligner: Aligner,
+    aligner: Aligner | None,
     request: SeamRequest,
     a: SongInfo,
     b: SongInfo,
     cache: SongCache,
 ) -> tuple[Rendered, AuditReport, str]:
+    if request.move == "stem_intertwine":
+        try:
+            transition = render_intertwined(settings, a, b)
+        except (ValueError, OSError, RuntimeError) as problem:
+            raise CannotRender(str(problem)) from problem
+        duration = transition.audio.shape[0] / SAMPLE_RATE
+        output_beats = a.beats[
+            a.beat_index_of_bar(transition.exit_cue.bar - 8) :
+            a.beat_index_of_bar(transition.exit_cue.bar - 8) + 16 * a.beats_per_bar + 1
+        ]
+        output = output_beats - transition.a_start
+        script = TransitionScript(
+            style="stem_intertwine",
+            duration=duration,
+            a=Part(
+                a,
+                Warp.identity(0.0, transition.a_start, duration),
+                gain=transition.a_drums,
+            ),
+            b=Part(
+                b,
+                Warp(output, transition.b_points),
+                gain=transition.b_drums,
+            ),
+            overlap=(0.0, duration),
+            expects_beats_aligned=True,
+            meta={
+                "period": a.period,
+                "bars": 16,
+                "vocal_gains": {"a": transition.a_vocal, "b": transition.b_vocal},
+            },
+        )
+        rendered = Rendered(script, transition.audio, transition.a_dry, transition.b_dry)
+        return (
+            rendered,
+            audit(rendered),
+            "Drums and harmonic beds cross; bass swaps once; vocals take turns.",
+        )
     if request.move == "vocal_ride":
         lines = ride_lines(a, b)
         if lines is None:
@@ -696,7 +743,14 @@ class SeamStore:
         tried: list[dict] = []
         rendered: Rendered | None = None
         near: tuple | None = None
-        if request.move != "auto":
+        preference = db.preference(conn, "steering", {}) if conn is not None else {}
+        stem_preference = preference.get("stems", "sometimes")
+        disabled_planned_stem = (
+            request.soft and stem_preference == "never" and request.move in STEM_MOVES
+        )
+        if disabled_planned_stem:
+            tried.append({"move": request.move, "why": "Stem-assisted moves are set to Never."})
+        elif request.move != "auto":
             try:
                 rendered, report, why = self._chosen_move(request, a, b)
             except CannotTrust as problem:
@@ -714,11 +768,20 @@ class SeamStore:
                     tried.append({"move": request.move, "why": _what_failed(report)})
                 rendered = None
         if rendered is None:
-            rendered, report, why, fell_back = self._best_move(a, b, tried, request.move, near)
+            rendered, report, why, fell_back = self._best_move(
+                a,
+                b,
+                tried,
+                request.move,
+                near,
+                stem_preference=stem_preference,
+            )
         return self._save(request, rendered, report, why, fell_back, tried)
 
     def _chosen_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
         if request.move in STEM_MOVES:
+            if request.move == "stem_intertwine":
+                return _stem_render(self.settings, None, request, a, b, self._cache)
             if self._aligner is None:
                 self._aligner = Aligner(str(self.settings.models_dir))
             return _stem_render(self.settings, self._aligner, request, a, b, self._cache)
@@ -743,6 +806,7 @@ class SeamStore:
         tried: list[dict],
         asked: str = "auto",
         near: tuple | None = None,
+        stem_preference: str = "sometimes",
     ):
         """The move that best suits these two and the rest of the mix. A clean take of a ride or
         blend comes first, then one of those with a near miss, then an effect. A cut only if
@@ -750,6 +814,8 @@ class SeamStore:
         near miss that's already in hand."""
         can_ride = "word_blend" in modes_for(a, b) and ride_lines(a, b) is not None
         moves = fallback_order(a.id, b.id, can_ride, self.mix_moves())
+        if stem_preference == "never":
+            moves = [move for move in moves if move not in STEM_MOVES]
         held = near
         for group in (
             [move for move in moves if move in SMOOTH_MOVES],

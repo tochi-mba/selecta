@@ -68,12 +68,17 @@ Vocal rides now find where a voice stops and starts from the separated vocal its
 
 The planned shares above are what's asked for. What it sounds like, and how often a planned move survives rendering, needs more listening and more real renders.
 
+### Local export batch — 5 November 2026
+
+- Ten four-song MP3s were exported to `Music/Selecta Mixes Refresh 2026-11-05`, with 40 distinct library IDs across the batch. Each also has a tracklist and per-seam audit results.
+- All 30 rendered seams passed the current automated checks. The renderer chose 27 clean cuts and 3 bass-swap blends. This is a cut-heavy result, not evidence of the smoother blended sound requested; the exports still need a person's listening review.
+
 ## Partly works
 
 | What | Works | Doesn't |
 |---|---|---|
 | Planner | 8 songs in 5 s, artists kept 10 apart, locks kept, feel honoured by each seam | The arc follows energy numbers that barely vary (0.32 to 0.55) until they're rescaled |
-| Steering | Bigger, calmer, something else, feel, length, start song, lock; saved transition feel is sent from the Mixes UI and overrides a mix's default style in planner tests. “Take me to” searches mix-ready songs and constrains a new plan to end on the chosen destination, with a clear error if no route exists | Destination steering is an endpoint constraint in the beam planner, not yet a shortest-path search through the seam graph. The intertwined stem move isn't in the mix planner |
+| Steering | Bigger, calmer, something else, feel, length, start song, lock; saved transition feel is sent from the Mixes UI and overrides a mix's default style in planner tests. “Take me to” searches mix-ready songs and constrains a new plan to end on the chosen destination. Stem-assisted moves have persistent Never / Sometimes / Often steering. The planner can select a gated 16-bar intertwined-stem move, and that choice reaches the same seam renderer, audio preview, and audit path as other moves | Destination steering is an endpoint constraint in the beam planner, not yet a shortest-path search through the seam graph. The intertwined render has automated beat, phrase, vocal-overlap, low-end, and peak checks, but no reliable stem-artifact detector; listening still decides whether exposed stems sound clean |
 | Stem cache | Whole windows across stems and rendered seams are budgeted together; priority-song stem windows are protected by source metadata | Existing windows created before metadata cannot be mapped to priority songs and remain ordinary eviction candidates |
 | Audit | Fails broken renders and sagging seams, in plain words | Beat check misreads syncopated drums, so rides allow up to 40 ms. Thresholds are starting values |
 
@@ -83,7 +88,7 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 - The blind listening test. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
 - The drawn Arc and the typographic word moment. Fullscreen lyrics work, without the word moment.
 - Loop rolls on A's band, half and double time, drop swaps and brakes. The placeholders that faked these are gone.
-- The intertwined transition: no beat alignment, and the planner can't reach it.
+- No blind paired listening study yet to measure whether the intertwined transition improves the mix versus a conventional blend on the same pair.
 
 ## Still needs a person
 

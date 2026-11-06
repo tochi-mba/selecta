@@ -521,6 +521,7 @@ def create_app(
         steering = get_steering(conn)
         selected_language = steering.mix_language
         destination = steering.target
+        stem_preference = steering.stems
         try:
             end_id = int(destination) if destination else None
         except ValueError as problem:
@@ -542,6 +543,7 @@ def create_app(
                 verdicts=store.verdicts(),
                 mix_language=selected_language if selected_language != "balanced" else None,
                 end_id=end_id,
+                stems=stem_preference,
             )
         except ValueError as problem:
             raise HTTPException(400, str(problem)) from problem
