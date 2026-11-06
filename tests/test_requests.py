@@ -145,3 +145,25 @@ def test_evicted_request_audio_can_be_prepared_again_without_erasing_failures(tm
     (folder / "seam.json").write_text(json.dumps({**state, "status": "failed"}))
     assert not store.forget_missing_audio(request.key)
     assert store.status(request.key)["status"] == "failed"
+
+
+def test_bridge_approval_survives_restart_but_cannot_transfer_to_a_changed_route(tmp_path):
+    from selecta.requests import approve_bridge, bridge_approved
+
+    path = tmp_path / "approval.sqlite"
+    conn = db.connect(path)
+    conn.execute(
+        "INSERT INTO songs(id,path,folder,size,mtime,duration) VALUES(1,?, ?,1,0,100)",
+        ("track.wav", ""),
+    )
+    conn.commit()
+    request = add_request(conn, 1)
+    assert approve_bridge(conn, request, "exact-route-and-mix-snapshot")
+    conn.close()
+    conn = db.connect(path)
+    assert bridge_approved(conn, request, "exact-route-and-mix-snapshot")
+    assert not bridge_approved(conn, request, "different-route-or-mix")
+    cancel_request(conn, request)
+    assert not bridge_approved(conn, request, "exact-route-and-mix-snapshot")
+    assert not approve_bridge(conn, request, "exact-route-and-mix-snapshot")
+    conn.close()

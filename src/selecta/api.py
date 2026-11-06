@@ -1134,7 +1134,6 @@ def create_app(
             return mix_payload(conn)
 
     request_offers: dict[str, dict] = {}
-    request_approvals: set[str] = set()
     request_guard = threading.Lock()
 
     def request_audio_ready(request: SeamRequest) -> bool:
@@ -1171,7 +1170,6 @@ def create_app(
             for key in list(request_offers):
                 if request_offers[key]["expires"] < now_time:
                     del request_offers[key]
-            request_approvals.intersection_update(request_offers)
             for row in found:
                 plan = row.get("plan")
                 if plan is None:
@@ -1179,7 +1177,9 @@ def create_app(
                 signature = hashlib.sha256(
                     json.dumps([items, row["id"], plan], sort_keys=True).encode()
                 ).hexdigest()
-                approved = not plan["bridges"] or signature in request_approvals
+                approved = not plan["bridges"] or song_requests.bridge_approved(
+                    conn, row["id"], signature
+                )
                 chain = [
                     items[plan["position"] - 1][0],
                     *plan["songs"],
@@ -1231,7 +1231,8 @@ def create_app(
                 or offer["plan"]["position"] <= protected
             ):
                 raise HTTPException(409, "This route changed. Choose a fresh proposal.")
-            request_approvals.add(body.offer)
+            if not song_requests.approve_bridge(conn, offer["request_id"], body.offer):
+                raise HTTPException(409, "This request was cancelled or already added.")
             return {"approved": True}
 
     @app.post("/api/requests/insert")
@@ -1242,7 +1243,9 @@ def create_app(
             if offer is None or offer["expires"] < time.time() or offer["items"] != items:
                 raise HTTPException(409, "The prepared placement changed. Finding another.")
             plan = offer["plan"]
-            if plan["bridges"] and body.offer not in request_approvals:
+            if plan["bridges"] and not song_requests.bridge_approved(
+                conn, offer["request_id"], body.offer
+            ):
                 raise HTTPException(409, "Approve the bridge route first.")
             if not all(request_audio_ready(request) for request in offer["seams"]):
                 raise HTTPException(409, "Both handovers must finish and pass their checks first.")

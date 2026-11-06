@@ -30,6 +30,36 @@ def initialise(conn: sqlite3.Connection) -> None:
     )""")
     conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS one_waiting_request_per_song
         ON song_requests(song_id) WHERE status='waiting' """)
+    conn.execute("""CREATE TABLE IF NOT EXISTS request_bridge_approvals (
+        request_id INTEGER PRIMARY KEY, signature TEXT NOT NULL
+    )""")
+
+
+def approve_bridge(conn: sqlite3.Connection, request_id: int, signature: str) -> bool:
+    initialise(conn)
+    with conn:
+        waiting = conn.execute(
+            "SELECT 1 FROM song_requests WHERE id=? AND status='waiting'", (request_id,)
+        ).fetchone()
+        if waiting is None:
+            return False
+        conn.execute(
+            "INSERT OR REPLACE INTO request_bridge_approvals VALUES(?,?)",
+            (request_id, signature),
+        )
+    return True
+
+
+def bridge_approved(conn: sqlite3.Connection, request_id: int, signature: str) -> bool:
+    initialise(conn)
+    return (
+        conn.execute(
+            "SELECT 1 FROM request_bridge_approvals a JOIN song_requests r ON r.id=a.request_id "
+            "WHERE a.request_id=? AND a.signature=? AND r.status='waiting'",
+            (request_id, signature),
+        ).fetchone()
+        is not None
+    )
 
 
 def add_request(conn: sqlite3.Connection, song_id: int) -> int:
