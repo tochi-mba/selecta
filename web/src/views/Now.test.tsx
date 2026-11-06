@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, status } from '../test/backend';
-import { Now } from './Now';
+import { Now, transitionCount } from './Now';
 
 const mix: MixItem[] = [
   {
@@ -89,6 +89,13 @@ describe('word focus on the Now and Stage screens', () => {
 });
 
 describe('beat-grid transition countdown', () => {
+  it('follows changing bar lengths instead of extrapolating the average BPM', () => {
+    const varying = { ...detail, bar_times: [0, 8, 15, 21], beat_times: [0, 2, 4, 6, 8, 9.75, 11.5, 13.25, 15, 16.5, 18, 19.5, 21] };
+    expect(transitionCount(varying, 11.6, 21)).toMatchObject({ aligned: true, bars: 2, barNumber: 2, beatInBar: 3 });
+    expect(transitionCount(varying, 15.1, 21)).toMatchObject({ bars: 1, barNumber: 3, beatInBar: 1 });
+    expect(transitionCount(varying, 15.1, 19.5)).toMatchObject({ aligned: false, beats: 3 });
+    expect(transitionCount({ ...detail, beat_times: [] }, 3, 16)).toBeNull();
+  });
   it('shows bars and the current beat against the analyzed grid', async () => {
     const set = [
       mix[0],

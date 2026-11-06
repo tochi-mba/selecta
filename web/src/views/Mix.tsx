@@ -258,6 +258,7 @@ function SeamRow(props: {
   const { item, previous, refreshMix, open, onToggle, names, notify } = props;
   const seam = item.seam!;
   const state = seam.state;
+  const plannedBars = state.bars ?? seam.settings.bars;
   const chosen = seam.settings.move ?? 'auto';
   const [hearing, setHearing] = useState(false);
   const busy = state.status === 'queued' || state.status === 'rendering';
@@ -299,10 +300,10 @@ function SeamRow(props: {
           <button onClick={onToggle}>{open ? 'Close' : 'Change'}</button>
         </div>
       </div>
-      <div className={`seam-visual ${state.status}`} role="img" aria-label={`${state.status === 'ready' ? 'Ready' : 'Planned'} ${state.bars ?? seam.settings.bars ?? 4}-bar transition from ${previous.title} into ${item.title}`}>
-        <span className="seam-visual-label">{state.status === 'ready' ? 'Transition' : 'Transition plan'} · {state.bars ?? seam.settings.bars ?? 4} bars</span>
+      <div className={`seam-visual ${state.status}`} role="img" aria-label={`${state.status === 'ready' ? 'Ready' : 'Planned'} transition${plannedBars ? ` over ${plannedBars} bars` : '; length not yet determined'} from ${previous.title} into ${item.title}`}>
+        <span className="seam-visual-label">{state.status === 'ready' ? 'Transition' : 'Transition plan'} · {plannedBars ? `${plannedBars} bars` : 'Length pending'}</span>
         <div className="seam-visual-bars" aria-hidden="true">
-          {Array.from({ length: Math.min(Math.max(state.bars ?? seam.settings.bars ?? 4, 2), 8) }, (_, index) => (
+          {Array.from({ length: plannedBars ? Math.min(Math.max(plannedBars, 1), 8) : 1 }, (_, index) => (
             <i key={index} />
           ))}
         </div>
