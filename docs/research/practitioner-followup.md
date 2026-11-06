@@ -189,6 +189,12 @@ upvotes and individual examples do not establish universal parameters.
   call-and-response endings also scale their echo to the remaining vocal gap. The blend/roll moves
   also use phrase timing, stems, local energy or bass information as relevant. Tests check this parameter
   behavior, while actual sound quality remains a listening question.
+- Serato's official [Stems overview](https://support.serato.com/hc/en-us/articles/5700968326927-Stems-Overview)
+  describes independently controlling vocal, bass, melody, and drum parts; its [Stems guide](https://support.serato.com/hc/en-us/articles/18086920234511-Using-Stems)
+  also documents stem-specific echo and break effects. This supports applying a tail to the isolated
+  vocal or instrument layer that needs it instead of washing the entire mix. Selecta's ride/roll
+  renders already route these echoes on isolated vocal hits; blend moves keep effect-free stems
+  separate. The guide documents product capabilities, not whether any given stem sounds clean.
 - In a [Beatmatch echo/reverb thread](https://www.reddit.com/r/Beatmatch/comments/11t0c8d/help_with_echo_and_reverb/),
   one practitioner describes a one-beat echo at a low-to-mid depth after lowering the low EQ, while
   other commenters recommend changing or skipping FX so blends do not all sound alike. Another
