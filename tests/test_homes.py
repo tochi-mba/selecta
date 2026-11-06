@@ -21,7 +21,8 @@ def _home(path: Path, analysed: list[int], songs: int = 4) -> Path:
         )
     for song in analysed:
         conn.execute(
-            "INSERT INTO analysis(song_id,version,bpm,camelot,grid_confidence) VALUES(?,3,120,'8A',0.9)",
+            "INSERT INTO analysis(song_id,version,bpm,camelot,grid_confidence) "
+            "VALUES(?,3,120,'8A',0.9)",
             (song,),
         )
     conn.commit()
@@ -134,7 +135,10 @@ def test_a_failed_analysis_gives_way_to_one_that_worked(tmp_path):
 def test_saved_mixes_from_every_folder_are_kept(tmp_path):
     first = _home(tmp_path / "first", [1])
     second = _home(tmp_path / "second", [1])
-    for home, mixes in ((first, {"Friday": [1]}), (second, {"Sunday": [2]})):
+    shared = {"name": "Both", "songs": [1]}
+    friday = {"name": "Friday", "songs": [1]}
+    sunday = {"name": "Sunday", "songs": [2]}
+    for home, mixes in ((first, [friday, shared]), (second, [sunday, shared])):
         conn = db.connect(home / "selecta.sqlite")
         db.set_preference(conn, "saved_mixes", mixes)
         conn.commit()
@@ -142,7 +146,8 @@ def test_saved_mixes_from_every_folder_are_kept(tmp_path):
     target = tmp_path / "target"
     gather(target, [first, second])
     conn = db.connect(target / "selecta.sqlite")
-    assert set(db.preference(conn, "saved_mixes")) == {"Friday", "Sunday"}
+    names = [item["name"] for item in db.preference(conn, "saved_mixes")]
+    assert sorted(names) == ["Both", "Friday", "Sunday"], "each kept once"
     conn.close()
 
 

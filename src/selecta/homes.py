@@ -112,9 +112,10 @@ def _merge_saved_mixes(conn: sqlite3.Connection) -> None:
     row = conn.execute("SELECT value FROM old.preferences WHERE key='saved_mixes'").fetchone()
     if row is None:
         return
-    theirs = json.loads(row["value"])
     mine = conn.execute("SELECT value FROM main.preferences WHERE key='saved_mixes'").fetchone()
-    merged = {**theirs, **(json.loads(mine["value"]) if mine else {})}
+    kept = json.loads(mine["value"]) if mine else []
+    names = {item["name"] for item in kept}
+    merged = [*kept, *(item for item in json.loads(row["value"]) if item["name"] not in names)]
     conn.execute(
         "INSERT INTO main.preferences(key,value) VALUES('saved_mixes',?) "
         "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
