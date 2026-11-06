@@ -7,14 +7,17 @@ When the app stops, the input closes and this stops too, so nothing is left runn
 
 from __future__ import annotations
 
+import json
+import os
 import sys
 import threading
 import time
 from collections import Counter
+from typing import TextIO
 
 from selecta import db, mix
 from selecta.config import load_settings
-from selecta.jobs import set_render_priority, take_app_input
+from selecta.jobs import kill_tree_of_children, set_render_priority, take_app_input
 from selecta.seams import SeamRequest, SeamStore, request_from
 from selecta.stems import cache_bytes, largest_cache_bytes
 
