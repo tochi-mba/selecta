@@ -6,7 +6,7 @@ import { NowState, SetPlayer } from './player';
 import { navigate, Route, useRoute } from './router';
 import { PageLink, Shell } from './shell/Shell';
 import { sayThisTabIsPlaying, whenAnotherTabPlays } from './state/tabs';
-import { Action, Dialog, Drawer, Section, Skeleton } from './ui/controls';
+import { Action, announce, Dialog, Drawer, Section, Skeleton } from './ui/controls';
 import { showProblem, showToast } from './ui/toasts';
 import { Library } from './views/Library';
 import { Links } from './views/Links';
@@ -67,13 +67,19 @@ export function App() {
   const mixRef = useRef<MixItem[]>([]);
   mixRef.current = mix;
 
+  // an edit's answer is newer than a check that was already on its way, so that check is ignored
+  const mixChanges = useRef(0);
   const setMixData = useCallback((next: MixData) => {
+    mixChanges.current += 1;
     mixRef.current = next.mix;
     setData(next);
   }, []);
   const refreshMix = useCallback(() => {
+    const seen = mixChanges.current;
     get<MixData>('/mix')
-      .then(setMixData)
+      .then((next) => {
+        if (seen === mixChanges.current) setMixData(next);
+      })
       .catch((error: Error) => {
         // a stopped server is shown once, across the top, not as a stream of messages
         if (problemKind(error) !== 'offline') showProblem(`Couldn’t read your mix: ${error.message}`);
@@ -176,8 +182,24 @@ export function App() {
     notify(`Found ${what} in your folder. Adding to your library and analysing.`);
   }, [status?.new_songs, notify]);
   const [now, setNow] = useState<NowState>(player.state);
+  // the music ticks 20 times a second. Listen wants that fairly often, for the lyrics, and every other
+  // page only needs to know when something other than the time has changed, or a second has gone by
+  const shownNow = useRef(player.state);
+  const shownAt = useRef(0);
   useEffect(() => {
-    player.onChange = setNow;
+    player.onChange = (next) => {
+      const before = shownNow.current;
+      const { songTime: _time, ...rest } = next;
+      const { songTime: _was, ...restBefore } = before;
+      const sameOtherwise = JSON.stringify(rest) === JSON.stringify(restBefore);
+      const moment = performance.now();
+      const listening = routeRef.current.page === 'listen';
+      const due = listening ? moment - shownAt.current >= 80 : Math.floor(next.songTime) !== Math.floor(before.songTime);
+      if (sameOtherwise && !due) return;
+      shownNow.current = next;
+      shownAt.current = moment;
+      setNow(next);
+    };
   }, [player]);
 
   // Only one tab plays at a time. The one that starts playing takes the sound.
@@ -241,6 +263,11 @@ export function App() {
 
   const playing = mix[now.position];
   const active = now.phase !== 'idle';
+
+  // said once for each song, so a screen reader isn't talking over the music all the time
+  useEffect(() => {
+    if (active && playing?.title) announce(`Now playing ${playing.title} by ${playing.artist}`);
+  }, [active, playing?.title, playing?.artist]);
 
   useEffect(() => {
     document.title = active && playing ? `${playing.title} · Selecta` : `${TITLES[route.page]} · Selecta`;

@@ -663,11 +663,25 @@ def create_app(
     def check_library_now() -> dict:
         return {"new": check_for_new_songs()}
 
+    def carry_on_analysing() -> None:
+        """Songs left to analyse get analysed, at low priority, whether they arrived a moment ago or
+        were left over from last time, unless someone has paused it. A pause lasts until they
+        press start, even across a restart."""
+        with connect() as conn:
+            background.paused = bool(db.preference(conn, "analysis_paused", False))
+            counts = _counts(conn)
+        if background.paused or counts["music"] <= counts["analysed"]:
+            return
+        with background.lock:
+            if background.analysis is None or background.analysis.poll() is not None:
+                background.analysis = background.analyse()
+
     def watch_for_new_songs() -> None:
         time.sleep(FIRST_LOOK_SECONDS)
         while True:
             try:
                 check_for_new_songs()
+                carry_on_analysing()
             except (OSError, sqlite3.Error, ValueError, RuntimeError):
                 pass  # a folder that's busy or unplugged just gets looked at again later
             time.sleep(WATCH_EVERY_SECONDS)
@@ -678,6 +692,8 @@ def create_app(
     @app.post("/api/analysis/start")
     def start_analysis() -> dict:
         background.paused = False
+        with connect() as conn:
+            db.set_preference(conn, "analysis_paused", False)
         with background.lock:
             if background.analysis is None or background.analysis.poll() is not None:
                 background.analysis = background.analyse()
@@ -687,6 +703,8 @@ def create_app(
     def stop_analysis() -> dict:
         """Safe at any moment: finished songs are saved, and it picks up where it left off."""
         background.paused = True
+        with connect() as conn:
+            db.set_preference(conn, "analysis_paused", True)
         with background.lock:
             if background.analysis is not None and background.analysis.poll() is None:
                 background.analysis.terminate()

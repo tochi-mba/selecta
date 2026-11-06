@@ -146,8 +146,8 @@ def add_pair(
     conn: sqlite3.Connection, a: int, b: int, seam: dict, draft: int | None = None
 ) -> tuple[int, int]:
     """Two songs and the transition between them, all at once or not at all. Each song goes in
-    only if it isn't already there, and they end up next to each other, so a failure part way can't leave
-    half of a pair behind. Says where each one is."""
+    only if it isn't already there, and they end up next to each other, so a failure part way can't
+    leave half of a pair behind. Says where each one is."""
     items = list(_items(conn, draft))
     order = [item[0] for item in items]
     if a == b:

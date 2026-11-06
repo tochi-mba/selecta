@@ -292,9 +292,9 @@ def refine_sections(sections: list[dict], lines: list[Line], bar_times: np.ndarr
 
 def _at_corrected_tempo(features: dict, sections: list[dict], found: float, right: float):
     """When analysis heard a song at half or double its real speed, the beats and bars have to
-    change with it, or it would be mixed as if it were still at the wrong speed. A correction that isn't
-    half or double only changes what the tempo is called, since there's no way to know where those
-    beats would fall."""
+    change with it, or it would be mixed as if it were still at the wrong speed. A correction that
+    isn't half or double only changes what the tempo is called, since there's no way to know where
+    those beats would fall."""
     ratio = right / found if found else 1.0
     beats = features["beats"]
     bar_arrays = ("energy_bars", "low_share_bars", "chroma_bars", "rms_db_bars", "mfcc_bars")

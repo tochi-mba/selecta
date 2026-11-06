@@ -3,7 +3,7 @@ import { Folders, get, Jobs, post, Storage } from '../api';
 import { analysisWords, estimateWords, etaRangeWords, gb, storageWords } from '../lib';
 import type { WorkshopTab } from '../router';
 import { PageLink } from '../shell/Shell';
-import { Action, Problem, Skeleton, Status } from '../ui/controls';
+import { Action, Problem, Skeleton, Status, StatusKind } from '../ui/controls';
 import { ViewProps } from './shared';
 import { Listening } from './Listening';
 
@@ -298,6 +298,29 @@ function Diagnostics() {
   );
 }
 
+/** Every state a control can be in, in whichever theme this is, for checking the look in one place. */
+function ControlStates() {
+  const kinds: StatusKind[] = ['planned', 'queued', 'working', 'ready', 'warning', 'failed', 'needs-action', 'unavailable'];
+  return (
+    <details className="panel">
+      <summary>Control states, for checking how things look</summary>
+      <div className="row wrap gallery">
+        <button>Default</button>
+        <button className="primary">Primary</button>
+        <button disabled>Disabled</button>
+        <button aria-pressed="true">Pressed</button>
+        <button data-working aria-busy="true">Working</button>
+        <PageLink to="/workshop/diagnostics" className="button">Link as a button</PageLink>
+      </div>
+      <div className="row wrap gallery">
+        {kinds.map((kind) => <Status key={kind} kind={kind} />)}
+      </div>
+      <Skeleton lines={2} label="Example of loading" />
+      <Problem retry={() => {}}>An example of something that couldn’t be loaded.</Problem>
+    </details>
+  );
+}
+
 const SECTIONS: { tab: WorkshopTab; label: string; path: string }[] = [
   { tab: 'overview', label: 'Overview', path: '/workshop' },
   { tab: 'analysis', label: 'Analysis', path: '/workshop/analysis' },
@@ -376,6 +399,7 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
         </>
       )}
       {tab === 'diagnostics' && <Diagnostics />}
+      {tab === 'diagnostics' && <ControlStates />}
     </main>
   );
 }

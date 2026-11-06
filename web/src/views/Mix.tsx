@@ -79,9 +79,9 @@ export function Adder(props: {
               <small>{song.reason}</small>
             </button>
             {!song.analysed && (
-              <button disabled={line.includes(song.song_id)} onClick={() => void analyse(song)}>
+              <Action disabled={line.includes(song.song_id)} run={() => analyse(song)}>
                 {analysingWords(line, song.song_id)}
-              </button>
+              </Action>
             )}
           </li>
         ))}
@@ -171,15 +171,15 @@ function SeamEditor(props: {
         <legend>How should this land?</legend>
         <div className="chips moves">
           {options.moves.map((option) => (
-            <button
+            <Action
               key={option.name}
               aria-pressed={chosen === option.name}
               disabled={!option.available}
               title={option.reason ?? option.description}
-              onClick={() => void change({ move: option.name, bars: undefined, phrase: undefined, exit_bar: undefined, entry_bar: undefined })}
+              run={() => change({ move: option.name, bars: undefined, phrase: undefined, exit_bar: undefined, entry_bar: undefined })}
             >
               {option.label}
-            </button>
+            </Action>
           ))}
         </div>
         <p className="hint">{move?.description}</p>
@@ -206,9 +206,9 @@ function SeamEditor(props: {
               Pick for me
             </button>
             {(blends ? [4, 8, 16] : [4, 8, 12, 16]).map((bars) => (
-              <button key={bars} aria-pressed={settings.bars === bars} onClick={() => void change({ bars })}>
+              <Action key={bars} aria-pressed={settings.bars === bars} run={() => change({ bars })}>
                 {bars} bars
-              </button>
+              </Action>
             ))}
           </div>
         </fieldset>
@@ -819,18 +819,18 @@ export function Mix(props: ViewProps) {
         <div className="row wrap">
           {inDraft ? (
             <>
-              <button className="primary" onClick={() => void playDraft?.(draftId)}>Play this mix</button>
+              <Action className="primary" working="Starting…" run={() => playDraft?.(draftId)}>Play this mix</Action>
               {draftPlace ? (
-                <button onClick={() => void prioritize(false)}>Take out of line</button>
+                <Action run={() => prioritize(false)}>Take out of line</Action>
               ) : (
                 waiting > 0 && (
-                  <button title="Renders in the background, right after your current mix" onClick={() => void prioritize(true)}>
+                  <Action title="Renders in the background, right after your current mix" run={() => prioritize(true)}>
                     Prioritize
-                  </button>
+                  </Action>
                 )
               )}
               <button onClick={() => setRenaming(true)}>Rename</button>
-              <button onClick={() => void copyDraft()}>Copy</button>
+              <Action working="Copying…" run={copyDraft}>Copy</Action>
             </>
           ) : (
             <>
@@ -849,20 +849,20 @@ export function Mix(props: ViewProps) {
             </>
           )}
           {!inDraft && ready < seams.length && (
-            <button onClick={() => void renderAll()} disabled={!waiting}>
+            <Action run={renderAll} disabled={!waiting}>
               {waiting ? 'Render every seam' : rendering ? `Rendering ${ready} of ${seams.length}…` : 'Change failed transitions to continue'}
-            </button>
+            </Action>
           )}
           {mix.length > 1 && <button onClick={() => setExporting(true)}>Download audio</button>}
           {inDraft ? (
             <>
-              <button onClick={() => void deleteDraft()}>Delete</button>
+              <Action working="Deleting…" run={deleteDraft}>Delete</Action>
               <button onClick={backToCurrent}>Back to current mix</button>
             </>
           ) : (
             <>
               <button onClick={() => setView('Mixes')}>New mix</button>
-              <button onClick={() => void clear()}>Clear</button>
+              <Action working="Clearing…" run={clear}>Clear</Action>
             </>
           )}
         </div>
