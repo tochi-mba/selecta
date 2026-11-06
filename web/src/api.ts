@@ -87,7 +87,7 @@ export type SongDetail = {
   key: string;
   peaks: number[];
   sections: { label: string; start: number; end: number }[];
-  lines: { start: number; end: number; text: string }[];
+  lines: { start: number; end: number; text: string; words?: { start: number; end: number }[] }[];
 };
 
 export type Link = {

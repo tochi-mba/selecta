@@ -9,8 +9,8 @@ This ledger combines measured acceptance runs with the latest live-library snaps
 | Library scan and filter | 1,389 files in 5 s: 707 songs, 614 set aside, 68 duplicates | An override can only be set in the database |
 | Fast analysis, resumable | 187 of 707 songs done. Tempos match known values. Start and pause from the Workshop | The other 520 take about 3.5 hours at about 25 s each. Key accuracy is unchecked by ear |
 | Lyric lookup | 583 of 707 songs have line-synced lyrics | English gets word timing. Other languages rarely pass the check |
-| Web app | Build a mix, reorder, lock, swap, edit any seam, hear it, rate it, export it. All views fit a 375 px phone with no sideways scroll. The Mixes view now has a five-stop energy curve that can be drawn or adjusted with sliders, saved, and reset to each mix's own shape | Stage view is still missing. Folder entry is typed, not picked |
-| Playing a set | Gapless Web Audio from finished audio. A real seam played through in the browser, with lyrics and the song strip following | Not yet run for a full set, and only checked by its on-screen state, not by ear. No lyric word highlighting |
+| Web app | Build a mix, reorder, lock, swap, edit any seam, hear it, rate it, export it. All views fit a 375 px phone with no sideways scroll. The Mixes view has a five-stop energy curve that can be drawn or adjusted with sliders, saved, and reset to each mix's own shape. Fullscreen Stage mode is already available | Folder entry is typed, not picked |
+| Playing a set | Gapless Web Audio from finished audio. A real seam played through in the browser, with lyrics, the song strip, and current-word focus following playback. Word focus uses a line-level timing estimate intended only for display | Not yet run for a full set or evaluated against sung-word ground truth. Stem artifacts and mix quality still need listening |
 | Set export | A 3.6-minute mix saved in 5 s and downloaded | Every seam must be rendered first |
 | Word links | All 583 songs searched in 3.3 s: 12,878 pairs. 896 fit musically across the 172 songs with timing | Machine-found links can still be corny. Only a listener can judge |
 | Word timing | Starts within about 80 ms of what the model hears unguided, on four sung lines read by hand. On speech with known times, a steady 66 to 70 ms offset, unchanged over music, which settling onto the voice removes | No ground truth on singing. Many lines are refused, including *Layla* |
@@ -86,7 +86,7 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 
 - Melody, sample, rhythm and shortest-path discovery. The old same-melody search matched everything, and still runs under `selecta discover`, but the app no longer shows it.
 - The blind listening test. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
-- The typographic word moment. Fullscreen lyrics work, without the word moment.
+- The typographic word-to-word match cut. Fullscreen Stage mode and approximate current-word focus work, but the lyric highlight has not been validated against sung-word ground truth.
 - Loop rolls on A's band, half and double time, drop swaps and brakes. The placeholders that faked these are gone.
 - No blind paired listening study yet to measure whether the intertwined transition improves the mix versus a conventional blend on the same pair.
 

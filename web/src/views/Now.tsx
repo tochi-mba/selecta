@@ -12,6 +12,21 @@ const SECTION_WORDS: Record<string, string> = {
   outro: 'Outro',
   instrumental: 'Band',
 };
+const LYRIC_WORD = /^[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?$/u;
+
+function highlightedLine(text: string, activeWord: number) {
+  let word = 0;
+  return text.split(/([\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?)/gu).map((part, index) => {
+    if (!LYRIC_WORD.test(part)) return part;
+    const current = word === activeWord;
+    word += 1;
+    return (
+      <span key={index} className={current ? 'current-word' : undefined}>
+        {part}
+      </span>
+    );
+  });
+}
 
 /** Sections as a person would name them: neighbours with the same name are one section. */
 function mergedSections(detail: SongDetail) {
@@ -80,10 +95,14 @@ function Lyrics({ detail, time }: { detail: SongDetail; time: number }) {
   }, [lines, time]);
   if (!lines.length) return <div className="lyrics quiet" />;
   const singing = index >= 0 && time < lines[index].end + 1.5;
+  const current = index >= 0 ? lines[index] : null;
+  const wordIndex = current?.words?.findIndex((word) => word.start <= time && time < word.end) ?? -1;
   return (
     <div className="lyrics" aria-live="off">
       <p className="dim">{index > 0 ? lines[index - 1].text : ' '}</p>
-      <p className={singing ? 'sung' : 'dim'}>{index >= 0 ? lines[index].text : ' '}</p>
+      <p className={singing ? 'sung' : 'dim'}>
+        {current ? highlightedLine(current.text, singing ? wordIndex : -1) : ' '}
+      </p>
       <p className="dim">{lines[index + 1]?.text ?? ' '}</p>
     </div>
   );
