@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import numpy as np
+
 from selecta.analysis.song import Cue, SongInfo
 from selecta.render.script import Curve, Part, TransitionScript, fade_in, fade_out, sweep
 from selecta.styles.timing import BlendTiming, blend_timing, tempo_gap
@@ -9,6 +11,25 @@ from selecta.styles.timing import BlendTiming, blend_timing, tempo_gap
 _FADE_SHARE = 0.65
 RAMP_MIN_GAP = 0.05
 RAMP_LONG_BEATS = 32
+
+
+def _nearby_mean(song: SongInfo, values: np.ndarray, bar: int) -> float:
+    """Read a small local arrangement window instead of steering a move from track averages."""
+    if values.size == 0:
+        return 0.0
+    index = int(np.clip(bar, 0, values.size - 1))
+    return float(np.mean(values[max(0, index - 2) : min(values.size, index + 2)]))
+
+
+def _swap_position(a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int) -> float:
+    """Keep A's bass a little longer when B lands in a denser, bass-heavy section."""
+    low_delta = _nearby_mean(b, b.low_share_bars, entry_bar) - _nearby_mean(
+        a, a.low_share_bars, exit_bar
+    )
+    energy_delta = _nearby_mean(b, b.energy_bars, entry_bar) - _nearby_mean(
+        a, a.energy_bars, exit_bar
+    )
+    return float(np.clip(0.5 + 0.12 * low_delta + 0.06 * energy_delta, 0.38, 0.62))
 
 
 def _swap_time(timing: BlendTiming, bars: int, beats_per_bar: int, swap_at: float) -> float:
@@ -30,7 +51,7 @@ def bass_swap_blend(
     exit_cue: Cue,
     entry_cue: Cue,
     bars: int = 16,
-    swap_at: float = 0.5,
+    swap_at: float | None = None,
     **options,
 ) -> TransitionScript | None:
     timing = blend_timing(a, b, exit_cue.bar, entry_cue.bar, bars)
@@ -38,6 +59,7 @@ def bass_swap_blend(
         return None
     start, end = timing.overlap_start, timing.overlap_end
     span = (end - start) * _FADE_SHARE
+    swap_at = _swap_position(a, b, exit_cue.bar, entry_cue.bar) if swap_at is None else swap_at
     swap = _swap_time(timing, bars, a.beats_per_bar, swap_at)
     a_low, b_low = _low_curves(swap, timing.master_period)
     return TransitionScript(
@@ -47,7 +69,7 @@ def bass_swap_blend(
         b=Part(song=b, warp=timing.b_warp, gain=fade_in(start, start + span), low=b_low),
         overlap=(start, end),
         expects_beats_aligned=True,
-        meta={"bars": bars, "swap": swap, "period": timing.master_period},
+        meta={"bars": bars, "swap": swap, "swap_at": swap_at, "period": timing.master_period},
     )
 
 
@@ -57,7 +79,7 @@ def tempo_ramp(
     exit_cue: Cue,
     entry_cue: Cue,
     bars: int = 4,
-    swap_at: float = 0.5,
+    swap_at: float | None = None,
     **options,
 ) -> TransitionScript | None:
     """Carry a wider tempo gap the way a DJ rides the pitch fader. A drifts over eight bars to a
@@ -70,6 +92,7 @@ def tempo_ramp(
         return None
     start, end = timing.overlap_start, timing.overlap_end
     span = (end - start) * _FADE_SHARE
+    swap_at = _swap_position(a, b, exit_cue.bar, entry_cue.bar) if swap_at is None else swap_at
     swap = _swap_time(timing, bars, a.beats_per_bar, swap_at)
     a_low, b_low = _low_curves(swap, timing.master_period)
     return TransitionScript(
@@ -79,7 +102,7 @@ def tempo_ramp(
         b=Part(song=b, warp=timing.b_warp, gain=fade_in(start, start + span), low=b_low),
         overlap=(start, end),
         expects_beats_aligned=True,
-        meta={"bars": bars, "swap": swap, "period": timing.master_period},
+        meta={"bars": bars, "swap": swap, "swap_at": swap_at, "period": timing.master_period},
     )
 
 
@@ -89,13 +112,14 @@ def filter_sweep(
     exit_cue: Cue,
     entry_cue: Cue,
     bars: int = 8,
-    swap_at: float = 0.5,
+    swap_at: float | None = None,
     **options,
 ) -> TransitionScript | None:
     timing = blend_timing(a, b, exit_cue.bar, entry_cue.bar, bars)
     if timing is None:
         return None
     start, end = timing.overlap_start, timing.overlap_end
+    swap_at = _swap_position(a, b, exit_cue.bar, entry_cue.bar) if swap_at is None else swap_at
     swap = _swap_time(timing, bars, a.beats_per_bar, swap_at)
     a_low, b_low = _low_curves(swap, timing.master_period)
     fade = (end - start) * 0.35
@@ -118,5 +142,5 @@ def filter_sweep(
         ),
         overlap=(start, end),
         expects_beats_aligned=True,
-        meta={"bars": bars, "swap": swap, "period": timing.master_period},
+        meta={"bars": bars, "swap": swap, "swap_at": swap_at, "period": timing.master_period},
     )

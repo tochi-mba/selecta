@@ -50,6 +50,14 @@ beat grid is available before its word. Synthetic tests cover a sparse source in
 and a crowded source into a bass-heavy section. These checks show pair-dependent behavior, not that
 the effect sounds right; real-song listening is still needed.
 
+The 6 November 2026 Preview snapshot had 23 ratings: phrase roll 7 Good / 9 Bad; word blend 2 Good;
+vocal ride, echo out, and word cut 1 Good each; delay throw and bass swap blend 1 Bad each; other
+styles unrated. Bad ratings now remove only their exact ordered song-pair/style from automatic
+planning. They do not blacklist a style from other pairs. The sample is too small to infer global
+style quality. Vocal ride, echo out, delay throw, and reverb-wash amounts now respond to how soon B's
+next known lyric arrives. Tests verify the parameter mapping; listening still needs to establish
+whether the stems and tails sound natural on these songs.
+
 ## Rendering
 
 | What | Measured |

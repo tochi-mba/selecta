@@ -605,7 +605,12 @@ class SeamStore:
                     found.untimed[state["untimed_song"]] += 1
             elif state.get("status") == "ready":
                 style = state.get("style")
-                found.worked.add((*pair, style))
+                if state.get("rating") == "bad":
+                    # A human rejection overrides a technically clean audit. Keep it scoped to
+                    # this ordered pair and move so other songs can still use the same recipe.
+                    found.failed.add((*pair, style))
+                else:
+                    found.worked.add((*pair, style))
                 if not state.get("passed"):
                     found.warned.add((*pair, style))
                     found.warned_songs.update(pair)

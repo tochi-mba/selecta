@@ -249,6 +249,10 @@ def _ride(
         return None
 
     beat = timing.master_period
+    echo_room_beats = max((handoff - voice_end) / beat, 0.0)
+    echo_room = float(np.clip(echo_room_beats / 2.0, 0.0, 1.0))
+    echo_feedback = 0.15 + 0.25 * echo_room
+    echo_wet = 0.1 + 0.18 * echo_room
     swap = start + max(round(bars * _BAND_LEAVES), 1) * bar * beat
     a_low, b_low = _low_curves(swap, beat)
     rise = fade_in(start, band_gone)
@@ -271,8 +275,8 @@ def _ride(
         ),
         echo=Echo(
             delay_seconds=beat,
-            feedback=0.4,
-            wet=0.28,
+            feedback=echo_feedback,
+            wet=echo_wet,
             return_highpass_hz=220.0,
             damp_lowpass_hz=6500.0,
         ),
@@ -337,6 +341,9 @@ def _ride(
             "handoff": handoff,
             "voice_end": voice_end,
             "beat_limit_ms": _RIDE_BEAT_LIMIT_MS,
+            "echo_room_beats": echo_room_beats,
+            "echo_feedback": echo_feedback,
+            "echo_wet": echo_wet,
         },
     )
 

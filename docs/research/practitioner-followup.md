@@ -174,3 +174,31 @@ upvotes and individual examples do not establish universal parameters.
   stronger section can build a longer/faster roll; bass-heavy incoming sections hold the low end
   back later. Synthetic tests cover contrasting sparse/lift and crowded/heavy pairs, but listening
   still has to establish whether those adaptations sound musical on real songs.
+- Current practitioner notes on [vocal transitions](https://www.reddit.com/r/Beatmatch/comments/1u03p4g/tips_for_transitions_with_songs_with_vocals/)
+  recommend creating instrumental room or alternating short vocal lines, and describe stem cuts or
+  echo/reverb as options when they solve a specific clash. A separate [effects discussion](https://www.reddit.com/r/Beatmatch/comments/1wtdr7e/how_do_you_use_effects_to_transition/)
+  warns against making effect use habitual; some contributors prefer a short, timed echo or no effect
+  at all. A [filter discussion](https://www.reddit.com/r/Beatmatch/comments/1rgix4w/transition_filtersfx/)
+  describes choosing high-pass or low-pass direction based on which part needs to leave or arrive.
+  These are practitioner anecdotes, not controlled comparisons.
+- The [Pioneer DJM-S11 manual](https://www.pioneer-dj.de/wp-content/uploads/2024/02/Pioneer-DJm-S11-User-Manual.pdf)
+  documents echo as repeated, attenuating delay and its depth control as a balance of dry/effected
+  sound and feedback. This supports treating repeat amount as a meaningful audible control; it does
+  not imply one best value for every transition. Selecta now scales vocal-ride, echo-out, delay-throw
+  and reverb-wash tails against the incoming song's measured lyric runway. The blend/roll moves also
+  use phrase timing, stems, local energy or bass information as relevant. Tests check this parameter
+  behavior, while actual sound quality remains a listening question.
+- In a [Beatmatch echo/reverb thread](https://www.reddit.com/r/Beatmatch/comments/11t0c8d/help_with_echo_and_reverb/),
+  one practitioner describes a one-beat echo at a low-to-mid depth after lowering the low EQ, while
+  other commenters recommend changing or skipping FX so blends do not all sound alike. Another
+  [effects thread](https://www.reddit.com/r/Beatmatch/comments/199snbt/use_fx/) warns that FX on bass or
+  the whole frequency range can become muddy, while describing reverb as useful for a deliberate
+  buildup. These comments reinforce Selecta's filtered, brief sends and cue-dependent effect amount;
+  they are not universal settings. The low swap in the beatmatched blend also now shifts modestly
+  toward the incoming section when its local energy and bass share call for a later hand-off.
+- A read-only snapshot of the Selecta Preview seam metadata on 6 November 2026 found 23 rated seams:
+  phrase roll 7 Good / 9 Bad; word blend 2 Good; vocal ride 1 Good; echo out 1 Good; word cut 1 Good;
+  delay throw 1 Bad; bass swap blend 1 Bad. All other styles had no rating in this snapshot. The
+  sample is sparse and the labels are subjective. A Bad now excludes only that ordered song pair and
+  rendered style from automatic planning; a Good remains a preference for that exact pair. One Bad
+  rating is not evidence to ban a style library-wide.

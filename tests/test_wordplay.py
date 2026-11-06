@@ -347,8 +347,14 @@ def test_phrase_roll_changes_its_contour_for_a_sparse_lift_vs_a_crowded_drop(tmp
 
     assert open_roll != restrained_roll
     assert open_roll.phrase_loops > restrained_roll.phrase_loops
+    assert open_roll.word_hits == 3
+    assert open_roll.fast_hits == 6
+    assert restrained_roll.word_hits == 2
+    assert restrained_roll.fast_hits == 2
     assert open_roll.acceleration < restrained_roll.acceleration
     assert open_roll.bass_mid_level > restrained_roll.bass_mid_level
+    capped = roll_shape(sparse, lift, phrase, available_fast_hits=3)
+    assert capped.fast_hits == 2, "the stutter must fit the incoming track's actual runway"
 
 
 def test_a_roll_brings_the_bass_in_steps_not_all_at_once(word_pair):
@@ -611,6 +617,24 @@ def test_a_vocal_ride_keeps_as_voice_going_over_bs_band_until_bs_voice_starts(wo
     assert script.meta["voice_end"] > a_gone, "and A's voice carries on without it"
     assert handoff - a_gone > script.meta["period"], "for a real stretch of B's band"
     assert np.isfinite(render(script).audio).all()
+
+
+def test_a_vocal_ride_reduces_its_echo_when_b_s_voice_arrives_sooner(word_pair):
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    close = vocal_ride(a, b, phrase_a[-1], phrase_b[0], voice, band_a, band_b, bars=4)
+    later_word = Word(
+        phrase_b[0].text,
+        phrase_b[0].start + 4.0,
+        phrase_b[0].end + 4.0,
+        phrase_b[0].confidence,
+    )
+    roomy = vocal_ride(a, b, phrase_a[-1], later_word, voice, band_a, band_b, bars=4)
+
+    assert close is not None and roomy is not None
+    for script in (close, roomy):
+        room = min(script.meta["echo_room_beats"] / 2.0, 1.0)
+        assert script.meta["echo_wet"] == pytest.approx(0.1 + 0.18 * room)
+        assert script.meta["echo_feedback"] == pytest.approx(0.15 + 0.25 * room)
 
 
 def test_ride_lines_need_a_as_voice_singing_and_prefer_a_chorus_in_b(tmp_path):

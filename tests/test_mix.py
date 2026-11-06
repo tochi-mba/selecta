@@ -1403,6 +1403,38 @@ def test_a_seam_says_what_was_tried_before_what_it_landed_on(tmp_path, monkeypat
     assert (1, 2, state["style"]) in verdicts.worked
 
 
+def test_a_bad_human_rating_overrides_a_passed_audit_for_that_pair(tmp_path):
+    from selecta.lyrics.lrclib import Line
+    from selecta.planner.vibes import _word_move
+
+    store = SeamStore(Settings(tmp_path))
+    folder = store.folder("rated-bad")
+    folder.mkdir(parents=True)
+    (folder / "seam.json").write_text(
+        json.dumps(
+            {
+                "status": "ready",
+                "passed": True,
+                "style": "phrase_roll",
+                "rating": "bad",
+                "request": {"a": 1, "b": 2, "move": "phrase_roll"},
+            }
+        ),
+        "utf-8",
+    )
+
+    verdicts = store.verdicts()
+
+    assert (1, 2, "phrase_roll") in verdicts.failed
+    assert (1, 2, "phrase_roll") not in verdicts.worked
+
+    a, b = _two_songs(tmp_path)
+    a.bpm, b.bpm = 120.0, 145.0
+    a.lines = [Line(20.0, 22.0, "good morning world")]
+    b.lines = [Line(20.0, 22.0, "good morning world")]
+    assert _word_move(a, b, verdicts) is None, "the rated-bad phrase roll must not be planned again"
+
+
 def test_seams_an_old_fallback_swapped_get_another_chance(tmp_path):
     store = SeamStore(Settings(tmp_path))
     folder = store.folder("old")
