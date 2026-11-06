@@ -40,7 +40,7 @@ describe('words on screen', () => {
     });
     expect(words.summary).toBe('Selecta is using 4.20 GB. Your drive has 13 GB free.');
     expect(words.detail).toContain('1.00 GB of that is separated vocals');
-    expect(words.detail).toContain('3.20 GB is song analysis and models');
+    expect(words.detail).toContain('3.20 GB is saved data and models');
   });
 
   it('uses enough precision for the displayed storage parts to add up to the total', () => {

@@ -299,7 +299,13 @@ def create_app(
     @app.get("/api/storage")
     def storage() -> dict:
         usage = shutil.disk_usage(settings.home)
-        used = sum(path.stat().st_size for path in settings.home.rglob("*") if path.is_file())
+        used = 0
+        for path in settings.home.rglob("*"):
+            try:
+                if path.is_file():
+                    used += path.stat().st_size
+            except FileNotFoundError:
+                continue  # cache pruning may remove a file during this snapshot
         cache = cache_bytes(settings)
         largest = largest_cache_bytes(settings)
         return {

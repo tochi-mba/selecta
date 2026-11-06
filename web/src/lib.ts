@@ -52,7 +52,7 @@ export function storageWords(storage: Storage): { summary: string; detail: strin
     summary: `Selecta is using ${preciseGb(used)}. Your drive has ${gb(storage.free_bytes)} free.`,
     detail:
       `${preciseGb(cache)} of that is separated vocals and finished seams, which Selecta can make again. ` +
-      `The other ${preciseGb(kept)} is song analysis and models, which it keeps.`,
+      `The other ${preciseGb(kept)} is saved data and models, including analysis, transition history, backups and listening studies.`,
   };
 }
 
