@@ -9,7 +9,7 @@ const ARC_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'];
 const DEFAULT_ARC = [62, 72, 100, 85, 68];
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshStatus, openDraft, playDraft }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshStatus, openDraft, playDraft, tab = "browse" }: ViewProps & { tab?: "browse" | "mine" }) {
   const [cards, setCards] = useState<VibeCard[] | null>(null);
   const [songs, setSongs] = useState(12);
   const [building, setBuilding] = useState('');

@@ -136,6 +136,7 @@ export type SongDetail = {
   beats_per_bar?: number;
   sections: { label: string; start: number; end: number }[];
   lines: { start: number; end: number; text: string; words?: { start: number; end: number }[] }[];
+  lyric_status?: string | null;
 };
 
 export type Link = {
@@ -193,55 +194,54 @@ export type Storage = {
   total_bytes: number;
 };
 
-/** The button just pressed, so whatever it sets off can show on it, on every button there is. */
-let pressed: { button: Element; at: number } | null = null;
-const PRESS_WINDOW_MS = 150;
-if (typeof document !== 'undefined') {
-  document.addEventListener('click', (event) => {
-    const button = event.target instanceof Element ? event.target.closest('button') : null;
-    if (button) pressed = { button, at: performance.now() };
-  }, true);
+/** What went wrong, so a page can tell a missing thing from a conflict from a stopped server. */
+export class ApiError extends Error {
+  status: number;
+  code: string;
+
+  constructor(message: string, status: number, code = '') {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
 }
 
-function showBusy<T>(work: Promise<T>): Promise<T> {
-  const button = pressed && performance.now() - pressed.at < PRESS_WINDOW_MS ? pressed.button : null;
-  if (!button) return work;
-  const change = (by: number) => {
-    const count = Number(button.getAttribute('data-working') ?? 0) + by;
-    if (count > 0) {
-      button.setAttribute('data-working', String(count));
-      button.setAttribute('aria-busy', 'true');
-    } else {
-      button.removeAttribute('data-working');
-      button.removeAttribute('aria-busy');
-    }
-  };
-  change(1);
-  work.then(() => change(-1), () => change(-1));
-  return work;
+export type ProblemKind = 'offline' | 'missing' | 'conflict' | 'invalid' | 'storage' | 'server';
+
+export function problemKind(error: unknown): ProblemKind {
+  if (!(error instanceof ApiError)) return 'offline';
+  if (error.code === 'storage_full') return 'storage';
+  if (error.status === 404) return 'missing';
+  if (error.status === 409) return 'conflict';
+  if (error.status >= 400 && error.status < 500) return 'invalid';
+  return 'server';
 }
 
 async function send<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, init);
   if (!response.ok) {
     let detail = response.statusText;
+    let code = '';
     try {
-      detail = (await response.json()).detail ?? detail;
+      const body = await response.json();
+      detail = typeof body.detail === 'string' ? body.detail : detail;
+      code = body.code ?? '';
     } catch {
       /* the status text will do */
     }
-    throw new Error(detail);
+    throw new ApiError(detail, response.status, code);
   }
   return response.json();
 }
 
 export const get = <T,>(path: string) => send<T>(path);
 
-export const post = <T,>(path: string, body?: unknown) =>
-  showBusy(send<T>(path, {
+export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) =>
+  send<T>(path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(body ?? {}),
-  }));
+  });
 
-export const del = <T,>(path: string) => showBusy(send<T>(path, { method: 'DELETE' }));
+export const del = <T,>(path: string, headers?: Record<string, string>) => send<T>(path, { method: 'DELETE', headers });

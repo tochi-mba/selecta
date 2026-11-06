@@ -11,6 +11,7 @@ import io
 import json
 import math
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -84,12 +85,22 @@ VIBE_KEYS = {
 }
 
 
+PAGE_ADDRESSES = re.compile(r"^(listen|mixes|mix|library|discover|workshop|listening)(/[\w/-]*)?$")
+
+
 class FreshFiles(StaticFiles):
     """Always ask before reusing a saved copy. Without this, a browser went on showing the last
-    reel's page after a new reel was served at the same address."""
+    reel's page after a new reel was served at the same address. An address that belongs to a page
+    gets the app, so reloading works anywhere. Only those: a missing file or a bad API route still
+    gets a real 404, not a page pretending everything's fine."""
 
     async def get_response(self, path, scope):
-        response = await super().get_response(path, scope)
+        try:
+            response = await super().get_response(path, scope)
+        except HTTPException as problem:
+            if problem.status_code != 404 or not PAGE_ADDRESSES.match(path):
+                raise
+            response = await super().get_response("index.html", scope)
         response.headers["Cache-Control"] = "no-cache"
         return response
 
@@ -656,10 +667,12 @@ def create_app(
 
         with connect() as conn:
             song = analysed_or_404(conn, song_id)
+            lyric = conn.execute("SELECT status FROM lyrics WHERE song_id=?", (song_id,)).fetchone()
         peaks = load_features(settings, song_id)["peaks"].astype(float)
         bars = song.bar_times
         return {
             "id": song.id,
+            "lyric_status": lyric[0] if lyric else None,
             "artist": song.artist,
             "title": song.title,
             "duration": song.duration,

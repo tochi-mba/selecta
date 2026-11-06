@@ -215,11 +215,11 @@ function LinkCard({ link, onAdd, names, onRated }: { link: Link; onAdd: (link: L
   return (
     <article className={`link-card ${state.status}`}>
       <h2 className="phrase">“{link.phrase}”</h2>
-      <p className="handoff">
+      <p className="link-handoff">
         <b>{link.title_a}</b> <span>{link.artist_a}</span>
         <q>{link.line_a}</q>
       </p>
-      <p className="handoff">
+      <p className="link-handoff">
         <b>{link.title_b}</b> <span>{link.artist_b}</span>
         <q>{link.line_b}</q>
       </p>
@@ -263,7 +263,7 @@ function LinkCard({ link, onAdd, names, onRated }: { link: Link; onAdd: (link: L
   );
 }
 
-export function Links({ mix, setMixData, setView, notify, status, now, player }: ViewProps) {
+export function Links({ mix, setMixData, setView, notify, status, now, player, tab = "words" }: ViewProps & { tab?: "words" | "harmonic" }) {
   const [query, setQuery] = useState('');
   const [data, setData] = useState<LinkList | null>(null);
 

@@ -1,3 +1,4 @@
+import type { WorkshopTab } from "../router";
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { get, post, Storage } from '../api';
 import { analysisWords, estimateWords, etaRangeWords, gb, storageWords } from '../lib';
@@ -92,7 +93,7 @@ function StoragePanel() {
   );
 }
 
-export function Workshop({ status, refreshStatus, notify }: ViewProps) {
+export function Workshop({ status, refreshStatus, notify, tab = "overview" }: ViewProps & { tab?: WorkshopTab }) {
   const { counts } = status;
   const [folder, setFolder] = useState('');
   const [problem, setProblem] = useState('');

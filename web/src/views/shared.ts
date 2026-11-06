@@ -26,4 +26,5 @@ export type ViewProps = {
   notify: (message: string, undo?: Undo) => void;
   stage: boolean;
   toggleStage: () => void;
+  openRequests?: () => void;
 };

@@ -1,8 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, MouseEvent, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { get, MixData, post, SongDetail } from '../api';
-import { etaWords, clock } from '../lib';
-import { RequestTag } from './Requests';
+import { clock } from '../lib';
+import { VolumeControl } from '../shell/Shell';
+import { Action, Skeleton, Status } from '../ui/controls';
+import { seamFacts } from '../ui/seam';
+import { RequestsContext, RequestTag } from './Requests';
 import { ViewProps } from './shared';
+
+const VIEW_KEY = 'selecta.listen';
+
+type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean };
+
+function savedView(): ListenView {
+  try {
+    return { lyrics: false, spectrum: true, timing: true, ...JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') };
+  } catch {
+    return { lyrics: false, spectrum: true, timing: true };
+  }
+}
 
 const SECTION_WORDS: Record<string, string> = {
   intro: 'Intro',
@@ -41,7 +56,7 @@ function mergedSections(detail: SongDetail) {
 }
 
 /** The whole song as one strip, with its sections named. Where the seam falls is marked. */
-function Strip({ detail, time, seamAt }: { detail: SongDetail; time: number; seamAt: number | null }) {
+function Strip({ detail, time, seamAt, onSeek }: { detail: SongDetail; time: number; seamAt: number | null; onSeek?: (seconds: number) => void }) {
   const percent = (seconds: number) => (100 * seconds) / detail.duration;
   const shape = useMemo(() => {
     const step = 100 / Math.max(detail.peaks.length, 1);
@@ -55,8 +70,32 @@ function Strip({ detail, time, seamAt }: { detail: SongDetail; time: number; sea
   const sections = useMemo(() => mergedSections(detail), [detail]);
   const barTimes = detail.bar_times ?? [];
   const clip = `played-${detail.id}`;
+  const pointAt = (event: MouseEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    if (box.width) onSeek?.(detail.duration * Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1));
+  };
+  const keys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const moves: Record<string, number> = { ArrowLeft: time - 5, ArrowDown: time - 5, ArrowRight: time + 5, ArrowUp: time + 5, Home: 0, End: detail.duration - 1, PageDown: time - 30, PageUp: time + 30 };
+    if (moves[event.key] === undefined) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onSeek?.(moves[event.key]);
+  };
+  const place = onSeek
+    ? {
+        role: 'slider',
+        tabIndex: 0,
+        'aria-label': 'Where in the song',
+        'aria-valuemin': 0,
+        'aria-valuemax': Math.round(detail.duration),
+        'aria-valuenow': Math.round(time),
+        'aria-valuetext': `${clock(time)} of ${clock(detail.duration)}`,
+        onClick: pointAt,
+        onKeyDown: keys,
+      }
+    : { role: 'img', 'aria-label': `${clock(time)} of ${clock(detail.duration)}` };
   return (
-    <div className="strip" role="img" aria-label={`${clock(time)} of ${clock(detail.duration)}`}>
+    <div className={`strip ${onSeek ? 'can-seek' : ''}`} {...place}>
       <svg className="peaks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <clipPath id={clip}>
@@ -270,7 +309,7 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label="Live music frequency visualizer" />;
 }
 
-function Lyrics({ detail, time }: { detail: SongDetail; time: number }) {
+function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; focus?: boolean }) {
   const lines = detail.lines;
   const index = useMemo(() => {
     let found = -1;
@@ -280,29 +319,88 @@ function Lyrics({ detail, time }: { detail: SongDetail; time: number }) {
     }
     return found;
   }, [lines, time]);
-  if (!lines.length) return <div className="lyrics quiet" />;
+  // the space stays the same whichever it is, so the page doesn't jump about between songs
+  if (!lines.length) {
+    const words = detail.lyric_status === 'instrumental'
+      ? 'Instrumental'
+      : detail.lyric_status === 'plain'
+        ? 'Lyrics for this song aren’t timed, so they can’t follow along.'
+        : detail.lyric_status
+          ? 'No lyrics found for this song.'
+          : 'Lyrics haven’t been looked up yet.';
+    return <div className={`lyrics quiet ${focus ? 'focus' : ''}`}><p className="dim">{words}</p></div>;
+  }
   const singing = index >= 0 && time < lines[index].end + 1.5;
   const current = index >= 0 ? lines[index] : null;
   const wordIndex = current?.words?.findIndex((word) => word.start <= time && time < word.end) ?? -1;
+  const around = focus ? 3 : 1;
   return (
-    <div className="lyrics" aria-live="off">
-      <p className="dim">{index > 0 ? lines[index - 1].text : ' '}</p>
+    <div className={`lyrics ${focus ? 'focus' : ''}`} aria-live="off">
+      {Array.from({ length: around }, (_, gap) => around - gap).map((back) => (
+        <p className="dim" key={`before-${back}`}>{lines[index - back]?.text ?? ' '}</p>
+      ))}
       <p className={singing ? 'sung' : 'dim'}>
         {current ? highlightedLine(current.text, singing ? wordIndex : -1) : ' '}
       </p>
-      <p className="dim">{lines[index + 1]?.text ?? ' '}</p>
+      {Array.from({ length: around }, (_, gap) => gap + 1).map((ahead) => (
+        <p className="dim" key={`after-${ahead}`}>{lines[index + ahead]?.text ?? ' '}</p>
+      ))}
     </div>
   );
 }
 
+/** What makes this hand-over what it is, from what was measured and what the render reported, and
+ * nothing that wasn't. */
+function WhyThisTransition({ from, into, names }: { from?: ViewProps['mix'][number]; into: ViewProps['mix'][number]; names: Record<string, string> }) {
+  const seam = into.seam;
+  if (!seam) return null;
+  const state = seam.state;
+  const facts = seamFacts(seam, names);
+  const tempo = from?.bpm && into.bpm ? `${Math.round(from.bpm)} → ${Math.round(into.bpm)} BPM` : null;
+  const keys = from?.key && into.key ? `${from.key} → ${into.key}` : null;
+  return (
+    <details className="why">
+      <summary>Why this transition?</summary>
+      <p><Status kind={facts.kind}>{facts.words}</Status></p>
+      {facts.asked && state.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What will play is {state.label}.</p>}
+      {state.why && <p>{state.why}</p>}
+      <p className="hint">{[tempo, keys].filter(Boolean).join(' · ')}</p>
+      {!!state.tried?.length && (
+        <>
+          <p className="hint">Also tried:</p>
+          <ul className="hint">{state.tried.map((attempt) => <li key={attempt.move}>{names[attempt.move] ?? attempt.move}: {attempt.why}</li>)}</ul>
+        </>
+      )}
+      {!!state.checks?.length && (
+        <>
+          <p className="hint">What was measured on the finished audio. It can’t tell you how it sounds. Only you can:</p>
+          <ul className="audit">
+            {state.checks.map((check) => <li key={check.name}><Status kind={check.passed ? 'ready' : 'warning'}>{check.text}</Status></li>)}
+          </ul>
+        </>
+      )}
+    </details>
+  );
+}
+
 export function Now(props: ViewProps) {
-  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, toggleStage } = props;
+  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, toggleStage, status, openRequests } = props;
+  const requests = useContext(RequestsContext);
   const item = mix[now.position];
   const next = mix[now.position + 1];
   const [detail, setDetail] = useState<SongDetail | null>(null);
   const [rated, setRated] = useState('');
-  const [swapping, setSwapping] = useState(false);
   const [problem, setProblem] = useState('');
+  const [view, setViewChoice] = useState<ListenView>(savedView);
+  const choose = (change: Partial<ListenView>) => {
+    const chosen = { ...view, ...change };
+    setViewChoice(chosen);
+    try {
+      window.localStorage.setItem(VIEW_KEY, JSON.stringify(chosen));
+    } catch {
+      // it just won't be remembered next time
+    }
+  };
 
   useEffect(() => {
     if (!item) return;
@@ -325,7 +423,6 @@ export function Now(props: ViewProps) {
   };
 
   const swap = async (direction: number) => {
-    setSwapping(true);
     setProblem('');
     try {
       const data = await post<MixData>(`/mix/${now.position + 1}/swap?direction=${direction}`);
@@ -333,14 +430,14 @@ export function Now(props: ViewProps) {
       notify(`Next up: ${data.mix[now.position + 1]?.title}.`, true);
     } catch (error) {
       setProblem((error as Error).message);
-    } finally {
-      setSwapping(false);
     }
   };
 
   const seam = next?.seam?.state;
   const idle = now.phase === 'idle';
   const resumable = idle && now.songTime > 1;
+  const names = status.moves ?? {};
+  const facts = seamFacts(next?.seam, names);
   const eyebrow =
     now.phase === 'loading'
       ? 'Loading'
@@ -349,30 +446,29 @@ export function Now(props: ViewProps) {
         : now.phase === 'paused'
           ? `Paused · ${mixName}`
           : mixName;
-  const seamWords =
-    seam?.status === 'ready'
-      ? `${seam.label}, ready`
-      : seam?.status === 'failed'
-        ? 'That move won’t work here. Selecta will pick another.'
-        : seam?.eta !== undefined
-          ? `The seam will be ready in ${etaWords(seam.eta)}`
-          : seam?.status === 'none'
-            ? idle
-              ? 'Waiting to render'
-              : 'Getting the seam ready…'
-            : 'Rendering the seam…';
+  const shown = detail && detail.id === item?.song_id ? detail : null;
+  const waiting = requests?.requests?.filter((request) => request.id > 0).length ?? 0;
 
   return (
-    <main className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''}`}>
+    <main className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''} ${view.lyrics && !stage ? 'lyric-focus' : ''}`} id="main">
       <p className="eyebrow">{eyebrow}</p>
       <h1 className="display">{item?.title}</h1>
       {item && <RequestTag item={item} />}
       <p className="artist">{item?.artist}</p>
 
-      <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />
-      {detail && detail.id === item?.song_id && (
+      {!stage && (
+        <div className="listen-view" role="group" aria-label="What to show">
+          <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
+          <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
+          <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
+          <button onClick={toggleStage} title="F">Fullscreen lyrics</button>
+        </div>
+      )}
+
+      {(stage || (view.spectrum && !view.lyrics)) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />}
+      {shown && (stage || (view.timing && !view.lyrics)) && (
         <TransitionCountdown
-          detail={detail}
+          detail={shown}
           time={now.songTime}
           seamAt={now.seamAt}
           nextTitle={next?.title}
@@ -381,8 +477,8 @@ export function Now(props: ViewProps) {
           switchAt={seam?.switch_at}
         />
       )}
-      {detail && detail.id === item?.song_id && !stage && <Strip detail={detail} time={now.songTime} seamAt={now.seamAt} />}
-      {detail && detail.id === item?.song_id && <Lyrics detail={detail} time={now.songTime} />}
+      {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} onSeek={now.inSeam ? undefined : (seconds) => void player.seek(seconds)} />}
+      {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} /> : item && <Skeleton lines={2} label="Loading this song" />}
       {stage && (
         <button className="exit-stage" onClick={toggleStage}>
           Exit fullscreen
@@ -392,6 +488,7 @@ export function Now(props: ViewProps) {
       {!stage && (
         <>
           <div className="transport">
+            <button aria-label="Previous song" title="P" disabled={idle} onClick={() => void player.previous()}>⏮</button>
             <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
               {now.phase === 'playing'
                 ? 'Pause'
@@ -403,14 +500,13 @@ export function Now(props: ViewProps) {
                       ? `Resume from ${clock(now.songTime)}`
                       : 'Play'}
             </button>
-            <button onClick={() => void player.skip()} disabled={idle} title="N">
-              Skip to the seam
+            <button aria-label="Next song" title="Shift N" disabled={idle || !next} onClick={() => void player.next()}>⏭</button>
+            <button onClick={() => void player.skip()} disabled={idle || !next} title="N">
+              Jump to the transition
             </button>
-            <button onClick={toggleStage} title="F">
-              Fullscreen lyrics
-            </button>
-            <button onClick={() => document.getElementById('request-song-search')?.focus()}>
-              Request a song
+            <VolumeControl player={player} now={now} />
+            <button onClick={() => openRequests?.()} title="R">
+              Request a song{waiting ? ` (${waiting} waiting)` : ''}
             </button>
           </div>
           {now.notice && <p className="notice" role="status">{now.notice}</p>}
@@ -418,8 +514,8 @@ export function Now(props: ViewProps) {
           {now.lastSeamKey && !rated && (
             <div className="thumbs" role="group" aria-label="Rate that seam">
               <span>How was that seam?</span>
-              <button onClick={() => void rate('good')}>Good</button>
-              <button onClick={() => void rate('bad')}>Bad</button>
+              <Action run={() => rate('good')}>Good</Action>
+              <Action run={() => rate('bad')}>Bad</Action>
             </div>
           )}
 
@@ -430,14 +526,15 @@ export function Now(props: ViewProps) {
                 <b>{next.title}</b>
                 <span>{next.artist}</span>
                 <RequestTag item={next} />
-                <small>{seamWords}</small>
+                <small><Status kind={facts.kind}>{facts.words}</Status></small>
               </button>
               <div className="chips steer" role="group" aria-label="Change what plays next">
-                <button onClick={() => void swap(1)} disabled={swapping}>Bigger</button>
-                <button onClick={() => void swap(-1)} disabled={swapping}>Calmer</button>
-                <button onClick={() => void swap(0)} disabled={swapping}>Something else</button>
+                <Action run={() => swap(1)} working="Finding one…">Bigger</Action>
+                <Action run={() => swap(-1)} working="Finding one…">Calmer</Action>
+                <Action run={() => swap(0)} working="Finding one…">Something else</Action>
               </div>
               {problem && <p className="warn" role="alert">{problem}</p>}
+              <WhyThisTransition from={item} into={next} names={names} />
             </section>
           ) : (
             <section className="next-up">

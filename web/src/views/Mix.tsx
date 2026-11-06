@@ -3,7 +3,7 @@ import { del, DraftList, get, MixData, MixItem, post, SeamOptions, SeamSettings,
 import { analysingWords, askedToAnalyse, clock, etaRangeWords, etaWords, length, nth, runningTime, seamStatusWords, triedWords } from '../lib';
 import { RenameDraft } from './Drafts';
 import { MixScope, useMixPath } from './mixScope';
-import { ComingSongs, RequestsPanel, RequestTag, useRequestComing } from './Requests';
+import { ComingSongs, RequestTag, useRequestComing } from './Requests';
 import { Studio } from './Studio';
 import { Undo, ViewProps } from './shared';
 
@@ -687,7 +687,6 @@ export function Mix(props: ViewProps) {
         </div>
       </header>
       {renameForm}
-      {!inDraft && <RequestsPanel />}
       {naming && (
         <form className="row" onSubmit={saveMix}>
           <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
