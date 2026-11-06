@@ -530,6 +530,9 @@ def create_app(
             raise HTTPException(404)
         root = store.root.resolve()
         path = (root / key / "preview.flac").resolve()
+        if key.startswith("study-"):
+            root = (settings.home / "listening-audio").resolve()
+            path = (root / f"{key}.flac").resolve()
         if not path.is_relative_to(root) or not path.is_file():
             raise HTTPException(404, "This trial's audio is unavailable")
         return FileResponse(path, media_type="audio/flac", filename=f"{option}.flac")

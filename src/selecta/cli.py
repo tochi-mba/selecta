@@ -440,6 +440,19 @@ def discover(limit: int = typer.Option(1000, help="Maximum audio links to keep p
     console.print(f"Found {lyric_count} lyric links and {audio_count} audio links.")
 
 
+@app.command("listening-import")
+def listening_import(manifest: Path) -> None:
+    """Register two same-context comparison renders from a JSON manifest."""
+    from selecta.listening import register_comparison
+
+    data = json.loads(manifest.read_text("utf-8"))
+    settings, conn = _open()
+    trials = register_comparison(
+        conn, settings, data["study"], data["pair"], data["conditions"], data.get("seed", 42)
+    )
+    console.print(f"Registered {len(trials)} comparison. Open study {data['study']} in Workshop.")
+
+
 @app.command("set-mix")
 def set_mix(
     output: Path = typer.Option(Path("out/selecta-set.wav"), "--output", "-o"),

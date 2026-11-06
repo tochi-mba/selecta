@@ -3,8 +3,16 @@ import sqlite3
 
 import numpy as np
 import pytest
+import soundfile as sf
 
-from selecta.listening import create_trials, prepare_comparison, public_trials, respond
+from selecta.config import Settings
+from selecta.listening import (
+    create_trials,
+    prepare_comparison,
+    public_trials,
+    register_comparison,
+    respond,
+)
 
 
 def test_comparison_preparation_matches_loudness_and_rejects_invalid_audio():
@@ -46,3 +54,25 @@ def test_invalid_pairs_do_not_partially_create_a_study():
     with pytest.raises(ValueError):
         create_trials(conn, "bad", [{"pair": "1-2", "conditions": ["same", "same"]}], 1)
     assert conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() == []
+
+
+def test_import_preserves_study_audio_and_rejects_context_mismatch(tmp_path):
+    sr = 8000
+    wave = np.sin(np.arange(sr * 2) * 2 * np.pi * 440 / sr) * 0.4
+    stereo = np.column_stack((wave, wave))
+    paths = [tmp_path / "adaptive.wav", tmp_path / "baseline.wav"]
+    for path in paths:
+        sf.write(path, stereo, sr)
+    context = {"a": 1, "b": 2, "a_at": 30, "b_at": 16}
+    conditions = [{"path": str(path), "renderer": path.stem, "context": context} for path in paths]
+    conn = sqlite3.connect(":memory:")
+    settings = Settings(tmp_path / "data")
+    ids = register_comparison(conn, settings, "heldout", "1-2", conditions)
+    assert len(ids) == 1
+    mapping = json.loads(conn.execute("SELECT mapping FROM listening_trials").fetchone()[0])
+    for key in mapping.values():
+        assert (settings.home / "listening-audio" / f"{key}.flac").exists()
+    assert all(path.exists() for path in paths)
+    conditions[1] = {**conditions[1], "context": {"a": 99}}
+    with pytest.raises(ValueError, match="identical source cues"):
+        register_comparison(conn, settings, "heldout", "1-2", conditions)

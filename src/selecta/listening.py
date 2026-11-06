@@ -6,9 +6,53 @@ import json
 import random
 import sqlite3
 import uuid
+from pathlib import Path
 
 import numpy as np
 import pyloudnorm as pyln
+import soundfile as sf
+
+
+def register_comparison(
+    conn, settings, study: str, pair: str, conditions: list[dict], seed: int = 42
+):
+    """Import two declared same-context renders, preserving original files.
+
+    Context declarations are retained for audit; their musical truth still needs review.
+    Study audio lives outside the evictable seam cache.
+    """
+    if not study.strip() or not pair:
+        raise ValueError("Study and pair identifiers are required")
+    if len(conditions) != 2 or not conditions[0].get("context"):
+        raise ValueError("Two renders with explicit source context are required")
+    if conditions[0]["context"] != conditions[1].get("context"):
+        raise ValueError("Both conditions must declare identical source cues and context")
+    if not all(condition.get("renderer") for condition in conditions):
+        raise ValueError("Record the renderer version for both conditions")
+    first, sr = sf.read(conditions[0]["path"], always_2d=True)
+    second, other_sr = sf.read(conditions[1]["path"], always_2d=True)
+    if sr != other_sr:
+        raise ValueError("Comparison sample rates must match")
+    first, second, report = prepare_comparison(first, second, sr)
+    root = settings.home / "listening-audio"
+    root.mkdir(parents=True, exist_ok=True)
+    keys = []
+    for audio, metadata in zip((first, second), conditions, strict=True):
+        key = "study-" + uuid.uuid4().hex
+        sf.write(root / f"{key}.flac", audio, sr, subtype="PCM_24")
+        (root / f"{key}.json").write_text(
+            json.dumps(
+                {
+                    "source": str(Path(metadata["path"]).resolve()),
+                    "context": metadata["context"],
+                    "renderer": metadata["renderer"],
+                    "preparation": report,
+                }
+            ),
+            "utf-8",
+        )
+        keys.append(key)
+    return create_trials(conn, study, [{"pair": pair, "conditions": keys}], seed)
 
 
 def prepare_comparison(
