@@ -412,6 +412,7 @@ def create_app(
     @app.get("/api/songs/{song_id}")
     def song_detail(song_id: int) -> dict:
         from selecta.analysis.pipeline import load_features
+        from selecta.lyrics.align import provisional_words
 
         with connect() as conn:
             song = analysed_or_404(conn, song_id)
@@ -434,7 +435,16 @@ def create_app(
                 for section in song.sections
             ],
             "lines": [
-                {"start": line.start, "end": line.end, "text": line.text} for line in song.lines
+                {
+                    "start": line.start,
+                    "end": line.end,
+                    "text": line.text,
+                    "words": [
+                        {"start": word.start, "end": word.end}
+                        for word in provisional_words(line)
+                    ],
+                }
+                for line in song.lines
             ],
         }
 

@@ -642,6 +642,55 @@ def test_the_vibes_route_lists_cards_and_refuses_a_mix_with_too_few_songs(client
     assert client.post("/api/vibes/nonsense/build").status_code == 404
 
 
+def test_song_details_include_line_estimated_word_focus_times(tmp_path):
+    from selecta import db
+
+    settings = Settings(tmp_path)
+    conn = db.connect(settings.db_path)
+    track = make_track(bpm=120, bars=16, seed=41)
+    song = song_from_track(tmp_path, "lyric-detail", track)
+    _song_row(conn, 1, "Test Artist", "Timed Line", song.path)
+    db.save_analysis(
+        conn,
+        1,
+        {
+            "version": ANALYSIS_VERSION,
+            "bpm": song.bpm,
+            "camelot": "8A",
+            "lufs": -14.0,
+            "peak_db": -2.0,
+            "energy": 0.5,
+            "sections": json.dumps(song.sections),
+            "beats_per_bar": 4,
+            "grid_confidence": 0.95,
+            "constant_tempo": 1,
+            "key_confidence": 0.9,
+        },
+    )
+    features = features_path(settings, 1)
+    features.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(
+        features,
+        beats=song.beats,
+        bar_starts=song.bar_starts,
+        peaks=np.ones(100),
+        energy_bars=song.energy_bars,
+        low_share_bars=song.low_share_bars,
+        chroma_bars=np.zeros((song.bar_starts.size, 12)),
+        rms_db_bars=np.zeros(song.bar_starts.size),
+        mfcc_bars=np.zeros((song.bar_starts.size, 20)),
+    )
+    db.save_lyrics(conn, 1, "synced", "[00:01.00]Hello bright city lights", None)
+    conn.close()
+
+    response = TestClient(create_app(settings, tmp_path / "no-web")).get("/api/songs/1")
+    assert response.status_code == 200
+    words = response.json()["lines"][0]["words"]
+    assert len(words) == 4
+    assert all(word["start"] < word["end"] for word in words)
+    assert [word["start"] for word in words] == sorted(word["start"] for word in words)
+
+
 def test_destination_steering_persists_and_status_names_the_song(client):
     response = client.post("/api/steer", json={"action": "take_me_to", "value": 2})
     assert response.status_code == 200
