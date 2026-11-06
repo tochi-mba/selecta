@@ -17,6 +17,31 @@ _AFTER_SECONDS = 8.0
 """Long enough for the audit to hear where B settles, not just its first bar."""
 
 
+def _next_vocal_room_beats(song: SongInfo, entry_time: float, beat: float) -> float:
+    """How much rhythmic room B leaves before the next lyric can compete with A's tail."""
+    if not song.vocals_known:
+        return 0.5
+    next_line = min((line.start for line in song.lines if line.start >= entry_time), default=None)
+    if next_line is None:
+        return 2.0
+    return max(0.0, min((next_line - entry_time) / beat, 2.0))
+
+
+def _tail_echo(entry: SongInfo, entry_cue: Cue, beat: float) -> Echo:
+    """Keep a tail short when B's vocal arrives quickly; leave room when the intro is clear."""
+    room = _next_vocal_room_beats(entry, entry_cue.time, beat) / 2.0
+    # Echo is a send effect: a restrained floor keeps the handoff audible, while a clear
+    # instrumental runway allows a longer, more obvious tail.
+    feedback = 0.22 + 0.28 * room
+    wet = 0.16 + 0.24 * room
+    return Echo(
+        delay_seconds=beat,
+        feedback=feedback,
+        wet=wet,
+        return_highpass_hz=300.0,
+    )
+
+
 def _lead_in(a: SongInfo, exit_cue: Cue) -> float:
     return max(3.0, min(a.period * a.beats_per_bar * _LEAD_IN_BARS, exit_cue.time))
 
@@ -54,6 +79,7 @@ def echo_out(
     lead = _lead_in(a, exit_cue)
     beat = a.period
     send_from = lead - beat
+    echo = _tail_echo(b, entry_cue, beat)
     return TransitionScript(
         style="echo_out",
         duration=lead + _AFTER_SECONDS,
@@ -61,7 +87,7 @@ def echo_out(
             song=a,
             warp=Warp.identity(0.0, exit_cue.time - lead, lead + 0.05),
             gain=Curve([(lead - 0.005, 1.0), (lead + 0.02, 0.0)]),
-            echo=Echo(delay_seconds=beat, feedback=0.55, wet=0.4, return_highpass_hz=300.0),
+            echo=echo,
             echo_send=Curve(
                 [(send_from - 0.02, 0.0), (send_from, 1.0), (lead, 1.0), (lead + 0.02, 0.0)]
             ),
@@ -72,7 +98,7 @@ def echo_out(
             gain=fade_in(lead, lead + 0.02),
         ),
         overlap=(lead, lead + 0.02),
-        meta={"cut": lead, "b_at": lead},
+        meta={"cut": lead, "b_at": lead, "echo_wet": echo.wet, "echo_feedback": echo.feedback},
     )
 
 
@@ -93,6 +119,13 @@ def delay_throw(
     lead = _lead_in(a, exit_cue)
     word_end = lead - (exit_cue.time - last_word_end)
     send_from = word_end - min(beat, 0.6)
+    vocal_room = _next_vocal_room_beats(b, entry_cue.time, beat) / 2.0
+    echo = Echo(
+        delay_seconds=beat,
+        feedback=0.18 + 0.24 * vocal_room,
+        wet=0.12 + 0.24 * vocal_room,
+        return_highpass_hz=350.0,
+    )
     return TransitionScript(
         style="delay_throw",
         duration=lead + _AFTER_SECONDS,
@@ -100,7 +133,7 @@ def delay_throw(
             song=a,
             warp=Warp.identity(0.0, exit_cue.time - lead, lead + 0.05),
             gain=Curve([(lead - 0.005, 1.0), (lead + 0.015, 0.0)]),
-            echo=Echo(delay_seconds=beat, feedback=0.45, wet=0.4, return_highpass_hz=350.0),
+            echo=echo,
             echo_send=Curve(
                 [
                     (send_from - 0.02, 0.0),
@@ -116,7 +149,7 @@ def delay_throw(
             gain=fade_in(lead, lead + 0.015),
         ),
         overlap=(lead, lead + 0.015),
-        meta={"cut": lead},
+        meta={"cut": lead, "echo_wet": echo.wet, "echo_feedback": echo.feedback},
     )
 
 
@@ -131,6 +164,13 @@ def reverb_wash(
     if exit_cue.time - lead < 0:
         return None
     fade_time = beat
+    vocal_room = _next_vocal_room_beats(b, entry_cue.time, beat) / 2.0
+    wash = Wash(
+        wet=0.18 + 0.18 * vocal_room,
+        decay_seconds=1.2 + 0.8 * vocal_room,
+        damping=0.45,
+        return_highpass_hz=350.0,
+    )
     return TransitionScript(
         style="reverb_wash",
         duration=lead + _AFTER_SECONDS,
@@ -138,7 +178,7 @@ def reverb_wash(
             song=a,
             warp=Warp.identity(0.0, exit_cue.time - lead, lead + fade_time),
             gain=Curve([(lead - 0.01, 1.0), (lead + fade_time, 0.0)]),
-            wash=Wash(wet=0.38, decay_seconds=2.2, damping=0.45, return_highpass_hz=350.0),
+            wash=wash,
             wash_send=Curve(
                 [
                     (lead - wash_seconds, 0.0),
@@ -154,5 +194,5 @@ def reverb_wash(
             gain=fade_in(lead, lead + beat / 2),
         ),
         overlap=(lead, lead + fade_time),
-        meta={"cut": lead},
+        meta={"cut": lead, "wash_wet": wash.wet, "wash_decay_seconds": wash.decay_seconds},
     )

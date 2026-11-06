@@ -15,6 +15,7 @@ This ledger combines measured acceptance runs with the latest live-library snaps
 | Word links | All 583 songs searched in 3.3 s: 12,878 pairs. 896 fit musically across the 172 songs with timing | Machine-found links can still be corny. Only a listener can judge |
 | Word timing | Starts within about 80 ms of what the model hears unguided, on four sung lines read by hand. On speech with known times, a steady 66 to 70 ms offset, unchanged over music, which settling onto the voice removes | No ground truth on singing. Many lines are refused, including *Layla* |
 | Local-only server | Foreign hosts and other sites' changes get 403. A bad request gets 400. The page makes no outside requests | Binds to 127.0.0.1 |
+| Storage and song priority | Workshop shows free and cached storage and lets the user set a cache budget. Library can mark songs for first-priority analysis/stem retention and filter to the priority list; queue-order and API tests cover priority behavior | Priority is binary, not a manually ranked queue; old cache entries without song metadata cannot be tied back to priority songs |
 
 ## Latest live-library snapshot — 5 November 2026, 22:16 UTC
 
@@ -43,6 +44,21 @@ The older measured mix and word-link counts below are historical results; this r
 
 The new rules were set from these same ratings, so only further reels can test them.
 
+Phrase rolls now vary repetition count, acceleration, and bass arrival with the outgoing vocal span,
+local energy and low-band share, the incoming section's energy and bass share, and how much of B's
+beat grid is available before its word. Synthetic tests cover a sparse source into a stronger lift
+and a crowded source into a bass-heavy section. These checks show pair-dependent behavior, not that
+the effect sounds right; real-song listening is still needed.
+
+The 6 November 2026 Preview snapshot had 23 ratings: phrase roll 7 Good / 9 Bad; word blend 2 Good;
+vocal ride, echo out, and word cut 1 Good each; delay throw and bass swap blend 1 Bad each; other
+styles unrated. Bad ratings now remove only their exact ordered song-pair/style from automatic
+planning. They do not blacklist a style from other pairs. The sample is too small to infer global
+style quality. Vocal ride, echo out, delay throw, reverb-wash, phrase-roll, and call-and-response
+tails now respond to the incoming lyric runway. Beatmatched bass swaps also adjust to local energy
+and low-band share. Tests verify the parameter mapping; listening still needs to establish
+whether the stems and tails sound natural on these songs.
+
 ## Rendering
 
 | What | Measured |
@@ -64,6 +80,10 @@ Sixteen mixes under four headings: the moment, the mood, the sound and the journ
 | Length | Mixes reach the length asked for wherever enough songs exist. Small pools relax how far apart an artist must be, rather than stopping short |
 | Seasonal songs | Christmas songs only play in the Christmas mix, which appears once there are enough of them |
 
+On 6 November 2026, ten four-song mini-sets were exported to `Music/Selecta Mixes Stem Refresh 2026-11-06`.
+All 40 source tracks are unique; all 30 transitions passed the seam audit, and every MP3 decoded without
+errors. This establishes file integrity and automated checks, not that a person has approved the sound.
+
 Vocal rides now find where a voice stops and starts from the separated vocal itself, so they work in any language. Moves that need exact words still rely on an English-only timing model, so those are planned only for English songs, and only where timing hasn't already failed. Past results are read back before planning, so a move that failed on two songs isn't planned for them again.
 
 The planned shares above are what's asked for. What it sounds like, and how often a planned move survives rendering, needs more listening and more real renders.
@@ -84,10 +104,12 @@ The planned shares above are what's asked for. What it sounds like, and how ofte
 
 ## Not built
 
-- Melody, sample, rhythm and shortest-path discovery. The old same-melody search matched everything, and still runs under `selecta discover`, but the app no longer shows it.
+Temporal discovery progress (6 November): audio search now stores eight-bar ordered harmonic-sequence candidates across offsets and fixed transpositions, including exact source start times for audition. Five focused tests cover reordered-profile rejection, held/silent/invalid windows, transposition, offsets, persistence, and limits. A synthetic pair of 96-bar tracks took 0.022 seconds locally. Full-library precision, runtime, audition UI, melody-contour verification and stem consonance remain unverified; candidates are not automatic-set approvals.
+
+- Temporal melody, sample and rhythm discovery, and shortest-path destination search. The existing audio search only compares whole-track mean chroma; it now reports a coarse tonal-profile resemblance and explicitly does not claim a melody match. The app still does not surface these tonal candidates.
 - The blind listening test. "Best DJ" isn't proven until Selecta wins it on bad-transition rate.
 - The typographic word-to-word match cut. Fullscreen Stage mode and approximate current-word focus work, but the lyric highlight has not been validated against sung-word ground truth.
-- Loop rolls on A's band, half and double time, drop swaps and brakes. The placeholders that faked these are gone.
+- Loop rolls on A's band, a dedicated half/double-time transition, drop swaps and brakes. Tempo-free landings already compare half/double BPM relationships, but that alone does not beatmatch a long blend. The placeholders that faked the missing moves are gone.
 - No blind paired listening study yet to measure whether the intertwined transition improves the mix versus a conventional blend on the same pair.
 
 ## Still needs a person

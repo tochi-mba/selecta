@@ -320,6 +320,43 @@ def test_a_rolls_shape_comes_from_its_own_tracks(tmp_path):
     assert roll_shape(fast, fast, words(0.3, 0.4)).phrase_loops == 2
 
 
+def test_phrase_roll_changes_its_contour_for_a_sparse_lift_vs_a_crowded_drop(tmp_path):
+    def words(*lengths, at=40.0):
+        result = []
+        for length in lengths:
+            result.append(Word("word", at, at + length, 0.9))
+            at += length
+        return result
+
+    sparse = song_from_track(tmp_path, "sparse", make_track(bpm=128, bars=8, seed=3))
+    crowded = song_from_track(tmp_path, "crowded", make_track(bpm=128, bars=8, seed=4))
+    lift = song_from_track(tmp_path, "lift", make_track(bpm=128, bars=8, seed=5))
+    drop = song_from_track(tmp_path, "drop", make_track(bpm=128, bars=8, seed=6))
+    sparse.energy_bars[:] = 0.2
+    sparse.low_share_bars[:] = 0.08
+    crowded.energy_bars[:] = 0.9
+    crowded.low_share_bars[:] = 0.5
+    lift.energy_bars[:] = 0.9
+    lift.low_share_bars[:] = 0.2
+    drop.energy_bars[:] = 0.2
+    drop.low_share_bars[:] = 0.55
+    phrase = words(0.3, 0.4)
+
+    open_roll = roll_shape(sparse, lift, phrase)
+    restrained_roll = roll_shape(crowded, drop, phrase)
+
+    assert open_roll != restrained_roll
+    assert open_roll.phrase_loops > restrained_roll.phrase_loops
+    assert open_roll.word_hits == 3
+    assert open_roll.fast_hits == 6
+    assert restrained_roll.word_hits == 2
+    assert restrained_roll.fast_hits == 2
+    assert open_roll.acceleration < restrained_roll.acceleration
+    assert open_roll.bass_mid_level > restrained_roll.bass_mid_level
+    capped = roll_shape(sparse, lift, phrase, available_fast_hits=3)
+    assert capped.fast_hits == 2, "the stutter must fit the incoming track's actual runway"
+
+
 def test_a_roll_brings_the_bass_in_steps_not_all_at_once(word_pair):
     """How DJs build it: a little bass, more bass, most of it, then all of it on the landing."""
     a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
@@ -351,6 +388,9 @@ def test_the_last_repeat_rings_on_into_b(word_pair):
     hits = _voice_hits(script, voice)
     assert hits[-1].echo is not None
     assert all(hit.echo is None for hit in hits[:-1])
+    echo_room = min(script.meta["echo_room_beats"] / 2.0, 1.0)
+    assert hits[-1].echo.wet == pytest.approx(0.1 + 0.18 * echo_room)
+    assert hits[-1].echo.feedback == pytest.approx(0.15 + 0.25 * echo_room)
 
 
 def test_a_single_word_rolls_without_a_phrase_stage(word_pair):
@@ -384,6 +424,9 @@ def test_call_and_response_drops_a_into_the_gaps_b_leaves(word_pair):
             assert not line.start < source < line.end, "A never talks over B"
     assert float(calls[0].gain.values[1]) > float(calls[-1].gain.values[1]) or len(calls) == 1
     assert calls[-1].echo is not None, "A's last call rings away"
+    echo_room = min(script.meta["echo_room_beats"] / 2.0, 1.0)
+    assert calls[-1].echo.wet == pytest.approx(0.1 + 0.18 * echo_room)
+    assert calls[-1].echo.feedback == pytest.approx(0.15 + 0.25 * echo_room)
     assert np.isfinite(render(script).audio).all()
 
 
@@ -580,6 +623,24 @@ def test_a_vocal_ride_keeps_as_voice_going_over_bs_band_until_bs_voice_starts(wo
     assert script.meta["voice_end"] > a_gone, "and A's voice carries on without it"
     assert handoff - a_gone > script.meta["period"], "for a real stretch of B's band"
     assert np.isfinite(render(script).audio).all()
+
+
+def test_a_vocal_ride_reduces_its_echo_when_b_s_voice_arrives_sooner(word_pair):
+    a, b, phrase_a, phrase_b, voice, band_a, band_b = word_pair
+    close = vocal_ride(a, b, phrase_a[-1], phrase_b[0], voice, band_a, band_b, bars=4)
+    later_word = Word(
+        phrase_b[0].text,
+        phrase_b[0].start + 4.0,
+        phrase_b[0].end + 4.0,
+        phrase_b[0].confidence,
+    )
+    roomy = vocal_ride(a, b, phrase_a[-1], later_word, voice, band_a, band_b, bars=4)
+
+    assert close is not None and roomy is not None
+    for script in (close, roomy):
+        room = min(script.meta["echo_room_beats"] / 2.0, 1.0)
+        assert script.meta["echo_wet"] == pytest.approx(0.1 + 0.18 * room)
+        assert script.meta["echo_feedback"] == pytest.approx(0.15 + 0.25 * room)
 
 
 def test_ride_lines_need_a_as_voice_singing_and_prefer_a_chorus_in_b(tmp_path):

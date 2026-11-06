@@ -46,6 +46,35 @@ function show(energyArc: number[] | null = null) {
 }
 
 describe('Pick a feeling', () => {
+  it('does not misreport zero mix-ready songs when an older server omits that count', async () => {
+    fakeBackend({ 'GET /vibes': [], 'GET /saved': [] });
+    const oldServerStatus = status();
+    const counts = { ...oldServerStatus.counts };
+    delete counts.ready;
+    const player = new SetPlayer(() => [], () => {});
+    render(
+      <Mixes
+        status={{ ...oldServerStatus, counts }}
+        mix={[]}
+        mixName=""
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={() => {}}
+        refreshStatus={() => {}}
+        player={player}
+        now={player.state}
+        setView={() => {}}
+        notify={() => {}}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    expect(
+      await screen.findByText(/hasn’t reported how many songs have the cues needed for mixes/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/0 of 90 songs have the vocal or instrumental cues needed/)).not.toBeInTheDocument();
+  });
+
   it('waits for six mix-ready songs even when audio analysis has finished on more', async () => {
     fakeBackend({ 'GET /vibes': [], 'GET /saved': [] });
     const player = new SetPlayer(() => [], () => {});
@@ -162,8 +191,8 @@ describe('Pick a feeling', () => {
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],
       'GET /saved': [],
       'GET /songs': [
-        { id: 7, artist: 'Example Artist', title: 'Midnight', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false },
-        { id: 8, artist: 'Unready Artist', title: 'No Cues', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: null, never: false },
+        { id: 7, artist: 'Example Artist', title: 'Midnight', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false },
+        { id: 8, artist: 'Unready Artist', title: 'No Cues', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: null, never: false, priority: false },
       ],
       'POST /steer': { mix_language: 'balanced', target: '7' },
     });

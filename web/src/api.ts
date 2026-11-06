@@ -76,6 +76,7 @@ export type SongRow = {
   camelot: string | null;
   lyric_status: string | null;
   never: boolean;
+  priority: boolean;
 };
 
 export type SongDetail = {
@@ -86,6 +87,9 @@ export type SongDetail = {
   bpm: number;
   key: string;
   peaks: number[];
+  bar_times?: number[];
+  beat_times?: number[];
+  beats_per_bar?: number;
   sections: { label: string; start: number; end: number }[];
   lines: { start: number; end: number; text: string; words?: { start: number; end: number }[] }[];
 };

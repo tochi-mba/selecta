@@ -38,9 +38,26 @@ describe('words on screen', () => {
       smallest_budget_bytes: 1024 ** 3,
       total_bytes: 1024 ** 4,
     });
-    expect(words.summary).toBe('Selecta is using 4.2 GB. Your drive has 13 GB free.');
-    expect(words.detail).toContain('1.0 GB of that is separated vocals');
-    expect(words.detail).toContain('3.2 GB is song analysis and models');
+    expect(words.summary).toBe('Selecta is using 4.20 GB. Your drive has 13 GB free.');
+    expect(words.detail).toContain('1.00 GB of that is separated vocals');
+    expect(words.detail).toContain('3.20 GB is saved data and models');
+  });
+
+  it('uses enough precision for the displayed storage parts to add up to the total', () => {
+    const words = storageWords({
+      used_bytes: 7.44 * 1024 ** 3,
+      kept_bytes: 0.38 * 1024 ** 3,
+      cache_bytes: 7.06 * 1024 ** 3,
+      free_bytes: 56 * 1024 ** 3,
+      budget_bytes: 8 * 1024 ** 3,
+      largest_budget_bytes: 8 * 1024 ** 3,
+      smallest_budget_bytes: 0.5 * 1024 ** 3,
+      total_bytes: 64 * 1024 ** 3,
+    });
+
+    expect(words.summary).toContain('using 7.44 GB');
+    expect(words.detail).toContain('7.06 GB of that');
+    expect(words.detail).toContain('other 0.38 GB');
   });
 });
 

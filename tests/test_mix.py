@@ -60,6 +60,67 @@ def _order(conn, store):
     return [item["song_id"] for item in mix.read_mix(conn, store)]
 
 
+def test_discovery_review_persists_without_changing_the_mix(conn, tmp_path):
+    payload = json.dumps({"a_at": 2, "b_at": 8, "bars": 8, "transpose": 2})
+    conn.execute(
+        "INSERT INTO seam_book(song_a,song_b,kind,payload,score) VALUES(1,2,?,?,.98)",
+        ("harmonic_sequence_candidate", payload),
+    )
+    conn.commit()
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    candidate = client.get("/api/discoveries").json()[0]
+    assert candidate["payload"]["b_at"] == 8
+    route = f"/api/discoveries/{candidate['id']}/review"
+    assert client.post(route, json={"verdict": "approved"}).status_code == 200
+    assert client.get("/api/discoveries").json()[0]["status"] == "approved"
+    assert conn.execute("SELECT COUNT(*) FROM queue").fetchone()[0] == 0
+    assert client.post(route, json={"verdict": "invalid"}).status_code == 400
+    assert client.post("/api/discoveries/999/review", json={"verdict": "new"}).status_code == 404
+
+
+def test_listening_routes_hide_mapping_and_persist_responses(conn, tmp_path):
+    from selecta.listening import create_trials
+
+    trial = create_trials(
+        conn, "study-1", [{"pair": "1-2", "conditions": ["first-render", "second-render"]}], 42
+    )[0]
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    public = client.get("/api/listening?study=study-1")
+    assert "first-render" not in public.text
+    assert public.json()[0]["id"] == trial
+    assert client.get(f"/api/listening/{trial}/a/audio").status_code == 404
+    for key in ("first-render", "second-render"):
+        folder = Settings(tmp_path).renders_dir / "seams" / key
+        folder.mkdir(parents=True)
+        (folder / "preview.flac").write_bytes(b"opaque audio response")
+    audio = client.get(f"/api/listening/{trial}/a/audio")
+    assert audio.status_code == 200
+    assert audio.content == b"opaque audio response"
+    assert "first-render" not in str(audio.headers)
+    assert "second-render" not in str(audio.headers)
+    response = client.post(
+        f"/api/listening/{trial}/response",
+        json={"listener": "one", "choice": "tie", "setup": "headphones"},
+    )
+    assert response.json() == {"saved": True}
+    assert conn.execute("SELECT choice FROM listening_responses").fetchone()[0] == "tie"
+
+
+def test_skip_feedback_preserves_exposure_and_does_not_edit_queue(conn, tmp_path):
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    payload = {"song_id": 1, "heard_seconds": 16.9, "source_position": 84.95}
+    assert client.post("/api/playback/skip", json=payload).json() == {"saved": True}
+    row = conn.execute("SELECT * FROM playback_skips").fetchone()
+    assert row["heard_seconds"] == pytest.approx(16.9)
+    assert row["source_position"] == pytest.approx(84.95)
+    assert conn.execute("SELECT COUNT(*) FROM queue").fetchone()[0] == 0
+    assert (
+        client.post("/api/playback/skip", json={**payload, "heard_seconds": -1}).status_code == 400
+    )
+    assert client.post("/api/playback/skip", json={**payload, "song_id": 999}).status_code == 404
+    assert conn.execute("SELECT COUNT(*) FROM playback_skips").fetchone()[0] == 1
+
+
 def test_songs_can_be_added_anywhere_removed_and_reordered(conn, store):
     for song in (1, 2, 3):
         mix.add_song(conn, song)
@@ -214,6 +275,17 @@ def test_a_destination_cannot_also_be_the_explicit_start(tmp_path):
     assert plan_set(songs, count=1, end_id=songs[1].id)[0].song.id == songs[1].id
     with pytest.raises(ValueError, match="one-song mix cannot start and finish"):
         plan_set(songs, songs[0].id, 1, end_id=songs[1].id)
+
+
+def test_destination_planning_does_not_return_an_unfinished_route(tmp_path, monkeypatch):
+    from selecta.planner import beam
+
+    songs = [_song(tmp_path, f"unreachable-{i}", f"Artist {i}") for i in range(3)]
+    monkeypatch.setattr(beam, "_best_move", lambda *args: None)
+    with pytest.raises(ValueError, match="Could not find a playable route"):
+        plan_set(songs, songs[0].id, 3, end_id=songs[-1].id)
+    with pytest.raises(ValueError, match="empty library"):
+        plan_set([], end_id=99)
 
 
 def test_shared_phrases_pull_a_wordplay_plan_towards_them(tmp_path):
@@ -613,9 +685,7 @@ def test_intertwined_stem_request_uses_the_shared_audited_seam_path(tmp_path, mo
     monkeypatch.setattr("selecta.seams.audit", lambda _rendered: SimpleNamespace(passed=True))
     store = SeamStore(Settings(tmp_path))
 
-    rendered, _, why = store._chosen_move(
-        SeamRequest(a.id, b.id, "stem_intertwine"), a, b
-    )
+    rendered, _, why = store._chosen_move(SeamRequest(a.id, b.id, "stem_intertwine"), a, b)
 
     assert rendered.script.style == "stem_intertwine"
     assert rendered.script.meta["bars"] == 16
@@ -685,10 +755,14 @@ def test_song_details_include_line_estimated_word_focus_times(tmp_path):
 
     response = TestClient(create_app(settings, tmp_path / "no-web")).get("/api/songs/1")
     assert response.status_code == 200
-    words = response.json()["lines"][0]["words"]
+    detail = response.json()
+    words = detail["lines"][0]["words"]
     assert len(words) == 4
     assert all(word["start"] < word["end"] for word in words)
     assert [word["start"] for word in words] == sorted(word["start"] for word in words)
+    assert detail["bar_times"] == song.bar_times.tolist()
+    assert detail["beat_times"] == song.beats.tolist()
+    assert detail["beats_per_bar"] == song.beats_per_bar
 
 
 def test_destination_steering_persists_and_status_names_the_song(client):
@@ -839,6 +913,13 @@ def test_a_failed_seam_is_remembered_and_can_be_retried(tmp_path):
     again = SeamStore(Settings(tmp_path)).status(request.key)
     assert again["status"] == "failed"
     assert again["error"] == "It didn't work."
+    import shutil
+
+    shutil.rmtree(store.root)
+    fresh = SeamStore(Settings(tmp_path))
+    assert fresh.submit(request)["status"] == "failed"
+    assert (request.a, request.b, request.move) in fresh.verdicts().failed
+    assert not fresh.root.exists(), "a remembered failure must not start another render"
     assert "agreement" not in SeamStore.__dict__, "failure wording stays in plain language"
 
 
@@ -850,6 +931,31 @@ def test_spare_time_work_waits_behind_anything_a_person_asked_for(tmp_path):
     store.ask(theirs)
     assert store._next_job() == theirs
     assert store._next_job() == idle
+
+
+def test_bad_rating_survives_audio_eviction_without_claiming_audio_is_ready(tmp_path):
+    import shutil
+
+    store = SeamStore(Settings(tmp_path))
+    request = SeamRequest(1, 2, "vocal_ride")
+    folder = store.folder(request.key)
+    folder.mkdir(parents=True)
+    state = {
+        "key": request.key,
+        "status": "ready",
+        "style": "vocal_ride",
+        "passed": True,
+        "request": {"a": 1, "b": 2, "move": "vocal_ride"},
+    }
+    (folder / "seam.json").write_text(json.dumps(state), "utf-8")
+    store.rate(request.key, "bad", "Voice clashes")
+    shutil.rmtree(folder)
+    fresh = SeamStore(Settings(tmp_path))
+    assert fresh.status(request.key)["status"] == "none"
+    assert (1, 2, "vocal_ride") in fresh.verdicts().failed
+    assert (1, 2, "vocal_ride") not in fresh.verdicts().worked
+    saved = json.loads((tmp_path / "seam-history" / f"{request.key}.json").read_text())
+    assert saved["note"] == "Voice clashes"
 
 
 def test_the_worker_reports_through_disk_so_the_app_can_read_it(tmp_path):
@@ -1401,6 +1507,38 @@ def test_a_seam_says_what_was_tried_before_what_it_landed_on(tmp_path, monkeypat
     verdicts = store.verdicts()
     assert (1, 2, "vocal_ride") in verdicts.failed
     assert (1, 2, state["style"]) in verdicts.worked
+
+
+def test_a_bad_human_rating_overrides_a_passed_audit_for_that_pair(tmp_path):
+    from selecta.lyrics.lrclib import Line
+    from selecta.planner.vibes import _word_move
+
+    store = SeamStore(Settings(tmp_path))
+    folder = store.folder("rated-bad")
+    folder.mkdir(parents=True)
+    (folder / "seam.json").write_text(
+        json.dumps(
+            {
+                "status": "ready",
+                "passed": True,
+                "style": "phrase_roll",
+                "rating": "bad",
+                "request": {"a": 1, "b": 2, "move": "phrase_roll"},
+            }
+        ),
+        "utf-8",
+    )
+
+    verdicts = store.verdicts()
+
+    assert (1, 2, "phrase_roll") in verdicts.failed
+    assert (1, 2, "phrase_roll") not in verdicts.worked
+
+    a, b = _two_songs(tmp_path)
+    a.bpm, b.bpm = 120.0, 145.0
+    a.lines = [Line(20.0, 22.0, "good morning world")]
+    b.lines = [Line(20.0, 22.0, "good morning world")]
+    assert _word_move(a, b, verdicts) is None, "the rated-bad phrase roll must not be planned again"
 
 
 def test_seams_an_old_fallback_swapped_get_another_chance(tmp_path):

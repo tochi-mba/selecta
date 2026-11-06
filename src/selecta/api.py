@@ -7,6 +7,7 @@ rendering used, at the level the mix uses, plus finished seams, and joins them o
 from __future__ import annotations
 
 import io
+import json
 import os
 import shutil
 import sqlite3
@@ -104,6 +105,23 @@ class SeamSettings(BaseModel):
 class RateRequest(BaseModel):
     rating: str
     note: str = ""
+
+
+class DiscoveryReview(BaseModel):
+    verdict: str
+
+
+class ListeningResponse(BaseModel):
+    listener: str
+    choice: str
+    setup: str
+    quality: dict | None = None
+
+
+class SkipFeedback(BaseModel):
+    song_id: int
+    heard_seconds: float
+    source_position: float
 
 
 class ScanRequest(BaseModel):
@@ -288,7 +306,13 @@ def create_app(
     @app.get("/api/storage")
     def storage() -> dict:
         usage = shutil.disk_usage(settings.home)
-        used = sum(path.stat().st_size for path in settings.home.rglob("*") if path.is_file())
+        used = 0
+        for path in settings.home.rglob("*"):
+            try:
+                if path.is_file():
+                    used += path.stat().st_size
+            except FileNotFoundError:
+                continue  # cache pruning may remove a file during this snapshot
         cache = cache_bytes(settings)
         largest = largest_cache_bytes(settings)
         return {
@@ -401,13 +425,22 @@ def create_app(
                 params.append(ANALYSIS_VERSION)
             elif state == "not_yet":
                 sql += " AND s.is_music=1 AND a.song_id IS NULL"
+            elif state == "priority":
+                sql += " AND s.is_music=1 AND s.processing_priority=100"
             else:
                 sql += " AND s.is_music=1"
             rows = conn.execute(
                 sql + " ORDER BY s.artist,s.title LIMIT ?", (*params, min(limit, 500))
             ).fetchall()
             never = never_played(conn)
-            return [{**dict(row), "never": row["id"] in never} for row in rows]
+            return [
+                {
+                    **dict(row),
+                    "never": row["id"] in never,
+                    "priority": row["processing_priority"] == 100,
+                }
+                for row in rows
+            ]
 
     @app.get("/api/songs/{song_id}")
     def song_detail(song_id: int) -> dict:
@@ -426,6 +459,9 @@ def create_app(
             "bpm": song.bpm,
             "key": song.camelot,
             "peaks": (peaks[:: max(peaks.size // 400, 1)] / 255.0).round(3).tolist(),
+            "bar_times": song.bar_times.tolist(),
+            "beat_times": song.beats.tolist(),
+            "beats_per_bar": song.beats_per_bar,
             "sections": [
                 {
                     "label": section["label"],
@@ -440,8 +476,7 @@ def create_app(
                     "end": line.end,
                     "text": line.text,
                     "words": [
-                        {"start": word.start, "end": word.end}
-                        for word in provisional_words(line)
+                        {"start": word.start, "end": word.end} for word in provisional_words(line)
                     ],
                 }
                 for line in song.lines
@@ -455,6 +490,101 @@ def create_app(
             song = analysed_or_404(conn, song_id)
         audio = audio_io.decode(song.path) * float(10.0 ** (song.gain_db / 20.0))
         return Response(_wav(np.clip(audio, -1.0, 1.0)), media_type="audio/wav")
+
+    @app.get("/api/discoveries")
+    def discoveries(limit: int = 40) -> list[dict]:
+        with connect() as conn:
+            rows = conn.execute(
+                "SELECT d.*,a.artist artist_a,a.title title_a,b.artist artist_b,b.title title_b "
+                "FROM seam_book d JOIN songs a ON a.id=d.song_a JOIN songs b ON b.id=d.song_b "
+                "WHERE d.kind='harmonic_sequence_candidate' AND a.is_music=1 AND b.is_music=1 "
+                "AND a.duplicate_of IS NULL AND b.duplicate_of IS NULL "
+                "ORDER BY d.score DESC,d.id LIMIT ?",
+                (max(0, min(limit, 200)),),
+            ).fetchall()
+            return [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
+
+    @app.post("/api/discoveries/{discovery_id}/review")
+    def review_discovery(discovery_id: int, body: DiscoveryReview) -> dict:
+        if body.verdict not in {"new", "approved", "rejected"}:
+            raise HTTPException(400, "Choose approved, rejected, or new")
+        with connect() as conn:
+            changed = conn.execute(
+                "UPDATE seam_book SET status=? WHERE id=? AND kind='harmonic_sequence_candidate'",
+                (body.verdict, discovery_id),
+            )
+            if not changed.rowcount:
+                raise HTTPException(404, "Discovery not found")
+            conn.commit()
+        return {"id": discovery_id, "status": body.verdict}
+
+    @app.get("/api/listening")
+    def listening_trials(study: str) -> list[dict]:
+        from selecta.listening import public_trials
+
+        with connect() as conn:
+            return public_trials(conn, study)
+
+    @app.get("/api/listening/{trial}/{option}/audio")
+    def listening_audio(trial: str, option: str) -> FileResponse:
+        from selecta.listening import initialise
+
+        if option not in {"a", "b"}:
+            raise HTTPException(404)
+        with connect() as conn:
+            initialise(conn)
+            row = conn.execute(
+                "SELECT mapping FROM listening_trials WHERE id=?", (trial,)
+            ).fetchone()
+        if row is None:
+            raise HTTPException(404)
+        key = json.loads(row["mapping"])[option]
+        if not isinstance(key, str) or Path(key).name != key:
+            raise HTTPException(404)
+        root = store.root.resolve()
+        path = (root / key / "preview.flac").resolve()
+        if key.startswith("study-"):
+            root = (settings.home / "listening-audio").resolve()
+            path = (root / f"{key}.flac").resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            raise HTTPException(404, "This trial's audio is unavailable")
+        return FileResponse(path, media_type="audio/flac", filename=f"{option}.flac")
+
+    @app.post("/api/listening/{trial}/response")
+    def listening_response(trial: str, body: ListeningResponse) -> dict:
+        from selecta.listening import respond
+
+        with connect() as conn:
+            try:
+                respond(conn, trial, body.listener, body.choice, body.setup, body.quality)
+            except ValueError as problem:
+                raise HTTPException(400, str(problem)) from problem
+        return {"saved": True}
+
+    @app.post("/api/playback/skip")
+    def playback_skip(body: SkipFeedback) -> dict:
+        import math
+
+        if not all(
+            math.isfinite(value) and value >= 0
+            for value in (body.heard_seconds, body.source_position)
+        ):
+            raise HTTPException(400, "Listening times must be finite and nonnegative")
+        with connect() as conn:
+            song = db.song_by_id(conn, body.song_id)
+            if song is None:
+                raise HTTPException(404)
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS playback_skips (id INTEGER PRIMARY KEY, "
+                "song_id INTEGER NOT NULL REFERENCES songs(id), heard_seconds REAL NOT NULL, "
+                "source_position REAL NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+            )
+            conn.execute(
+                "INSERT INTO playback_skips(song_id,heard_seconds,source_position) VALUES(?,?,?)",
+                (body.song_id, body.heard_seconds, body.source_position),
+            )
+            conn.commit()
+        return {"saved": True}
 
     @app.post("/api/steer")
     def steering(body: SteerRequest) -> dict:
@@ -828,9 +958,11 @@ def create_app(
             return mix_payload(conn)
 
     @app.post("/api/mix/{position}/render")
-    def render_at(position: int) -> dict:
+    def render_at(position: int, retry: bool = False) -> dict:
         with connect() as conn:
             request = seam_request_at(conn, position)
+        if retry:
+            return store.submit(request, urgent=True, retry=True)
         return store.submit(request, urgent=True)
 
     @app.post("/api/mix/render")
@@ -840,7 +972,7 @@ def create_app(
         with connect() as conn:
             items = mix.read_mix(conn, store)
             for before, item in zip(items, items[1:], strict=False):
-                if item["seam"]["state"]["status"] in {"none", "failed"}:
+                if item["seam"]["state"]["status"] == "none":
                     store.submit(
                         request_from(before["song_id"], item["song_id"], item["seam"]["settings"])
                     )

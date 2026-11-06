@@ -14,6 +14,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections import Counter, deque
@@ -145,8 +146,12 @@ def _why_unavailable(move: str, a: SongInfo, b: SongInfo, has_link: bool) -> str
             return "A isn't singing enough near a place it could finish."
         return None
     if move == "stem_intertwine":
-        return None if can_intertwine(a, b) else (
-            "This needs a close tempo and key, reliable beat grids, and sixteen bars of room."
+        return (
+            None
+            if can_intertwine(a, b)
+            else (
+                "This needs a close tempo and key, reliable beat grids, and sixteen bars of room."
+            )
         )
     if move in WORD_MOVES or move == "auto":
         return None
@@ -327,8 +332,11 @@ def _stem_render(
             raise CannotRender(str(problem)) from problem
         duration = transition.audio.shape[0] / SAMPLE_RATE
         output_beats = a.beats[
-            a.beat_index_of_bar(transition.exit_cue.bar - 8) :
-            a.beat_index_of_bar(transition.exit_cue.bar - 8) + 16 * a.beats_per_bar + 1
+            a.beat_index_of_bar(transition.exit_cue.bar - 8) : a.beat_index_of_bar(
+                transition.exit_cue.bar - 8
+            )
+            + 16 * a.beats_per_bar
+            + 1
         ]
         output = output_beats - transition.a_start
         script = TransitionScript(
@@ -502,9 +510,33 @@ class SeamStore:
         self.prepare_links = False
         self._cache = SongCache(capacity=7)
         self._aligner: Aligner | None = None
+        for meta in self.root.glob("*/seam.json"):
+            try:
+                previous = json.loads(meta.read_text("utf-8"))
+                if (
+                    previous.get("status") in {"ready", "failed"}
+                    and previous.get("key") == meta.parent.name
+                ):
+                    self._remember(previous)
+            except (OSError, ValueError):
+                continue
 
     def folder(self, key: str) -> Path:
         return self.root / key
+
+    def _remember(self, state: dict) -> None:
+        history = self.settings.home / "seam-history"
+        history.mkdir(parents=True, exist_ok=True)
+        target = history / f"{state['key']}.json"
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=history, suffix=".tmp", delete=False
+        ) as stream:
+            temporary = Path(stream.name)
+            json.dump(state, stream)
+        try:
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
 
     def status(self, key: str) -> dict:
         """What's on disk comes first, because that's where the worker reports. Nothing is under
@@ -526,17 +558,28 @@ class SeamStore:
                 pass  # mid-write: what we last knew will do for this moment
         with self._lock:
             state = self._states.get(key)
+        if state is None:
+            try:
+                remembered = json.loads(
+                    (self.settings.home / "seam-history" / f"{key}.json").read_text("utf-8")
+                )
+                if remembered.get("status") == "failed":
+                    return remembered
+            except (OSError, ValueError):
+                pass
         return state if state is not None else {"status": "none", "key": key}
 
     def _worker_has_gone(self) -> bool:
         return self._worker is not None and self._worker.poll() is not None
 
-    def submit(self, request: SeamRequest, urgent: bool = False) -> dict:
+    def submit(self, request: SeamRequest, urgent: bool = False, retry: bool = False) -> dict:
         """Ask the worker for a seam. Anything done or under way stays as it is. Urgent is for a
         seam in the mix that a person just tapped or is about to hear: it goes ahead of the rest of
         the mix, even a seam already waiting. Nothing outside the mix is ever urgent."""
         key = request.key
         current = self.status(key)
+        if current["status"] == "failed" and not retry:
+            return current
         if current["status"] in {"ready", "rendering"}:
             return current
         if current["status"] == "queued" and not urgent:
@@ -584,13 +627,17 @@ class SeamStore:
     def verdicts(self) -> Verdicts:
         """What every finished seam showed about what works between which songs."""
         found = Verdicts()
-        if not self.root.is_dir():
-            return found
-        for meta in self.root.glob("*/seam.json"):
+        histories = (self.settings.home / "seam-history").glob("*.json")
+        seen = set()
+        for meta in [*self.root.glob("*/seam.json"), *histories]:
             try:
                 state = json.loads(meta.read_text("utf-8"))
             except (OSError, ValueError):
                 continue
+            key = state.get("key", str(meta))
+            if key in seen:
+                continue
+            seen.add(key)
             request = state.get("request") or {}
             pair = (request.get("a"), request.get("b"))
             if None in pair:
@@ -605,7 +652,12 @@ class SeamStore:
                     found.untimed[state["untimed_song"]] += 1
             elif state.get("status") == "ready":
                 style = state.get("style")
-                found.worked.add((*pair, style))
+                if state.get("rating") == "bad":
+                    # A human rejection overrides a technically clean audit. Keep it scoped to
+                    # this ordered pair and move so other songs can still use the same recipe.
+                    found.failed.add((*pair, style))
+                else:
+                    found.worked.add((*pair, style))
                 if not state.get("passed"):
                     found.warned.add((*pair, style))
                     found.warned_songs.update(pair)
@@ -734,6 +786,7 @@ class SeamStore:
         folder = self.folder(request.key)
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "seam.json").write_text(json.dumps(result, indent=1), "utf-8")
+        self._remember(result)
         return result
 
     def render_now(self, conn: sqlite3.Connection, request: SeamRequest) -> dict:
@@ -875,6 +928,7 @@ class SeamStore:
             "checks": _plain_checks(report),
         }
         (folder / "seam.json").write_text(json.dumps(result, indent=1), "utf-8")
+        self._remember(result)
         return result
 
     def rate(self, key: str, rating: str, note: str = "") -> dict:
@@ -884,6 +938,7 @@ class SeamStore:
         status["rating"] = rating
         status["note"] = note
         (self.folder(key) / "seam.json").write_text(json.dumps(status, indent=1), "utf-8")
+        self._remember(status)
         return status
 
 

@@ -31,6 +31,13 @@ function Harness({ start, state = status(), notify = () => {} }: { start: MixIte
 }
 
 describe('rendering every seam', () => {
+  it('does not present remembered failures as ongoing renders', () => {
+    render(<Harness start={songs(seam('failed', 'a', { error: 'No safe vocal runway.' }))} />);
+    expect(screen.getByRole('button', { name: 'Change failed transitions to continue' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Render and hear' })).toBeNull();
+    expect(screen.getByText(/Remembered failed attempt/)).toHaveTextContent('No safe vocal runway.');
+    expect(screen.getByRole('button', { name: 'Retry this attempt anyway' })).toBeEnabled();
+  });
   it('sends one request and every badge changes straight away', async () => {
     const calls = fakeBackend({
       'POST /mix/render': { mix: songs(seam('queued', 'a'), seam('queued', 'b')), name: 'Test mix', can_undo: false },

@@ -172,6 +172,8 @@ def plan_set(
     suit this mix most, from 0 to 1."""
     rng = None if seed is None else np.random.default_rng(seed)
     if not songs:
+        if end_id is not None:
+            raise ValueError("Cannot reach the requested destination with an empty library")
         return []
     links = links or set()
     first = next((song for song in songs if song.id == start_id), songs[0])
@@ -276,7 +278,13 @@ def plan_set(
             break
         expanded.sort(key=lambda item: -item[0])
         beams = expanded[:width]
-    return beams[0][1]
+    result = beams[0][1]
+    if end_id is not None and result[-1].song.id != end_id:
+        raise ValueError(
+            "Could not find a playable route to your destination. "
+            "Try a different start song or mix length."
+        )
+    return result
 
 
 def suggest_next(

@@ -41,11 +41,18 @@ export function runningTime(mix: MixItem[]): number {
 /** Plain words for the storage panel. Selecta's disk use comes in two kinds, and a person needs to
  * know which is which to understand what the slider does. */
 export function storageWords(storage: Storage): { summary: string; detail: string } {
+  const hundredths = (bytes: number) => Math.round((bytes / 1024 ** 3) * 100);
+  const preciseGb = (value: number) => `${(value / 100).toFixed(2)} GB`;
+  const used = hundredths(storage.used_bytes);
+  const kept = hundredths(storage.kept_bytes);
+  // Derive the displayed cache as the remainder so rounding can never make the parts
+  // add up to a different displayed total.
+  const cache = Math.max(used - kept, 0);
   return {
-    summary: `Selecta is using ${gb(storage.used_bytes)}. Your drive has ${gb(storage.free_bytes)} free.`,
+    summary: `Selecta is using ${preciseGb(used)}. Your drive has ${gb(storage.free_bytes)} free.`,
     detail:
-      `${gb(storage.cache_bytes)} of that is separated vocals and finished seams, which Selecta can make again. ` +
-      `The other ${gb(storage.kept_bytes)} is song analysis and models, which it keeps.`,
+      `${preciseGb(cache)} of that is separated vocals and finished seams, which Selecta can make again. ` +
+      `The other ${preciseGb(kept)} is saved data and models, including analysis, transition history, backups and listening studies.`,
   };
 }
 
