@@ -97,6 +97,7 @@ def _gather_database(target: Path, source: Path) -> None:
         )
         _copy_table(conn, "analysis")
         _merge_saved_mixes(conn)
+        _merge_drafts(conn)
         if (
             _has_table(conn, "old", "queue")
             and not conn.execute("SELECT 1 FROM main.queue LIMIT 1").fetchone()
@@ -105,6 +106,17 @@ def _gather_database(target: Path, source: Path) -> None:
         conn.commit()
     finally:
         conn.close()
+
+
+def _merge_drafts(conn: sqlite3.Connection) -> None:
+    """Keep every draft from another folder, without bringing its place in the render line."""
+    if not _has_table(conn, "old", "drafts"):
+        return
+    conn.execute(
+        "INSERT INTO main.drafts(name,items,history) "
+        "SELECT o.name,o.items,o.history FROM old.drafts o WHERE NOT EXISTS "
+        "(SELECT 1 FROM main.drafts m WHERE m.name=o.name AND m.items=o.items)"
+    )
 
 
 def _merge_saved_mixes(conn: sqlite3.Connection) -> None:

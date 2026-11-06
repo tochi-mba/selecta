@@ -191,22 +191,58 @@ def _unfinished(item: dict) -> bool:
     return bool(seam) and seam["state"]["status"] in {"none", "queued", "rendering"}
 
 
-def mix_time_left(items: list[dict], clock: JobClock, now: float | None = None) -> dict:
-    """How long until the mix is fully rendered. Each unfinished seam also gets an `eta`: how long
-    until that seam is ready, which is everything ahead of it in line as well as its own time. The
-    one being rendered goes first, then the rest in mix order, the order the worker takes them."""
-    now = time.time() if now is None else now
+def _seam_estimate(item: dict, clock: JobClock, now: float) -> Estimate:
+    state = item["seam"]["state"]
+    estimate = clock.estimate(item["seam"]["settings"].get("move") or "auto")
+    if state["status"] == "rendering" and state.get("started_at"):
+        estimate = still_to_go(estimate, now - float(state["started_at"]))
+    return estimate
+
+
+def _in_turn(items: list[dict]) -> list[dict]:
     waiting = [item for item in items if _unfinished(item)]
     waiting.sort(key=lambda item: item["seam"]["state"]["status"] != "rendering")
-    so_far: list[Estimate] = []
+    return waiting
+
+
+def mix_time_left(
+    items: list[dict],
+    clock: JobClock,
+    now: float | None = None,
+    ahead: list[Estimate] | None = None,
+    seen: set[str] | None = None,
+) -> dict:
+    """How long until the mix is fully rendered. Each unfinished seam also gets an `eta`: how long
+    until that seam is ready, which is everything ahead of it in line as well as its own time. The
+    one being rendered goes first, then the rest in mix order, the order the worker takes them.
+    `ahead` is whatever has to finish first, and `seen` the seams it already includes, since a seam
+    shared by two mixes only renders once."""
+    now = time.time() if now is None else now
+    so_far = list(ahead or [])
+    waiting = _in_turn(items)
     for item in waiting:
         state = item["seam"]["state"]
-        estimate = clock.estimate(item["seam"]["settings"].get("move") or "auto")
-        if state["status"] == "rendering" and state.get("started_at"):
-            estimate = still_to_go(estimate, now - float(state["started_at"]))
-        so_far.append(estimate)
+        if not seen or state.get("key") not in seen:
+            so_far.append(_seam_estimate(item, clock, now))
         state["eta"] = round(combine(so_far).seconds)
     return {**combine(so_far).as_dict(), "seams": len(waiting)}
+
+
+def time_ahead(
+    mixes: list[list[dict]], clock: JobClock, now: float | None = None
+) -> tuple[list[Estimate], set[str]]:
+    """All the work in these mixes, in order, counting a seam that's in two of them once."""
+    now = time.time() if now is None else now
+    estimates: list[Estimate] = []
+    seen: set[str] = set()
+    for items in mixes:
+        for item in _in_turn(items):
+            key = item["seam"]["state"].get("key")
+            if key is None or key not in seen:
+                estimates.append(_seam_estimate(item, clock, now))
+            if key is not None:
+                seen.add(key)
+    return estimates, seen
 
 
 def analysis_rates(conn: sqlite3.Connection) -> list[float]:

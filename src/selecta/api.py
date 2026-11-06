@@ -31,7 +31,14 @@ from selecta import db, jobs, mix
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings, load_settings
 from selecta.discovery.hearing import STEPS, audition_folder, make_audition
 from selecta.discovery.search import spread_out
-from selecta.eta import analysis_left, analysis_line_left, combine, mix_time_left, still_to_go
+from selecta.eta import (
+    analysis_left,
+    analysis_line_left,
+    combine,
+    mix_time_left,
+    still_to_go,
+    time_ahead,
+)
 from selecta.seams import (
     MOVES,
     STUDIO_SESSION,
@@ -110,6 +117,15 @@ class SeamSettings(BaseModel):
 
 class StudioShape(BaseModel):
     shape: dict
+
+
+class DraftRequest(BaseModel):
+    name: str | None = None
+    copy_current: bool = False
+
+
+class LineMove(BaseModel):
+    step: int
 
 
 class RateRequest(BaseModel):
@@ -310,6 +326,7 @@ def create_app(
                 ),
                 "analysing": songs_in_line(conn),
                 "mix_rendering": jobs.mix_is_rendering(settings.home),
+                "mixes_in_line": len(mix.line_order(conn)),
                 "eta": {
                     "analysis": analysis_left(
                         conn,
@@ -563,8 +580,10 @@ def create_app(
 
     # ---- the Seam Studio
 
-    def studio_request_at(conn: sqlite3.Connection, position: int) -> tuple:
-        request = seam_request_at(conn, position)
+    def studio_request_at(
+        conn: sqlite3.Connection, position: int, draft: int | None = None
+    ) -> tuple:
+        request = seam_request_at(conn, position, draft)
         session = SeamRequest(
             request.a,
             request.b,
@@ -575,11 +594,11 @@ def create_app(
         return request, session
 
     @app.post("/api/mix/{position}/studio")
-    def open_studio(position: int) -> dict:
+    def open_studio(position: int, draft: int | None = None) -> dict:
         """Lay out both songs' stems for this seam, or say how long that has left. Asking again is
         how the page follows its progress."""
         with connect() as conn:
-            request, session = studio_request_at(conn, position)
+            request, session = studio_request_at(conn, position, draft)
             a, b = analysed_or_404(conn, request.a), analysed_or_404(conn, request.b)
         reason = why_no_studio(a, b)
         if reason:
@@ -607,12 +626,12 @@ def create_app(
         return FileResponse(path, media_type="audio/flac")
 
     @app.post("/api/mix/{position}/studio/use")
-    def use_studio_shape(position: int, body: StudioShape) -> dict:
+    def use_studio_shape(position: int, body: StudioShape, draft: int | None = None) -> dict:
         """Render the shape a person settled on, and make it this seam."""
         with connect() as conn:
-            request, _ = studio_request_at(conn, position)
+            request, _ = studio_request_at(conn, position, draft)
             shape = json.dumps(clean_shape(body.shape), sort_keys=True)
-            mix.remember(conn, "changing that seam")
+            mix.remember(conn, "changing that seam", draft)
             mix.set_seam(
                 conn,
                 position,
@@ -622,9 +641,10 @@ def create_app(
                     "exit_bar": request.exit_bar,
                     "entry_bar": request.entry_bar,
                 },
+                draft,
             )
-            store.submit(seam_request_at(conn, position), urgent=True)
-            return mix_payload(conn)
+            store.submit(seam_request_at(conn, position, draft), urgent=draft is None)
+            return mix_payload(conn, draft)
 
     @app.post("/api/discoveries/{discovery_id}/review")
     def review_discovery(discovery_id: int, body: DiscoveryReview) -> dict:
@@ -722,19 +742,177 @@ def create_app(
 
     # ---- the mix: songs in order, with an editable seam between each pair
 
-    def mix_payload(conn: sqlite3.Connection) -> dict:
-        items = mix.read_mix(conn, store)
-        return {
+    def mix_payload(conn: sqlite3.Connection, draft: int | None = None) -> dict:
+        items = mix.read_mix(conn, store, draft)
+        payload = {
             "mix": items,
-            "name": mix.mix_name(conn),
-            "can_undo": bool(db.preference(conn, "mix_undo", [])),
-            "eta": mix_time_left(items, store.clock),
+            "name": mix.mix_name(conn, draft),
+            "can_undo": mix.can_undo(conn, draft),
         }
+        if draft is None:
+            return {**payload, "eta": mix_time_left(items, store.clock)}
+        line = mix.line_order(conn)
+        before = line[: line.index(draft)] if draft in line else line
+        ahead, seen = time_ahead(
+            [mix.read_mix(conn, store), *(mix.read_mix(conn, store, other) for other in before)],
+            store.clock,
+        )
+        eta = mix_time_left(items, store.clock, ahead=ahead, seen=seen)
+        if draft not in line:
+            # these won't start by themselves, so there's no time to quote for them
+            for item in items[1:]:
+                if item["seam"]["state"]["status"] == "none":
+                    item["seam"]["state"].pop("eta", None)
+        place = line.index(draft) + 1 if draft in line else None
+        return {**payload, "eta": eta, "draft": {"id": draft, "place": place}}
+
+    @app.exception_handler(mix.NoSuchDraft)
+    def draft_gone(_request, _problem) -> JSONResponse:
+        return JSONResponse({"detail": "That draft isn't there any more."}, status_code=404)
 
     @app.get("/api/mix")
-    def get_mix() -> dict:
+    def get_mix(draft: int | None = None) -> dict:
         with connect() as conn:
+            return mix_payload(conn, draft)
+
+    # ---- drafts: mixes being worked on, without touching what's playing
+
+    def draft_summary(
+        row: sqlite3.Row,
+        items: list[dict],
+        place: int | None,
+        eta: dict | None,
+        own: float,
+    ) -> dict:
+        states = [item["seam"]["state"] for item in items[1:]]
+        stored = len(json.loads(row["items"]))
+        return {
+            "id": row["id"],
+            "name": row["name"],
+            "songs": len(items),
+            "seconds": sum(item["duration"] or 0 for item in items),
+            "seams": len(states),
+            "ready": sum(state["status"] == "ready" for state in states),
+            "failed": sum(state["status"] == "failed" for state in states),
+            "waiting": sum(state["status"] in {"none", "queued", "rendering"} for state in states),
+            "rendering": any(state["status"] == "rendering" for state in states),
+            "place": place,
+            "eta": eta,
+            "to_render": round(own),
+            "missing": max(stored - len(items), 0),
+        }
+
+    def drafts_payload(conn: sqlite3.Connection) -> dict:
+        rows = {row["id"]: row for row in mix.all_drafts(conn)}
+        items = {draft: mix.read_mix(conn, store, draft) for draft in rows}
+        for draft in mix.line_order(conn):
+            # a mix with nothing left to render has had its turn
+            if not any(seam_unfinished(item) for item in items[draft]):
+                mix.leave_line(conn, draft)
+        line = mix.line_order(conn)
+        current = mix.read_mix(conn, store)
+        ahead = [current]
+        places: dict[int, tuple[int, dict]] = {}
+        for index, draft in enumerate(line):
+            ahead = [*ahead, items[draft]]
+            estimates, _ = time_ahead(ahead, store.clock)
+            places[draft] = (index + 1, combine(estimates).as_dict())
+        summaries = []
+        for draft in sorted(rows, key=lambda d: line.index(d) if d in line else len(line)):
+            place, eta = places.get(draft, (None, None))
+            own = combine(time_ahead([items[draft]], store.clock)[0]).seconds
+            summaries.append(draft_summary(rows[draft], items[draft], place, eta, own))
+        left, _ = time_ahead([current], store.clock)
+        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        return {
+            "drafts": summaries,
+            "current": {
+                "name": mix.mix_name(conn),
+                "songs": len(current),
+                "left": len(left),
+                "eta": combine(left).as_dict(),
+            },
+            "out_of_room": bool(line) and cache_bytes(settings) >= limit,
+        }
+
+    def seam_unfinished(item: dict) -> bool:
+        seam = item.get("seam")
+        return bool(seam) and seam["state"]["status"] in {"none", "queued", "rendering"}
+
+    @app.get("/api/drafts")
+    def get_drafts() -> dict:
+        with connect() as conn:
+            return drafts_payload(conn)
+
+    @app.post("/api/drafts")
+    def new_draft(body: DraftRequest) -> dict:
+        with connect() as conn:
+            if body.copy_current:
+                draft = mix.copy_current(conn, body.name)
+            else:
+                draft = mix.create_draft(conn, body.name)
+            return {"id": draft, "name": mix.mix_name(conn, draft)}
+
+    @app.post("/api/drafts/restore")
+    def restore_draft() -> dict:
+        with connect() as conn:
+            draft = mix.restore_draft(conn)
+            if draft is None:
+                raise HTTPException(404, "There's nothing to bring back.")
+            return {"id": draft, "name": mix.mix_name(conn, draft)}
+
+    @app.post("/api/drafts/{draft}/name")
+    def rename_draft(draft: int, body: NameRequest) -> dict:
+        with connect() as conn:
+            return {"id": draft, "name": mix.rename_draft(conn, draft, body.name)}
+
+    @app.post("/api/drafts/{draft}/duplicate")
+    def duplicate_draft(draft: int) -> dict:
+        with connect() as conn:
+            copy = mix.duplicate_draft(conn, draft)
+            return {"id": copy, "name": mix.mix_name(conn, copy)}
+
+    @app.delete("/api/drafts/{draft}")
+    def delete_draft(draft: int) -> dict:
+        with connect() as conn:
+            return {"name": mix.delete_draft(conn, draft)}
+
+    @app.post("/api/drafts/{draft}/play")
+    def play_draft(draft: int) -> dict:
+        """Make this draft the current mix. What was current takes its place among the drafts."""
+        with connect() as conn:
+            if not mix.read_mix(conn, store, draft):
+                raise HTTPException(400, "Add a song to this draft first.")
+            mix.play_draft(conn, draft)
             return mix_payload(conn)
+
+    def wake_the_worker() -> None:
+        if store.prepare_links:
+            store.start()
+
+    @app.post("/api/drafts/{draft}/line")
+    def join_line(draft: int) -> dict:
+        """Render this mix in the background, once the current mix and those ahead are done."""
+        with connect() as conn:
+            items = mix.read_mix(conn, store, draft)
+            if len(items) < 2:
+                raise HTTPException(400, "Add at least two songs first.")
+            if any(seam_unfinished(item) for item in items):
+                mix.join_line(conn, draft)
+                wake_the_worker()
+            return drafts_payload(conn)
+
+    @app.delete("/api/drafts/{draft}/line")
+    def leave_line(draft: int) -> dict:
+        with connect() as conn:
+            mix.leave_line(conn, draft)
+            return drafts_payload(conn)
+
+    @app.post("/api/drafts/{draft}/line/move")
+    def move_in_line(draft: int, body: LineMove) -> dict:
+        with connect() as conn:
+            mix.move_in_line(conn, draft, body.step)
+            return drafts_payload(conn)
 
     def phrases_of(conn: sqlite3.Connection) -> dict[tuple[int, int], str]:
         phrases: dict[tuple[int, int], str] = {}
@@ -773,7 +951,9 @@ def create_app(
             songs, traits = library_now(conn)
         return [describe(vibe, songs, traits) for vibe in VIBES]
 
-    def play_vibe(conn: sqlite3.Connection, key: str, count: int, start: int | None) -> dict:
+    def play_vibe(
+        conn: sqlite3.Connection, key: str, count: int, start: int | None, as_draft: bool = False
+    ) -> dict:
         from selecta.planner.vibes import BY_KEY, MIN_SONGS, build_vibe, eligible
 
         vibe = BY_KEY.get(key)
@@ -817,15 +997,21 @@ def create_app(
             )
         except ValueError as problem:
             raise HTTPException(400, str(problem)) from problem
+        if as_draft:
+            draft = mix.create_draft(conn, vibe.name)
+            mix.merge_with_locks(conn, [item.song.id for item in planned], seams, draft)
+            return {"id": draft, "name": mix.mix_name(conn, draft), "count": len(planned)}
         mix.remember(conn, f"changing to {vibe.name}")
         mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
         mix.set_mix_name(conn, vibe.name)
         return {**mix_payload(conn), "count": len(planned)}
 
     @app.post("/api/vibes/{key}/build")
-    def build_vibe_route(key: str, count: int = 12, start: int | None = None) -> dict:
+    def build_vibe_route(
+        key: str, count: int = 12, start: int | None = None, as_draft: bool = False
+    ) -> dict:
         with connect() as conn:
-            return play_vibe(conn, key, count, start)
+            return play_vibe(conn, key, count, start, as_draft)
 
     @app.post("/api/mix/build")
     def build_mix(body: BuildRequest) -> dict:
@@ -841,40 +1027,10 @@ def create_app(
             return play_vibe(conn, names.get(body.vibe, body.vibe), body.count, body.start)
 
     @app.post("/api/mix/undo")
-    def undo_mix() -> dict:
+    def undo_mix(draft: int | None = None) -> dict:
         with connect() as conn:
-            undone = mix.undo(conn)
-            return {**mix_payload(conn), "undone": undone}
-
-    @app.get("/api/saved")
-    def saved() -> list[dict]:
-        with connect() as conn:
-            return [
-                {"name": item["name"], "songs": item["songs"]} for item in mix.saved_mixes(conn)
-            ]
-
-    @app.post("/api/saved")
-    def save(body: NameRequest) -> list[dict]:
-        name = body.name.strip()[:60]
-        if not name:
-            raise HTTPException(400, "A saved mix needs a name.")
-        with connect() as conn:
-            mix.save_mix(conn, name)
-        return saved()
-
-    @app.post("/api/saved/load")
-    def load_saved(body: NameRequest) -> dict:
-        with connect() as conn:
-            mix.remember(conn, f"opening {body.name}")
-            if not mix.load_saved(conn, body.name):
-                raise HTTPException(404, "That mix isn't saved any more.")
-            return mix_payload(conn)
-
-    @app.post("/api/saved/delete")
-    def delete_saved(body: NameRequest) -> list[dict]:
-        with connect() as conn:
-            mix.delete_saved(conn, body.name)
-        return saved()
+            undone = mix.undo(conn, draft)
+            return {**mix_payload(conn, draft), "undone": undone}
 
     @app.post("/api/mix/clear")
     def clear_mix() -> dict:
@@ -885,29 +1041,29 @@ def create_app(
             return mix_payload(conn)
 
     @app.post("/api/mix/songs")
-    def add_song(body: AddRequest) -> dict:
+    def add_song(body: AddRequest, draft: int | None = None) -> dict:
         with connect() as conn:
             song = analysed_or_404(conn, body.song_id)
-            mix.remember(conn, f"adding {song.title}")
-            mix.add_song(conn, body.song_id, body.position)
-            return mix_payload(conn)
+            mix.remember(conn, f"adding {song.title}", draft)
+            mix.add_song(conn, body.song_id, body.position, draft)
+            return mix_payload(conn, draft)
 
     @app.delete("/api/mix/songs/{position}")
-    def remove_song(position: int) -> dict:
+    def remove_song(position: int, draft: int | None = None) -> dict:
         with connect() as conn:
-            mix.remember(conn, "removing that song")
-            mix.remove_at(conn, position)
-            return mix_payload(conn)
+            mix.remember(conn, "removing that song", draft)
+            mix.remove_at(conn, position, draft)
+            return mix_payload(conn, draft)
 
     @app.post("/api/mix/move")
-    def move_song(body: MoveRequest) -> dict:
+    def move_song(body: MoveRequest, draft: int | None = None) -> dict:
         with connect() as conn:
-            mix.remember(conn, "moving that song")
-            mix.move_song(conn, body.source, body.target)
-            return mix_payload(conn)
+            mix.remember(conn, "moving that song", draft)
+            mix.move_song(conn, body.source, body.target, draft)
+            return mix_payload(conn, draft)
 
     @app.get("/api/mix/suggest")
-    def suggest(position: int = 0, q: str = "", limit: int = 12) -> dict:
+    def suggest(position: int = 0, q: str = "", limit: int = 12, draft: int | None = None) -> dict:
         """What could go here, best fit first. With a search, only what matches, still best fit
         first, followed by matching songs that aren't analysed yet."""
         from selecta.planner.beam import _artist, rank_candidates
@@ -915,7 +1071,7 @@ def create_app(
 
         text = q.strip().casefold()
         with connect() as conn:
-            items = mix.read_mix(conn, store)
+            items = mix.read_mix(conn, store, draft)
             songs, traits = library_now(conn)
             by_id = {song.id: song for song in songs}
             before = (
@@ -932,7 +1088,7 @@ def create_app(
                 used,
                 phrases,
                 around=[by_id[item["song_id"]] for item in items if item["song_id"] in by_id],
-                belongs=belonging(mix.mix_name(conn), songs, traits),
+                belongs=belonging(mix.mix_name(conn, draft), songs, traits),
                 nearby_artists={
                     _artist(by_id[item["song_id"]]) for item in close if item["song_id"] in by_id
                 },
@@ -1009,13 +1165,15 @@ def create_app(
         }
 
     @app.post("/api/mix/{position}/lock")
-    def lock_song(position: int) -> dict:
+    def lock_song(position: int, draft: int | None = None) -> dict:
         with connect() as conn:
-            mix.toggle_lock(conn, position)
-            return mix_payload(conn)
+            mix.toggle_lock(conn, position, draft)
+            return mix_payload(conn, draft)
 
-    def seam_request_at(conn: sqlite3.Connection, position: int) -> SeamRequest:
-        items = mix.read_mix(conn, store)
+    def seam_request_at(
+        conn: sqlite3.Connection, position: int, draft: int | None = None
+    ) -> SeamRequest:
+        items = mix.read_mix(conn, store, draft)
         if not 1 <= position < len(items):
             raise HTTPException(404, "There's no seam there.")
         settings_now = items[position]["seam"]["settings"]
@@ -1024,13 +1182,13 @@ def create_app(
         )
 
     @app.post("/api/mix/{position}/swap")
-    def swap_song(position: int, direction: int = 0) -> dict:
+    def swap_song(position: int, direction: int = 0, draft: int | None = None) -> dict:
         """Replace the song at this place: something bigger, calmer, or just different."""
         from selecta.planner.beam import _artist, suggest_next
         from selecta.planner.vibes import belonging
 
         with connect() as conn:
-            items = mix.read_mix(conn, store)
+            items = mix.read_mix(conn, store, draft)
             if not 1 <= position < len(items):
                 raise HTTPException(404, "There's no song to swap there.")
             songs, traits = library_now(conn)
@@ -1050,7 +1208,7 @@ def create_app(
             following = (
                 library.get(items[position + 1]["song_id"]) if position + 1 < len(items) else None
             )
-            belongs = belonging(mix.mix_name(conn), songs, traits)
+            belongs = belonging(mix.mix_name(conn, draft), songs, traits)
             known = store.remembered().read_taste(songs)
             pick = None
             for pool in (fresh, songs):
@@ -1068,58 +1226,60 @@ def create_app(
             if pick is None:
                 raise HTTPException(404, "Nothing else fits here yet. Analysing more songs helps.")
             swapped_out.append(items[position]["song_id"])
-            mix.remember(conn, "swapping that song")
-            mix.replace_at(conn, position, pick.id)
-            return mix_payload(conn)
+            mix.remember(conn, "swapping that song", draft)
+            mix.replace_at(conn, position, pick.id, draft)
+            return mix_payload(conn, draft)
 
     @app.get("/api/mix/{position}/options")
-    def options_at(position: int) -> dict:
+    def options_at(position: int, draft: int | None = None) -> dict:
         with connect() as conn:
-            request = seam_request_at(conn, position)
+            request = seam_request_at(conn, position, draft)
             a = analysed_or_404(conn, request.a)
             b = analysed_or_404(conn, request.b)
         return seam_options(a, b)
 
     @app.post("/api/mix/{position}/seam")
-    def set_seam(position: int, body: SeamSettings) -> dict:
+    def set_seam(position: int, body: SeamSettings, draft: int | None = None) -> dict:
         if body.move not in MOVES:
             raise HTTPException(400, f"unknown move: {body.move}")
         with connect() as conn:
-            seam_request_at(conn, position)
-            mix.remember(conn, "changing that seam")
-            mix.set_seam(conn, position, body.model_dump())
-            return mix_payload(conn)
+            seam_request_at(conn, position, draft)
+            mix.remember(conn, "changing that seam", draft)
+            mix.set_seam(conn, position, body.model_dump(), draft)
+            return mix_payload(conn, draft)
 
     @app.post("/api/mix/{position}/render")
-    def render_at(position: int, retry: bool = False) -> dict:
+    def render_at(position: int, retry: bool = False, draft: int | None = None) -> dict:
+        """Render this seam now. Only the current mix can jump the line: in a draft it waits its
+        turn, however much someone wants to hear it."""
         with connect() as conn:
-            request = seam_request_at(conn, position)
+            request = seam_request_at(conn, position, draft)
         if retry:
-            return store.submit(request, urgent=True, retry=True)
-        return store.submit(request, urgent=True)
+            return store.submit(request, urgent=draft is None, retry=True)
+        return store.submit(request, urgent=draft is None)
 
     @app.post("/api/mix/render")
-    def render_all() -> dict:
+    def render_all(draft: int | None = None) -> dict:
         """Queue every seam that isn't done, at once, and say so straight away. Asking one seam at
         a time left the page showing "not rendered yet" until the last request came back."""
         with connect() as conn:
-            items = mix.read_mix(conn, store)
+            items = mix.read_mix(conn, store, draft)
             for before, item in zip(items, items[1:], strict=False):
                 if item["seam"]["state"]["status"] == "none":
                     store.submit(
                         request_from(before["song_id"], item["song_id"], item["seam"]["settings"])
                     )
-            return mix_payload(conn)
+            return mix_payload(conn, draft)
 
     @app.post("/api/mix/export")
-    def export() -> dict:
+    def export(draft: int | None = None) -> dict:
         name = f"selecta-mix-{time.strftime('%Y%m%d-%H%M%S')}.flac"
         started = time.monotonic()
         with connect() as conn:
-            songs_in_mix = len(mix.read_mix(conn, store))
+            songs_in_mix = len(mix.read_mix(conn, store, draft))
             try:
                 exported_mix = mix.export_mix(
-                    conn, settings, store, settings.home / "exports" / name
+                    conn, settings, store, settings.home / "exports" / name, draft
                 )
             except ValueError as problem:
                 raise HTTPException(400, str(problem)) from problem

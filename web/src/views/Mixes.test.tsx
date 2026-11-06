@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { VibeCard } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, status } from '../test/backend';
@@ -47,7 +47,7 @@ function show(energyArc: number[] | null = null) {
 
 describe('Pick a feeling', () => {
   it('does not misreport zero mix-ready songs when an older server omits that count', async () => {
-    fakeBackend({ 'GET /vibes': [], 'GET /saved': [] });
+    fakeBackend({ 'GET /vibes': [] });
     const oldServerStatus = status();
     const counts = { ...oldServerStatus.counts };
     delete counts.ready;
@@ -76,7 +76,7 @@ describe('Pick a feeling', () => {
   });
 
   it('waits for six mix-ready songs even when audio analysis has finished on more', async () => {
-    fakeBackend({ 'GET /vibes': [], 'GET /saved': [] });
+    fakeBackend({ 'GET /vibes': [] });
     const player = new SetPlayer(() => [], () => {});
     render(
       <Mixes
@@ -101,7 +101,6 @@ describe('Pick a feeling', () => {
   it('lets the listener choose the transition feel and saves it for future mixes', async () => {
     const calls = fakeBackend({
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],
-      'GET /saved': [],
       'POST /steer': { mix_language: 'seamless' },
     });
     show();
@@ -114,7 +113,6 @@ describe('Pick a feeling', () => {
   it('lets the listener set how often new mixes use stem-assisted moves', async () => {
     const calls = fakeBackend({
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],
-      'GET /saved': [],
       'POST /steer': { mix_language: 'balanced', stems: 'often', target: null },
     });
     show();
@@ -126,7 +124,6 @@ describe('Pick a feeling', () => {
   it('lets the listener shape and save a five-stop energy arc', async () => {
     const calls = fakeBackend({
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],
-      'GET /saved': [],
       'POST /steer': { energy_arc: [62, 72, 35, 85, 68] },
     });
     show();
@@ -168,7 +165,6 @@ describe('Pick a feeling', () => {
   it('clears a saved energy arc back to the mix-specific default', async () => {
     const calls = fakeBackend({
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],
-      'GET /saved': [],
       'POST /steer': { energy_arc: null },
     });
     show([20, 40, 80, 60, 30]);
@@ -189,7 +185,6 @@ describe('Pick a feeling', () => {
   it('lets the listener set a song as the destination for future mixes', async () => {
     const calls = fakeBackend({
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],
-      'GET /saved': [],
       'GET /songs': [
         { id: 7, artist: 'Example Artist', title: 'Midnight', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false },
         { id: 8, artist: 'Unready Artist', title: 'No Cues', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: null, never: false, priority: false },
@@ -213,7 +208,6 @@ describe('Pick a feeling', () => {
         card('afro_heat', 'Afro heat', 'The sound'),
         card('slow_burn', 'Slow burn', 'The journey'),
       ],
-      'GET /saved': [],
     });
     show();
     const moment = (await screen.findByRole('heading', { name: 'The moment' })).parentElement!;
@@ -225,7 +219,7 @@ describe('Pick a feeling', () => {
   });
 
   it('says what’s inside each one, from the songs that would really play', async () => {
-    fakeBackend({ 'GET /vibes': [card('peak', 'Peak time', 'The moment')], 'GET /saved': [] });
+    fakeBackend({ 'GET /vibes': [card('peak', 'Peak time', 'The moment')] });
     show();
     const heading = await screen.findByRole('heading', { name: 'Peak time' });
     const inside = within(heading.closest('article')!);
@@ -243,10 +237,44 @@ describe('Pick a feeling', () => {
         card('christmas', 'Christmas', 'The sound', { ready: false, needs: 2 }),
         card('workout', 'Workout', 'The moment', { ready: false, needs: 3 }),
       ],
-      'GET /saved': [],
     });
     show();
     expect(await screen.findByText('needs 3 more')).toBeInTheDocument();
     expect(screen.queryByText('Christmas')).toBeNull();
+  });
+});
+
+describe('a feeling kept as a draft', () => {
+  it('builds it without touching what’s playing', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('peak', 'Peak time', 'The moment')],
+      'POST /vibes/peak/build': { id: 4, name: 'Peak time', count: 12 },
+      'GET /drafts': { drafts: [], current: { name: 'Current', songs: 3, left: 0, eta: { seconds: 0, low: 0, high: 0 } }, out_of_room: false },
+    });
+    const notify = vi.fn();
+    const setMixData = vi.fn();
+    const player = new SetPlayer(() => [], () => {});
+    render(
+      <Mixes
+        status={status()}
+        mix={[]}
+        mixName=""
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={setMixData}
+        refreshStatus={() => {}}
+        player={player}
+        now={player.state}
+        setView={() => {}}
+        notify={notify}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Save Peak time as a draft' }));
+    await waitFor(() => expect(notify).toHaveBeenCalled());
+    expect(calls.find((call) => call.method === 'POST')?.path).toContain('as_draft=true');
+    expect(setMixData).not.toHaveBeenCalled();
+    expect(notify.mock.calls[0][0]).toContain('Nothing changed in what’s playing');
   });
 });

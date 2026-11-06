@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { fakeBackend, seam, songs, status } from './test/backend';
 
@@ -13,7 +13,6 @@ function backend(mix: () => unknown) {
     'GET /status': status(),
     'GET /mix': mix,
     'GET /vibes': [],
-    'GET /saved': [],
   });
 }
 
@@ -45,7 +44,7 @@ describe('the badges', () => {
 
 describe('when the mix can’t be read', () => {
   it('says so rather than showing an empty mix in silence', async () => {
-    fakeBackend({ 'GET /status': status(), 'GET /vibes': [], 'GET /saved': [] });
+    fakeBackend({ 'GET /status': status(), 'GET /vibes': [] });
     render(<App />);
     expect(await screen.findByText(/Couldn’t read your mix: Not Found/)).toBeInTheDocument();
   });
@@ -72,5 +71,68 @@ describe('keyboard shortcuts', () => {
     expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+describe('an open draft', () => {
+  const list = (drafts: { id: number; name: string }[]) => ({
+    drafts: drafts.map((draft) => ({ songs: 2, seconds: 400, seams: 1, ready: 0, failed: 0, waiting: 1, rendering: false, place: null, eta: null, to_render: 60, missing: 0, ...draft })),
+    current: { name: 'Current', songs: 3, left: 0, eta: { seconds: 0, low: 0, high: 0 } },
+    out_of_room: false,
+  });
+  const current = { mix: songs(seam('ready', 'a')), name: 'Current', can_undo: false };
+  const friday = { mix: songs(seam('none', 'b')), name: 'Friday', can_undo: true, draft: { id: 7, place: null } };
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('opens from the list without touching the current mix, and stays open after a reload', async () => {
+    const calls = fakeBackend({
+      'GET /status': status(),
+      'GET /vibes': [],
+      'GET /drafts': list([{ id: 7, name: 'Friday' }]),
+      'GET /mix': (_body: unknown, url: string) => (url.includes('draft=7') ? friday : current),
+    });
+    const { unmount } = render(<App />);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Edit Friday' }))[0]);
+    expect(await screen.findByRole('heading', { name: 'Friday' })).toBeInTheDocument();
+    expect(calls.some((call) => call.method !== 'GET')).toBe(false);
+    unmount();
+    render(<App />);
+    fireEvent.click((await navigation()).getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByRole('heading', { name: 'Friday' })).toBeInTheDocument();
+  });
+
+  it('falls back to the current mix if the draft has gone', async () => {
+    window.localStorage.setItem('selecta.openDraft', '99');
+    fakeBackend({
+      'GET /status': status(),
+      'GET /vibes': [],
+      'GET /drafts': list([]),
+      'GET /mix': (_body: unknown, url: string) => {
+        if (url.includes('draft=99')) throw new Error('gone');
+        return current;
+      },
+    });
+    render(<App />);
+    fireEvent.click((await navigation()).getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByRole('heading', { name: 'Current' })).toBeInTheDocument();
+    expect(window.localStorage.getItem('selecta.openDraft')).toBeNull();
+  });
+
+  it('being sent to Edit from another page means the mix that’s playing', async () => {
+    window.localStorage.setItem('selecta.openDraft', '7');
+    fakeBackend({
+      'GET /status': status(),
+      'GET /vibes': [],
+      'GET /drafts': list([{ id: 7, name: 'Friday' }]),
+      'GET /mix': (_body: unknown, url: string) => (url.includes('draft=7') ? friday : current),
+      'POST /drafts/7/play': { ...current, name: 'Friday' },
+    });
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Play Friday' }));
+    await waitFor(() => expect(window.localStorage.getItem('selecta.openDraft')).toBeNull());
+    expect(await screen.findByText(/What was playing is kept in your drafts/)).toBeInTheDocument();
   });
 });

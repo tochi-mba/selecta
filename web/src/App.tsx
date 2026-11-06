@@ -9,7 +9,10 @@ import { Mixes } from './views/Mixes';
 import { Now } from './views/Now';
 import { Start } from './views/Start';
 import { Workshop } from './views/Workshop';
-import type { Toast, View } from './views/shared';
+import { MixScope } from './views/mixScope';
+import type { Toast, Undo, View } from './views/shared';
+
+const OPEN_DRAFT = 'selecta.openDraft';
 
 const NAV: { view: View; label: string }[] = [
   { view: 'Mixes', label: 'Mixes' },
@@ -36,6 +39,8 @@ export function App() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [helping, setHelping] = useState(false);
   const [stage, setStage] = useState(false);
+  const viewRef = useRef(view);
+  viewRef.current = view;
   const mix = data.mix;
   const mixRef = useRef<MixItem[]>([]);
   mixRef.current = mix;
@@ -58,12 +63,69 @@ export function App() {
       .catch((error: Error) => setProblem(error.message));
   }, []);
 
-  const notify = useCallback((message: string, undo = false) => {
+  // One draft can be open at a time. It stays open while looking at other pages, and across reloads.
+  const [draftId, setDraftId] = useState<number | null>(() => {
+    try {
+      const saved = window.localStorage.getItem(OPEN_DRAFT);
+      return saved ? Number(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [draftData, setDraftData] = useState<MixData | null>(null);
+  const draftRef = useRef(draftId);
+  draftRef.current = draftId;
+  const remember = (id: number | null) => {
+    try {
+      if (id === null) window.localStorage.removeItem(OPEN_DRAFT);
+      else window.localStorage.setItem(OPEN_DRAFT, String(id));
+    } catch {
+      // the draft just won't reopen next time
+    }
+  };
+  const closeDraft = useCallback(() => {
+    setDraftId(null);
+    setDraftData(null);
+    remember(null);
+  }, []);
+  const refreshDraft = useCallback(() => {
+    const asked = draftRef.current;
+    if (asked === null) return;
+    get<MixData>(`/mix?draft=${asked}`)
+      .then((next) => {
+        if (draftRef.current === asked) setDraftData(next);
+      })
+      .catch(() => {
+        // deleted or played in another tab, so the current mix is what's left to show
+        if (draftRef.current === asked) closeDraft();
+      });
+  }, [closeDraft]);
+  useEffect(refreshDraft, [draftId, view, refreshDraft]);
+  const openDraft = useCallback((id: number) => {
+    setDraftData(null);
+    setDraftId(id);
+    remember(id);
+    setView('Edit');
+  }, []);
+  // being sent to Edit from another page means the mix that's playing
+  const goTo = useCallback((next: View) => {
+    if (next === 'Edit') closeDraft();
+    setView(next);
+  }, [closeDraft]);
+
+  const notify = useCallback((message: string, undo: Undo = false) => {
     setToast({ message: message.replace(/\.\.$/, '.'), undo, id: Date.now() });
   }, []);
-  const undo = useCallback(async () => {
-    const next = await post<MixData>('/mix/undo');
-    setMixData(next);
+  const undo = useCallback(async (how: Undo = true) => {
+    if (typeof how === 'function') {
+      await how();
+      setToast(null);
+      return;
+    }
+    const open = viewRef.current === 'Edit' ? draftRef.current : null;
+    const next = await post<MixData>(open === null ? '/mix/undo' : `/mix/undo?draft=${open}`);
+    if (open === null) setMixData(next);
+    else setDraftData(next);
     setToast({ message: next.undone ? `Undid ${next.undone}.` : 'Nothing to undo.', undo: false, id: Date.now() });
   }, [setMixData]);
 
@@ -82,6 +144,14 @@ export function App() {
   }, []);
 
   const player = useMemo(() => new SetPlayer(() => mixRef.current, refreshMix), [refreshMix]);
+  const playDraft = useCallback(async (id: number, from = 0) => {
+    const next = await post<MixData>(`/drafts/${id}/play`);
+    setMixData(next);
+    if (draftRef.current === id) closeDraft();
+    setView('Now');
+    void player.playFrom(from);
+    setToast({ message: `Now playing ${next.name}. What was playing is kept in your drafts.`, undo: true, id: Date.now() });
+  }, [closeDraft, player, setMixData]);
   const [now, setNow] = useState<NowState>(player.state);
   useEffect(() => {
     player.onChange = setNow;
@@ -104,6 +174,14 @@ export function App() {
   }, [refreshStatus, setMixData, player]);
 
   useEffect(refreshMix, [view, refreshMix]);
+
+  // A draft being rendered has to show that as it happens too.
+  const draftBusy = !!draftData && (draftData.draft?.place != null || draftData.mix.some((item) => ['queued', 'rendering'].includes(item.seam?.state.status ?? '')));
+  useEffect(() => {
+    if (!draftBusy) return;
+    const timer = window.setInterval(refreshDraft, 2000);
+    return () => window.clearInterval(timer);
+  }, [draftBusy, refreshDraft]);
 
   // Anything still rendering gets checked often, so its status changes on its own.
   const busy = mix.some((item) => ['none', 'queued', 'rendering'].includes(item.seam?.state.status ?? ''));
@@ -197,10 +275,13 @@ export function App() {
     refreshStatus,
     player,
     now,
-    setView,
+    setView: goTo,
     notify,
     stage,
     toggleStage,
+    openDraft,
+    closeDraft,
+    playDraft,
   };
   const shown: View = view === 'Now' && !mix.length ? 'Mixes' : view;
   return (
@@ -231,7 +312,24 @@ export function App() {
       )}
       {shown === 'Mixes' && <Mixes {...shared} />}
       {shown === 'Now' && <Now {...shared} />}
-      {shown === 'Edit' && <Mix {...shared} />}
+      {shown === 'Edit' && draftId === null && <Mix {...shared} />}
+      {shown === 'Edit' && draftId !== null && !draftData && <main className="page" aria-busy="true" />}
+      {shown === 'Edit' && draftId !== null && draftData && (
+        <MixScope.Provider value={draftId}>
+          <Mix
+            {...shared}
+            key={draftId}
+            mix={draftData.mix}
+            mixName={draftData.name}
+            canUndo={draftData.can_undo}
+            mixEta={draftData.eta}
+            draftPlace={draftData.draft?.place ?? null}
+            refreshMix={refreshDraft}
+            setMixData={setDraftData}
+            renamedDraft={(name) => setDraftData((before) => (before ? { ...before, name } : before))}
+          />
+        </MixScope.Provider>
+      )}
       {shown === 'Library' && <Library {...shared} />}
       {shown === 'Words' && <Links {...shared} />}
       {shown === 'Workshop' && <Workshop {...shared} />}
@@ -250,7 +348,7 @@ export function App() {
       {toast && (
         <div className={`toast ${active && shown !== 'Now' ? 'raised' : ''}`} role="status" key={toast.id}>
           <span>{toast.message}</span>
-          {toast.undo && <button onClick={() => void undo()}>Undo</button>}
+          {toast.undo && <button onClick={() => void undo(toast.undo)}>Undo</button>}
         </div>
       )}
       {helping && (

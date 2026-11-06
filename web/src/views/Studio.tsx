@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Eta, MixData, MixItem, post } from '../api';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
+import { useMixPath } from './mixScope';
 
 type Session = {
   status: 'none' | 'queued' | 'rendering' | 'ready' | 'failed';
@@ -39,12 +40,13 @@ export function Studio(props: {
   const [soloed, setSoloed] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const deck = useRef<StemDeck | null>(null);
+  const at = useMixPath();
 
   useEffect(() => {
     let live = true;
     let timer: number | undefined;
     const follow = () => {
-      post<Session>(`/mix/${position}/studio`)
+      post<Session>(at(`/mix/${position}/studio`))
         .then((next) => {
           if (!live) return;
           setSession(next);
@@ -112,7 +114,7 @@ export function Studio(props: {
     deck.current?.stop();
     setPlaying(false);
     try {
-      onUsed(await post<MixData>(`/mix/${position}/studio/use`, { shape }));
+      onUsed(await post<MixData>(at(`/mix/${position}/studio/use`), { shape }));
       notify('Rendering your version. It’ll play in the mix when it’s ready.');
       onClose();
     } catch (error) {
