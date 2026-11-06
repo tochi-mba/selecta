@@ -44,7 +44,7 @@ export function Drafts({ notify, openDraft, playDraft, setView }: Props) {
     setList(next);
     const placed = next.drafts.find((item) => item.id === draft.id);
     if (!placed?.place) notify(`${draft.name} is already ready.`);
-    else if (next.current.left > 0 || placed.place > 1) notify(`${draft.name} will render after what’s ahead of it, in ${etaRangeWords(placed.eta ?? undefined)}.`);
+    else if (next.current.left > 0 || placed.place > 1) notify(`${draft.name} is in line, and will be ready in ${etaRangeWords(placed.eta ?? undefined)}.`);
     else notify(`Rendering ${draft.name} in the background.`);
   };
   const duplicate = async (draft: DraftInfo) => {

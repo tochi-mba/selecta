@@ -523,7 +523,7 @@ export function Mix(props: ViewProps) {
     const placed = next.drafts.find((item) => item.id === draftId);
     if (!take) notify('Taken out of the line. It won’t render by itself now.');
     else if (placed?.place) {
-      notify(placed.place === 1 && next.current.left === 0 ? 'Rendering this in the background.' : `This will render after what’s ahead of it, in ${etaRangeWords(placed.eta ?? undefined)}.`);
+      notify(placed.place === 1 && next.current.left === 0 ? 'Rendering this in the background.' : `This is in line, and will be ready in ${etaRangeWords(placed.eta ?? undefined)}.`);
     }
   };
   const copyDraft = async () => {
