@@ -42,6 +42,26 @@ def _insert_songs(conn, *ids: int) -> None:
     )
 
 
+def test_legacy_melody_claims_are_relabelled_without_losing_reviews(tmp_path):
+    path = tmp_path / "legacy.sqlite"
+    conn = db.connect(path)
+    _insert_songs(conn, 1, 2)
+    conn.execute(
+        "INSERT INTO seam_book(id,song_a,song_b,kind,payload,score,status) "
+        "VALUES(9,1,2,'same_melody','{}',.99,'approved')"
+    )
+    conn.commit()
+    conn.close()
+    for _ in range(2):
+        conn = db.connect(path)
+        row = conn.execute("SELECT * FROM seam_book WHERE id=9").fetchone()
+        assert row["kind"] == "tonal_profile_cousin"
+        assert row["status"] == "approved"
+        assert json.loads(row["payload"])["legacy_kind"] == "same_melody"
+        assert conn.execute("SELECT COUNT(*) FROM seam_book").fetchone()[0] == 1
+        conn.close()
+
+
 def test_audio_search_calls_average_chroma_a_tonal_profile_not_a_melody(tmp_path):
     conn = db.connect(tmp_path / "test.sqlite")
     _insert_songs(conn, 1, 2)
