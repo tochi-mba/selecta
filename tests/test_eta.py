@@ -198,7 +198,7 @@ def test_each_seam_is_quoted_with_the_ones_ahead_of_it(tmp_path):
         clock.record("vocal_ride", 200.0)
     for _ in range(4):
         clock.record("echo_out", 30.0)
-    items = [_item("none"), _item("queued", "vocal_ride"), _item("none")]
+    items = [_item("none"), _item("queued", "vocal_ride", windows=0), _item("none")]
     left = mix_time_left(items, clock)
     etas = [item["seam"]["state"]["eta"] for item in items]
     assert etas == [30, 230, 260]
@@ -397,7 +397,7 @@ def test_the_starting_guesses_are_close_to_real_times_on_a_real_pc():
     assert GUESSES["cut_on_one"] < 10
     assert GUESSES["delay_throw"] < 15
     assert GUESSES["echo_out"] < 20
-    assert GUESSES["vocal_ride"] >= 240
+    assert GUESSES["stem_window"] >= 100
 
 
 def test_one_real_time_moves_an_estimate_a_long_way(tmp_path):
@@ -550,3 +550,85 @@ def test_a_file_from_before_all_this_still_reads(tmp_path):
     assert clock.estimate("echo_out").seconds > 0
     clock.record("echo_out", 13.0)
     assert clock.times()["echo_out"] == [11.0, 12.0, 13.0]
+
+
+# ---- stems already split or not, which matters more than anything else
+
+
+def _ride(status="none", **state):
+    return _item(status, "vocal_ride", key="ride", **state)
+
+
+def _clock_for_stems(home):
+    clock = JobClock(home)
+    for _ in range(5):
+        clock.record("vocal_ride", 40.0)
+        clock.record("stem_window", 120.0)
+    return clock
+
+
+def test_a_stem_move_with_its_stems_ready_is_quoted_as_quick(tmp_path):
+    clock = _clock_for_stems(tmp_path)
+    item = _ride(windows=0)
+    assert mix_time_left([item], clock)["seconds"] == 40
+
+
+def test_a_stem_move_is_quoted_for_the_stems_it_still_needs(tmp_path):
+    clock = _clock_for_stems(tmp_path)
+    assert mix_time_left([_ride(windows=1)], clock)["seconds"] == 160
+    assert mix_time_left([_ride(windows=2)], clock)["seconds"] == 280
+
+
+def test_without_knowing_a_stem_move_is_assumed_to_split_both_songs(tmp_path):
+    clock = _clock_for_stems(tmp_path)
+    assert mix_time_left([_ride()], clock)["seconds"] == 280
+
+
+def test_an_ordinary_move_never_waits_for_stems(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(5):
+        clock.record("echo_out", 10.0)
+    assert mix_time_left([_item("none")], clock)["seconds"] == 10
+
+
+def test_a_running_stem_move_counts_down_through_its_stems(tmp_path):
+    clock = _clock_for_stems(tmp_path)
+    now = 10_000.0
+    def left(elapsed, windows):
+        item = _ride("rendering", started_at=now - elapsed, windows=windows, windows_total=2)
+        return mix_time_left([item], clock, now)["seconds"]
+
+    assert left(0, 2) == 280
+    assert left(60, 2) == 220
+    assert left(120, 1) == 160, "one window done, right on time"
+    assert left(180, 1) == 100
+    assert left(240, 0) == 40, "both done, and only its own work is left"
+
+
+def test_a_stem_move_running_past_its_stems_is_judged_by_its_own_work(tmp_path):
+    clock = JobClock(tmp_path)
+    for seconds in (30.0, 30.0, 300.0, 300.0, 30.0):
+        clock.record("vocal_ride", seconds)
+    for _ in range(5):
+        clock.record("stem_window", 120.0)
+    now = 10_000.0
+    item = _ride("rendering", started_at=now - 300.0, windows=0, windows_total=2)
+    assert mix_time_left([item], clock, now)["seconds"] > 100, "60 s in, past all the quick ones"
+
+
+def test_old_times_with_stems_mixed_in_are_dropped_but_others_stay(tmp_path):
+    (tmp_path / "job-times.json").write_text(
+        json.dumps({"vocal_ride": [330.0], "stem_window": [120.0], "echo_out": [11.0]}), "utf-8"
+    )
+    clock = JobClock(tmp_path)
+    assert set(clock.times()) == {"stem_window", "echo_out"}
+    clock.record("vocal_ride", 30.0)
+    assert JobClock(tmp_path).times()["vocal_ride"] == [30.0], "new times are kept"
+    assert JobClock(tmp_path).times()["stem_window"] == [120.0]
+
+
+def test_the_score_is_of_what_a_person_was_told(tmp_path):
+    clock = JobClock(tmp_path)
+    clock.record("vocal_ride", 30.0, quoted=100.0, total=300.0)
+    assert clock.accuracy() == {"jobs": 1, "typical_miss": 3.0}
+    assert clock.times()["vocal_ride"] == [30.0], "while its own time leaves out the stems"

@@ -295,6 +295,24 @@ def test_a_songs_own_voice_never_clashes_with_its_own_band():
     assert score(only_first, apart, Taste()) == pytest.approx(score(only_first, hearing, Taste()))
 
 
+def test_a_part_that_left_stays_gone():
+    """On a real pair the search brought a song's drums back for one square to hit the energy."""
+    hearing, taste = _hearing(), Taste()
+    returning = as_array(STRIP_AND_LAND).copy()
+    returning[0, LANE["drums"], 5] = True
+    assert score(returning, hearing, taste) < score(as_array(STRIP_AND_LAND), hearing, taste)
+
+
+def test_tuning_does_not_bring_parts_back():
+    hearing = _hearing(
+        a_other=[LOUD, LOUD, QUIET, QUIET, QUIET, LOUD, LOUD, LOUD], b_other=[QUIET] * CELLS
+    )
+    tuned = tune(as_array(STRIP_AND_LAND), hearing, Taste())
+    for side, lane in ((0, "drums"), (0, "bass"), (1, "drums"), (1, "bass")):
+        lanes = tuned[side, LANE[lane]]
+        assert int(lanes[0]) + int((lanes[1:] & ~lanes[:-1]).sum()) <= 1
+
+
 def test_a_deliberate_tease_is_not_flicker():
     assert (
         score(as_array(STRIP_AND_LAND), _hearing(), Taste())
@@ -494,9 +512,31 @@ def test_a_harmony_failure_keeps_the_melodies_apart_until_the_landing():
     assert fixed["b"]["other"] == [0, 0, 0, 0, 0, 0, 1, 1]
 
 
-def test_a_thin_stretch_keeps_the_first_songs_drums_longer():
+def test_a_thin_stretch_is_filled_by_a_melody_that_is_resting():
+    """The thinnest square on the shape is the sixth, where the tease pulls away."""
     fixed = repair(clean_shape(STRIP_AND_LAND), ["quiet time"], _hearing())
+    assert fixed["b"]["other"][5] == 1
+    assert fixed["a"]["drums"] == STRIP_AND_LAND["a"]["drums"]
+
+
+def test_with_no_melody_to_fill_it_the_first_songs_drums_stay_longer():
+    fixed = repair(clean_shape(STRIP_AND_LAND), ["level fall"], _hearing(b_other=[QUIET] * CELLS))
     assert fixed["a"]["drums"] == [1, 1, 1, 0, 0, 0, 0, 0]
+
+
+def test_a_thin_stretch_with_drums_already_to_the_end_has_nothing_to_extend():
+    """Found on a real pair, where the first song's drums already ran to the last square."""
+    shape = clean_shape(STRIP_AND_LAND)
+    shape["a"]["drums"] = [1] * CELLS
+    assert repair(shape, ["quiet time"], _hearing(b_other=[QUIET] * CELLS)) is None
+
+
+def test_a_thin_stretch_with_no_drums_starts_them_from_the_top():
+    shape = clean_shape(STRIP_AND_LAND)
+    shape["a"]["drums"] = [0] * CELLS
+    assert (
+        repair(shape, ["level fall"], _hearing(b_other=[QUIET] * CELLS))["a"]["drums"][0] == 1
+    )
 
 
 def test_a_low_end_clash_removes_the_doubled_part():

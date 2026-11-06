@@ -78,6 +78,7 @@ CLASH = 10.0
 CLIPPED_WORD = 6.0
 DRUMS_BEFORE_BASS = 3.0
 JUMP_AT_THE_EDGE = 4.0
+BROKEN_PART = 5.0
 TOO_LONG_BARE = 5.0
 FLICKER = 2.0
 LIKE_A_LIKED_SHAPE = 12.0
@@ -325,6 +326,14 @@ def score(shape: np.ndarray, hearing: Hearing, taste: Taste) -> float:
     points -= TOO_LONG_BARE * max(_longest_run(no_drums) - LONGEST_WITHOUT_DRUMS, 0)
     points -= TOO_LONG_BARE * max(_longest_run(no_bass) - LONGEST_WITHOUT_BASS, 0)
 
+    # a voice, drums or bass that has left stays gone, and once it's arrived it stays. Bringing a
+    # first song's drums back for one square mid-breakdown hits the energy but isn't a choice a DJ
+    # would make. Only a melody teases
+    for s in (A, B):
+        for lane in (VOICE, DRUMS, BASS):
+            runs = int(shape[s, lane, 0]) + int((shape[s, lane, 1:] & ~shape[s, lane, :-1]).sum())
+            points -= BROKEN_PART * max(runs - 1, 0)
+
     # switching a part on and off over and over stops sounding like a choice
     changes = (shape[:, :, 1:] != shape[:, :, :-1]).sum(axis=2)
     points -= FLICKER * float(np.maximum(changes - USUAL_CHANGES_PER_LANE, 0).sum())
@@ -425,6 +434,22 @@ def arrangements(hearing: Hearing, taste: Taste, theirs: Shape | None = None) ->
     return [as_shape(shape) for _, shape in made]
 
 
+def _fill_the_thinnest_square(shape: np.ndarray, hearing: Hearing) -> None:
+    """Too thin at its lowest. A melody that's there and resting can fill it. Otherwise the first
+    song's drums stay for one more square, as long as they have somewhere to go."""
+    present = hearing.levels >= PRESENT_DB
+    power = 10.0 ** (hearing.levels / 10.0) * present
+    thinnest = int(np.argmin((power * shape).sum(axis=(0, 1))))
+    for s in (A, B):
+        if present[s, MELODY, thinnest] and not shape[s, MELODY, thinnest]:
+            shape[s, MELODY, thinnest] = True
+            return
+    drums = np.flatnonzero(shape[A, DRUMS])
+    following = int(drums[-1]) + 1 if drums.size else 0
+    if following < CELLS and present[A, DRUMS, following]:
+        shape[A, DRUMS, following] = True
+
+
 def repair(shape: Shape, failed: list[str], hearing: Hearing) -> Shape | None:
     """A specific fix for what a render's checks found, or None if the shape can't fix it. Being
     able to hear a take and go again is the one thing a machine can do that a live DJ can't."""
@@ -441,9 +466,7 @@ def repair(shape: Shape, failed: list[str], hearing: Hearing) -> Shape | None:
     if {"phrase integrity"} & set(failed):
         fixed = _voice_moved_to_a_gap(fixed, hearing)
     if {"quiet time", "level fall", "seam energy"} & set(failed):
-        # too thin at its lowest: keep the first song's drums for one more square
-        drums = np.flatnonzero(fixed[A, DRUMS])
-        fixed[A, DRUMS, int(drums[-1]) + 1 if drums.size else 0] = True
+        _fill_the_thinnest_square(fixed, hearing)
     if "entry level" in failed:
         # the landing jumps out: let the first song's melody thin out before it
         fixed[B, DRUMS, : CELLS - 1] = False

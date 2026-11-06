@@ -104,14 +104,20 @@ class WordTake:
     report: AuditReport
 
 
+def line_window(song: SongInfo, line: Line) -> tuple[float, float, float]:
+    """The stretch of a song to split for one line: where it starts, how long it is, and when the
+    next line begins. Worked out from the lyrics alone, so what's needed is known in advance."""
+    later = [other.start for other in song.lines if other.start > line.start]
+    origin = max(0.0, line.start - WINDOW_LEAD)
+    next_start = later[0] if later else line.end + LINE_SEARCH_AFTER
+    return origin, max(line.end, next_start) + WINDOW_TAIL - origin, next_start
+
+
 def _fit_line(
     settings: Settings, aligner: Aligner, song: SongInfo, line: Line
 ) -> tuple[list[Word], list[Word], float, np.ndarray, float, float, Stem, Stem]:
     """Fit a line's words to the separated voice, or raise if the fit can't be trusted."""
-    later = [other.start for other in song.lines if other.start > line.start]
-    origin = max(0.0, line.start - WINDOW_LEAD)
-    next_start = later[0] if later else line.end + LINE_SEARCH_AFTER
-    length = max(line.end, next_start) + WINDOW_TAIL - origin
+    origin, length, next_start = line_window(song, line)
     stems = separate_window(settings, Path(song.path), origin, length)
     vocal = sf.read(stems.vocals, dtype="float32")[0]
 
@@ -237,10 +243,7 @@ def voice_edge(
 
 def locate_voice_edge(settings: Settings, song: SongInfo, line: Line, at_end: bool) -> Phrase:
     """Find where a voice stops or starts, for a ride. Uses the same stems as finding its words."""
-    later = [other.start for other in song.lines if other.start > line.start]
-    origin = max(0.0, line.start - WINDOW_LEAD)
-    next_start = later[0] if later else line.end + LINE_SEARCH_AFTER
-    length = max(line.end, next_start) + WINDOW_TAIL - origin
+    origin, length, next_start = line_window(song, line)
     stems = separate_window(settings, Path(song.path), origin, length)
     vocal = sf.read(stems.vocals, dtype="float32")[0]
     edge = voice_edge(vocal, origin, line, next_start, at_end)
