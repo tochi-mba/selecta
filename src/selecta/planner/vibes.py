@@ -20,6 +20,7 @@ import numpy as np
 
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
+from selecta.arrange import can_arrange
 from selecta.lyrics.lrclib import clean_artist
 from selecta.planner.arc import target_energy
 from selecta.planner.beam import (
@@ -65,6 +66,7 @@ RIDE_WEIGHT = {"balanced": 3.0, "seamless": 3.0, "wordplay": 1.5, "punchy": 1.5}
 MAX_SHARE = {
     "vocal_ride": 0.35,
     "stem_intertwine": 0.3,
+    "stem_arrange": 0.2,
     "bass_swap_blend": 0.4,
     "filter_sweep": 0.3,
     "tempo_ramp": 0.25,
@@ -86,6 +88,9 @@ FAMILIES = {
 ROLL_GAP = 0.1
 ROLL_SHOWCASE_GAP = 0.5
 BLEND_SHOWCASE_GAP = 0.08
+ARRANGE_WEIGHT = 1.5
+"""Less than a vocal ride for now. It has one example behind it, and rides have dozens. Ratings
+move it up or down through the same memory as every other move."""
 OVER_SHARE = 0.05
 SONG_RECORD_WEIGHT = 0.3
 """Songs that keep rendering badly get picked a little less, and clean ones a little more."""
@@ -548,6 +553,10 @@ def _moves_that_fit(
     intertwine = memory.move_factor(a.id, b.id, "stem_intertwine")
     if stems != "never" and intertwine > 0 and can_intertwine(a, b):
         options.append(("stem_intertwine", (0.35 if stems == "sometimes" else 1.3) * intertwine))
+    arrange = memory.move_factor(a.id, b.id, "stem_arrange")
+    if stems != "never" and arrange > 0 and can_arrange(a, b):
+        weight = ARRANGE_WEIGHT * (1.5 if stems == "often" else 1.0)
+        options.append(("stem_arrange", weight * arrange * overlap_lean))
     exits, entries = a.exit_cues()[:3], b.entry_cues()[:4]
     for name, weight in MOVE_WEIGHTS[vibe.language].items():
         known = memory.move_factor(a.id, b.id, name)

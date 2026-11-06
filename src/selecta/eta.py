@@ -1,10 +1,14 @@
 """How long things will take, worked out from how long they've taken on this machine.
 
-Every job's real time is kept, so estimates start as rough guesses and quickly become measurements.
-Three things keep them honest. Times are averaged after dropping the extremes, because a total is
-what a person is waiting for, and one stall while a PC slept shouldn't skew it. Each estimate has a
-likely range, which widens when there's little to go on. And a job that's running counts down from
-when it really started, without ever claiming to be finished or going below a small floor.
+Every job's real time is kept, so estimates start as guesses and quickly become measurements.
+Four things keep them honest, each from comparing estimates with what really happened on this PC:
+
+- One real time counts as much as the starting guess, and after that the guess fades quickly.
+- How busy the PC is right now counts. The same song took 30 s idle and 12 minutes under load, so
+  recent jobs running slow make every estimate longer until things calm down.
+- A job that's already running is judged by how long jobs like it took when they ran this long. If
+  it has outlasted all the quick ones, it's one of the slow ones, whatever the average says is left.
+- Whatever has to finish first is counted, so a wait behind rendering is part of the time quoted.
 """
 
 from __future__ import annotations
@@ -25,7 +29,33 @@ from selecta.config import ANALYSIS_VERSION
 KEEP = 40
 """Only recent times count, so estimates follow changes in the machine and the code."""
 TRUST_AFTER = 5
-"""With fewer times than this, an estimate leans partly on the starting guess."""
+"""With fewer times than this, the starting guess still counts as one more time."""
+LOAD_AFTER = 5
+"""A kind of job needs this many real times before it can say the PC is running slow."""
+RECENT_JOBS = 8
+SLOWEST_LOAD = 3.0
+QUICKEST_LOAD = 0.5
+RECENT_SONGS = 8
+"""Walking through real analyses, half this recent pace and half the long-run one had the fewest bad
+misses, and it follows the PC speeding up and slowing down."""
+BUSY_ENOUGH = 1.6
+"""Jobs vary by this much anyway, so it takes more than this for the PC to count as busy or idle."""
+STEADY_JOBS = {
+    "stem_window",
+    "cut_on_one",
+    "echo_out",
+    "delay_throw",
+    "reverb_wash",
+    "bass_swap_blend",
+    "filter_sweep",
+    "tempo_ramp",
+    "stem_studio",
+}
+"""Jobs whose time says how busy the PC is. A word move takes 50 s with its stems ready and 330 s
+without, which says nothing about the PC, so those don't count."""
+LOAD_KEY = "_load"
+CHECKS_KEY = "_checks"
+KEEP_CHECKS = 40
 LONGEST_BELIEVABLE = 3 * 3600.0
 """Anything longer than this was probably a PC asleep, not a job working."""
 MOOD = 0.3
@@ -42,26 +72,28 @@ ANALYSIS_RATE_GUESS = 0.15
 """Seconds of work per second of audio, until there are real analysis times to go on."""
 RECENT_ANALYSES = 100
 GUESSES = {
-    "cut_on_one": 25.0,
-    "echo_out": 30.0,
-    "delay_throw": 30.0,
-    "reverb_wash": 30.0,
+    "cut_on_one": 5.0,
+    "echo_out": 10.0,
+    "delay_throw": 8.0,
+    "reverb_wash": 10.0,
     "bass_swap_blend": 40.0,
-    "filter_sweep": 40.0,
-    "tempo_ramp": 45.0,
-    "vocal_ride": 200.0,
-    "word_blend": 240.0,
-    "word_exchange": 240.0,
-    "phrase_roll": 220.0,
-    "word_cut": 200.0,
-    "stem_intertwine": 240.0,
-    "auto": 120.0,
+    "filter_sweep": 30.0,
+    "tempo_ramp": 30.0,
+    "vocal_ride": 300.0,
+    "word_blend": 120.0,
+    "word_exchange": 200.0,
+    "phrase_roll": 150.0,
+    "word_cut": 100.0,
+    "stem_intertwine": 300.0,
+    "auto": 150.0,
+    "stem_arrange": 300.0,
     "stem_studio": 15.0,
     "studio_session": 60.0,
-    "stem_window": 100.0,
+    "stem_window": 120.0,
     "audition": 15.0,
     "export_per_song": 1.5,
 }
+"""Measured on a four-core laptop, so a new PC isn't far out from the very first job."""
 UNKNOWN_JOB_GUESS = 120.0
 
 
@@ -100,8 +132,7 @@ def estimate_from(samples: Iterable[float], guess: float) -> Estimate:
     expected = sum(kept) / len(kept)
     low, high = _quantile(ordered, 0.1), _quantile(ordered, 0.9)
     if count < TRUST_AFTER:
-        weight = count / TRUST_AFTER
-        expected = weight * expected + (1.0 - weight) * guess
+        expected = (sum(kept) + guess) / (len(kept) + 1)
         low, high = min(low, expected * 0.6), max(high, expected * 1.6)
     return Estimate(expected, min(low, expected), max(high, expected), count)
 
@@ -143,47 +174,110 @@ def still_to_go(estimate: Estimate, elapsed: float) -> Estimate:
     )
 
 
+def _scaled(estimate: Estimate, by: float) -> Estimate:
+    return Estimate(
+        estimate.seconds * by,
+        estimate.low * by,
+        estimate.high * by,
+        estimate.samples,
+        estimate.late,
+    )
+
+
 class JobClock:
     """Real job times, kept beside the rest of the data so they last between runs."""
 
     def __init__(self, home: Path):
         self.path = home / FILE_NAME
 
-    def times(self) -> dict[str, list[float]]:
+    def _everything(self) -> dict:
         try:
             loaded = json.loads(self.path.read_text("utf-8"))
         except (OSError, ValueError):
             return {}
         return loaded if isinstance(loaded, dict) else {}
 
+    def times(self) -> dict[str, list[float]]:
+        return {kind: v for kind, v in self._everything().items() if not kind.startswith("_")}
+
     def record(self, kind: str, seconds: float) -> None:
         if not (0 < seconds <= LONGEST_BELIEVABLE) or not math.isfinite(seconds):
             return
-        times = self.times()
-        recent = [*times.get(kind, []), round(float(seconds), 2)][-KEEP:]
-        times[kind] = recent
+        stored = self._everything()
+        before = stored.get(kind, [])
+        quoted = self.estimate(kind).seconds
+        checks = [*stored.get(CHECKS_KEY, []), round(seconds / max(quoted, 0.1), 3)]
+        stored[CHECKS_KEY] = checks[-KEEP_CHECKS:]
+        if kind in STEADY_JOBS and len(before) >= LOAD_AFTER:
+            usual = statistics.median(before)
+            ratios = [*stored.get(LOAD_KEY, []), round(seconds / max(usual, 0.1), 3)]
+            stored[LOAD_KEY] = ratios[-RECENT_JOBS:]
+        stored[kind] = [*before, round(float(seconds), 2)][-KEEP:]
         self.path.parent.mkdir(parents=True, exist_ok=True)
         # written whole and swapped in, since the app and the worker can both be recording
         descriptor, temporary = tempfile.mkstemp(dir=self.path.parent, suffix=".tmp")
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            json.dump(times, stream)
+            json.dump(stored, stream)
         try:
             os.replace(temporary, self.path)
         except OSError:
             Path(temporary).unlink(missing_ok=True)
 
+    def load(self) -> float:
+        """How much slower than usual jobs have been lately, where 1 is usual."""
+        ratios = self._everything().get(LOAD_KEY, [])
+        if len(ratios) < LOAD_AFTER:
+            return 1.0
+        load = statistics.median(ratios)
+        if 1.0 / BUSY_ENOUGH < load < BUSY_ENOUGH:
+            return 1.0
+        return max(QUICKEST_LOAD, min(load, SLOWEST_LOAD))
+
     def estimate(self, kind: str) -> Estimate:
-        return estimate_from(self.times().get(kind, []), GUESSES.get(kind, UNKNOWN_JOB_GUESS))
+        guess = GUESSES.get(kind, UNKNOWN_JOB_GUESS)
+        return _scaled(estimate_from(self.times().get(kind, []), guess), self.load())
+
+    def left(self, kind: str, elapsed: float) -> Estimate:
+        """What's left of a job that has run this long. Among past jobs that ran at least this long,
+        how much longer did they go? A job past all the quick ones is one of the slow ones."""
+        estimate = self.estimate(kind)
+        if elapsed <= 0:
+            return estimate
+        load = self.load()
+        longer = [time * load - elapsed for time in self.times().get(kind, [])]
+        longer = [time for time in longer if time > 0]
+        if not longer:
+            return still_to_go(estimate, elapsed)
+        floor = max(estimate.seconds * 0.1, SHORTEST_LEFT)
+        seconds = max(statistics.fmean(longer), floor)
+        return Estimate(
+            seconds,
+            max(min(min(longer), seconds), min(floor, seconds)),
+            max(max(longer), seconds),
+            estimate.samples,
+            elapsed > estimate.high,
+        )
 
     def recent(self) -> dict[str, float]:
         """The expected time for each kind of job, for the page to quote."""
         times = self.times()
+        load = self.load()
         return {
             kind: round(
-                estimate_from(times.get(kind, []), GUESSES.get(kind, UNKNOWN_JOB_GUESS)).seconds, 1
+                estimate_from(times.get(kind, []), GUESSES.get(kind, UNKNOWN_JOB_GUESS)).seconds
+                * load,
+                1,
             )
             for kind in {*GUESSES, *times}
         }
+
+    def accuracy(self) -> dict:
+        """How far out recent estimates really were: how many times too long or too short."""
+        checks = [ratio for ratio in self._everything().get(CHECKS_KEY, []) if ratio > 0]
+        if not checks:
+            return {"jobs": 0, "typical_miss": None}
+        misses = [max(ratio, 1.0 / ratio) for ratio in checks]
+        return {"jobs": len(checks), "typical_miss": round(statistics.median(misses), 2)}
 
 
 def _unfinished(item: dict) -> bool:
@@ -193,10 +287,10 @@ def _unfinished(item: dict) -> bool:
 
 def _seam_estimate(item: dict, clock: JobClock, now: float) -> Estimate:
     state = item["seam"]["state"]
-    estimate = clock.estimate(item["seam"]["settings"].get("move") or "auto")
+    kind = item["seam"]["settings"].get("move") or "auto"
     if state["status"] == "rendering" and state.get("started_at"):
-        estimate = still_to_go(estimate, now - float(state["started_at"]))
-    return estimate
+        return clock.left(kind, now - float(state["started_at"]))
+    return clock.estimate(kind)
 
 
 def _in_turn(items: list[dict]) -> list[dict]:
@@ -266,6 +360,7 @@ def analysis_rates(conn: sqlite3.Connection) -> list[float]:
 
 
 def _rate_range(rates: list[float], songs: int) -> tuple[float, float, float]:
+    """Seconds of work per second of audio, with `rates` newest first."""
     if not rates:
         return (
             ANALYSIS_RATE_GUESS,
@@ -274,7 +369,8 @@ def _rate_range(rates: list[float], songs: int) -> tuple[float, float, float]:
         )
     ordered = sorted(rates)
     share = min(max(songs, 1) / MANY_SONGS, 1.0)
-    rate = share * statistics.fmean(ordered) + (1.0 - share) * statistics.median(ordered)
+    long_run = share * statistics.fmean(ordered) + (1.0 - share) * statistics.median(ordered)
+    rate = 0.5 * long_run + 0.5 * statistics.median(rates[:RECENT_SONGS])
     root = math.sqrt(max(songs, 1))
     below = max((rate - _quantile(ordered, 0.1)) / root, rate * MOOD)
     above = max((_quantile(ordered, 0.9) - rate) / root, rate * MOOD)
@@ -296,8 +392,14 @@ def analysis_time(
     )
 
 
-def analysis_left(conn: sqlite3.Connection, running: bool, waits_for_mix: bool) -> dict:
-    """The rest of the library. It only counts songs that still need analysing."""
+def analysis_left(
+    conn: sqlite3.Connection,
+    running: bool,
+    waits_for_mix: bool,
+    ahead: list[Estimate] | None = None,
+) -> dict:
+    """The rest of the library, once what's ahead of it has finished. It only counts songs that
+    still need analysing."""
     row = conn.execute(
         "SELECT COUNT(*) songs, COALESCE(SUM(s.duration),0) audio FROM songs s "
         "LEFT JOIN analysis a ON a.song_id=s.id "
@@ -306,10 +408,13 @@ def analysis_left(conn: sqlite3.Connection, running: bool, waits_for_mix: bool) 
         (ANALYSIS_VERSION,),
     ).fetchone()
     estimate = analysis_time(row["audio"], analysis_rates(conn), running, row["songs"])
-    return {**estimate.as_dict(), "songs": row["songs"], "after_mix": waits_for_mix}
+    total = combine([estimate, *(ahead or [])]) if row["songs"] else estimate
+    return {**total.as_dict(), "songs": row["songs"], "after_mix": waits_for_mix}
 
 
-def analysis_line_left(conn: sqlite3.Connection, line: list[int]) -> dict[int, int]:
+def analysis_line_left(
+    conn: sqlite3.Connection, line: list[int], ahead: list[Estimate] | None = None
+) -> dict[int, int]:
     """For each song waiting to be analysed by request, how long until it's ready."""
     if not line:
         return {}
@@ -323,7 +428,9 @@ def analysis_line_left(conn: sqlite3.Connection, line: list[int]) -> dict[int, i
     }
     audio = 0.0
     ready_in = {}
+    waiting = combine(ahead or []).seconds
     for count, song in enumerate(line, 1):
         audio += float(durations.get(song) or 0.0)
-        ready_in[song] = round(analysis_time(audio, rates, loaded=False, songs=count).seconds)
+        own = analysis_time(audio, rates, loaded=False, songs=count).seconds
+        ready_in[song] = round(own + waiting)
     return ready_in

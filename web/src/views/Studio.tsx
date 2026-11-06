@@ -39,6 +39,9 @@ export function Studio(props: {
   const [cell, setCell] = useState(-1);
   const [soloed, setSoloed] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [asking, setAsking] = useState('');
+  const [changes, setChanges] = useState<string[] | null>(null);
+  const [before, setBefore] = useState<Shape | null>(null);
   const deck = useRef<StemDeck | null>(null);
   const at = useMixPath();
 
@@ -78,7 +81,35 @@ export function Studio(props: {
 
   const change = (next: Shape) => {
     setShape(next);
+    setChanges(null);
+    setBefore(null);
+    setProblem('');
     deck.current?.setShape(next);
+  };
+  /** Selecta's turn. What was there can be put back, and nothing is final until "Use this". */
+  const askSelecta = async (mine: boolean) => {
+    if (!shape) return;
+    setAsking(mine ? 'tune' : 'arrange');
+    setProblem('');
+    try {
+      const answer = await post<{ shape: Shape; changes: string[] }>(at(`/mix/${position}/studio/tune`), { shape: mine ? shape : null });
+      const same = JSON.stringify(answer.shape) === JSON.stringify(shape);
+      setBefore(same ? null : shape);
+      setShape(answer.shape);
+      deck.current?.setShape(answer.shape);
+      setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
+    } catch (error) {
+      setProblem((error as Error).message);
+    } finally {
+      setAsking('');
+    }
+  };
+  const putBack = () => {
+    if (!before) return;
+    setShape(before);
+    deck.current?.setShape(before);
+    setBefore(null);
+    setChanges(null);
   };
   const toggle = (side: Side, lane: Lane, index: number) => {
     if (!shape) return;
@@ -153,6 +184,20 @@ export function Studio(props: {
             </button>
             {soloed && <button onClick={() => void solo(soloed)}>Hear everything again</button>}
           </div>
+          <div className="row wrap">
+            <button disabled={!!asking} onClick={() => void askSelecta(false)}>
+              {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
+            </button>
+            <button disabled={!!asking} onClick={() => void askSelecta(true)}>
+              {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
+            </button>
+            {before && <button onClick={putBack}>Put it back</button>}
+          </div>
+          {changes && (
+            <ul className="studio-changes" role="status">
+              {changes.map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          )}
           <div className="chips studio-shapes" role="group" aria-label="Ready-made shapes">
             {SHAPES.map((option) => (
               <button key={option.name} title={option.about} onClick={() => change(option.change(shape))}>
@@ -193,7 +238,7 @@ export function Studio(props: {
             <button className="primary" disabled={saving} onClick={() => void use()}>
               {saving ? 'Saving…' : 'Use this'}
             </button>
-            {session?.start_shape && <button onClick={() => change(session.start_shape as Shape)}>Start again</button>}
+            {session?.start_shape && <button onClick={() => change((session.shape ?? session.start_shape) as Shape)}>Start again</button>}
           </div>
         </>
       )}

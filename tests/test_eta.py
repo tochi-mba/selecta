@@ -18,6 +18,7 @@ from selecta.eta import (
     LONGEST_BELIEVABLE,
     MODEL_LOAD_SECONDS,
     MOOD,
+    RECENT_JOBS,
     Estimate,
     JobClock,
     analysis_left,
@@ -43,7 +44,7 @@ def test_real_times_take_over_from_the_guess_gradually():
     guess = 100.0
     answers = [estimate_from([40.0] * count, guess).seconds for count in range(1, 6)]
     assert answers == sorted(answers, reverse=True), "each real time should move it further"
-    assert answers[0] == pytest.approx(88.0)
+    assert answers[0] == pytest.approx(70.0), "one real time counts as much as the guess"
     assert answers[-1] == pytest.approx(40.0), "after a few real times the guess no longer counts"
 
 
@@ -202,6 +203,7 @@ def test_each_seam_is_quoted_with_the_ones_ahead_of_it(tmp_path):
     etas = [item["seam"]["state"]["eta"] for item in items]
     assert etas == [30, 230, 260]
     assert left["seconds"] == 260
+    assert clock.load() == 1.0
     assert left["seams"] == 3
 
 
@@ -309,7 +311,7 @@ def test_one_song_is_judged_by_the_typical_rate_and_many_by_the_average():
     hundreds really will include them."""
     rates = [0.1] * 18 + [1.0] * 2
     assert analysis_time(100.0, rates, True, songs=1).seconds == pytest.approx(10.0, abs=0.5)
-    assert analysis_time(100.0, rates, True, songs=100).seconds == pytest.approx(19.0)
+    assert analysis_time(100.0, rates, True, songs=100).seconds == pytest.approx(14.5)
 
 
 def test_a_long_run_keeps_room_for_a_busy_pc():
@@ -385,3 +387,166 @@ def test_a_song_with_no_length_does_not_break_the_line(conn):
     _song(conn, 1, 0.0)
     loading = round(MODEL_LOAD_SECONDS)
     assert analysis_line_left(conn, [1, 99]) == {1: loading, 99: loading}
+
+
+# ---- from comparing estimates with what really happened
+
+
+def test_the_starting_guesses_are_close_to_real_times_on_a_real_pc():
+    """A cut was quoted at 21 s and took 4 s, and a vocal ride at 3.5 minutes and took 5.5."""
+    assert GUESSES["cut_on_one"] < 10
+    assert GUESSES["delay_throw"] < 15
+    assert GUESSES["echo_out"] < 20
+    assert GUESSES["vocal_ride"] >= 240
+
+
+def test_one_real_time_moves_an_estimate_a_long_way(tmp_path):
+    clock = JobClock(tmp_path)
+    clock.record("mystery", 1000.0)
+    assert clock.estimate("mystery").seconds > 500
+
+
+def test_jobs_running_slow_lately_make_everything_longer(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(6):
+        clock.record("echo_out", 10.0)
+    for _ in range(6):
+        clock.record("vocal_ride", 300.0)
+    assert clock.load() == pytest.approx(1.0, abs=0.1)
+    usual = clock.estimate("bass_swap_blend").seconds
+    for _ in range(4):
+        clock.record("echo_out", 30.0)
+    assert clock.load() > 1.5
+    assert clock.estimate("bass_swap_blend").seconds > usual * 1.5, "even a job it hasn't seen"
+
+
+def test_estimates_come_back_down_when_the_pc_calms_down(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(6):
+        clock.record("echo_out", 10.0)
+    for _ in range(5):
+        clock.record("echo_out", 60.0)
+    busy = clock.load()
+    for _ in range(RECENT_JOBS):
+        clock.record("echo_out", 10.0)
+    assert clock.load() < busy
+    assert clock.load() <= 1.0
+
+
+def test_a_word_move_splitting_its_stems_is_not_a_busy_pc(tmp_path):
+    """The same move took 50 s with its stems ready and 330 s without."""
+    clock = JobClock(tmp_path)
+    for seconds in (50.0, 50.0, 50.0, 330.0, 330.0, 330.0):
+        clock.record("phrase_roll", seconds)
+    assert clock.load() == 1.0
+
+
+def test_ordinary_variation_is_not_a_busy_pc(tmp_path):
+    clock = JobClock(tmp_path)
+    for seconds in (10.0, 12.0, 9.0, 11.0, 13.0, 10.0, 12.0, 9.0, 11.0, 13.0):
+        clock.record("echo_out", seconds)
+    assert clock.load() == 1.0
+
+
+def test_one_slow_job_is_not_a_busy_pc(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(8):
+        clock.record("echo_out", 10.0)
+    clock.record("echo_out", 500.0)
+    assert clock.load() == pytest.approx(1.0, abs=0.1)
+
+
+def test_the_load_stays_believable(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(4):
+        clock.record("echo_out", 1.0)
+    for _ in range(6):
+        clock.record("echo_out", 5000.0)
+    assert clock.load() <= 3.0
+    clock = JobClock(tmp_path / "other")
+    for _ in range(4):
+        clock.record("echo_out", 5000.0)
+    for _ in range(6):
+        clock.record("echo_out", 0.1)
+    assert clock.load() >= 0.5
+
+
+def test_a_job_past_all_the_quick_ones_is_one_of_the_slow_ones(tmp_path):
+    """Jobs that split stems take minutes, and ones with stems ready take under one."""
+    clock = JobClock(tmp_path)
+    for seconds in (50.0, 50.0, 50.0, 330.0, 330.0, 330.0):
+        clock.record("phrase_roll", seconds)
+    assert clock.left("phrase_roll", 10.0).seconds == pytest.approx(180.0, abs=30.0)
+    assert clock.left("phrase_roll", 60.0).seconds == pytest.approx(270.0, abs=30.0)
+    assert clock.left("phrase_roll", 300.0).seconds == pytest.approx(30.0, abs=15.0)
+
+
+def test_a_job_longer_than_any_before_it_never_claims_to_be_done(tmp_path):
+    clock = JobClock(tmp_path)
+    for seconds in (50.0, 60.0, 55.0, 52.0, 58.0):
+        clock.record("phrase_roll", seconds)
+    left = clock.left("phrase_roll", 500.0)
+    assert left.seconds >= 3.0
+    assert left.late
+
+
+def test_time_left_is_always_a_sensible_range(tmp_path):
+    clock = JobClock(tmp_path)
+    for seconds in (5.0, 300.0, 40.0, 600.0, 90.0, 30.0):
+        clock.record("vocal_ride", seconds)
+    for elapsed in range(0, 900, 11):
+        left = clock.left("vocal_ride", float(elapsed))
+        assert 0 < left.low <= left.seconds <= left.high
+
+
+def test_a_recent_slowdown_counts_for_analysis_without_taking_over():
+    calm = analysis_time(100.0, [0.2] * 100, True, songs=25).seconds
+    busy = analysis_time(100.0, [0.6] * 8 + [0.2] * 92, True, songs=25).seconds
+    assert calm < busy < 60.0
+
+
+def test_analysis_counts_the_rendering_it_is_waiting_behind(conn):
+    _song(conn, 1, 200.0)
+    alone = analysis_left(conn, True, False)["seconds"]
+    waiting = analysis_left(conn, True, True, [Estimate(600.0, 400.0, 900.0)])
+    assert waiting["seconds"] == alone + 600
+    assert waiting["after_mix"] is True
+
+
+def test_nothing_left_to_analyse_means_no_wait(conn):
+    assert analysis_left(conn, True, True, [Estimate(600.0, 400.0, 900.0)])["seconds"] == 0
+
+
+def test_a_song_asked_for_waits_behind_rendering_too(conn):
+    _song(conn, 1, 100.0)
+    alone = analysis_line_left(conn, [1])[1]
+    assert analysis_line_left(conn, [1], [Estimate(300.0, 200.0, 400.0)])[1] == alone + 300
+
+
+def test_the_clock_keeps_score_of_how_far_out_it_was(tmp_path):
+    clock = JobClock(tmp_path)
+    assert clock.accuracy() == {"jobs": 0, "typical_miss": None}
+    for _ in range(6):
+        clock.record("echo_out", 10.0)
+    assert clock.accuracy()["jobs"] == 6
+    assert clock.accuracy()["typical_miss"] == pytest.approx(1.0, abs=0.05)
+    for _ in range(12):
+        clock.record("mystery_job", 1000.0)
+    assert clock.accuracy()["typical_miss"] >= 1.0
+
+
+def test_scores_and_load_are_not_mistaken_for_jobs(tmp_path):
+    clock = JobClock(tmp_path)
+    for _ in range(5):
+        clock.record("echo_out", 10.0)
+    assert set(clock.times()) == {"echo_out"}
+    assert not any(kind.startswith("_") for kind in clock.recent())
+
+
+def test_a_file_from_before_all_this_still_reads(tmp_path):
+    (tmp_path / "job-times.json").write_text(json.dumps({"echo_out": [11.0, 12.0]}), "utf-8")
+    clock = JobClock(tmp_path)
+    assert clock.load() == 1.0
+    assert clock.estimate("echo_out").seconds > 0
+    clock.record("echo_out", 13.0)
+    assert clock.times()["echo_out"] == [11.0, 12.0, 13.0]

@@ -9,6 +9,7 @@ each starts from what's already known rather than finding it out again.
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -17,6 +18,7 @@ from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
 
 RULES_VERSION = 1
+SHAPED_MOVES = {"stem_studio", "stem_arrange"}
 """Raise this when rendering changes enough that past failures no longer say what would happen now.
 Ratings always count, since a person's opinion of a hand-over doesn't go out of date."""
 WORD_TIMED_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
@@ -56,6 +58,10 @@ class SeamMemory:
     bad_moves: Counter[str] = field(default_factory=Counter)
     good_traits: Counter[str] = field(default_factory=Counter)
     bad_traits: Counter[str] = field(default_factory=Counter)
+    liked_shapes: list[dict] = field(default_factory=list)
+    disliked_shapes: list[dict] = field(default_factory=list)
+    pair_shapes: dict[tuple[int, int], dict] = field(default_factory=dict)
+    liked_arcs: list[list[float]] = field(default_factory=list)
     _pairs: dict[tuple[int, int], set[Attempt]] | None = field(default=None, repr=False)
 
     @classmethod
@@ -107,6 +113,36 @@ class SeamMemory:
         elif state.get("rating") == "bad":
             self.disliked.add(attempt)
             self.bad_moves[style] += 1
+        if style in SHAPED_MOVES:
+            self._learn_shape(a, b, state)
+
+    def _learn_shape(self, a: int, b: int, state: dict) -> None:
+        """A rated shape is the clearest thing the listener can say. One they liked joins what
+        Selecta arranges with, and one they made for this pair gets used for this pair. Rating a
+        shape they made also counts for arranging in general, since it's the same kind of move."""
+        rating = state.get("rating")
+        raw = (state.get("request") or {}).get("shape") or state.get("shape_used")
+        if rating not in {"good", "bad"} or not raw:
+            return
+        try:
+            shape = json.loads(raw) if isinstance(raw, str) else raw
+        except ValueError:
+            return
+        made_by_hand = state.get("style") == "stem_studio"
+        if rating == "good":
+            if shape not in self.liked_shapes:
+                self.liked_shapes.append(shape)
+            if state.get("arc"):
+                self.liked_arcs.append(state["arc"])
+            if made_by_hand:
+                self.pair_shapes[(a, b)] = shape
+                self.liked.add((a, b, "stem_arrange"))
+                self.good_moves["stem_arrange"] += 1
+        else:
+            if shape not in self.disliked_shapes:
+                self.disliked_shapes.append(shape)
+            if made_by_hand:
+                self.bad_moves["stem_arrange"] += 1
 
     def read_taste(self, library: Iterable[SongInfo]) -> SeamMemory:
         """Work out what the listener's ratings have in common, which needs the songs themselves."""

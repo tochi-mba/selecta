@@ -217,7 +217,12 @@ def _curve(cells: list[int], seconds: float) -> Curve:
 
 
 def render_shape(
-    a: SongInfo, b: SongInfo, folder: Path, session: dict, shape: Shape
+    a: SongInfo,
+    b: SongInfo,
+    folder: Path,
+    session: dict,
+    shape: Shape,
+    style: str = "stem_studio",
 ) -> Rendered:
     """Play the chosen shape into a finished seam that the mix can use like any other."""
     seconds = float(session["seconds"])
@@ -233,7 +238,7 @@ def render_shape(
     b_points = np.asarray(session["b_points"], dtype=float)
     a_start = float(session["a_start"])
     script = TransitionScript(
-        style="stem_studio",
+        style=style,
         duration=seconds,
         a=Part(a, Warp.identity(0.0, a_start, seconds), gain=_curve(shape["a"]["drums"], seconds)),
         b=Part(b, Warp(a_points - a_start, b_points), gain=_curve(shape["b"]["drums"], seconds)),
@@ -242,6 +247,7 @@ def render_shape(
         meta={
             "period": a.period,
             "bars": int(session["bars"]),
+            "shape": shape,
             "vocal_gains": {
                 "a": _curve(shape["a"]["vocals"], seconds),
                 "b": _curve(shape["b"]["vocals"], seconds),

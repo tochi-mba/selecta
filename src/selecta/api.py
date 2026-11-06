@@ -28,6 +28,16 @@ from pydantic import BaseModel
 
 from selecta import audio as audio_io
 from selecta import db, jobs, mix
+from selecta.arrange import (
+    WontWork,
+    arrangements,
+    as_array,
+    as_shape,
+    listen,
+    taste_from,
+    tune,
+    what_changed,
+)
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings, load_settings
 from selecta.discovery.hearing import STEPS, audition_folder, make_audition
 from selecta.discovery.search import spread_out
@@ -126,6 +136,10 @@ class DraftRequest(BaseModel):
 
 class LineMove(BaseModel):
     step: int
+
+
+class TuneRequest(BaseModel):
+    shape: dict | None = None
 
 
 class RateRequest(BaseModel):
@@ -296,6 +310,14 @@ def create_app(
             if not db.is_analysed(conn, song, ANALYSIS_VERSION)
         ]
 
+    def rendering_ahead(conn: sqlite3.Connection) -> list:
+        """Analysis waits while mixes render, so that wait is part of how long it will take."""
+        if not jobs.mix_is_rendering(settings.home):
+            return []
+        mixes = [mix.read_mix(conn, store)]
+        mixes += [mix.read_mix(conn, store, draft) for draft in mix.line_order(conn)]
+        return time_ahead(mixes, store.clock)[0]
+
     @app.get("/api/status")
     def status() -> dict:
         with connect() as conn:
@@ -332,9 +354,11 @@ def create_app(
                         conn,
                         bool(background.analysis and background.analysis.poll() is None),
                         jobs.mix_is_rendering(settings.home),
+                        rendering_ahead(conn),
                     ),
-                    "line": analysis_line_left(conn, songs_in_line(conn)),
+                    "line": analysis_line_left(conn, songs_in_line(conn), rendering_ahead(conn)),
                     "jobs": store.clock.recent(),
+                    "accuracy": store.clock.accuracy(),
                 },
                 "scan": background.scan,
             }
@@ -607,7 +631,8 @@ def create_app(
         if state["status"] == "none":
             state = store.submit(session, urgent=True)
         if state["status"] == "ready":
-            chosen = clean_shape(request.shape) if request.shape else None
+            used = store.status(request.key).get("shape_used")
+            chosen = clean_shape(request.shape or used) if request.shape or used else None
             return {**state, "key": session.key, "shape": chosen}
         windows = windows_to_separate(settings, a, b, session.exit_bar, session.entry_bar)
         estimate = combine(
@@ -617,6 +642,35 @@ def create_app(
         if state.get("started_at"):
             estimate = still_to_go(estimate, time.time() - float(state["started_at"]))
         return {**state, "key": session.key, "eta": estimate.as_dict()}
+
+    @app.post("/api/mix/{position}/studio/tune")
+    def tune_studio_shape(position: int, body: TuneRequest, draft: int | None = None) -> dict:
+        """Fine tune the grid as it stands, or with no grid given, arrange it from nothing. It's
+        all done from what was measured in the stems, so it answers straight away, and nothing
+        changes until the person chooses to use it."""
+        with connect() as conn:
+            request, session = studio_request_at(conn, position, draft)
+            items = mix.read_mix(conn, store, draft)
+        state = store.status(session.key)
+        if state["status"] != "ready":
+            raise HTTPException(409, "The stems aren't ready yet.")
+        folder = store.folder(session.key)
+        try:
+            hearing = listen(folder, float(state["seconds"]))
+        except (OSError, RuntimeError, KeyError) as problem:
+            raise HTTPException(409, "The stems have been cleared. Open this again.") from problem
+        known = taste_from(store.remembered())
+        titles = {"a": items[position - 1]["title"], "b": items[position]["title"]}
+        if body.shape is None:
+            try:
+                made = arrangements(hearing, known)[0]
+            except WontWork as problem:
+                raise HTTPException(400, str(problem)) from problem
+            return {"shape": made, "changes": []}
+        before = clean_shape(body.shape)
+        known.anchor = as_array(before)
+        after = as_shape(tune(as_array(before), hearing, known))
+        return {"shape": after, "changes": what_changed(before, after, hearing, titles)}
 
     @app.get("/api/studio/{key}/{side}/{lane}")
     def studio_stem(key: str, side: str, lane: str) -> FileResponse:
