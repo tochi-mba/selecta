@@ -99,6 +99,7 @@ export type Status = {
   analysing: number[];
   mix_rendering: boolean;
   mixes_in_line?: number;
+  transitions_ready?: number;
   new_songs?: { count: number; first: string | null; at: number } | null;
   eta?: {
     analysis: Eta & { songs: number; after_mix: boolean };

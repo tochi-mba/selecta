@@ -987,7 +987,8 @@ class SeamStore:
 
     def _next_job(self) -> SeamRequest:
         """What's about to be heard, then the rest of the mix in order, then the mixes in the render
-        line, then anything else a person asked for. Only spare time goes on word links."""
+        line, then anything else a person asked for. Spare time goes on word links and the library's
+        best transitions."""
         while True:
             self._arrived.clear()
             self._running_draft = None

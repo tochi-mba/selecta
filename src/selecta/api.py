@@ -428,6 +428,7 @@ def create_app(
                 "analysing": songs_in_line(conn),
                 "mix_rendering": jobs.mix_is_rendering(settings.home),
                 "mixes_in_line": len(mix.line_order(conn)),
+                "transitions_ready": len(store.remembered().clean),
                 "eta": {
                     "analysis": analysis_left(
                         conn,

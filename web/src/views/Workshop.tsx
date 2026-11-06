@@ -152,6 +152,10 @@ export function Workshop({ status, refreshStatus, notify }: ViewProps) {
               : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
         </p>
         {estimateWords(status.eta?.accuracy) && <p className="hint">{estimateWords(status.eta?.accuracy)}</p>}
+        <p className="hint">
+          With nothing else to do, Selecta tries out the best transitions across your library, so they’re ready when you want them.
+          {status.transitions_ready ? ` ${status.transitions_ready} have come out clean so far.` : ''}
+        </p>
         {left > 0 && (
           <div className="row wrap">
             <button className={status.analysis_running ? '' : 'primary'} onClick={() => void toggle()}>

@@ -16,11 +16,11 @@ const storage = {
   total_bytes: 200 * GB,
 };
 
-function show() {
+function show(more: Parameters<typeof status>[0] = {}) {
   const player = new SetPlayer(() => [], () => {});
   render(
     <Workshop
-      status={status()}
+      status={status(more)}
       mix={[]}
       mixName=""
       canUndo={false}
@@ -62,5 +62,13 @@ describe('the storage slider', () => {
     expect(
       await screen.findByText(/Priority-song stem windows are protected, so they can temporarily put the cache over its limit/),
     ).toBeInTheDocument();
+  });
+});
+
+describe('what happens in spare time', () => {
+  it('says what Selecta does with nothing else to do, and how far it has got', async () => {
+    fakeBackend({ 'GET /storage': storage });
+    show({ transitions_ready: 124 });
+    expect(await screen.findByText(/tries out the best transitions across your library.*124 have come out clean so far/)).toBeInTheDocument();
   });
 });

@@ -37,7 +37,38 @@ in the background once the current mix is done. On any seam, **Shape it yourself
 both songs' voice, drums, bass and melody on a grid you can hear instantly, and Selecta can arrange
 it or fine tune yours. Rate what you make, and it learns from that.
 
-To run the tests:
+Requests let you ask for a song while a mix plays. Selecta finds a spot where it fits without
+forcing a bad transition, and shows it faded in Edit until its transitions are ready. Requests are
+planned together, so no song is used twice and each spot goes to one request at a time. If a song
+doesn't fit anywhere, **Find a bridge** goes through your whole library for the best way to reach
+it, and you choose. A bridge joins all at once, when every transition in it is ready, and nothing
+in it can play before that.
+
+Songs you add to your music folder come in by themselves within about a minute, once they've
+finished copying, and go on to be analysed. With nothing else to do, Selecta tries out the best
+transitions across your library at the lowest priority, giving way to anything else straight away,
+and stops at 80% of its storage limit.
+
+## Working on Selecta
+
+Double-click `dev.cmd`, or run it from a terminal. It starts the server and the site, each reloading
+as you edit, and opens your browser. Closing the window stops it all.
+
+```bash
+dev.cmd
+```
+
+It needs [uv](https://docs.astral.sh/uv/) and [pnpm](https://pnpm.io/) and installs everything else.
+It uses your normal data folder, so set `SELECTA_HOME` to work on a different library. On macOS or
+Linux, the same file runs with `uv run python -x dev.cmd`.
+
+To run everything CI checks:
+
+```bash
+dev.cmd test
+```
+
+Or one piece at a time:
 
 ```bash
 uv run pytest
