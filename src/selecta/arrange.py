@@ -134,7 +134,7 @@ def _pitch_classes(mono: np.ndarray) -> np.ndarray:
     size = 8192
     if mono.size < size:
         return np.zeros(12)
-    frames = np.lib.stride_tricks.sliding_window_view(mono, size)[::size // 2]
+    frames = np.lib.stride_tricks.sliding_window_view(mono, size)[:: size // 2]
     power = (np.abs(np.fft.rfft(frames * np.hanning(size), axis=1)) ** 2).mean(axis=0)
     freqs = np.fft.rfftfreq(size, 1.0 / SAMPLE_RATE)
     keep = (freqs >= 110.0) & (freqs <= 2000.0)
@@ -147,10 +147,31 @@ def _pitch_classes(mono: np.ndarray) -> np.ndarray:
 def listen(folder: Path, seconds: float) -> Hearing:
     """Measure both songs' stems. The result is kept beside them, so it only happens once."""
     saved = folder / "hearing.json"
+    sources = {}
+    for side in SIDES:
+        for lane in LANES:
+            path = folder / f"{side}_{lane}.flac"
+            try:
+                stat = path.stat()
+                sources[path.name] = [stat.st_size, stat.st_mtime_ns]
+            except FileNotFoundError:
+                sources[path.name] = None
     try:
         data = json.loads(saved.read_text("utf-8"))
         kept = Hearing(*(np.array(data[name]) for name in ("levels", "notes", "edges")))
-        if kept.levels.shape == (len(SIDES), len(LANES), CELLS):
+        if (
+            data.get("version") == 1
+            and data.get("seconds") == seconds
+            and isinstance(data.get("sources"), dict)
+            and all(
+                signature is None or data["sources"].get(name) == signature
+                for name, signature in sources.items()
+            )
+            and kept.levels.shape == (len(SIDES), len(LANES), CELLS)
+            and kept.notes.shape == (len(SIDES), len(LANES), CELLS, 12)
+            and kept.edges.shape == (len(SIDES), CELLS + 1)
+            and all(np.isfinite(values).all() for values in (kept.levels, kept.notes, kept.edges))
+        ):
             return kept
     except (OSError, ValueError, KeyError, TypeError):
         pass
@@ -175,7 +196,16 @@ def listen(folder: Path, seconds: float) -> Hearing:
                     )
     hearing = Hearing(levels, notes, edges)
     saved.write_text(
-        json.dumps({"levels": levels.tolist(), "notes": notes.tolist(), "edges": edges.tolist()}),
+        json.dumps(
+            {
+                "version": 1,
+                "seconds": seconds,
+                "sources": sources,
+                "levels": levels.tolist(),
+                "notes": notes.tolist(),
+                "edges": edges.tolist(),
+            }
+        ),
         "utf-8",
     )
     return hearing
