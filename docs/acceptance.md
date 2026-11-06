@@ -165,3 +165,36 @@ measured. This covers harmonic candidates, not the missing melody, sample or rhy
 - Whether anything sounds good, especially the moves not yet heard.
 - Beat, downbeat and key accuracy on rap and Latin tracks.
 - Whether the interface is actually easy to use. Every screen was walked in a browser at desktop and phone width, with page tests in `web/src`, but that can't judge taste.
+
+## Playback readiness audit — 6 November 2026
+
+The player now checks the imminent seam independently of the 1.5-second whole-mix
+refresh, with at most one status request in flight and a 100 ms minimum interval.
+Decoded clips are scheduled up to their actual audio-clock cue instead of being
+rejected by an arbitrary 250 ms margin. Download completion revalidates the song,
+seam key and playback session; stale failures cannot stop a newly selected song.
+All audio layers remain tracked after the display handoff so stop/seek silences
+transition tails, and the transition indicator lasts through the audible tail.
+
+At commit 5c87ef1, all 172 frontend tests and the production build passed. The
+clock-controlled tests cover readiness just before/at/after a cue, a cue within
+the fallback window, changed transitions, seek/stop during loading, stale download
+failure and stopping a seam after its display handoff. These use a simulated
+AudioContext, not proof of audible sample alignment in a real browser.
+
+Still unverified: browser background timer throttling, actual decode latency at
+late completion, status/network delays around the fallback commitment, and audible
+handoffs across these cases. A server render finishing before a cue is not enough
+if its audio has not reached and decoded in the browser. Do not claim every late
+render is incorporated, or that the playback audit is complete.
+
+The isolated real-library request route Rehab → Die On This Hill completed its
+render but failed automated beat alignment (31.9 ms) and level fall (7.43 dB).
+That is a failed-quality route, not successful request insertion evidence.
+
+Browser smoke check on the isolated copied library at port 8741: Rehab loaded,
+advanced to 0:29 with lyric changes, and Pause changed the controls to Resume.
+The frontend was the current production build; the test server backend had not
+been restarted to load the latest request-approval fixes. This was a single-song
+play/pause check, not a late-render transition check. Screenshot evidence is local
+at `Temp/selecta-requests-browser-ioodyr19/playback-paused.png`.
