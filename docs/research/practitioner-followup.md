@@ -74,6 +74,13 @@ upvotes and individual examples do not establish universal parameters.
   becomes audible and warns against letting the basslines compete. These are practitioner reports,
   not controlled listening results, but they reinforce that transition length and overlap density
   need to be chosen per pair.
+- A [set-flow thread](https://www.reddit.com/r/Beatmatch/comments/185ajxy/why_are_my_sets_losing_the_flow_so_frustrating/)
+  describes a gradual build, an early peak, a cooldown, and another lift, while warning that a
+  constant energy level can feel flat and abrupt song-by-song jumps can feel tiring. A separate
+  [recent planning discussion](https://www.reddit.com/r/DJs/comments/1wytm6t/do_you_plan_your_sets/)
+  argues that exact preplanning often fails when the room or slot changes, and recommends keeping
+  several flexible vibe paths. These reports disagree on how much of a set to preplan, but support
+  exposing energy shape as a user choice and making the default editable rather than universal.
 - The [Hybrid Spectrogram and Waveform Separation paper](https://arxiv.org/abs/2111.03600) reports
   both objective separation scores and a human evaluation on its benchmark. Its listeners still gave
   the tested outputs a moderate quality score, despite improvements over earlier systems. An [AES
@@ -100,3 +107,6 @@ upvotes and individual examples do not establish universal parameters.
   substitutes for Selecta's own blind, paired listening measurements.
 - Let the planner choose transition length and overlap density for each pair. Phrase alignment alone
   does not make a long blend suitable, especially when the incoming arrangement gets busy quickly.
+- Treat an energy arc as a guide that can rise, dip, or peak before the final track; let a listener
+  draw it or return to a mix-specific default. A curve shapes sequencing, but does not replace
+  listening or a live DJ's judgment when the room calls for a different direction.
