@@ -142,6 +142,7 @@ export function Shell({
   song,
   showPlayer,
   hasMix,
+  hasNext,
   stage,
   waitingRequests,
   onRequests,
