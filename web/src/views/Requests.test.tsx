@@ -157,15 +157,15 @@ describe('asking for a song', () => {
     });
     render(<Requests />);
     fireEvent.change(search(), { target: { value: 's' } });
-    const first = await screen.findByRole('button', { name: /Wanted .*\+ Request/ });
+    const first = await screen.findByRole('button', { name: /Wanted .*Request$/ });
     fireEvent.click(first);
-    expect(screen.getByRole('button', { name: /Wanted .*✓ Requested/ })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: /Second .*\+ Request/ }));
-    expect(screen.getByRole('button', { name: /Second .*✓ Requested/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Third .*\+ Request/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Wanted .*Requested$/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Second .*Request$/ }));
+    expect(screen.getByRole('button', { name: /Second .*Requested$/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Third .*Request$/ })).toBeEnabled();
     await waitFor(() => expect(calls.filter((call) => call.path === '/requests' && call.method === 'POST')).toHaveLength(2));
     await waitFor(() => expect(screen.getByText('2 waiting')).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: /Wanted .*✓ Requested/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Wanted .*Requested$/ })).toBeDisabled();
   });
 
   it('two picks close together both stay, whichever answer comes back first', async () => {
@@ -176,8 +176,8 @@ describe('asking for a song', () => {
     });
     render(<Requests />);
     fireEvent.change(search(), { target: { value: 's' } });
-    fireEvent.click(await screen.findByRole('button', { name: /Wanted .*\+ Request/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Second .*\+ Request/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Wanted .*Request$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Second .*Request$/ }));
     expect(screen.getAllByText('Adding')).toHaveLength(2);
     await server.release();
     await waitFor(() => expect(screen.queryByText('Adding')).toBeNull());
@@ -198,8 +198,8 @@ describe('asking for a song', () => {
     }));
     render(<Requests />);
     fireEvent.change(search(), { target: { value: 's' } });
-    fireEvent.click(await screen.findByRole('button', { name: /Wanted .*\+ Request/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Second .*\+ Request/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Wanted .*Request$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Second .*Request$/ }));
     await waitFor(() => expect(screen.getByText('1 waiting')).toBeInTheDocument());
     expect(within(screen.getByRole('list', { name: 'Your requests' })).getByText('Second')).toBeInTheDocument();
     expect(within(screen.getByRole('list', { name: 'Your requests' })).queryByText('Wanted')).toBeNull();
@@ -352,8 +352,8 @@ describe('every press shows straight away', () => {
     }));
     render(<Requests />);
     fireEvent.change(search(), { target: { value: 's' } });
-    fireEvent.click(await screen.findByRole('button', { name: /Wanted .*\+ Request/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Second .*\+ Request/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Wanted .*Request$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Second .*Request$/ }));
     await screen.findByRole('alert');
     expect(listed().getByText('Wanted')).toBeInTheDocument();
     expect(listed().queryByText('Second')).toBeNull();
@@ -378,8 +378,8 @@ describe('every press shows straight away', () => {
     }));
     render(<Requests />);
     fireEvent.change(search(), { target: { value: 's' } });
-    fireEvent.click(await screen.findByRole('button', { name: /Wanted .*\+ Request/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Second .*\+ Request/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Wanted .*Request$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Second .*Request$/ }));
     await waitFor(() => expect(screen.getByText('2 waiting')).toBeInTheDocument());
     expect(listed().getByText('Wanted')).toBeInTheDocument();
     await act(async () => { finishFirst(); });

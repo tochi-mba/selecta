@@ -31,8 +31,9 @@ class FakeAudio {
   async decodeAudioData() {
     return { duration: 100 };
   }
-  async resume() {}
-  async suspend() {}
+  state: AudioContextState = 'suspended';
+  async resume() { this.state = 'running'; }
+  async suspend() { this.state = 'suspended'; }
 }
 
 function audioBackend(missing: number[]) {
@@ -292,6 +293,21 @@ describe('the transport', () => {
     vi.unstubAllGlobals();
   });
   const skipped = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls.filter(([url]) => url.includes('/playback/skip'));
+
+  it('never claims sound started when the context is closed', async () => {
+    audioBackend([]);
+    const resumed = vi.spyOn(FakeAudio.prototype, 'resume').mockImplementationOnce(async function (this: FakeAudio) {
+      this.state = 'closed';
+    });
+    try {
+      player = new SetPlayer(() => songs(), () => {});
+      await player.playFrom(0);
+      expect(player.state.phase).toBe('idle');
+      expect(player.state.notice).toMatch(/holding the sound back/);
+    } finally {
+      resumed.mockRestore();
+    }
+  });
 
   it('Next goes straight to the next song, and says it was skipped', async () => {
     audioBackend([]);

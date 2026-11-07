@@ -1,332 +1,84 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Folders, get, Jobs, post } from '../api';
+import { analysisWords, estimateWords, etaRangeWords } from '../lib';
+import { useRoute, type WorkshopTab } from '../router';
+import { WORKSPACE_TABS } from '../shell/manifest';
+import { PageLink } from '../shell/PageLink';
+import { ThemeChoices } from '../ui/ThemeChoice';
+import { setPrefs, usePrefs } from '../state/prefs';
 import { ControlGallery } from '../ui/ControlGallery';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { Folders, get, Jobs, post, Storage } from '../api';
-import { analysisWords, estimateWords, etaRangeWords, gb, storageWords } from '../lib';
-import type { WorkshopTab } from '../router';
-import { PageLink } from '../shell/Shell';
-import { Action, Problem, Skeleton, Status } from '../ui/controls';
-import { ViewProps } from './shared';
+import { Action, Status } from '../ui/controls';
+import { LinkTabs } from '../ui/primitives';
+import { ExportJobs } from './ExportJobs';
 import { Listening } from './Listening';
+import { ViewProps } from './shared';
+import { Diagnostics, FoldersPanel, JobsPanel, MemoryPanel, NeedsYou, StoragePanel } from './WorkshopPanels';
 
-const GB = 1024 ** 3;
-
-/** The limit moves the moment the slider does. Saving waits until the slider stops. */
-type Memory = { tried: number; clean: number; warned: number; failed: number; liked: number; disliked: number };
-
-/** What Selecta has learned from rendering, so it's clear why mixes get better as it goes. */
-function MemoryPanel() {
-  const [memory, setMemory] = useState<Memory | null>(null);
-  const [failed, setFailed] = useState(false);
-  const load = useCallback(() => get<Memory>('/memory').then((value) => { setMemory(value); setFailed(false); }).catch(() => setFailed(true)), []);
-  useEffect(() => { void load(); }, [load]);
-  if (failed) return <Problem retry={load}>Couldn’t load learning history.</Problem>;
-  if (!memory) return <Skeleton variant="metrics" label="Loading learning history" />;
-  if (!memory.tried) return <section className="panel"><h2>Learning starts with listening</h2><p className="hint">Rate transitions after you hear them. Your feedback stays on this PC.</p></section>;
-  const rated = memory.liked + memory.disliked;
+/** How this looks and behaves in this browser. Nothing here touches music, mixes or the server, so
+ * any of it can be switched back, including the older navigation if the new one ever gets in the way. */
+function InterfaceChoices() {
+  const preferences = usePrefs();
   return (
-    <section className="panel stack">
-      <h2>What it’s learned</h2>
-      <p>
-        Selecta remembers {memory.tried} hand-over{memory.tried === 1 ? '' : 's'} it has tried: {memory.clean} came out clean,{' '}
-        {memory.warned} with a warning, and {memory.failed} that can’t work.
-        {rated > 0 && ` You’ve rated ${rated}.`} Mixes and suggestions use all of this, and it stays even when old seams are cleared to save space.
-      </p>
-    </section>
-  );
-}
-
-function StoragePanel() {
-  const [storage, setStorage] = useState<Storage | null>(null);
-  const [limit, setLimit] = useState<number | null>(null);
-  const wait = useRef<number | undefined>(undefined);
-  const saves = useRef(0);
-  const [saved, setSaved] = useState(true);
-  const [problem, setProblem] = useState('');
-
-  const [loadFailed, setLoadFailed] = useState(false);
-  const refresh = () =>
-    get<Storage>('/storage').then((data) => {
-      setLoadFailed(false);
-      setStorage(data);
-      setLimit((current) => current ?? data.budget_bytes / GB);
-    }).catch(() => setLoadFailed(true));
-  useEffect(() => {
-    void refresh().catch(() => {});
-    const timer = window.setInterval(() => void refresh().catch(() => {}), 15000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  if ((!storage || limit === null) && loadFailed) return <Problem retry={refresh}>Couldn’t read storage information.</Problem>;
-  if (!storage || limit === null) return <Skeleton variant="metrics" label="Working out how much room there is" />;
-  const words = storageWords(storage);
-  const overBudget = storage.cache_bytes > storage.budget_bytes;
-  const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);
-  const smallest = storage.smallest_budget_bytes / GB;
-
-  const move = (value: number) => {
-    setLimit(value);
-    setSaved(false);
-    setProblem('');
-    saves.current += 1;
-    const mine = saves.current;
-    window.clearTimeout(wait.current);
-    wait.current = window.setTimeout(() => {
-      void post<Storage>('/storage', { budget_gb: value })
-        .then((confirmed) => {
-          // only the last one moved counts, and it shows what was really saved
-          if (mine !== saves.current) return;
-          setStorage(confirmed);
-          setLimit(confirmed.budget_bytes / GB);
-          setSaved(true);
-        })
-        .catch((error: Error) => { if (mine === saves.current) setProblem(error.message); });
-    }, 400);
-  };
-
-  const total = Math.max(1, storage.used_bytes + storage.free_bytes);
-  return (
-    <section className="panel stack">
-      <h2>Storage</h2>
-      {loadFailed && <Problem retry={refresh}>Storage information may be out of date.</Problem>}
-      <p>{words.summary}</p>
-      <div className="bar-meter" role="img" aria-label={words.summary}>
-        <i className="kept" style={{ width: `${(100 * storage.kept_bytes) / total}%` }} />
-        <i className="cache" style={{ width: `${(100 * storage.cache_bytes) / total}%` }} />
-      </div>
-      <p className="hint">{words.detail}</p>
-      <dl className="song-facts">
-        <div><dt>Kept for mixes</dt><dd>{gb(storage.cache_bytes)} of {gb(storage.budget_bytes)} allowed</dd></div>
-        <div><dt>Everything else Selecta keeps</dt><dd>{gb(storage.kept_bytes)}</dd></div>
-        <div><dt>Free on this drive</dt><dd>{gb(storage.free_bytes)}</dd></div>
-      </dl>
-      <label className="limit">
-        <span>
-          Keep up to <b>{limit.toFixed(1)} GB</b> of vocals and seams
-        </span>
-        <input
-          type="range"
-          min={smallest}
-          max={largest}
-          step={0.1}
-          value={Math.min(limit, largest)}
-          onChange={(event) => move(Number(event.target.value))}
-        />
+    <section className="panel stack interface-choices">
+      <h2>Interface</h2>
+      <p className="hint">These are kept in this browser. None of them change your music or your mixes.</p>
+      <ThemeChoices />
+      <label className="choice">
+        <input type="checkbox" checked={preferences.density === 'compact'} onChange={(event) => setPrefs({ density: event.target.checked ? 'compact' : 'comfortable' })} />
+        Compact rows in the Library, the timeline and drafts
       </label>
-      {!saved && !problem && <p className="hint" role="status">Saving…</p>}
-      {!saved && problem && <Action run={() => move(limit)}>Retry saving budget</Action>}
-      {problem && <p className="warn" role="alert">{problem}</p>}
-      <p className="hint">
-        {overBudget
-          ? 'Priority-song stem windows are protected, so they can temporarily put the cache over its limit. Lower a song’s priority to make its windows eligible for removal.'
-          : 'When it’s full, Selecta removes the oldest cache items that are not protected by song priority. It makes them again if needed.'}{' '}
-        It always leaves at least 2 GB free. Your music is never touched. The most it can use right now is {gb(storage.largest_budget_bytes)}.
-      </p>
+      <label className="choice">
+        <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />
+        Use Ctrl K for search and commands
+      </label>
+      <label className="choice">
+        <input type="checkbox" checked={preferences.singleKeys} onChange={(event) => setPrefs({ singleKeys: event.target.checked })} />
+        Single-key shortcuts such as N and M
+      </label>
+      <label className="choice">
+        <input type="checkbox" checked={preferences.classicNav} onChange={(event) => setPrefs({ classicNav: event.target.checked })} />
+        Use the older navigation: Mixes, Discover and Workshop
+      </label>
     </section>
   );
 }
 
-/** What's actually going on in the background, from what's actually there. */
-function JobsPanel({ status }: { status: ViewProps['status'] }) {
+/** How much is ready, what's running, what's stuck and what needs someone, in that order. */
+function Overview({ status }: { status: ViewProps['status'] }) {
+  const { counts } = status;
+  const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const [jobs, setJobs] = useState<Jobs | null>(null);
-  const [failed, setFailed] = useState(false);
-  const refresh = useCallback(() => get<Jobs>('/jobs').then((next) => {
-    setJobs(next);
-    setFailed(false);
-  }).catch(() => setFailed(true)), []);
+  const [folders, setFolders] = useState<Folders | null>(null);
+  const onJobs = useCallback((next: Jobs) => setJobs(next), []);
   useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), 5000);
-    return () => window.clearInterval(timer);
-  }, [refresh]);
-  if (!jobs) return failed ? <Problem retry={refresh}>Couldn’t find out what’s running.</Problem> : <Skeleton variant="metrics" label="Finding out what’s running" />;
-  const left = jobs.mix.queued + jobs.mix.rendering + jobs.mix.none;
+    let live = true;
+    // a list it couldn't get just means nothing extra to report here, and Sources has its own warning
+    get<Folders>('/folders').then((list) => { if (live) setFolders(list); }).catch(() => {});
+    return () => { live = false; };
+  }, [status.scan.status]);
   return (
-    <section className="panel stack">
-      <h2>What’s happening now</h2>
-      <ul className="job-list">
-        <li>
-          <b>Rendering</b>
-          {!jobs.worker.running
-            ? <Status kind="unavailable">Not started. It starts by itself when there’s something to do.</Status>
-            : jobs.storage_full
-              ? <Status kind="needs-action">Paused: the storage limit has been reached</Status>
-              : jobs.mix.rendering || jobs.worker.rendering_the_mix
-                ? <Status kind="working">Working through your current mix</Status>
-                : left
-                  ? <Status kind="queued">{left} transition{left === 1 ? '' : 's'} in line</Status>
-                  : <Status kind="ready">Your current mix is done</Status>}
-        </li>
-        <li>
-          <b>Drafts in the render line</b>
-          {jobs.drafts_in_line ? <Status kind="queued">{jobs.drafts_in_line} waiting</Status> : <Status kind="planned">None</Status>}
-          {jobs.drafts_in_line > 0 && <PageLink to="/mixes/mine">Change the order</PageLink>}
-        </li>
-        <li>
-          <b>Analysis</b>
-          {jobs.analysis.left === 0
-            ? <Status kind="ready">All done</Status>
-            : jobs.analysis.running
-              ? <Status kind={status.mix_rendering ? 'queued' : 'working'}>{status.mix_rendering ? 'Waiting while your mix renders' : `${jobs.analysis.left} to go`}</Status>
-              : jobs.analysis.paused
-                ? <Status kind="planned">Paused, {jobs.analysis.left} to go</Status>
-                : <Status kind="planned">{jobs.analysis.left} waiting</Status>}
-        </li>
-        <li>
-          <b>Spare time</b>
-          <Status kind="planned">Trying out the best transitions across your library, once everything above is done{status.transitions_ready ? `. ${status.transitions_ready} clean so far` : ''}</Status>
-        </li>
-      </ul>
-      {jobs.storage_full && <p className="hint">Rendering waits until there’s room. <PageLink to="/workshop/storage">Change the limit</PageLink>.</p>}
-      {!!jobs.failed_seams.length && (
-        <>
-          <h3>Transitions that couldn’t be made</h3>
-          <ul className="job-failures">
-            {jobs.failed_seams.map((seam) => <li key={`${seam.from}-${seam.to}`}><Status kind="failed">{seam.from} into {seam.to}</Status>{seam.why ? <small className="hint"> {seam.why}</small> : null}</li>)}
-          </ul>
-          <PageLink to="/mix/current/edit">Choose another move for them</PageLink>
-        </>
-      )}
-      {!!jobs.failed_songs.length && (
-        <>
-          <h3>Songs that couldn’t be analysed</h3>
-          <ul className="job-failures">
-            {jobs.failed_songs.map((song) => <li key={song.id}><Status kind="failed">{song.title ?? 'Untitled'}</Status></li>)}
-          </ul>
-          <PageLink to="/library?show=attention">See them in your library</PageLink>
-        </>
-      )}
-      <p className="hint">{jobs.estimates}</p>
-    </section>
-  );
-}
-
-function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status' | 'refreshStatus' | 'notify'>) {
-  const [folder, setFolder] = useState('');
-  const [problem, setProblem] = useState('');
-  const [list, setList] = useState<Folders | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const scanPending = useRef(false);
-  const reading = status.scan.status === 'running' || submitting;
-  const refresh = useCallback(() => get<Folders>('/folders').then((value) => { setList(value); setLoadFailed(false); }).catch(() => setLoadFailed(true)), []);
-  useEffect(() => {
-    void refresh();
-  }, [refresh, status.scan.status]);
-  const checkNow = async () => {
-    const { new: found } = await post<{ new: number }>('/library/check');
-    refreshStatus();
-    notify(found ? `Found ${found} new ${found === 1 ? 'song' : 'songs'}. Analysing them now.` : 'No new songs yet. Anything still copying in is checked again shortly.');
-  };
-  const scan = async (event: FormEvent) => {
-    event.preventDefault();
-    if (scanPending.current || reading || !folder.trim()) return;
-    scanPending.current = true;
-    setSubmitting(true);
-    setProblem('');
-    try {
-      await post('/scan', { folder: folder.trim().replace(/^"|"$/g, '') });
-      setFolder('');
-      refreshStatus();
-    } catch (error) {
-      setProblem((error as Error).message);
-    } finally { scanPending.current = false; setSubmitting(false); }
-  };
-  const stopWatching = async (path: string) => {
-    setList(await post<Folders>('/folders/stop-watching', { folder: path }));
-    notify('Stopped watching that folder. Nothing in it was touched, and its songs are still in your library.');
-  };
-  return (
-    <section className="panel stack">
-      <h2>Your music folders</h2>
-      {loadFailed && <Problem retry={refresh}>Couldn’t read your watched folders.</Problem>}
-      {list === null && !loadFailed && <Skeleton variant="metrics" lines={1} label="Looking at your folders" />}
-      {!!list?.folders.length && (
-        <ul className="folder-list">
-          {list.folders.map((item) => (
-            <li key={item.path}>
-              <div>
-                <b>{item.path}</b>
-                <small className="hint"> {item.songs} song{item.songs === 1 ? '' : 's'}</small>
-              </div>
-              {item.available ? <Status kind="ready">Watching</Status> : <Status kind="warning">Can’t find it right now. Its songs are kept until it’s back.</Status>}
-              <Action run={() => stopWatching(item.path)}>Stop watching</Action>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="row wrap">
-        <span className="hint">New songs added to these show up by themselves within a minute or so. Selecta never changes or deletes your files.</span>
-        <Action working="Checking…" run={checkNow}>Check now</Action>
+    <>
+      <div className="metrics">
+        <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
+        <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
+        <div><strong>{left}</strong><span>still to analyse</span></div>
+        <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>
+        <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
       </div>
-      <h3>Add another folder</h3>
-      <p className="hint">Copy a folder address from File Explorer. Adding a folder sends artist, title, album and duration to LRCLIB for lyric lookup; audio stays here.</p>
-      <form className="row wrap" onSubmit={(event) => void scan(event)}>
-        <input
-          value={folder}
-          onChange={(event) => setFolder(event.target.value)}
-          placeholder="C:\\Users\\you\\Music"
-          aria-label="Music folder"
-        />
-        <button disabled={!folder.trim() || reading} data-working={reading || undefined}>{reading ? 'Reading…' : 'Read folder'}</button>
-      </form>
-      {problem && <p className="warn" role="alert">{problem}</p>}
-      {status.scan.status === 'done' && (
-        <p className="hint">Read {status.scan.folder}: {status.scan.music} songs, {status.scan.set_aside} set aside. Analysing them now.</p>
-      )}
-      {status.scan.status === 'failed' && <p className="warn" role="alert">{status.scan.error}</p>}
-    </section>
+      {jobs && <NeedsYou jobs={jobs} readySongs={counts.ready ?? 0} folders={folders} />}
+      <JobsPanel status={status} onJobs={onJobs} />
+      <ExportJobs always />
+      <InterfaceChoices />
+    </>
   );
 }
-
-/** What's useful for working out a problem, with no paths or song names. It stays here unless you
- * copy it somewhere yourself. */
-function Diagnostics() {
-  const [info, setInfo] = useState<Record<string, unknown> | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const load = useCallback(() => get<Record<string, unknown>>('/diagnostics').then((next) => {
-    setInfo(next);
-    setFailed(false);
-  }).catch(() => setFailed(true)), []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  if (failed) return <Problem retry={load}>The server isn’t answering, which is the first thing to look at. Is Selecta still running?</Problem>;
-  if (!info) return <Skeleton variant="metrics" label="Gathering details" />;
-  const text = JSON.stringify(info, null, 2);
-  const canCopy = typeof navigator.clipboard?.writeText === 'function';
-  return (
-    <section className="panel stack">
-      <h2>Diagnostics</h2>
-      <p className="hint">No paths or song names, and nothing is sent anywhere. It only leaves this PC if you copy it somewhere yourself.</p>
-      <pre className="diagnostics">{text}</pre>
-      <div className="row wrap">
-        {canCopy && (
-          <Action run={async () => {
-            await navigator.clipboard.writeText(text);
-            setCopied(true);
-          }}>
-            {copied ? 'Copied' : 'Copy'}
-          </Action>
-        )}
-        <Action run={load}>Check again</Action>
-      </div>
-    </section>
-  );
-}
-
-const SECTIONS: { tab: WorkshopTab; label: string; path: string }[] = [
-  { tab: 'overview', label: 'Overview', path: '/workshop' },
-  { tab: 'analysis', label: 'Analysis', path: '/workshop/analysis' },
-  { tab: 'storage', label: 'Storage', path: '/workshop/storage' },
-  { tab: 'sources', label: 'Sources', path: '/workshop/sources' },
-  { tab: 'learning', label: 'Learning', path: '/workshop/learning' },
-  { tab: 'diagnostics', label: 'Diagnostics', path: '/workshop/diagnostics' },
-];
 
 export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: ViewProps & { tab?: WorkshopTab }) {
   const { counts } = status;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
+  const route = useRoute();
+  const inStudy = route.page === 'listening';
+  const here = WORKSPACE_TABS.find((section) => section.tab === tab)?.path ?? '/workshop';
 
   const toggle = async () => {
     await post(status.analysis_running ? '/analysis/stop' : '/analysis/start');
@@ -335,26 +87,11 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
   };
 
   return (
-    <main className="page" id="main">
-      <h1 className="display small">Workshop</h1>
-      <nav className="tabs" aria-label="Workshop">
-        {SECTIONS.map((section) => (
-          <PageLink key={section.tab} to={section.path} aria-current={tab === section.tab ? 'page' : undefined}>{section.label}</PageLink>
-        ))}
-      </nav>
+    <main className="page browse workspace" id="main">
+      <h1 className="display small">{inStudy ? 'Listening study' : 'Workspace'}</h1>
+      <LinkTabs label="Workspace" items={WORKSPACE_TABS} current={here} />
 
-      {tab === 'overview' && (
-        <>
-          <div className="metrics">
-            <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
-            <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
-            <div><strong>{left}</strong><span>still to analyse</span></div>
-            <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>
-            <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
-          </div>
-          <JobsPanel status={status} />
-        </>
-      )}
+      {tab === 'overview' && <Overview status={status} />}
 
       {tab === 'analysis' && (
         <section className="panel stack">
@@ -369,10 +106,12 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
                 : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
           </p>
           {estimateWords(status.eta?.accuracy) && <p className="hint">{estimateWords(status.eta?.accuracy)}</p>}
+          <p className="hint">Times are estimates, from how long this PC has been taking. They’re never a promise.</p>
           <p className="hint">
             With nothing else to do, Selecta tries out the best transitions across your library, so they’re ready when you want them.
             {status.transitions_ready ? ` ${status.transitions_ready} have come out clean so far.` : ''}
           </p>
+          {!!status.analysing?.length && <p><Status kind="queued">{status.analysing.length} song{status.analysing.length === 1 ? '' : 's'} you asked for will go first</Status></p>}
           {left > 0 && (
             <div className="row wrap">
               <Action className={status.analysis_running ? '' : 'primary'} run={toggle}>
@@ -381,6 +120,9 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
               <span className="hint">Safe to pause any time.</span>
             </div>
           )}
+          <p className="hint">
+            <PageLink to="/library?show=not_yet">See what’s waiting</PageLink>, or <PageLink to="/library?show=attention">see what needs attention</PageLink>. A song that couldn’t be analysed can be tried again from there.
+          </p>
         </section>
       )}
 

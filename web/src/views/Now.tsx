@@ -1,8 +1,10 @@
-import { KeyboardEvent, MouseEvent, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { get, MixData, post, SongDetail } from '../api';
+import { KeyboardEvent, MouseEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { ApiError, get, MixData, post, SongDetail } from '../api';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
-import { Action, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
+import { orderOf } from '../state/readiness';
+import { Action, announce, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
+import { useShownTheme } from '../state/prefs';
 import { Icon } from '../ui/Icon';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
@@ -57,8 +59,13 @@ function mergedSections(detail: SongDetail) {
   return merged;
 }
 
-/** The whole song as one strip, with its sections named. Where the seam falls is marked. */
-function Strip({ detail, time, seamAt, onSeek }: { detail: SongDetail; time: number; seamAt: number | null; onSeek?: (seconds: number) => void }) {
+const CANT_SEEK = 'You can’t move around during a transition, because it plays as one finished piece. You can again once the next song has taken over.';
+
+/** The whole song as one strip, with its sections named. Where the seam falls is marked. During a
+ * transition it stays the same control, and says why it won't move rather than quietly becoming
+ * something else. */
+function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDetail; time: number; seamAt: number | null; onSeek: (seconds: number) => void; seekBlocked?: boolean }) {
+  const noteId = useId();
   const percent = (seconds: number) => (100 * seconds) / detail.duration;
   const shape = useMemo(() => {
     const step = 100 / Math.max(detail.peaks.length, 1);
@@ -73,31 +80,37 @@ function Strip({ detail, time, seamAt, onSeek }: { detail: SongDetail; time: num
   const barTimes = detail.bar_times ?? [];
   const clip = `played-${detail.id}`;
   const pointAt = (event: MouseEvent<HTMLDivElement>) => {
+    if (seekBlocked) {
+      announce(CANT_SEEK);
+      return;
+    }
     const box = event.currentTarget.getBoundingClientRect();
-    if (box.width) onSeek?.(detail.duration * Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1));
+    if (box.width) onSeek(detail.duration * Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1));
   };
   const keys = (event: KeyboardEvent<HTMLDivElement>) => {
     const moves: Record<string, number> = { ArrowLeft: time - 5, ArrowDown: time - 5, ArrowRight: time + 5, ArrowUp: time + 5, Home: 0, End: detail.duration - 1, PageDown: time - 30, PageUp: time + 30 };
     if (moves[event.key] === undefined) return;
     event.preventDefault();
     event.stopPropagation();
-    onSeek?.(moves[event.key]);
+    if (seekBlocked) announce(CANT_SEEK);
+    else onSeek(moves[event.key]);
   };
-  const place = onSeek
-    ? {
-        role: 'slider',
-        tabIndex: 0,
-        'aria-label': 'Where in the song',
-        'aria-valuemin': 0,
-        'aria-valuemax': Math.round(detail.duration),
-        'aria-valuenow': Math.round(time),
-        'aria-valuetext': `${clock(time)} of ${clock(detail.duration)}`,
-        onClick: pointAt,
-        onKeyDown: keys,
-      }
-    : { role: 'img', 'aria-label': `${clock(time)} of ${clock(detail.duration)}` };
   return (
-    <div className={`strip ${onSeek ? 'can-seek' : ''}`} {...place}>
+    <>
+    <div
+      className={`strip ${seekBlocked ? 'seek-blocked' : 'can-seek'}`}
+      role="slider"
+      tabIndex={0}
+      aria-label="Where in the song"
+      aria-valuemin={0}
+      aria-valuemax={Math.round(detail.duration)}
+      aria-valuenow={Math.round(time)}
+      aria-valuetext={`${clock(time)} of ${clock(detail.duration)}`}
+      aria-disabled={seekBlocked || undefined}
+      aria-describedby={seekBlocked ? noteId : undefined}
+      onClick={pointAt}
+      onKeyDown={keys}
+    >
       <svg className="peaks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <clipPath id={clip}>
@@ -130,6 +143,8 @@ function Strip({ detail, time, seamAt, onSeek }: { detail: SongDetail; time: num
         {clock(time)} / {clock(detail.duration)}
       </span>
     </div>
+    <p className="hint seek-note" id={noteId}>{seekBlocked ? CANT_SEEK : ' '}</p>
+    </>
   );
 }
 
@@ -259,6 +274,8 @@ function TransitionCountdown({
 function MusicVisualizer({ player, active, stage }: { player: ViewProps['player']; active: boolean; stage: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
+  // its colours come from the page, so a change of theme has to draw it again
+  const theme = useShownTheme();
   useEffect(() => {
     if (typeof CanvasRenderingContext2D === 'undefined') return;
     const node = canvas.current;
@@ -272,6 +289,11 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     gradient.addColorStop(1, soft);
     let lastDraw = -Infinity;
     const draw = (timestamp = 0) => {
+      // nothing to look at while the tab is hidden, and the music mustn't pay for it
+      if (document.hidden) {
+        frame = 0;
+        return;
+      }
       if (active && !reduceMotion && timestamp - lastDraw < 1000 / 30) {
         frame = window.requestAnimationFrame(draw);
         return;
@@ -305,10 +327,30 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
       }
       if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
     };
+    const wake = () => {
+      if (!document.hidden && !frame) draw();
+    };
+    document.addEventListener('visibilitychange', wake);
     draw();
-    return () => window.cancelAnimationFrame(frame);
-  }, [player, active, stage, reduceMotion]);
+    return () => {
+      document.removeEventListener('visibilitychange', wake);
+      window.cancelAnimationFrame(frame);
+    };
+  }, [player, active, stage, reduceMotion, theme]);
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label="Live music frequency visualizer" />;
+}
+
+/** Why there's nothing to follow along with. A song's timing is never made up to fill the gap. */
+function noLyricsWords(status: string | null | undefined): string {
+  switch (status) {
+    case 'instrumental': return 'Instrumental';
+    case 'plain': return 'Lyrics for this song aren’t timed, so they can’t follow along.';
+    case 'failed': return 'Looking up lyrics for this song didn’t work. Selecta will try again later.';
+    case 'synced': return 'The timed lyrics for this song couldn’t be read.';
+    case null:
+    case undefined: return 'Lyrics haven’t been looked up yet.';
+    default: return 'No lyrics found for this song.';
+  }
 }
 
 function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; focus?: boolean }) {
@@ -323,14 +365,7 @@ function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; foc
   }, [lines, time]);
   // the space stays the same whichever it is, so the page doesn't jump about between songs
   if (!lines.length) {
-    const words = detail.lyric_status === 'instrumental'
-      ? 'Instrumental'
-      : detail.lyric_status === 'plain'
-        ? 'Lyrics for this song aren’t timed, so they can’t follow along.'
-        : detail.lyric_status
-          ? 'No lyrics found for this song.'
-          : 'Lyrics haven’t been looked up yet.';
-    return <div className={`lyrics quiet ${focus ? 'focus' : ''}`}><p className="dim">{words}</p></div>;
+    return <div className={`lyrics quiet ${focus ? 'focus' : ''}`}><p className="dim">{noLyricsWords(detail.lyric_status)}</p></div>;
   }
   const singing = index >= 0 && time < lines[index].end + 1.5;
   const current = index >= 0 ? lines[index] : null;
@@ -385,8 +420,25 @@ function WhyThisTransition({ from, into, names }: { from?: ViewProps['mix'][numb
   );
 }
 
+/** What's coming, what was asked for, and what will really play, kept apart. Whether it exists as
+ * audio yet comes from the render, not from the plan. */
+function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number]['seam']; ready: boolean; names: Record<string, string> }) {
+  const facts = seamFacts(seam, names);
+  const state = seam?.state;
+  const rendered = state?.status === 'ready';
+  return (
+    <div className="transition-truth">
+      <p><Status kind={facts.kind}>{facts.words}</Status></p>
+      {rendered && facts.asked && state?.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What will play is {state.label}.</p>}
+      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'Selecta’s choice'}. It hasn’t been made yet, so what plays can still change.</p>}
+      {!ready && !rendered && <p className="hint">If it isn’t ready in time, this song plays on and the next one fades in, so the music doesn’t stop.</p>}
+      {state?.status === 'failed' && <p className="hint">If it can’t be made, Selecta falls back to its own pick. You can choose another in Edit.</p>}
+    </div>
+  );
+}
+
 export function Now(props: ViewProps) {
-  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, toggleStage, status, openRequests } = props;
+  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests } = props;
   const requests = useContext(RequestsContext);
   const item = mix[now.position];
   const next = mix[now.position + 1];
@@ -395,7 +447,13 @@ export function Now(props: ViewProps) {
   const [detailAttempt, setDetailAttempt] = useState(0);
   const [rated, setRated] = useState('');
   const [problem, setProblem] = useState('');
+  const [changed, setChanged] = useState<{ from: string; to: string; id: number } | null>(null);
   const [view, setViewChoice] = useState<ListenView>(savedView);
+  const page = useRef<HTMLElement>(null);
+  // The Stage hides whatever had focus, so focus waits on the page, where Space still plays and pauses
+  useEffect(() => {
+    if (stage) page.current?.focus({ preventScroll: true });
+  }, [stage]);
   const choose = (change: Partial<ListenView>) => {
     const chosen = { ...view, ...change };
     setViewChoice(chosen);
@@ -427,13 +485,20 @@ export function Now(props: ViewProps) {
     notify(rating === 'good' ? 'Noted. More like that.' : 'Noted. Less like that.');
   };
 
+  // The place it means is the one on screen when pressed, whatever has played by the time it answers,
+  // and if the mix has moved on since, it stops rather than swapping a different song.
   const swap = async (direction: number) => {
     setProblem('');
+    const place = now.position + 1;
+    const before = mix[place]?.title;
     try {
-      const data = await post<MixData>(`/mix/${now.position + 1}/swap?direction=${direction}`);
+      const data = await post<MixData>(`/mix/${place}/swap?direction=${direction}`, undefined, { 'x-mix-order': orderOf(mix) });
       setMixData(data);
-      notify(`Next up: ${data.mix[now.position + 1]?.title}.`, true);
+      const after = data.mix[place];
+      setChanged(after && before && after.title !== before ? { from: before, to: after.title, id: after.song_id } : null);
+      notify(`Next up: ${after?.title}.`, true);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       setProblem((error as Error).message);
     }
   };
@@ -442,7 +507,6 @@ export function Now(props: ViewProps) {
   const idle = now.phase === 'idle';
   const resumable = idle && now.songTime > 1;
   const names = status.moves ?? {};
-  const facts = seamFacts(next?.seam, names);
   const eyebrow =
     now.phase === 'loading'
       ? 'Loading'
@@ -454,82 +518,84 @@ export function Now(props: ViewProps) {
   const shown = detail && detail.id === item?.song_id ? detail : null;
   const waiting = requests?.requests?.filter((request) => request.id > 0).length ?? 0;
 
+  const showChanged = changed && changed.id === next?.song_id ? changed : null;
   return (
-    <main className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''} ${view.lyrics && !stage ? 'lyric-focus' : ''}`} id="main">
-      <p className="eyebrow">{eyebrow}</p>
-      <h1 className="display">{item?.title}</h1>
-      {item && <RequestTag item={item} />}
-      <p className="artist">{item?.artist}</p>
+    <main ref={page} tabIndex={-1} className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''} ${view.lyrics && !stage ? 'lyric-focus' : ''}`} id="main">
+      <div className="listen-layout">
+        <div className="listen-main">
+          <header className="listen-identity">
+            <p className="eyebrow">{eyebrow}</p>
+            <h1 className="display">{item?.title}</h1>
+            {item && <RequestTag item={item} />}
+            <p className="artist">{item?.artist}</p>
+          </header>
 
-      {!stage && (
-        <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
-          <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
-          <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
-          <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
-          <Tooltip text="Shortcut: F">
-            <button onClick={toggleStage}>Fullscreen lyrics</button>
-          </Tooltip>
-        </fieldset>
-      )}
+          {!stage && (
+            <>
+              <div className="transport">
+                <Tooltip text="Previous song (P)">
+                  <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>
+                </Tooltip>
+                <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
+                  {now.phase === 'playing'
+                    ? 'Pause'
+                    : now.phase === 'loading'
+                      ? 'Loading…'
+                      : now.phase === 'paused'
+                        ? 'Resume'
+                        : resumable
+                          ? `Resume from ${clock(now.songTime)}`
+                          : 'Play'}
+                </button>
+                <Tooltip text="Next song (Shift N)">
+                  <button aria-label="Next song" disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>
+                </Tooltip>
+              </div>
+              <div className="transport-more">
+                <Tooltip text="Shortcut: N">
+                  <button onClick={() => void player.skip()} disabled={idle || !next}>
+                    Jump to the transition
+                  </button>
+                </Tooltip>
+                <VolumeControl player={player} now={now} />
+                <Tooltip text="Shortcut: R">
+                  <button onClick={() => openRequests?.()}>
+                    Request a song{waiting ? ` (${waiting} waiting)` : ''}
+                  </button>
+                </Tooltip>
+              </div>
+              {now.notice && <p className="notice" role="status">{now.notice}</p>}
+              <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
+                <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
+                <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
+                <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
+                <Tooltip text="Shortcut: F">
+                  <button onClick={toggleStage}>Fullscreen lyrics</button>
+                </Tooltip>
+              </fieldset>
+            </>
+          )}
 
-      {(stage || (view.spectrum && !view.lyrics)) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />}
-      {shown && (stage || (view.timing && !view.lyrics)) && (
-        <TransitionCountdown
-          detail={shown}
-          time={now.songTime}
-          seamAt={now.seamAt}
-          nextTitle={next?.title}
-          ready={now.nextReady}
-          inSeam={now.inSeam}
-          switchAt={seam?.switch_at}
-        />
-      )}
-      {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} onSeek={now.inSeam ? undefined : (seconds) => void player.seek(seconds)} />}
-      {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>Couldn’t load lyrics and song details. Playback controls are still available.</Problem>}
-      {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
-      {stage && (
-        <button className="exit-stage" onClick={toggleStage}>
-          Exit fullscreen
-        </button>
-      )}
+          {(stage || (view.spectrum && !view.lyrics)) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />}
+          {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
+          {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>Couldn’t load lyrics and song details. Playback controls are still available.</Problem>}
+          {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
+        </div>
 
-      {!stage && (
-        <>
-          <div className="transport">
-            <Tooltip text="Previous song (P)">
-              <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>
-            </Tooltip>
-            <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
-              {now.phase === 'playing'
-                ? 'Pause'
-                : now.phase === 'loading'
-                  ? 'Loading…'
-                  : now.phase === 'paused'
-                    ? 'Resume'
-                    : resumable
-                      ? `Resume from ${clock(now.songTime)}`
-                      : 'Play'}
-            </button>
-            <Tooltip text="Next song (Shift N)">
-              <button aria-label="Next song" disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>
-            </Tooltip>
-          </div>
-          <div className="transport-more">
-            <Tooltip text="Shortcut: N">
-              <button onClick={() => void player.skip()} disabled={idle || !next}>
-                Jump to the transition
-              </button>
-            </Tooltip>
-            <VolumeControl player={player} now={now} />
-            <Tooltip text="Shortcut: R">
-              <button onClick={() => openRequests?.()}>
-                Request a song{waiting ? ` (${waiting} waiting)` : ''}
-              </button>
-            </Tooltip>
-          </div>
-          {now.notice && <p className="notice" role="status">{now.notice}</p>}
+        <aside className="listen-side" aria-label="Coming up">
+          {shown && (stage || (view.timing && !view.lyrics)) && (
+            <TransitionCountdown
+              detail={shown}
+              time={now.songTime}
+              seamAt={now.seamAt}
+              nextTitle={next?.title}
+              ready={now.nextReady}
+              inSeam={now.inSeam}
+              switchAt={seam?.switch_at}
+            />
+          )}
 
-          {now.lastSeamKey && !rated && (
+          {!stage && now.lastSeamKey && !rated && (
             <div className="thumbs" role="group" aria-label="Rate that transition">
               <span>How was that transition?</span>
               <Action run={() => rate('good')}>Good</Action>
@@ -537,21 +603,22 @@ export function Now(props: ViewProps) {
             </div>
           )}
 
-          {next ? (
+          {!stage && (next ? (
             <section className="next-up">
               <p className="eyebrow">Next</p>
               <button className="next-song" onClick={() => setView('Edit')}>
                 <b>{next.title}</b>
                 <span>{next.artist}</span>
                 <RequestTag item={next} />
-                <small><Status kind={facts.kind}>{facts.words}</Status></small>
               </button>
+              <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} />
               <div className="chips steer" role="group" aria-label="Change what plays next">
                 <Action run={() => swap(1)} working="Finding one…">Bigger</Action>
                 <Action run={() => swap(-1)} working="Finding one…">Calmer</Action>
                 <Action run={() => swap(0)} working="Finding one…">Something else</Action>
               </div>
-              {problem && <p className="warn" role="alert">{problem}</p>}
+              {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
+              {problem && <p className="warn" role="alert">{problem} Nothing has changed, so the plan above still stands.</p>}
               <WhyThisTransition from={item} into={next} names={names} />
             </section>
           ) : (
@@ -560,8 +627,16 @@ export function Now(props: ViewProps) {
               <p className="soft">This is the last song in the mix.</p>
               <button onClick={() => setView('Edit')}>Add more songs</button>
             </section>
-          )}
-        </>
+          ))}
+        </aside>
+      </div>
+
+      {stage && (
+        <div className="stage-controls">
+          {stageFallback && <p className="hint stage-notice" role="status">Your browser didn’t allow fullscreen, so this fills the page instead. Press Escape to go back.</p>}
+          <button onClick={() => void player.togglePause()} disabled={now.phase === 'loading'}>{now.phase === 'playing' ? 'Pause' : 'Play'}</button>
+          <button className="exit-stage" onClick={toggleStage}>Exit fullscreen</button>
+        </div>
       )}
     </main>
   );

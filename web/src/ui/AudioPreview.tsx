@@ -14,13 +14,22 @@ export function AudioPreview({ src, startAt, autoPlay, label = 'A preview' }: { 
     setProblem('');
     const element = audio.current;
     if (!element || (!autoPlay && startAt === undefined)) return;
+    let live = true;
     const go = () => {
       if (startAt !== undefined) element.currentTime = Math.max(0, startAt);
-      if (autoPlay) void Promise.resolve(element.play()).catch(() => setProblem('Preview did not start. Press play to try again.'));
+      if (autoPlay) {
+        void Promise.resolve(element.play()).catch((error: Error) => {
+          // being stopped or replaced on the way isn't the preview failing
+          if (live && error?.name !== 'AbortError') setProblem('Preview did not start. Press play to try again.');
+        });
+      }
     };
     if (element.readyState > 0) go();
     else element.addEventListener('loadedmetadata', go, { once: true });
-    return () => element.removeEventListener('loadedmetadata', go);
+    return () => {
+      live = false;
+      element.removeEventListener('loadedmetadata', go);
+    };
   }, [src, startAt, autoPlay]);
 
   useEffect(() => {

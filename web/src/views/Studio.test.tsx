@@ -118,14 +118,14 @@ describe('the seam studio', () => {
     connectMainPlayer({ isPlaying: () => true, pause, resume: vi.fn() });
     open();
     await square('Song 1 voice, square 1');
-    fireEvent.click(screen.getByRole('button', { name: '▶ Play it' }));
-    expect(await screen.findByRole('button', { name: '■ Stop' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Play preview' }));
+    expect(await screen.findByRole('button', { name: 'Stop preview' })).toBeInTheDocument();
     expect(deck.made[0].play).toHaveBeenCalled();
     expect(pause).toHaveBeenCalled();
     connectMainPlayer(null);
-    fireEvent.click(screen.getByRole('button', { name: '■ Stop' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stop preview' }));
     expect(deck.made[0].stop).toHaveBeenCalled();
-    expect(await screen.findByRole('button', { name: '▶ Play it' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Play preview' })).toBeInTheDocument();
   });
 
   it('pressing a name plays only that part, and can go back to everything', async () => {
@@ -169,7 +169,7 @@ describe('the seam studio', () => {
     const { calls, onClose, onUsed, notify } = open(ready, { 'POST /mix/1/studio/use': data });
     const cell = await square('Song 2 voice, square 1');
     fireEvent.click(cell);
-    fireEvent.click(screen.getByRole('button', { name: 'Use this' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to this transition' }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const body = calls.find((call) => call.path.endsWith('/use'))?.body as { shape: Shape };
     expect(body.shape.b.vocals[0]).toBe(1);
@@ -182,7 +182,7 @@ describe('the seam studio', () => {
     const { onClose } = open();
     const cell = await square('Song 2 voice, square 1');
     fireEvent.click(cell);
-    fireEvent.click(screen.getByRole('button', { name: 'Use this' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to this transition' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Song 2 voice, square 1' })).toHaveAttribute('aria-pressed', 'true');
@@ -209,7 +209,7 @@ describe('the seam studio', () => {
     await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
     expect(calls.find((call) => call.path.endsWith('/tune'))?.body).toEqual({ shape: null });
     expect(deck.made[0].setShape).toHaveBeenLastCalledWith(made);
-    expect(screen.getByRole('status')).toHaveTextContent('Selecta arranged this');
+    expect(screen.getByText('Selecta arranged this from what’s in the stems.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Put it back' }));
     expect(cell).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
@@ -224,14 +224,14 @@ describe('the seam studio', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
     await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
     expect((calls.find((call) => call.path.endsWith('/tune'))?.body as { shape: Shape }).shape.a.vocals[0]).toBe(1);
-    expect(screen.getByRole('status')).toHaveTextContent('where it clashed');
+    expect(screen.getByText(/where it clashed/)).toBeInTheDocument();
   });
 
   it('says so when fine tuning finds nothing to change', async () => {
     open(ready, { 'POST /mix/1/studio/tune': { shape: shape(1, 0), changes: [] } });
     await square('Song 2 bass, square 1');
     fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Nothing to change');
+    expect(await screen.findByText(/Nothing to change/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
   });
 
@@ -254,7 +254,7 @@ describe('the seam studio', () => {
     expect(screen.getByRole('button', { name: 'Let Selecta arrange it' })).toBeEnabled();
   });
 
-  it('nothing it does is final until “Use this”', async () => {
+  it('nothing it does is final until “Apply to this transition”', async () => {
     const { calls } = open(ready, { 'POST /mix/1/studio/tune': { shape: shape(1, 1), changes: ['x'] } });
     await square('Song 1 voice, square 1');
     fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));

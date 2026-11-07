@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urlsplit
@@ -25,6 +26,7 @@ from selecta.api_common import (
 from selecta.config import Settings, load_settings
 from selecta.routes.discover import add_routes as discover_routes
 from selecta.routes.edit import add_routes as edit_routes
+from selecta.routes.exports import add_routes as exports_routes
 from selecta.routes.helpers import add_routes as helpers_routes
 from selecta.routes.library import add_routes as library_routes
 from selecta.routes.mixes import add_routes as mixes_routes
@@ -56,11 +58,21 @@ def create_app(
 
     running_operations: dict[str, asyncio.Event] = {}
 
-    ctx = SimpleNamespace(settings=settings, store=store, background=background)
+    # what happened to the last few, for diagnostics: only the kind of thing, never what it named
+    recent_operations: deque[dict] = deque(maxlen=20)
+
+    ctx = SimpleNamespace(
+        settings=settings,
+        store=store,
+        background=background,
+        recent_operations=recent_operations,
+    )
     helpers_routes(app, ctx)
     library_routes(app, ctx)
     mixes_routes(app, ctx)
     system_routes(app, ctx)
+    # before edit's /api/exports/{name}, or that would answer for /api/exports/jobs
+    exports_routes(app, ctx)
     edit_routes(app, ctx)
     song_requests_routes(app, ctx)
     discover_routes(app, ctx)
@@ -77,13 +89,18 @@ def create_app(
             return await call_next(request)
         if operation in running_operations:
             await running_operations[operation].wait()
+        kind = operation.split("-", 1)[0]
         known = finished_operations.get(operation)
         if known is not None:
+            recent_operations.append({"kind": kind, "status": known[0], "repeat": True})
             return Response(known[1], status_code=known[0], media_type="application/json")
         running_operations[operation] = asyncio.Event()
         try:
             response = await call_next(request)
             body = b"".join([chunk async for chunk in response.body_iterator])
+            recent_operations.append(
+                {"kind": kind, "status": response.status_code, "repeat": False}
+            )
             if response.status_code < 500:
                 finished_operations[operation] = (response.status_code, body)
                 while len(finished_operations) > OPERATIONS_KEPT:

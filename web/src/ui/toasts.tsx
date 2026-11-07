@@ -1,9 +1,11 @@
 import { Icon } from './Icon';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
+import { canUndo, clearActivity, recordActivity, runUndo } from '../state/activity';
 
-/** What's been said lately. A message with an Undo stays until its time is up however many others
- * arrive, because losing the way back from a mistake to a passing message is worse than a crowded
- * corner of the screen. Each Undo knows exactly what it undoes, whatever is on screen by then. */
+/** What's been said lately. A toast confirms something once and then goes, and never holds the only
+ * way back: anything that can be undone is also kept in Activity, so its Undo is still there after
+ * the message has gone. Each Undo knows exactly what it undoes, whatever is on screen by then. */
 
 export type ToastTone = 'info' | 'problem';
 export type Toast = {
@@ -11,14 +13,17 @@ export type Toast = {
   message: string;
   undo?: () => Promise<unknown> | void;
   tone: ToastTone;
+  activity: number;
 };
 
 const SHOWN = 3;
 const PLAIN_MS = 4500;
 const PROBLEM_MS = 8000;
+const UNDO_MS = 15000;
 
 let next = 1;
 let toasts: Toast[] = [];
+let quiet = false;
 const listeners = new Set<() => void>();
 
 function changed() {
@@ -32,18 +37,29 @@ export function dismissToast(id: number) {
   changed();
 }
 
-export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone } = {}): number {
+/** On the Stage, nothing but a real problem interrupts. The rest waits in Activity. */
+export function setToastsQuiet(on: boolean) {
+  quiet = on;
+  if (on) {
+    toasts = toasts.filter((toast) => toast.tone === 'problem');
+    changed();
+  }
+}
+
+export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone; scope?: string | null } = {}): number {
   const clean = message.replace(/\.\.$/, '.');
   // the same words again just means the same thing is still true
   const same = toasts.find((toast) => toast.message === clean && !toast.undo && !options.undo);
   if (same) return same.id;
-  const toast: Toast = { id: next++, message: clean, undo: options.undo, tone: options.tone ?? 'info' };
+  const tone = options.tone ?? 'info';
+  const activity = recordActivity(clean, { tone, scope: options.scope, undo: options.undo });
+  if (quiet && tone !== 'problem') return -activity;
+  const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity };
   const all = [...toasts, toast];
-  // make room by dropping the oldest that nothing depends on
+  // room is made from the oldest with no Undo first. One with an Undo can go too, because Activity has it
   while (all.length > SHOWN) {
     const spare = all.findIndex((item) => !item.undo);
-    if (spare < 0) break;
-    all.splice(spare, 1);
+    all.splice(spare < 0 ? 0 : spare, 1);
   }
   toasts = all;
   changed();
@@ -56,20 +72,23 @@ export function showProblem(message: string): number {
 
 export function clearToasts() {
   toasts = [];
+  quiet = false;
+  clearActivity();
   changed();
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 function ToastRow({ toast }: { toast: Toast }) {
   const timer = useRef<number | null>(null);
   const start = () => {
     if (timer.current !== null) window.clearTimeout(timer.current);
-    if (toast.undo) return;
-    const wait = toast.tone === 'problem' ? PROBLEM_MS : PLAIN_MS;
+    const wait = toast.undo ? UNDO_MS : toast.tone === 'problem' ? PROBLEM_MS : PLAIN_MS;
     timer.current = window.setTimeout(() => dismissToast(toast.id), wait);
   };
   const hold = () => {
@@ -77,13 +96,13 @@ function ToastRow({ toast }: { toast: Toast }) {
     timer.current = null;
   };
   useEffect(() => {
-    if (!toast.undo) start();
+    start();
     return hold;
   }, []);
   const undo = async () => {
     dismissToast(toast.id);
     try {
-      await toast.undo?.();
+      await runUndo(toast.activity);
     } catch (error) {
       showProblem((error as Error).message || 'Couldn’t undo that.');
     }
@@ -98,18 +117,20 @@ function ToastRow({ toast }: { toast: Toast }) {
       onBlur={start}
     >
       <span>{toast.message}</span>
-      {toast.undo && <button onClick={() => void undo()}>Undo</button>}
+      {toast.undo && <button onClick={() => void undo()} title={canUndo(toast.activity) ? undefined : 'A newer change has to be undone first'}>Undo</button>}
       <button className="toast-close" aria-label="Dismiss" onClick={() => dismissToast(toast.id)}><Icon name="close" /></button>
     </div>
   );
 }
 
+/** Outside the page, so a message and its Undo stay usable while a dialog has the page inert. */
 export function Toaster() {
   const shown = useSyncExternalStore(subscribe, () => toasts);
   if (!shown.length) return null;
-  return (
+  return createPortal(
     <div className="toasts" aria-label="Notifications">
       {shown.map((toast) => <ToastRow key={toast.id} toast={toast} />)}
-    </div>
+    </div>,
+    document.body,
   );
 }

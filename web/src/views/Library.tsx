@@ -2,16 +2,21 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { get, LibraryPage, LibrarySong, MixData, post } from '../api';
 import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
-import { Action, Problem, Sheet, Skeleton, Status, StatusKind } from '../ui/controls';
+import { setPrefs, usePrefs } from '../state/prefs';
+import { orderOf, trackReadiness } from '../state/readiness';
+import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { Icon } from '../ui/Icon';
+import { SearchField } from '../ui/primitives';
 import { ViewProps } from './shared';
+import { SongDetails } from './SongDetails';
 
 const FILTERS = [
+  { name: 'all', label: 'Everything' },
   { name: 'ready', label: 'Ready' },
   { name: 'not_yet', label: 'Not analysed yet' },
   { name: 'attention', label: 'Needs attention' },
   { name: 'priority', label: 'Priority list' },
   { name: 'set_aside', label: 'Set aside' },
-  { name: 'all', label: 'Everything' },
 ];
 
 const SORTS = [
@@ -21,109 +26,22 @@ const SORTS = [
   { name: 'recent', label: 'Newest first' },
 ];
 
-const READINESS: Record<string, { kind: StatusKind; words: string }> = {
-  mix_ready: { kind: 'ready', words: 'Ready for mixes' },
-  analysed_incomplete: { kind: 'warning', words: 'Not ready for mixes' },
-  queued: { kind: 'queued', words: 'Waiting to be analysed' },
-  processing: { kind: 'working', words: 'Being analysed' },
-  needs_attention: { kind: 'failed', words: 'Couldn’t be analysed' },
-  set_aside: { kind: 'unavailable', words: 'Set aside' },
-  excluded: { kind: 'unavailable', words: 'Never plays' },
-  missing: { kind: 'failed', words: 'File is missing' },
-};
+const PAGE_SIZE = 100;
+// the server's own limit on one page, which keeps refreshing what's on screen cheap
+const MOST_REFRESHED = 200;
 
-function SongDetails({ song, onClose, onChanged, notify }: { song: LibrarySong; onClose: () => void; onChanged: () => void; notify: ViewProps['notify'] }) {
-  const [bpm, setBpm] = useState(song.override_bpm ? String(song.override_bpm) : '');
-  const [camelot, setCamelot] = useState(song.override_camelot ?? '');
-  const [problem, setProblem] = useState('');
-  const facts = READINESS[song.readiness.status] ?? READINESS.queued;
-  const send = async (body: Record<string, unknown>, said: string) => {
-    setProblem('');
-    try {
-      const answer = await post<{ redone: number }>(`/songs/${song.id}/correct`, body);
-      onChanged();
-      notify(answer.redone ? `${said} ${answer.redone} transition${answer.redone === 1 ? '' : 's'} with this song will be made again.` : said);
-    } catch (error) {
-      setProblem((error as Error).message);
-    }
-  };
-  const detectedTempo = song.detected_bpm ? Math.round(song.detected_bpm) : null;
-  return (
-    <Sheet title={song.title ?? 'Untitled'} onClose={onClose}>
-      <p className="song-detail-artist">{song.artist ?? 'Unknown artist'}</p>
-      <p><Status kind={facts.kind}>{facts.words}</Status></p>
-      {song.readiness.reason && <p className="hint">{song.readiness.reason}</p>}
-      <dl className="song-facts">
-        <div><dt>Length</dt><dd>{clock(song.duration)}</dd></div>
-        <div><dt>Tempo</dt><dd>{song.bpm ? `${Math.round(song.bpm)} BPM` : 'Not measured yet'}{song.override_bpm ? ' (your correction)' : ''}</dd></div>
-        <div><dt>Key</dt><dd>{song.camelot ?? 'Not measured yet'}{song.override_camelot ? ' (your correction)' : ''}</dd></div>
-        <div><dt>Lyrics</dt><dd>{song.lyric_status === 'synced' ? 'Timed' : song.lyric_status === 'instrumental' ? 'Instrumental' : song.lyric_status ? 'Not timed' : 'Not looked up yet'}</dd></div>
-        {song.grid_confidence != null && <div><dt>Beat grid</dt><dd>{Math.round(song.grid_confidence * 100)}% sure</dd></div>}
-      </dl>
-      <section className="stack">
-        <h3>Correct it</h3>
-        <p className="hint">If Selecta got something wrong. What it measured is kept, so this can be put back, and analysing the song again won’t lose it.</p>
-        <div className="row wrap">
-          <label className="correct-field">
-            Tempo{detectedTempo ? ` (measured ${detectedTempo})` : ''}
-            <input type="number" min={40} max={240} step="0.1" value={bpm} onChange={(event) => setBpm(event.target.value)} placeholder={detectedTempo ? String(detectedTempo) : ''} />
-          </label>
-          {detectedTempo && (
-            <>
-              <button onClick={() => setBpm(String(Math.round((song.detected_bpm ?? 0) * 2)))}>Double</button>
-              <button onClick={() => setBpm(String(Math.round((song.detected_bpm ?? 0) / 2)))}>Half</button>
-            </>
-          )}
-        </div>
-        <label className="correct-field">
-          Key{song.detected_camelot ? ` (measured ${song.detected_camelot})` : ''}
-          <input value={camelot} onChange={(event) => setCamelot(event.target.value.toUpperCase())} placeholder={song.detected_camelot ?? '8A'} maxLength={3} />
-        </label>
-        {problem && <p className="warn" role="alert">{problem}</p>}
-        <div className="row wrap">
-          <Action
-            className="primary"
-            working="Saving…"
-            disabled={bpm === (song.override_bpm ? String(song.override_bpm) : '') && camelot === (song.override_camelot ?? '')}
-            run={() => send({
-              ...(bpm ? { bpm: Number(bpm) } : {}),
-              ...(camelot ? { camelot } : {}),
-              clear: [...(bpm ? [] : ['bpm']), ...(camelot ? [] : ['camelot'])],
-            }, 'Saved your correction.')}
-          >
-            Save correction
-          </Action>
-          {(song.override_bpm || song.override_camelot) && (
-            <Action run={async () => {
-              await send({ clear: ['bpm', 'camelot'] }, 'Back to what Selecta measured.');
-              setBpm('');
-              setCamelot('');
-            }}>
-              Use what was measured
-            </Action>
-          )}
-        </div>
-      </section>
-      <section className="stack">
-        <h3>Is it music?</h3>
-        <p className="hint">Something set aside never gets analysed or mixed. Your file isn’t touched either way.</p>
-        <div className="row wrap">
-          {song.readiness.status === 'set_aside' ? (
-            <Action run={() => send({ is_music: true }, 'This counts as music now.')}>This is music</Action>
-          ) : (
-            <Action run={() => send({ is_music: false }, 'Set aside.')}>This isn’t music</Action>
-          )}
-          {song.music_override != null && <Action run={() => send({ clear: ['is_music'] }, 'Selecta will decide again next time it reads your folder.')}>Let Selecta decide</Action>}
-        </div>
-      </section>
-    </Sheet>
-  );
-}
+const pagesFrom = (text: string | null) => {
+  const pages = Number(text);
+  return Number.isInteger(pages) && pages > 1 ? Math.min(pages, 200) : 1;
+};
 
 export function Library({ mix, now, player, setMixData, setView, notify, status, refreshStatus }: ViewProps) {
   const query = useQueryParam('q') ?? '';
-  const filter = useQueryParam('show') ?? 'ready';
+  const filter = useQueryParam('show') ?? 'all';
   const sort = useQueryParam('sort') ?? 'title';
+  const pagesAsked = useQueryParam('pages');
+  const pagesWanted = useRef(pagesFrom(pagesAsked));
+  pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
   const [searching, setSearching] = useState(true);
   useEffect(() => setTyped(query), [query]);
@@ -132,29 +50,44 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const [next, setNext] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [opened, setOpened] = useState<number | null>(null);
+  const preferences = usePrefs();
   const line = status.analysing ?? [];
   const asked = useRef(0);
 
-  const url = useCallback((after?: string | null) => {
-    const params = new URLSearchParams({ q: query, state: filter, sort, limit: '100' });
+  const url = useCallback((after?: string | null, limit = PAGE_SIZE) => {
+    const params = new URLSearchParams({ q: query, state: filter, sort, limit: String(limit) });
     if (after) params.set('after', after);
     return `/library?${params}`;
   }, [query, filter, sort]);
 
-  // only the newest search can answer, however the answers arrive
-  const load = useCallback(() => {
+  // Only the newest search can answer, however the answers arrive. Coming back to a list that had been
+  // shown further down loads as many pages as it had, one after another, in the same order.
+  const load = useCallback(async () => {
     asked.current += 1;
     const mine = asked.current;
-    return get<LibraryPage>(url())
-      .then((page) => {
+    try {
+      const found = new Map<number, LibrarySong>();
+      let after: string | null = null;
+      let count = 0;
+      for (let page = 0; page < pagesWanted.current; page += 1) {
+        const answer: LibraryPage = await get<LibraryPage>(url(after));
         if (mine !== asked.current) return;
+        for (const song of answer.songs) found.set(song.id, song);
+        count = answer.total;
+        after = answer.next;
+        if (!after) break;
+      }
+      setSearching(false);
+      setRows([...found.values()]);
+      setTotal(count);
+      setNext(after);
+      setFailed(false);
+    } catch {
+      if (mine === asked.current) {
+        setFailed(true);
         setSearching(false);
-        setRows(page.songs);
-        setTotal(page.total);
-        setNext(page.next);
-        setFailed(false);
-      })
-      .catch(() => { if (mine === asked.current) { setFailed(true); setSearching(false); } });
+      }
+    }
   }, [url]);
 
   const more = async () => {
@@ -167,21 +100,23 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     });
     setNext(page.next);
     setTotal(page.total);
+    setAddressQuery({ pages: String(pagesWanted.current + 1) });
   };
 
   // what's on screen keeps its place while it's being brought up to date
   const refreshShown = useCallback(() => {
     const mine = asked.current;
-    return get<LibraryPage>(url()).then((page) => {
+    return get<LibraryPage>(url(null, Math.min(Math.max(rows?.length ?? PAGE_SIZE, PAGE_SIZE), MOST_REFRESHED))).then((page) => {
       if (mine !== asked.current) return;
+      setFailed(false);
       setTotal(page.total);
       setRows((before) => {
         if (!before) return page.songs;
         const fresh = new Map(page.songs.map((song) => [song.id, song]));
         return before.map((song) => fresh.get(song.id) ?? song);
       });
-    }).catch(() => {});
-  }, [url]);
+    }).catch(() => { if (mine === asked.current) setFailed(true); });
+  }, [url, rows?.length]);
 
   useEffect(() => {
     setSearching(true);
@@ -195,13 +130,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   }, [line.length, refreshShown]);
 
   useEffect(() => {
-    const wait = window.setTimeout(() => setAddressQuery({ q: typed || null }), 200);
+    if (typed === query) return;
+    const wait = window.setTimeout(() => setAddressQuery({ q: typed || null, pages: null }), 200);
     return () => window.clearTimeout(wait);
-  }, [typed]);
+  }, [typed, query]);
 
   const inMix = new Set(mix.map((item) => item.song_id));
   const add = async (song: LibrarySong, position?: number) => {
-    setMixData(await post<MixData>('/mix/songs', { song_id: song.id, position }));
+    // "play next" means next in what's on screen, so it stops if that's changed
+    const guard = position === undefined ? undefined : { 'x-mix-order': orderOf(mix) };
+    setMixData(await post<MixData>('/mix/songs', { song_id: song.id, position }, guard));
     notify(position !== undefined ? `${song.title} plays next.` : `Added ${song.title}.`, true);
   };
   const never = async (song: LibrarySong) => {
@@ -237,34 +175,40 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   };
   const setPriority = async (song: LibrarySong) => {
     await post(`/songs/${song.id}/priority?priority=${song.priority ? 0 : 100}`);
-    notify(song.priority ? `${song.title} moved to background processing.` : `${song.title} moved to the priority list.`, true);
+    notify(song.priority ? `${song.title} moved to background processing.` : `${song.title} moved to the priority list.`);
     await refreshShown();
   };
   const shownDetails = rows?.find((song) => song.id === opened) ?? null;
+  const { counts } = status;
+  const compact = preferences.density === 'compact';
 
   return (
-    <main className="page library" id="main">
-      <h1 className="display small">Library</h1>
+    <main className="page library density" id="main">
+      <header className="library-head">
+        <h1 className="display small">Library</h1>
+        <p className="library-summary">
+          {Number.isFinite(counts.ready) && <span><b>{counts.ready}</b> ready for mixes</span>}
+          <span><b>{counts.analysed}</b> analysed</span>
+          <span><b>{counts.music}</b> songs</span>
+          {!!counts.set_aside && <span><b>{counts.set_aside}</b> set aside</span>}
+        </p>
+      </header>
       <div className="library-find">
-        <label className="library-search">Search your library
-        <input
-          className="wide"
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-          placeholder="Search by artist or title"
-          aria-label="Search your library"
-        />
-        </label>
+        <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search by artist or title" />
         <label className="library-sort">
           Sort by
-          <select value={sort} onChange={(event) => setAddressQuery({ sort: event.target.value === 'title' ? null : event.target.value })}>
+          <select value={sort} onChange={(event) => setAddressQuery({ sort: event.target.value === 'title' ? null : event.target.value, pages: null }, { push: true })}>
             {SORTS.map((option) => <option key={option.name} value={option.name}>{option.label}</option>)}
           </select>
         </label>
+        <div className="row library-density" role="group" aria-label="Row size">
+          <button aria-pressed={!compact} onClick={() => setPrefs({ density: 'comfortable' })}>Comfortable</button>
+          <button aria-pressed={compact} onClick={() => setPrefs({ density: 'compact' })}>Compact</button>
+        </div>
       </div>
       <div className="chips" role="group" aria-label="Show">
         {FILTERS.map((option) => (
-          <button key={option.name} aria-pressed={filter === option.name} onClick={() => setAddressQuery({ show: option.name === 'ready' ? null : option.name })}>
+          <button key={option.name} aria-pressed={filter === option.name} onClick={() => setAddressQuery({ show: option.name === 'all' ? null : option.name, pages: null }, { push: true })}>
             {option.label}
           </button>
         ))}
@@ -286,57 +230,58 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {failed && rows !== null && <p className="warn" role="status">Can’t check on your library right now, so what’s shown may be out of date.</p>}
       {rows === null && !failed && <Skeleton variant="library" lines={6} label="Loading your songs" />}
       {rows !== null && <p className="hint library-count" role="status">{rows.length < total ? `Showing ${rows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
-      {rows?.length === 0 && <section className="empty-state"><h2>{query ? `Nothing matches “${query}”.` : 'No songs in this view'}</h2><p>Try a different title or artist, or show all songs to check their progress.</p><div className="row wrap">{query && <button onClick={() => { setTyped(''); setAddressQuery({ q: null }); }}>Clear search</button>}<button onClick={() => setAddressQuery({ show: 'all' })}>Show all songs</button></div></section>}
-      <ul className="rows" aria-busy={searching}>
+      {rows?.length === 0 && !failed && (
+        <section className="empty-state">
+          <h2>{query ? `Nothing matches “${query}”.` : 'No songs in this view'}</h2>
+          <p>Try a different title or artist, or show all songs to check their progress.</p>
+          <div className="row wrap">
+            {query && <button onClick={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}>Clear search</button>}
+            {filter !== 'all' && <button onClick={() => setAddressQuery({ show: null, pages: null }, { push: true })}>Show all songs</button>}
+          </div>
+        </section>
+      )}
+      <ul className="rows library-rows" aria-busy={searching}>
         {rows?.map((song) => {
-          const ready = song.bpm !== null;
-          const facts = READINESS[song.readiness.status] ?? READINESS.queued;
+          const facts = trackReadiness(song);
           const already = inMix.has(song.id);
+          const name = song.title ?? 'Untitled';
           return (
             <li key={song.id} className={`song-row ${song.never ? 'never' : ''}`}>
               <div className="song-name">
-                <button className="link song-open" onClick={() => setOpened(song.id)} aria-label={`Details for ${song.title ?? 'Untitled'}`}>
-                  <b>{song.title ?? 'Untitled'}</b>
+                <button className="link song-open" onClick={() => setOpened(song.id)} aria-label={`Details for ${name}`}>
+                  <b>{name}</b>
                 </button>
                 <span>{song.artist ?? 'Unknown artist'}</span>
               </div>
-              <small className="facts">
-                {ready ? `${Math.round(song.bpm!)} BPM ${song.camelot ?? ''}` : 'Not analysed'} · {clock(song.duration)}
-                {song.lyric_status === 'synced' ? ' · lyrics' : ''}
+              <small className="facts song-columns">
+                <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
+                <span>{song.camelot ?? '–'}</span>
+                <span>{clock(song.duration)}</span>
+                {song.lyric_status === 'synced' && <span>lyrics</span>}
               </small>
-              <span className="song-readiness" title={song.readiness.reason || undefined}>
+              <div className="song-readiness">
                 <Status kind={facts.kind}>{facts.words}</Status>
-              </span>
+                {facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}
+              </div>
               <div className="song-actions">
-                {ready ? (
-                  <>
-                    <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => startFrom(song)}>Start a mix</Action>
-                    <Action working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>
-                    {now.phase !== 'idle' && (
-                      <Action working="Adding…" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next</Action>
-                    )}
-                  </>
-                ) : (
-                  filter !== 'set_aside' && (
-                    <Action disabled={line.includes(song.id)} run={() => analyse(song)}>
-                      {analysingWords(line, song.id)}
-                      {status.eta?.line[song.id] !== undefined && `, ${etaWords(status.eta.line[song.id])}`}
-                    </Action>
-                  )
+                {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => startFrom(song)}>Start a mix</Action>}
+                {facts.canAdd && <Action working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>}
+                {facts.canAdd && now.phase !== 'idle' && <Action working="Adding…" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next</Action>}
+                {facts.canAnalyse && (
+                  <Action disabled={line.includes(song.id)} run={() => analyse(song)}>
+                    {analysingWords(line, song.id)}
+                    {status.eta?.line[song.id] !== undefined && `, ${etaWords(status.eta.line[song.id])}`}
+                  </Action>
                 )}
-                {filter !== 'set_aside' && (
-                  <details><summary aria-label={`More actions for ${song.title ?? 'Untitled'}`}>More</summary><div className="row wrap">
-                    <Action
-                      aria-pressed={song.priority}
-                      run={() => setPriority(song)}
-                      title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup"
-                    >
+                {!facts.setAside && (
+                  <Menu label={<><Icon name="more" /><span className="visually-hidden">More actions for {name}</span></>}>
+                    <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
                       {song.priority ? 'Priority: on' : 'Prioritize'}
                     </Action>
-                    <Action aria-pressed={song.never} run={() => never(song)} title="Selecta won’t pick this when it builds a mix">
+                    <Action role="menuitemcheckbox" aria-checked={song.never} run={() => never(song)} title="Selecta won’t pick this when it builds a mix">
                       {song.never ? 'Never: on' : 'Never play'}
                     </Action>
-                  </div></details>
+                  </Menu>
                 )}
               </div>
             </li>
@@ -344,7 +289,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         })}
       </ul>
       {next && <Action className="library-more" working="Loading…" run={more}>Show more songs</Action>}
-      {shownDetails && <SongDetails song={shownDetails} onClose={() => setOpened(null)} onChanged={() => void refreshShown()} notify={notify} />}
+      {shownDetails && <SongDetails song={shownDetails} onClose={() => setOpened(null)} onChanged={() => void refreshShown()} notify={notify} onPriority={setPriority} onNever={never} />}
     </main>
   );
 }

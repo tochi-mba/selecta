@@ -1,17 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, get, MixData, MixItem, post, problemKind, Status } from './api';
-import { connectMainPlayer } from './audio/focus';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ApiError, DraftList, get, MixData, MixItem, post, problemKind, Status } from './api';
+import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { loadResume } from './lib';
 import { NowState, SetPlayer } from './player';
-import { navigate, Route, useRoute } from './router';
+import { navigate, useRoute } from './router';
+import { buildCommands } from './shell/commands';
+import { describeRoute } from './shell/manifest';
 import { PageLink, Shell } from './shell/Shell';
+import { markNewestUndone } from './state/activity';
+import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
+import { orderOf } from './state/readiness';
+import { SHORTCUTS, shortcutFor } from './state/shortcuts';
 import { sayThisTabIsPlaying, whenAnotherTabPlays } from './state/tabs';
+import { ActivityPanel } from './ui/ActivityPanel';
+import { CommandPalette } from './ui/CommandPalette';
 import { Action, announce, Dialog, Drawer, Section, Skeleton } from './ui/controls';
-import { showProblem, showToast } from './ui/toasts';
+import { setToastsQuiet, showProblem, showToast } from './ui/toasts';
+import { ExportJobs } from './views/ExportJobs';
 import { Library } from './views/Library';
 import { Links } from './views/Links';
 import { Mix } from './views/Mix';
 import { Mixes } from './views/Mixes';
+import { MyMixes } from './views/MyMixes';
 import { Now } from './views/Now';
 import { RequestsContext, RequestsPanel, useRequests } from './views/Requests';
 import { Start } from './views/Start';
@@ -28,30 +38,25 @@ const PATHS: Record<View, string> = {
   Workshop: '/workshop',
 };
 
-const TITLES: Record<Route['page'], string> = {
-  listen: 'Listen',
-  mixes: 'Mixes',
-  edit: 'Edit',
-  library: 'Library',
-  discover: 'Discover',
-  workshop: 'Workshop',
-  listening: 'Listening test',
-  missing: 'Not found',
-};
+const SET_UP_KEY = 'selecta.setUp';
 
-const KEYS: [string, string][] = [
-  ['Space', 'Play or pause'],
-  ['N', 'Jump to the transition'],
-  ['Shift N', 'Next song'],
-  ['P', 'Previous song'],
-  ['← →', 'Back or forward 5 seconds'],
-  ['M', 'Mute'],
-  ['R', 'Request a song'],
-  ['Z', 'Undo'],
-  ['F', 'Fullscreen lyrics'],
-  ['/', 'Search your library'],
-  ['?', 'This list'],
-];
+function hasBeenSetUp(): boolean {
+  try {
+    return window.localStorage.getItem(SET_UP_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function rememberSetUp() {
+  try {
+    window.localStorage.setItem(SET_UP_KEY, '1');
+  } catch {
+    // this only changes the wording if the server is ever unreachable
+  }
+}
+
+const scopeKey = (scope: number | null) => (scope === null ? 'current' : `draft:${scope}`);
 
 export function App() {
   const route = useRoute();
@@ -62,7 +67,13 @@ export function App() {
   const [data, setData] = useState<MixData>({ mix: [], name: 'Your mix', can_undo: false });
   const [helping, setHelping] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  const [commanding, setCommanding] = useState(false);
+  const [commandDrafts, setCommandDrafts] = useState<{ id: number; name: string }[]>([]);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [stage, setStage] = useState(false);
+  const [stageFallback, setStageFallback] = useState(false);
+  const preferences = usePrefs();
+  useEffect(() => readFlagFromAddress(window.location.search), []);
   const mix = data.mix;
   const mixRef = useRef<MixItem[]>([]);
   mixRef.current = mix;
@@ -100,13 +111,18 @@ export function App() {
   const [draftGone, setDraftGone] = useState(false);
   const draftRef = useRef(draftId);
   draftRef.current = draftId;
+  const draftMixRef = useRef<MixItem[]>([]);
+  const setDraftMix = useCallback((next: MixData) => {
+    draftMixRef.current = next.mix;
+    setDraftData(next);
+  }, []);
   const refreshDraft = useCallback(() => {
     const asked = draftRef.current;
     if (asked === null) return;
     get<MixData>(`/mix?draft=${asked}`)
       .then((next) => {
         if (draftRef.current !== asked) return;
-        setDraftData(next);
+        setDraftMix(next);
         setDraftGone(false);
       })
       .catch((error: Error) => {
@@ -114,7 +130,7 @@ export function App() {
         // a draft that's gone says so, rather than quietly showing a different mix
         if (error instanceof ApiError && error.status === 404) setDraftGone(true);
       });
-  }, []);
+  }, [setDraftMix]);
   useEffect(() => {
     setDraftData(null);
     setDraftGone(false);
@@ -126,19 +142,26 @@ export function App() {
   }, []);
   const goTo = useCallback((next: View) => navigate(PATHS[next]), []);
 
-  const undoIn = useCallback(async (scope: number | null) => {
-    const next = await post<MixData>(scope === null ? '/mix/undo' : `/mix/undo?draft=${scope}`);
+  // With `order`, it only goes ahead if that mix is still in the order it was left in, because undoing
+  // always takes back the newest change, and that may no longer be the change this was offered for.
+  const undoIn = useCallback(async (scope: number | null, order?: string) => {
+    const next = await post<MixData>(scope === null ? '/mix/undo' : `/mix/undo?draft=${scope}`, undefined, order === undefined ? undefined : { 'x-mix-order': order });
     if (scope === null) setMixData(next);
-    else if (draftRef.current === scope) setDraftData(next);
+    else if (draftRef.current === scope) setDraftMix(next);
     showToast(next.undone ? `Undid ${next.undone}.` : 'Nothing to undo.');
-  }, [setMixData]);
+  }, [setMixData, setDraftMix]);
+  const undoNewest = useCallback(async (scope: number | null) => {
+    await undoIn(scope);
+    markNewestUndone(scopeKey(scope));
+  }, [undoIn]);
   const notify = useCallback((message: string, undo: Undo = false) => {
     if (typeof undo === 'function') {
       showToast(message, { undo });
     } else if (undo) {
       // it undoes the mix this was said about, wherever you are when you press it
       const scope = draftRef.current;
-      showToast(message, { undo: () => undoIn(scope) });
+      const order = orderOf(scope === null ? mixRef.current : draftMixRef.current);
+      showToast(message, { scope: scopeKey(scope), undo: () => undoIn(scope, order) });
     } else {
       showToast(message);
     }
@@ -154,7 +177,8 @@ export function App() {
     return () => window.removeEventListener('unhandledrejection', failed);
   }, []);
 
-  const player = useMemo(() => new SetPlayer(() => mixRef.current, refreshMix), [refreshMix]);
+  // kept for the life of the app, above every page, so nothing a page does can start a second one
+  const [player] = useState(() => new SetPlayer(() => mixRef.current, refreshMix));
   useEffect(() => {
     connectMainPlayer({
       isPlaying: () => player.state.phase === 'playing',
@@ -168,7 +192,8 @@ export function App() {
     setMixData(next);
     navigate('/listen');
     void player.playFrom(from);
-    showToast(`Now playing ${next.name}. What was playing is kept in your drafts.`, { undo: () => undoIn(null) });
+    const order = orderOf(next.mix);
+    showToast(`Now playing ${next.name}. What was playing is kept in your drafts.`, { scope: 'current', undo: () => undoIn(null, order) });
   }, [player, setMixData, undoIn]);
   const requests = useRequests({ mix, player, onMix: setMixData }, notify);
   const foundAt = useRef<number | null>(null);
@@ -207,7 +232,11 @@ export function App() {
     if (now.phase === 'playing') sayThisTabIsPlaying();
   }, [now.phase]);
   useEffect(() => whenAnotherTabPlays(() => {
-    if (player.state.phase !== 'playing') return;
+    // the other tab has the sound now, so nothing finishing here may bring this one back over it
+    mainPlayerTouched();
+    const previewing = !!audioOwner();
+    stopPreviewsOnly();
+    if (player.state.phase !== 'playing' && !previewing) return;
     void player.pause();
     showToast('Playing in another tab now. Press play here to bring it back.');
   }), [player]);
@@ -269,9 +298,16 @@ export function App() {
     if (active && playing?.title) announce(`Now playing ${playing.title} by ${playing.artist}`);
   }, [active, playing?.title, playing?.artist]);
 
+  const pageTitle = describeRoute(route).title;
   useEffect(() => {
-    document.title = active && playing ? `${playing.title} · Selecta` : `${TITLES[route.page]} · Selecta`;
-  }, [active, playing?.title, route.page]);
+    document.title = active && playing ? `${playing.title} · Selecta` : `${pageTitle} · Selecta`;
+  }, [active, playing?.title, pageTitle]);
+
+  // a library that exists means this person is set up, even if the server is away next time
+  const setUp = !!status && status.counts.total > 0;
+  useEffect(() => {
+    if (setUp) rememberSetUp();
+  }, [setUp]);
 
   // Media keys, headsets and the system's now-playing panel: each does what it says it does.
   useEffect(() => {
@@ -297,66 +333,118 @@ export function App() {
     }
   }, [active, playing?.title, now.phase, data.name, player]);
 
+  // Going on stage hides everything that had focus, so coming back puts focus back where it was.
+  const beforeStage = useRef<HTMLElement | null>(null);
+  const noteFocusForStage = () => {
+    if (!document.fullscreenElement && !stageRef.current) beforeStage.current = document.activeElement as HTMLElement | null;
+  };
+  const stageRef = useRef(false);
+  stageRef.current = stage;
   const toggleStage = useCallback(() => {
+    noteFocusForStage();
     if (document.fullscreenElement) {
       void document.exitFullscreen();
-    } else {
-      const asked = document.documentElement.requestFullscreen?.();
-      // a browser can say no, and the lyrics still fill the page
-      if (asked) void asked.catch(() => setStage((on) => !on));
-      else setStage((on) => !on);
+      return;
     }
+    if (stageRef.current) {
+      setStage(false);
+      setStageFallback(false);
+      return;
+    }
+    const asked = document.documentElement.requestFullscreen?.();
+    const fillThePage = () => {
+      setStage(true);
+      setStageFallback(true);
+    };
+    // a browser can say no, and the lyrics still fill the page
+    if (asked) void asked.catch(fillThePage);
+    else fillThePage();
   }, []);
   useEffect(() => {
-    const change = () => setStage(!!document.fullscreenElement);
+    const change = () => {
+      setStage(!!document.fullscreenElement);
+      setStageFallback(false);
+    };
     document.addEventListener('fullscreenchange', change);
     return () => document.removeEventListener('fullscreenchange', change);
   }, []);
+  useEffect(() => {
+    setToastsQuiet(stage);
+    if (stage) return;
+    const back = beforeStage.current;
+    beforeStage.current = null;
+    if (back?.isConnected && back !== document.body) back.focus();
+  }, [stage]);
 
   useEffect(() => {
     const keys = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setHelping(false);
-        if (!document.fullscreenElement) setStage(false);
+        if (!document.fullscreenElement) {
+          setStage(false);
+          setStageFallback(false);
+        }
       }
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      const typing = !!target && (/INPUT|TEXTAREA|SELECT/.test(target.tagName) || target.isContentEditable || !!target.closest('[role="grid"],[role="menu"],[role="dialog"]'));
-      if (typing || event.ctrlKey || event.metaKey || event.altKey) return;
-      const key = event.key.toLowerCase();
-      if (event.code === 'Space') {
-        if (target instanceof HTMLButtonElement || target instanceof HTMLAnchorElement) return;
-        event.preventDefault();
-        if (mixRef.current.length) void player.togglePause();
-      } else if (key === 'n') {
-        if (event.shiftKey) void player.next();
-        else void player.skip();
-      } else if (key === 'p') void player.previous();
-      else if (key === 'm') player.toggleMute();
-      else if (key === 'r') setRequesting(true);
-      else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        if (player.state.phase === 'idle') return;
-        void player.seek(player.state.songTime + (event.key === 'ArrowLeft' ? -5 : 5));
-      } else if (key === 'z') {
-        const place = routeRef.current;
-        void undoIn(place.page === 'edit' ? place.draft : null);
-      } else if (key === 'f') {
-        navigate('/listen');
-        toggleStage();
-      } else if (key === '?') setHelping((on) => !on);
-      else if (event.key === '/') {
-        event.preventDefault();
-        navigate('/library');
+      const shortcut = shortcutFor(event);
+      if (!shortcut) return;
+      if (shortcut !== 'palette' && !prefs().singleKeys) return;
+      switch (shortcut) {
+        case 'palette':
+          // turned off, it leaves the browser's own Ctrl K alone
+          if (!prefs().palette) return;
+          event.preventDefault();
+          setCommanding(true);
+          break;
+        case 'playPause':
+          event.preventDefault();
+          if (mixRef.current.length) void player.togglePause();
+          break;
+        case 'next': void player.next(); break;
+        case 'jump': void player.skip(); break;
+        case 'previous': void player.previous(); break;
+        case 'mute': player.toggleMute(); break;
+        case 'request': setRequesting(true); break;
+        case 'back5':
+        case 'forward5':
+          if (player.state.phase === 'idle') return;
+          void player.seek(player.state.songTime + (shortcut === 'back5' ? -5 : 5));
+          break;
+        case 'undo': {
+          const place = routeRef.current;
+          void undoNewest(place.page === 'edit' ? place.draft : null);
+          break;
+        }
+        case 'stage':
+          navigate('/listen');
+          toggleStage();
+          break;
+        case 'help': setHelping((on) => !on); break;
+        case 'search':
+          event.preventDefault();
+          navigate('/library');
+          break;
       }
     };
     window.addEventListener('keydown', keys);
     return () => window.removeEventListener('keydown', keys);
-  }, [player, undoIn, toggleStage]);
+  }, [player, undoNewest, toggleStage]);
+
+  // the drafts it can jump to are only ever as old as this opening of it
+  useEffect(() => {
+    if (!commanding) return;
+    let live = true;
+    get<DraftList>('/drafts').then((list) => { if (live) setCommandDrafts(list.drafts ?? []); }).catch(() => { if (live) setCommandDrafts([]); });
+    return () => { live = false; };
+  }, [commanding]);
 
   if (problem && !status) {
     return (
       <main className="page" id="main">
         <h1 className="display">Can’t reach Selecta.</h1>
-        <p className="lede">{problem}. It may have stopped running. Start it again, and this page will pick up by itself.</p>
+        <p className="lede">
+          {problem}. It may have stopped running. Start it again, and this page will pick up by itself.
+          {hasBeenSetUp() ? ' Your library, mixes and ratings are safe, and you won’t have to set anything up again.' : ''}
+        </p>
         <Action className="primary" run={refreshStatus} working="Trying…">Try now</Action>
       </main>
     );
@@ -368,6 +456,7 @@ export function App() {
     status,
     mix,
     mixName: data.name,
+    currentMixName: data.name,
     canUndo: data.can_undo,
     mixEta: data.eta,
     refreshMix,
@@ -378,14 +467,43 @@ export function App() {
     setView: goTo,
     notify,
     stage,
+    stageFallback,
     toggleStage,
     openDraft,
     closeDraft,
     playDraft,
     openRequests: () => setRequesting(true),
+    undo: undoNewest,
   };
   const nothingToHear = route.page === 'listen' && !mix.length;
   const waitingRequests = requests.requests?.filter((request) => request.id > 0).length ?? 0;
+  const counts = status.counts;
+  const commands = commanding ? buildCommands({
+    hasMix: mix.length > 0,
+    playing: now.phase === 'playing',
+    active,
+    hasNext: !!mix[now.position + 1],
+    canUndo: draftId === null ? data.can_undo : !!draftData?.can_undo,
+    readySongs: counts.ready ?? 0,
+    songsLeftToAnalyse: Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0),
+    analysing: status.analysis_running,
+    drafts: commandDrafts,
+    theme: preferences.theme,
+    togglePause: () => void player.togglePause(),
+    next: () => void player.next(),
+    jump: () => void player.skip(),
+    toggleStage: () => { navigate('/listen'); toggleStage(); },
+    openRequests: () => setRequesting(true),
+    openActivity: () => setActivityOpen(true),
+    openHelp: () => setHelping(true),
+    undo: () => { void undoNewest(draftId).catch((error: Error) => showProblem(error.message)); },
+    startAnalysis: () => {
+      void post('/analysis/start').then(() => {
+        void refreshStatus();
+        showToast('Analysing the rest of your library in the background.');
+      }).catch((error: Error) => showProblem(error.message));
+    },
+  }) : [];
   return (
     <RequestsContext.Provider value={requests}>
       <Shell
@@ -399,6 +517,8 @@ export function App() {
         waitingRequests={waitingRequests}
         onRequests={() => setRequesting(true)}
         onHelp={() => setHelping(true)}
+        onCommands={() => setCommanding(true)}
+        onActivity={() => setActivityOpen(true)}
         banner={problem ? (
           <div className="connection" role="alert">
             <span><b>Can’t reach Selecta.</b> What’s on screen may be out of date, and anything already loaded keeps playing. Trying again every few seconds.</span>
@@ -406,15 +526,16 @@ export function App() {
           </div>
         ) : undefined}
       >
-        <Section name={TITLES[route.page]} key={route.page}>
-          {(route.page === 'mixes' || nothingToHear) && <Mixes {...shared} tab={route.page === 'mixes' ? route.tab : 'browse'} />}
+        <Section name={pageTitle} key={route.page}>
+          {route.page === 'mixes' && route.tab === 'mine' && <MyMixes {...shared} />}
+          {((route.page === 'mixes' && route.tab === 'browse') || nothingToHear) && <Mixes {...shared} />}
           {route.page === 'listen' && !nothingToHear && <Now {...shared} />}
           {route.page === 'edit' && draftId === null && <Mix {...shared} key="current" />}
           {route.page === 'edit' && draftId !== null && draftGone && (
             <main className="page" id="main">
               <h1 className="display small">That draft isn’t there any more.</h1>
               <p className="lede">It may have been deleted or played in another tab. Nothing else has changed.</p>
-              <PageLink to="/mixes/mine" className="button primary">See your mixes</PageLink>
+              <PageLink to="/mixes/mine" className="button primary">See my mixes</PageLink>
             </main>
           )}
           {route.page === 'edit' && draftId !== null && !draftGone && !draftData && <main className="page" aria-busy="true"><Skeleton variant="timeline" label="Opening your draft" /></main>}
@@ -429,7 +550,7 @@ export function App() {
                 mixEta={draftData.eta}
                 draftPlace={draftData.draft?.place ?? null}
                 refreshMix={refreshDraft}
-                setMixData={setDraftData}
+                setMixData={setDraftMix}
                 renamedDraft={(name) => setDraftData((before) => (before ? { ...before, name } : before))}
               />
             </MixScope.Provider>
@@ -442,7 +563,7 @@ export function App() {
             <main className="page" id="main">
               <h1 className="display small">There’s nothing at this address.</h1>
               <p className="lede">Your music and mixes are fine. It may be an old link.</p>
-              <PageLink to="/mixes" className="button primary">Go to Mixes</PageLink>
+              <PageLink to="/mixes" className="button primary">Go to Explore</PageLink>
             </main>
           )}
         </Section>
@@ -452,16 +573,33 @@ export function App() {
           <RequestsPanel />
         </Drawer>
       )}
+      {activityOpen && (
+        <Drawer title="Activity" onClose={() => setActivityOpen(false)}>
+          <ActivityPanel />
+          <ExportJobs />
+        </Drawer>
+      )}
+      {commanding && <CommandPalette commands={commands} onClose={() => setCommanding(false)} />}
       {helping && (
         <Dialog title="Keyboard shortcuts" onClose={() => setHelping(false)} footer={<button autoFocus data-autofocus onClick={() => setHelping(false)}>Close</button>}>
           <dl className="keys">
-            {KEYS.map(([key, what]) => (
-              <div key={key}>
-                <dt><kbd>{key}</kbd></dt>
-                <dd>{what}</dd>
+            {SHORTCUTS.filter((shortcut) => shortcut.id !== 'palette' || preferences.palette).map((shortcut) => (
+              <div key={shortcut.id}>
+                <dt><kbd>{shortcut.keys}</kbd></dt>
+                <dd>{shortcut.label}</dd>
               </div>
             ))}
           </dl>
+          <div className="row wrap">
+            <label className="choice">
+              <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />
+              Use Ctrl K for search and commands
+            </label>
+            <label className="choice">
+              <input type="checkbox" checked={preferences.singleKeys} onChange={(event) => setPrefs({ singleKeys: event.target.checked })} />
+              Use single-key shortcuts
+            </label>
+          </div>
         </Dialog>
       )}
     </RequestsContext.Provider>

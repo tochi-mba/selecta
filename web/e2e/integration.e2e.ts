@@ -84,9 +84,11 @@ test('saving a draft as a file while another mix is reordered: the file is of th
   await page.goto(`/mixes/drafts/${made.id}/edit`);
   await page.getByRole('button', { name: 'Download audio' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
-  await dialog.locator('button.primary').click();
+  const save = dialog.getByRole('button', { name: 'Save it', exact: true });
+  if (await save.count()) await save.click();
   await request.post('/api/mix/move', { data: { source: 0, target: 3 } });
-  const link = dialog.getByRole('link');
+  // The dialog also links to Workspace; only an /api/exports/ link is the actual FLAC.
+  const link = dialog.locator('a[href^="/api/exports/"]');
   await expect(link).toBeVisible({ timeout: 170_000 });
   const bytes = await (await request.get((await link.getAttribute('href'))!)).body();
   expect(bytes.subarray(0, 4).toString('latin1')).toBe('fLaC');
@@ -95,15 +97,37 @@ test('saving a draft as a file while another mix is reordered: the file is of th
   await request.delete(`/api/drafts/${made.id}`);
 });
 
-test('changing a draft while it’s being saved stops the save, and says why', async ({ page, request }) => {
+test('editing a draft during export keeps the job pinned to its original revision', async ({ page, request }) => {
   const made = await (await request.post('/api/drafts', { data: { name: 'Moving target' } })).json();
   for (const song of [8, 9, 10]) await request.post(`/api/mix/songs?draft=${made.id}`, { data: { song_id: song } });
   await page.goto(`/mixes/drafts/${made.id}/edit`);
   await page.getByRole('button', { name: 'Download audio' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
-  await dialog.locator('button.primary').click();
-  await request.post(`/api/mix/move?draft=${made.id}`, { data: { source: 0, target: 2 } });
-  await expect(dialog.getByText(/changed while it was getting ready/)).toBeVisible({ timeout: 30_000 });
+  const save = dialog.getByRole('button', { name: 'Save it', exact: true });
+  if (await save.count()) await save.click();
+
+  // UI requests can be asynchronous. Wait for the server to persist the exact snapshot.
+  await expect.poll(async () => {
+    const data = await (await request.get('/api/exports/jobs')).json();
+    return data.jobs.some((job: { draft: number; scope: string }) => job.scope === 'draft' && job.draft === made.id);
+  }, { timeout: 20_000 }).toBe(true);
+  const before = await (await request.get('/api/exports/jobs')).json();
+  const job = before.jobs.find((entry: { draft: number; scope: string }) =>
+    entry.scope === 'draft' && entry.draft === made.id,
+  );
+  expect(job.songs.map((song: { song_id: number }) => song.song_id)).toEqual([8, 9, 10]);
+  const keys = job.seams.map((seam: { key: string }) => seam.key);
+
+  // Reordering the source draft cannot alter the already accepted export request.
+  const changed = await request.post(`/api/mix/move?draft=${made.id}`, { data: { source: 0, target: 2 } });
+  expect(changed.ok()).toBe(true);
+  expect(ids(await (await request.get(`/api/mix?draft=${made.id}`)).json())).toEqual([9, 10, 8]);
+  const retained = await (await request.get(`/api/exports/jobs/${job.id}`)).json();
+  expect(retained.songs.map((song: { song_id: number }) => song.song_id)).toEqual([8, 9, 10]);
+  expect(retained.seams.map((seam: { key: string }) => seam.key)).toEqual(keys);
+  expect(retained.state).not.toBe('cancelled');
+  expect(retained.error ?? '').not.toMatch(/changed|revision/i);
+  if (retained.can_cancel) await request.delete(`/api/exports/jobs/${job.id}`);
   await request.delete(`/api/drafts/${made.id}`);
 });
 
@@ -127,7 +151,7 @@ test('a correction made while the page is open shows up, and only touches its ow
 
 test('a hundred quick looks at a page never lose what’s on it', async ({ page }) => {
   await page.goto('/library');
-  const search = page.getByRole('textbox', { name: 'Search your library' });
+  const search = page.getByRole('searchbox', { name: 'Search your library' });
   for (const typed of ['S', 'Sl', 'Slo', 'Slow', 'Slo', 'Sl', 'Slow']) await search.fill(typed);
   await expect(page.getByText('Slow Tide').first()).toBeVisible();
   await expect(page.getByText('Morning Light')).toHaveCount(0);

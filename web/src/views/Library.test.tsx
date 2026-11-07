@@ -1,5 +1,5 @@
 import { ApiError } from '../api';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SetPlayer } from '../player';
@@ -87,7 +87,8 @@ describe('songs not analysed yet', () => {
     });
     show();
     await screen.findByText('First');
-    await userEvent.click(screen.getByRole('button', { name: 'Prioritize' }));
+    await userEvent.click(screen.getByRole('button', { name: 'More actions for First' }));
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Prioritize' }));
     await waitFor(() => expect(calls.some((call) => call.path === '/songs/1/priority?priority=100')).toBe(true));
     await userEvent.click(screen.getByRole('button', { name: 'Priority list' }));
     await waitFor(() => expect(calls.some((call) => call.path.includes('state=priority'))).toBe(true));
@@ -208,7 +209,8 @@ describe('whether a song can go in a mix', () => {
     fakeBackend({ 'GET /library': page({ ...row(1, 'First'), readiness: { status: 'analysed_incomplete', reason: 'No timed lyrics.' } }) });
     show();
     await userEvent.click(await screen.findByRole('button', { name: 'Details for First' }));
-    expect(await screen.findByText('No timed lyrics.')).toBeInTheDocument();
+    const details = await screen.findByRole('dialog', { name: 'First' });
+    expect(within(details).getByText('No timed lyrics.')).toBeInTheDocument();
   });
 });
 

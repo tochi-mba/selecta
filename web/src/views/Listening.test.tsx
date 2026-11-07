@@ -4,7 +4,7 @@ import { fakeBackend } from '../test/backend';
 import { Listening } from './Listening';
 
 describe('blind listening responses', () => {
-  it('clears quality ratings when reopening a study', async () => {
+  it('restores unfinished ratings for the same study, without leaking them to another study', async () => {
     fakeBackend({ 'GET /listening': [{ id: 'opaque' }] });
     render(<Listening />);
     fireEvent.change(screen.getByLabelText('Study code'), { target: { value: 'test' } });
@@ -17,6 +17,11 @@ describe('blind listening responses', () => {
     expect(quality().getByRole('radio', { name: '5 · Excellent' })).toBeChecked();
     const issues = () => within(screen.getByRole('group', { name: 'Issues with A, if any' }));
     expect(issues().getByRole('checkbox', { name: 'beat' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Open study' }));
+    await waitFor(() => expect(quality().getByRole('radio', { name: '5 · Excellent' })).toBeChecked());
+    expect(issues().getByRole('checkbox', { name: 'beat' })).toBeEnabled();
+    // A different study (even with the same trial ID) must not inherit these ratings.
+    fireEvent.change(screen.getByLabelText('Study code'), { target: { value: 'another-study' } });
     fireEvent.click(screen.getByRole('button', { name: 'Open study' }));
     await waitFor(() => expect(quality().getByRole('radio', { name: '5 · Excellent' })).not.toBeChecked());
     expect(issues().getByRole('checkbox', { name: 'beat' })).toBeDisabled();

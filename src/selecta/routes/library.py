@@ -30,6 +30,7 @@ from selecta.api_common import (
 )
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_line_left
+from selecta.library.scan import ScanStopped
 
 
 def add_routes(app, ctx) -> None:
@@ -50,11 +51,12 @@ def add_routes(app, ctx) -> None:
             raise HTTPException(400, "That folder doesn't exist on this PC.")
         if background.scan.get("status") == "running":
             return background.scan
+        background.scan_stop.clear()
 
         def run() -> None:
             conn = connect()
             try:
-                report = scan_folder(conn, folder)
+                report = scan_folder(conn, folder, should_stop=background.scan_stop.is_set)
                 remember_folder(conn, folder)
                 background.scan = {
                     "status": "done",
@@ -71,6 +73,8 @@ def add_routes(app, ctx) -> None:
                     check=False,
                 )
                 start_analysis()
+            except ScanStopped:
+                background.scan = {"status": "cancelled", "folder": str(folder)}
             except Exception as problem:  # noqa: BLE001 - shown to the person, not swallowed
                 background.scan = {"status": "failed", "error": str(problem)}
             finally:
@@ -78,6 +82,14 @@ def add_routes(app, ctx) -> None:
 
         background.scan = {"status": "running", "folder": str(folder)}
         threading.Thread(target=run, daemon=True).start()
+        return background.scan
+
+    @app.post("/api/scan/cancel")
+    def cancel_scan() -> dict:
+        """Stop reading a folder. Everything already in the library stays, and it can be read again
+        at any time. It says it's still running until the reading has really stopped."""
+        if background.scan.get("status") == "running":
+            background.scan_stop.set()
         return background.scan
 
     def remember_folder(conn: sqlite3.Connection, folder: Path) -> None:

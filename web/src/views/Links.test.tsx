@@ -166,7 +166,7 @@ describe('songs that might share chords', () => {
     });
     render(<HarmonicDiscoveries />);
     fireEvent.click(await hearButton());
-    fireEvent.click(await screen.findByRole('button', { name: '■ Stop' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Stop' }));
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'No' }));
     expect(await screen.findByRole('heading', { name: /Third/ })).toBeInTheDocument();
@@ -237,7 +237,7 @@ describe('the two kinds of discovery', () => {
   it('each have their own address', () => {
     fakeBackend({ 'GET /links': { links: [], prepared: 0, preparing: 0 }, 'GET /drafts': { drafts: [] } });
     render(<Links {...props('words')} />);
-    expect(screen.getByRole('link', { name: 'Harmonic discoveries' })).toHaveAttribute('href', '/discover/harmonic');
+    expect(screen.getByRole('link', { name: 'Harmonic matches' })).toHaveAttribute('href', '/discover/harmonic');
     expect(screen.getByRole('link', { name: 'Word connections' })).toHaveAttribute('aria-current', 'page');
   });
 

@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
-import { PageLink } from '../shell/Shell';
+import { setQuery as setAddressQuery, useQueryParam } from '../router';
+import { EXPLORE_TABS } from '../shell/manifest';
+import { operationId } from '../state/async';
 import { AudioPreview } from '../ui/AudioPreview';
-import { Action, Menu, Problem, Skeleton } from '../ui/controls';
+import { Icon } from '../ui/Icon';
+import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { LinkTabs, SearchField } from '../ui/primitives';
+import { seamFacts } from '../ui/seam';
 import { ViewProps } from './shared';
 
 const HARMONIC_OWNER = 'harmonic-discoveries';
@@ -30,8 +35,12 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   const [getting, setGetting] = useState(false);
   const [step, setStep] = useState<number | null>(null);
   const [bar, setBar] = useState(-1);
+  const [saving, setSaving] = useState(false);
+  const [unsaved, setUnsaved] = useState<{ target: HarmonicDiscovery; verdict: string } | null>(null);
   const audio = useRef<HTMLAudioElement>(null);
   const keepGoing = useRef(false);
+  // the same answer sent again, because a reply got lost, keeps its name, so it can't count twice
+  const verdictNames = useRef(new Map<string, string>());
 
   useEffect(() => {
     let live = true;
@@ -121,12 +130,22 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   }, [item?.id]);
 
   const review = async (target: HarmonicDiscovery, verdict: string) => {
+    if (saving) return;
+    const asking = `${target.id}:${verdict}`;
+    const name = verdictNames.current.get(asking) ?? operationId('verdict');
+    verdictNames.current.set(asking, name);
+    setSaving(true);
     try {
-      await post(`/discoveries/${target.id}/review`, { verdict });
+      await post(`/discoveries/${target.id}/review`, { verdict }, { 'x-operation-id': name });
+      verdictNames.current.delete(asking);
       setItems((rows) => rows.map((row) => (row.id === target.id ? { ...row, status: verdict } : row)));
       setError('');
+      setUnsaved(null);
     } catch {
       setError('Couldn’t save that. Try again.');
+      setUnsaved({ target, verdict });
+    } finally {
+      setSaving(false);
     }
   };
   const skip = (target: HarmonicDiscovery) => setSkipped((ids) => [...ids.filter((id) => id !== target.id), target.id]);
@@ -142,9 +161,10 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         {waiting.length > 0 && <span className="hint">{waiting.length} to hear</span>}
       </div>
       <p className="hint">
-        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. These won’t go into a mix.
+        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.
       </p>
       {error && <p role="alert" className="warn">{error}</p>}
+      {unsaved && <button disabled={saving} onClick={() => void review(unsaved.target, unsaved.verdict)}>Try saving that again</button>}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audio}
@@ -168,15 +188,16 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
           </h3>
           <p className="hint">{item.artist_a} · {item.artist_b}</p>
           <button className="primary" disabled={getting} onClick={() => (listening ? (keepGoing.current = false, stop()) : void hear(item))}>
-            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? '■ Stop' : '▶ Hear what Selecta heard'}
+            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? <><Icon name="stop" /> Stop</> : <><Icon name="play" /> Hear what Selecta heard</>}
           </button>
+          <p className="discovery-now" role="status">{listening && step !== null ? `Now playing: ${steps[step].label}` : 'Nothing is playing'}</p>
           {audition && (
             <>
-              <ol className="discovery-steps">
+              <ol className="discovery-steps" aria-label="Four stages to hear">
                 {steps.map((entry, index) => (
                   <li key={entry.key}>
                     <button aria-current={step === index ? 'step' : undefined} onClick={() => playStep(item.id, index)}>
-                      {entry.label}
+                      <span className="discovery-step-number" aria-hidden="true">{index + 1}</span> {entry.label}
                     </button>
                   </li>
                 ))}
@@ -190,9 +211,9 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
           )}
           <div className="row wrap" role="group" aria-label={`Do ${item.title_a} and ${item.title_b} sound connected?`}>
             <span>Hear a connection?</span>
-            <button onClick={() => void review(item, 'approved')}>Yes</button>
-            <button onClick={() => void review(item, 'rejected')}>No</button>
-            {following && <button onClick={() => skip(item)}>Skip for now</button>}
+            <button disabled={saving} onClick={() => void review(item, 'approved')}>Yes</button>
+            <button disabled={saving} onClick={() => void review(item, 'rejected')}>No</button>
+            {following && <button disabled={saving} onClick={() => skip(item)}>Skip for now</button>}
           </div>
         </article>
       )}
@@ -206,7 +227,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
                 <span>
                   {row.title_a} and {row.title_b}: {row.status === 'approved' ? 'connected' : 'not connected'}
                 </span>
-                <button onClick={() => void review(row, 'new')}>Change</button>
+                <button disabled={saving} onClick={() => void review(row, 'new')}>Change</button>
               </li>
             ))}
           </ul>
@@ -225,6 +246,8 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
   const [playing, setPlaying] = useState(false);
   const state = override ?? link.state;
   const busy = state.status === 'queued' || state.status === 'rendering';
+  // what was asked for and what you'd really hear are kept apart, and neither says it sounds good
+  const facts = seamFacts({ settings: { move }, state }, names);
 
   useEffect(() => {
     if (!override || !['queued', 'rendering'].includes(override.status)) return;
@@ -268,6 +291,8 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
           </button>
         ))}
       </div>
+      <p className="link-status"><Status kind={facts.kind}>{facts.words}</Status></p>
+      {facts.asked && state.status === 'ready' && state.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What you’d hear is {state.label}.</p>}
       {cardError && <p className="warn" role="alert">{cardError}</p>}
       {state.status === 'failed' && <p className="warn">{state.error}</p>}
       {state.status === 'ready' && !state.passed && <p className="warn">This one has a rough spot. Hear it and decide.</p>}
@@ -291,20 +316,23 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
         )}
         {state.status === 'ready' && (
           <span className="pair" role="group" aria-label="Rate this link">
-            <button aria-pressed={state.rating === 'good'} onClick={() => void rate('good')}>Good</button>
-            <button aria-pressed={state.rating === 'bad'} onClick={() => void rate('bad')}>Bad</button>
+            <Action aria-pressed={state.rating === 'good'} run={() => rate('good')}>Good</Action>
+            <Action aria-pressed={state.rating === 'bad'} run={() => rate('bad')}>Bad</Action>
           </span>
         )}
       </div>
       {state.status === 'ready' && playing && (
-        <AudioPreview autoPlay src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} label={`${link.title_a} into ${link.title_b}`} />
+        // keyed by what was rendered, so a clip from before a change can't be taken for this one
+        <AudioPreview key={state.key} autoPlay src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} label={`${link.title_a} into ${link.title_b}`} />
       )}
     </article>
   );
 }
 
 export function Links({ setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
-  const [query, setQuery] = useState('');
+  // it's in the address, so a search survives a reload, a shared link and coming Back
+  const addressQuery = useQueryParam('q') ?? '';
+  const [query, setQuery] = useState(addressQuery);
   const [data, setData] = useState<LinkList | null>(null);
   const [failed, setFailed] = useState(false);
   const [drafts, setDrafts] = useState<{ id: number; name: string }[]>([]);
@@ -324,7 +352,10 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
 
   useEffect(() => {
     if (tab !== 'words') return;
-    const wait = window.setTimeout(() => void load(), 200);
+    const wait = window.setTimeout(() => {
+      void load();
+      setAddressQuery({ q: query || null });
+    }, 200);
     return () => window.clearTimeout(wait);
   }, [query, tab]);
 
@@ -365,12 +396,9 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
   );
 
   return (
-    <main className="page" id="main">
-      <h1 className="display small">Discover</h1>
-      <nav className="tabs" aria-label="Discover">
-        <PageLink to="/discover" aria-current={tab === 'words' ? 'page' : undefined}>Word connections</PageLink>
-        <PageLink to="/discover/harmonic" aria-current={tab === 'harmonic' ? 'page' : undefined}>Harmonic discoveries</PageLink>
-      </nav>
+    <main className="page browse" id="main">
+      <LinkTabs label="Explore" items={EXPLORE_TABS} current={tab === 'harmonic' ? '/discover/harmonic' : '/discover'} />
+      <h1 className="display small">{tab === 'harmonic' ? 'Harmonic matches' : 'Word connections'}</h1>
       {tab === 'harmonic' && <HarmonicDiscoveries secondsToPrepare={status.eta?.jobs.audition} />}
       {tab === 'words' && (
         <>
@@ -384,13 +412,7 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
               {data.prepared < data.preparing && data.eta ? ` The rest take ${etaWords(data.eta)} of spare time.` : ''}
             </p>
           )}
-          <label>Search shared words<input
-            className="wide"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Look for a word, like night or love"
-            aria-label="Search shared words"
-          /></label>
+          <SearchField label="Search shared words" value={query} onChange={setQuery} placeholder="Look for a word, like night or love" />
           {failed && data === null && <Problem retry={load}>Couldn’t search your lyrics. Nothing’s lost.</Problem>}
           {failed && data !== null && <p className="warn" role="status">Can’t check for new ones right now, so what’s shown may be out of date.</p>}
           {data === null && !failed && <Skeleton variant="pairs" lines={4} label="Searching your lyrics" />}
@@ -401,6 +423,7 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
           {didnt.length > 0 && (
             <details className="didnt">
               <summary>{didnt.length} didn’t work so well</summary>
+              <p className="hint">Still here to hear or try again. Each one says what actually happened.</p>
               <div className="link-grid">{didnt.map(card)}</div>
             </details>
           )}

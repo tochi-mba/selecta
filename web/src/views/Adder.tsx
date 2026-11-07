@@ -4,7 +4,8 @@ import { analysingWords, askedToAnalyse } from '../lib';
 import { Action, Problem, Skeleton } from '../ui/controls';
 import { useMixPath } from './mixScope';
 
-/** What could go at this place in the mix: the best fits first, and the same order when searching. */
+/** What could go at this place in the mix: the best fits first, and the same order when searching. A
+ * song that can't go in yet says why, and how to get it ready. */
 export function Adder(props: {
   position: number;
   onAdd: (song: Suggestion) => void;
@@ -47,7 +48,10 @@ export function Adder(props: {
   };
 
   const keys = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Escape') onClose();
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      onClose();
+    }
     const first = songs?.find((song) => song.analysed);
     if (event.key === 'Enter' && first) { event.preventDefault(); onAdd(first); }
   };
@@ -66,6 +70,7 @@ export function Adder(props: {
         <button onClick={onClose}>Cancel</button>
       </div>
       <p className="hint">{query ? 'Best fit first' : 'These would fit best here'}</p>
+      {position >= 0 && <p className="hint adder-where">It goes in as number {position + 1}.</p>}
       {failed && <Problem retry={load}>Couldn’t find songs for this position. Try again.</Problem>}
       {songs === null && !failed && <Skeleton variant="library" lines={2} label="Finding what fits" />}
       {songs?.length === 0 && <p className="hint">Nothing matches that.</p>}

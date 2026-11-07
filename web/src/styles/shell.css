@@ -1,7 +1,6 @@
 /* The frame around every page: navigation, the mini-player, overlays and notifications. */
 
 .shell { min-height: 100vh; }
-.shell.with-player { --player-height: 66px; }
 .content:focus { outline: none; }
 
 .skip-link {
@@ -52,8 +51,18 @@ a.button:hover { border-color: var(--text); }
 .nav a[aria-current='page'] { color: var(--text); background: var(--surface-control); }
 .nav a:hover { color: var(--text); }
 .nav .brand { font: 900 1.25rem var(--display); letter-spacing: -0.02em; color: var(--text); }
+.nav .brand-mark { display: none; }
 .nav li a i { font-style: normal; width: 1.4em; text-align: center; flex: none; }
-.count { color: var(--request); font-weight: 700; }
+.nav a[aria-current='true'] { color: var(--text); }
+.nav .count, .mini .count, .context-bar .count { color: var(--request); font-weight: 700; }
+
+/* One frame. Every bit of its shape is measured from the numbers in tokens.css, so there is exactly one
+   answer to how much room the bars take, whichever bars are showing. */
+.content {
+  margin-left: var(--rail-offset);
+  padding-bottom: calc(var(--bottom-chrome) + var(--space-5));
+  min-height: 100dvh;
+}
 
 /* wide: a rail down the side */
 @media (min-width: 761px) {
@@ -70,12 +79,36 @@ a.button:hover { border-color: var(--text); }
   }
   .nav .brand { padding: var(--space-1) var(--space-2); }
   .nav ul { flex-direction: column; gap: 2px; flex: 1 1 auto; }
-  .nav li a { display: flex; gap: var(--space-2); align-items: center; padding: 9px var(--space-2); border-radius: var(--radius-sm); min-height: 40px; }
+  .nav li a { display: flex; gap: var(--space-2); align-items: center; padding: 9px var(--space-2); border-radius: var(--radius-sm); min-height: var(--control-height); position: relative; }
   .nav-context { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
   .nav-foot { display: flex; gap: var(--space-2); }
-  .nav-foot button:first-child { flex: 1 1 auto; font-size: var(--text-sm); padding: 8px; }
-  .content { margin-left: var(--rail-width); padding-bottom: var(--bottom-chrome); }
-  .mini { left: var(--rail-width); }
+  .nav-request { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-sm); padding: 8px; min-width: 0; }
+  .nav-collapse { flex: none; padding: 8px; }
+
+  /* collapsed: icons only, and each one still has its name, for screen readers and on a resting pointer */
+  :root[data-rail='collapsed'] .nav { padding-inline: var(--space-2); align-items: stretch; }
+  :root[data-rail='collapsed'] .nav-label, :root[data-rail='collapsed'] .brand-word {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  :root[data-rail='collapsed'] .brand-mark { display: block; text-align: center; }
+  :root[data-rail='collapsed'] .nav li a { justify-content: center; }
+  :root[data-rail='collapsed'] .nav-foot { flex-direction: column; }
+  :root[data-rail='collapsed'] .nav { overflow: visible; }
+  :root[data-rail='collapsed'] .nav li a:hover::after, :root[data-rail='collapsed'] .nav li a:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: calc(100% + var(--space-2));
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: var(--layer-toast);
+    padding: 4px 8px;
+    white-space: nowrap;
+    color: var(--text);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font-size: var(--text-sm);
+  }
 }
 
 /* narrow: a bar along the bottom, with nothing hidden off to the side */
@@ -84,12 +117,12 @@ a.button:hover { border-color: var(--text); }
     left: 0;
     right: 0;
     bottom: 0;
-    height: calc(var(--nav-height) + var(--safe-bottom));
+    height: var(--nav-bottom);
     padding-bottom: var(--safe-bottom);
     border-top: 1px solid var(--border);
   }
   .nav .brand, .nav-foot { display: none; }
-  .nav ul { flex: 1 1 auto; }
+  .nav ul { flex: 1 1 auto; min-width: 0; }
   .nav li { flex: 1 1 0; min-width: 0; }
   .nav li a {
     height: 100%;
@@ -98,23 +131,52 @@ a.button:hover { border-color: var(--text); }
     align-items: center;
     justify-content: center;
     gap: 2px;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     white-space: nowrap;
     overflow: hidden;
   }
   .nav li a i { font-size: 1.05rem; line-height: 1; }
   .nav-context { display: none; }
-  .content { padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--bottom-chrome)); }
-  .mini { bottom: calc(var(--nav-height) + var(--safe-bottom)); left: 0; }
   .mini-volume { display: none; }
-  .on-stage .content { padding-bottom: 0; }
+  /* with a keyboard up, what's being typed gets the room */
+  :root[data-keyboard='open'] .nav, :root[data-keyboard='open'] .mini { display: none; }
 }
-.on-stage .content { margin-left: 0; padding-bottom: 0; }
+.on-stage .content { padding-bottom: 0; }
+
+/* the page's own bar: where you are, and what's reachable from anywhere */
+.context-bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--layer-header);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--header-height);
+  padding: var(--space-1) var(--gutter);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.crumbs { min-width: 0; font-size: var(--text-sm); color: var(--text-soft); }
+.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px var(--space-2); }
+.crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
+.crumbs a { color: var(--text-soft); }
+.crumbs [aria-current='page'] { color: var(--text); font-weight: 600; }
+.context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; }
+.context-button { display: inline-flex; align-items: center; gap: var(--space-2); background: none; border-color: transparent; padding: 6px 8px; min-width: var(--control-height); justify-content: center; }
+.context-button:hover:not(:disabled) { border-color: var(--border); }
+.palette-button { border-color: var(--border); color: var(--text-soft); }
+.context-request { display: none; }
+@media (max-width: 760px) {
+  .context-request { display: inline-flex; }
+  .context-label { display: none; }
+}
 
 .mini {
   position: fixed;
+  left: var(--rail-offset);
   right: 0;
-  bottom: 0;
+  bottom: var(--nav-bottom);
   height: var(--player-height);
   z-index: var(--layer-player);
   display: flex;
@@ -162,7 +224,7 @@ button.icon { padding: 6px 8px; min-width: 40px; }
   position: fixed;
   z-index: var(--layer-toast);
   right: var(--space-4);
-  bottom: calc(var(--bottom-chrome) + var(--space-3));
+  bottom: calc(var(--bottom-chrome) + var(--keyboard-inset) + var(--space-3));
   display: grid;
   gap: var(--space-2);
   width: min(420px, calc(100vw - 2 * var(--space-4)));
@@ -184,9 +246,6 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 .toast-row > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: 4px 12px; flex: none; }
 .toast-row .toast-close { border: 0; padding: 4px 8px; min-width: 34px; }
-@media (max-width: 760px) {
-  .toasts { right: var(--space-4); bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--bottom-chrome) + var(--space-2)); }
-}
 
 /* whatever sits on top of the page */
 .overlay {
@@ -195,7 +254,7 @@ button.icon { padding: 6px 8px; min-width: 40px; }
   z-index: var(--layer-dialog);
   background: var(--surface-overlay);
   display: flex;
-  padding: 0;
+  padding: 0 0 var(--keyboard-inset);
 }
 .overlay-panel {
   background: var(--surface-raised);
@@ -370,20 +429,6 @@ button.song-open { display: block; max-width: 100%; white-space: normal; overflo
 
 /* Listen: the things you reach for stay in reach */
 .transport-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
-@media (max-width: 760px) {
-  .now .transport {
-    position: sticky;
-    bottom: calc(var(--nav-height) + var(--safe-bottom));
-    z-index: var(--layer-sticky);
-    justify-content: center;
-    padding: var(--space-2) 0;
-    margin: 0;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-  }
-  .now .transport .primary.big { flex: 1 1 auto; }
-}
-
 .song-name { grid-template-columns: minmax(0, 1fr); }
 .song-name > * { min-width: 0; }
 button.song-open b { display: block; white-space: normal; overflow-wrap: anywhere; }

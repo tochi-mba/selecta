@@ -1,9 +1,15 @@
-/* Selecta's look, in one place. The colours are the ones it's always had: warm black, cream, lime,
-   request blue and warning orange. Everything else refers to what a colour means, not what it is. */
+/* Selecta's look, in one place, in layers. The colours are the ones it's always had: warm black, cream,
+   lime, request blue and warning orange. Pages use what a colour means, never what it is:
+
+     palette   the raw colours, and the only place they appear
+     meaning   surface, text, status, selection and focus
+     parts     buttons, rows and the shell, built from the meanings
+
+   A status is never colour alone: every one also has a mark and words (see Status in ui/controls). */
 :root {
   color-scheme: dark;
 
-  /* the raw palette */
+  /* the palette */
   --bg: #100f0c;
   --panel: #1a1814;
   --panel-2: #24211b;
@@ -21,11 +27,15 @@
   --surface-raised: var(--panel);
   --surface-control: var(--panel-2);
   --surface-overlay: color-mix(in srgb, var(--bg) 72%, transparent);
+  --surface-selected: color-mix(in srgb, var(--accent) 12%, var(--panel));
   --border: var(--line);
   --border-strong: var(--soft);
   --text: var(--ink);
   --text-soft: var(--soft);
   --focus: var(--accent);
+  --selected: var(--accent);
+  --playing: var(--accent);
+  --danger: var(--warn);
   --status-ready: var(--ok);
   --status-working: var(--accent);
   --status-planned: var(--soft);
@@ -35,7 +45,16 @@
   --status-unavailable: var(--soft);
   --status-request: var(--request);
 
-  /* type */
+  /* the brand's lime. It can't be text or a thin line on cream, so in light it only ever appears as a
+     filled shape with dark ink on it and a dark edge round it */
+  --primary-fill: var(--accent);
+  --primary-ink: var(--accent-ink);
+  --primary-edge: var(--accent);
+  --word-fill: transparent;
+  --word-ink: var(--accent);
+  --word-glow: color-mix(in srgb, var(--accent) 40%, transparent);
+
+  /* type: the display face is the personality, and everything else stays out of its way */
   --display: 'Arial Black', 'Helvetica Neue', Impact, system-ui, sans-serif;
   --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
@@ -44,37 +63,76 @@
   --text-md: 1rem;
   --text-lg: 1.15rem;
   --text-xl: 1.5rem;
+  --type-display: 900 clamp(2.4rem, 8vw, 5.2rem) / 1.02 var(--display);
+  --type-page: 900 clamp(1.8rem, 3.5vw, 2.8rem) / 1.12 var(--display);
+  --type-section: 800 clamp(1.15rem, 2vw, 1.5rem) / 1.2 var(--display);
+  --type-song: 700 1rem / 1.3 var(--body);
+  --type-meta: 400 var(--text-sm) / 1.4 var(--body);
+  --type-counter: 500 var(--text-sm) / 1.2 var(--mono);
 
-  /* space */
+  /* space, shape and depth */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 48px;
   --radius: 10px;
   --radius-sm: 8px;
   --radius-pill: 99px;
+  --shadow-raised: 0 6px 24px rgb(0 0 0 / 35%);
+  --gutter: clamp(16px, 3vw, 40px);
+  --content-reading: 880px;
+  --content-browse: 1180px;
+  --content-work: 1400px;
+
+  /* how much room rows and controls take. Compact only applies where a page opts in with .density */
+  --control-height: 44px;
+  --row-pad: var(--space-3);
+  --row-gap: var(--space-2);
 
   /* movement */
   --motion-fast: 120ms;
   --motion-slow: 240ms;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   /* what sits on top of what */
   --layer-sticky: 5;
+  --layer-header: 10;
   --layer-nav: 20;
   --layer-player: 30;
   --layer-sheet: 40;
   --layer-dialog: 50;
   --layer-toast: 60;
 
-  /* the shell's own shape, so nothing else ends up underneath it */
-  --rail-width: 196px;
+  /* The shell's own shape. All of it is worked out here, on the root, so the page, the player, toasts
+     and scrolling are always measured from the same numbers and nothing ends up underneath anything. */
+  --rail-open: 212px;
+  --rail-collapsed: 72px;
+  --rail-width: var(--rail-open);
+  --rail-offset: var(--rail-width);
+  --header-height: 56px;
   --nav-height: 58px;
+  --nav-bottom: 0px;
   --player-height: 0px;
+  --keyboard-inset: 0px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --bottom-chrome: calc(var(--player-height) + var(--space-3));
+  --bottom-chrome: calc(var(--nav-bottom) + var(--player-height));
 }
+
+:root[data-rail='collapsed'] { --rail-width: var(--rail-collapsed); }
+:root[data-player='on'] { --player-height: 66px; }
+
+/* narrow: the navigation is a bar along the bottom, and the player stacks on top of it */
+@media (max-width: 760px) {
+  :root { --rail-offset: 0px; --nav-bottom: calc(var(--nav-height) + var(--safe-bottom)); --header-height: 48px; }
+  /* an on-screen keyboard takes the room, so nothing can sit on top of what's being typed */
+  :root[data-keyboard='open'] { --nav-bottom: 0px; --player-height: 0px; }
+}
+
+/* the Stage has no frame at all */
+:root[data-stage='on'] { --rail-offset: 0px; --nav-bottom: 0px; --player-height: 0px; --header-height: 0px; }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
@@ -90,6 +148,13 @@
     --warn: #b93d10;
     --ok: #3f7a1a;
     --request: #086a93;
+    --primary-fill: #e8ff3a;
+    --primary-ink: #14140a;
+    --primary-edge: #16140e;
+    --word-fill: #e8ff3a;
+    --word-ink: #14140a;
+    --word-glow: transparent;
+    --shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
   }
 }
 
@@ -106,12 +171,25 @@
   --warn: #b93d10;
   --ok: #3f7a1a;
   --request: #086a93;
+  --primary-fill: #e8ff3a;
+  --primary-ink: #14140a;
+  --primary-edge: #16140e;
+  --word-fill: #e8ff3a;
+  --word-ink: #14140a;
+  --word-glow: transparent;
+  --shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
+}
+
+.density[data-density='compact'], :root[data-density='compact'] .density {
+  --control-height: 36px;
+  --row-pad: var(--space-2);
+  --row-gap: var(--space-1);
 }
 
 html {
-  /* a focused control is never left hiding behind the sticky bars */
-  scroll-padding-top: var(--space-6);
-  scroll-padding-bottom: calc(var(--bottom-chrome) + var(--nav-height) + var(--space-4));
+  /* a focused control is never left hiding behind the bars */
+  scroll-padding-top: calc(var(--header-height) + var(--space-4));
+  scroll-padding-bottom: calc(var(--bottom-chrome) + var(--keyboard-inset) + var(--space-4));
 }
 
 @media (prefers-reduced-motion: reduce) {

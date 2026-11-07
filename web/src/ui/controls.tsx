@@ -1,6 +1,7 @@
 import { ButtonHTMLAttributes, cloneElement, Component, ErrorInfo, KeyboardEvent, ReactElement, ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { showProblem } from './toasts';
-import { Icon } from './Icon';
+import { Icon, IconName } from './Icon';
 export { Skeleton } from './Skeleton';
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
@@ -46,22 +47,22 @@ export function Action({
 
 export type StatusKind = 'planned' | 'queued' | 'working' | 'ready' | 'warning' | 'failed' | 'needs-action' | 'unavailable';
 
-const STATUS: Record<StatusKind, { words: string; mark: string }> = {
-  planned: { words: 'Planned', mark: '○' },
-  queued: { words: 'In line', mark: '…' },
-  working: { words: 'Working on it', mark: '◐' },
-  ready: { words: 'Ready', mark: '✓' },
-  warning: { words: 'Ready, with a warning', mark: '!' },
-  failed: { words: 'Didn’t work', mark: '✕' },
-  'needs-action': { words: 'Needs you', mark: '●' },
-  unavailable: { words: 'Not available', mark: '–' },
+const STATUS: Record<StatusKind, { words: string; mark: IconName }> = {
+  planned: { words: 'Planned', mark: 'circle' },
+  queued: { words: 'In line', mark: 'clock' },
+  working: { words: 'Working on it', mark: 'half' },
+  ready: { words: 'Ready', mark: 'check' },
+  warning: { words: 'Ready, with a warning', mark: 'warning' },
+  failed: { words: 'Didn’t work', mark: 'close' },
+  'needs-action': { words: 'Needs you', mark: 'dot' },
+  unavailable: { words: 'Not available', mark: 'minus' },
 };
 
 /** The same words and the same marks everywhere, so a state never relies on colour alone. */
 export function Status({ kind, children, title }: { kind: StatusKind; children?: ReactNode; title?: string }) {
   return (
     <span className={`status status-${kind}`} title={title}>
-      <i aria-hidden="true">{STATUS[kind].mark}</i>
+      <Icon name={STATUS[kind].mark} width={14} height={14} />
       {children ?? STATUS[kind].words}
     </span>
   );
@@ -103,8 +104,23 @@ export class Section extends Component<{ name: string; children: ReactNode }, { 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 let openOverlays = 0;
 let previousOverflow = '';
+const overlayStack: HTMLElement[] = [];
 
-/** Anything that sits on top of the page: focus goes in, stays in, and returns where it was. */
+/** Only the top overlay can be reached. Everything underneath it is inert: the page, and any overlay
+ * this one opened on top of. */
+function syncInert() {
+  const top = overlayStack[overlayStack.length - 1];
+  const root = document.getElementById('root');
+  if (top) root?.setAttribute('inert', '');
+  else root?.removeAttribute('inert');
+  for (const item of overlayStack) {
+    if (item === top) item.removeAttribute('inert');
+    else item.setAttribute('inert', '');
+  }
+}
+
+/** Anything that sits on top of the page: focus goes in, stays in, and returns where it was, or to the
+ * start of the page if what it came from has gone. */
 function Overlay({
   title,
   onClose,
@@ -119,6 +135,7 @@ function Overlay({
   footer?: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  const holder = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
@@ -126,11 +143,17 @@ function Overlay({
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
+    const mine = holder.current;
+    if (mine) overlayStack.push(mine);
+    syncInert();
     const first = panel.current?.querySelector<HTMLElement>('[data-autofocus]') ?? panel.current;
     first?.focus();
     return () => {
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
-      if (before?.isConnected) before.focus();
+      if (mine) overlayStack.splice(overlayStack.indexOf(mine), 1);
+      syncInert();
+      if (before?.isConnected && before !== document.body) before.focus();
+      else document.getElementById('content')?.focus({ preventScroll: true });
     };
   }, []);
   const keys = (event: KeyboardEvent) => {
@@ -159,8 +182,8 @@ function Overlay({
       first.focus();
     }
   };
-  return (
-    <div className={`overlay overlay-${kind}`} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  return createPortal(
+    <div ref={holder} className={`overlay overlay-${kind}`} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div ref={panel} className="overlay-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
@@ -169,7 +192,8 @@ function Overlay({
         <div className="overlay-body">{children}</div>
         {footer && <footer className="overlay-foot">{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -254,20 +278,35 @@ export function Tooltip({ text, children }: { text: string; children: ReactEleme
 }
 
 let say: (words: string) => void = () => {};
+let lastSaid = '';
+let lastSaidAt = -Infinity;
+const REPEAT_AFTER_MS = 8000;
 
-/** Tell a screen reader something once, without interrupting the music with a running commentary. */
+/** Tell a screen reader something once, without interrupting the music with a running commentary. The
+ * same words again soon after aren't news, so they aren't repeated. */
 export function announce(words: string) {
+  const moment = Date.now();
+  if (words === lastSaid && moment - lastSaidAt < REPEAT_AFTER_MS) return;
+  lastSaid = words;
+  lastSaidAt = moment;
   say(words);
 }
 
+/** Outside the page, so it can still speak while a dialog has the page inert. */
 export function LiveRegion() {
   const [words, setWords] = useState('');
   useEffect(() => {
+    let wait: number | undefined;
     say = (next) => {
       setWords('');
-      window.setTimeout(() => setWords(next), 30);
+      window.clearTimeout(wait);
+      wait = window.setTimeout(() => setWords(next), 30);
     };
-    return () => { say = () => {}; };
+    return () => {
+      window.clearTimeout(wait);
+      lastSaid = '';
+      say = () => {};
+    };
   }, []);
-  return <div className="visually-hidden" aria-live="polite" role="status">{words}</div>;
+  return createPortal(<div className="visually-hidden" aria-live="polite" role="status">{words}</div>, document.body);
 }

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import sqlite3
 from collections.abc import Callable, Sequence
 
@@ -26,6 +27,8 @@ from selecta.seams import SeamStore, request_from
 Item = tuple[int, str | None, int]
 NAME_LIMIT = 60
 LAST_DELETED = "last_deleted_draft"
+DELETED_DRAFTS = "deleted_drafts"
+KEEP_DELETED = 10
 
 
 class NoSuchDraft(KeyError):
@@ -339,12 +342,51 @@ def export_mix(
     missing = [item for item in mix[1:] if item["seam"]["state"].get("status") != "ready"]
     if missing:
         raise ValueError(f"{len(missing)} seams still need rendering.")
+    return _join_to_file(
+        conn,
+        settings,
+        store,
+        destination,
+        [item["song_id"] for item in mix],
+        [item["seam"]["state"] for item in mix[1:]],
+    )
+
+
+def export_snapshot(
+    conn: sqlite3.Connection,
+    settings: Settings,
+    store: SeamStore,
+    destination,
+    songs: Sequence[int],
+    seam_keys: Sequence[str],
+) -> dict:
+    """Join exactly these songs and these finished seams, whatever the mix has become since they
+    were chosen. A seam that isn't finished stops it, and nothing else is used in its place."""
+    if len(songs) < 2 or len(seam_keys) != len(songs) - 1:
+        raise ValueError("A mix needs at least two songs.")
+    states = [store.status(key) for key in seam_keys]
+    missing = [state for state in states if state.get("status") != "ready"]
+    if missing:
+        raise ValueError(f"{len(missing)} seams still need rendering.")
+    return _join_to_file(conn, settings, store, destination, list(songs), states)
+
+
+def _join_to_file(
+    conn: sqlite3.Connection,
+    settings: Settings,
+    store: SeamStore,
+    destination,
+    songs: list[int],
+    seams: list[dict],
+) -> dict:
+    """Songs in order, with the finished seam between each pair. The file only appears under its
+    real name once it's whole, so a failed write can't leave something that looks like an export."""
     cache = SongCache(capacity=3)
     parts: list[np.ndarray] = []
     position = 0.0
-    for index, item in enumerate(mix):
-        song = load_song(conn, settings, item["song_id"])
-        after = mix[index + 1]["seam"]["state"] if index + 1 < len(mix) else None
+    for index, song_id in enumerate(songs):
+        song = load_song(conn, settings, song_id)
+        after = seams[index] if index < len(seams) else None
         end = after["a_source_start"] if after else song.duration
         if end <= position:
             raise ValueError(
@@ -358,7 +400,12 @@ def export_mix(
             position = after["b_source_end"]
     audio = join(parts)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    sf.write(destination, audio, SAMPLE_RATE, subtype="PCM_16")
+    partial = destination.with_name(destination.name + ".part")
+    try:
+        sf.write(partial, audio, SAMPLE_RATE, subtype="PCM_16", format="FLAC")
+        os.replace(partial, destination)
+    finally:
+        partial.unlink(missing_ok=True)
     return {"seconds": audio.shape[0] / SAMPLE_RATE, "name": destination.name}
 
 
@@ -529,20 +576,41 @@ def _put_back(conn: sqlite3.Connection, saved: dict) -> None:
 def delete_draft(conn: sqlite3.Connection, draft: int) -> str:
     """Delete a draft and keep it aside, so it can be taken back."""
     row = _draft_row(conn, draft)
-    db.set_preference(conn, LAST_DELETED, _as_saved(row))
+    saved = _as_saved(row)
+    # the newest also stays where older versions of Selecta look, so going back to one is safe
+    db.set_preference(conn, LAST_DELETED, saved)
+    kept = [*_deleted_drafts(conn), saved]
+    db.set_preference(conn, DELETED_DRAFTS, kept[-KEEP_DELETED:])
     conn.execute("DELETE FROM drafts WHERE id=?", (draft,))
     _set_line(conn, line_order(conn))
     conn.commit()
     return row["name"]
 
 
-def restore_draft(conn: sqlite3.Connection) -> int | None:
-    saved = db.preference(conn, LAST_DELETED, None)
+def _deleted_drafts(conn: sqlite3.Connection) -> list[dict]:
+    """What can be brought back, oldest first. Something deleted by an older version is only in the
+    one place it knew about, and counts as the newest."""
+    kept = db.preference(conn, DELETED_DRAFTS, [])
+    last = db.preference(conn, LAST_DELETED, None)
+    if last and all(saved["id"] != last["id"] for saved in kept):
+        kept = [*kept, last]
+    return kept
+
+
+def restore_draft(conn: sqlite3.Connection, draft: int | None = None) -> int | None:
+    """Bring back the draft named, or the last one deleted. Naming it means deleting another since
+    can't bring back the wrong one."""
+    kept = _deleted_drafts(conn)
+    saved = next((item for item in kept if item["id"] == draft), None) if draft else None
+    if draft is None and kept:
+        saved = kept[-1]
     if not saved:
         return None
     saved["name"] = unique_name(conn, saved["name"])
     _put_back(conn, saved)
-    db.set_preference(conn, LAST_DELETED, None)
+    left = [item for item in kept if item["id"] != saved["id"]]
+    db.set_preference(conn, DELETED_DRAFTS, left)
+    db.set_preference(conn, LAST_DELETED, left[-1] if left else None)
     return saved["id"]
 
 

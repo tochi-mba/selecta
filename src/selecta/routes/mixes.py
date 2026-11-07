@@ -82,9 +82,9 @@ def add_routes(app, ctx) -> None:
             return {"id": draft, "name": mix.mix_name(conn, draft)}
 
     @app.post("/api/drafts/restore")
-    def restore_draft() -> dict:
+    def restore_draft(id: int | None = None) -> dict:
         with connect() as conn:
-            draft = mix.restore_draft(conn)
+            draft = mix.restore_draft(conn, id)
             if draft is None:
                 raise HTTPException(404, "There's nothing to bring back.")
             return {"id": draft, "name": mix.mix_name(conn, draft)}

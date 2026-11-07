@@ -1,28 +1,17 @@
-import { MouseEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
 import { NowState, SetPlayer } from '../player';
-import { navigate, Route, savedScroll, useLocationText } from '../router';
-import { LiveRegion } from '../ui/controls';
-import { Icon, type IconName } from '../ui/Icon';
+import { Route, savedScroll, useLocationText } from '../router';
+import { setPrefs, usePrefs } from '../state/prefs';
+import { useUnseenActivity } from '../state/activity';
+import { announce, LiveRegion } from '../ui/controls';
+import { Icon } from '../ui/Icon';
+import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
+import { CLASSIC_DESTINATIONS, describeRoute, DESTINATIONS, destinationOf } from './manifest';
+import { PageLink } from './PageLink';
 
-const PLACES: { path: string; label: string; page: Route['page']; mark: IconName }[] = [
-  { path: '/listen', label: 'Listen', page: 'listen', mark: 'music' },
-  { path: '/mixes', label: 'Mixes', page: 'mixes', mark: 'mixes' },
-  { path: '/library', label: 'Library', page: 'library', mark: 'library' },
-  { path: '/discover', label: 'Discover', page: 'discover', mark: 'discover' },
-  { path: '/workshop', label: 'Workshop', page: 'workshop', mark: 'settings' },
-];
-
-/** An ordinary link that doesn't reload the page, so the music keeps going. */
-export function PageLink({ to, children, ...rest }: { to: string; children: ReactNode } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
-  const follow = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    navigate(to);
-  };
-  return <a {...rest} href={to} onClick={follow}>{children}</a>;
-}
+export { PageLink };
 
 function clock(seconds: number): string {
   const whole = Math.max(Math.floor(seconds), 0);
@@ -43,6 +32,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
       <input
         type="range"
         aria-label="Volume"
+        aria-valuetext={now.muted ? 'Muted' : `${Math.round(now.volume * 100)} percent`}
         min={0}
         max={100}
         value={Math.round((now.muted ? 0 : now.volume) * 100)}
@@ -52,8 +42,9 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
   );
 }
 
-/** The song that's playing, on every page but the one that's all about it. Shown only once there's
- * something to show, and the page makes room for it so nothing ends up underneath. */
+/** The song that's playing, on every page but the one that's all about it. It only presents the
+ * player. The player itself lives above every page, so nothing here can start or stop the music by
+ * appearing or going away. */
 function MiniPlayer({ player, now, song, onRequests, waiting }: { player: SetPlayer; now: NowState; song: MixItem; onRequests: () => void; waiting: number }) {
   const progress = now.duration ? Math.min(now.songTime / now.duration, 1) : 0;
   return (
@@ -75,6 +66,67 @@ function MiniPlayer({ player, now, song, onRequests, waiting }: { player: SetPla
   );
 }
 
+/** Where this page sits, and the things you can reach from anywhere. */
+function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette }: { route: Route; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean }) {
+  const { crumbs } = describeRoute(route);
+  const unseen = useUnseenActivity();
+  return (
+    <header className="context-bar">
+      <nav className="crumbs" aria-label="Breadcrumb">
+        <ol>
+          {crumbs.map((crumb, index) => (
+            <li key={crumb.label}>
+              {crumb.path && index < crumbs.length - 1
+                ? <PageLink to={crumb.path}>{crumb.label}</PageLink>
+                : <span aria-current="page">{crumb.label}</span>}
+            </li>
+          ))}
+        </ol>
+      </nav>
+      <div className="context-actions">
+        {palette && (
+          <button className="context-button palette-button" onClick={onCommands} aria-label="Search and commands" title="Search and commands (Ctrl K)">
+            <Icon name="search" /><span className="context-label">Search</span><kbd className="context-label">Ctrl K</kbd>
+          </button>
+        )}
+        <button className="context-button context-request" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
+          <Icon name="request" />{waiting ? <span className="count">{waiting}</span> : null}
+        </button>
+        <ThemeMenu />
+        <button className="context-button" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
+          <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
+        </button>
+        <button className="context-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={onHelp}><Icon name="help" /></button>
+      </div>
+    </header>
+  );
+}
+
+/** Keeps everything fixed to the bottom above an on-screen keyboard, or out of its way, by working out
+ * how much of the window the keyboard is covering. */
+function useKeyboardInset() {
+  useEffect(() => {
+    const view = window.visualViewport;
+    if (!view) return;
+    const root = document.documentElement;
+    const measure = () => {
+      const covered = Math.max(window.innerHeight - view.height - view.offsetTop, 0);
+      root.style.setProperty('--keyboard-inset', `${Math.round(covered)}px`);
+      if (covered > 120) root.dataset.keyboard = 'open';
+      else delete root.dataset.keyboard;
+    };
+    measure();
+    view.addEventListener('resize', measure);
+    view.addEventListener('scroll', measure);
+    return () => {
+      view.removeEventListener('resize', measure);
+      view.removeEventListener('scroll', measure);
+      root.style.removeProperty('--keyboard-inset');
+      delete root.dataset.keyboard;
+    };
+  }, []);
+}
+
 export function Shell({
   route,
   player,
@@ -86,6 +138,8 @@ export function Shell({
   waitingRequests,
   onRequests,
   onHelp,
+  onCommands = () => {},
+  onActivity = () => {},
   banner,
   children,
 }: {
@@ -99,14 +153,17 @@ export function Shell({
   waitingRequests: number;
   onRequests: () => void;
   onHelp: () => void;
+  onCommands?: () => void;
+  onActivity?: () => void;
   banner?: ReactNode;
   children: ReactNode;
 }) {
   const place = useLocationText().split('?')[0];
   const content = useRef<HTMLDivElement>(null);
-  const shell = useRef<HTMLDivElement>(null);
   const first = useRef(true);
   const [popped, setPopped] = useState(false);
+  const prefs = usePrefs();
+  useKeyboardInset();
 
   useEffect(() => {
     const pop = () => setPopped(true);
@@ -114,7 +171,8 @@ export function Shell({
     return () => window.removeEventListener('popstate', pop);
   }, []);
 
-  // A new page starts at the top with focus at its start. Back and Forward return to where you were.
+  // A new page starts at the top with focus at its start, and says where you are. Back and Forward
+  // return to where you were.
   useEffect(() => {
     if (first.current) {
       first.current = false;
@@ -123,46 +181,77 @@ export function Shell({
     window.scrollTo?.(0, popped ? savedScroll() : 0);
     setPopped(false);
     content.current?.focus({ preventScroll: true });
+    announce(`${describeRoute(route).title} page`);
   }, [place]);
 
+  // the shape of the frame lives in one place, on the root, so everything is measured from the same numbers
+  const withPlayer = showPlayer && !!song && !stage;
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.player = withPlayer ? 'on' : 'off';
+    root.dataset.rail = prefs.railCollapsed ? 'collapsed' : 'open';
+    if (stage) root.dataset.stage = 'on';
+    else delete root.dataset.stage;
+  }, [withPlayer, prefs.railCollapsed, stage]);
+
   const editing = route.page === 'edit';
+  const here = destinationOf(route);
+  const collapsed = prefs.railCollapsed;
   return (
-    <div className={`shell ${stage ? 'on-stage' : ''} ${showPlayer && !stage ? 'with-player' : ''}`} ref={shell}>
+    <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`}>
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
       {!stage && (
         <nav className="nav" aria-label="Main">
-          <PageLink to="/mixes" className="brand" aria-label="Selecta, go to Mixes">Selecta</PageLink>
+          <PageLink to="/mixes" className="brand" aria-label="Selecta, go to Explore"><span className="brand-word">Selecta</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
           <ul>
-            {PLACES.map((item) => (
-              <li key={item.page}>
-                <PageLink to={item.path} aria-current={route.page === item.page ? 'page' : undefined}>
-                  <Icon name={item.mark} />
-                  <span>{item.label}</span>
-                </PageLink>
-              </li>
-            ))}
+            {prefs.classicNav
+              ? CLASSIC_DESTINATIONS.map((item) => (
+                  <li key={item.path}>
+                    <PageLink to={item.path} data-tip={item.label} aria-current={item.pages.includes(route.page) && !editing ? 'page' : undefined}>
+                      <Icon name={item.icon} />
+                      <span className="nav-label">{item.label}</span>
+                    </PageLink>
+                  </li>
+                ))
+              : DESTINATIONS.map((item) => (
+                  <li key={item.id}>
+                    <PageLink to={item.path} data-tip={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
+                      <Icon name={item.icon} />
+                      <span className="nav-label">{item.label}</span>
+                    </PageLink>
+                  </li>
+                ))}
             {hasMix && (
               <li className="nav-context">
-                <PageLink to="/mix/current/edit" aria-current={editing ? 'page' : undefined}>
+                <PageLink to="/mix/current/edit" data-tip="Edit" aria-current={editing ? 'page' : undefined}>
                   <Icon name="edit" />
-                  <span>Edit</span>
+                  <span className="nav-label">Edit</span>
                 </PageLink>
               </li>
             )}
           </ul>
           <div className="nav-foot">
-            <button onClick={onRequests} aria-label={waitingRequests ? `Requests, ${waitingRequests} waiting` : 'Requests'}>
-              Request a song{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
+            <button className="nav-request" onClick={onRequests} aria-label={waitingRequests ? `Requests, ${waitingRequests} waiting` : 'Requests'} title="Request a song (R)">
+              <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
             </button>
-            <button className="quiet" aria-label="Keyboard shortcuts" onClick={onHelp}><Icon name="help" /></button>
+            <button
+              className="nav-collapse quiet"
+              aria-pressed={collapsed}
+              aria-label={collapsed ? 'Expand the side bar' : 'Collapse the side bar'}
+              title={collapsed ? 'Expand the side bar' : 'Collapse the side bar'}
+              onClick={() => setPrefs({ railCollapsed: !collapsed })}
+            >
+              <Icon name="rail" />
+            </button>
           </div>
         </nav>
       )}
       <div className="content" id="content" tabIndex={-1} ref={content}>
+        {!stage && <ContextBar route={route} onCommands={onCommands} onActivity={onActivity} onHelp={onHelp} onRequests={onRequests} waiting={waitingRequests} palette={prefs.palette} />}
         {banner}
         {children}
       </div>
-      {showPlayer && song && !stage && <MiniPlayer player={player} now={now} song={song} onRequests={onRequests} waiting={waitingRequests} />}
+      {withPlayer && song && <MiniPlayer player={player} now={now} song={song} onRequests={onRequests} waiting={waitingRequests} />}
       <Toaster />
       <LiveRegion />
     </div>

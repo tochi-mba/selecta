@@ -295,3 +295,35 @@ export type Folders = {
   folders: { path: string; available: boolean; songs: number }[];
   watch_every: number;
 };
+
+/** Saving a mix to a file, as a job that outlives whatever started it. `seams_ready` is a real count of
+ * the transitions in this job's snapshot. There's deliberately no percentage. */
+export type ExportJobState = 'preparing' | 'encoding' | 'ready' | 'failed' | 'cancelling' | 'cancelled' | 'interrupted' | 'expired';
+
+export type ExportJob = {
+  id: string;
+  state: ExportJobState;
+  scope: 'current' | 'draft';
+  draft: number | null;
+  mix_name: string;
+  songs: { song_id: number; title: string; artist: string }[];
+  seams: { key: string; from: string; to: string }[];
+  seams_total: number;
+  seams_ready: number;
+  seconds_estimate: number;
+  name: string;
+  seconds: number | null;
+  error: string | null;
+  created_at: number;
+  can_cancel: boolean;
+  quiet_seconds: number;
+};
+
+/** What Selecta can say about a folder before reading it, from GET /api/folders/check. */
+export type FolderCheck = {
+  ok: boolean;
+  kind: 'ok' | 'missing' | 'not_a_folder' | 'no_access' | 'already_added' | 'inside_added' | 'no_audio';
+  reason: string;
+  path: string;
+  audio_files: number | null;
+};

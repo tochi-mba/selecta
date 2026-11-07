@@ -11,13 +11,18 @@ export default defineConfig({
   testMatch: '**/*.e2e.ts',
   timeout: 300_000,
   expect: { timeout: 20_000 },
+  // Fully-parallel discovery balances GitHub shards by test, not by file. Within each
+  // shard there is still only ONE worker using its own mutable test server and database.
   workers: 1,
-  fullyParallel: false,
+  fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
   reporter: [['list']],
   outputDir: './test-results',
   use: {
     baseURL: `http://127.0.0.1:${port}`,
+    // A missing or hidden control is a quick failure, not a five-minute hang.
+    // Slow real audio/render waits retain the test's 300-second limit and explicit assertions.
+    actionTimeout: 20_000,
     channel: 'msedge',
     headless: true,
     launchOptions: { args: ['--mute-audio'] },

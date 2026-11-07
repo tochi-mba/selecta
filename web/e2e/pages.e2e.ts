@@ -1,6 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { PAGES, stickingOut } from './helpers';
+import { PAGES, resetMix, stickingOut } from './helpers';
+
+test.beforeEach(async ({ request }) => {
+  // Pages can run in any shard order; never depend on another test's mix changes.
+  await resetMix(request);
+});
 
 const WIDTHS = [
   [320, 568],
@@ -117,7 +122,7 @@ test('Back and Forward go where they should', async ({ page }) => {
   const nav = page.getByRole('navigation', { name: 'Main' });
   await nav.getByRole('link', { name: 'Library' }).click();
   await expect(page).toHaveURL(/\/library$/);
-  await nav.getByRole('link', { name: 'Workshop' }).click();
+  await nav.getByRole('link', { name: 'Workspace' }).click();
   await expect(page).toHaveURL(/\/workshop$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/library$/);
@@ -130,12 +135,12 @@ test('Back and Forward go where they should', async ({ page }) => {
 
 test('the Library’s filters are part of its address', async ({ page }) => {
   await page.goto('/library');
-  await page.getByRole('textbox', { name: 'Search your library' }).fill('Déjà');
+  await page.getByRole('searchbox', { name: 'Search your library' }).fill('Déjà');
   await expect(page).toHaveURL(/q=D/);
-  await expect(page.getByText('Déjà Vu')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Déjà Vu' })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('textbox', { name: 'Search your library' })).toHaveValue('Déjà');
-  await expect(page.getByText('Déjà Vu')).toBeVisible();
+  await expect(page.getByRole('searchbox', { name: 'Search your library' })).toHaveValue('Déjà');
+  await expect(page.getByRole('button', { name: 'Details for Déjà Vu' })).toBeVisible();
   await expect(page.getByText('Morning Light')).toHaveCount(0);
 });
 
