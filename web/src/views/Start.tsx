@@ -95,7 +95,8 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
             <div className="row">
               <input
                 {...field}
-                autoFocus
+                autoComplete="off"
+                spellCheck={false}
                 value={folder}
                 onChange={(event) => setFolder(event.target.value)}
                 placeholder="C:\Users\you\Music"

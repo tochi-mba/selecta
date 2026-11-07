@@ -565,14 +565,17 @@ export function Now(props: ViewProps) {
                 </Tooltip>
               </div>
               {now.notice && <p className="notice" role="status">{now.notice}</p>}
-              <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
+              <details className="view-options">
+                <summary>Display options</summary>
+                <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
                 <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
                 <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
                 <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
                 <Tooltip text="Shortcut: F">
                   <button onClick={toggleStage}>Fullscreen lyrics</button>
                 </Tooltip>
-              </fieldset>
+                </fieldset>
+              </details>
             </>
           )}
 

@@ -187,6 +187,16 @@ describe('a menu', () => {
     expect(opener).toHaveFocus();
   });
 
+  it('opens at the last action on ArrowUp and exposes the controlled menu', () => {
+    render(<Menu label="More"><button>One</button><button>Two</button></Menu>);
+    const opener = screen.getByRole('button', { name: 'More' });
+    expect(opener).toHaveAttribute('type', 'button');
+    fireEvent.keyDown(opener, { key: 'ArrowUp' });
+    const menu = screen.getByRole('menu');
+    expect(opener).toHaveAttribute('aria-controls', menu.id);
+    expect(screen.getByRole('button', { name: 'Two' })).toHaveFocus();
+  });
+
   it('closes once something in it is chosen', () => {
     render(<Menu label="More"><button>One</button></Menu>);
     fireEvent.click(screen.getByRole('button', { name: 'More' }));

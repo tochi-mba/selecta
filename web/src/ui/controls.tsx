@@ -220,13 +220,16 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const firstOnOpen = useRef<'first' | 'last'>('first');
   useEffect(() => {
     if (!open) return;
     const away = (event: MouseEvent) => {
       if (!holder.current?.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', away);
-    holder.current?.querySelector<HTMLElement>('[role="menu"] button:not([disabled])')?.focus();
+    const items = holder.current?.querySelectorAll<HTMLElement>('[role="menu"] button:not([disabled])');
+    if (items?.length) items[firstOnOpen.current === 'last' ? items.length - 1 : 0].focus();
     return () => document.removeEventListener('mousedown', away);
   }, [open]);
   const keys = (event: KeyboardEvent) => {
@@ -238,7 +241,12 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
     }
     if (event.key === 'Tab') { setOpen(false); return; }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-    if (!open) { event.preventDefault(); setOpen(true); return; }
+    if (!open) {
+      event.preventDefault();
+      firstOnOpen.current = event.key === 'ArrowUp' || event.key === 'End' ? 'last' : 'first';
+      setOpen(true);
+      return;
+    }
     const items = [...(holder.current?.querySelectorAll<HTMLElement>('[role="menu"] button:not([disabled])') ?? [])];
     if (!items.length) return;
     event.preventDefault();
@@ -248,10 +256,10 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
   };
   return (
     <div className={`menu ${className ?? ''}`} ref={holder} onKeyDown={keys}>
-      <button ref={opener} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>{label}</button>
+      <button ref={opener} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
       {open && (
         // a press on anything inside closes it, because each item is the end of the job
-        <div role="menu" className="menu-list" onClick={() => { setOpen(false); opener.current?.focus(); }}>{children}</div>
+        <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); opener.current?.focus(); }}>{children}</div>
       )}
     </div>
   );
