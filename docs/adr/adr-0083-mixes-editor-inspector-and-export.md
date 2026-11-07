@@ -3,7 +3,7 @@
 - **Decision status:** Proposed (owner review required)
 - **Implementation status:** Not started
 - **Proposed:** 2026-11-07
-- **Programme:** Selecta 3.1 verification-led UI/UX finishing (documentation only)
+- **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 3 — creator journeys
 - **Extends:** ADR-0056, ADR-0057, ADR-0058, ADR-0065. No inherited task is automatically complete.
 - **Dependencies:** ADRs 0078–0080; audio trust in ADR-0082.
@@ -50,7 +50,7 @@ More deliberate confirmation and scope language can add one interaction to risky
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. This documentation-only PR neither modifies runtime nor records implementation success.
+The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
 
 ## Status history
 

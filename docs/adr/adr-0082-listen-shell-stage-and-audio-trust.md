@@ -1,9 +1,9 @@
 # ADR-0082: Polish Listen, navigation, mini-player and Stage without audio regressions
 
 - **Decision status:** Proposed (owner review required)
-- **Implementation status:** Not started
+- **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
-- **Programme:** Selecta 3.1 verification-led UI/UX finishing (documentation only)
+- **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 2 — listener journeys
 - **Extends:** ADR-0048, ADR-0049, ADR-0055, ADR-0069. No inherited task is automatically complete.
 - **Dependencies:** ADRs 0078–0080; shared visual hierarchy.
@@ -49,13 +49,13 @@ Less always-visible detail improves attention, but lyrics, Why, waveform, steeri
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. This documentation-only PR neither modifies runtime nor records implementation success.
+The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
 
 ## Status history
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
-| 2026-11-07 | Proposed | Not started | Documentation-only finishing plan; no tests or human review executed for this programme |
+| 2026-11-07 | Proposed | Not started | Original documentation-only finishing plan |\n| 2026-11-07 | Proposed | In progress | Selected UI/test code now on PR #25; complete verification still outstanding |
 
 ## Related documents
 
