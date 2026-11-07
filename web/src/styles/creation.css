@@ -226,3 +226,8 @@
 .draft-tools label { display: grid; gap: var(--space-1); color: var(--text-soft); font-size: var(--text-sm); }
 .draft-tools input { min-width: min(320px, 80vw); }
 .draft-tools select { min-width: 160px; }
+
+/* Only an actual grid cell takes ownership of a painting gesture. The
+   containing grid and the rest of the workspace still scroll naturally. */
+.studio-grid .studio-cell { touch-action: none; }
+.studio-grid .studio-cell:active { border-color: var(--focus); }
