@@ -1,7 +1,7 @@
 # ADR-0136 — Visual materials, typography, hierarchy and authentic musical identity
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 1/8 Implemented, 4/8 In progress, 3 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Visual foundation.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-The source defines warm charcoal, cream, lime, request blue, warning orange and heavy display type. More decoration is not automatically a better music experience; legibility and meaningful music visuals are the baseline. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+The source defines warm charcoal, cream, lime, request blue, warning orange and heavy display type. More decoration is not automatically a better music experience; legibility and meaningful music visuals are the baseline. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,16 +32,16 @@ The source defines warm charcoal, cream, lime, request blue, warning orange and 
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 1 source-level Implemented, 0 independently Verified
 
-1. **MI-0136-01 — Audit all semantic tokens.** Acceptance: One owner for palette, surfaces, type, spacing, motion and status meanings. Required verification: Token diff and dark/light/system contrast review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0136-02 — Specify song-title composition.** Acceptance: Long, RTL, emoji and missing metadata render without collision or inaccessible truncation. Required verification: Fixture screenshots and screen reader name checks. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0136-03 — Define accent and selection hierarchy.** Acceptance: Playing, focus, selection, queued and requested are distinguishable without color alone. Required verification: Forced-colors, grayscale and keyboard screenshots. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0136-01 — Audit all semantic tokens.** Acceptance: One owner for palette, surfaces, type, spacing, motion and status meanings. Required verification: Token diff and dark/light/system contrast review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/shell/Shell.tsx`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0136-02 — Specify song-title composition.** Acceptance: Long, RTL, emoji and missing metadata render without collision or inaccessible truncation. Required verification: Fixture screenshots and screen reader name checks. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/shell/Shell.tsx`; `web/src/views/Now.test.tsx`, `web/src/shell/Shell.test.tsx`; independent checks pending.**
+3. **MI-0136-03 — Define accent and selection hierarchy.** Acceptance: Playing, focus, selection, queued and requested are distinguishable without color alone. Required verification: Forced-colors, grayscale and keyboard screenshots. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/shell/Shell.tsx`; partial behavior or baseline, task acceptance outstanding.**
 4. **MI-0136-04 — Document authentic artwork rules.** Acceptance: Only verifiable artwork shown; all placeholders clearly non-representational. Required verification: Metadata-missing fixture review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 5. **MI-0136-05 — Create page-level material specimens.** Acceptance: Listen, Mix ideas, Library, Editor, Studio and Workspace show appropriate density. Required verification: Human side-by-side design assessment. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 6. **MI-0136-06 — Calibrate readable text contrast.** Acceptance: Body, muted text, button, status and overlays satisfy applicable WCAG targets. Required verification: Measured computed-style contrast in both themes. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0136-07 — Specify focus and reading widths.** Acceptance: Reading, browsing and editing layouts retain clear line length and logical reading order. Required verification: 320–2560 and 200/400% zoom checks. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-8. **MI-0136-08 — Preserve existing identity.** Acceptance: Existing warm palette, source files and navigation semantics remain intact through visual refinement. Required verification: Before/after parity and owner review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+7. **MI-0136-07 — Specify focus and reading widths.** Acceptance: Reading, browsing and editing layouts retain clear line length and logical reading order. Required verification: 320–2560 and 200/400% zoom checks. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/shell/Shell.tsx`; partial behavior or baseline, task acceptance outstanding.**
+8. **MI-0136-08 — Preserve existing identity.** Acceptance: Existing warm palette, source files and navigation semantics remain intact through visual refinement. Required verification: Before/after parity and owner review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/shell/Shell.tsx`; partial behavior or baseline, task acceptance outstanding.**
 
 ## Shared invariants and negative cases
 
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

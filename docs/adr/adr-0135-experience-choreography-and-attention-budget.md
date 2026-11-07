@@ -1,7 +1,7 @@
 # ADR-0135 — Experience choreography, musical attention and the calm-to-creative ladder
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 2/8 Implemented, 3/8 In progress, 3 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Experience foundation.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Selecta is simultaneously an autonomous DJ, discovery engine and precise creative workstation. The current source offers these capabilities but does not prove how attention behaves during real listening. No animation should compete with a great transition. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+Selecta is simultaneously an autonomous DJ, discovery engine and precise creative workstation. The current source offers these capabilities but does not prove how attention behaves during real listening. No animation should compete with a great transition. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ Selecta is simultaneously an autonomous DJ, discovery engine and precise creativ
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 2 source-level Implemented, 0 independently Verified
 
 1. **MI-0135-01 — Map attention across seven core journeys.** Acceptance: Each scene has a single primary decision and measured distraction budget; note all interruptions. Required verification: Storyboard review with listener/creator and source inventory. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0135-02 — Define the four attention modes.** Acceptance: List entry/exit points, retained focus and no unexpected playback changes for each. Required verification: Keyboard walkthrough and route-flow evidence. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0135-03 — Create beat-independent choreography rules.** Acceptance: UI animation never implies beat-accurate timing without actual audio state. Required verification: Player-state fixture and audio synchronization review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0135-04 — Author interruption policy.** Acceptance: Only failures, required consent and user-initiated overlays can interrupt listening. Required verification: Injected render, notification and request tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0135-05 — Specify transition-to-creation continuity.** Acceptance: Selected song/seam identity survives navigating between Listen, Edit and Studio. Required verification: Deep-link, Back/Forward and revision tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+2. **MI-0135-02 — Define the four attention modes.** Acceptance: List entry/exit points, retained focus and no unexpected playback changes for each. Required verification: Keyboard walkthrough and route-flow evidence. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/ui/toasts.tsx`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0135-03 — Create beat-independent choreography rules.** Acceptance: UI animation never implies beat-accurate timing without actual audio state. Required verification: Player-state fixture and audio synchronization review. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/ui/toasts.tsx`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
+4. **MI-0135-04 — Author interruption policy.** Acceptance: Only failures, required consent and user-initiated overlays can interrupt listening. Required verification: Injected render, notification and request tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/ui/toasts.tsx`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
+5. **MI-0135-05 — Specify transition-to-creation continuity.** Acceptance: Selected song/seam identity survives navigating between Listen, Edit and Studio. Required verification: Deep-link, Back/Forward and revision tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/ui/toasts.tsx`; partial behavior or baseline, task acceptance outstanding.**
 6. **MI-0135-06 — Design first-delight evaluation.** Acceptance: Compare first mix, first seam and first request confidence with uncoached listeners. Required verification: Study protocol and raw success/hesitation counts. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0135-07 — Inventory overload failure cases.** Acceptance: Long titles, multiple jobs, failed request, toast burst and nested overlay preserve hierarchy. Required verification: Dark/light/mobile screenshot review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+7. **MI-0135-07 — Inventory overload failure cases.** Acceptance: Long titles, multiple jobs, failed request, toast burst and nested overlay preserve hierarchy. Required verification: Dark/light/mobile screenshot review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/ui/toasts.tsx`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0135-08 — Record scene and owner sign-off.** Acceptance: Each proposed scene has owner, alternatives, no-go and traceable implementation evidence. Required verification: Decision record with exact SHA and accessibility/audio reviewer. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
