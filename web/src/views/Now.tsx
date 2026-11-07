@@ -283,8 +283,13 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     const context = node?.getContext('2d');
     if (!node || !context) return;
     let frame = 0;
-    const accent = getComputedStyle(node).getPropertyValue('--accent').trim() || '#e8ff3a';
-    const soft = getComputedStyle(node).getPropertyValue('--ok').trim() || '#9ed46a';
+    const style = getComputedStyle(node);
+    // Canvas cannot resolve CSS custom properties inside a fillStyle. Read
+    // the theme's rendered tokens instead; system high-contrast foreground
+    // colour is the safe fallback when a token is missing.
+    const fallback = style.color;
+    const accent = style.getPropertyValue('--accent').trim() || fallback;
+    const soft = style.getPropertyValue('--ok').trim() || fallback;
     let gradient: CanvasGradient | null = null;
     let gradientHeight = 0;
     let lastDraw = -Infinity;
