@@ -12,6 +12,7 @@ import { allRendered, audioClock, PAGES, resetMix, soundsStarted, spyOnAudio, st
 test.beforeEach(async ({ request }) => resetMix(request));
 
 const playButton = (page: Page) => page.locator('.now .transport .primary');
+const playButtonIn = (page: Page) => page.locator('.mini button.round');
 
 async function startPlaying(page: Page) {
   await page.goto('/listen');
@@ -238,6 +239,87 @@ test('pages hold their shape while they load, even when every answer is slow', a
   console.log(`layout shift while loading slowly: ${JSON.stringify(found)}`);
   const bad = Object.entries(found).filter(([, shift]) => shift > 0.25);
   expect(bad).toEqual([]);
+});
+
+test('the first run says which stage it’s at, from what the server says, and each can go wrong on its own', async ({ page, request }) => {
+  const status = await (await request.get('/api/status')).json();
+  const withCounts = (more: Record<string, unknown>) => ({ ...status, counts: { ...status.counts, total: 0, music: 0, analysed: 0, ready: 0 }, ...more });
+  let answer = withCounts({ scan: { status: 'running', folder: 'D:\\Music' } });
+  await page.route('**/api/status', (route) => route.fulfill({ json: answer }));
+  await page.goto('/');
+  await expect(page.getByRole('status').filter({ hasText: 'Finding music in your folder' })).toContainText('D:\\Music');
+  await expect(page.getByRole('button', { name: 'Stop reading this folder' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reading…' })).toBeDisabled();
+  answer = withCounts({ scan: { status: 'cancelled' } });
+  await expect(page.getByText(/Stopped reading that folder. Nothing was moved or changed/)).toBeVisible({ timeout: 10_000 });
+  await page.reload();
+  await expect(page.getByText(/Stopped reading that folder/)).toBeVisible();
+  answer = withCounts({ scan: { status: 'failed', error: 'That drive went away part way through.' } });
+  await page.reload();
+  await expect(page.getByRole('alert').filter({ hasText: 'That drive went away part way through.' })).toBeVisible();
+  // and it can always be tried again, without starting anything over
+  await expect(page.getByRole('textbox', { name: 'Music folder' })).toBeEnabled();
+  answer = withCounts({ scan: { status: 'done', music: 0 } });
+  await page.reload();
+  await expect(page.getByText(/No new music was found in that folder/)).toBeVisible();
+  // some songs found, not enough ready: the second step, and the rest of the app is open
+  answer = { ...status, counts: { ...status.counts, total: 40, music: 40, analysed: 3, ready: 2 }, scan: { status: 'idle' } };
+  await page.goto('/mixes');
+  await expect(page.locator('.setup-steps li[aria-current="step"]')).toContainText('Prepare library');
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' })).toBeVisible();
+});
+
+test('with an on-screen keyboard up, what’s being typed gets the room', async ({ page }) => {
+  await startPlaying(page);
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.getByRole('link', { name: 'Library' }).first().click();
+  await expect(page.locator('.mini')).toBeVisible();
+  const box = page.getByRole('searchbox', { name: 'Search your library' });
+  await box.focus();
+  // a real phone sets this from how much of the window its keyboard covers, which a desktop browser can't do
+  await page.evaluate(() => { document.documentElement.dataset.keyboard = 'open'; });
+  await expect(page.locator('.mini')).toBeHidden();
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden();
+  await expect(box).toBeFocused();
+  await expect(box).toBeInViewport();
+  await page.evaluate(() => { delete document.documentElement.dataset.keyboard; });
+  await expect(page.locator('.mini')).toBeVisible();
+  await expect(playButtonIn(page)).toBeVisible();
+});
+
+test('the full Studio grid works at the smallest size: it scrolls by itself, and the keyboard can reach all of it', async ({ page, request }) => {
+  const cells = 8;
+  const row = Array.from({ length: cells }, (_, index) => (index < cells / 2 ? 1 : 0));
+  const shape = { a: { vocals: row, drums: row, bass: row, other: row }, b: { vocals: row, drums: row, bass: row, other: row } };
+  const stem = await (await request.get('/api/songs/1/audio')).body();
+  await page.route('**/api/mix/1/studio*', (route) => route.fulfill({ json: { status: 'ready', key: 'smallest', cells, seconds: 8, bars: 16, start_shape: shape, shape } }));
+  await page.route('**/api/mix/1/options*', async (route) => {
+    const answer = await route.fetch();
+    await route.fulfill({ response: answer, json: { ...await answer.json(), studio: { available: true } } });
+  });
+  await page.route('**/api/studio/**', (route) => route.fulfill({ body: stem, contentType: 'audio/flac' }));
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto('/mix/current/edit');
+  await page.getByRole('button', { name: 'Change', exact: true }).first().click();
+  await page.getByRole('tab', { name: 'Studio' }).click();
+  await page.getByRole('button', { name: 'Open the Studio' }).click();
+  const squares = page.locator('.studio-cell');
+  await expect(squares.first()).toBeVisible({ timeout: 60_000 });
+  expect(await squares.count()).toBe(64);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const first = squares.first();
+  await first.focus();
+  for (let move = 0; move < 7; move += 1) await page.keyboard.press('ArrowRight');
+  const last = page.getByRole('button', { name: 'Morning Light voice, square 8' });
+  await expect(last).toBeFocused();
+  await expect(last).toBeInViewport();
+  // the part's own name stays in sight while the squares scroll past it
+  await expect(page.getByRole('button', { name: 'Hear only Morning Light voice' })).toBeInViewport();
+  const was = await last.getAttribute('aria-pressed');
+  await page.keyboard.press('Space');
+  await expect(last).not.toHaveAttribute('aria-pressed', was ?? '');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.studio')).toHaveCount(0);
 });
 
 test('the keyboard alone can request a song, cancel it, and get back to where it was', async ({ page, request }) => {
