@@ -117,10 +117,14 @@ test('saving a mix as an audio file makes a real FLAC', async ({ page, request }
   await page.getByRole('button', { name: 'Download audio' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
   await expect(dialog).toBeVisible();
-  await dialog.locator('button.primary').click();
-  const link = dialog.getByRole('link');
-  await expect(link).toBeVisible({ timeout: 170_000 });
-  const answer = await request.get((await link.getAttribute('href'))!);
+  // A rerun can find an earlier ready or still-encoding export of this revision.
+  // Only initiate a new one if the panel offers a fresh save action.
+  const save = dialog.getByRole('button', { name: 'Save it', exact: true });
+  if (await save.count()) await save.click();
+  // Workspace is also linked inside the dialog; only an actual export path is audio.
+  const file = dialog.locator('a[href^="/api/exports/"]');
+  await expect(file).toBeVisible({ timeout: 170_000 });
+  const answer = await request.get((await file.getAttribute('href'))!);
   expect(answer.status()).toBe(200);
   const bytes = await answer.body();
   expect(bytes.subarray(0, 4).toString('latin1')).toBe('fLaC');

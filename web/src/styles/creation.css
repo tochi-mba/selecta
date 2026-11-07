@@ -93,7 +93,7 @@
   opacity: 1;
   font-size: var(--text-sm);
 }
-.timeline .add-gap button small { color: var(--text-soft); opacity: 0.8; }
+.timeline .add-gap button small { color: var(--text-soft); }
 .timeline .add-gap button:hover, .timeline .add-gap button:focus-visible { color: var(--text); border-color: var(--border-strong); }
 @media (pointer: coarse) {
   .timeline .add-gap button { min-height: 44px; }
