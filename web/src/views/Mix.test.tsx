@@ -788,3 +788,21 @@ describe('timeline drop safety', () => {
     expect(calls.some((call) => call.path === '/mix/move')).toBe(false);
   });
 });
+
+describe('complete FLAC snapshot inspection', () => {
+  it('shows the exact ordered source songs before creating a file', async () => {
+    resetExports();
+    fakeBackend({ 'GET /exports/jobs': { jobs: [] } });
+    render(
+      <MixScope.Provider value={null}>
+        <ExportPanel mix={songs(seam('ready', 'a'))} mixName="My mix" inDraft={false}
+          guard={{}} setMixData={() => {}} names={{}} onClose={() => {}} />
+      </MixScope.Provider>,
+    );
+    fireEvent.click(screen.getByText(/Review proposed order/));
+    const snapshot = screen.getByText(/Review proposed order/).closest('details')!;
+    expect(within(snapshot).getByText('Song 1')).toBeInTheDocument();
+    expect(within(snapshot).getByText('Song 2')).toBeInTheDocument();
+    expect(snapshot).toHaveTextContent('not a finished file yet');
+  });
+});

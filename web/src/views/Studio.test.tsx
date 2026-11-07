@@ -376,3 +376,25 @@ describe('Studio representation parity', () => {
     expect(await square('Song 1 voice, square 2')).toHaveAttribute('aria-pressed', 'false');
   });
 });
+
+describe('Studio pointer painting', () => {
+  it('paints a consistent value over touched cells without re-toggling a revisited cell', async () => {
+    open();
+    const first = await square('Song 1 voice, square 1');
+    const second = await square('Song 1 voice, square 2');
+    const grid = screen.getByRole('grid');
+    const prior = document.elementFromPoint;
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => second });
+    try {
+      fireEvent.pointerDown(first, { pointerId: 23, pointerType: 'touch', isPrimary: true, button: 0, clientX: 20, clientY: 20 });
+      fireEvent.pointerMove(grid, { pointerId: 23, pointerType: 'touch', isPrimary: true, buttons: 1, clientX: 60, clientY: 20 });
+      fireEvent.pointerMove(grid, { pointerId: 23, pointerType: 'touch', isPrimary: true, buttons: 1, clientX: 60, clientY: 20 });
+      fireEvent.pointerUp(grid, { pointerId: 23, pointerType: 'touch', isPrimary: true, button: 0 });
+      expect(first).toHaveAttribute('aria-pressed', 'false');
+      expect(second).toHaveAttribute('aria-pressed', 'false');
+      expect(deck.made.at(-1)?.setShape).toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: prior });
+    }
+  });
+});

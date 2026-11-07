@@ -325,3 +325,23 @@ describe('Undo confirmation timing', () => {
     expect(screen.queryByText('Moved song three.')).toBeNull();
   });
 });
+
+describe('toast focus continuity', () => {
+  it('restores focus to the active page after a confirmed Undo removes its button', async () => {
+    const main = document.createElement('div');
+    main.id = 'content';
+    main.tabIndex = -1;
+    document.body.append(main);
+    try {
+      render(<Toaster />);
+      act(() => { showToast('Undo this change.', { undo: async () => {} }); });
+      const undo = screen.getByRole('button', { name: 'Undo' });
+      undo.focus();
+      fireEvent.click(undo);
+      await waitFor(() => expect(screen.queryByText('Undo this change.')).toBeNull());
+      expect(main).toHaveFocus();
+    } finally {
+      main.remove();
+    }
+  });
+});
