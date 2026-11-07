@@ -366,6 +366,9 @@ function MusicVisualizer({ player, active, stage, intensity }: { player: ViewPro
       if (!spectrum || spectrum.length === 0) {
         // No analyzer bins means there are no measurements. Keep the surface
         // still; do not draw decorative "frequency levels" in their place.
+        // Continue the visibility-limited sampling loop so a late-starting
+        // audio context can begin drawing as soon as real data is available.
+        if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
         return;
       }
       const bars = Math.min(72, Math.max(24, Math.floor(width / (ratio * 7))));
