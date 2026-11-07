@@ -57,12 +57,13 @@ function keepShape(key: string, shape: Shape | null) {
   }
 }
 
-function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, onToggle, onSolo }: {
+function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disabled, onToggle, onSolo }: {
   shape: Shape;
   titles: Record<Side, string>;
   missing: string[];
   barsPerCell: number;
   soloed: string | null;
+  disabled: boolean;
   onToggle: (side: Side, lane: Lane, index: number) => void;
   onSolo: (name: string) => void;
 }) {
@@ -75,7 +76,7 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, onToggl
             const name = `${side}_${lane}`;
             const lost = missing.includes(name);
             return (
-              <fieldset key={name} disabled={lost}>
+              <fieldset key={name} disabled={lost || disabled}>
                 <legend>{LANE_WORDS[lane]}{lost ? ' — unavailable' : ''}</legend>
                 <button type="button" aria-pressed={soloed === name} onClick={() => onSolo(name)}>
                   {soloed === name ? 'Hear everything' : `Hear only ${LANE_WORDS[lane].toLowerCase()}`}
@@ -281,7 +282,7 @@ export function Studio(props: {
     }
   };
   const solo = async (name: string) => {
-    if (!deck.current || missing.includes(name)) return;
+    if (!deck.current || applying.current || missing.includes(name)) return;
     const next = soloed === name ? null : name;
     setSoloed(next);
     deck.current.solo(next);
@@ -396,13 +397,13 @@ export function Studio(props: {
             </p>
           )}
           <div className="row wrap">
-            <button disabled={!!asking} onClick={() => void askSelecta(false)}>
+            <button disabled={saving || !!asking} onClick={() => void askSelecta(false)}>
               {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
             </button>
-            <button disabled={!!asking} onClick={() => void askSelecta(true)}>
+            <button disabled={saving || !!asking} onClick={() => void askSelecta(true)}>
               {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
             </button>
-            {before && <button onClick={putBack}>Put it back</button>}
+            {before && <button disabled={saving} onClick={putBack}>Put it back</button>}
           </div>
           {changes && (
             <ul className="studio-changes" role="status">
@@ -411,7 +412,7 @@ export function Studio(props: {
           )}
           <div className="chips studio-shapes" role="group" aria-label="Ready-made shapes">
             {SHAPES.map((option) => (
-              <button key={option.name} title={option.about} onClick={() => change(option.change(shape))}>
+              <button key={option.name} disabled={saving} title={option.about} onClick={() => change(option.change(shape))}>
                 {option.name}
               </button>
             ))}
@@ -456,7 +457,7 @@ export function Studio(props: {
                           data-cell={`${row}-${SOLO_COLUMN}`}
                           tabIndex={focusCell.row === row && focusCell.column === SOLO_COLUMN ? 0 : -1}
                           aria-pressed={soloed === name}
-                          aria-disabled={lost || undefined}
+                          aria-disabled={lost || saving || undefined}
                           aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}`}
                           title={lost ? 'This part couldn’t be loaded' : undefined}
                           onFocus={() => setFocusCell({ row, column: SOLO_COLUMN })}
@@ -472,7 +473,7 @@ export function Studio(props: {
                             tabIndex={focusCell.row === row && focusCell.column === index ? 0 : -1}
                             className={`studio-cell ${index === cell ? 'now' : ''}`}
                             aria-pressed={Boolean(value)}
-                            aria-disabled={lost || undefined}
+                            aria-disabled={lost || saving || undefined}
                             aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}
                             title={lost ? 'This part couldn’t be loaded' : `Bar ${index * barsPerCell + 1}`}
                             onFocus={() => setFocusCell({ row, column: index })}
@@ -494,6 +495,7 @@ export function Studio(props: {
               missing={missing}
               barsPerCell={barsPerCell}
               soloed={soloed}
+              disabled={saving}
               onToggle={toggle}
               onSolo={(name) => void solo(name)}
             />
