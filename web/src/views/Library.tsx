@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, get, LibraryPage, LibrarySong, MixData, post } from '../api';
 import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
@@ -275,6 +275,22 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     await load();
   };
   const shownDetails = rows?.find((song) => song.id === opened) ?? null;
+  // One pass rather than comparing every row against every other row: long
+  // libraries can reach 20,000 songs, and identical titles must still select
+  // the correct ID without a quadratic render or name collisions.
+  const duplicateIds = useMemo(() => {
+    const firstByName = new Map<string, number>();
+    const duplicates = new Set<number>();
+    for (const song of rows ?? []) {
+      const identity = JSON.stringify([song.title, song.artist]);
+      const first = firstByName.get(identity);
+      if (first !== undefined) {
+        duplicates.add(first);
+        duplicates.add(song.id);
+      } else firstByName.set(identity, song.id);
+    }
+    return duplicates;
+  }, [rows]);
   const { counts } = status;
   const compact = preferences.density === 'compact';
 
@@ -341,7 +357,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           const facts = trackReadiness(song);
           const already = inMix.has(song.id);
           const title = song.title ?? 'Untitled';
-          const duplicate = rows.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist);
+          const duplicate = duplicateIds.has(song.id);
           const name = duplicate ? `${title} (song ${song.id})` : title;
           return (
             <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''}`}>
