@@ -13,13 +13,15 @@ import { ViewProps } from './shared';
 
 const VIEW_KEY = 'selecta.listen';
 
-type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean };
+type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean; intensity: 'quiet' | 'standard' | 'focused' };
 
 function savedView(): ListenView {
+  const defaults: ListenView = { lyrics: false, spectrum: true, timing: true, intensity: 'standard' };
   try {
-    return { lyrics: false, spectrum: true, timing: true, ...JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') };
+    const saved = JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') as Partial<ListenView>;
+    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard' };
   } catch {
-    return { lyrics: false, spectrum: true, timing: true };
+    return defaults;
   }
 }
 
@@ -312,7 +314,7 @@ function TransitionCountdown({
   );
 }
 
-function MusicVisualizer({ player, active, stage }: { player: ViewProps['player']; active: boolean; stage: boolean }) {
+function MusicVisualizer({ player, active, stage, intensity }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity'] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
   // its colours come from the page, so a change of theme has to draw it again
@@ -405,7 +407,7 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
       window.cancelAnimationFrame(frame);
     };
   }, [player, active, stage, reduceMotion, theme]);
-  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label={active ? 'Live audio frequency levels' : 'Audio frequency visualizer paused'} />;
+  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? 'Live audio frequency levels' : 'Audio frequency visualizer paused'} />;
 }
 
 /** Why there's nothing to follow along with. A song's timing is never made up to fill the gap. */
@@ -421,7 +423,9 @@ function noLyricsWords(status: string | null | undefined): string {
   }
 }
 
-function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; focus?: boolean }) {
+function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail; time: number; focus?: boolean; canBrowse?: boolean }) {
+  const [reading, setReading] = useState(false);
+  useEffect(() => setReading(false), [detail.id]);
   const lines = detail.lines;
   const starts = useMemo(() => lines.map((line) => line.start), [lines]);
   // Audio ticks many times per second; a long lyric sheet should not be
@@ -436,7 +440,20 @@ function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; foc
   const wordIndex = current?.words?.findIndex((word) => word.start <= time && time < word.end) ?? -1;
   const around = focus ? 3 : 1;
   return (
-    <div className={`lyrics ${focus ? 'focus' : ''}`} aria-live="off">
+    <div className={`lyrics ${focus ? 'focus' : ''} ${reading ? 'reading' : ''}`} aria-live="off">
+      {canBrowse && (
+        <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReading(!reading)}>
+          {reading ? 'Resume lyric follow' : 'Read all lyrics'}
+        </button>
+      )}
+      {reading ? (
+        <div className="lyrics-scroll" tabIndex={0} role="region" aria-label="All timed lyrics, scroll manually">
+          {lines.map((line, at) => (
+            <p key={at} dir="auto" className={at === index && singing ? 'sung' : 'dim'}>{line.text}</p>
+          ))}
+        </div>
+      ) : (
+        <>
       {Array.from({ length: around }, (_, gap) => around - gap).map((back) => (
         <p className="dim" key={`before-${back}`}>{lines[index - back]?.text ?? ' '}</p>
       ))}
@@ -446,6 +463,8 @@ function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; foc
       {Array.from({ length: around }, (_, gap) => gap + 1).map((ahead) => (
         <p className="dim" key={`after-${ahead}`}>{lines[index + ahead]?.text ?? ' '}</p>
       ))}
+        </>
+      )}
     </div>
   );
 }
@@ -665,10 +684,10 @@ export function Now(props: ViewProps) {
             </>
           )}
 
-          {(stage || (view.spectrum && !view.lyrics)) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />}
+          {(view.intensity !== 'quiet' && (stage || (view.spectrum && !view.lyrics))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} />}
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>Couldn’t load lyrics and song details. Playback controls are still available.</Problem>}
-          {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
+          {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} canBrowse={!stage} /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
         </div>
 
         <aside className="listen-side" aria-label="Coming up">
@@ -716,6 +735,13 @@ export function Now(props: ViewProps) {
                 <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
                 <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
                 <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
+                <div className="listen-intensity" role="group" aria-label="Visual intensity">
+                  {(['quiet', 'standard', 'focused'] as const).map((intensity) => (
+                    <button key={intensity} type="button" aria-pressed={view.intensity === intensity} onClick={() => choose({ intensity })}>
+                      {intensity === 'quiet' ? 'Quiet visuals' : intensity === 'focused' ? 'Focused visuals' : 'Standard visuals'}
+                    </button>
+                  ))}
+                </div>
                 <Tooltip text="Shortcut: F">
                   <button data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>
                 </Tooltip>

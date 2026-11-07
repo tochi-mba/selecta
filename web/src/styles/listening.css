@@ -163,3 +163,14 @@
 @media (forced-colors: active) {
   .strip .scrub-ghost { border-color: Highlight; }
 }
+
+/* The listener controls decorative intensity, never the audio engine. */
+.listen-intensity { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+.music-visualizer.focused { height: 124px; }
+.stage .music-visualizer.focused { height: min(20svh, 180px); }
+/* Reading the complete lyric sheet is deliberate and static: playback may
+   continue, but it never scrolls this container out from under the listener. */
+.lyrics-browse { display: block; margin-bottom: var(--space-2); font-size: var(--text-sm); }
+.lyrics-scroll { max-height: min(52svh, 480px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.lyrics-scroll p { unicode-bidi: plaintext; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lyrics-scroll:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
