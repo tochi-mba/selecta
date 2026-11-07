@@ -132,7 +132,7 @@ a.button:hover { border-color: var(--text); }
     align-items: center;
     justify-content: center;
     gap: 2px;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     white-space: nowrap;
     overflow: hidden;
   }
@@ -152,7 +152,7 @@ a.button:hover { border-color: var(--text); }
     border-radius: 0;
     background: transparent;
     color: var(--text-soft);
-    font-size: 0.68rem;
+    font-size: 0.75rem;
   }
   .nav-more-mobile[aria-current='page'] { color: var(--text); background: var(--surface-control); }
   .mini-volume { display: none; }
@@ -515,3 +515,15 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
 }
 
 .seam-visual-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+
+/* Keep dialog controls reachable above a software keyboard and in short
+   landscape viewports. Only the body scrolls; the title and actions stay put. */
+@media (max-height: 520px) {
+  .overlay-dialog { align-items: flex-start; }
+  .overlay-dialog .overlay-panel { max-height: calc(100dvh - 2 * var(--space-2)); }
+}
+@media (max-width: 760px) {
+  :root[data-keyboard='open'] .overlay {
+    padding-bottom: max(var(--keyboard-inset), var(--safe-bottom));
+  }
+}

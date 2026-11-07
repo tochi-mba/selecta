@@ -340,9 +340,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''}`}>
               <div className="song-name">
                 <button className="link song-open" onClick={() => setOpened(song.id)} aria-label={`Details for ${name}`}>
-                  <b>{title}</b>
+                  <b title={title}>{title}</b>
                 </button>
-                <span>{song.artist ?? 'Unknown artist'}</span>
+                <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
               </div>
               <small className="facts song-columns">
                 <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
