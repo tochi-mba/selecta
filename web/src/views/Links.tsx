@@ -39,6 +39,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   const [unsaved, setUnsaved] = useState<{ target: HarmonicDiscovery; verdict: string } | null>(null);
   const audio = useRef<HTMLAudioElement>(null);
   const keepGoing = useRef(false);
+  const preparingRequest = useRef(0);
   // the same answer sent again, because a reply got lost, keeps its name, so it can't count twice
   const verdictNames = useRef(new Map<string, string>());
 
@@ -101,17 +102,21 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     });
   };
   const hear = async (target: HarmonicDiscovery, from = 0) => {
+    const request = ++preparingRequest.current;
     setGetting(true);
     setError('');
     try {
       const info = await post<Audition>(`/discoveries/${target.id}/hear`);
+      // A skip, verdict or newer listen may have changed the displayed pair
+      // while this response was being prepared. Never play the old pair then.
+      if (request !== preparingRequest.current || item?.id !== target.id) return;
       setAudition(info);
       keepGoing.current = true;
       playStep(target.id, from);
     } catch (problem) {
-      setError((problem as Error).message);
+      if (request === preparingRequest.current) setError((problem as Error).message);
     } finally {
-      setGetting(false);
+      if (request === preparingRequest.current) setGetting(false);
     }
   };
 
@@ -123,6 +128,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 
   // a new pair starts by itself once someone's listening
   useEffect(() => {
+    preparingRequest.current += 1;
+    setGetting(false);
     setAudition(null);
     stop();
     if (keepGoing.current && item) void hear(item);
@@ -251,11 +258,18 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
 
   useEffect(() => {
     if (!override || !['queued', 'rendering'].includes(override.status)) return;
+    const key = override.key;
+    const currentRequest = renderRequest.current;
+    let live = true;
     const timer = window.setInterval(() => {
-      get<SeamState>(`/seams/${override.key}`).then(setOverride).catch(() => {});
+      get<SeamState>(`/seams/${key}`).then((next) => {
+        if (!live || currentRequest !== renderRequest.current) return;
+        // A response for an older render key cannot replace the new result.
+        setOverride((current) => current?.key === key ? next : current);
+      }).catch(() => {});
     }, 1500);
-    return () => window.clearInterval(timer);
-  }, [override]);
+    return () => { live = false; window.clearInterval(timer); };
+  }, [override?.key, override?.status]);
 
   const render = async (name: string) => {
     const request = ++renderRequest.current;
@@ -269,7 +283,13 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
     finally { if (request === renderRequest.current) setRendering(false); }
   };
   const rate = async (rating: string) => {
-    setOverride(await post<SeamState>(`/seams/${state.key}/rate`, { rating }));
+    const request = renderRequest.current;
+    const key = state.key;
+    const result = await post<SeamState>(`/seams/${key}/rate`, { rating });
+    // If a new style was chosen during the rating request, its render result
+    // must not be displaced by the older rated audio key.
+    if (request !== renderRequest.current) return;
+    setOverride(result);
     onRated();
   };
 
