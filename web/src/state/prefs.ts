@@ -88,6 +88,15 @@ function subscribe(listener: () => void) {
   };
 }
 
+function storageChanged(event: StorageEvent) {
+  if (event.key !== KEY && event.key !== null) return;
+  current = read();
+  apply(current);
+  for (const listener of listeners) listener();
+}
+
+if (typeof window !== 'undefined') window.addEventListener('storage', storageChanged);
+
 export function usePrefs(): Prefs {
   return useSyncExternalStore(subscribe, prefs);
 }
