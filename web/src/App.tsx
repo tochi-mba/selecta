@@ -488,6 +488,7 @@ export function App() {
     songsLeftToAnalyse: Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0),
     analysing: status.analysis_running,
     drafts: commandDrafts,
+    theme: preferences.theme,
     togglePause: () => void player.togglePause(),
     next: () => void player.next(),
     jump: () => void player.skip(),

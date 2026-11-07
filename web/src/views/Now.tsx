@@ -4,6 +4,7 @@ import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
 import { orderOf } from '../state/readiness';
 import { Action, announce, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
+import { useShownTheme } from '../state/prefs';
 import { Icon } from '../ui/Icon';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
@@ -273,6 +274,8 @@ function TransitionCountdown({
 function MusicVisualizer({ player, active, stage }: { player: ViewProps['player']; active: boolean; stage: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
+  // its colours come from the page, so a change of theme has to draw it again
+  const theme = useShownTheme();
   useEffect(() => {
     if (typeof CanvasRenderingContext2D === 'undefined') return;
     const node = canvas.current;
@@ -333,7 +336,7 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
       document.removeEventListener('visibilitychange', wake);
       window.cancelAnimationFrame(frame);
     };
-  }, [player, active, stage, reduceMotion]);
+  }, [player, active, stage, reduceMotion, theme]);
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label="Live music frequency visualizer" />;
 }
 

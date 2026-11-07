@@ -45,6 +45,15 @@
   --status-unavailable: var(--soft);
   --status-request: var(--request);
 
+  /* the brand's lime. It can't be text or a thin line on cream, so in light it only ever appears as a
+     filled shape with dark ink on it and a dark edge round it */
+  --primary-fill: var(--accent);
+  --primary-ink: var(--accent-ink);
+  --primary-edge: var(--accent);
+  --word-fill: transparent;
+  --word-ink: var(--accent);
+  --word-glow: color-mix(in srgb, var(--accent) 40%, transparent);
+
   /* type: the display face is the personality, and everything else stays out of its way */
   --display: 'Arial Black', 'Helvetica Neue', Impact, system-ui, sans-serif;
   --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -139,6 +148,13 @@
     --warn: #b93d10;
     --ok: #3f7a1a;
     --request: #086a93;
+    --primary-fill: #e8ff3a;
+    --primary-ink: #14140a;
+    --primary-edge: #16140e;
+    --word-fill: #e8ff3a;
+    --word-ink: #14140a;
+    --word-glow: transparent;
+    --shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
   }
 }
 
@@ -155,6 +171,13 @@
   --warn: #b93d10;
   --ok: #3f7a1a;
   --request: #086a93;
+  --primary-fill: #e8ff3a;
+  --primary-ink: #14140a;
+  --primary-edge: #16140e;
+  --word-fill: #e8ff3a;
+  --word-ink: #14140a;
+  --word-glow: transparent;
+  --shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
 }
 
 .density[data-density='compact'], :root[data-density='compact'] .density {

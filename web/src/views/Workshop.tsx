@@ -4,6 +4,7 @@ import { analysisWords, estimateWords, etaRangeWords } from '../lib';
 import { useRoute, type WorkshopTab } from '../router';
 import { WORKSPACE_TABS } from '../shell/manifest';
 import { PageLink } from '../shell/PageLink';
+import { ThemeChoices } from '../ui/ThemeChoice';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { ControlGallery } from '../ui/ControlGallery';
 import { Action, Status } from '../ui/controls';
@@ -21,6 +22,7 @@ function InterfaceChoices() {
     <section className="panel stack interface-choices">
       <h2>Interface</h2>
       <p className="hint">These are kept in this browser. None of them change your music or your mixes.</p>
+      <ThemeChoices />
       <label className="choice">
         <input type="checkbox" checked={preferences.density === 'compact'} onChange={(event) => setPrefs({ density: event.target.checked ? 'compact' : 'comfortable' })} />
         Compact rows in the Library, the timeline and drafts

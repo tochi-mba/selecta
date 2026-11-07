@@ -6,6 +6,7 @@ import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
 import { announce, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
 import { CLASSIC_DESTINATIONS, describeRoute, DESTINATIONS, destinationOf } from './manifest';
 import { PageLink } from './PageLink';
@@ -91,6 +92,7 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
         <button className="context-button context-request" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
           <Icon name="request" />{waiting ? <span className="count">{waiting}</span> : null}
         </button>
+        <ThemeMenu />
         <button className="context-button" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
           <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
         </button>

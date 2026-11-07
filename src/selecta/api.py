@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urlsplit
@@ -57,7 +58,15 @@ def create_app(
 
     running_operations: dict[str, asyncio.Event] = {}
 
-    ctx = SimpleNamespace(settings=settings, store=store, background=background)
+    # what happened to the last few, for diagnostics: only the kind of thing, never what it named
+    recent_operations: deque[dict] = deque(maxlen=20)
+
+    ctx = SimpleNamespace(
+        settings=settings,
+        store=store,
+        background=background,
+        recent_operations=recent_operations,
+    )
     helpers_routes(app, ctx)
     library_routes(app, ctx)
     mixes_routes(app, ctx)
@@ -80,13 +89,18 @@ def create_app(
             return await call_next(request)
         if operation in running_operations:
             await running_operations[operation].wait()
+        kind = operation.split("-", 1)[0]
         known = finished_operations.get(operation)
         if known is not None:
+            recent_operations.append({"kind": kind, "status": known[0], "repeat": True})
             return Response(known[1], status_code=known[0], media_type="application/json")
         running_operations[operation] = asyncio.Event()
         try:
             response = await call_next(request)
             body = b"".join([chunk async for chunk in response.body_iterator])
+            recent_operations.append(
+                {"kind": kind, "status": response.status_code, "repeat": False}
+            )
             if response.status_code < 500:
                 finished_operations[operation] = (response.status_code, body)
                 while len(finished_operations) > OPERATIONS_KEPT:

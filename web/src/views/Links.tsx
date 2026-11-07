@@ -6,6 +6,7 @@ import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { EXPLORE_TABS } from '../shell/manifest';
 import { operationId } from '../state/async';
 import { AudioPreview } from '../ui/AudioPreview';
+import { Icon } from '../ui/Icon';
 import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { LinkTabs, SearchField } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
@@ -187,7 +188,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
           </h3>
           <p className="hint">{item.artist_a} · {item.artist_b}</p>
           <button className="primary" disabled={getting} onClick={() => (listening ? (keepGoing.current = false, stop()) : void hear(item))}>
-            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? '■ Stop' : '▶ Hear what Selecta heard'}
+            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? <><Icon name="stop" /> Stop</> : <><Icon name="play" /> Hear what Selecta heard</>}
           </button>
           <p className="discovery-now" role="status">{listening && step !== null ? `Now playing: ${steps[step].label}` : 'Nothing is playing'}</p>
           {audition && (

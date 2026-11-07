@@ -225,6 +225,7 @@ def add_routes(app, ctx) -> None:
             "worker_running": bool(worker and worker.poll() is None),
             "songs": counts,
             "analysis_failures": errors,
+            "recent_operations": list(ctx.recent_operations),
             "mix_songs": mix_songs,
             "drafts_in_line": line,
             "seam_records": len(store.remembered().clean),

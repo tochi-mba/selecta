@@ -633,7 +633,7 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
           <span className="request-pair"><b>{item.from}</b> → <b>{item.to}</b></span>
           <span className={`pill ${item.status}`}>{SEAM_WORDS[item.status] ?? 'Not made yet'}</span>
           <button aria-label={`Hear ${item.from} into ${item.to}`} aria-pressed={preview.playing === item.key} onClick={() => void hear(item)}>
-            {preview.playing === item.key ? '■ Stop' : wanted === item.key ? 'Getting it ready…' : '▶ Hear'}
+            {preview.playing === item.key ? <><Icon name="stop" /> Stop</> : wanted === item.key ? 'Getting it ready…' : <><Icon name="play" /> Hear</>}
           </button>
         </div>
       ))}
@@ -725,7 +725,7 @@ export function RequestsPanel() {
                     <b>{song.title ?? 'Untitled'}</b>
                     <span>{song.artist ?? 'Unknown artist'}</span>
                   </span>
-                  <small>{already === 'Requested' ? '✓ Requested' : already || '+ Request'}</small>
+                  <small>{already === 'Requested' ? <><Icon name="check" width={14} height={14} /> Requested</> : already || <><Icon name="plus" width={14} height={14} /> Request</>}</small>
                 </button>
               </li>
             );

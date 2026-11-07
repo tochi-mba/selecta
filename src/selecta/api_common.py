@@ -94,7 +94,13 @@ class FreshFiles(StaticFiles):
         try:
             response = await super().get_response(path, scope)
         except StarletteHTTPException as problem:
-            if problem.status_code != 404 or not PAGE_ADDRESSES.match(path.replace("\\", "/")):
+            address = path.replace("\\", "/")
+            known = PAGE_ADDRESSES.match(address)
+            # someone opening an old link in a browser gets the app, which says there's nothing there
+            # and offers a way back. Anything else asking for a missing file still gets a real 404
+            accepts = dict(scope.get("headers", [])).get(b"accept", b"")
+            opened = b"text/html" in accepts and "." not in address.rsplit("/", 1)[-1]
+            if problem.status_code != 404 or address.startswith("api") or not (known or opened):
                 raise
             response = await super().get_response("index.html", scope)
         response.headers["Cache-Control"] = "no-cache"

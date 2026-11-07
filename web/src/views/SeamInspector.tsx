@@ -3,6 +3,7 @@ import { ApiError, get, MixItem, post, SeamOptions, SeamSettings } from '../api'
 import { clock, triedWords } from '../lib';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Action, Problem, Skeleton, Status, Workspace } from '../ui/controls';
+import { Icon } from '../ui/Icon';
 import { Tabs } from '../ui/primitives';
 import { seamFacts, seamLayers } from '../ui/seam';
 import { MixScope, useMixPath } from './mixScope';
@@ -354,7 +355,7 @@ export function SeamInspector(props: {
                 <p className="hint">Measured on the finished audio. These can’t tell you how it sounds. Only you can.</p>
                 <ul>
                   {state.checks.map((check) => (
-                    <li key={check.name} className={check.passed ? 'ok' : 'bad'}>{check.passed ? '✓' : '!'} {check.text}</li>
+                    <li key={check.name} className={check.passed ? 'ok' : 'bad'}><Icon name={check.passed ? 'check' : 'warning'} width={14} height={14} /> {check.text}</li>
                   ))}
                 </ul>
               </>

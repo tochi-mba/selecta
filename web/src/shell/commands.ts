@@ -1,5 +1,6 @@
 import type { DraftInfo } from '../api';
 import { navigate } from '../router';
+import { setPrefs, Theme } from '../state/prefs';
 import { DESTINATIONS, EXPLORE_TABS, WORKSPACE_TABS } from './manifest';
 
 /** What the command palette can do. It's a shortcut to things that already have an ordinary way to do
@@ -28,6 +29,7 @@ export type CommandContext = {
   songsLeftToAnalyse: number;
   analysing: boolean;
   drafts: Pick<DraftInfo, 'id' | 'name'>[];
+  theme: Theme;
   togglePause: () => void;
   next: () => void;
   jump: () => void;
@@ -62,6 +64,14 @@ export function buildCommands(context: CommandContext): Command[] {
     { id: 'analyse', label: 'Analyse the rest of my library', group: 'Do', unavailable: context.analysing ? 'Analysis is already running.' : context.songsLeftToAnalyse ? undefined : 'Every song has been analysed.', run: context.startAnalysis },
     { id: 'activity', label: 'Activity and Undo', group: 'Do', keywords: 'history recent', run: context.openActivity },
     { id: 'help', label: 'Keyboard shortcuts', group: 'Do', keywords: 'keys help', run: context.openHelp },
+    ...(['light', 'dark', 'system'] as Theme[]).map((theme): Command => ({
+      id: `theme-${theme}`,
+      label: theme === 'system' ? 'Theme: match this computer' : `Theme: ${theme}`,
+      group: 'Do',
+      keywords: 'appearance colour color mode',
+      unavailable: context.theme === theme ? 'It’s already using that.' : undefined,
+      run: () => setPrefs({ theme }),
+    })),
   ];
   const drafts = context.drafts.map((draft): Command => ({
     id: `draft-${draft.id}`,

@@ -56,7 +56,7 @@
 
 /* a phone keeps play and pause in reach however far down the page goes */
 @media (max-width: 760px) {
-  .listen-layout { display: flex; flex-direction: column; gap: var(--space-3); }
+  .listen-layout { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); }
   .listen-main { display: contents; }
   .listen-identity { order: 1; }
   .now .listen-view { order: 2; margin-block: 0; }
@@ -85,7 +85,7 @@
 
 /* the Stage: nothing but the music, readable from across the room */
 .now.stage { max-width: none; width: 100%; outline: none; }
-.stage .listen-layout { display: flex; flex-direction: column; flex: 1 1 auto; justify-content: center; gap: 0; }
+.stage .listen-layout { display: flex; flex-direction: column; align-items: stretch; flex: 1 1 auto; justify-content: center; gap: 0; }
 .stage .listen-main, .stage .listen-side { display: contents; }
 .stage .listen-identity { order: 1; }
 .stage .music-visualizer { order: 2; }

@@ -4,7 +4,11 @@ import { useSyncExternalStore } from 'react';
  * server, so turning any of them back is always safe, and a browser that can't store them just goes
  * back to the defaults next time. */
 
+export type Theme = 'system' | 'light' | 'dark';
+
 export type Prefs = {
+  /** Light, dark, or whatever this computer is set to. */
+  theme: Theme;
   railCollapsed: boolean;
   density: 'comfortable' | 'compact';
   /** Ctrl or Cmd K. Everything it does has an ordinary way to do it too. */
@@ -15,7 +19,10 @@ export type Prefs = {
   classicNav: boolean;
 };
 
-export const DEFAULT_PREFS: Prefs = { railCollapsed: false, density: 'comfortable', palette: true, singleKeys: true, classicNav: false };
+export const DEFAULT_PREFS: Prefs = { theme: 'system', railCollapsed: false, density: 'comfortable', palette: true, singleKeys: true, classicNav: false };
+
+/** What the browser's own title bar should be, matching each theme's background in tokens.css. */
+const BAR_COLOUR = { dark: '#100f0c', light: '#f5f2e9' };
 
 const KEY = 'selecta.prefs';
 const listeners = new Set<() => void>();
@@ -24,6 +31,7 @@ function read(): Prefs {
   try {
     const saved = JSON.parse(window.localStorage.getItem(KEY) ?? '{}') as Partial<Prefs>;
     return {
+      theme: saved.theme === 'light' || saved.theme === 'dark' ? saved.theme : 'system',
       railCollapsed: saved.railCollapsed === true,
       density: saved.density === 'compact' ? 'compact' : 'comfortable',
       palette: saved.palette !== false,
@@ -44,7 +52,14 @@ export function prefs(): Prefs {
 
 function apply(next: Prefs) {
   if (typeof document === 'undefined') return;
-  document.documentElement.dataset.density = next.density;
+  const root = document.documentElement;
+  root.dataset.density = next.density;
+  if (next.theme === 'system') delete root.dataset.theme;
+  else root.dataset.theme = next.theme;
+  for (const bar of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+    const own = bar.media.includes('light') ? BAR_COLOUR.light : BAR_COLOUR.dark;
+    bar.content = next.theme === 'system' ? own : BAR_COLOUR[next.theme];
+  }
 }
 
 export function setPrefs(change: Partial<Prefs>) {
@@ -75,6 +90,27 @@ function subscribe(listener: () => void) {
 
 export function usePrefs(): Prefs {
   return useSyncExternalStore(subscribe, prefs);
+}
+
+const SYSTEM_LIGHT = '(prefers-color-scheme: light)';
+
+function subscribeToSystem(listener: () => void) {
+  const media = window.matchMedia?.(SYSTEM_LIGHT);
+  media?.addEventListener('change', listener);
+  const unsubscribe = subscribe(listener);
+  return () => {
+    media?.removeEventListener('change', listener);
+    unsubscribe();
+  };
+}
+
+/** Which theme is really showing right now, whichever way it was chosen. */
+export function useShownTheme(): 'light' | 'dark' {
+  return useSyncExternalStore(subscribeToSystem, () => {
+    const { theme } = prefs();
+    if (theme !== 'system') return theme;
+    return window.matchMedia?.(SYSTEM_LIGHT).matches ? 'light' : 'dark';
+  });
 }
 
 /** `?ui=classic` in the address turns the older navigation on, and `?ui=new` turns it off, even when

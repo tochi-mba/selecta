@@ -35,6 +35,12 @@ const paths = {
   command: 'M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3Z',
   lock: 'M6 11h12v9H6ZM8 11V8a4 4 0 0 1 8 0v3',
   request: 'M12 4v10M8 10l4 4 4-4M5 20h14',
+  circle: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
+  half: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M12 3v18M12 7h4M12 11h5M12 15h5M12 19h2',
+  dot: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',
+  sun: 'M12 3V2M12 22v-1M4 12H3M21 12h-1M6.3 6.3l-.7-.7M18.4 18.4l-.7-.7M17.7 6.3l.7-.7M5.6 18.4l.7-.7M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+  moon: 'M21 13.5A9 9 0 1 1 10.5 3a7 7 0 0 0 10.5 10.5Z',
+  system: 'M3 5h18v12H3ZM8 21h8M12 17v4',
 } as const;
 
 export type IconName = keyof typeof paths;

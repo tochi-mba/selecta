@@ -6,6 +6,13 @@
     <title>Selecta</title>
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#100f0c" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f2e9" />
+    <!-- before the first paint, so a chosen theme never flashes the other one. Same key as state/prefs.ts -->
+    <script>
+      try {
+        var theme = JSON.parse(localStorage.getItem('selecta.prefs') || '{}').theme;
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch (error) {}
+    </script>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/selecta-192.png" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8ff3a'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23100f0c'/%3E%3C/svg%3E" />
