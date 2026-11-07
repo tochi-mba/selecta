@@ -412,8 +412,12 @@ export function safeDiagnostics(info: Record<string, unknown>): Record<string, u
   }
   if (info.songs && typeof info.songs === 'object' && !Array.isArray(info.songs)) {
     const counts = info.songs as Record<string, unknown>;
-    safe.songs = Object.fromEntries(['total', 'music', 'analysed', 'lyrics', 'ready', 'set_aside'].flatMap((key) =>
-      typeof counts[key] === 'number' && Number.isFinite(counts[key]) ? [[key, counts[key]]] : []));
+    const selected: Record<string, number> = {};
+    for (const key of ['total', 'music', 'analysed', 'lyrics', 'ready', 'set_aside']) {
+      const count = counts[key];
+      if (typeof count === 'number' && Number.isFinite(count)) selected[key] = count;
+    }
+    safe.songs = selected;
   }
   if (Array.isArray(info.recent_operations)) {
     safe.recent_operations = info.recent_operations.slice(-20).flatMap((item) => {
