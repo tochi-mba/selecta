@@ -97,6 +97,18 @@ export function Mix(props: ViewProps) {
   const [name, setName] = useState(mixName);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const focusAfter = useRef<{ key: string; how: 'up' | 'down' | 'handle' } | null>(null);
+  const inspector = useRef<HTMLElement | null>(null);
+  const selectedIdentity = selected?.kind === 'seam' ? `${selected.a}>${selected.b}` : selected?.kind === 'song' ? selected.key : '';
+
+  useEffect(() => {
+    if (!selectedIdentity || narrow) return;
+    const panel = inspector.current;
+    if (typeof panel?.scrollTo !== 'function') return;
+    panel.scrollTo({
+      top: 0,
+      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
+  }, [selectedIdentity, narrow]);
 
   const resizeInspector = (next: number) => {
     const safe = Math.min(Math.max(Math.round(next), MIN_INSPECTOR_WIDTH), MAX_INSPECTOR_WIDTH);
@@ -596,7 +608,7 @@ export function Mix(props: ViewProps) {
               onPointerDown={beginInspectorResize}
               onKeyDown={resizeInspectorWithKeys}
             />
-            <aside className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
+            <aside ref={inspector} className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
               <div className="inspector-head">
                 <h2>{seamInspector ? 'Transition' : 'Song'}</h2>
                 <button aria-label="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>

@@ -408,12 +408,16 @@ button[data-working]::after {
   top: var(--space-4);
   max-height: calc(100vh - var(--space-6) - var(--player-height));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-raised);
   padding: var(--space-4);
   margin-top: 20px;
 }
+@media (prefers-reduced-motion: reduce) { .edit-inspector { scroll-behavior: auto; } }
 .inspector-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .inspector-pair { overflow-wrap: anywhere; margin: var(--space-2) 0; }
 .inspector-tabs { display: flex; gap: var(--space-1); margin: var(--space-3) 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }

@@ -482,6 +482,13 @@ describe('what’s selected', () => {
     expect(within(side).getByRole('tab', { name: 'Listen' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('smoothly resets the inspector when a transition is opened', async () => {
+    const scrollTo = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: scrollTo });
+    await pick();
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' }));
+  });
+
   it('plays the exact render, and the same stays selected when others move', async () => {
     await pick();
     const side = screen.getByRole('complementary', { name: 'This transition' });
