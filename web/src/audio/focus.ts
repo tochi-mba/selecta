@@ -52,6 +52,9 @@ export function audioOwner(): AudioOwner | null {
 
 /** Take over the sound. Whoever had it stops, and the mix pauses if it was playing. */
 export function takeAudio(next: AudioOwner) {
+  // A newly claimed preview supersedes any queued resume from a previous
+  // preview, even if both finished before the main pause promise settled.
+  intentGeneration += 1;
   if (owner && owner.id !== next.id) {
     const before = owner;
     owner = null;
