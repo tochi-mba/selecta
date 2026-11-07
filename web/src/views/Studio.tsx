@@ -188,6 +188,7 @@ export function Studio(props: {
     const made = new StemDeck(session.seconds ?? 1, session.cells ?? 8, chosen);
     made.onCell = setCell;
     deck.current = made;
+    latestShape.current = chosen;
     setShape(chosen);
     made
       .load((side, lane) => `/api/studio/${session.key}/${side}/${lane}`)
@@ -203,7 +204,9 @@ export function Studio(props: {
     // late response could clear an unsaved newer arrangement.
     if (applying.current) return;
     tuneAttempt.current += 1;
+    latestShape.current = next;
     setShape(next);
+    setAsking('');
     setChanges(null);
     setBefore(null);
     setProblem('');
@@ -227,6 +230,7 @@ export function Studio(props: {
       }
       const same = JSON.stringify(answer.shape) === JSON.stringify(shape);
       setBefore(same ? null : shape);
+      latestShape.current = answer.shape;
       setShape(answer.shape);
       deck.current?.setShape(answer.shape);
       if (session?.key) setRetained(keepShape(session.key, answer.shape));
@@ -240,6 +244,8 @@ export function Studio(props: {
   const putBack = () => {
     if (!before || applying.current) return;
     tuneAttempt.current += 1;
+    latestShape.current = before;
+    setAsking('');
     setShape(before);
     if (session?.key) setRetained(keepShape(session.key, before));
     deck.current?.setShape(before);
@@ -283,7 +289,7 @@ export function Studio(props: {
   };
   const use = async () => {
     if (!shape || applying.current || !session) return;
-    const submitted = shape;
+    const submitted = latestShape.current ?? shape;
     applying.current = true;
     tuneAttempt.current += 1;
     setSaving(true);
