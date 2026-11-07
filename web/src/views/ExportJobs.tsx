@@ -28,7 +28,8 @@ function snapshotWords(job: ExportJob): string {
   const first = job.songs[0]?.title;
   const last = job.songs[job.songs.length - 1]?.title;
   const when = new Date(job.created_at * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-  return `${scope}, ${job.songs.length} songs${first && last ? `, ${first} to ${last}` : ''}${job.revision ? `, revision ${job.revision}` : ''}. Started ${when}.`;
+  const identity = job.scope === 'draft' && job.draft !== null ? `, draft ${job.draft}` : '';
+  return `${scope}${identity}, ${job.songs.length} songs${first && last ? `, ${first} to ${last}` : ''}${job.revision ? `, revision ${job.revision}` : ''}. Started ${when}.`;
 }
 
 function Row({ job }: { job: ExportJob }) {
@@ -48,6 +49,22 @@ function Row({ job }: { job: ExportJob }) {
       {job.state === 'preparing' && job.quiet_seconds > 600 && <p><Status kind="blocked">Nothing has finished for a while. Rendering may be waiting on your current mix or on storage room.</Status></p>}
       {job.error && <p className="warn">{job.error}</p>}
       {job.state === 'expired' && <p className="hint">The file isn’t in Selecta’s exports folder any more, so it can’t be downloaded.</p>}
+      <details className="export-snapshot">
+        <summary>View frozen export contents ({job.songs.length} songs, {job.seams.length} transitions)</summary>
+        <p className="hint">
+          {job.scope === 'draft' ? `Draft ${job.draft ?? 'unknown'}` : 'Current mix'} when saved.
+          {job.revision ? ` Revision ${job.revision}.` : ' This older job has no revision identifier.'}
+          {' '}Approximate source duration {length(job.seconds_estimate)}.
+        </p>
+        <ol className="export-snapshot-songs">
+          {job.songs.map((song, index) => <li key={index}><b>{song.title || 'Untitled'}</b> — {song.artist || 'Unknown artist'} <small>(song {song.song_id})</small></li>)}
+        </ol>
+        {!!job.seams.length && (
+          <ul className="export-snapshot-seams">
+            {job.seams.map((seam, index) => <li key={index}>{seam.from} into {seam.to} — transition <code>{seam.key}</code></li>)}
+          </ul>
+        )}
+      </details>
       <div className="row wrap export-job-actions">
         {job.state === 'ready' && <a href={`/api/exports/${encodeURIComponent(job.name)}`} download>download {job.name}</a>}
         {job.state === 'ready' && job.seconds != null && <small className="soft">{length(job.seconds)} long</small>}

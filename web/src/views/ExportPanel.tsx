@@ -83,6 +83,24 @@ export function ExportPanel(props: {
         Save captures exactly the songs and transitions shown for this {inDraft ? 'draft' : 'current mix'} at the moment you start. Later edits will not change the exported file.
       </p>
       {mine?.revision && <p className="hint">Frozen revision <code>{mine.revision}</code>. Use this ID to distinguish this file from later exports of the same mix.</p>}
+      <details className="export-snapshot">
+        <summary>Review {mine ? 'frozen' : 'proposed'} order ({mine ? mine.songs.length : mix.length} songs)</summary>
+        <p className="hint">{mine ? 'The original order below cannot be changed by editing the mix now.' : 'This order will be captured when Save it succeeds. It is not a finished file yet.'}</p>
+        <ol className="export-snapshot-songs">
+          {mine ? mine.songs.map((song, index) => (
+            <li key={index}><b>{song.title || 'Untitled'}</b> — {song.artist || 'Unknown artist'} <small>(song {song.song_id})</small></li>
+          )) : mix.map((song, index) => (
+            <li key={index}><b>{song.title}</b> — {song.artist} <small>(song {song.song_id})</small></li>
+          ))}
+        </ol>
+        {mine && !!mine.seams.length && (
+          <ul className="export-snapshot-seams">
+            {mine.seams.map((seam, index) => (
+              <li key={index}>{seam.from} into {seam.to}: <code>{seam.key}</code></li>
+            ))}
+          </ul>
+        )}
+      </details>
       <ol className="export-stages" aria-label="Export progress">
         <li aria-current={!stage || stage === 'preparing' ? 'step' : undefined}>
           Prepare transitions{mine ? ` — ${mine.seams_ready} of ${mine.seams_total} ready` : ''}
