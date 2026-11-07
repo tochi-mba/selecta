@@ -118,7 +118,7 @@ export function Listening() {
       if (error instanceof ApiError && error.status < 500 && error.status !== 408) {
         pendingResponse.current = null;
         setRetryChoice(null);
-        setError(error.message);
+        setError(`Your response was not saved. ${error.message}`);
       } else {
         setRetryChoice(submitted.choice);
         setError('Could not confirm whether your response was saved. Retry the same answer to continue. Your ratings are kept.');
