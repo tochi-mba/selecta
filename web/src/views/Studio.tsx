@@ -98,6 +98,44 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
   );
 }
 
+/** A guided view over the exact same grid. These controls deliberately make only two
+ * lossless, explainable edits: fill or clear one complete lane. Merely moving between
+ * Shape and Detailed never translates or normalizes the working copy. */
+function StudioShapeEditor({ shape, titles, missing, disabled, onSetLane }: {
+  shape: Shape;
+  titles: Record<Side, string>;
+  missing: string[];
+  disabled: boolean;
+  onSetLane: (side: Side, lane: Lane, value: 0 | 1) => void;
+}) {
+  return (
+    <div className="studio-list studio-shape" role="region" aria-label="Guided shape controls">
+      <p className="hint">Choose which musical parts carry through the whole transition. For finer timing, switch to Detailed; every square stays exactly as you left it.</p>
+      {SIDES.map((side) => (
+        <section key={side} aria-labelledby={`studio-shape-${side}`}>
+          <h4 id={`studio-shape-${side}`}>{titles[side]}</h4>
+          {LANES.map((lane) => {
+            const name = `${side}_${lane}`;
+            const lost = missing.includes(name);
+            const active = shape[side][lane].filter(Boolean).length;
+            const total = shape[side][lane].length;
+            return (
+              <fieldset key={name} disabled={lost || disabled}>
+                <legend>{LANE_WORDS[lane]}{lost ? ' — unavailable' : ''}</legend>
+                <p className="hint" role="status">{active === 0 ? 'Left out' : active === total ? 'Used throughout' : `Used in ${active} of ${total} sections`}</p>
+                <div className="row wrap">
+                  <button type="button" aria-pressed={active === total} onClick={() => onSetLane(side, lane, 1)}>Use throughout</button>
+                  <button type="button" aria-pressed={active === 0} onClick={() => onSetLane(side, lane, 0)}>Leave out</button>
+                </div>
+              </fieldset>
+            );
+          })}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 /** Both songs' voice, drums, bass and melody on one grid. Tap a square and it's heard straight away.
  * Press a name to hear only that part. Four things are kept apart here: the copy you're working on, one
  * recovered from this browser, what's applied to the mix, and the audio that was rendered from it.
@@ -135,7 +173,7 @@ export function Studio(props: {
   const latestShape = useRef<Shape | null>(null);
   latestShape.current = shape;
   const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
-  const [editorMode, setEditorMode] = useState<'grid' | 'list'>('grid');
+  const [editorMode, setEditorMode] = useState<'shape' | 'grid' | 'list'>('grid');
   const deck = useRef<StemDeck | null>(null);
   const grid = useRef<HTMLDivElement>(null);
   const at = useMixPath();
@@ -257,6 +295,10 @@ export function Studio(props: {
     if (!shape || missing.includes(`${side}_${lane}`)) return;
     const cells = shape[side][lane].map((value, at) => (at === index ? (value ? 0 : 1) : value));
     change({ ...shape, [side]: { ...shape[side], [lane]: cells } });
+  };
+  const setLane = (side: Side, lane: Lane, value: 0 | 1) => {
+    if (!shape || missing.includes(`${side}_${lane}`)) return;
+    change({ ...shape, [side]: { ...shape[side], [lane]: shape[side][lane].map(() => value) } });
   };
   const start = async () => {
     listen();
@@ -418,11 +460,20 @@ export function Studio(props: {
             ))}
           </div>
           {restored && <p className="hint" role="status">This is what you were working on before. Start again to go back to what’s in the mix.</p>}
-          <div className="chips" role="group" aria-label="Studio editor layout">
-            <button aria-pressed={editorMode === 'grid'} onClick={() => setEditorMode('grid')}>Time grid</button>
-            <button aria-pressed={editorMode === 'list'} onClick={() => setEditorMode('list')}>Controls by part</button>
+          <div className="chips" role="group" aria-label="Studio editor mode">
+            <button aria-pressed={editorMode === 'shape'} onClick={() => setEditorMode('shape')}>Shape</button>
+            <button aria-pressed={editorMode === 'grid'} onClick={() => setEditorMode('grid')}>Detailed grid</button>
+            <button aria-pressed={editorMode === 'list'} onClick={() => setEditorMode('list')}>Detailed list</button>
           </div>
-          {editorMode === 'grid' ? (
+          {editorMode === 'shape' ? (
+            <StudioShapeEditor
+              shape={shape}
+              titles={titles}
+              missing={missing}
+              disabled={saving}
+              onSetLane={setLane}
+            />
+          ) : editorMode === 'grid' ? (
             <>
               <p className="hint">Arrow keys move around the grid, and Space turns a square on or off. Left of the first square is the part’s name, which plays that part alone.</p>
               <div

@@ -110,10 +110,11 @@ describe('listener display options', () => {
       />,
     );
     expect(screen.getByRole('button', { name: 'Pause' })).toBeVisible();
-    const details = container.querySelector('details.view-options');
+    const details = container.querySelector('details.dj-controls');
     expect(details).not.toBeNull();
     expect(details).not.toHaveAttribute('open');
-    expect(screen.getByText('Display options')).toBeVisible();
+    expect(screen.getByText('DJ controls')).toBeVisible();
+    expect(screen.getByText('Display options')).toBeInTheDocument();
     await screen.findByText('Hello');
   });
 });
@@ -153,6 +154,10 @@ describe('safe next-song steering', () => {
     );
     const bigger = screen.getByRole('button', { name: 'Bigger' });
     const calmer = screen.getByRole('button', { name: 'Calmer' });
+    const djControls = bigger.closest('details');
+    expect(djControls).toHaveClass('dj-controls');
+    expect(djControls).not.toHaveAttribute('open');
+    expect(screen.getByText('Up Next')).toBeVisible();
     bigger.focus();
     fireEvent.click(bigger);
     await waitFor(() => expect(writes).toBe(1));

@@ -147,7 +147,7 @@ button[aria-disabled='true'] { cursor: progress; }
     outline: 2px solid Highlight;
     outline-offset: 1px;
   }
-  .status-warning, .status-failed, .warn { color: Mark; }
+  .status-warning, .status-blocked, .status-failed, .warn { color: Mark; }
   .status-ready, .status-needs-action { color: CanvasText; }
   button:focus-visible, a:focus-visible, input:focus-visible,
   select:focus-visible, textarea:focus-visible, [role='button']:focus-visible {
@@ -177,7 +177,7 @@ button[aria-disabled='true'] { cursor: progress; }
     padding-inline: 4px;
     color: CanvasText;
   }
-  .status-failed, .status-warning, .status-needs-action {
+  .status-failed, .status-warning, .status-blocked, .status-needs-action {
     text-decoration: underline;
     text-underline-offset: 3px;
   }

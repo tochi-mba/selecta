@@ -82,6 +82,7 @@ export function ExportPanel(props: {
         {mix.length ? <>From <b>{mix[0].title}</b> to <b>{mix[mix.length - 1].title}</b>. </> : ''}
         Save captures exactly the songs and transitions shown for this {inDraft ? 'draft' : 'current mix'} at the moment you start. Later edits will not change the exported file.
       </p>
+      {mine?.revision && <p className="hint">Frozen revision <code>{mine.revision}</code>. Use this ID to distinguish this file from later exports of the same mix.</p>}
       <ol className="export-stages" aria-label="Export progress">
         <li aria-current={!stage || stage === 'preparing' ? 'step' : undefined}>
           Prepare transitions{mine ? ` — ${mine.seams_ready} of ${mine.seams_total} ready` : ''}

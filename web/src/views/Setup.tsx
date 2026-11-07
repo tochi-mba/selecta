@@ -85,6 +85,7 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
         </dl>
       </details>
       <div className="row wrap">
+        {ready >= READY_NEEDED && <PageLink to="/mixes" className="button primary">Make my first mix</PageLink>}
         <PageLink to="/library" className="button">Open Library</PageLink>
         {!status.analysis_running && <Action className="primary" run={onAnalyse}>Analyse my songs</Action>}
         {status.analysis_running && <span className="pill rendering">Analysing now</span>}

@@ -48,14 +48,16 @@ export function Action({
   );
 }
 
-export type StatusKind = 'planned' | 'queued' | 'working' | 'ready' | 'warning' | 'failed' | 'needs-action' | 'unavailable';
+export type StatusKind = 'planned' | 'queued' | 'working' | 'recovering' | 'ready' | 'warning' | 'blocked' | 'failed' | 'needs-action' | 'unavailable';
 
 const STATUS: Record<StatusKind, { words: string; mark: IconName }> = {
   planned: { words: 'Planned', mark: 'circle' },
   queued: { words: 'In line', mark: 'clock' },
   working: { words: 'Working on it', mark: 'half' },
+  recovering: { words: 'Recovering', mark: 'half' },
   ready: { words: 'Ready', mark: 'check' },
   warning: { words: 'Ready, with a warning', mark: 'warning' },
+  blocked: { words: 'Blocked', mark: 'warning' },
   failed: { words: 'Didn’t work', mark: 'close' },
   'needs-action': { words: 'Needs you', mark: 'dot' },
   unavailable: { words: 'Not available', mark: 'minus' },

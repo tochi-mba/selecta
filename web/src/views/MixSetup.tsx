@@ -207,8 +207,9 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
   };
 
   return (
-    <Dialog title="How mixes get built" onClose={onClose} footer={<button className="primary" onClick={onClose}>Done</button>}>
-      <p className="hint">These stay as your defaults for every new mix you build. They don’t change a mix you’ve already got. You can change any transition song by song later.</p>
+    <Dialog title="Shape the next mix" onClose={onClose} footer={<button className="primary" onClick={onClose}>Done shaping</button>}>
+      <p className="eyebrow">Optional shape</p>
+      <p className="hint">These stay as your defaults for every new mix you build. They don’t change a mix you’ve already got or anything playing now. You can change any transition song by song later.</p>
       {problem && <p className="warn" role="alert">{problem}</p>}
 
       <h3 className="setup-group">How transitions feel</h3>

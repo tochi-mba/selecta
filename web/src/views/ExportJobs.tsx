@@ -28,7 +28,7 @@ function snapshotWords(job: ExportJob): string {
   const first = job.songs[0]?.title;
   const last = job.songs[job.songs.length - 1]?.title;
   const when = new Date(job.created_at * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-  return `${scope}, ${job.songs.length} songs${first && last ? `, ${first} to ${last}` : ''}. Started ${when}.`;
+  return `${scope}, ${job.songs.length} songs${first && last ? `, ${first} to ${last}` : ''}${job.revision ? `, revision ${job.revision}` : ''}. Started ${when}.`;
 }
 
 function Row({ job }: { job: ExportJob }) {
@@ -45,7 +45,7 @@ function Row({ job }: { job: ExportJob }) {
         {stage.words}
         {job.state === 'preparing' ? `, ${job.seams_ready} of ${job.seams_total} ready` : ''}
       </Status>
-      {job.state === 'preparing' && job.quiet_seconds > 600 && <p className="hint">Nothing has finished for a while. Rendering may be waiting on your current mix or on storage room.</p>}
+      {job.state === 'preparing' && job.quiet_seconds > 600 && <p><Status kind="blocked">Nothing has finished for a while. Rendering may be waiting on your current mix or on storage room.</Status></p>}
       {job.error && <p className="warn">{job.error}</p>}
       {job.state === 'expired' && <p className="hint">The file isn’t in Selecta’s exports folder any more, so it can’t be downloaded.</p>}
       <div className="row wrap export-job-actions">

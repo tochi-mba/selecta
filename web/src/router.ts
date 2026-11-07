@@ -19,6 +19,8 @@ const WORKSHOP_TABS: WorkshopTab[] = ['overview', 'analysis', 'storage', 'source
 /** Friendlier names for the same places. Every older address keeps working and keeps its meaning, so
  * nothing bookmarked or installed breaks, and no address is ever reinterpreted as something else. */
 export const ALIASES: Record<string, string> = {
+  '/make': '/mixes',
+  '/make-a-mix': '/mixes',
   '/explore': '/mixes',
   '/explore/mixes': '/mixes',
   '/explore/words': '/discover',

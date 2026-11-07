@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
+import re
 from pathlib import Path
 
 import pytest
@@ -82,6 +83,7 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
     job = response.json()
     assert [song["song_id"] for song in job["songs"]] == [1, 2]
     assert len(job["seams"]) == 1
+    assert re.fullmatch(r"[0-9a-f]{12}", job["revision"])
 
     try:
         assert started.wait(timeout=3), "The export did not reach the encoding step"
@@ -96,6 +98,7 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
             break
         time.sleep(0.02)
     assert saved["state"] == "ready", saved
+    assert saved["revision"] == job["revision"]
     assert captured["songs"] == [1, 2]
     assert captured["keys"] == [job["seams"][0]["key"]]
     names = [item["name"] for item in client.get("/api/exports/jobs").json()["jobs"]]

@@ -328,8 +328,9 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 .status i { font-style: normal; }
 .status-planned, .status-unavailable, .status-queued { color: var(--status-planned); }
 .status-working { color: var(--status-working); }
+.status-recovering { color: var(--status-recovering); }
 .status-ready { color: var(--status-ready); }
-.status-warning, .status-failed { color: var(--status-failed); }
+.status-warning, .status-blocked, .status-failed { color: var(--status-failed); }
 .status-needs-action { color: var(--status-action); font-weight: 700; }
 
 .skeleton { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }

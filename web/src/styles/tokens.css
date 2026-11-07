@@ -40,7 +40,9 @@
   --status-working: var(--accent);
   --status-planned: var(--soft);
   --status-warning: var(--warn);
+  --status-blocked: var(--warn);
   --status-failed: var(--warn);
+  --status-recovering: var(--request);
   --status-action: var(--accent);
   --status-unavailable: var(--soft);
   --status-request: var(--request);
