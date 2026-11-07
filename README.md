@@ -29,7 +29,7 @@ uv run selecta web
 ```
 
 The first screen asks where your music is, then reads it and analyses it in the background. Pick a
-mix on the Mixes page and press play. Its seams start rendering by themselves, ahead of everything
+mix on the Explore page and press play. Its seams start rendering by themselves, ahead of everything
 else, and you can change how any song hands over to the next on the Edit page.
 
 Drafts let you build another mix without touching what's playing. **Prioritize** one and it renders
@@ -125,7 +125,7 @@ and matches loudness at a shared peak-safe target. It retains originals and stor
 outside the disposable seam cache. Identical context declarations are required, but their musical
 truth still needs checking by the person preparing the clips.
 
-Open Workshop's blind comparison panel and enter the study code, a listener nickname and listening
+Open Workspace's Learning section (`/listening`) and enter the study code, a listener nickname and listening
 setup. Method names stay hidden there. `selecta listening-report heldout-v1` reports missing
 responses, missing quality grades, and bad-transition rates (grades 1–2). Optional private `method`
 labels group results across pairs, with renderer versions kept separate. Old unlabelled clips stay
