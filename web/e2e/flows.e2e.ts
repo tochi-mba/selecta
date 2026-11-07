@@ -10,8 +10,11 @@ async function removeSong(page: Page, title: string) {
 }
 
 async function deleteDraft(page: Page, name: string) {
-  await page.getByRole('button', { name: `More actions for ${name}` }).click();
-  await page.getByRole('menuitem', { name: `Delete ${name}` }).click();
+  await page.getByRole('button', { name: `More actions for ${name}`, exact: true }).click();
+  await page.getByRole('menuitem', { name: `Delete ${name}`, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: `Delete ${name}?`, exact: true });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Delete draft' }).click();
 }
 
 test.beforeEach(async ({ request }) => {
@@ -82,7 +85,7 @@ test('drafts: make one, name it, fill it, and it stays apart from the current mi
   const made = await (await request.post('/api/drafts', { data: { name: 'Friday night' } })).json();
   await request.post(`/api/mix/songs?draft=${made.id}`, { data: { song_id: 5 } });
   await page.reload();
-  const draft = page.getByRole('button', { name: 'Edit Friday night' });
+  const draft = page.getByRole('button', { name: 'Edit Friday night', exact: true });
   await expect(draft).toBeVisible();
   await draft.click();
   await expect(page).toHaveURL(new RegExp(`/mixes/drafts/${made.id}/edit$`));
@@ -94,11 +97,11 @@ test('drafts: make one, name it, fill it, and it stays apart from the current mi
 
   await page.goto('/mixes/mine');
   await deleteDraft(page, 'Friday night');
-  await expect(page.getByRole('button', { name: 'Edit Friday night' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit Friday night', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: /Undo|Bring it back/ }).first().click();
-  await expect(page.getByRole('button', { name: 'Edit Friday night' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Friday night', exact: true })).toBeVisible();
   await deleteDraft(page, 'Friday night');
-  await expect(page.getByRole('button', { name: 'Edit Friday night' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit Friday night', exact: true })).toHaveCount(0);
 });
 
 test('a draft that’s been deleted is explained, and never quietly swapped for another mix', async ({ page, request }) => {
