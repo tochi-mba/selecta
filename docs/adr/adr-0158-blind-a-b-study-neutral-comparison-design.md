@@ -1,7 +1,7 @@
 # ADR-0158 — Blind listening studies: neutral feedback, fair comparison and no visual bias
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 1/8 Implemented, 6/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Listening research.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-The listening-study interface must not favor one render through layout, color, timing or animation. Assessment validity matters more than visual delight on this surface. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+The listening-study interface must not favor one render through layout, color, timing or animation. Assessment validity matters more than visual delight on this surface. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ The listening-study interface must not favor one render through layout, color, t
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 1 source-level Implemented, 0 independently Verified
 
-1. **MI-0158-01 — Audit visual condition masking.** Acceptance: A/B modes have identical styling and DOM/accessibility method anonymity. Required verification: Rendered HTML and screenshot comparison. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0158-02 — Specify identical audio transport.** Acceptance: Switching clips cannot overlap or surprise-resume main mix. Required verification: Audio focus fixture. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0158-03 — Guard heard-state eligibility.** Acceptance: A button click without audio cannot unlock preference. Required verification: Unavailable clip and media readiness tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0158-04 — Balance preference controls.** Acceptance: Tie, cannot judge and both versions treated neutrally. Required verification: Researcher protocol and visual review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0158-05 — Preserve response identity.** Acceptance: Retries do not duplicate or mutate earlier exact trials. Required verification: API idempotency tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0158-06 — Design neutral issue tags.** Acceptance: Issue inputs do not prime quality or reveal hidden method. Required verification: Human study pilot. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0158-07 — Handle interruptions honestly.** Acceptance: Browser reload/failed clip preserves trial or exposes nonjudgment. Required verification: Recovery and keyboard tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0158-01 — Audit visual condition masking.** Acceptance: A/B modes have identical styling and DOM/accessibility method anonymity. Required verification: Rendered HTML and screenshot comparison. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0158-02 — Specify identical audio transport.** Acceptance: Switching clips cannot overlap or surprise-resume main mix. Required verification: Audio focus fixture. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0158-03 — Guard heard-state eligibility.** Acceptance: A button click without audio cannot unlock preference. Required verification: Unavailable clip and media readiness tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx`; `web/src/views/Listening.test.tsx`; independent checks pending.**
+4. **MI-0158-04 — Balance preference controls.** Acceptance: Tie, cannot judge and both versions treated neutrally. Required verification: Researcher protocol and visual review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx`; partial behavior or baseline, task acceptance outstanding.**
+5. **MI-0158-05 — Preserve response identity.** Acceptance: Retries do not duplicate or mutate earlier exact trials. Required verification: API idempotency tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx`; partial behavior or baseline, task acceptance outstanding.**
+6. **MI-0158-06 — Design neutral issue tags.** Acceptance: Issue inputs do not prime quality or reveal hidden method. Required verification: Human study pilot. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0158-07 — Handle interruptions honestly.** Acceptance: Browser reload/failed clip preserves trial or exposes nonjudgment. Required verification: Recovery and keyboard tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0158-08 — Validate study evidence.** Acceptance: Analyze sequence/order effects, sample count and raw responses without superiority claims. Required verification: Counterbalanced research report. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

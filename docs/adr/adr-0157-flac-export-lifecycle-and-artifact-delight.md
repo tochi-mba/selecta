@@ -1,7 +1,7 @@
 # ADR-0157 — FLAC export: frozen revision, trustworthy progress and finished-artifact moment
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 2/8 Implemented, 5/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P1 / Export.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Saving a mix is emotionally meaningful, but a button glow must never imply a playable file exists while seams or encoding remain incomplete. The export remains attached to a frozen revision. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+Saving a mix is emotionally meaningful, but a button glow must never imply a playable file exists while seams or encoding remain incomplete. The export remains attached to a frozen revision. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ Saving a mix is emotionally meaningful, but a button glow must never imply a pla
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 2 source-level Implemented, 0 independently Verified
 
-1. **MI-0157-01 — Specify frozen export identity.** Acceptance: Source kind, source ID, ordered songs, seam keys and revision visible and enforced. Required verification: Export snapshot/API test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0157-02 — Define job state choreography.** Acceptance: Preparing, encoding, ready, fail, interrupted, canceled, expired distinct. Required verification: Job fixtures and reload tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0157-03 — Keep long work non-modal.** Acceptance: Job persists after dialog close/refresh and is discoverable. Required verification: Navigation and restart E2E. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0157-04 — Prevent false download success.** Acceptance: Ready only after confirmed decodable FLAC linked to snapshot. Required verification: Decoded audio and artifact signature check. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0157-05 — Handle changed-since-export.** Acceptance: Old file described correctly, new revision requires new explicit action. Required verification: Concurrent edit/export test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0157-06 — Guard retries and idempotence.** Acceptance: Uncertain response retry cannot create accidental duplicate artifacts. Required verification: Lost response and operation-id tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0157-07 — Specify accessible progress and error.** Acceptance: Screen readers hear meaningful stage changes once, focus retained. Required verification: NVDA/Edge and keyboard review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0157-01 — Specify frozen export identity.** Acceptance: Source kind, source ID, ordered songs, seam keys and revision visible and enforced. Required verification: Export snapshot/API test. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx`; `web/src/views/Mix.test.tsx`; independent checks pending.**
+2. **MI-0157-02 — Define job state choreography.** Acceptance: Preparing, encoding, ready, fail, interrupted, canceled, expired distinct. Required verification: Job fixtures and reload tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0157-03 — Keep long work non-modal.** Acceptance: Job persists after dialog close/refresh and is discoverable. Required verification: Navigation and restart E2E. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0157-04 — Prevent false download success.** Acceptance: Ready only after confirmed decodable FLAC linked to snapshot. Required verification: Decoded audio and artifact signature check. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx`; partial behavior or baseline, task acceptance outstanding.**
+5. **MI-0157-05 — Handle changed-since-export.** Acceptance: Old file described correctly, new revision requires new explicit action. Required verification: Concurrent edit/export test. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx`; `web/src/views/Mix.test.tsx`; independent checks pending.**
+6. **MI-0157-06 — Guard retries and idempotence.** Acceptance: Uncertain response retry cannot create accidental duplicate artifacts. Required verification: Lost response and operation-id tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0157-07 — Specify accessible progress and error.** Acceptance: Screen readers hear meaningful stage changes once, focus retained. Required verification: NVDA/Edge and keyboard review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0157-08 — Evaluate finished moment.** Acceptance: Users identify the right file and revision without confusion. Required verification: Uncoached export and re-export task. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

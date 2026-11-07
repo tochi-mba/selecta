@@ -1,7 +1,7 @@
 # ADR-0155 — Musical discovery: wordplay, harmonic auditions and earned delight
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 2/8 Implemented, 5/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P1 / Discovery.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Word connections and harmonic candidates can be genuinely surprising. Their visual presentation must communicate what the engine detected while preserving the primacy of audible proof and avoiding invented artistic quality. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+Word connections and harmonic candidates can be genuinely surprising. Their visual presentation must communicate what the engine detected while preserving the primacy of audible proof and avoiding invented artistic quality. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ Word connections and harmonic candidates can be genuinely surprising. Their visu
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 2 source-level Implemented, 0 independently Verified
 
-1. **MI-0155-01 — Design word connection narrative.** Acceptance: Phrase, both song lines, move and actual rendered state clearly linked. Required verification: Pair comprehension and false-positive fixtures. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0155-02 — Preserve candidate/result distinction.** Acceptance: Never imply all discovered phrases sound good or are auto-approved. Required verification: Failed seam and unrated discovery checks. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0155-03 — Specify four-stage harmonic audition.** Acceptance: Stage numbering and chord cursor are genuinely playback-driven. Required verification: Audio and seek fixture. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0155-04 — Guard one preview owner.** Acceptance: Audition cannot overlap the main mix or stale pair preview. Required verification: Audio-focus rapid skip tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0155-05 — Handle listening feedback safely.** Acceptance: Yes/No/Skip and changed verdict are exact-pair idempotent operations. Required verification: Lost-response and duplicate-submit tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0155-06 — Make empty and exhausted states useful.** Acceptance: No candidates, analyzing, completed and offline are distinct. Required verification: Discovery lifecycle visual fixtures. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0155-07 — Respect multilingual and instrumental tracks.** Acceptance: Lyric availability and right-to-left line presentation handled. Required verification: Metadata/lyrics edge-case review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0155-01 — Design word connection narrative.** Acceptance: Phrase, both song lines, move and actual rendered state clearly linked. Required verification: Pair comprehension and false-positive fixtures. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0155-02 — Preserve candidate/result distinction.** Acceptance: Never imply all discovered phrases sound good or are auto-approved. Required verification: Failed seam and unrated discovery checks. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0155-03 — Specify four-stage harmonic audition.** Acceptance: Stage numbering and chord cursor are genuinely playback-driven. Required verification: Audio and seek fixture. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx`; `web/src/views/Links.test.tsx`; independent checks pending.**
+4. **MI-0155-04 — Guard one preview owner.** Acceptance: Audition cannot overlap the main mix or stale pair preview. Required verification: Audio-focus rapid skip tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx`; `web/src/views/Links.test.tsx`; independent checks pending.**
+5. **MI-0155-05 — Handle listening feedback safely.** Acceptance: Yes/No/Skip and changed verdict are exact-pair idempotent operations. Required verification: Lost-response and duplicate-submit tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx`; partial behavior or baseline, task acceptance outstanding.**
+6. **MI-0155-06 — Make empty and exhausted states useful.** Acceptance: No candidates, analyzing, completed and offline are distinct. Required verification: Discovery lifecycle visual fixtures. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0155-07 — Respect multilingual and instrumental tracks.** Acceptance: Lyric availability and right-to-left line presentation handled. Required verification: Metadata/lyrics edge-case review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0155-08 — Measure musical delight without bias.** Acceptance: Participants evaluate actual connections blind to engine confidence. Required verification: Counterbalanced real audio quality notes. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

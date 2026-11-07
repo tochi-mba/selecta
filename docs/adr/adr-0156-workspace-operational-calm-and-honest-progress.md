@@ -1,7 +1,7 @@
 # ADR-0156 — Workspace calm: background progress, storage capacity and action-first status
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 2/8 Implemented, 5/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P1 / Workspace.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Source watching, analysis, rendered seams, storage and diagnostics are required for a local-first DJ. The best operational UX is quiet until a human decision is needed, with no fake progress or unnecessary alerts. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+Source watching, analysis, rendered seams, storage and diagnostics are required for a local-first DJ. The best operational UX is quiet until a human decision is needed, with no fake progress or unnecessary alerts. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ Source watching, analysis, rendered seams, storage and diagnostics are required 
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 2 source-level Implemented, 0 independently Verified
 
-1. **MI-0156-01 — Define operations information priority.** Acceptance: What needs action first; routine work is secondary. Required verification: User triage comprehension test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0156-02 — Specify honest job states.** Acceptance: Queued/working/paused/blocked/failed and estimates never conflated. Required verification: Job fixture matrix and late-status checks. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0156-03 — Visualize resource priority.** Acceptance: Current mix/draft/analysis/spare order explained when delayed. Required verification: Worker scheduling and status E2E. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0156-04 — Design storage budget interactions.** Acceptance: Slider reports actual GB, protection and safe-free-space consequences. Required verification: Boundary and low-disk tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0156-05 — Protect source-watch semantics.** Acceptance: Missing/unwatched folders never imply original file deletion. Required verification: Folder disconnect and re-add tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0156-06 — Specify diagnostics affordances.** Acceptance: Copy payload excludes names/paths and raw logs appear on demand. Required verification: Privacy allowlist and AT tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0156-07 — Keep keyboard/mobile operations reachable.** Acceptance: Source forms and meters work under keyboard/zoom. Required verification: 320px and on-screen keyboard tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0156-01 — Define operations information priority.** Acceptance: What needs action first; routine work is secondary. Required verification: User triage comprehension test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0156-02 — Specify honest job states.** Acceptance: Queued/working/paused/blocked/failed and estimates never conflated. Required verification: Job fixture matrix and late-status checks. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0156-03 — Visualize resource priority.** Acceptance: Current mix/draft/analysis/spare order explained when delayed. Required verification: Worker scheduling and status E2E. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0156-04 — Design storage budget interactions.** Acceptance: Slider reports actual GB, protection and safe-free-space consequences. Required verification: Boundary and low-disk tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; partial behavior or baseline, task acceptance outstanding.**
+5. **MI-0156-05 — Protect source-watch semantics.** Acceptance: Missing/unwatched folders never imply original file deletion. Required verification: Folder disconnect and re-add tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; `web/src/views/Workshop.test.tsx`; independent checks pending.**
+6. **MI-0156-06 — Specify diagnostics affordances.** Acceptance: Copy payload excludes names/paths and raw logs appear on demand. Required verification: Privacy allowlist and AT tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; `web/src/views/Workshop.test.tsx`; independent checks pending.**
+7. **MI-0156-07 — Keep keyboard/mobile operations reachable.** Acceptance: Source forms and meters work under keyboard/zoom. Required verification: 320px and on-screen keyboard tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0156-08 — Measure operator recovery.** Acceptance: People resolve analysis/storage/source errors without coaching. Required verification: Injected error study with success denominator. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
