@@ -328,7 +328,7 @@ test('the keyboard alone can request a song, cancel it, and get back to where it
   await page.keyboard.press('r');
   const drawer = page.getByRole('dialog', { name: 'Requests' });
   await expect(drawer).toBeVisible();
-  const box = drawer.getByRole('textbox', { name: 'Request a song' });
+  const box = drawer.getByRole('combobox', { name: 'Request a song' });
   await expect(box).toBeFocused();
   await box.fill('Déjà');
   await expect(drawer.getByRole('button', { name: /Déjà Vu/ })).toBeVisible();
