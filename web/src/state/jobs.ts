@@ -8,6 +8,22 @@ let timer: number | null = null;
 let reading: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
+function completeJobs(value: Jobs): boolean {
+  return !!value
+    && Array.isArray(value.failed_seams)
+    && Array.isArray(value.failed_songs)
+    && !!value.mix
+    && typeof value.mix.queued === 'number'
+    && typeof value.mix.rendering === 'number'
+    && typeof value.mix.none === 'number'
+    && !!value.analysis
+    && typeof value.analysis.left === 'number';
+}
+
+const onVisible = () => {
+  if (document.visibilityState === 'visible' && listeners.size) void refreshJobs();
+};
+
 function publish(next: JobsSnapshot) {
   snapshot = next;
   for (const listener of listeners) listener();
@@ -16,7 +32,10 @@ function publish(next: JobsSnapshot) {
 export function refreshJobs(): Promise<void> {
   if (reading) return reading;
   reading = get<Jobs>('/jobs')
-    .then((jobs) => publish({ jobs, stale: false, unsupported: false }))
+    .then((jobs) => {
+      if (completeJobs(jobs)) publish({ jobs, stale: false, unsupported: false });
+      else publish({ ...snapshot, jobs: null, stale: true, unsupported: false });
+    })
     .catch((error) => {
       if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
         publish({ jobs: null, stale: false, unsupported: true });
@@ -32,13 +51,17 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   if (listeners.size === 1) {
     void refreshJobs();
-    timer = window.setInterval(() => void refreshJobs(), 5000);
+    timer = window.setInterval(() => {
+      if (document.visibilityState !== 'hidden') void refreshJobs();
+    }, 5000);
+    document.addEventListener('visibilitychange', onVisible);
   }
   return () => {
     listeners.delete(listener);
     if (!listeners.size && timer !== null) {
       window.clearInterval(timer);
       timer = null;
+      document.removeEventListener('visibilitychange', onVisible);
     }
   };
 }

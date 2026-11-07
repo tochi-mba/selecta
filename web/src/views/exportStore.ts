@@ -34,7 +34,10 @@ export function refreshExports(): Promise<void> {
   return get<{ jobs: ExportJob[] }>('/exports/jobs').then(
     (answer) => {
       // an answer to an older question can't overwrite a newer one
-      if (mine === asked) changed({ jobs: answer.jobs, stale: false, unsupported: false });
+      if (mine !== asked) return;
+      // An older or partial response is not an empty export list.
+      if (!Array.isArray(answer?.jobs)) changed({ stale: true });
+      else changed({ jobs: answer.jobs, stale: false, unsupported: false });
     },
     (error: unknown) => {
       if (mine !== asked) return;
@@ -47,19 +50,29 @@ export function refreshExports(): Promise<void> {
 function schedule() {
   window.clearTimeout(timer);
   if (!listeners.size) return;
-  const busy = now.jobs?.some(isExportActive);
+  const busy = document.visibilityState !== 'hidden' && now.jobs?.some(isExportActive);
   timer = window.setTimeout(() => {
     void refreshExports().finally(schedule);
   }, busy ? QUICK_MS : SLOW_MS);
 }
 
+const whenVisible = () => {
+  if (document.visibilityState === 'visible' && listeners.size) void refreshExports().finally(schedule);
+};
+
 function subscribe(listener: () => void) {
   const first = !listeners.size;
   listeners.add(listener);
-  if (first) void refreshExports().finally(schedule);
+  if (first) {
+    document.addEventListener('visibilitychange', whenVisible);
+    void refreshExports().finally(schedule);
+  }
   return () => {
     listeners.delete(listener);
-    if (!listeners.size) window.clearTimeout(timer);
+    if (!listeners.size) {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', whenVisible);
+    }
   };
 }
 
