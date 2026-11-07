@@ -93,7 +93,6 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
     } finally {
       pendingWrites.current -= 1;
       readVersion.current += 1;
-      if (!pendingWrites.current) void refresh();
     }
   };
 
@@ -134,6 +133,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   };
   const keepCurrent = async () => {
     const made = await write(() => post<{ id: number; name: string }>('/drafts', { copy_current: true }));
+    await refresh();
     notify(`Saved a copy of your current mix as ${made.name}. What’s playing hasn’t changed.`);
   };
   const prioritize = (draft: DraftInfo) => onDraft(draft, 'put that in line', async () => {
@@ -146,6 +146,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   });
   const duplicate = (draft: DraftInfo) => onDraft(draft, 'copy that', async () => {
     const made = await write(() => post<{ name: string }>(`/drafts/${draft.id}/duplicate`));
+    await refresh();
     notify(`Made a copy: ${made.name}.`);
   });
   const remove = (draft: DraftInfo) => onDraft(draft, 'delete that', async () => {
