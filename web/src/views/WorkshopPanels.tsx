@@ -42,6 +42,9 @@ export function StoragePanel() {
   const [limit, setLimit] = useState<number | null>(null);
   const wait = useRef<number | undefined>(undefined);
   const saves = useRef(0);
+  // A slow earlier budget write must not overtake the most recently chosen
+  // limit. Serialise writes and apply only the newest answer to the controls.
+  const writeQueue = useRef<Promise<void>>(Promise.resolve());
   const confirmed = useRef<number | null>(null);
   const [saved, setSaved] = useState(true);
   const [problem, setProblem] = useState('');
@@ -77,23 +80,26 @@ export function StoragePanel() {
     const mine = saves.current;
     window.clearTimeout(wait.current);
     wait.current = window.setTimeout(() => {
-      void post<Storage>('/storage', { budget_gb: value })
+      const work = writeQueue.current.then(() => post<Storage>('/storage', { budget_gb: value }))
         .then((answer) => {
-          // only the last one moved counts, and it shows what was really saved
-          if (mine !== saves.current) return;
+          // All successful responses update the confirmed server value; only
+          // the latest choice updates the visible setting. If that choice
+          // later fails, the fallback is the last real accepted limit.
           confirmed.current = answer.budget_bytes / GB;
+          if (mine !== saves.current) return;
           setStorage(answer);
           setLimit(answer.budget_bytes / GB);
+          setProblem('');
           setSaved(true);
         })
         .catch((error: Error) => {
           if (mine !== saves.current) return;
-          // it goes back to what's really in force, and what you asked for can be sent again
           setProblem(error.message);
           setWanted(value);
           setSaved(true);
           if (confirmed.current !== null) setLimit(confirmed.current);
         });
+      writeQueue.current = work;
     }, 400);
   };
 
