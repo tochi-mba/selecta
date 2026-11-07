@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { get, MixData, post, VibeCard } from '../api';
+import { ApiError, get, MixData, post, VibeCard } from '../api';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { useLocationText } from '../router';
+import { orderOf } from '../state/readiness';
 import { EXPLORE_TABS } from '../shell/manifest';
 import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
@@ -15,7 +16,7 @@ const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 type Asked = { key: string; name: string; open: boolean };
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshStatus }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus }: ViewProps) {
   const [cards, setCards] = useState<VibeCard[] | null>(null);
   const [songs, setSongs] = useState(12);
   const [building, setBuilding] = useState('');
@@ -42,7 +43,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     setBuilding(key);
     setProblem('');
     try {
-      const data = await post<MixData>(`/vibes/${key}/build?count=${songs}`);
+      const data = await post<MixData>(`/vibes/${key}/build?count=${songs}`, undefined, {
+        'x-mix-order': orderOf(mix),
+      });
       setMixData(data);
       rememberStartedAMix();
       notify(`${name}: ${data.mix.length} songs.`, true);
@@ -53,6 +56,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         void player.playFrom(0);
       }
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       setProblem((error as Error).message);
     } finally {
       buildingNow.current = false;

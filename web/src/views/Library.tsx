@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { get, LibraryPage, LibrarySong, MixData, post } from '../api';
+import { ApiError, get, LibraryPage, LibrarySong, MixData, post } from '../api';
 import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
@@ -35,7 +35,7 @@ const pagesFrom = (text: string | null) => {
   return Number.isInteger(pages) && pages > 1 ? Math.min(pages, 200) : 1;
 };
 
-export function Library({ mix, now, player, setMixData, setView, notify, status, refreshStatus }: ViewProps) {
+export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus }: ViewProps) {
   const query = useQueryParam('q') ?? '';
   const filter = useQueryParam('show') ?? 'all';
   const sort = useQueryParam('sort') ?? 'title';
@@ -176,21 +176,30 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const never = async (song: LibrarySong) => {
     await post(`/songs/${song.id}/never`);
     notify(song.never ? `${song.title} can play again.` : `${song.title} won’t be picked for mixes.`);
-    await refreshShown();
+    await load();
   };
   const [building, setBuilding] = useState(false);
+  const buildingNow = useRef(false);
   const [confirmStart, setConfirmStart] = useState<LibrarySong | null>(null);
   const startFrom = async (song: LibrarySong) => {
+    // Two different rows can be clicked before React paints the busy state.
+    if (buildingNow.current) return;
+    buildingNow.current = true;
     setBuilding(true);
     try {
-      const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`);
+      // A late build must not replace a mix edited in another tab.
+      const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`, undefined, {
+        'x-mix-order': orderOf(mix),
+      });
       setMixData(data);
       setView('Now');
       void player.playFrom(0);
       notify(`A mix starting from ${song.title}.`, true);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       notify((error as Error).message || 'Couldn’t build that mix. Try again.');
     } finally {
+      buildingNow.current = false;
       setBuilding(false);
     }
   };
@@ -217,7 +226,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const setPriority = async (song: LibrarySong) => {
     await post(`/songs/${song.id}/priority?priority=${song.priority ? 0 : 100}`);
     notify(song.priority ? `${song.title} moved to background processing.` : `${song.title} moved to the priority list.`);
-    await refreshShown();
+    await load();
   };
   const shownDetails = rows?.find((song) => song.id === opened) ?? null;
   const { counts } = status;
@@ -330,7 +339,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         })}
       </ul>
       {next && <Action className="library-more" working="Loading…" run={more}>Show more songs</Action>}
-      {shownDetails && <SongDetails song={shownDetails} onClose={() => setOpened(null)} onChanged={() => void refreshShown()} notify={notify} onPriority={setPriority} onNever={never} />}
+      {shownDetails && <SongDetails song={shownDetails} onClose={() => setOpened(null)} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} />}
       {confirmStart && (
         <Dialog
           title="Replace your current mix?"

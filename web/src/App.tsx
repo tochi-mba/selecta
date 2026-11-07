@@ -191,14 +191,35 @@ export function App() {
     });
     return () => connectMainPlayer(null);
   }, [player]);
-  const playDraft = useCallback(async (id: number, from = 0) => {
-    const next = await post<MixData>(`/drafts/${id}/play`);
-    setMixData(next);
-    navigate('/listen');
-    void player.playFrom(from);
-    const order = orderOf(next.mix);
-    showToast(`Now playing ${next.name}. What was playing is kept in your drafts.`, { scope: 'current', undo: () => undoIn(null, order) });
-  }, [player, setMixData, undoIn]);
+  const [confirmDraft, setConfirmDraft] = useState<{ id: number; from: number; order: string; replacing: string } | null>(null);
+  const activatingDraft = useRef(false);
+  const activateDraft = useCallback(async (id: number, from: number, expectedOrder: string) => {
+    if (activatingDraft.current) return;
+    activatingDraft.current = true;
+    try {
+      // The server rejects a draft activation if the current mix changed in
+      // another tab since the listener chose which mix to replace.
+      const next = await post<MixData>(`/drafts/${id}/play`, undefined, { 'x-mix-order': expectedOrder });
+      setMixData(next);
+      navigate('/listen');
+      void player.playFrom(from);
+      const order = orderOf(next.mix);
+      showToast(`Now playing ${next.name}. What was playing is kept in your drafts.`, { scope: 'current', undo: () => undoIn(null, order) });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
+      throw error;
+    } finally {
+      activatingDraft.current = false;
+    }
+  }, [player, refreshMix, setMixData, undoIn]);
+  const playDraft = useCallback((id: number, from = 0) => {
+    const order = orderOf(mixRef.current);
+    if (mixRef.current.length && player.state.phase !== 'idle') {
+      setConfirmDraft({ id, from, order, replacing: data.name });
+      return Promise.resolve();
+    }
+    return activateDraft(id, from, order);
+  }, [activateDraft, data.name, player]);
   const requests = useRequests({ mix, player, onMix: setMixData }, notify);
   const foundAt = useRef<number | null>(null);
   useEffect(() => {
@@ -588,6 +609,25 @@ export function App() {
           )}
         </Section>
       </Shell>
+      {confirmDraft && (
+        <Dialog
+          title={`Replace ${confirmDraft.replacing}?`}
+          onClose={() => setConfirmDraft(null)}
+          footer={(
+            <>
+              <button onClick={() => setConfirmDraft(null)}>Keep current mix</button>
+              <Action className="primary" working="Switching…" run={async () => {
+                const choice = confirmDraft;
+                setConfirmDraft(null);
+                await activateDraft(choice.id, choice.from, choice.order);
+              }}>Replace with draft</Action>
+            </>
+          )}
+        >
+          <p>Playing this draft will stop the current mix. The old mix is kept in My Mixes, and you can undo the switch.</p>
+          <p className="hint">Cancel to keep listening without changing either mix.</p>
+        </Dialog>
+      )}
       {requesting && (
         <Drawer title="Requests" onClose={() => setRequesting(false)}>
           <RequestsPanel />
