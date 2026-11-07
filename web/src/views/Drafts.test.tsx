@@ -219,7 +219,7 @@ describe('your drafts', () => {
     const up = await screen.findByRole('button', { name: 'Move Draft 2 up the line' });
     fireEvent.click(up);
     fireEvent.click(screen.getByRole('button', { name: 'Move Draft 2 down the line' }));
-    expect(moves).toBe(1);
+    await waitFor(() => expect(moves).toBe(1));
     await act(async () => { releaseFirst(); });
     await waitFor(() => expect(moves).toBe(2));
     await waitFor(() => expect(within(screen.getByRole('group', { name: 'Draft 2 in the render line' })).getByText('2nd in line')).toBeInTheDocument());
