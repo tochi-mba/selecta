@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, status } from '../test/backend';
@@ -115,6 +115,53 @@ describe('listener display options', () => {
     expect(details).not.toHaveAttribute('open');
     expect(screen.getByText('Display options')).toBeVisible();
     await screen.findByText('Hello');
+  });
+});
+
+describe('safe next-song steering', () => {
+  it('blocks overlapping steering presses until the first server change finishes', async () => {
+    let finish: () => void = () => {};
+    let writes = 0;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/mix/1/swap') && init?.method === 'POST') {
+        writes += 1;
+        await new Promise<void>((done) => { finish = done; });
+        return new Response(JSON.stringify({ mix: [mix[0], { ...mix[0], position: 1, song_id: 2, title: 'New Next' }] }), { status: 200 });
+      }
+      if (url.includes('/songs/1')) return new Response(JSON.stringify(detail), { status: 200 });
+      return new Response('{}', { status: 200 });
+    }));
+    const tracks = [mix[0], { ...mix[0], position: 1, song_id: 2, title: 'Next Song' }];
+    const player = new SetPlayer(() => tracks, () => {});
+    const notify = vi.fn();
+    render(
+      <Now
+        status={status()}
+        mix={tracks}
+        mixName="Test mix"
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={() => {}}
+        refreshStatus={() => {}}
+        player={player}
+        now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}}
+        notify={notify}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    const bigger = screen.getByRole('button', { name: 'Bigger' });
+    const calmer = screen.getByRole('button', { name: 'Calmer' });
+    fireEvent.click(bigger);
+    await waitFor(() => expect(writes).toBe(1));
+    expect(calmer).toBeDisabled();
+    fireEvent.click(calmer);
+    expect(writes).toBe(1);
+    await act(async () => { finish(); });
+    await waitFor(() => expect(calmer).toBeEnabled());
+    expect(writes).toBe(1);
+    expect(notify).toHaveBeenCalled();
   });
 });
 
