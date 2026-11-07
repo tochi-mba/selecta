@@ -52,7 +52,7 @@ a.button:hover { border-color: var(--text); }
 .nav a:hover { color: var(--text); }
 .nav .brand { font: 900 1.25rem var(--display); letter-spacing: -0.02em; color: var(--text); }
 .nav .brand-mark { display: none; }
-.mobile-label { display: none; }
+.nav-more-mobile { display: none; }
 .nav li a i { font-style: normal; width: 1.4em; text-align: center; flex: none; }
 .nav a[aria-current='true'] { color: var(--text); }
 .nav .count, .mini .count, .context-bar .count { color: var(--request); font-weight: 700; }
@@ -138,12 +138,30 @@ a.button:hover { border-color: var(--text); }
   }
   .nav li a i { font-size: 1.05rem; line-height: 1; }
   .nav-context { display: none; }
-  .mobile-label { display: inline; }
-  .desktop-label { display: none; }
+  .nav-more-desktop { display: none !important; }
+  .nav-more-mobile {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 0.68rem;
+  }
+  .nav-more-mobile[aria-current='page'] { color: var(--text); background: var(--surface-control); }
   .mini-volume { display: none; }
   /* with a keyboard up, what's being typed gets the room */
   :root[data-keyboard='open'] .nav, :root[data-keyboard='open'] .mini { display: none; }
 }
+.more-nav ul { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-2); }
+.more-nav a { display: block; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); text-decoration: none; }
+.more-nav a[aria-current='page'] { border-color: var(--focus); background: var(--surface-selected); }
 .listen-empty {
   min-height: calc(100dvh - var(--header-height) - var(--bottom-chrome));
   display: grid;

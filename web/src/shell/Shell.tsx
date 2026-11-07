@@ -4,11 +4,11 @@ import { NowState, SetPlayer } from '../player';
 import { Route, savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
-import { announce, LiveRegion } from '../ui/controls';
+import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
-import { CLASSIC_DESTINATIONS, describeRoute, DESTINATIONS, destinationOf } from './manifest';
+import { CLASSIC_DESTINATIONS, describeRoute, DESTINATIONS, destinationOf, WORKSPACE_TABS } from './manifest';
 import { PageLink } from './PageLink';
 
 export { PageLink };
@@ -162,6 +162,7 @@ export function Shell({
   const content = useRef<HTMLDivElement>(null);
   const first = useRef(true);
   const [popped, setPopped] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const prefs = usePrefs();
   useKeyboardInset();
 
@@ -225,10 +226,14 @@ export function Shell({
                 ))}
             {!prefs.classicNav && workspace && (
               <li className="nav-more">
-                <PageLink to={workspace.path} data-tip={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
+                <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
                   <Icon name={workspace.icon} />
-                  <span className="nav-label"><span className="desktop-label">{workspace.label}</span><span className="mobile-label">More</span></span>
+                  <span className="nav-label">{workspace.label}</span>
                 </PageLink>
+                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
+                  <Icon name={workspace.icon} />
+                  <span className="nav-label">More</span>
+                </button>
               </li>
             )}
             {hasMix && (
@@ -262,6 +267,21 @@ export function Shell({
         {children}
       </div>
       {withPlayer && song && <MiniPlayer player={player} now={now} song={song} onRequests={onRequests} waiting={waitingRequests} />}
+      {moreOpen && (
+        <Drawer title="More" onClose={() => setMoreOpen(false)}>
+          <nav className="more-nav" aria-label="Workspace">
+            <p className="eyebrow">Workspace</p>
+            <p className="hint">Analysis, sources, storage, learning and diagnostics.</p>
+            <ul>
+              {WORKSPACE_TABS.map((item) => (
+                <li key={item.tab}>
+                  <PageLink to={item.path} aria-current={route.page === 'workshop' && route.tab === item.tab ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{item.label}</PageLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </Drawer>
+      )}
       <Toaster />
       <LiveRegion />
     </div>
