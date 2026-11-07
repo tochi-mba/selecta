@@ -6,7 +6,8 @@ import { ExportJob, MixData, MixItem, Status } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, seam, songs, status } from '../test/backend';
 import { Adder } from './Adder';
-import { resetExports } from './exportStore';
+import { refreshExports, resetExports } from './exportStore';
+import { ExportPanel } from './ExportPanel';
 import { Mix } from './Mix';
 import { MixScope } from './mixScope';
 import { RequestsContext, RequestsState } from './Requests';
@@ -569,6 +570,29 @@ describe('saving as a file', () => {
   });
 
   beforeEach(() => resetExports());
+
+  it('never confuses two different drafts with identical songs and transition keys', async () => {
+    fakeBackend({
+      'GET /exports/jobs': { jobs: [exportJob({ scope: 'draft', draft: 101, state: 'ready', can_cancel: false, seams_ready: 1 })] },
+    });
+    await refreshExports();
+    render(
+      <MixScope.Provider value={202}>
+        <ExportPanel
+          mix={songs(seam('ready', 'a'))}
+          mixName="Second draft"
+          inDraft
+          guard={{}}
+          setMixData={() => {}}
+          names={{}}
+          onClose={() => {}}
+        />
+      </MixScope.Provider>,
+    );
+    expect(screen.getByRole('dialog', { name: 'Save as an audio file' })).toHaveTextContent('Second draft');
+    expect(screen.queryByRole('link', { name: 'download mix.flac' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save it' })).toBeEnabled();
+  });
 
   it('says exactly which mix, and what it’s waiting on', async () => {
     fakeBackend({ 'GET /exports/jobs': { jobs: [] } });

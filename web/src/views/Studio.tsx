@@ -27,9 +27,21 @@ const UNSAVED = 'selecta.studio.';
 /** The column of solo buttons, in front of the squares, in the grid's one tab stop. */
 const SOLO_COLUMN = -1;
 
-function savedShape(key: string): Shape | null {
+function savedShape(key: string, cells: number): Shape | null {
   try {
-    return JSON.parse(window.localStorage.getItem(UNSAVED + key) ?? 'null');
+    // A browser may still hold a draft written by an older Selecta version or a different
+    // bar layout. Never feed a malformed grid into the audio deck or overwrite the current
+    // transition with it. The committed shape remains the safe starting point.
+    const candidate: unknown = JSON.parse(window.localStorage.getItem(UNSAVED + key) ?? 'null');
+    if (!candidate || typeof candidate !== 'object') return null;
+    const saved = candidate as Shape;
+    for (const side of SIDES) {
+      for (const lane of LANES) {
+        const squares = saved[side]?.[lane];
+        if (!Array.isArray(squares) || squares.length !== cells || squares.some((value) => value !== 0 && value !== 1)) return null;
+      }
+    }
+    return saved;
   } catch {
     return null;
   }
@@ -128,7 +140,7 @@ export function Studio(props: {
     if (session?.status !== 'ready' || deck.current || !session.start_shape) return;
     const committed = session.shape ?? session.start_shape;
     // what you were working on is still here, even after leaving the page or a failed render
-    const unsaved = savedShape(session.key);
+    const unsaved = savedShape(session.key, session.cells ?? 8);
     const chosen = unsaved ?? committed;
     setRestored(!!unsaved && JSON.stringify(unsaved) !== JSON.stringify(committed));
     const made = new StemDeck(session.seconds ?? 1, session.cells ?? 8, chosen);
@@ -277,7 +289,7 @@ export function Studio(props: {
     <section className="studio" aria-label="Stem studio">
       <header className="studio-head">
         <div className="studio-pair">
-          <h3>Shape this transition</h3>
+          <h3>Shape transition {position}</h3>
           <p><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <b>{item.title}</b></p>
         </div>
         {shape && loaded && (

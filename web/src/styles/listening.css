@@ -60,7 +60,9 @@
   .listen-layout { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); }
   .listen-main { display: contents; }
   .listen-identity { order: 1; }
-  .now .listen-view { order: 2; margin-block: 0; }
+  /* The disclosure owns the mobile flex order, not its nested fieldset. */
+  .now .view-options { order: 2; margin-block: 0; }
+  .now .listen-view { margin-block: 0; }
   .music-visualizer { order: 3; }
   .strip { order: 4; }
   .seek-note { order: 5; }

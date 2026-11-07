@@ -64,6 +64,7 @@ describe('the seam studio', () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+    window.localStorage.removeItem('selecta.studio.abc');
   });
 
   it('says how long the stems will take while they are split, and that the mix keeps playing', async () => {
@@ -144,6 +145,29 @@ describe('the seam studio', () => {
     act(() => deck.made[0].onCell(1));
     expect(cell).toHaveClass('now');
     expect(screen.getByRole('button', { name: 'Song 1 drums, square 3' })).not.toHaveClass('now');
+  });
+
+  it('ignores a corrupted local grid and safely uses the server shape', async () => {
+    window.localStorage.setItem('selecta.studio.abc', JSON.stringify({ a: { vocals: [1] } }));
+    open();
+    expect(await square('Song 1 voice, square 1')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Nothing to recover')).toBeInTheDocument();
+    expect(deck.made[0].shape).toEqual(ready.start_shape);
+  });
+
+  it('recovers a valid uncommitted grid for the same transition', async () => {
+    const recovered = shape(0, 1);
+    window.localStorage.setItem('selecta.studio.abc', JSON.stringify(recovered));
+    open();
+    expect(await square('Song 2 bass, square 1')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Yes, your earlier work')).toBeInTheDocument();
+    expect(deck.made[0].shape).toEqual(recovered);
+  });
+
+  it('shows which numbered pair is being shaped', async () => {
+    open();
+    expect(await square('Song 1 voice, square 1')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Shape transition 1' })).toBeInTheDocument();
   });
 
   it('starts from the shape already chosen when coming back to a seam', async () => {
