@@ -3,7 +3,7 @@ import { ApiError, Eta, MixData, MixItem, post } from '../api';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
-import { Action, Problem } from '../ui/controls';
+import { Action, announce, Problem } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { moveInGrid } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
@@ -69,11 +69,12 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
 }) {
   return (
     <div className="studio-list" aria-label="Stem controls by song and part">
-      {SIDES.map((side) => (
+      {SIDES.map((side, sideIndex) => (
         <section key={side} aria-labelledby={`studio-list-${side}`}>
           <h4 id={`studio-list-${side}`}>{titles[side]}</h4>
-          {LANES.map((lane) => {
+          {LANES.map((lane, laneIndex) => {
             const name = `${side}_${lane}`;
+            const row = sideIndex * LANES.length + laneIndex;
             const lost = missing.includes(name);
             return (
               <fieldset key={name} disabled={lost || disabled}>
@@ -84,7 +85,7 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
                 <div className="studio-list-cells">
                   {shape[side][lane].map((value, index) => (
                     <label key={index}>
-                      <input type="checkbox" checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
+                      <input type="checkbox" data-cell={`${row}-${index}`} checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
                       <span>Bar {index * barsPerCell + 1}</span>
                     </label>
                   ))}
@@ -174,6 +175,11 @@ export function Studio(props: {
   latestShape.current = shape;
   const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
   const [editorMode, setEditorMode] = useState<'shape' | 'grid' | 'list'>('grid');
+  const changeEditorMode = (next: 'shape' | 'grid' | 'list') => {
+    if (next === editorMode) return;
+    setEditorMode(next);
+    announce(`${next === 'shape' ? 'Shape' : next === 'grid' ? 'Detailed grid' : 'Detailed list'} controls. All eight lanes and every square are unchanged.`);
+  };
   const deck = useRef<StemDeck | null>(null);
   const grid = useRef<HTMLDivElement>(null);
   const at = useMixPath();
@@ -439,10 +445,10 @@ export function Studio(props: {
             </p>
           )}
           <div className="row wrap">
-            <button disabled={saving || !!asking} onClick={() => void askSelecta(false)}>
+            <button disabled={saving || !!asking} aria-busy={asking === 'arrange'} onClick={() => void askSelecta(false)}>
               {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
             </button>
-            <button disabled={saving || !!asking} onClick={() => void askSelecta(true)}>
+            <button disabled={saving || !!asking} aria-busy={asking === 'tune'} onClick={() => void askSelecta(true)}>
               {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
             </button>
             {before && <button disabled={saving} onClick={putBack}>Put it back</button>}
@@ -461,9 +467,9 @@ export function Studio(props: {
           </div>
           {restored && <p className="hint" role="status">This is what you were working on before. Start again to go back to what’s in the mix.</p>}
           <div className="chips" role="group" aria-label="Studio editor mode">
-            <button aria-pressed={editorMode === 'shape'} onClick={() => setEditorMode('shape')}>Shape</button>
-            <button aria-pressed={editorMode === 'grid'} onClick={() => setEditorMode('grid')}>Detailed grid</button>
-            <button aria-pressed={editorMode === 'list'} onClick={() => setEditorMode('list')}>Detailed list</button>
+            <button aria-pressed={editorMode === 'shape'} onClick={() => changeEditorMode('shape')}>Shape</button>
+            <button aria-pressed={editorMode === 'grid'} onClick={() => changeEditorMode('grid')}>Detailed grid</button>
+            <button aria-pressed={editorMode === 'list'} onClick={() => changeEditorMode('list')}>Detailed list</button>
           </div>
           {editorMode === 'shape' ? (
             <StudioShapeEditor

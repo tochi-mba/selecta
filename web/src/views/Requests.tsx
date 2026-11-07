@@ -536,7 +536,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
                 </span>
               </div>
               <span className="coming-progress" role="status">
-                {stage === 'ready' ? 'Joining now' : seams.length ? `${done} of ${seams.length} ready${wait}` : `Getting it ready${wait}`}
+                {stage === 'ready' ? 'Ready — waiting for a valid opening' : seams.length ? `${done} of ${seams.length} ready${wait}` : `Getting it ready${wait}`}
               </span>
               <button aria-label={`Cancel request for ${title}`} title="Cancel this request" onClick={() => void cancel(request)}>Cancel</button>
             </div>

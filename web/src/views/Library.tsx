@@ -63,6 +63,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const preferences = usePrefs();
   const line = status.analysing ?? [];
   const asked = useRef(0);
+  // Keep old search pages out of the committed result list while a newer URL
+  // query/filter/sort is loading. This is distinct from refreshing the same list.
+  const searchIdentity = JSON.stringify([query, filter, sort]);
+  const [resolvedIdentity, setResolvedIdentity] = useState<string | null>(null);
+  const committedRows = searchIdentity === resolvedIdentity ? rows : null;
 
   const url = useCallback((after?: string | null, limit = PAGE_SIZE) => {
     const params = new URLSearchParams({ q: query, state: filter, sort, limit: String(limit) });
@@ -94,6 +99,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         if (!after) break;
       }
       setSearching(false);
+      setResolvedIdentity(JSON.stringify([query, filter, sort]));
       setRows([...found.values()]);
       setTotal(count);
       setNext(after);
@@ -106,7 +112,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         setSearching(false);
       }
     }
-  }, [url]);
+  }, [url, query, filter, sort]);
 
   const more = async () => {
     const mine = asked.current;
@@ -337,12 +343,12 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           )}
         </div>
       )}
-      {searching && rows !== null && <p className="hint" role="status">Updating results…</p>}
-      {failed && rows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
-      {failed && rows !== null && <p className="warn" role="status">Can’t check on your library right now, so what’s shown may be out of date.</p>}
-      {rows === null && !failed && <Skeleton variant="library" lines={6} label="Loading your songs" />}
-      {rows !== null && <p className="hint library-count" role="status">{rows.length < total ? `Showing ${rows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
-      {rows?.length === 0 && !failed && (
+      {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
+      {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
+      {failed && committedRows !== null && <p className="warn" role="status">Can’t check on your library right now, so what’s shown may be out of date.</p>}
+      {committedRows === null && !failed && <Skeleton variant="library" lines={6} label="Loading your songs" />}
+      {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
+      {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
           <h2>{query ? `Nothing matches “${query}”.` : 'No songs in this view'}</h2>
           <p>Try a different title or artist, or show all songs to check their progress.</p>
@@ -352,7 +358,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           </div>
         </section>
       )}
-      {!!rows?.length && (
+      {!!committedRows?.length && (
         <div className="library-column-head" aria-hidden="true">
           <span>Song and artist</span>
           <span>Tempo · Key · Length</span>
@@ -361,7 +367,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </div>
       )}
       <ul ref={listRef} className="rows library-rows" aria-busy={searching}>
-        {rows?.map((song) => {
+        {committedRows?.map((song) => {
           const facts = trackReadiness(song);
           const already = inMix.has(song.id);
           const title = song.title ?? 'Untitled';

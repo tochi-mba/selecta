@@ -128,6 +128,9 @@ type SongRowProps = {
   actions: RefObject<RowActions>;
 };
 
+/** A private drag format stops arbitrary dropped text from becoming a song position. */
+const SONG_DRAG_TYPE = 'application/x-selecta-song-position';
+
 /** One song in the timeline. Only the handle starts a drag, so scrolling a long mix on a phone can't
  * pick a song up by accident. A mouse drags it the ordinary way, a finger or pen uses pointer events,
  * and the arrow keys and the Move buttons do the same job without dragging at all. */
@@ -183,18 +186,30 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
       data-position={item.position}
       onClick={(event) => { if (pickedTheRow(event)) actions.current.selectSong(rowKey); }}
       onDragStart={(event: DragEvent<HTMLLIElement>) => {
-        event.dataTransfer.setData('text/plain', String(item.position));
+        if (!(event.target as HTMLElement).closest('[data-handle]')) {
+          event.preventDefault();
+          return;
+        }
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData(SONG_DRAG_TYPE, String(item.position));
         event.dataTransfer.setDragImage?.(event.currentTarget, 24, 24);
       }}
       onDragOver={(event) => {
+        if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
         event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
         actions.current.dragOver(rowKey);
       }}
       onDragLeave={() => actions.current.dragOver(null)}
+      onDragEnd={() => actions.current.dragOver(null)}
       onDrop={(event) => {
+        if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
         event.preventDefault();
         actions.current.dragOver(null);
-        const from = Number(event.dataTransfer.getData('text/plain'));
+        const raw = event.dataTransfer.getData(SONG_DRAG_TYPE);
+        if (!/^\d+$/.test(raw)) return;
+        const from = Number(raw);
+        if (!Number.isSafeInteger(from) || from < 0 || from >= total) return;
         if (from !== item.position) void actions.current.move(from, item.position, 'drag');
       }}
     >
