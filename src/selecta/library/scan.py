@@ -12,6 +12,7 @@ import sqlite3
 import time
 import unicodedata
 from collections import defaultdict
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import median
@@ -275,14 +276,32 @@ def _inside(path: str, root_text: str) -> bool:
     return path.startswith(root_text.rstrip(os.sep) + os.sep)
 
 
-def scan_folder(conn: sqlite3.Connection, root: Path, careful: bool = False) -> ScanReport:
+class ScanStopped(Exception):
+    """Someone asked for this scan to stop. Nothing's been written yet, so nothing is half done."""
+
+
+def _listing(root: Path, should_stop: Callable[[], bool]) -> Iterator[Path]:
+    for path in root.rglob("*"):
+        if should_stop():
+            raise ScanStopped
+        yield path
+
+
+def scan_folder(
+    conn: sqlite3.Connection,
+    root: Path,
+    careful: bool = False,
+    should_stop: Callable[[], bool] = lambda: False,
+) -> ScanReport:
+    """Read a folder into the library. All the slow reading comes before any of the writing, and
+    that's where it can be stopped, so stopping leaves the library exactly as it was."""
     root = root.resolve()
     report = ScanReport(root=root)
     known = db.known_files(conn)
 
     files: list[Path] = []
     subtitled: set[str] = set()
-    for path in sorted(root.rglob("*")):
+    for path in sorted(_listing(root, should_stop)):
         if not path.is_file():
             continue
         suffix = path.suffix.lower()
@@ -300,6 +319,8 @@ def scan_folder(conn: sqlite3.Connection, root: Path, careful: bool = False) -> 
     tried = db.preference(conn, "unreadable_files", {})
     unreadable: dict[str, list] = {}
     for path in files:
+        if should_stop():
+            raise ScanStopped
         key = str(path)
         seen.add(key)
         try:

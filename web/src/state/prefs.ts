@@ -9,11 +9,13 @@ export type Prefs = {
   density: 'comfortable' | 'compact';
   /** Ctrl or Cmd K. Everything it does has an ordinary way to do it too. */
   palette: boolean;
+  /** Keys like N and M with no Ctrl held. Speech input can set them off by accident, so they can be off. */
+  singleKeys: boolean;
   /** The kill switch: the older navigation labels and grouping, over exactly the same pages. */
   classicNav: boolean;
 };
 
-export const DEFAULT_PREFS: Prefs = { railCollapsed: false, density: 'comfortable', palette: true, classicNav: false };
+export const DEFAULT_PREFS: Prefs = { railCollapsed: false, density: 'comfortable', palette: true, singleKeys: true, classicNav: false };
 
 const KEY = 'selecta.prefs';
 const listeners = new Set<() => void>();
@@ -25,6 +27,7 @@ function read(): Prefs {
       railCollapsed: saved.railCollapsed === true,
       density: saved.density === 'compact' ? 'compact' : 'comfortable',
       palette: saved.palette !== false,
+      singleKeys: saved.singleKeys !== false,
       classicNav: saved.classicNav === true,
     };
   } catch {

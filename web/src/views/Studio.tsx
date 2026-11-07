@@ -1,10 +1,12 @@
 import { KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { Eta, MixData, MixItem, post } from '../api';
+import { ApiError, Eta, MixData, MixItem, post } from '../api';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
 import { Action, Problem } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { moveInGrid } from '../ui/primitives';
+import { seamFacts } from '../ui/seam';
 import { useMixPath } from './mixScope';
 
 type Session = {
@@ -22,6 +24,8 @@ type Session = {
 const LANE_WORDS: Record<Lane, string> = { vocals: 'Voice', drums: 'Drums', bass: 'Bass', other: 'Melody' };
 const WAIT_MS = 2000;
 const UNSAVED = 'selecta.studio.';
+/** The column of solo buttons, in front of the squares, in the grid's one tab stop. */
+const SOLO_COLUMN = -1;
 
 function savedShape(key: string): Shape | null {
   try {
@@ -42,23 +46,28 @@ function keepShape(key: string, shape: Shape | null) {
 }
 
 /** Both songs' voice, drums, bass and melody on one grid. Tap a square and it's heard straight away.
- * Press a name to hear only that part. Nothing is rendered until "Use this". */
+ * Press a name to hear only that part. Four things are kept apart here: the copy you're working on, one
+ * recovered from this browser, what's applied to the mix, and the audio that was rendered from it.
+ * Nothing is rendered until Apply. */
 export function Studio(props: {
   position: number;
   item: MixItem;
   previous: MixItem;
+  names?: Record<string, string>;
   onClose: () => void;
   onUsed: (data: MixData) => void;
+  onConflict?: () => void;
   onListen?: () => void;
   notify: (message: string) => void;
   guard?: Record<string, string>;
 }) {
-  const { position, item, previous, onClose, onUsed, notify, guard } = props;
+  const { position, item, previous, names, onClose, onUsed, onConflict, notify, guard } = props;
   const [session, setSession] = useState<Session | null>(null);
   const [shape, setShape] = useState<Shape | null>(null);
   const [problem, setProblem] = useState('');
   const [playing, setPlaying] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [missing, setMissing] = useState<string[]>([]);
   const [cell, setCell] = useState(-1);
   const [soloed, setSoloed] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -69,6 +78,8 @@ export function Studio(props: {
   const [retained, setRetained] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const applying = useRef(false);
+  const latestShape = useRef<Shape | null>(null);
+  latestShape.current = shape;
   const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
   const deck = useRef<StemDeck | null>(null);
   const grid = useRef<HTMLDivElement>(null);
@@ -126,7 +137,10 @@ export function Studio(props: {
     setShape(chosen);
     made
       .load((side, lane) => `/api/studio/${session.key}/${side}/${lane}`)
-      .then(() => setLoaded(true))
+      .then((lost) => {
+        setMissing(Array.isArray(lost) ? lost : []);
+        setLoaded(true);
+      })
       .catch((error: Error) => setProblem(error.message));
   }, [session]);
 
@@ -138,13 +152,19 @@ export function Studio(props: {
     deck.current?.setShape(next);
     if (session?.key) setRetained(keepShape(session.key, next));
   };
-  /** Selecta's turn. What was there can be put back, and nothing is final until "Use this". */
+  /** Selecta's turn. What was there can be put back, nothing is final until Apply, and if it fails or
+   * the grid changed while it was thinking, what you've got stays exactly as it is. */
   const askSelecta = async (mine: boolean) => {
     if (!shape) return;
+    const sent = shape;
     setAsking(mine ? 'tune' : 'arrange');
     setProblem('');
     try {
       const answer = await post<{ shape: Shape; changes: string[] }>(at(`/mix/${position}/studio/tune`), { shape: mine ? shape : null });
+      if (latestShape.current !== sent) {
+        setChanges(['You changed the grid while Selecta was working, so your version stays.']);
+        return;
+      }
       const same = JSON.stringify(answer.shape) === JSON.stringify(shape);
       setBefore(same ? null : shape);
       setShape(answer.shape);
@@ -166,9 +186,21 @@ export function Studio(props: {
     setChanges(null);
   };
   const toggle = (side: Side, lane: Lane, index: number) => {
-    if (!shape) return;
+    if (!shape || missing.includes(`${side}_${lane}`)) return;
     const cells = shape[side][lane].map((value, at) => (at === index ? (value ? 0 : 1) : value));
     change({ ...shape, [side]: { ...shape[side], [lane]: cells } });
+  };
+  const start = async () => {
+    listen();
+    try {
+      await deck.current?.play();
+      setPlaying(true);
+    } catch (error) {
+      // it never made a sound, so whatever was playing can carry on
+      setPlaying(false);
+      releaseAudio(owner.current.id);
+      throw error;
+    }
   };
   const playOrStop = async () => {
     if (!deck.current) return;
@@ -178,38 +210,41 @@ export function Studio(props: {
       setCell(-1);
       quiet();
     } else {
-      listen();
-      await deck.current.play();
-      setPlaying(true);
+      await start();
     }
   };
   const solo = async (name: string) => {
-    if (!deck.current) return;
+    if (!deck.current || missing.includes(name)) return;
     const next = soloed === name ? null : name;
     setSoloed(next);
     deck.current.solo(next);
-    if (next && !playing) {
-      listen();
-      await deck.current.play();
-      setPlaying(true);
-    }
+    if (next && !playing) await start();
   };
   const use = async () => {
-    if (!shape || applying.current) return;
+    if (!shape || applying.current || !session) return;
     applying.current = true;
     setSaving(true);
     deck.current?.stop();
     setPlaying(false);
     quiet();
     try {
+      // the same pair, or nothing: this shape was made for these stems and no others
+      const now = await post<Session>(at(`/mix/${position}/studio`));
+      if (now.key !== session.key) {
+        setProblem('This transition has changed since the Studio opened, so nothing was applied. Your shape is still here.');
+        setSaving(false);
+        onConflict?.();
+        return;
+      }
       onUsed(await post<MixData>(at(`/mix/${position}/studio/use`), { shape }, guard));
-      if (session?.key) keepShape(session.key, null);
+      keepShape(session.key, null);
       notify('Rendering your version. It’ll play in the mix when it’s ready.');
       onClose();
     } catch (error) {
       // the shape stays right here, so nothing's lost by this going wrong
       setProblem((error as Error).message);
       setSaving(false);
+      if (error instanceof ApiError && error.code === 'mix_changed') onConflict?.();
     } finally { applying.current = false; }
   };
 
@@ -218,26 +253,43 @@ export function Studio(props: {
   const failed = problem || (session?.status === 'failed' ? session.error : '');
   const barsPerCell = session?.bars && session.cells ? session.bars / session.cells : 2;
   const columns = session?.cells ?? 8;
-  const dirty = !!shape && JSON.stringify(shape) !== JSON.stringify(session?.shape ?? session?.start_shape);
+  const committed = session?.shape ?? session?.start_shape;
+  const dirty = !!shape && JSON.stringify(shape) !== JSON.stringify(committed);
   const rowCount = SIDES.length * LANES.length;
+  const rendered = seamFacts(item.seam, names);
+  const stemName = (name: string) => {
+    const [side, lane] = name.split('_') as [Side, Lane];
+    return `${titles[side]} ${LANE_WORDS[lane].toLowerCase()}`;
+  };
   const gridKeys = (event: KeyboardEvent<HTMLDivElement>) => {
-    const moves: Record<string, [number, number]> = { ArrowRight: [0, 1], ArrowLeft: [0, -1], ArrowDown: [1, 0], ArrowUp: [-1, 0] };
-    let next = moves[event.key] ? { row: focusCell.row + moves[event.key][0], column: focusCell.column + moves[event.key][1] } : null;
-    if (event.key === 'Home') next = { row: focusCell.row, column: 0 };
-    if (event.key === 'End') next = { row: focusCell.row, column: columns - 1 };
+    let next: { row: number; column: number } | null;
+    if (event.ctrlKey && event.key === 'Home') next = { row: 0, column: 0 };
+    else if (event.ctrlKey && event.key === 'End') next = { row: rowCount - 1, column: columns - 1 };
+    else if (event.key === 'Home') next = { row: focusCell.row, column: 0 };
+    else next = moveInGrid(event.key, focusCell, rowCount, columns, SOLO_COLUMN);
     if (!next) return;
     event.preventDefault();
-    const moved = { row: Math.min(Math.max(next.row, 0), rowCount - 1), column: Math.min(Math.max(next.column, 0), columns - 1) };
-    setFocusCell(moved);
-    grid.current?.querySelector<HTMLElement>(`[data-cell="${moved.row}-${moved.column}"]`)?.focus();
+    setFocusCell(next);
+    grid.current?.querySelector<HTMLElement>(`[data-cell="${next.row}-${next.column}"]`)?.focus();
   };
 
   return (
     <section className="studio" aria-label="Stem studio">
-      <div className="row wrap studio-head">
-        <h3>Shape this transition</h3>
+      <header className="studio-head">
+        <div className="studio-pair">
+          <h3>Shape this transition</h3>
+          <p><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <b>{item.title}</b></p>
+        </div>
+        {shape && loaded && (
+          <div className="studio-transport">
+            <Action className="primary" run={playOrStop}>
+              <Icon name={playing ? 'stop' : 'play'} /> {playing ? 'Stop preview' : 'Play preview'}
+            </Action>
+            {soloed && <button onClick={() => void solo(soloed)}>Hear everything again</button>}
+          </div>
+        )}
         <button onClick={onClose}>Close</button>
-      </div>
+      </header>
       {failed && (loaded ? <p className="warn" role="alert">{failed}</p> : <Problem retry={() => { deck.current?.close(); deck.current = null; setSession(null); setAttempt((value) => value + 1); }}>{failed}</Problem>)}
       {!failed && preparing && (
         <p className="hint" role="status">
@@ -248,18 +300,23 @@ export function Studio(props: {
       {!failed && session?.status === 'ready' && !loaded && <p className="hint" role="status">Loading the stems…</p>}
       {shape && loaded && (
         <>
+          <dl className="studio-states" aria-label="Where this shape has got to">
+            <div className={dirty ? 'on' : undefined}><dt>Working copy</dt><dd>{dirty ? 'Changed, not applied yet' : 'Same as what’s applied'}</dd></div>
+            <div className={restored ? 'on' : undefined}><dt>Recovered from this browser</dt><dd>{restored ? 'Yes, your earlier work' : 'Nothing to recover'}</dd></div>
+            <div><dt>Applied to the mix</dt><dd>{session?.shape ? 'Your shape' : 'Selecta’s starting shape'}</dd></div>
+            <div><dt>Rendered audio</dt><dd>{rendered.words}</dd></div>
+          </dl>
           <p className="hint">
             Each square is {barsPerCell} bar{barsPerCell === 1 ? '' : 's'}. Tap one to turn that part on or off. Press a name to hear only that part.
           </p>
           <p className="hint">Previewing pauses the main mix. After stopping or closing Studio, use the main player to resume it.</p>
           <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes — not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? '. Your work is kept on this browser when you close Studio.' : ''}</p>
           {!retained && <p className="warn" role="alert">This browser could not keep a local copy. Apply your changes before closing Studio to keep them.</p>}
-          <div className="row wrap">
-            <Action className="primary" run={playOrStop}>
-              <Icon name={playing ? 'stop' : 'play'} /> {playing ? 'Stop preview' : 'Play preview'}
-            </Action>
-            {soloed && <button onClick={() => void solo(soloed)}>Hear everything again</button>}
-          </div>
+          {missing.length > 0 && (
+            <p className="warn" role="alert">
+              Couldn’t load {missing.map(stemName).join(', ')}, so {missing.length === 1 ? 'that part' : 'those parts'} can’t be heard or changed here. The rest work as normal.
+            </p>
+          )}
           <div className="row wrap">
             <button disabled={!!asking} onClick={() => void askSelecta(false)}>
               {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
@@ -282,8 +339,15 @@ export function Studio(props: {
             ))}
           </div>
           {restored && <p className="hint" role="status">This is what you were working on before. Start again to go back to what’s in the mix.</p>}
-          <p className="hint">Arrow keys move around the grid, and Space turns a square on or off.</p>
-          <div className="studio-grid" role="grid" aria-label={`Stems for ${titles.a} and ${titles.b}`} ref={grid} onKeyDown={gridKeys}>
+          <p className="hint">Arrow keys move around the grid, and Space turns a square on or off. Left of the first square is the part’s name, which plays that part alone.</p>
+          <div
+            className="studio-grid"
+            role="grid"
+            aria-label={`Stems for ${titles.a} and ${titles.b}`}
+            ref={grid}
+            onKeyDown={gridKeys}
+            style={{ '--cells': columns } as React.CSSProperties}
+          >
             <div className="studio-lane studio-ruler" role="row" aria-label="Bars">
               <span className="studio-name" role="columnheader">Bar</span>
               {Array.from({ length: columns }, (_, index) => (
@@ -292,20 +356,29 @@ export function Studio(props: {
             </div>
             {SIDES.map((side, sideIndex) => (
               <div className="studio-side" key={side} role="rowgroup" aria-label={titles[side]}>
-                <h4>{titles[side]}</h4>
+                <div className="studio-side-name" role="row">
+                  <span role="gridcell" aria-colspan={columns + 1}><h4>{titles[side]}</h4></span>
+                </div>
                 {LANES.map((lane, laneIndex) => {
                   const name = `${side}_${lane}`;
                   const row = sideIndex * LANES.length + laneIndex;
+                  const lost = missing.includes(name);
+                  const silenced = !!soloed && soloed !== name;
                   return (
-                    <div className="studio-lane" key={name} role="row">
+                    <div className={`studio-lane ${silenced ? 'silenced' : ''} ${soloed === name ? 'soloed' : ''} ${lost ? 'lost' : ''}`} key={name} role="row">
                       <span role="rowheader" className="studio-gridcell">
                         <button
                           className="studio-name"
+                          data-cell={`${row}-${SOLO_COLUMN}`}
+                          tabIndex={focusCell.row === row && focusCell.column === SOLO_COLUMN ? 0 : -1}
                           aria-pressed={soloed === name}
+                          aria-disabled={lost || undefined}
                           aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}`}
+                          title={lost ? 'This part couldn’t be loaded' : undefined}
+                          onFocus={() => setFocusCell({ row, column: SOLO_COLUMN })}
                           onClick={() => void solo(name)}
                         >
-                          {LANE_WORDS[lane]}
+                          {soloed === name ? 'Solo: ' : ''}{LANE_WORDS[lane]}
                         </button>
                       </span>
                       {shape[side][lane].map((value, index) => (
@@ -315,8 +388,9 @@ export function Studio(props: {
                             tabIndex={focusCell.row === row && focusCell.column === index ? 0 : -1}
                             className={`studio-cell ${index === cell ? 'now' : ''}`}
                             aria-pressed={Boolean(value)}
+                            aria-disabled={lost || undefined}
                             aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}
-                            title={`Bar ${index * barsPerCell + 1}`}
+                            title={lost ? 'This part couldn’t be loaded' : `Bar ${index * barsPerCell + 1}`}
                             onFocus={() => setFocusCell({ row, column: index })}
                             onClick={() => toggle(side, lane, index)}
                           />

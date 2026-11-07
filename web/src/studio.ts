@@ -38,17 +38,29 @@ export class StemDeck {
     return this.context;
   }
 
-  async load(urlOf: (side: Side, lane: Lane) => string): Promise<void> {
+  /** Get every stem it can, and say which it couldn't. A lane with no stem is simply silent, and the
+   * rest stay in lockstep, because only the stems that loaded are ever scheduled. With none at all
+   * there's nothing to work with, so that's a failure. */
+  async load(urlOf: (side: Side, lane: Lane) => string): Promise<string[]> {
     const context = this.audio();
+    const missing: string[] = [];
+    let problem: unknown = null;
     await Promise.all(
       SIDES.flatMap((side) =>
         LANES.map(async (lane) => {
-          const response = await fetch(urlOf(side, lane));
-          if (!response.ok) throw new Error('Those stems aren’t available any more.');
-          this.buffers.set(`${side}_${lane}`, await context.decodeAudioData(await response.arrayBuffer()));
+          try {
+            const response = await fetch(urlOf(side, lane));
+            if (!response.ok) throw new Error('Those stems aren’t available any more.');
+            this.buffers.set(`${side}_${lane}`, await context.decodeAudioData(await response.arrayBuffer()));
+          } catch (error) {
+            problem = error;
+            missing.push(`${side}_${lane}`);
+          }
         }),
       ),
     );
+    if (!this.buffers.size) throw problem instanceof Error ? problem : new Error('Those stems aren’t available any more.');
+    return missing;
   }
 
   get playing(): boolean {

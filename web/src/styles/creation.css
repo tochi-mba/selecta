@@ -1,1 +1,203 @@
 /* The editor, the transition inspector and the Studio. */
+
+/* The editor's three regions: a scoped header, a fluid timeline, and what's selected beside it. */
+.page.mix { max-width: var(--content-work); padding-top: var(--space-4); }
+.editor-head { margin-bottom: var(--space-4); }
+.editor-scope {
+  position: sticky;
+  top: var(--header-height);
+  z-index: var(--layer-sticky);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0 calc(-1 * var(--gutter)) var(--space-4);
+  padding: var(--space-2) var(--gutter);
+  background: var(--surface-raised);
+  border-block: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+.editor-scope.is-current { box-shadow: inset 3px 0 0 var(--playing); }
+.editor-scope.is-draft { box-shadow: inset 3px 0 0 var(--status-request); }
+.scope-badge { font-weight: 700; }
+.scope-words { color: var(--text-soft); overflow-wrap: anywhere; }
+.scope-revision { font: var(--type-counter); color: var(--text-soft); }
+.editor-scope .status { white-space: normal; margin-left: auto; }
+@media (max-width: 760px) {
+  .editor-scope .status { margin-left: 0; }
+}
+.mix-head { margin-bottom: 0; }
+.editor-actions { justify-content: flex-start; }
+.editor-actions .destructive .ui-icon, .editor-actions button .ui-icon { margin-right: 4px; }
+
+/* the timeline: songs are solid rows, transitions hang between them */
+.timeline .song {
+  grid-template-columns: var(--control-height) auto minmax(0, 1fr) auto;
+  padding: var(--row-pad) var(--space-3);
+  cursor: default;
+}
+.timeline .song.selected { box-shadow: 0 0 0 2px var(--selected); background: var(--surface-selected); }
+.timeline .song.selected.playing { box-shadow: 0 0 0 2px var(--selected), inset 3px 0 0 var(--playing); }
+.timeline .song.over { box-shadow: 0 -3px 0 0 var(--selected); }
+.timeline .grip {
+  display: inline-grid;
+  place-items: center;
+  align-self: stretch;
+  min-height: var(--control-height);
+  margin-block: calc(-1 * var(--space-1));
+  border-radius: var(--radius-sm);
+  /* a finger on the handle moves the song, and a finger anywhere else scrolls the page */
+  touch-action: none;
+}
+.timeline .grip:hover { color: var(--text); background: var(--surface-control); }
+.timeline .grip:active { cursor: grabbing; }
+.timeline .grip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; color: var(--text); }
+.song-select {
+  display: block;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  unicode-bidi: plaintext;
+}
+.song-select b { display: block; white-space: normal; overflow-wrap: anywhere; }
+.song-select:hover:not(:disabled) b { text-decoration: underline; }
+.locked-badge { display: inline-flex; align-items: center; gap: 4px; width: fit-content; margin-top: 2px; font-size: var(--text-xs); color: var(--text); }
+.timeline .song-actions button { min-height: var(--control-height); min-width: var(--control-height); display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.song-more .menu-list { min-width: 170px; }
+.song-more .menu-list button { display: flex; justify-content: flex-start; gap: var(--space-2); }
+
+.timeline .seam { cursor: default; }
+.timeline .seam.open { outline: none; border-left-color: var(--selected); background: var(--surface-selected); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.timeline .seam-actions button { min-height: var(--control-height); }
+.timeline .seam-name { min-height: var(--control-height); }
+
+/* somewhere real to press between two songs */
+.timeline .add-gap { padding-block: 2px; }
+.timeline .add-gap button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: auto;
+  height: auto;
+  min-height: 36px;
+  padding: 2px var(--space-3);
+  color: var(--text-soft);
+  background: none;
+  border-color: transparent;
+  border-radius: var(--radius-pill);
+  opacity: 1;
+  font-size: var(--text-sm);
+}
+.timeline .add-gap button small { color: var(--text-soft); opacity: 0.8; }
+.timeline .add-gap button:hover, .timeline .add-gap button:focus-visible { color: var(--text); border-color: var(--border-strong); }
+@media (pointer: coarse) {
+  .timeline .add-gap button { min-height: 44px; }
+}
+
+/* A long mix skips drawing what's far off screen. An open menu has to be able to leave its row, so that
+   row goes back to drawing normally. */
+.timeline.long > .song { content-visibility: auto; contain-intrinsic-size: auto 84px; }
+.timeline.long > .seam { content-visibility: auto; contain-intrinsic-size: auto 96px; }
+.timeline.long > .add-gap { content-visibility: auto; contain-intrinsic-size: auto 40px; }
+.timeline.long > .song:has(.menu button[aria-expanded='true']), .timeline.long > .song:focus-within { content-visibility: visible; }
+.timeline .song:has(.menu button[aria-expanded='true']) { position: relative; z-index: calc(var(--layer-sticky) - 1); }
+
+@media (max-width: 620px) {
+  .timeline .song { grid-template-columns: var(--control-height) auto minmax(0, 1fr); }
+}
+
+/* what's selected, beside the timeline */
+.edit-inspector {
+  top: calc(var(--header-height) + 64px);
+  max-height: calc(100dvh - var(--header-height) - 64px - var(--bottom-chrome) - var(--space-4));
+  padding: 0 var(--space-4) var(--space-4);
+  margin-top: 0;
+}
+.inspector-head { padding-top: var(--space-3); }
+/* which two songs this is about stays in view however far the panel scrolls */
+.inspector-identity {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: var(--space-2);
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+}
+.overlay-sheet .overlay-body:has(.inspector-identity) { padding-top: 0; }
+.inspector-identity p { margin: 0; }
+.inspector-identity .inspector-pair { padding-bottom: 0; border-bottom: 0; }
+.inspector-scope { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); font-size: var(--text-sm); color: var(--text-soft); margin-top: var(--space-1) !important; }
+.inspector-state { margin-top: var(--space-1) !important; }
+
+.seam-layers { display: grid; gap: 2px; margin: 0 0 var(--space-3); font-size: var(--text-sm); }
+.seam-layers > div { display: grid; grid-template-columns: minmax(84px, 110px) minmax(0, 1fr); gap: var(--space-2); padding-block: var(--space-1); border-bottom: 1px solid var(--border); }
+.seam-layers dt { color: var(--text-soft); }
+.seam-layers dd { margin: 0; overflow-wrap: anywhere; }
+.seam-layers .differs dd { color: var(--status-warning); font-weight: 600; }
+
+.inspector .editor { background: none; border: 0; padding: 0; margin-top: var(--space-2); }
+.inspector .editor legend { font-size: var(--text-md); }
+.inspector .cue-row { grid-template-columns: minmax(0, 1fr); }
+.inspector .cue-row label > span { overflow-wrap: anywhere; }
+.report-head { margin: var(--space-4) 0 var(--space-1); font-size: var(--text-md); }
+.report-head:first-child { margin-top: 0; }
+
+/* the Studio */
+.studio { border: 0; padding: 0; }
+.overlay-workspace .overlay-body:has(.studio) { padding-top: 0; }
+.studio-head {
+  position: sticky;
+  top: 0;
+  z-index: calc(var(--layer-sticky) - 1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-2);
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+}
+.studio-pair { flex: 1 1 240px; min-width: 0; }
+.studio-pair p { margin: 2px 0 0; overflow-wrap: anywhere; color: var(--text-soft); font-size: var(--text-sm); }
+.studio-pair b { color: var(--text); unicode-bidi: plaintext; }
+.studio-transport { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.studio-transport .primary { display: inline-flex; align-items: center; gap: var(--space-2); }
+.studio-states { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: var(--space-2); margin: 0; }
+.studio-states > div { padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 0; }
+.studio-states > div.on { border-color: var(--selected); }
+.studio-states dt { font-size: var(--text-xs); color: var(--text-soft); }
+.studio-states dd { margin: 0; font-size: var(--text-sm); overflow-wrap: anywhere; }
+
+/* It scrolls both ways on a small screen, as a grid has to, with the bar numbers and part names staying
+   put, so a square can always be matched to its bar and its part. */
+.studio-grid { --name-width: 76px; max-height: min(72dvh, 680px); overflow: auto; }
+.studio-lane {
+  grid-template-columns: var(--name-width) repeat(var(--cells, 8), minmax(44px, 1fr));
+  min-width: calc(var(--name-width) + var(--cells, 8) * 48px);
+}
+.studio-ruler { position: sticky; top: 0; z-index: 3; background: var(--surface-raised); padding-block: 2px; }
+.studio-lane.studio-ruler .studio-name { position: sticky; left: 0; z-index: 4; display: block; min-height: 0; padding: 2px; background: var(--surface-raised); }
+.studio-ruler span.now { color: var(--text); font-weight: 700; text-decoration: underline; }
+.studio-side-name { position: sticky; left: 0; width: fit-content; max-width: min(100%, 70vw); }
+.studio-side-name h4 { white-space: normal; overflow-wrap: anywhere; margin: var(--space-2) 0 var(--space-1); unicode-bidi: plaintext; position: static; }
+.studio-side-name [role='gridcell'] { display: block; }
+.studio-lane .studio-name { background: var(--surface-control); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.studio-lane.soloed .studio-name { font-weight: 700; }
+/* on, off and being played each look different without colour: a filled mark, a hollow square, a bar on top */
+.studio-cell { position: relative; }
+.studio-cell[aria-pressed='true']::after {
+  content: '';
+  position: absolute;
+  inset: 30% 30%;
+  border-radius: 2px;
+  background: var(--bg);
+}
+.studio-lane.silenced .studio-cell, .studio-lane.silenced .studio-name { opacity: 0.45; }
+.studio-lane.lost .studio-cell { cursor: not-allowed; opacity: 0.35; background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--border) 4px 6px); }
+.studio-lane.lost .studio-name { cursor: not-allowed; text-decoration: line-through; }

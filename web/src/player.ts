@@ -35,6 +35,7 @@ const SKIP_LEAD = 8;
 const SAVE_EVERY = 5;
 const RESTART_WITHIN = 4;
 const SOUND_KEY = 'selecta.sound';
+const WAKE_WAIT_MS = 3000;
 
 function savedSound(): { volume: number; muted: boolean } {
   try {
@@ -78,6 +79,7 @@ export class SetPlayer {
   private passed = new Set<string>();
   private ending = false;
   private playGeneration = 0;
+  private holdingSound = false;
   private watchedState: SeamState | null = null;
   private stateRead: AbortController | null = null;
   private stateReadAt = -Infinity;
@@ -120,8 +122,44 @@ export class SetPlayer {
       this.master.connect(this.analyser);
       this.analyser.connect(this.output);
       this.output.connect(this.context.destination);
+      // The system can take the sound away by itself, on a phone call for example. What's on screen
+      // follows what's really happening, rather than saying it's playing.
+      const context = this.context;
+      context.onstatechange = () => {
+        if (!this.holdingSound && context.state !== 'running' && this.state.phase === 'playing') {
+          this.update({ phase: 'paused', notice: 'The sound was interrupted. Press play to carry on.' });
+        }
+      };
     }
     return this.context;
+  }
+
+  /** Stop the sound on purpose, which isn't the system interrupting it. */
+  private async hold(context: AudioContext) {
+    this.holdingSound = true;
+    try {
+      await context.suspend();
+    } finally {
+      this.holdingSound = false;
+    }
+  }
+
+  /** Ask for the sound. A browser can refuse without saying so until there's been a tap, by simply
+   * never answering, so this stops waiting and reports whether it got it. */
+  private async wake(context: AudioContext): Promise<boolean> {
+    if (context.state === 'running') return true;
+    let wait: number | undefined;
+    try {
+      await Promise.race([
+        context.resume(),
+        new Promise((settled) => { wait = window.setTimeout(settled, WAKE_WAIT_MS); }),
+      ]);
+    } catch {
+      // whether it worked is what's checked next
+    } finally {
+      window.clearTimeout(wait);
+    }
+    return context.state !== 'suspended';
   }
 
   private applySound() {
@@ -167,7 +205,12 @@ export class SetPlayer {
     if (!found) {
       found = fetch(`/api/songs/${id}/audio`).then(async (response) => {
         if (!response.ok) throw new Error('That song isn’t available.');
-        return this.audio().decodeAudioData(await response.arrayBuffer());
+        const bytes = await response.arrayBuffer();
+        try {
+          return await this.audio().decodeAudioData(bytes);
+        } catch {
+          throw new Error('That song’s audio couldn’t be read.');
+        }
       });
       found.catch(() => this.songs.delete(id));
       this.songs.set(id, found);
@@ -264,8 +307,12 @@ export class SetPlayer {
     this.stopAll();
     const generation = this.playGeneration;
     const context = this.audio();
-    await context.resume();
+    const woken = await this.wake(context);
     if (generation !== this.playGeneration) return;
+    if (!woken) {
+      this.update({ phase: 'idle', position, songTime: offset, duration: item.duration, inSeam: false, notice: 'Your browser is holding the sound back. Press play to start.' });
+      return;
+    }
     this.update({ phase: 'loading', position, songTime: offset, duration: item.duration, notice: '', inSeam: false });
     let buffer: AudioBuffer;
     try {
@@ -290,14 +337,14 @@ export class SetPlayer {
   /** Pause or carry on because something else needs the sound, not because anyone asked. */
   async pause() {
     if (this.state.phase !== 'playing' || !this.context) return;
-    await this.context.suspend();
+    await this.hold(this.context);
     this.update({ phase: 'paused' });
   }
 
   async resume() {
     if (this.state.phase !== 'paused' || !this.context) return;
-    await this.context.resume();
-    this.update({ phase: 'playing' });
+    if (await this.wake(this.context)) this.update({ phase: 'playing', notice: '' });
+    else this.update({ notice: 'Your browser is holding the sound back. Press play to carry on.' });
   }
 
   /** Is a transition being heard right now? What's already sounding can't be taken back. */
@@ -374,11 +421,11 @@ export class SetPlayer {
     stopPreviewsOnly();
     const context = this.audio();
     if (this.state.phase === 'playing') {
-      await context.suspend();
+      await this.hold(context);
       this.update({ phase: 'paused' });
     } else if (this.state.phase === 'paused') {
-      await context.resume();
-      this.update({ phase: 'playing' });
+      if (await this.wake(context)) this.update({ phase: 'playing', notice: '' });
+      else this.update({ notice: 'Your browser is holding the sound back. Press play to carry on.' });
     } else if (this.state.phase === 'idle') {
       await this.playFrom(this.state.position, this.state.songTime);
     }

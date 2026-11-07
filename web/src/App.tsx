@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, DraftList, get, MixData, MixItem, post, problemKind, Status } from './api';
-import { connectMainPlayer } from './audio/focus';
+import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { loadResume } from './lib';
 import { NowState, SetPlayer } from './player';
 import { navigate, useRoute } from './router';
@@ -232,7 +232,11 @@ export function App() {
     if (now.phase === 'playing') sayThisTabIsPlaying();
   }, [now.phase]);
   useEffect(() => whenAnotherTabPlays(() => {
-    if (player.state.phase !== 'playing') return;
+    // the other tab has the sound now, so nothing finishing here may bring this one back over it
+    mainPlayerTouched();
+    const previewing = !!audioOwner();
+    stopPreviewsOnly();
+    if (player.state.phase !== 'playing' && !previewing) return;
     void player.pause();
     showToast('Playing in another tab now. Press play here to bring it back.');
   }), [player]);
@@ -383,6 +387,7 @@ export function App() {
       }
       const shortcut = shortcutFor(event);
       if (!shortcut) return;
+      if (shortcut !== 'palette' && !prefs().singleKeys) return;
       switch (shortcut) {
         case 'palette':
           // turned off, it leaves the browser's own Ctrl K alone
@@ -584,10 +589,16 @@ export function App() {
               </div>
             ))}
           </dl>
-          <label className="choice">
-            <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />
-            Use Ctrl K for search and commands
-          </label>
+          <div className="row wrap">
+            <label className="choice">
+              <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />
+              Use Ctrl K for search and commands
+            </label>
+            <label className="choice">
+              <input type="checkbox" checked={preferences.singleKeys} onChange={(event) => setPrefs({ singleKeys: event.target.checked })} />
+              Use single-key shortcuts
+            </label>
+          </div>
         </Dialog>
       )}
     </RequestsContext.Provider>

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { sayThisTabIsPlaying } from '../state/tabs';
 
 /** Only one thing makes a sound at a time. The mix is one owner, and everything you can audition is
  * another: a transition, a bridge, a chord demo, the Studio, a listening test. Starting a preview
  * pauses the mix, and when the preview ends the mix carries on, unless the person has since paused,
- * played or moved on themselves, in which case what they did stands. */
+ * played or moved on themselves, in which case what they did stands. The states and rules are written
+ * out in docs/adr/selecta-3-audio.md. */
 
 export type AudioOwner = {
   id: string;
@@ -52,6 +54,8 @@ export function takeAudio(next: AudioOwner) {
     resumeAfter = true;
     void main.pause();
   }
+  // a preview here shouldn't play over the mix in another tab either
+  sayThisTabIsPlaying();
   changed();
 }
 
@@ -102,10 +106,13 @@ let nextPreviewId = 1;
  * two from overlapping, and leaving the page they're on lets the sound go. */
 export function usePreview(): Preview {
   const id = useRef(`preview-${nextPreviewId++}`);
+  // which press of play this is. Something still arriving from an older one can't touch a newer one
+  const session = useRef(0);
   const [playing, setPlaying] = useState('');
   const [problem, setProblem] = useState('');
 
   const stopHere = useCallback(() => {
+    session.current += 1;
     const audio = element();
     audio.onended = null;
     audio.onerror = null;
@@ -116,20 +123,27 @@ export function usePreview(): Preview {
   const play = useCallback((key: string, src: string, label = 'A preview') => {
     setProblem('');
     takeAudio({ id: id.current, label, stop: stopHere });
+    session.current += 1;
+    const mine = session.current;
     const audio = element();
     audio.pause();
     audio.src = src;
     audio.onended = () => {
+      if (mine !== session.current) return;
       setPlaying('');
       releaseAudio(id.current);
     };
     audio.onerror = () => {
+      if (mine !== session.current) return;
       setPlaying('');
       setProblem('That couldn’t be played.');
       releaseAudio(id.current);
     };
     setPlaying(key);
-    void Promise.resolve(audio.play()).catch(() => {
+    void Promise.resolve(audio.play()).catch((error: Error) => {
+      // Changing the clip cancels the play before it. That's not a failure, and giving the sound back
+      // here would bring the mix in underneath the clip that replaced it.
+      if (mine !== session.current || error?.name === 'AbortError') return;
       setPlaying('');
       setProblem('That couldn’t be played.');
       releaseAudio(id.current);

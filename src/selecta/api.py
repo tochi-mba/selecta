@@ -25,6 +25,7 @@ from selecta.api_common import (
 from selecta.config import Settings, load_settings
 from selecta.routes.discover import add_routes as discover_routes
 from selecta.routes.edit import add_routes as edit_routes
+from selecta.routes.exports import add_routes as exports_routes
 from selecta.routes.helpers import add_routes as helpers_routes
 from selecta.routes.library import add_routes as library_routes
 from selecta.routes.mixes import add_routes as mixes_routes
@@ -61,6 +62,8 @@ def create_app(
     library_routes(app, ctx)
     mixes_routes(app, ctx)
     system_routes(app, ctx)
+    # before edit's /api/exports/{name}, or that would answer for /api/exports/jobs
+    exports_routes(app, ctx)
     edit_routes(app, ctx)
     song_requests_routes(app, ctx)
     discover_routes(app, ctx)

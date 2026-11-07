@@ -429,20 +429,6 @@ button.song-open { display: block; max-width: 100%; white-space: normal; overflo
 
 /* Listen: the things you reach for stay in reach */
 .transport-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
-@media (max-width: 760px) {
-  .now .transport {
-    position: sticky;
-    bottom: calc(var(--nav-height) + var(--safe-bottom));
-    z-index: var(--layer-sticky);
-    justify-content: center;
-    padding: var(--space-2) 0;
-    margin: 0;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-  }
-  .now .transport .primary.big { flex: 1 1 auto; }
-}
-
 .song-name { grid-template-columns: minmax(0, 1fr); }
 .song-name > * { min-width: 0; }
 button.song-open b { display: block; white-space: normal; overflow-wrap: anywhere; }

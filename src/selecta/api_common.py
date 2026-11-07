@@ -54,6 +54,10 @@ API_FEATURES = [
     "jobs",
     "diagnostics",
     "folders",
+    "folder_check",
+    "scan_cancel",
+    "draft_restore_by_id",
+    "export_jobs",
 ]
 
 
@@ -74,7 +78,10 @@ SORTS = {
 }
 
 
-PAGE_ADDRESSES = re.compile(r"^(listen|mixes|mix|library|discover|workshop|listening)(/[\w/-]*)?$")
+PAGE_ADDRESSES = re.compile(
+    r"^(listen|mixes|mix|library|discover|workshop|listening|explore|my-mixes|workspace|studies)"
+    r"(/[\w/-]*)?$"
+)
 
 
 class FreshFiles(StaticFiles):
@@ -289,6 +296,7 @@ class _Background:
 
     def __init__(self, home: Path) -> None:
         self.scan: dict = {"status": "idle"}
+        self.scan_stop = threading.Event()
         self.found: dict | None = None
         self.paused = False
         self.looking = threading.Lock()

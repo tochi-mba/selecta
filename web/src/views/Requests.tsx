@@ -5,6 +5,8 @@ import { del, get, MixData, MixItem, post, SongRow } from '../api';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
 import { SetPlayer } from '../player';
+import { operationId } from '../state/async';
+import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 
 type Stage =
@@ -240,8 +242,10 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
         latest.current?.onMix(changed);
         const words = `${ready.title ?? 'Your request'} joined your mix${ready.after ? ` after ${ready.after}` : ''}.`;
         setMessage(words);
+        // only while the mix is as this left it, because Undo takes back whatever is newest
+        const joined = orderOf(changed.mix);
         told.current?.(words, async () => {
-          const before = await post<MixData>('/mix/undo');
+          const before = await post<MixData>('/mix/undo', undefined, { 'x-mix-order': joined });
           latest.current?.onMix(before);
         });
         changes.current += 1;
@@ -308,7 +312,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     const data = await press(
       (rows) => [...rows, row],
       (rows) => rows.filter((other) => other.id !== id),
-      () => post<RequestList>('/requests', { song_id: song.id }),
+      () => post<RequestList>('/requests', { song_id: song.id }, { 'x-operation-id': operationId(`request-${song.id}`) }),
       `Couldn’t save ${song.title ?? 'that request'}. Try again.`,
     );
     if (data) settle(data.requests, id);
@@ -365,8 +369,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     if (data) {
       leaving.current.delete(request.id);
       active?.onMix(data);
+      const joined = orderOf(data.mix);
       told.current?.(`${request.title ?? 'That song'} is in your mix.`, async () => {
-        const before = await post<MixData>('/mix/undo');
+        const before = await post<MixData>('/mix/undo', undefined, { 'x-mix-order': joined });
         latest.current?.onMix(before);
       });
     }
@@ -626,6 +631,7 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
       {transitions.map((item) => (
         <div className="request-preview" key={item.key}>
           <span className="request-pair"><b>{item.from}</b> → <b>{item.to}</b></span>
+          <span className={`pill ${item.status}`}>{SEAM_WORDS[item.status] ?? 'Not made yet'}</span>
           <button aria-label={`Hear ${item.from} into ${item.to}`} aria-pressed={preview.playing === item.key} onClick={() => void hear(item)}>
             {preview.playing === item.key ? '■ Stop' : wanted === item.key ? 'Getting it ready…' : '▶ Hear'}
           </button>
@@ -751,15 +757,27 @@ export function RequestsPanel() {
                   disabled={request.id < 0}
                   title="Cancel this request"
                   aria-label={`Cancel request for ${title}`}
-                  onClick={() => void cancel(request)}
+                  onClick={() => {
+                    void cancel(request);
+                    // the row is going, so focus waits somewhere that's staying
+                    box.current?.focus();
+                  }}
                 >
-                  <Icon name="close" />
+                  <Icon name="close" /> Cancel
                 </button>
                 <p className="request-detail">{words.detail}</p>
                 {stage === 'approve' && (
-                  <div className="request-approve">
-                    <p className="hint">Approve this route to add {request.route?.length ?? 0} songs together, including your request:</p>
-                    <ol className="bridge-route" aria-label={`Proposed route to ${title}`}>{request.route?.map((song) => <li key={song.id}>{song.title ?? 'Untitled'}</li>)}</ol>
+                  <div className="request-approve" role="group" aria-label={`Approve the route to ${title}`}>
+                    <h3>Getting to {title}</h3>
+                    <p className="hint">Nothing joins until you say so. These {request.route?.length ?? 0} songs join together once every transition is ready, or none of them do. None of them can play before that.</p>
+                    <ol className="bridge-route" aria-label={`Proposed route to ${title}`}>
+                      {request.route?.map((song) => (
+                        <li key={song.id} className={song.id === request.song_id ? 'bridge-wanted' : 'bridge-step'}>
+                          <span>{song.title ?? 'Untitled'}</span>
+                          <small className="soft">{song.id === request.song_id ? 'Your request' : `Extra song${song.artist ? `, ${song.artist}` : ''}`}</small>
+                        </li>
+                      ))}
+                    </ol>
                     <TransitionPreviews request={request} playback={playback} />
                     <div className="row wrap">
                       <button className="primary" onClick={() => void chooseBridge(request, true)}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}</button>

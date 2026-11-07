@@ -6,13 +6,15 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from selecta import db, jobs, mix
 from selecta.api_common import (
     API_FEATURES,
     API_VERSION,
+    LOCAL_HOSTS,
     WATCH_EVERY_SECONDS,
     BuildRequest,
     ScanRequest,
@@ -131,6 +133,21 @@ def add_routes(app, ctx) -> None:
                 ).fetchone()[0]
                 shown.append({"path": str(folder), "available": folder.is_dir(), "songs": count})
         return {"folders": shown, "scan": background.scan, "watch_every": WATCH_EVERY_SECONDS}
+
+    @app.get("/api/folders/check")
+    def check_a_folder(request: Request, path: str = "") -> dict:
+        """Say what would happen with this folder, before anything is read. Reading isn't normally
+        checked for where it came from, but this touches the path it's given, and a network path
+        makes Windows sign in to that machine, so another site must not be able to ask."""
+        from selecta.library.folder_check import check_folder
+
+        origin = request.headers.get("origin")
+        if request.headers.get("sec-fetch-site") in {"cross-site", "same-site"} or (
+            origin and urlsplit(origin).hostname not in LOCAL_HOSTS
+        ):
+            raise HTTPException(403, "Selecta is local only")
+        with connect() as conn:
+            return check_folder(conn, path)
 
     @app.post("/api/folders/stop-watching")
     def stop_watching(body: ScanRequest) -> dict:

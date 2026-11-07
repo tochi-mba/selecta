@@ -1,12 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
-import { MixData, MixItem, post } from '../api';
-import { length } from '../lib';
-import { Dialog, Status } from '../ui/controls';
+import { useState } from 'react';
+import { ApiError, ExportJob, get, MixData, MixItem } from '../api';
+import { length, runningTime } from '../lib';
+import { PageLink } from '../shell/PageLink';
+import { Action, Dialog, Status } from '../ui/controls';
 import { seamFacts } from '../ui/seam';
+import { cancelExport, isExportActive, startExport, useExports } from './exportStore';
+import { exportStage } from './ExportJobs';
 import { useMixPath } from './mixScope';
 
+/** Is this job a file of the mix exactly as it is now? */
+function sameVersion(job: ExportJob, mix: MixItem[]): boolean {
+  const songs = job.songs.map((song) => song.song_id).join(',');
+  const keys = job.seams.map((seam) => seam.key).join(',');
+  return songs === mix.map((item) => item.song_id).join(',') && keys === mix.slice(1).map((item) => item.seam?.state.key).join(',');
+}
+
 /** Exactly which mix is being saved, what it's still waiting on, and the file once it really exists.
- * If the mix changes while this is going on, it stops rather than saving something else. */
+ * The server keeps working whether this stays open or not, and it saves the mix as it was when this
+ * started, so changing the mix afterwards can't change what ends up in the file. */
 export function ExportPanel(props: {
   mix: MixItem[];
   mixName: string;
@@ -18,63 +29,51 @@ export function ExportPanel(props: {
 }) {
   const { mix, mixName, inDraft, guard, setMixData, names, onClose } = props;
   const at = useMixPath();
-  const [going, setGoing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { jobs, unsupported } = useExports();
+  const [started, setStarted] = useState<string | null>(null);
   const [problem, setProblem] = useState('');
-  const [file, setFile] = useState<{ name: string; seconds: number } | null>(null);
-  const order = useRef('');
   const seams = mix.slice(1);
   const ready = seams.filter((item) => item.seam?.state.status === 'ready').length;
-  const failed = seams.filter((item) => item.seam?.state.status === 'failed');
   const left = seams.filter((item) => item.seam?.state.status !== 'ready');
-  const orderNow = mix.map((item) => item.song_id).join(',');
+  const scope = inDraft ? 'draft' : 'current';
+
+  // what this opened to: the export just started here, or one of this very version from earlier
+  const mine = jobs?.find((job) => job.id === started)
+    ?? jobs?.find((job) => job.scope === scope && sameVersion(job, mix) && (isExportActive(job) || job.state === 'ready'));
+  const going = !!mine && isExportActive(mine);
+  const file = mine?.state === 'ready' ? mine : null;
+  const changedSince = !!mine && !sameVersion(mine, mix);
+  const stage = mine ? mine.state : null;
 
   const start = async () => {
     setProblem('');
-    setFile(null);
-    order.current = orderNow;
-    setGoing(true);
     try {
-      setMixData(await post<MixData>(at('/mix/render'), undefined, guard));
+      const job = await startExport(at('/exports/jobs'), guard);
+      setStarted(job.id);
+      // the songs on the page show what's now in line
+      get<MixData>(at('/mix')).then(setMixData).catch(() => {});
     } catch (error) {
-      setGoing(false);
-      setProblem((error as Error).message);
+      if (error instanceof ApiError && error.status === 404 && error.code === '') {
+        setProblem(error.message === 'Not Found' ? 'This running copy of Selecta can’t do this yet. Restart Selecta, then try again.' : error.message);
+      } else {
+        setProblem((error as Error).message);
+      }
     }
   };
 
-  useEffect(() => {
-    if (!going || saving) return;
-    if (order.current !== orderNow) {
-      setGoing(false);
-      setProblem('This mix changed while it was getting ready, so nothing was saved. Start again when you’re happy with it.');
-      return;
-    }
-    if (failed.length && failed.length === left.length) {
-      setGoing(false);
-      setProblem(`${failed.length} transition${failed.length === 1 ? '' : 's'} couldn’t be made. Pick another move for ${failed.length === 1 ? 'it' : 'them'}, then try again.`);
-      return;
-    }
-    if (ready < seams.length) return;
-    setSaving(true);
-    post<{ name: string; seconds: number }>(at('/mix/export'), undefined, guard)
-      .then(setFile)
-      .catch((error: Error) => setProblem(error.message))
-      .finally(() => {
-        setSaving(false);
-        setGoing(false);
-      });
-  }, [going, saving, orderNow, ready, seams.length, failed.length, left.length]);
-
   return (
     <Dialog title="Save as an audio file" onClose={onClose}>
-      <p><b>{mixName}</b> <span className="soft">{inDraft ? 'draft' : 'current mix'}, {mix.length} songs. FLAC.</span></p>
+      <p><b>{mixName}</b> <span className="soft">{inDraft ? 'draft' : 'current mix'}, {mix.length} songs, about {length(runningTime(mix))}. FLAC.</span></p>
       <ol className="export-stages" aria-label="Export progress">
-        <li aria-current={!saving && !file ? 'step' : undefined}>Prepare transitions{going ? ` — ${ready} of ${seams.length} ready` : ''}</li>
-        <li aria-current={saving ? 'step' : undefined}>Create the FLAC file</li>
+        <li aria-current={!stage || stage === 'preparing' ? 'step' : undefined}>
+          Prepare transitions{mine ? ` — ${mine.seams_ready} of ${mine.seams_total} ready` : ''}
+        </li>
+        <li aria-current={stage === 'encoding' ? 'step' : undefined}>Create the FLAC file</li>
         <li aria-current={file ? 'step' : undefined}>Download your mix</li>
       </ol>
-      <p className="hint">{ready} of {seams.length} transitions ready. {left.length ? 'The rest get rendered first.' : 'Everything’s ready.'}</p>
-      {!!left.length && (
+      {mine && !file && <p role="status"><Status kind={exportStage(mine).kind}>{exportStage(mine).words}</Status></p>}
+      {!mine && <p className="hint">{ready} of {seams.length} transitions ready. {left.length ? 'The rest get rendered first.' : 'Everything’s ready.'}</p>}
+      {!mine && !!left.length && (
         <ul className="export-left">
           {left.slice(0, 8).map((item) => {
             const facts = seamFacts(item.seam, names);
@@ -84,15 +83,24 @@ export function ExportPanel(props: {
         </ul>
       )}
       {problem && <p className="warn" role="alert">{problem}</p>}
-      {file ? (
-        <p className="notice" role="status">Ready, {length(file.seconds)} long: <a href={`/api/exports/${file.name}`} download>download {file.name}</a></p>
-      ) : (
-        <button className="primary" disabled={going || saving || mix.length < 2} data-working={going || saving || undefined} onClick={() => void start()}>
-          {saving ? 'Saving the file…' : going ? `Rendering ${ready} of ${seams.length}…` : 'Save it'}
+      {unsupported && !problem && <p className="warn">This running copy of Selecta can’t do this yet. Restart Selecta, then try again.</p>}
+      {mine?.error && <p className="warn" role="alert">{mine.error}</p>}
+      {changedSince && (
+        <p className="hint" role="status">
+          You’ve changed this mix since this started. This file keeps the mix as it was when you pressed Save it. Save it again for the new version.
+        </p>
+      )}
+      {file && (
+        <p className="notice" role="status">Ready{file.seconds != null ? `, ${length(file.seconds)} long` : ''}: <a href={`/api/exports/${encodeURIComponent(file.name)}`} download>download {file.name}</a></p>
+      )}
+      {(!file || changedSince) && (
+        <button className="primary" disabled={going || mix.length < 2} data-working={going || undefined} onClick={() => void start()}>
+          {mine?.state === 'encoding' ? 'Saving the file…' : going ? `Rendering ${mine?.seams_ready} of ${mine?.seams_total}…` : 'Save it'}
         </button>
       )}
+      {mine?.can_cancel && <Action working="Cancelling…" run={() => cancelExport(mine.id)}>Cancel export</Action>}
       <p className="hint">Your original songs aren’t touched.</p>
-      <p className="hint">Keep this panel open to receive the download link. Closing it does not cancel work already sent to Selecta. Reopen Download audio and start again if you close before the link appears.</p>
+      <p className="hint">You can close this and it keeps going. Find it again under Activity, or in <PageLink to="/workshop" onClick={onClose}>Workspace</PageLink>.</p>
     </Dialog>
   );
 }
