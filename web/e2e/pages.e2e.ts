@@ -111,14 +111,15 @@ test('on a phone, Listen keeps display options after the song identity and trans
   await page.goto('/listen');
   const identity = page.locator('.listen-identity');
   const options = page.locator('details.view-options');
+  const summary = page.getByText('DJ controls', { exact: true });
   await expect(identity).toBeVisible();
-  await expect(options.locator('summary')).toBeVisible();
+  await expect(summary).toBeVisible();
   const header = await identity.boundingBox();
   const disclosure = await options.boundingBox();
   expect(header).not.toBeNull();
   expect(disclosure).not.toBeNull();
   expect(disclosure!.y).toBeGreaterThan(header!.y);
-  await options.locator('summary').click();
+  await summary.click();
   await expect(page.getByRole('button', { name: 'Spectrum' })).toBeVisible();
   await expect(page.getByRole('button', { name: /^(Play|Pause|Resume)$/ })).toBeVisible();
 });

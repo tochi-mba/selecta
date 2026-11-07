@@ -62,7 +62,8 @@ def lyric_links(conn: sqlite3.Connection, limit: int = 200_000) -> list[LyricLin
     rows = conn.execute(
         "SELECT s.id,s.artist,s.title,s.duration,l.synced FROM songs s "
         "JOIN lyrics l ON l.song_id=s.id "
-        "WHERE l.status='synced' AND s.is_music=1 AND s.duplicate_of IS NULL"
+        "WHERE l.status='synced' AND l.synced IS NOT NULL "
+        "AND s.is_music=1 AND s.duplicate_of IS NULL"
     ).fetchall()
     return discover(
         {r["id"]: parse_lrc(r["synced"], r["duration"]) for r in rows},

@@ -106,6 +106,7 @@ test('a transition takes over exactly where it was planned, with no gap', async 
   await page.getByRole('button', { name: 'Jump to the transition' }).click();
   await expect(page.getByText('Jumped to just before the seam.')).toBeVisible();
   await expect(title(page)).toHaveText('Slow Tide', { timeout: 150_000 });
+  await page.getByText('DJ controls', { exact: true }).click();
   await expect(page.getByRole('group', { name: 'Rate that transition' })).toBeVisible();
 
   const started = await page.evaluate(() => window.audioSpy.started);
@@ -150,7 +151,7 @@ test('moving around the app leaves the music alone, and the mini-player follows'
   await expect.poll(() => soundsStarted(page), { timeout: 30_000 }).toBe(3);
   const started = await soundsStarted(page);
   const nav = page.getByRole('navigation', { name: 'Main' });
-  for (const place of ['Library', 'Explore', 'My Mixes', 'Workspace']) {
+  for (const place of ['Library', 'Make a Mix', 'My Mixes', 'Workspace']) {
     await nav.getByRole('link', { name: place, exact: true }).click();
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
     await page.waitForTimeout(300);
