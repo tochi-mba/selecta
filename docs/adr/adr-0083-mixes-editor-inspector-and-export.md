@@ -1,7 +1,7 @@
 # ADR-0083: Make drafts, timeline editing, transition intent and export unambiguous
 
 - **Decision status:** Proposed (owner review required)
-- **Implementation status:** Not started
+- **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 3 — creator journeys
@@ -50,13 +50,14 @@ More deliberate confirmation and scope language can add one interaction to risky
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
+The decision remains **Proposed** pending owner approval. Only the explicitly identified S31 tasks in the evidence ledger are **In progress**; all other tasks in this ADR remain Not started. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
 
 ## Status history
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
-| 2026-11-07 | Proposed | Not started | Documentation-only finishing plan; no tests or human review executed for this programme |
+| 2026-11-07 | Proposed | Not started | Initial documentation-only finishing plan | 
+| 2026-11-07 | Proposed | In progress | Selected UI/Edge/test or visual-review infrastructure on draft PR #25; no human acceptance or task Verified |
 
 ## Related documents
 

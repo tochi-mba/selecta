@@ -1,7 +1,7 @@
 # ADR-0087: Verify WCAG, device reflow, audio latency and scale
 
 - **Decision status:** Proposed (owner review required)
-- **Implementation status:** Not started
+- **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 5 — cross-cutting quality
@@ -49,13 +49,14 @@ Testing several platforms and viewport combinations costs time; explicitly state
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now also has limited frontend/test changes in other workstreams. This ADR remains Not started; implementation is tracked by task ID in the evidence ledger and no task is Verified.
+The decision remains **Proposed** pending owner approval. Only the explicitly identified S31 tasks in the evidence ledger are **In progress**; all other tasks in this ADR remain Not started. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now also has limited frontend/test changes in other workstreams. This ADR remains Not started; implementation is tracked by task ID in the evidence ledger and no task is Verified.
 
 ## Status history
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
-| 2026-11-07 | Proposed | Not started | Documentation-only finishing plan; no tests or human review executed for this programme |
+| 2026-11-07 | Proposed | Not started | Initial documentation-only finishing plan | 
+| 2026-11-07 | Proposed | In progress | Selected UI/Edge/test or visual-review infrastructure on draft PR #25; no human acceptance or task Verified |
 
 ## Related documents
 

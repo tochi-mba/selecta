@@ -4,7 +4,7 @@
 - **Baseline:** `main` 3.0 merge `3b01dc1336aab0f1cb0a4d85be5eba359de81831` (PR #24 merged).
 - **Decision status:** Proposed for ADR-0078–0088; the owner has not approved their design decisions.
 - **Implementation status:** Selected tasks In progress on PR #25; **Implemented:** 0/116, **Verified:** 0/116.
-- **Scope:** Initially documentation-only; PR #25 now includes a limited frontend and component-test pass. No backend, schema, engine, dependency or CI changes.
+- **Scope:** Initially documentation-only; PR #25 now contains frontend and regression tests, plus non-blocking synthetic screenshot artifact upload in CI. Backend, schema, audio engine and dependencies are unchanged.
 - **History:** Existing ADR-0001–0077 and T/P/S3 task IDs remain intact. Prior roadmap ledgers, including the still-stale 3.0 "PR open" snapshot, are not proof of merged/verified work.
 
 ## Direction
@@ -21,17 +21,17 @@ The [Selecta 3.0 INV-01–INV-20 requirements](selecta-3-roadmap.md) remain bind
 
 | ADR | Phase | Workstream | Open S31 tasks | Decision | Implementation |
 |---|---|---|---:|---|---|
-| [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | 0 Baseline | Reconcile the shipped 3.0 baseline and govern finishing work | 10 | Proposed | Not started |
+| [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | 0 Baseline | Reconcile the shipped 3.0 baseline and govern finishing work | 10 | Proposed | In progress (partial) |
 | [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | 1 Foundations | Unify typography, themes, visual rhythm and CSS ownership | 10 | Proposed | In progress (partial) |
 | [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | 1 Foundations | Make controls, asynchronous states, recovery and Undo dependable | 10 | Proposed | In progress (partial) |
 | [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | 2 Listener | Reduce friction from first music folder to a confident first mix | 10 | Proposed | In progress (partial) |
 | [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | 2 Listener | Polish Listen, navigation, mini-player and Stage without audio regressions | 11 | Proposed | In progress (partial) |
-| [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | 3 Creator | Make drafts, timeline editing, transition intent and export unambiguous | 12 | Proposed | Not started |
-| [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | 3 Creator | Refine Stem Studio's expert controls without reducing capability | 9 | Proposed | Not started |
+| [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | 3 Creator | Make drafts, timeline editing, transition intent and export unambiguous | 12 | Proposed | In progress (partial) |
+| [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | 3 Creator | Refine Stem Studio's expert controls without reducing capability | 9 | Proposed | In progress (partial) |
 | [ADR-0085](adr-0085-requests-and-music-discovery.md) | 4 Discovery/Operations | Clarify Requests, consented bridges and discovery auditions | 10 | Proposed | Not started |
 | [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | 4 Discovery/Operations | Polish Library, Workspace, studies and operational status | 11 | Proposed | Not started |
-| [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | 5 Cross-cutting quality | Verify WCAG, device reflow, audio latency and scale | 11 | Proposed | Not started |
-| [ADR-0088](adr-0088-research-visual-regression-and-release.md) | 6 Verification | Require observable user, visual and product acceptance before release | 12 | Proposed | Not started |
+| [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | 5 Cross-cutting quality | Verify WCAG, device reflow, audio latency and scale | 11 | Proposed | In progress (partial) |
+| [ADR-0088](adr-0088-research-visual-regression-and-release.md) | 6 Verification | Require observable user, visual and product acceptance before release | 12 | Proposed | In progress (partial) |
 | **Total** | | | **116** | | **0 Implemented / 0 Verified** |
 
 ## Dependencies and proposed delivery order
@@ -62,12 +62,13 @@ Treat web performance references (INP <=200ms, CLS <=0.1) as methodology context
 
 ## PR scope and governance
 
-PR #25 began as planning documentation; it now includes limited source/test work on controls, onboarding, Listen and design tokens. This does **not** accept ADR decisions, justify checking tasks off or satisfy the other release gates. Further work must map each S31 and inherited S3/parity row to code and real automated/human evidence. Do not merge on the strength of partial work.
+PR #25 began as planning documentation; it now includes scoped source/test work on controls, onboarding, Listen, editor intent, Studio recovery, mix scope and visual capture infrastructure. This does **not** accept ADR decisions, justify checking tasks off or satisfy the other release gates. Further work must map each S31 and inherited S3/parity row to code and real automated/human evidence. Do not merge on the strength of partial work.
 
 ## Supporting documents
 
 - [116-item implementation checklist](selecta-3-1-implementation-checklist.md)
 - [Adversarial verification and usability matrix](selecta-3-1-verification-matrix.md)
+- [Synthetic visual-review candidates](selecta-3-1-visual-review.md)
 - [Per-task evidence ledger](selecta-3-1-evidence.md)
 - [Source inspection and research references](../research/selecta-3-1-polish.md)
 - [Selecta 3.0 road map](selecta-3-roadmap.md), [parity](selecta-3-parity-matrix.md), [verification](selecta-3-verification-matrix.md), [legacy evidence](selecta-3-evidence.md)

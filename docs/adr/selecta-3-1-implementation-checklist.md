@@ -1,7 +1,7 @@
 # Selecta 3.1 — 116-item UI/UX finishing implementation checklist
 
 - **Decision:** Proposed (11 ADRs, ADR-0078–0088).
-- **Implementation:** Five tasks In progress on PR #25, 111 not started; **0/116 Implemented; 0/116 Verified.**
+- **Implementation:** 22 tasks In progress on PR #25, 94 not started; **0/116 Implemented; 0/116 Verified.**
 - **Baseline:** `main` at `3b01dc1` (merged Selecta 3.0).
 - **Checklist discipline:** Every checkbox intentionally remains unchecked. PR #25 now includes a small amount of implementation, but no task yet has independent Verified evidence.
 - **Identity:** `S31-XXXX-NN` is unique to this finishing programme; historical T, P and S3 IDs remain unchanged.
@@ -24,7 +24,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0078 — Reconcile the shipped 3.0 baseline and govern finishing work](adr-0078-baseline-evidence-and-governance.md)
 
-**Phase:** 0 Baseline. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 0 Baseline. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0078-01 — Pin baseline to actual 3.0 merge and current release head.** Acceptance: Evidence record names commit, environment, browser, installed/PWA assumptions and support boundary.
 - [ ] **S31-0078-02 — Reconcile the 258 inherited S3 IDs with merged code and CI.** Acceptance: Every S3 ID maps to code/PR/tests or remains unresolved; no unchecked legacy item is silently marked done.
@@ -110,7 +110,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0083 — Make drafts, timeline editing, transition intent and export unambiguous](adr-0083-mixes-editor-inspector-and-export.md)
 
-**Phase:** 3 Creator. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/12.
+**Phase:** 3 Creator. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/12.
 
 - [ ] **S31-0083-01 — Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next.
 - [ ] **S31-0083-02 — Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity.
@@ -129,7 +129,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0084 — Refine Stem Studio's expert controls without reducing capability](adr-0084-stem-studio-workstation-polish.md)
 
-**Phase:** 3 Creator. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/9.
+**Phase:** 3 Creator. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/9.
 
 - [ ] **S31-0084-01 — Review session identity and the A/B song context.** Acceptance: User can always tell which songs/pair and revision are being changed.
 - [ ] **S31-0084-02 — Improve lane and square visual/readable semantics.** Acceptance: Voice, drums, bass and melody cells are distinguishable without colour alone.
@@ -180,7 +180,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0087 — Verify WCAG, device reflow, audio latency and scale](adr-0087-accessibility-responsive-and-performance-gates.md)
 
-**Phase:** 5 Cross-cutting quality. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/11.
+**Phase:** 5 Cross-cutting quality. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
 
 - [ ] **S31-0087-01 — Approve platform, width, zoom, orientation and keyboard matrix.** Acceptance: Matrix covers 320/375/390/430/768/1024/1280/1440/1920/3840 CSS px where meaningful.
 - [ ] **S31-0087-02 — Run full keyboard-only tasks across core journeys.** Acceptance: Skip link, menus, forms, tabs, waveform, timeline, Studio grid, requests and export have no traps.
@@ -198,7 +198,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0088 — Require observable user, visual and product acceptance before release](adr-0088-research-visual-regression-and-release.md)
 
-**Phase:** 6 Verification. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/12.
+**Phase:** 6 Verification. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/12.
 
 - [ ] **S31-0088-01 — Create deterministic visual snapshot matrix for approved screen/state/theme fixtures.** Acceptance: Include full UI, modal open, empty, loading, error, recovery, 320px and desktop examples.
 - [ ] **S31-0088-02 — Require reviewed diffs rather than bulk baseline replacement.** Acceptance: All visual changes have owner approval and intentional reasons; no accidentally hidden content.
