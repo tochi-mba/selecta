@@ -48,11 +48,11 @@ export function recordActivity(message: string, options: { tone?: ActivityTone; 
   // scope depends on it. Losing that failed entry would make an older Undo target
   // the wrong server revision.
   while (entries.length > KEEP) {
-    const spare = entries.findLastIndex((item) =>
+    const spare = entries.reduce((found, item, index) =>
       (!item.undo || item.undoState === 'undone' || item.undoState === 'failed')
       && !(item.undoState === 'failed' && item.scope
-        && entries.some((older) => older.id < item.id && older.scope === item.scope && older.undoState === 'available')),
-    );
+        && entries.some((older) => older.id < item.id && older.scope === item.scope && older.undoState === 'available'))
+        ? index : found, -1);
     entries.splice(spare >= 0 ? spare : entries.length - 1, 1);
   }
   entries = [...entries];

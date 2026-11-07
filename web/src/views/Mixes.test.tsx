@@ -212,6 +212,22 @@ describe('Pick a feeling', () => {
     });
   });
 
+  it('does not claim an energy shape was saved when clearing the shape fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/vibes')) return new Response(JSON.stringify([card('pick', 'Selecta’s pick', '')]), { status: 200 });
+      if (url.includes('/steer') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ detail: 'Could not save preferences' }), { status: 500 });
+      }
+      return new Response('{}', { status: 200 });
+    }));
+    show([20, 40, 80, 60, 30]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Use each mix’s arc' }));
+    expect(await screen.findByRole('button', { name: 'Try saving the shape again' })).toBeEnabled();
+    expect(screen.getByText(/Your change was not saved/)).toBeInTheDocument();
+    expect(screen.queryByText('Each mix uses its own shape.')).toBeNull();
+  });
+
   it('lets the listener set a song as the destination for future mixes', async () => {
     const calls = fakeBackend({
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],

@@ -183,6 +183,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
     }
   };
 
+  const arcSaved = JSON.stringify(energyArc) === savedArc.current;
   const arcPreview = energyArc ?? DEFAULT_ARC;
   const arcPoints = arcPreview.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
   const achieved = achievedArc(mix);
@@ -250,9 +251,11 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           {arcPreview.map((energy, index) => <circle key={ARC_STOPS[index]} cx={index * 25} cy={38 - energy * 0.34} r="2.2" />)}
         </svg>
         <p className="hint" role="status">
-          {arcSaving ? 'Saving your shape…' : energyArc === null ? 'Each mix uses its own shape.' : 'This is the shape you asked for, saved.'}
+          {arcSaving ? 'Saving your shape…'
+            : !arcSaved ? 'Your change was not saved. Try again; the previous setting is still on the server.'
+              : energyArc === null ? 'Each mix uses its own shape.' : 'This is the shape you asked for, saved.'}
         </p>
-        {problem && !arcSaving && energyArc !== null && <button type="button" onClick={() => setArcAttempt((value) => value + 1)}>Try saving the shape again</button>}
+        {!arcSaved && !arcSaving && <button type="button" onClick={() => setArcAttempt((value) => value + 1)}>Try saving the shape again</button>}
         <div className="energy-arc-stops">
           {ARC_STOPS.map((stop, index) => (
             <label key={stop}>
