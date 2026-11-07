@@ -689,6 +689,7 @@ export function RequestsPanel() {
   const [matches, setMatches] = useState<SongRow[] | null>(null);
   const [searchError, setSearchError] = useState('');
   const [searchAttempt, setSearchAttempt] = useState(0);
+  const [activeMatch, setActiveMatch] = useState(-1);
   const [finding, setFinding] = useState<number | null>(null);
   const box = useRef<HTMLInputElement>(null);
   const text = query.trim();
@@ -697,6 +698,7 @@ export function RequestsPanel() {
     let live = true;
     setMatches(null);
     setSearchError('');
+    setActiveMatch(-1);
     if (!text) return;
     const timer = window.setTimeout(() => {
       void get<SongRow[]>(`/songs?q=${encodeURIComponent(text)}&state=all&limit=20`)
@@ -712,6 +714,7 @@ export function RequestsPanel() {
   const waitingIds = new Set(requests?.map((request) => request.song_id));
   const asBridges = new Set(requests?.flatMap((request) => request.picked ?? []));
   const canPick = (song: SongRow) => !inMix.has(song.id) && !waitingIds.has(song.id) && !asBridges.has(song.id);
+  const availableMatches = matches?.map((song, index) => canPick(song) ? index : -1).filter((index) => index >= 0) ?? [];
   const orderedRequests = [...(requests ?? [])].sort((a, b) => GROUP_ORDER[stageOf(a, playback)] - GROUP_ORDER[stageOf(b, playback)]);
   // the list stays open, so a few songs can be asked for from one search
   const pick = (song: SongRow) => {
@@ -723,10 +726,24 @@ export function RequestsPanel() {
     box.current?.focus();
   };
   const keys = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Escape') setQuery('');
+    if (event.key === 'Escape' && query) {
+      event.preventDefault();
+      event.stopPropagation();
+      setQuery('');
+      setActiveMatch(-1);
+      return;
+    }
+    if (availableMatches.length && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault();
+      const at = availableMatches.indexOf(activeMatch);
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      setActiveMatch(availableMatches[(at + direction + availableMatches.length) % availableMatches.length]);
+      return;
+    }
     if (event.key === 'Enter') {
       event.preventDefault();
-      const first = matches?.find(canPick);
+      const selected = matches?.[activeMatch];
+      const first = selected && canPick(selected) ? selected : matches?.find(canPick);
       if (first) pick(first);
     }
   };
@@ -747,9 +764,14 @@ export function RequestsPanel() {
           data-autofocus={window.matchMedia?.('(pointer: fine)').matches || undefined}
           value={query}
           aria-label="Request a song"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="request-results"
+          aria-expanded={!!text && !!matches?.length}
+          aria-activedescendant={activeMatch >= 0 && matches?.[activeMatch] ? `request-option-${matches[activeMatch].id}` : undefined}
           placeholder="Request a song: search your library"
           autoComplete="off"
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => { setQuery(event.target.value); setActiveMatch(-1); }}
           onKeyDown={keys}
         />
         {text && <button onClick={finish}>Done</button>}
@@ -758,15 +780,17 @@ export function RequestsPanel() {
       {text && matches === null && !searchError && <Skeleton variant="library" lines={2} label="Searching your library" />}
       {text && matches && !searchError && matches.length === 0 && <p className="hint">Nothing in your library matches that.</p>}
       {text && !!matches?.length && (
-        <ul className="request-results">
-          {matches.map((song) => {
+        <ul id="request-results" className="request-results" role="listbox" aria-label="Matching songs">
+          {matches.map((song, index) => {
             const already = inMix.has(song.id) ? 'In your mix' : waitingIds.has(song.id) ? 'Requested' : asBridges.has(song.id) ? 'Coming as a bridge' : '';
+            const duplicate = matches.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist);
+            const identity = `${song.title ?? 'Untitled'} — ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
             return (
-              <li key={song.id}>
-                <button className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
+              <li key={song.id} id={`request-option-${song.id}`} role="option" aria-selected={activeMatch === index}>
+                <button aria-label={identity} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
                   <span className="request-name">
                     <b>{song.title ?? 'Untitled'}</b>
-                    <span>{song.artist ?? 'Unknown artist'}</span>
+                    <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>
                   </span>
                   <small>{already === 'Requested' ? <><Icon name="check" width={14} height={14} /> Requested</> : already || <><Icon name="plus" width={14} height={14} /> Request</>}</small>
                 </button>
@@ -793,7 +817,7 @@ export function RequestsPanel() {
             return (
               <Fragment key={request.id}>
                 {group !== previousGroup && (
-                  <li className="request-group" aria-hidden="true">
+                  <li className="request-group">
                     <h3>{GROUP_WORDS[group].title}</h3>
                     <p>{GROUP_WORDS[group].detail}</p>
                   </li>
