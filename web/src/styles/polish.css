@@ -202,3 +202,15 @@ button[aria-disabled='true'] { cursor: progress; }
   .toast-row { color: CanvasText; background: Canvas; border: 1px solid CanvasText; }
   .toast-row.problem { color: CanvasText; background: Canvas; border-color: Mark; }
 }
+
+/* Entering a route reveals only its new content. Navigation and the player never
+   move, and focused controls keep their exact hit boxes during the transition. */
+.content > main.page { animation: route-reveal var(--motion-reveal) ease-out both; }
+.on-stage .content > main.page { animation: none; }
+@keyframes route-reveal { from { opacity: 0.9; } to { opacity: 1; } }
+
+/* These small focus and target cues remain present with animation turned off. */
+.strip.can-seek:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .content > main.page { animation: none; }
+}
