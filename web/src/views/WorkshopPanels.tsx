@@ -350,7 +350,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
         <Action working="Checking…" run={checkNow}>Check now</Action>
       </div>
       <h3>Add another folder</h3>
-      <p className="hint">Copy a folder address from File Explorer. Your audio stays on this PC. Adding a folder sends each song’s artist, title, album and duration to LRCLIB to look up lyrics, and nothing else leaves this PC.</p>
+      <p className="hint">Copy a folder address from File Explorer. Your audio stays on this PC. For lyric lookup, Selecta sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file. Selecta also communicates with its local server.</p>
       <form className="row wrap sources-add" onSubmit={(event) => void scan(event)}>
         <Field label="Music folder" error={problem}>
           {(field) => (

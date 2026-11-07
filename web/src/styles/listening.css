@@ -174,3 +174,7 @@
 .lyrics-scroll { max-height: min(52svh, 480px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .lyrics-scroll p { unicode-bidi: plaintext; white-space: pre-wrap; overflow-wrap: anywhere; }
 .lyrics-scroll:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Bidirectional song and lyric identities never alter transport geometry. */
+.listen-identity .display, .listen-identity .artist, .lyrics p { unicode-bidi: plaintext; overflow-wrap: anywhere; }
+.listen-identity .display { min-width: 0; }

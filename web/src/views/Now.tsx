@@ -455,13 +455,13 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
       ) : (
         <>
       {Array.from({ length: around }, (_, gap) => around - gap).map((back) => (
-        <p className="dim" key={`before-${back}`}>{lines[index - back]?.text ?? ' '}</p>
+        <p dir="auto" className="dim" key={`before-${back}`}>{lines[index - back]?.text ?? ' '}</p>
       ))}
-      <p className={singing ? 'sung' : 'dim'}>
+      <p dir="auto" className={singing ? 'sung' : 'dim'}>
         {current ? highlightedLine(current.text, singing ? wordIndex : -1) : ' '}
       </p>
       {Array.from({ length: around }, (_, gap) => gap + 1).map((ahead) => (
-        <p className="dim" key={`after-${ahead}`}>{lines[index + ahead]?.text ?? ' '}</p>
+        <p dir="auto" className="dim" key={`after-${ahead}`}>{lines[index + ahead]?.text ?? ' '}</p>
       ))}
         </>
       )}
@@ -646,9 +646,9 @@ export function Now(props: ViewProps) {
         <div className="listen-main">
           <header className="listen-identity">
             <p className="eyebrow">{eyebrow}</p>
-            <h1 className="display">{item?.title}</h1>
+            <h1 className="display" dir="auto">{item?.title ?? 'Untitled'}</h1>
             {item && <RequestTag item={item} />}
-            <p className="artist">{item?.artist}</p>
+            <p className="artist" dir="auto">{item?.artist ?? 'Unknown artist'}</p>
           </header>
 
           {!stage && (

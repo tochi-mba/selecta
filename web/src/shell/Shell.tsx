@@ -55,8 +55,8 @@ function MiniPlayer({ player, now, song, onRequests, waiting }: { player: SetPla
         <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
       </button>
       <PageLink to="/listen" className="mini-song" title={`${song.title} — ${song.artist}`}>
-        <b title={song.title}>{song.title}</b>
-        <span title={song.artist}>{song.artist} · {clock(now.songTime)} / {clock(now.duration)}</span>
+        <b title={song.title} dir="auto">{song.title || 'Untitled'}</b>
+        <span title={song.artist} dir="auto">{song.artist || 'Unknown artist'} · {clock(now.songTime)} / {clock(now.duration)}</span>
       </PageLink>
       <button className="mini-next" disabled={now.phase === 'loading'} onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
       <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
