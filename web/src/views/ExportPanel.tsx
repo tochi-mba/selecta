@@ -39,7 +39,7 @@ export function ExportPanel(props: {
   const scope = inDraft ? 'draft' : 'current';
 
   // what this opened to: the export just started here, or one of this very version from earlier
-  const mine = jobs?.find((job) => job.id === started)
+  const mine = jobs?.find((job) => job.id === started && job.scope === scope && job.draft === draftId)
     ?? jobs?.find((job) => job.scope === scope && job.draft === draftId && sameVersion(job, mix) && (isExportActive(job) || job.state === 'ready'));
   const going = !!mine && isExportActive(mine);
   const file = mine?.state === 'ready' ? mine : null;
@@ -65,7 +65,10 @@ export function ExportPanel(props: {
   return (
     <Dialog title="Save as an audio file" onClose={onClose}>
       <p><b>{mixName}</b> <span className="soft">{inDraft ? 'draft' : 'current mix'}, {mix.length} songs, about {length(runningTime(mix))}. FLAC.</span></p>
-      <p className="hint">Save captures exactly the songs and transitions shown for this {inDraft ? 'draft' : 'current mix'} at the moment you start. Later edits will not change the exported file.</p>
+      <p className="hint">
+        {mix.length ? <>From <b>{mix[0].title}</b> to <b>{mix[mix.length - 1].title}</b>. </> : ''}
+        Save captures exactly the songs and transitions shown for this {inDraft ? 'draft' : 'current mix'} at the moment you start. Later edits will not change the exported file.
+      </p>
       <ol className="export-stages" aria-label="Export progress">
         <li aria-current={!stage || stage === 'preparing' ? 'step' : undefined}>
           Prepare transitions{mine ? ` — ${mine.seams_ready} of ${mine.seams_total} ready` : ''}
