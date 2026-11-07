@@ -8,7 +8,7 @@
 - **Programme:** Selecta 4.0 complete UI/UX overhaul
 - **Phase:** 7 Discovery
 - **Extends, does not automatically supersede:** ADR-0015, ADR-0060, ADR-0085
-- **Source surfaces to reconcile:** `web/src/views/Requests.tsx`; `web/src/views/RequestsJoining.test.tsx`; `src/selecta/routes/requests.py`
+- **Source surfaces to reconcile:** `web/src/views/Requests.tsx`; `web/src/views/RequestsJoining.test.tsx`; `src/selecta/routes/song_requests.py`
 - **Tasks:** S4-0103-01 through S4-0103-10 in [the Selecta 4.0 checklist](selecta-4-implementation-checklist.md)
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (after merged PRs #25 and #26)
 

@@ -8,7 +8,7 @@
 - **Programme:** Selecta 4.0 complete UI/UX overhaul
 - **Phase:** 1 Foundations / 2 Shell
 - **Extends, does not automatically supersede:** ADR-0004, ADR-0051, ADR-0080, ADR-0087
-- **Source surfaces to reconcile:** `web/src/ui/controls.tsx`; `web/src/ui/primitives.tsx`; `web/src/ui/toasts.tsx`; `web/src/shell/ActivityPanel.tsx`
+- **Source surfaces to reconcile:** `web/src/ui/controls.tsx`; `web/src/ui/primitives.tsx`; `web/src/ui/toasts.tsx`; `web/src/ui/ActivityPanel.tsx`
 - **Tasks:** S4-0094-01 through S4-0094-10 in [the Selecta 4.0 checklist](selecta-4-implementation-checklist.md)
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (after merged PRs #25 and #26)
 

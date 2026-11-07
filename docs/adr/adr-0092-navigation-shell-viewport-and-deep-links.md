@@ -8,7 +8,7 @@
 - **Programme:** Selecta 4.0 complete UI/UX overhaul
 - **Phase:** 2 Shell
 - **Extends, does not automatically supersede:** ADR-0002, ADR-0048, ADR-0049, ADR-0078, ADR-0082
-- **Source surfaces to reconcile:** `web/src/App.tsx`; `web/src/shell/*`; `web/src/router.tsx`; `web/src/styles/shell.css`
+- **Source surfaces to reconcile:** `web/src/App.tsx`; `web/src/shell/*`; `web/src/router.ts`; `web/src/styles/shell.css`
 - **Tasks:** S4-0092-01 through S4-0092-10 in [the Selecta 4.0 checklist](selecta-4-implementation-checklist.md)
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (after merged PRs #25 and #26)
 

@@ -8,7 +8,7 @@
 - **Programme:** Selecta 4.0 complete UI/UX overhaul
 - **Phase:** 9 Operations
 - **Extends, does not automatically supersede:** ADR-0021, ADR-0066, ADR-0086
-- **Source surfaces to reconcile:** `web/src/views/Listening.tsx`; `web/src/views/Workshop.tsx`; `src/selecta/routes/listening.py`
+- **Source surfaces to reconcile:** `web/src/views/Listening.tsx`; `web/src/views/Workshop.tsx`; `src/selecta/routes/* (study API; confirm route owner)`
 - **Tasks:** S4-0109-01 through S4-0109-10 in [the Selecta 4.0 checklist](selecta-4-implementation-checklist.md)
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (after merged PRs #25 and #26)
 

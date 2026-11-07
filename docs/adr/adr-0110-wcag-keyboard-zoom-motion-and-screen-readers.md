@@ -8,7 +8,7 @@
 - **Programme:** Selecta 4.0 complete UI/UX overhaul
 - **Phase:** 1–11 Cross-cutting
 - **Extends, does not automatically supersede:** ADR-0023, ADR-0067, ADR-0068, ADR-0087
-- **Source surfaces to reconcile:** `web/src/ui/*`; `web/src/shortcuts.ts`; `web/e2e/*`; `web/src/styles/*.css`
+- **Source surfaces to reconcile:** `web/src/ui/*`; `web/src/state/shortcuts.ts`; `web/e2e/*`; `web/src/styles/*.css`
 - **Tasks:** S4-0110-01 through S4-0110-10 in [the Selecta 4.0 checklist](selecta-4-implementation-checklist.md)
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (after merged PRs #25 and #26)
 
