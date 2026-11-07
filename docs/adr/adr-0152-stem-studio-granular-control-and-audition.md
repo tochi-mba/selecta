@@ -1,0 +1,54 @@
+# ADR-0152 — Stem Studio: physical grid feel, audible preview, precision and recovery
+
+- **Decision:** Proposed; no owner acceptance is asserted.
+- **Implementation:** Not started (0/8 new MI tasks).
+- **Independent verification:** No (0/8).
+- **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
+- **Priority / phase:** P0 / Studio.
+- **Related earlier ADRs:** ADR-0122, ADR-0102, ADR-0132; earlier decisions and historical implementation claims remain intact.
+- **Source touchpoints:** web/src/views/Studio.tsx; web/src/views/StudioGrid.tsx; web/src/styles/creation.css.
+
+## Context and evidence boundary
+
+Studio exposes up to eight lanes with 8–64 time cells, Shape, Detailed Grid, Detailed List and AI assistance. It needs instrument-like responsiveness without representing discrete on/off cells as continuous audio automation. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+
+## Proposed decision
+
+- Preserve all eight lanes for outgoing/incoming voice, drums, bass and melody; keep Shape and detailed representations losslessly synchronized.
+- Every cell operation has immediate local feedback and visible unsaved status while actual rendered result is pending.
+- Separate Solo Preview, preview the full seam, Apply and AI-assisted arrangement; labels reflect the exact affected artifact.
+- A user may ask Selecta to arrange a blank idea or refine their changes without the UI silently discarding authored cells.
+- Grid drag/paint behavior must be explicit and reversible, with keyboard and list alternatives on all viewports.
+- Audio previews never fabricate an audible result, and no preview interrupts intentional manual Pause.
+
+## Interaction choreography and visual behavior
+
+- Cell toggles ≤100 ms on press; rows never ripple automatically in imitation of a beat.
+- While auditioning, a thin time cursor tracks real preview time; it stops immediately on Stop, pause or audio failure.
+- Selecting an AI arrangement shows an exact pending operation, not a made-up growing waveform; changed grid appears only from returned data.
+- When switching Shape/Grid/List, preserve logical cell focus or announce target mapping; no animated transformation that loses controls.
+
+## Alternatives, trade-offs and limits
+
+Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
+
+## Implementation tasks — all Not started, none Verified
+
+1. **MI-0152-01 — Define eight-lane cell feedback.** Acceptance: On/off/solo/muted/failed/loading/unsaved states separately marked. Required verification: 64-cell accessibility and visual fixture. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+2. **MI-0152-02 — Specify grid painting and keyboard parity.** Acceptance: Each operation reproducible without drag and retains row/column identity. Required verification: Touch, keyboard and NVDA/Edge tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+3. **MI-0152-03 — Design preview and timeline cursor.** Acceptance: Cursor derived from actual rendered audio/clock and stops reliably. Required verification: Audio focus and timing tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+4. **MI-0152-04 — Preserve mode-switch data.** Acceptance: Shape/Grid/List round trip does not modify unrepresented cells. Required verification: Property-based state roundtrip tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+5. **MI-0152-05 — Protect AI-assist intent.** Acceptance: Arrange and fine tune operate on exact snapshot and never discard later edits. Required verification: Stale generation/revision race. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+6. **MI-0152-06 — Clarify apply and browser recovery.** Acceptance: Unsaved, recovered, applied and rendered are distinct; rollback safe. Required verification: Local storage failure and retry fixtures. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+7. **MI-0152-07 — Handle small screens without loss.** Acceptance: Sticky lane labels and horizontal scroll with meaningful context. Required verification: 320px, coarse-pointer and 400% zoom. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+8. **MI-0152-08 — Measure creator prediction.** Acceptance: Users can anticipate sound from changed cells and improve a seam. Required verification: Before/after listening and task study. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+
+## Shared invariants and negative cases
+
+Preserve original audio files; current/draft and revision identities; one audio-focus owner; manual Pause authority; explicit bridge consent and atomic join; full eight-lane Studio; existing library/route/search operations; blind-study neutrality; decodable exact-revision FLAC; local-only server and truthful LRCLIB metadata disclosure. **No desktop packager, native/browser folder-picker bridge, accounts, SaaS, cloud media upload, subscriptions, remote telemetry or sound effects.**
+
+Review idle, hovered, focused, pressed, selected, queued, rendering, ready, blocked, failed, retry, cancellation, stale response, missing metadata, long/RTL names, low-resource mode and offline recovery. Run dark/light/system, forced colors, 320–2560px, 200/400% zoom, coarse touch, keyboard, NVDA/Edge, reduced-motion and audio-continuity checks as applicable. Automated screenshots/test passes are not human validation.
+
+## Status, dependencies and records
+
+A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
