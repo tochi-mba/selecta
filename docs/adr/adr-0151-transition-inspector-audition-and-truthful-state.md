@@ -1,7 +1,7 @@
 # ADR-0151 — Transition Inspector: audition-first detail, state truth and precision
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 1/8 Implemented, 6/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Editor.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-A transition can be planned, rendering, rendered differently than requested or failed. A microinteraction that looks 'successful' at request time would mislead the creator about the audio they will hear. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+A transition can be planned, rendering, rendered differently than requested or failed. A microinteraction that looks 'successful' at request time would mislead the creator about the audio they will hear. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ A transition can be planned, rendering, rendered differently than requested or f
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 1 source-level Implemented, 0 independently Verified
 
-1. **MI-0151-01 — Design audition-first inspector hierarchy.** Acceptance: Pair, actual heard move and Play visible before diagnostics. Required verification: Transition-edit comprehension test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0151-02 — Specify requested/rendered taxonomy.** Acceptance: Fallback, missing source and failed render differ in words/icons. Required verification: Seam status matrix. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0151-03 — Guard stale technique changes.** Acceptance: Older render cannot replace latest chosen seam key. Required verification: Rapid change race test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0151-04 — Preserve exact preview ownership.** Acceptance: No overlapping player, correct resume and explicit manual Pause authority. Required verification: Real audio and focus tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0151-05 — Explain disabled moves.** Acceptance: Why unavailable readable to keyboard/touch/AT. Required verification: Disabled choice semantic review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0151-06 — Design cue editor feedback.** Acceptance: Phrase, entry, exit and length changes show committed/pending states. Required verification: Cue control keyboard tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0151-07 — Handle narrow inspector sheet.** Acceptance: Selection context and focus retained across open/close/revision. Required verification: 320px and deleted seam fixtures. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0151-01 — Design audition-first inspector hierarchy.** Acceptance: Pair, actual heard move and Play visible before diagnostics. Required verification: Transition-edit comprehension test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0151-02 — Specify requested/rendered taxonomy.** Acceptance: Fallback, missing source and failed render differ in words/icons. Required verification: Seam status matrix. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0151-03 — Guard stale technique changes.** Acceptance: Older render cannot replace latest chosen seam key. Required verification: Rapid change race test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0151-04 — Preserve exact preview ownership.** Acceptance: No overlapping player, correct resume and explicit manual Pause authority. Required verification: Real audio and focus tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx`; `web/src/audio/focus.test.tsx`, `web/src/views/Mix.test.tsx`; independent checks pending.**
+5. **MI-0151-05 — Explain disabled moves.** Acceptance: Why unavailable readable to keyboard/touch/AT. Required verification: Disabled choice semantic review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx`; partial behavior or baseline, task acceptance outstanding.**
+6. **MI-0151-06 — Design cue editor feedback.** Acceptance: Phrase, entry, exit and length changes show committed/pending states. Required verification: Cue control keyboard tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0151-07 — Handle narrow inspector sheet.** Acceptance: Selection context and focus retained across open/close/revision. Required verification: 320px and deleted seam fixtures. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0151-08 — Validate sound correspondence.** Acceptance: Displayed technique matches actual resulting transition across samples. Required verification: Human A/B audition with exact SHA. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

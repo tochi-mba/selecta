@@ -1,7 +1,7 @@
 # ADR-0153 — Library browsing: instant search, contextual actions and large-collection calm
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 1/8 Implemented, 5/8 In progress, 2 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P1 / Library.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-The Library needs to remain music-first while exposing analysis and operational status across collections of 20,000 tracks. Search and filter transitions must be fast and truthful, without losing scroll or input focus. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+The Library needs to remain music-first while exposing analysis and operational status across collections of 20,000 tracks. Search and filter transitions must be fast and truthful, without losing scroll or input focus. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ The Library needs to remain music-first while exposing analysis and operational 
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 1 source-level Implemented, 0 independently Verified
 
-1. **MI-0153-01 — Design query feedback lifecycle.** Acceptance: Typing, waiting, loading, success, empty, stale, failed all distinct. Required verification: Delayed query and offline simulations. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0153-02 — Preserve URL-backed state.** Acceptance: Filter/sort/page/search recover after Back/Forward/refresh. Required verification: Deep-link E2E. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0153-03 — Audit music identity hierarchy.** Acceptance: Title/artist precede processing metadata and remain readable. Required verification: Long/RTL/missing metadata review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0153-04 — Specify contextual action states.** Acceptance: Start vs Add vs Next consequences and confirmation explicit. Required verification: Current mix conflict tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0153-05 — Design readiness messaging.** Acceptance: Analysis/lyrics/mix eligibility not equated with playable files. Required verification: Song readiness fixtures. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0153-01 — Design query feedback lifecycle.** Acceptance: Typing, waiting, loading, success, empty, stale, failed all distinct. Required verification: Delayed query and offline simulations. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Library.tsx`; `web/src/views/Library.test.tsx`; independent checks pending.**
+2. **MI-0153-02 — Preserve URL-backed state.** Acceptance: Filter/sort/page/search recover after Back/Forward/refresh. Required verification: Deep-link E2E. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Library.tsx`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0153-03 — Audit music identity hierarchy.** Acceptance: Title/artist precede processing metadata and remain readable. Required verification: Long/RTL/missing metadata review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Library.tsx`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0153-04 — Specify contextual action states.** Acceptance: Start vs Add vs Next consequences and confirmation explicit. Required verification: Current mix conflict tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Library.tsx`; partial behavior or baseline, task acceptance outstanding.**
+5. **MI-0153-05 — Design readiness messaging.** Acceptance: Analysis/lyrics/mix eligibility not equated with playable files. Required verification: Song readiness fixtures. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Library.tsx`; partial behavior or baseline, task acceptance outstanding.**
 6. **MI-0153-06 — Validate large-list performance.** Acceptance: 20k rows remain responsive with stable scroll, popovers and focus. Required verification: Named hardware INP/long-task trace. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0153-07 — Audit density and touch targets.** Acceptance: Compact mode preserves essential actions and 44px default targets. Required verification: 320px/zoom and coarse-pointer review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+7. **MI-0153-07 — Audit density and touch targets.** Acceptance: Compact mode preserves essential actions and 44px default targets. Required verification: 320px/zoom and coarse-pointer review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Library.tsx`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0153-08 — Measure findability.** Acceptance: Users locate songs, filters and corrections without coaching. Required verification: Search-and-act study with raw counts. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

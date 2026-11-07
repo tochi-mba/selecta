@@ -1,7 +1,7 @@
 # ADR-0150 — Arrangement timeline: tactile song movement, insertions, locks and focus
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 4/8 Implemented, 3/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Editor.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Editor song rows and seam rows are distinct objects. Drag and drop can make arranging musical sequences feel tactile, but cannot outpace mutation guards, break scroll or become the only usable method. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+Editor song rows and seam rows are distinct objects. Drag and drop can make arranging musical sequences feel tactile, but cannot outpace mutation guards, break scroll or become the only usable method. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ Editor song rows and seam rows are distinct objects. Drag and drop can make arra
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 4 source-level Implemented, 0 independently Verified
 
-1. **MI-0150-01 — Define song/seam selection grammar.** Acceptance: Inspector knows selected stable ID across edits. Required verification: 100-song fixture and selection tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0150-02 — Specify pointer drag lifecycle.** Acceptance: Handle start, drag threshold, valid drop, cancel and scroll noninterference. Required verification: Coarse-touch and pointer E2E. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0150-03 — Design exact insertion affordances.** Acceptance: Add between named songs without accidental final-position ambiguity. Required verification: Long timeline task trial. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0150-04 — Specify keyboard reorder parity.** Acceptance: Pick/move/drop or up/down complete same mutation as pointer. Required verification: NVDA/Edge and keyboard tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0150-05 — Protect locks and scope.** Acceptance: Lock semantics precise, current/draft guard cannot be crossed. Required verification: Concurrent edit/rebuild assertions. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0150-06 — Guard stale mutations during animation.** Acceptance: Server rejects changed order; UI restores original without ghost row. Required verification: Delayed mutation and offline test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0150-07 — Prevent long-list layout shifts.** Acceptance: Virtualized/contained rows reveal menus and keep scroll context. Required verification: 100-song and 200/400% zoom. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0150-01 — Define song/seam selection grammar.** Acceptance: Inspector knows selected stable ID across edits. Required verification: 100-song fixture and selection tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0150-02 — Specify pointer drag lifecycle.** Acceptance: Handle start, drag threshold, valid drop, cancel and scroll noninterference. Required verification: Coarse-touch and pointer E2E. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`; `web/src/views/Mix.test.tsx`; independent checks pending.**
+3. **MI-0150-03 — Design exact insertion affordances.** Acceptance: Add between named songs without accidental final-position ambiguity. Required verification: Long timeline task trial. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0150-04 — Specify keyboard reorder parity.** Acceptance: Pick/move/drop or up/down complete same mutation as pointer. Required verification: NVDA/Edge and keyboard tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`; `web/src/views/Mix.test.tsx`; independent checks pending.**
+5. **MI-0150-05 — Protect locks and scope.** Acceptance: Lock semantics precise, current/draft guard cannot be crossed. Required verification: Concurrent edit/rebuild assertions. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`; partial behavior or baseline, task acceptance outstanding.**
+6. **MI-0150-06 — Guard stale mutations during animation.** Acceptance: Server rejects changed order; UI restores original without ghost row. Required verification: Delayed mutation and offline test. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`; `web/src/views/Mix.test.tsx`; independent checks pending.**
+7. **MI-0150-07 — Prevent long-list layout shifts.** Acceptance: Virtualized/contained rows reveal menus and keep scroll context. Required verification: 100-song and 200/400% zoom. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`; `web/src/views/Mix.test.tsx`; independent checks pending.**
 8. **MI-0150-08 — Evaluate arrangement fluency.** Acceptance: Users complete move, insert, remove, lock and Undo without coaching. Required verification: Task success/error and measured effort. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
