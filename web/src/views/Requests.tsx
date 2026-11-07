@@ -237,6 +237,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     let working = false;
     let again = false;
     const consider = async () => {
+      // A hidden tab is not the active listener. It must not autonomously
+      // change the current mix based on an audio position no one can hear.
+      if (document.visibilityState === 'hidden') return;
       // a check already under way was for how things were, so one more follows it
       if (working) { again = true; return; }
       const body = playbackBody();
@@ -277,7 +280,16 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     };
     checkNow.current = () => void consider();
     const timer = window.setInterval(() => void consider(), 5000);
-    return () => { live = false; checkNow.current = () => {}; window.clearInterval(timer); };
+    const visible = () => {
+      if (document.visibilityState === 'visible') void consider();
+    };
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      live = false;
+      checkNow.current = () => {};
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', visible);
+    };
   }, [!!playback]);
 
   // every request is looked at again as soon as anything changes that could affect where it goes
