@@ -424,3 +424,18 @@ describe('the transport', () => {
     expect(player.state.phase).toBe('playing');
   });
 });
+
+describe('volume recovery', () => {
+  it('restores a useful audible level when unmuting at zero volume', () => {
+    const player = new SetPlayer(() => [], () => {});
+    player.setVolume(0);
+    expect(player.state.volume).toBe(0);
+    player.toggleMute();
+    expect(player.state.volume).toBe(0.5);
+    expect(player.state.muted).toBe(false);
+    player.toggleMute();
+    expect(player.state.muted).toBe(true);
+    player.toggleMute();
+    expect(player.state.muted).toBe(false);
+  });
+});

@@ -360,3 +360,20 @@ describe('the seam studio', () => {
     expect(calls.some((call) => call.path.endsWith('/use'))).toBe(false);
   });
 });
+
+describe('Studio representation parity', () => {
+  it('keeps every stem square and its saved value when changing editor modes', async () => {
+    open();
+    const cell = await square('Song 1 voice, square 2');
+    fireEvent.click(cell);
+    expect(cell).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed list' }));
+    const lists = screen.getByRole('group', { name: 'Stem controls by song and part' });
+    const boxes = within(lists).getAllByRole('checkbox');
+    expect(boxes).toHaveLength(64);
+    expect(boxes[1]).not.toBeChecked();
+    expect(boxes[1]).toHaveAttribute('data-cell', '0-1');
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+    expect(await square('Song 1 voice, square 2')).toHaveAttribute('aria-pressed', 'false');
+  });
+});

@@ -310,3 +310,18 @@ describe('a tooltip', () => {
     expect(screen.getByRole('tooltip', { hidden: true })).not.toHaveAttribute('hidden');
   });
 });
+
+describe('Undo confirmation timing', () => {
+  it('retains the exact Undo notification while the server is still responding', async () => {
+    let finish: () => void = () => {};
+    const undo = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    render(<Toaster />);
+    act(() => { showToast('Moved song three.', { undo }); });
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(undo).toHaveBeenCalledOnce();
+    expect(screen.getByText('Moved song three.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undoing…' })).toHaveAttribute('aria-disabled', 'true');
+    await act(async () => { finish(); });
+    expect(screen.queryByText('Moved song three.')).toBeNull();
+  });
+});

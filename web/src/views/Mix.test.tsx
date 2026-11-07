@@ -776,3 +776,15 @@ describe('saving as a file', () => {
     expect(screen.getByRole('button', { name: 'Save it' })).toBeEnabled();
   });
 });
+
+describe('timeline drop safety', () => {
+  it('ignores outside text drops instead of treating blank text as song zero', () => {
+    const calls = fakeBackend({});
+    render(<Harness start={songs(seam('none', 'a'))} />);
+    const target = screen.getByRole('button', { name: 'Reorder Song 2' }).closest('li')!;
+    const outside = { types: ['text/plain'], getData: () => '' };
+    fireEvent.dragOver(target, { dataTransfer: outside });
+    fireEvent.drop(target, { dataTransfer: outside });
+    expect(calls.some((call) => call.path === '/mix/move')).toBe(false);
+  });
+});
