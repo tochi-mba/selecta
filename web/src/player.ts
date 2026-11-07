@@ -178,7 +178,13 @@ export class SetPlayer {
   }
 
   toggleMute() {
-    this.update({ muted: !this.state.muted });
+    // Zero volume is already silent. The next press must restore audible sound,
+    // not switch an invisible mute flag while leaving volume at zero.
+    if (this.state.volume === 0) {
+      this.update({ volume: 0.5, muted: false });
+    } else {
+      this.update({ muted: !this.state.muted });
+    }
     this.applySound();
   }
 

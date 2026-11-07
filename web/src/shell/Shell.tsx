@@ -24,8 +24,8 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
     <div className="volume">
       <button
         className="icon"
-        aria-label={now.muted ? 'Turn the sound back on' : 'Mute'}
-        aria-pressed={now.muted}
+        aria-label={now.volume === 0 ? 'Restore sound at 50 percent' : now.muted ? 'Unmute' : 'Mute'}
+        aria-pressed={now.muted || now.volume === 0}
         onClick={() => player.toggleMute()}
       >
         <Icon name={now.muted || now.volume === 0 ? 'muted' : 'volume'} />
@@ -33,7 +33,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
       <input
         type="range"
         aria-label="Volume"
-        aria-valuetext={now.muted ? 'Muted' : `${Math.round(now.volume * 100)} percent`}
+        aria-valuetext={now.muted ? 'Muted' : now.volume === 0 ? 'Silent, 0 percent' : `${Math.round(now.volume * 100)} percent`}
         min={0}
         max={100}
         value={Math.round((now.muted ? 0 : now.volume) * 100)}
@@ -51,14 +51,14 @@ function MiniPlayer({ player, now, song, onRequests, waiting }: { player: SetPla
   return (
     <aside className="mini" aria-label="Now playing">
       <i className="mini-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-      <button className="round" onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : 'Play'}>
+      <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : now.phase === 'loading' ? 'Loading song' : now.phase === 'paused' ? 'Resume' : 'Play'}>
         <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
       </button>
       <PageLink to="/listen" className="mini-song" title={`${song.title} — ${song.artist}`}>
         <b title={song.title}>{song.title}</b>
         <span title={song.artist}>{song.artist} · {clock(now.songTime)} / {clock(now.duration)}</span>
       </PageLink>
-      <button className="mini-next" onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
+      <button className="mini-next" disabled={now.phase === 'loading'} onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
       <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
         Request{waiting ? <span className="count"> {waiting}</span> : ''}
       </button>

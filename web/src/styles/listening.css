@@ -147,3 +147,19 @@
 .request-pair { flex: 1 1 160px; white-space: normal; overflow-wrap: anywhere; }
 .request-preview button { min-height: var(--control-height); }
 .request-name b, .request-name span { white-space: normal; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+
+/* Seeking shows a proposed location without moving the real audio playhead.
+   Vertical touch scrolling still works; only the scrub strip owns horizontal drags. */
+.strip.can-seek { cursor: crosshair; touch-action: pan-y; user-select: none; }
+.strip .scrub-ghost {
+  position: absolute;
+  top: 0;
+  height: 68px;
+  width: 2px;
+  border-left: 2px dashed var(--focus);
+  pointer-events: none;
+}
+.strip:has(.scrub-ghost) .time { font-variant-numeric: tabular-nums; }
+@media (forced-colors: active) {
+  .strip .scrub-ghost { border-color: Highlight; }
+}

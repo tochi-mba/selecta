@@ -187,3 +187,18 @@ button[aria-disabled='true'] { cursor: progress; }
   }
   .studio-cell[aria-pressed='true']::after { background: Highlight; }
 }
+
+/* Causal, short microinteractions. All state changes stay textual and immediate;
+   animation only decorates an already committed UI state. */
+.toast-row { animation: toast-appear var(--motion-reveal) var(--motion-ease) both; }
+.overlay-panel { animation: overlay-appear var(--motion-overlay) var(--motion-ease) both; }
+@keyframes toast-appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes overlay-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  /* Existing feature-specific keyframes have a fully static equivalent. */
+  *, *::before, *::after { animation-duration: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; }
+}
+@media (forced-colors: active) {
+  .toast-row { color: CanvasText; background: Canvas; border: 1px solid CanvasText; }
+  .toast-row.problem { color: CanvasText; background: Canvas; border-color: Mark; }
+}

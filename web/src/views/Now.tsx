@@ -1,4 +1,4 @@
-import { KeyboardEvent, MouseEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, PointerEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ApiError, get, MixData, post, SongDetail } from '../api';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
@@ -66,6 +66,14 @@ const CANT_SEEK = 'You can’t move around during a transition, because it plays
  * something else. */
 function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDetail; time: number; seamAt: number | null; onSeek: (seconds: number) => void; seekBlocked?: boolean }) {
   const noteId = useId();
+  // A pointer drag is a proposal, not an actual seek. Keep the real playhead
+  // anchored to the audio clock until the pointer is released and the player accepts it.
+  const [seekPreview, setSeekPreview] = useState<number | null>(null);
+  const dragging = useRef<number | null>(null);
+  useEffect(() => {
+    dragging.current = null;
+    setSeekPreview(null);
+  }, [detail.id, seekBlocked]);
   const percent = (seconds: number) =>
     100 * Math.min(Math.max(Number.isFinite(seconds) ? seconds : 0, 0), Math.max(detail.duration, 0)) / Math.max(detail.duration, 1);
   const shape = useMemo(() => {
@@ -80,13 +88,38 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
   const sections = useMemo(() => mergedSections(detail), [detail]);
   const barTimes = detail.bar_times ?? [];
   const clip = `played-${detail.id}`;
-  const pointAt = (event: MouseEvent<HTMLDivElement>) => {
+  const pointAt = (event: PointerEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    if (!box.width) return null;
+    return Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1) * detail.duration;
+  };
+  const beginSeek = (event: PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
     if (seekBlocked) {
       announce(CANT_SEEK);
       return;
     }
-    const box = event.currentTarget.getBoundingClientRect();
-    if (box.width) onSeek(detail.duration * Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1));
+    const target = pointAt(event);
+    if (target === null) return;
+    dragging.current = event.pointerId;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setSeekPreview(target);
+  };
+  const moveSeek = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragging.current !== event.pointerId) return;
+    const target = pointAt(event);
+    if (target !== null) setSeekPreview(target);
+  };
+  const endSeek = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragging.current !== event.pointerId) return;
+    dragging.current = null;
+    const target = pointAt(event);
+    setSeekPreview(null);
+    if (!seekBlocked && target !== null) onSeek(target);
+  };
+  const cancelSeek = () => {
+    dragging.current = null;
+    setSeekPreview(null);
   };
   const keys = (event: KeyboardEvent<HTMLDivElement>) => {
     const moves: Record<string, number> = { ArrowLeft: time - 5, ArrowDown: time - 5, ArrowRight: time + 5, ArrowUp: time + 5, Home: 0, End: detail.duration - 1, PageDown: time - 30, PageUp: time + 30 };
@@ -109,7 +142,11 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       aria-valuetext={`${clock(time)} of ${clock(detail.duration)}`}
       aria-disabled={seekBlocked || undefined}
       aria-describedby={seekBlocked ? noteId : undefined}
-      onClick={pointAt}
+      onPointerDown={beginSeek}
+      onPointerMove={moveSeek}
+      onPointerUp={endSeek}
+      onPointerCancel={cancelSeek}
+      onLostPointerCapture={cancelSeek}
       onKeyDown={keys}
     >
       <svg className="peaks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -139,9 +176,12 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
         })}
       </div>
       {seamAt !== null && <b className="seam-mark" style={{ left: `${percent(seamAt)}%` }} title={`Seam at ${clock(seamAt)}`} />}
-      <b className="playhead" style={{ left: `${percent(time)}%` }} />
+      <b className="playhead" style={{ left: `${percent(time)}%` }} aria-hidden="true" />
+      {seekPreview !== null && (
+        <b className="scrub-ghost" style={{ left: `${percent(seekPreview)}%` }} aria-hidden="true" />
+      )}
       <span className="time">
-        {clock(time)} / {clock(detail.duration)}
+        {seekPreview === null ? clock(time) : `Seek to ${clock(seekPreview)}`} / {clock(detail.duration)}
       </span>
     </div>
     <p className="hint seek-note" id={noteId}>{seekBlocked ? CANT_SEEK : ' '}</p>
@@ -283,6 +323,7 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     const context = node?.getContext('2d');
     if (!node || !context) return;
     let frame = 0;
+    let visible = true;
     const style = getComputedStyle(node);
     // Canvas cannot resolve CSS custom properties inside a fillStyle. Read
     // the theme's rendered tokens instead; system high-contrast foreground
@@ -295,17 +336,17 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     let lastDraw = -Infinity;
     const draw = (timestamp = 0) => {
       // nothing to look at while the tab is hidden, and the music mustn't pay for it
-      if (document.hidden) {
+      if (document.hidden || !visible) {
         frame = 0;
         return;
       }
-      if (active && !reduceMotion && timestamp - lastDraw < 1000 / 30) {
+      if (active && !reduceMotion && timestamp - lastDraw < 1000 / 15) {
         frame = window.requestAnimationFrame(draw);
         return;
       }
       lastDraw = timestamp;
       const rect = node.getBoundingClientRect();
-      const ratio = window.devicePixelRatio || 1;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
       const width = Math.max(1, Math.round(rect.width * ratio));
       const height = Math.max(1, Math.round(rect.height * ratio));
       if (node.width !== width || node.height !== height) {
@@ -339,8 +380,16 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
       if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
     };
     const wake = () => {
-      if (!document.hidden && !frame) draw();
+      if (!document.hidden && visible && !frame) draw(performance.now());
     };
+    const intersection = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(([entry]) => {
+      visible = entry?.isIntersecting ?? false;
+      if (!visible) {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+      } else wake();
+    });
+    intersection?.observe(node);
     document.addEventListener('visibilitychange', wake);
     window.addEventListener('resize', wake);
     // An inactive or reduced-motion canvas still needs to redraw when its
@@ -352,10 +401,11 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
       document.removeEventListener('visibilitychange', wake);
       window.removeEventListener('resize', wake);
       observer?.disconnect();
+      intersection?.disconnect();
       window.cancelAnimationFrame(frame);
     };
   }, [player, active, stage, reduceMotion, theme]);
-  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label="Live music frequency visualizer" />;
+  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label={active ? 'Live audio frequency levels' : 'Audio frequency visualizer paused'} />;
 }
 
 /** Why there's nothing to follow along with. A song's timing is never made up to fill the gap. */

@@ -1,5 +1,5 @@
 import { Icon } from './Icon';
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { canUndo, clearActivity, recordActivity, runUndo } from '../state/activity';
 
@@ -86,7 +86,10 @@ function subscribe(listener: () => void) {
 
 function ToastRow({ toast }: { toast: Toast }) {
   const timer = useRef<number | null>(null);
+  const inFlight = useRef(false);
+  const [undoing, setUndoing] = useState(false);
   const start = () => {
+    if (inFlight.current) return;
     if (timer.current !== null) window.clearTimeout(timer.current);
     const wait = toast.undo ? UNDO_MS : toast.tone === 'problem' ? PROBLEM_MS : PLAIN_MS;
     timer.current = window.setTimeout(() => dismissToast(toast.id), wait);
@@ -106,16 +109,26 @@ function ToastRow({ toast }: { toast: Toast }) {
       showProblem('Undo the newer change in this mix first. Your earlier Undo is kept in Activity.');
       return;
     }
-    dismissToast(toast.id);
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setUndoing(true);
+    hold();
     try {
       await runUndo(toast.activity);
+      // Keep Undo and its scope visible until the server confirms the change.
+      dismissToast(toast.id);
     } catch (error) {
       showProblem((error as Error).message || 'Couldn’t undo that.');
+      setUndoing(false);
+    } finally {
+      inFlight.current = false;
+      start();
     }
   };
   return (
     <div
       className={`toast-row ${toast.tone}`}
+      aria-busy={undoing || undefined}
       role={toast.tone === 'problem' ? 'alert' : 'status'}
       onMouseEnter={hold}
       onMouseLeave={start}
@@ -126,9 +139,9 @@ function ToastRow({ toast }: { toast: Toast }) {
       {toast.undo && (
         <button
           onClick={() => void undo()}
-          aria-disabled={!canUndo(toast.activity) || undefined}
+          aria-disabled={undoing || !canUndo(toast.activity) || undefined}
           title={canUndo(toast.activity) ? undefined : 'Undo the newer change first; this stays in Activity'}
-        >Undo</button>
+        >{undoing ? 'Undoing…' : 'Undo'}</button>
       )}
       <button className="toast-close" aria-label="Dismiss" onClick={() => dismissToast(toast.id)}><Icon name="close" /></button>
     </div>
