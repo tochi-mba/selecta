@@ -217,9 +217,9 @@ describe('a bridge joining as one', () => {
     expect(container.querySelectorAll('.coming-group .coming-rows > li')).toHaveLength(5);
   });
 
-  it('says when it’s joining', () => {
+  it('does not promise joining before the next valid opening', () => {
     show(value({ stage: 'ready' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Joining now');
+    expect(screen.getByRole('status')).toHaveTextContent('Ready — waiting for a valid opening');
   });
 
   it('words a single song differently', () => {
