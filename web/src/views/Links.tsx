@@ -36,6 +36,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   const [audition, setAudition] = useState<Audition | null>(null);
   const [getting, setGetting] = useState(false);
   const [step, setStep] = useState<number | null>(null);
+  const [requestedStep, setRequestedStep] = useState<number | null>(null);
   const [bar, setBar] = useState(-1);
   const [saving, setSaving] = useState(false);
   const reviewing = useRef(false);
@@ -87,6 +88,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   const stop = () => {
     audio.current?.pause();
     setStep(null);
+    setRequestedStep(null);
     setBar(-1);
     releaseAudio(HARMONIC_OWNER);
   };
@@ -94,6 +96,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     keepGoing.current = false;
     audio.current?.pause();
     setStep(null);
+    setRequestedStep(null);
     setBar(-1);
   };
   // leaving the page lets the sound go
@@ -105,8 +108,11 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     const player = audio.current;
     if (!player) return;
     takeAudio({ id: HARMONIC_OWNER, label: 'A chord audition', stop: quietHere });
-    setStep(index);
-    setBar(0);
+    // Pressing a stage does not prove playback started. Only the media
+    // element's "playing" event can move the current-stage marker.
+    setStep(null);
+    setRequestedStep(index);
+    setBar(-1);
     player.src = `/api/discoveries/${id}/hear/${['chords', 'a', 'b', 'both'][index]}`;
     const source = player.src;
     void player.play()?.catch(() => {
@@ -179,7 +185,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   if (!loaded && !error) return <Skeleton variant="pairs" lines={1} label="Finding harmonic discoveries" />;
   if (!loaded && error) return <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
   if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed.</p>;
-  const listening = step !== null;
+  const listening = step !== null || requestedStep !== null;
   return (
     <section className="next-up discoveries">
       <div className="row wrap discoveries-head">
@@ -197,10 +203,22 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         preload="none"
         data-testid="excerpt-player"
         onError={() => { keepGoing.current = false; stop(); setError('This audition clip is unavailable. Prepare it again to retry.'); }}
+        onPlaying={() => {
+          if (requestedStep !== null) {
+            setStep(requestedStep);
+            setRequestedStep(null);
+          }
+        }}
         onTimeUpdate={(event) => {
-          if (!audition) return;
+          if (!audition || event.currentTarget.paused || event.currentTarget.readyState < 2) return;
           const at = event.currentTarget.currentTime;
-          setBar(audition.bar_starts.filter((start) => start <= at).length - 1);
+          let low = 0, high = audition.bar_starts.length;
+          while (low < high) {
+            const middle = Math.floor((low + high) / 2);
+            if (audition.bar_starts[middle] <= at) low = middle + 1;
+            else high = middle;
+          }
+          setBar(low - 1);
         }}
         onEnded={() => {
           if (step !== null && item && step + 1 < steps.length) playStep(item.id, step + 1);
@@ -216,7 +234,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
           <button className="primary" disabled={getting} onClick={() => (listening ? (keepGoing.current = false, stop()) : void hear(item))}>
             {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? <><Icon name="stop" /> Stop</> : <><Icon name="play" /> Hear what Selecta heard</>}
           </button>
-          <p className="discovery-now" role="status">{listening && step !== null ? `Now playing: ${steps[step].label}` : 'Nothing is playing'}</p>
+          <p className="discovery-now" role="status">{step !== null ? `Now playing: ${steps[step].label}` : requestedStep !== null ? `Loading stage ${requestedStep + 1}; no audio confirmed yet` : 'Nothing is playing'}</p>
           {audition && (
             <>
               <ol className="discovery-steps" aria-label="Four stages to hear">
