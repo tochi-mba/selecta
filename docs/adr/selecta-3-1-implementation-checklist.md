@@ -1,7 +1,7 @@
 # Selecta 3.1 — 116-item UI/UX finishing implementation checklist
 
 - **Decision:** Proposed (11 ADRs, ADR-0078–0088).
-- **Implementation:** 22 tasks In progress on PR #25, 94 not started; **0/116 Implemented; 0/116 Verified.**
+- **Implementation:** 29 tasks In progress on PR #25, 87 not started; **0/116 Implemented; 0/116 Verified.**
 - **Baseline:** `main` at `3b01dc1` (merged Selecta 3.0).
 - **Checklist discipline:** Every checkbox intentionally remains unchecked. PR #25 now includes a small amount of implementation, but no task yet has independent Verified evidence.
 - **Identity:** `S31-XXXX-NN` is unique to this finishing programme; historical T, P and S3 IDs remain unchanged.
@@ -145,7 +145,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0085 — Clarify Requests, consented bridges and discovery auditions](adr-0085-requests-and-music-discovery.md)
 
-**Phase:** 4 Discovery/Operations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 4 Discovery/Operations. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0085-01 — Review request search and duplicate/pre-existing choices.** Acceptance: Users understand requested versus already planned/playing songs and can cancel safely.
 - [ ] **S31-0085-02 — Clarify waiting, preparing, ready, inserted, failed and cancelled states.** Acceptance: Status and detail agree with server truth, including late updates and refresh.
@@ -162,7 +162,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0086 — Polish Library, Workspace, studies and operational status](adr-0086-library-workspace-study-and-operational-trust.md)
 
-**Phase:** 4 Discovery/Operations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/11.
+**Phase:** 4 Discovery/Operations. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
 
 - [ ] **S31-0086-01 — Review Library search, sort, filters, density and URL/history state.** Acceptance: Results match query, Back restores selected filter, and deep links remain valid.
 - [ ] **S31-0086-02 — Rebalance library row title, artist, readiness and action hierarchy.** Acceptance: Scanning reveals song identity and blockers before secondary maintenance controls.

@@ -2,7 +2,7 @@
 
 - **Date:** 2026-11-07.
 - **Programme decisions:** 11 Proposed (ADR-0078–0088); none accepted as part of this proposal.
-- **Implementation:** 22 selected S31 tasks In progress on PR #25; 94 not started; **0/116 Implemented, 0/116 Verified**.
+- **Implementation:** 29 selected S31 tasks In progress on PR #25; 87 not started; **0/116 Implemented, 0/116 Verified**.
 - **Scope:** PR #25 began as docs-only, now contains targeted frontend/unit/Edge changes and synthetic screenshot upload. No backend/schema/audio-engine/dependency changes. Baseline `main` is `3b01dc1336aab0f1cb0a4d85be5eba359de81831`.
 - **Important historical distinction:** PR #24 is **merged**. The earlier 3.0 ledger still records it as in progress/open and 0 merged; that is a stale planning snapshot requiring item-by-item reconciliation, **not** a basis for retroactively marking any S3 item complete.
 - **Evidence presently available:** source inspection, existing suites, new concurrency/identity/keyboard regressions and Web unit/build success on earlier PR heads. Final-head aggregate CI must be checked after the last commit. Synthetic screenshots are *review candidates only*: no approved images, human AT/usability, real audio audition or scale benchmarks are claimed.
@@ -18,13 +18,13 @@
 | [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | Proposed | In progress (partial) | 0/11 | Polish Listen, navigation, mini-player and Stage without audio regressions |
 | [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | Proposed | In progress (partial) | 0/12 | Make drafts, timeline editing, transition intent and export unambiguous |
 | [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | Proposed | In progress (partial) | 0/9 | Refine Stem Studio's expert controls without reducing capability |
-| [ADR-0085](adr-0085-requests-and-music-discovery.md) | Proposed | Not started | 0/10 | Clarify Requests, consented bridges and discovery auditions |
-| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | Proposed | Not started | 0/11 | Polish Library, Workspace, studies and operational status |
+| [ADR-0085](adr-0085-requests-and-music-discovery.md) | Proposed | In progress (partial) | 0/10 | Clarify Requests, consented bridges and discovery auditions |
+| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | Proposed | In progress (partial) | 0/11 | Polish Library, Workspace, studies and operational status |
 | [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | Proposed | In progress (partial) | 0/11 | Verify WCAG, device reflow, audio latency and scale |
 | [ADR-0088](adr-0088-research-visual-regression-and-release.md) | Proposed | In progress (partial) | 0/12 | Require observable user, visual and product acceptance before release |
 | **Total** | 11 proposed | 0 implemented | **0/116** | |
 
-## Implementation on PR #25 — 22 partial tasks, none Verified
+## Implementation on PR #25 — 29 partial tasks, none Verified
 
 | Task | Status | Source or automated evidence | Still required before Verified |
 |---|---|---|---|
@@ -50,6 +50,14 @@
 | S31-0087-06 | In progress | Edge narrow Listen order/disclosure/transport assertion (`e638458`), synthetic screenshot matrix (`a30af56`) | Physical keyboard, safe area, short heights, 200/400% zoom |
 | S31-0088-01 | In progress | Synthetic route/overlay and light/dark candidate screenshot collection (`a30af56`) | Reviewed approved golden baselines including empty/error/recovery, not merely generated images |
 | S31-0088-03 | In progress | Pre-existing Python/Web/audio/Edge suites retained; new focused regressions added (`6e0c618`–`a30af56`) | Green exact-head aggregate `verify`, human review and P0/P1 disposition |
+
+| S31-0078-03 | In progress | `selecta-3-1-surface-inventory.md` indexes routes, overlays, Stage and mini-player from router/App | Validate coverage against actual built app, owner route and task sign-off |
+| S31-0078-04 | In progress | Source-grounded state-coverage plan and adversarial sequences in inventory | Execute and record initial/empty/stale/failed/recovered states on each surface |
+| S31-0085-03 | In progress | `Requests.tsx` stops concurrent bridge approvals, exposes busy state for alternate bridge selection (`416dda3`) | Human whole-route consent explanation and competing action audit |
+| S31-0085-04 | In progress | `Requests.test.tsx` adds in-flight duplicate consent regression (`416dda3`) | Real server atomic bridge, rejection, cancellation and no partial-play review |
+| S31-0086-01 | In progress | `Library.tsx` responds when only paginated URL/history changes; regression in `Library.test.tsx` (`bc70194`) | Back/Forward, refresh, sort, filter and 20k results on device |
+| S31-0086-03 | In progress | Page append avoids redundant full refetch and reloads subset on direct navigation (`bc70194`) | Background refresh, focus preservation and large-result profile |
+| S31-0088-11 | In progress | `selecta-3-1-release-readiness.md` documents scope, evidence gaps and explicit NO-GO | Exact-head green CI, real image/AT/audio/performance/usability findings and reviewer decision |
 
 All work remains on an unmerged **draft** PR. Captured screenshots do not count as approved visual comparisons, a Web job does not count as full CI, and a source test does not replace human AT, audible or unassisted research. See [visual review instructions](selecta-3-1-visual-review.md).
 

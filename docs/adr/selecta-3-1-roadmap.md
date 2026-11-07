@@ -28,8 +28,8 @@ The [Selecta 3.0 INV-01–INV-20 requirements](selecta-3-roadmap.md) remain bind
 | [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | 2 Listener | Polish Listen, navigation, mini-player and Stage without audio regressions | 11 | Proposed | In progress (partial) |
 | [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | 3 Creator | Make drafts, timeline editing, transition intent and export unambiguous | 12 | Proposed | In progress (partial) |
 | [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | 3 Creator | Refine Stem Studio's expert controls without reducing capability | 9 | Proposed | In progress (partial) |
-| [ADR-0085](adr-0085-requests-and-music-discovery.md) | 4 Discovery/Operations | Clarify Requests, consented bridges and discovery auditions | 10 | Proposed | Not started |
-| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | 4 Discovery/Operations | Polish Library, Workspace, studies and operational status | 11 | Proposed | Not started |
+| [ADR-0085](adr-0085-requests-and-music-discovery.md) | 4 Discovery/Operations | Clarify Requests, consented bridges and discovery auditions | 10 | Proposed | In progress (partial) |
+| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | 4 Discovery/Operations | Polish Library, Workspace, studies and operational status | 11 | Proposed | In progress (partial) |
 | [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | 5 Cross-cutting quality | Verify WCAG, device reflow, audio latency and scale | 11 | Proposed | In progress (partial) |
 | [ADR-0088](adr-0088-research-visual-regression-and-release.md) | 6 Verification | Require observable user, visual and product acceptance before release | 12 | Proposed | In progress (partial) |
 | **Total** | | | **116** | | **0 Implemented / 0 Verified** |
@@ -69,6 +69,8 @@ PR #25 began as planning documentation; it now includes scoped source/test work 
 - [116-item implementation checklist](selecta-3-1-implementation-checklist.md)
 - [Adversarial verification and usability matrix](selecta-3-1-verification-matrix.md)
 - [Synthetic visual-review candidates](selecta-3-1-visual-review.md)
+- [Route, overlay and state inventory](selecta-3-1-surface-inventory.md)
+- [Release readiness and outstanding human acceptance](selecta-3-1-release-readiness.md)
 - [Per-task evidence ledger](selecta-3-1-evidence.md)
 - [Source inspection and research references](../research/selecta-3-1-polish.md)
 - [Selecta 3.0 road map](selecta-3-roadmap.md), [parity](selecta-3-parity-matrix.md), [verification](selecta-3-verification-matrix.md), [legacy evidence](selecta-3-evidence.md)
