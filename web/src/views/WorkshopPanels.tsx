@@ -5,6 +5,7 @@ import { PageLink } from '../shell/PageLink';
 import { Action, Problem, Skeleton, Status } from '../ui/controls';
 import { Field, Slider } from '../ui/primitives';
 import { ViewProps } from './shared';
+import { refreshJobs, useJobsStatus } from '../state/jobs';
 
 const GB = 1024 ** 3;
 
@@ -173,19 +174,12 @@ export function NeedsYou({ jobs, readySongs, folders }: { jobs: Jobs; readySongs
 
 /** What's actually going on in the background, from what's actually there. */
 export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJobs?: (jobs: Jobs) => void }) {
-  const [jobs, setJobs] = useState<Jobs | null>(null);
-  const [failed, setFailed] = useState(false);
-  const refresh = useCallback(() => get<Jobs>('/jobs').then((next) => {
-    setJobs(next);
-    setFailed(false);
-    onJobs?.(next);
-  }).catch(() => setFailed(true)), [onJobs]);
+  const { jobs, stale: failed, unsupported } = useJobsStatus();
   useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), 5000);
-    return () => window.clearInterval(timer);
-  }, [refresh]);
-  if (!jobs) return failed ? <Problem retry={refresh}>Couldn’t find out what’s running.</Problem> : <Skeleton variant="metrics" label="Finding out what’s running" />;
+    if (jobs) onJobs?.(jobs);
+  }, [jobs, onJobs]);
+  if (unsupported) return <p className="hint">This running copy of Selecta can’t report background jobs. Restart Selecta to update it.</p>;
+  if (!jobs) return failed ? <Problem retry={refreshJobs}>Couldn’t find out what’s running.</Problem> : <Skeleton variant="metrics" label="Finding out what’s running" />;
   const left = jobs.mix.queued + jobs.mix.rendering + jobs.mix.none;
   return (
     <section className="panel stack">

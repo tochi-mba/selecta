@@ -4,6 +4,7 @@ import { NowState, SetPlayer } from '../player';
 import { Route, savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
+import { jobAttention, useJobsStatus } from '../state/jobs';
 import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { ThemeMenu } from '../ui/ThemeChoice';
@@ -70,6 +71,8 @@ function MiniPlayer({ player, now, song, onRequests, waiting }: { player: SetPla
 function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette }: { route: Route; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean }) {
   const { crumbs } = describeRoute(route);
   const unseen = useUnseenActivity();
+  const { jobs } = useJobsStatus();
+  const attention = jobAttention(jobs);
   return (
     <header className="context-bar">
       <nav className="crumbs" aria-label="Breadcrumb">
@@ -96,6 +99,11 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
         <button className="context-button" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
           <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
         </button>
+        {attention > 0 && (
+          <PageLink className="context-button health-attention" to="/workshop" aria-label={`Workspace, ${attention} ${attention === 1 ? 'item needs' : 'items need'} your attention`} title="Workspace needs your attention">
+            <Icon name="warning" /><span className="count">{attention}</span>
+          </PageLink>
+        )}
         <button className="context-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={onHelp}><Icon name="help" /></button>
       </div>
     </header>

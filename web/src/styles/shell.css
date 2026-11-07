@@ -194,6 +194,7 @@ a.button:hover { border-color: var(--text); }
 .context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; }
 .context-button { display: inline-flex; align-items: center; gap: var(--space-2); background: none; border-color: transparent; padding: 6px 8px; min-width: var(--control-height); justify-content: center; }
 .context-button:hover:not(:disabled) { border-color: var(--border); }
+.context-button.health-attention { color: var(--status-warning); text-decoration: none; border-color: var(--status-warning); }
 .palette-button { border-color: var(--border); color: var(--text-soft); }
 .context-request { display: none; }
 @media (max-width: 760px) {
