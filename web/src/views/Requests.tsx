@@ -794,7 +794,7 @@ export function RequestsPanel() {
             const identity = `${song.title ?? 'Untitled'} — ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
             return (
               <li key={song.id} id={`request-option-${song.id}`} role="option" aria-selected={activeMatch === index}>
-                <button aria-label={identity} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
+                <button aria-label={`${identity} — ${already || 'Request'}`} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
                   <span className="request-name">
                     <b>{song.title ?? 'Untitled'}</b>
                     <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>
