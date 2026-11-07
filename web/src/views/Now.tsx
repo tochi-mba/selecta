@@ -66,7 +66,8 @@ const CANT_SEEK = 'You can’t move around during a transition, because it plays
  * something else. */
 function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDetail; time: number; seamAt: number | null; onSeek: (seconds: number) => void; seekBlocked?: boolean }) {
   const noteId = useId();
-  const percent = (seconds: number) => (100 * seconds) / detail.duration;
+  const percent = (seconds: number) =>
+    100 * Math.min(Math.max(Number.isFinite(seconds) ? seconds : 0, 0), Math.max(detail.duration, 0)) / Math.max(detail.duration, 1);
   const shape = useMemo(() => {
     const step = 100 / Math.max(detail.peaks.length, 1);
     return detail.peaks
@@ -284,9 +285,8 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     let frame = 0;
     const accent = getComputedStyle(node).getPropertyValue('--accent').trim() || '#e8ff3a';
     const soft = getComputedStyle(node).getPropertyValue('--ok').trim() || '#9ed46a';
-    const gradient = context.createLinearGradient(0, 180, 0, 0);
-    gradient.addColorStop(0, accent);
-    gradient.addColorStop(1, soft);
+    let gradient: CanvasGradient | null = null;
+    let gradientHeight = 0;
     let lastDraw = -Infinity;
     const draw = (timestamp = 0) => {
       // nothing to look at while the tab is hidden, and the music mustn't pay for it
@@ -308,6 +308,12 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
         node.height = height;
       }
       context.clearRect(0, 0, width, height);
+      if (!gradient || height !== gradientHeight) {
+        gradientHeight = height;
+        gradient = context.createLinearGradient(0, height, 0, 0);
+        gradient.addColorStop(0, accent);
+        gradient.addColorStop(1, soft);
+      }
       const spectrum = active ? player.getSpectrum() : null;
       const bars = Math.min(72, Math.max(24, Math.floor(width / (ratio * 7))));
       const gap = 2 * ratio;
@@ -331,9 +337,16 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
       if (!document.hidden && !frame) draw();
     };
     document.addEventListener('visibilitychange', wake);
+    window.addEventListener('resize', wake);
+    // An inactive or reduced-motion canvas still needs to redraw when its
+    // actual size changes, without keeping a frame loop alive for no reason.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(wake);
+    observer?.observe(node);
     draw();
     return () => {
       document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('resize', wake);
+      observer?.disconnect();
       window.cancelAnimationFrame(frame);
     };
   }, [player, active, stage, reduceMotion, theme]);
@@ -355,14 +368,10 @@ function noLyricsWords(status: string | null | undefined): string {
 
 function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; focus?: boolean }) {
   const lines = detail.lines;
-  const index = useMemo(() => {
-    let found = -1;
-    for (let i = 0; i < lines.length; i += 1) {
-      if (lines[i].start <= time + 0.1) found = i;
-      else break;
-    }
-    return found;
-  }, [lines, time]);
+  const starts = useMemo(() => lines.map((line) => line.start), [lines]);
+  // Audio ticks many times per second; a long lyric sheet should not be
+  // scanned linearly on every tick just to find the current phrase.
+  const index = useMemo(() => upperBound(starts, time + 0.1) - 1, [starts, time]);
   // the space stays the same whichever it is, so the page doesn't jump about between songs
   if (!lines.length) {
     return <div className={`lyrics quiet ${focus ? 'focus' : ''}`}><p className="dim">{noLyricsWords(detail.lyric_status)}</p></div>;
