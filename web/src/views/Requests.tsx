@@ -167,6 +167,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   const inFlight = useRef(0);
   const nextTemporaryId = useRef(-1);
   const leaving = useRef(new Set<number>());
+  const bridgeBusy = useRef(new Set<number>());
   const checkNow = useRef<() => void>(() => {});
 
   const playbackBody = () => {
@@ -332,6 +333,11 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     }
   };
   const chooseBridge = async (request: RequestRow, allow: boolean) => {
+    // Two separate approval buttons mutate the same request and must not
+    // race the server into contradictory consent states.
+    if (bridgeBusy.current.has(request.id)) return;
+    bridgeBusy.current.add(request.id);
+    try {
     const data = await press(
       (rows) => rows.map((row) => (row.id === request.id ? { ...row, bridge_choice: allow, declined: !allow, seconds: null } : row)),
       (rows) => rows.map((row) => (row.id === request.id ? { ...row, bridge_choice: request.bridge_choice, declined: request.declined, seconds: request.seconds } : row)),
@@ -339,6 +345,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       allow ? 'Couldn’t save your OK. Try again.' : 'Couldn’t save that. Try again.',
     );
     if (data) settle(data.requests);
+    } finally {
+      bridgeBusy.current.delete(request.id);
+    }
   };
   const whereItsPlaying = () => {
     const active = latest.current;
@@ -349,6 +358,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   };
   const findBridges = (request: RequestRow) => post<BridgeSearch>(`/requests/${request.id}/bridges`, whereItsPlaying());
   const pickBridge = async (request: RequestRow, option: BridgeOption) => {
+    if (bridgeBusy.current.has(request.id)) return;
+    bridgeBusy.current.add(request.id);
+    try {
     const data = await press(
       (rows) => rows.map((row) => (row.id === request.id
         ? { ...row, bridge_choice: true, declined: false, bridge_lost: false, behind: undefined, picked: option.song_ids, route: option.songs, after: option.after, after_id: option.after_id, transitions: option.transitions, stage: 'preparing' as Stage, seconds: null }
@@ -358,6 +370,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       'Couldn’t save that bridge. Try again.',
     );
     if (data) settle(data.requests);
+    } finally {
+      bridgeBusy.current.delete(request.id);
+    }
   };
   const addAnyway = async (request: RequestRow) => {
     const active = latest.current;
@@ -500,6 +515,8 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
   const [found, setFound] = useState<BridgeSearch | null>(null);
   const [problem, setProblem] = useState('');
   const [hearing, setHearing] = useState<number | null>(null);
+  const [choosing, setChoosing] = useState(false);
+  const choosingNow = useRef(false);
   const title = request.title ?? 'that song';
   useEffect(() => {
     let live = true;
@@ -509,9 +526,17 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
     return () => { live = false; };
   }, []);
   if (!state) return null;
-  const use = (option: BridgeOption) => {
-    onClose();
-    void state.pickBridge(request, option);
+  const use = async (option: BridgeOption) => {
+    if (choosingNow.current) return;
+    choosingNow.current = true;
+    setChoosing(true);
+    try {
+      await state.pickBridge(request, option);
+      onClose();
+    } finally {
+      choosingNow.current = false;
+      setChoosing(false);
+    }
   };
   return (
     <div className="bridge-finder">
@@ -553,8 +578,8 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
                   </p>
                   <p className="hint">{option.words}</p>
                   <div className="row wrap">
-                    <button className="primary" onClick={() => use(option)}>Use this</button>
-                    <button aria-expanded={hearing === index} onClick={() => setHearing(hearing === index ? null : index)}>
+                    <button className="primary" disabled={choosing} aria-busy={choosing || undefined} onClick={() => void use(option)}>{choosing ? 'Saving this bridge…' : 'Use this'}</button>
+                    <button disabled={choosing} aria-expanded={hearing === index} onClick={() => setHearing(hearing === index ? null : index)}>
                       {hearing === index ? 'Hide transitions' : 'Hear the transitions'}
                     </button>
                   </div>
@@ -566,7 +591,7 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
             })}
           </ul>
           {(request.picked || request.bridge_choice === true) && (
-            <button onClick={() => { onClose(); void state.chooseBridge(request, false); }}>Don’t use a bridge</button>
+            <button disabled={choosing} onClick={() => { onClose(); void state.chooseBridge(request, false); }}>Don’t use a bridge</button>
           )}
         </>
       )}

@@ -501,6 +501,33 @@ describe('a request that needs an extra song', () => {
     await waitFor(() => expect(calls.find((call) => call.path === '/requests/7/bridge')?.body).toEqual({ allow: false }));
   });
 
+  it('allows only one bridge decision while its server response is pending', async () => {
+    let finish: () => void = () => {};
+    let writes = 0;
+    const configured = { ...route, stage: 'approve' as const };
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/requests/7/bridge') && init?.method === 'POST') {
+        writes += 1;
+        await new Promise<void>((done) => { finish = done; });
+        return new Response(JSON.stringify({ requests: [row({ bridge_choice: true })] }), { status: 200 });
+      }
+      if (url.includes('/requests/consider')) {
+        return new Response(JSON.stringify({ requests: [row(configured)] }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ requests: [row(configured)] }), { status: 200 });
+    }));
+    render(<Requests playback={playing(songs(undefined, undefined))} />);
+    const accept = await screen.findByRole('button', { name: 'Add both' });
+    fireEvent.click(accept);
+    await waitFor(() => expect(writes).toBe(1));
+    // The decision is already optimistic; a later click on the stale control
+    // must not dispatch the contradictory action while it is still pending.
+    fireEvent.click(accept);
+    expect(writes).toBe(1);
+    await act(async () => { finish(); });
+    expect(writes).toBe(1);
+  });
+
   it('an answer that can’t be saved goes back to asking, and says so', async () => {
     open();
     fireEvent.click(await screen.findByRole('button', { name: 'Add both' }));
