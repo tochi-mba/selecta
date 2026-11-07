@@ -220,6 +220,14 @@ describe('a menu', () => {
     expect(screen.getByRole('button', { name: 'Two' })).toHaveFocus();
   });
 
+  it('does not swallow a dialog Escape when its menu is closed', () => {
+    const onClose = vi.fn();
+    render(<Dialog title="Settings" onClose={onClose}><Menu label="More"><button>Something</button></Menu></Dialog>);
+    const menu = screen.getByRole('button', { name: 'More' });
+    fireEvent.keyDown(menu, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('closes once something in it is chosen', () => {
     render(<Menu label="More"><button>One</button></Menu>);
     fireEvent.click(screen.getByRole('button', { name: 'More' }));
@@ -263,6 +271,32 @@ describe('a tooltip', () => {
   it('describes the control to a screen reader as well', () => {
     render(<Tooltip text="Shortcut: N"><button>Jump</button></Tooltip>);
     expect(screen.getByRole('button', { name: 'Jump' })).toHaveAccessibleDescription('Shortcut: N');
+  });
+
+  it('dismisses only the tooltip on the first Escape inside a dialog', () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog title="Details" onClose={onClose}>
+        <Tooltip text="Shortcut: N"><button>Jump</button></Tooltip>
+      </Dialog>,
+    );
+    const jump = screen.getByRole('button', { name: 'Jump' });
+    jump.focus();
+    fireEvent.keyDown(jump, { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('tooltip', { hidden: true })).toHaveAttribute('hidden');
+    expect(jump).toHaveFocus();
+    fireEvent.keyDown(jump, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('preserves an existing accessible description on the wrapped control', () => {
+    render(<>
+      <p id="context-note">Second action is optional.</p>
+      <Tooltip text="Shortcut: N"><button aria-describedby="context-note">Jump</button></Tooltip>
+    </>);
+    expect(screen.getByRole('button', { name: 'Jump' }))
+      .toHaveAccessibleDescription('Second action is optional. Shortcut: N');
   });
 
   it('goes away with Escape, without moving focus, and comes back next time', () => {

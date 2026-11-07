@@ -234,6 +234,9 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
   }, [open]);
   const keys = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
+      // Only the open menu owns Escape; a closed trigger must not prevent an
+      // enclosing dialog or sheet from handling it.
+      if (!open) return;
       event.stopPropagation();
       setOpen(false);
       opener.current?.focus();
@@ -276,10 +279,17 @@ export function Tooltip({ text, children }: { text: string; children: ReactEleme
       onMouseLeave={() => setDismissed(false)}
       onBlur={() => setDismissed(false)}
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && !dismissed) setDismissed(true);
+        if (event.key === 'Escape' && !dismissed) {
+          // A tooltip is the innermost dismissible UI. Do not close its parent
+          // dialog on the same Escape press.
+          event.stopPropagation();
+          setDismissed(true);
+        }
       }}
     >
-      {cloneElement(children, { 'aria-describedby': id })}
+      {cloneElement(children, {
+        'aria-describedby': [children.props['aria-describedby'], dismissed ? null : id].filter(Boolean).join(' ') || undefined,
+      })}
       <span role="tooltip" id={id} className="tooltip" hidden={dismissed}>{text}</span>
     </span>
   );
