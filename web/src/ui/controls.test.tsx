@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Action, Dialog, Menu, Problem, Section, Status, Tooltip } from './controls';
 import { clearToasts, dismissToast, showProblem, showToast, Toaster } from './toasts';
-import { activityEntries } from '../state/activity';
+import { activityEntries, blockedBy, canUndo, clearFinishedActivity, markNewestUndone, recordActivity, runUndo } from '../state/activity';
 
 afterEach(() => clearToasts());
 
@@ -128,6 +128,29 @@ describe('notifications', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('scope-safe Undo history', () => {
+  it('keeps older Undo blocked while the newer one runs and after it fails', async () => {
+    const oldest = recordActivity('First edit', { scope: 'current', undo: async () => {} });
+    let rejectNewer: (error: Error) => void = () => {};
+    const newest = recordActivity('Second edit', {
+      scope: 'current',
+      undo: () => new Promise<void>((_resolve, reject) => { rejectNewer = reject; }),
+    });
+    const pending = runUndo(newest);
+    expect(canUndo(oldest)).toBe(false);
+    expect(blockedBy(activityEntries().find((entry) => entry.id === oldest)! )?.id).toBe(newest);
+    rejectNewer(new Error('The connection dropped.'));
+    await expect(pending).rejects.toThrow('The connection dropped.');
+    expect(canUndo(oldest)).toBe(false);
+    clearFinishedActivity();
+    expect(canUndo(oldest)).toBe(false);
+    await expect(runUndo(oldest)).rejects.toThrow(/newer Undo failed/);
+    // Only an independently confirmed, successful Undo elsewhere can release this guard.
+    markNewestUndone('current');
+    expect(canUndo(oldest)).toBe(true);
   });
 });
 
