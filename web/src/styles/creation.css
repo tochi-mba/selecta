@@ -207,3 +207,7 @@
 .studio-lane.silenced .studio-cell, .studio-lane.silenced .studio-name { opacity: 0.45; }
 .studio-lane.lost .studio-cell { cursor: not-allowed; opacity: 0.35; background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--border) 4px 6px); }
 .studio-lane.lost .studio-name { cursor: not-allowed; text-decoration: line-through; }
+.draft-tools { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; margin: var(--space-4) 0; }
+.draft-tools label { display: grid; gap: var(--space-1); color: var(--text-soft); font-size: var(--text-sm); }
+.draft-tools input { min-width: min(320px, 80vw); }
+.draft-tools select { min-width: 160px; }

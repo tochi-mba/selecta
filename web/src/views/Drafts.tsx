@@ -56,6 +56,8 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   const [failures, setFailures] = useState<Record<number, string>>({});
   const [couldntLoad, setCouldntLoad] = useState(false);
   const [renaming, setRenaming] = useState<number | null>(null);
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<'recent' | 'name' | 'readiness'>('recent');
   const heading = useRef<HTMLHeadingElement>(null);
   const wasRenaming = useRef<number | null>(null);
 
@@ -142,6 +144,18 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   }
   const { drafts, current, out_of_room: outOfRoom } = list;
   const inLine = drafts.filter((draft) => draft.place !== null);
+  const cleanQuery = query.trim().toLocaleLowerCase();
+  const shownDrafts = drafts
+    .filter((draft) => !cleanQuery || draft.name.toLocaleLowerCase().includes(cleanQuery))
+    .sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
+      if (sort === 'readiness') {
+        const readinessA = a.seams ? a.ready / a.seams : a.songs ? 1 : 0;
+        const readinessB = b.seams ? b.ready / b.seams : b.songs ? 1 : 0;
+        return readinessB - readinessA || b.id - a.id;
+      }
+      return b.id - a.id;
+    });
   return (
     <>
       <section className="drafts" aria-label="Your drafts">
@@ -155,6 +169,22 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
         <p className="hint">
           Build a mix without touching what’s playing. Everything saves as you go. Playing a draft makes it your current mix, and what was playing becomes a draft, so nothing is lost.
         </p>
+        {drafts.length > 4 && (
+          <div className="draft-tools">
+            <label>
+              <span>Find a draft</span>
+              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name" />
+            </label>
+            <label>
+              <span>Sort drafts</span>
+              <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}>
+                <option value="recent">Newest first</option>
+                <option value="name">Name</option>
+                <option value="readiness">Most ready</option>
+              </select>
+            </label>
+          </div>
+        )}
         {problem && <p className="warn" role="alert">{problem}</p>}
         {couldntLoad && <p className="warn" role="status">Can’t check on these right now, so what’s shown may be out of date.</p>}
         {outOfRoom && (
@@ -169,9 +199,15 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
             <p>Create a draft, or save a copy of your current mix. Editing a draft leaves playback alone.</p>
           </div>
         )}
-        {drafts.length > 0 && (
+        {drafts.length > 0 && shownDrafts.length === 0 && (
+          <div className="empty-state">
+            <h3>No drafts match “{query.trim()}”.</h3>
+            <button onClick={() => setQuery('')}>Clear search</button>
+          </div>
+        )}
+        {shownDrafts.length > 0 && (
           <ul className="draft-list density">
-            {drafts.map((draft) => {
+            {shownDrafts.map((draft) => {
               const facts = draftReadiness(draft);
               const failure = failures[draft.id];
               return (
