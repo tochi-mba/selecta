@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
+import { ApiError, DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { EXPLORE_TABS } from '../shell/manifest';
 import { operationId } from '../state/async';
+import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Icon } from '../ui/Icon';
 import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
@@ -354,7 +355,7 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
   );
 }
 
-export function Links({ setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
+export function Links({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
   // it's in the address, so a search survives a reload, a shared link and coming Back
   const addressQuery = useQueryParam('q') ?? '';
   const [query, setQuery] = useState(addressQuery);
@@ -362,6 +363,9 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
   const [failed, setFailed] = useState(false);
   const [drafts, setDrafts] = useState<{ id: number; name: string }[]>([]);
   const asked = useRef(0);
+  // The same pair sent again after a lost response keeps its operation ID.
+  // A confirmed success, or a definitive invalid request, clears the key.
+  const pairOperations = useRef(new Map<string, string>());
 
   const load = () => {
     asked.current += 1;
@@ -392,15 +396,35 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
     get<DraftList>('/drafts').then((list) => setDrafts(list.drafts ?? [])).catch(() => {});
   }, []);
 
-  // both songs and the transition between them go in together, or none of it does
+  // Both songs and their transition must insert atomically. The mix-order
+  // guard prevents an old card acting on a newer current mix or draft.
   const add = async (link: Link, move: string, draft: number | null) => {
-    const answer = await post<MixData>(`/mix/pair${draft === null ? '' : `?draft=${draft}`}`, { a: link.a, b: link.b, move, phrase: link.phrase });
-    if (draft === null) {
-      setMixData(answer);
-      notify(`Added “${link.phrase}” to your mix.`, true);
-      setView('Edit');
-    } else {
-      notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`);
+    const identity = JSON.stringify([link.a, link.b, move, link.phrase, draft]);
+    let operation = pairOperations.current.get(identity);
+    if (!operation) {
+      operation = operationId('pair');
+      pairOperations.current.set(identity, operation);
+    }
+    try {
+      const order = draft === null
+        ? orderOf(mix)
+        : orderOf((await get<MixData>(`/mix?draft=${draft}`)).mix);
+      const answer = await post<MixData>(
+        `/mix/pair${draft === null ? '' : `?draft=${draft}`}`,
+        { a: link.a, b: link.b, move, phrase: link.phrase },
+        { 'x-mix-order': order, 'x-operation-id': operation },
+      );
+      pairOperations.current.delete(identity);
+      if (draft === null) {
+        setMixData(answer);
+        notify(`Added “${link.phrase}” to your mix.`, true);
+        setView('Edit');
+      } else {
+        notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`);
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status < 500) pairOperations.current.delete(identity);
+      throw error;
     }
   };
 
