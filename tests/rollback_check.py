@@ -3,9 +3,9 @@
     python tests/rollback_check.py path/to/older/checkout
 
 Builds a home with this checkout's code and saves the things a person would hate to lose: a draft, a
-tempo correction, mix settings, a rating and a finished export's record. Then an older checkout reads
-that same home, in its own process, and says what it finds. Then this one reads it again. All three
-reports have to match. Only made-up songs are involved.
+tempo correction, mix settings, a rating and a finished export's record. Then an older checkout
+reads that same home, in its own process, and says what it finds. Then this one reads it again.
+All three reports have to match. Only made-up songs are involved.
 """
 
 from __future__ import annotations
@@ -95,7 +95,9 @@ def main() -> int:
         print(json.dumps(read_everything(Path(sys.argv[2]))))
         return 0
     older = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="selecta-rollback-", ignore_cleanup_errors=True) as folder:
+    with tempfile.TemporaryDirectory(
+        prefix="selecta-rollback-", ignore_cleanup_errors=True
+    ) as folder:
         home = Path(folder) / "home"
         home.mkdir()
         os.environ["SELECTA_HOME"] = str(home)
