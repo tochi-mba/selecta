@@ -93,7 +93,14 @@ export function releaseAudio(id: string) {
     // A later preview or a manual play/pause invalidates this intent. Neither
     // may be undone by a late completion of the original audio suspension.
     void Promise.resolve(waiting).catch(() => {}).then(() => {
-      if (generation === intentGeneration && !owner) void main?.resume();
+      if (generation !== intentGeneration || owner) return;
+      // A device may refuse resume, even after the AudioContext was
+      // successfully suspended. It must not produce an unhandled rejection.
+      try {
+        void Promise.resolve(main?.resume()).catch(() => {});
+      } catch {
+        // The player retains its paused state and exposes its own resume control.
+      }
     });
   }
   changed();
