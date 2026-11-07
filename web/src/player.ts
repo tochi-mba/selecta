@@ -159,7 +159,7 @@ export class SetPlayer {
     } finally {
       window.clearTimeout(wait);
     }
-    return context.state !== 'suspended';
+    return context.state === 'running';
   }
 
   private applySound() {

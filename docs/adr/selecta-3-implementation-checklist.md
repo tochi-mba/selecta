@@ -1,15 +1,15 @@
 # Selecta 3.0 — complete implementation task checklist
 
 - **Decision status:** Proposed.
-- **Implementation status:** Not started.
+- **Implementation status:** In progress on PR #24; items below await evidence-based reconciliation.
 - **Date:** 2026-11-07.
-- **Scope:** 30 ADRs and 252 stable S3 task IDs.
-- **Completed:** 0/252. **In progress:** 0. **Implemented:** 0. **Verified:** 0.
-- **Documentation-only:** These items are future work. Merging this checklist does not implement, test or verify them.
+- **Scope:** 31 ADRs and 258 stable S3 task IDs (252 original plus 6 in ADR-0077).
+- **Merged/verified:** 0/258 while PR #24 is open. **In progress:** runtime work and ADR-0077; full item-by-item reconciliation pending.
+- **History:** This checklist began as a documentation-only proposal. PR #24 now also contains code; do not infer item completion from code presence or a passing CI badge.
 
 ## Instructions
 
-The detailed wording, test cases, trade-offs and acceptance criteria for each ID are in the owning ADR. All task statuses below are **Not started**; do not check them off without a linked implementing PR and evidence. Statuses are independently recorded in each ADR and the [ledger](selecta-3-evidence.md). Previous [T tasks](implementation-checklist.md) and [P tasks](polish-implementation-checklist.md) remain separate historical trackers.
+The detailed wording, test cases, trade-offs and acceptance criteria for each ID are in the owning ADR. Statuses in the original 30-ADR sections are the **initial planning baseline** and need reconciliation with PR #24's runtime changes; do not check tasks off without linked implementation and evidence. Statuses are independently recorded in each ADR and the [ledger](selecta-3-evidence.md). Previous [T tasks](implementation-checklist.md) and [P tasks](polish-implementation-checklist.md) remain separate historical trackers.
 
 Use `In progress` for an actual implementation PR; `Implemented` for merged code with required automated checks; `Verified` for completed acceptance with real accessibility/audio/user evidence as relevant. Do not weaken existing test assertions to accommodate new labels or layouts.
 
@@ -461,3 +461,15 @@ Use `In progress` for an actual implementation PR; `Implemented` for merged code
 9. Status updates in the owning ADR, roadmap, this checklist and evidence ledger.
 
 **No evidence has been supplied for any new S3 task by this docs-only PR.**
+
+
+### [ADR-0077 — Choosing light or dark](adr-0077-light-and-dark-theme-choice.md)
+
+**Phase:** 2 Foundations. **Decision:** Proposed. **Implementation:** In progress on PR #24. **Progress:** 0/6 merged; no human verification.
+
+- [ ] **S3-0077-01 — In progress.** Store an explicit system/light/dark theme preference with safe defaults.
+- [ ] **S3-0077-02 — In progress.** Apply the chosen theme before paint, including the title bar.
+- [ ] **S3-0077-03 — In progress.** Offer accessible theme choices in the header, Workspace and command palette.
+- [ ] **S3-0077-04 — In progress.** Preserve legible contrast and lime brand accents in both themes.
+- [ ] **S3-0077-05 — In progress.** Refresh theme-dependent spectrum drawings without interrupting playback.
+- [ ] **S3-0077-06 — In progress.** Verify both themes with automated and human accessibility checks.

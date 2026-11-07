@@ -2,9 +2,9 @@
 
 ## Selecta 3.0 — full experience overhaul proposal (2026-11-07)
 
-**Decision status: Proposed. Implementation status: Not started.** See the [new roadmap and ADR index](selecta-3-roadmap.md), ADR-0047–0076, [252 individually tracked work items](selecta-3-implementation-checklist.md), [feature preservation map](selecta-3-parity-matrix.md), [verification plan](selecta-3-verification-matrix.md), [evidence ledger](selecta-3-evidence.md) and [research notes](../research/selecta-3-overhaul.md).
+**Decision status: Proposed. Implementation status: In progress on PR #24; not Verified.** See the [new roadmap and ADR index](selecta-3-roadmap.md), ADR-0047–0077, [258 individually tracked work items](selecta-3-implementation-checklist.md), [feature preservation map](selecta-3-parity-matrix.md), [verification plan](selecta-3-verification-matrix.md), [evidence ledger](selecta-3-evidence.md) and [research notes](../research/selecta-3-overhaul.md).
 
-This programme is **documentation only**: no runtime, audio, API, database, test or CI changes are implemented here. Retain the warm black/cream/lime identity and the complete functional preservation contract while proposing an extensive navigation and workspace overhaul. Merging this proposal does not itself approve any decision or mark an implementation task complete.
+This programme began **documentation only**, but PR #24 now includes runtime, audio, API, frontend and test changes. Its historical roadmap/checklist status summaries are not complete implementation evidence. Retain the warm black/cream/lime identity and the complete functional preservation contract while proposing an extensive navigation and workspace overhaul. Merging this proposal does not itself approve any decision or mark an implementation task complete.
 
 Earlier ADR-0001–0046 history is retained. Older headline status summaries may be stale: PR #23 has merged, but actual implementation and verification evidence must be reconciled before any new code work.
 

@@ -102,7 +102,7 @@ A human can find a blind spot with every automated check green, and that finding
 - The ledger is [selecta-3-evidence.md](selecta-3-evidence.md). This document, the checklist and the roadmap change together.
 - Normally each slice would have a design review and a separate PR. The owner chose one PR for this programme, and asked for it to be merged when CI is green, knowing the human checks are still open. That choice is recorded here, and it doesn't make anything Verified.
 
-**Ownership:** the owner decides ADRs, listens and signs off releases. The implementer owns the code and automated checks, and each ADR's tests are named in [the testing doc](selecta-3-testing.md).
+**Ownership:** the owner decides ADRs, listens and signs off releases. The implementer owns the code and automated checks, and each ADR's tests are named in [the verification matrix](selecta-3-verification-matrix.md).
 
 ## This document's own honesty
 

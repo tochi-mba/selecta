@@ -1,7 +1,7 @@
 # ADR-0077: Choosing light or dark
 
 - **Decision status:** Proposed
-- **Implementation status:** Implemented on PR 24. Not verified by a person
+- **Implementation status:** In progress on PR 24; not merged or verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 2 — Foundations
@@ -32,12 +32,12 @@ Bring lime back to the light theme where it can work: only as a filled shape wit
 
 ## Detailed implementation work
 
-1. **S3-0077-01 — Implemented.** Add the `theme` preference, defaulting to following the computer, with unrecognised saved values ignored.
-2. **S3-0077-02 — Implemented.** Apply it before first paint and keep it applied through `data-theme`, including the title bar colour.
-3. **S3-0077-03 — Implemented.** Header menu with radio semantics, Workspace radio group and palette commands, all showing the current choice.
-4. **S3-0077-04 — Implemented.** Semantic tokens for the main action and the current lyric word, so lime returns to the light theme without failing contrast.
-5. **S3-0077-05 — Implemented.** Redraw the spectrum when the shown theme changes.
-6. **S3-0077-06 — Implemented.** Run the automated contrast checks with the theme chosen explicitly, as well as following the system.
+1. **S3-0077-01 — In progress.** Add the `theme` preference, defaulting to following the computer, with unrecognised saved values ignored.
+2. **S3-0077-02 — In progress.** Apply it before first paint and keep it applied through `data-theme`, including the title bar colour.
+3. **S3-0077-03 — In progress.** Header menu with radio semantics, Workspace radio group and palette commands, all showing the current choice.
+4. **S3-0077-04 — In progress.** Semantic tokens for the main action and the current lyric word, so lime returns to the light theme without failing contrast.
+5. **S3-0077-05 — In progress.** Redraw the spectrum when the shown theme changes.
+6. **S3-0077-06 — In progress.** Run the automated contrast checks with the theme chosen explicitly, as well as following the system.
 
 ## Preservation and integration constraints
 
@@ -59,13 +59,13 @@ Lime as a filled button on cream is a stronger look than the old olive. The cont
 
 ## Acceptance and evidence
 
-A person can choose light or dark from any page and it stays chosen. Both themes pass the automated contrast checks. Evidence is in [the ledger](selecta-3-evidence.md). **Verified** needs the owner to look at both.
+A person can choose light or dark from any page and it stays chosen. Both themes must pass automated contrast checks before completion. Evidence is in [the ledger](selecta-3-evidence.md). **Verified** needs the owner to look at both.
 
 ## Status history
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
-| 2026-11-07 | Proposed | Implemented on PR 24 | Unit and browser tests, screenshots of both themes on a made-up library |
+| 2026-11-07 | Proposed | In progress on PR 24 | Automation and human review must be confirmed before completion |
 
 ## References
 

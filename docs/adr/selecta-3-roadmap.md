@@ -1,10 +1,10 @@
 # Selecta 3.0 — full UI/UX overhaul ADR roadmap and decision index
 
 - **Programme decision status:** Proposed.
-- **Programme implementation status:** Not started.
-- **Documentation status:** Proposed ADRs written; docs-only branch. No runtime, audio, backend, database, tests or CI changes.
+- **Programme implementation status:** In progress on PR #24; no S3 work item is Verified.
+- **Documentation status:** Originally a docs-only proposal; PR #24 now includes frontend, backend and test changes. The initial status tables are historical planning snapshots, not proof of completed implementation.
 - **Date:** 2026-11-07.
-- **Scope:** ADR-0047–0076, 30 new decisions, 252 stable tasks; **0 implemented / 0 verified**.
+- **Scope:** ADR-0047–0077, 31 decisions and 258 stable tasks (252 initial tasks plus 6 theme tasks); implementation mapping incomplete, **0 verified**.
 - **Existing history:** ADR-0001–0032 and ADR-0033–0046 are preserved, not renumbered or silently superseded.
 - **Planning source baseline:** main commit `84b8b5cbadf7204bf526e8932124b5c4890e2c44`, merged PR #23, at branch creation.
 
@@ -50,6 +50,8 @@ The historical polish ADRs describe more modest finishing work. This programme p
 | [ADR-0074 — Full test architecture, invariants and concurrent edge-case matrix](adr-0074-testing-matrix-contract-and-races.md) | Proposed | Not started | 7 Verification | 10 |
 | [ADR-0075 — Visual regression, usability research and observable release acceptance](adr-0075-visual-research-evidence-and-release-gates.md) | Proposed | Not started | 7 Verification | 9 |
 | [ADR-0076 — Incremental migration, rollout controls, rollback and delivery order](adr-0076-incremental-migration-rollback-and-go-no-go.md) | Proposed | Not started | 7 Verification | 9 |
+
+| [ADR-0077 — Choosing light or dark](adr-0077-light-and-dark-theme-choice.md) | Proposed | In progress on PR #24 | 2 Foundations | 6 |
 
 ## Status policy and evidence rule
 
@@ -131,7 +133,7 @@ No release with lost/corrupt data; wrong mix/draft write; inaccessible essential
 
 ## Supporting documents
 
-- [Individual work-item checklist — 252 tasks](selecta-3-implementation-checklist.md)
+- [Individual work-item checklist — 258 tasks](selecta-3-implementation-checklist.md)
 - [Old-to-new feature parity ownership](selecta-3-parity-matrix.md)
 - [Adversarial test and release verification matrix](selecta-3-verification-matrix.md)
 - [Status and evidence ledger](selecta-3-evidence.md)
@@ -142,4 +144,5 @@ No release with lost/corrupt data; wrong mix/draft write; inaccessible essential
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
-| 2026-11-07 | Proposed | Not started | 30 ADRs and 252 new work items; documentation only |
+| 2026-11-07 | Proposed | Not started | Original 30-ADR, 252-item documentation proposal |
+| 2026-11-07 | Proposed | In progress | Code and ADR-0077 added to PR #24; automated checks and human verification outstanding |

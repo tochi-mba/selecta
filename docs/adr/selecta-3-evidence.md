@@ -1,12 +1,14 @@
 # Selecta 3.0 — implementation status and evidence ledger
 
-- **Programme decision:** Proposed. **Implementation:** Not started.
+- **Programme decision:** Proposed. **Implementation:** In progress on PR #24; not merged or verified.
 - **Date:** 2026-11-07.
-- **ADR count:** 30; **individual task count:** 252; **Completed:** 0/252.
-- **Scope:** This is a documentation-only plan; no new test, visual screenshot, audible or user-testing result is claimed.
+- **ADR count:** 31; **individual task count:** 258; **Merged/verified:** 0/258 while PR #24 is open.
+- **Scope:** Began as a documentation-only plan. PR #24 now also contains implementation changes; no complete manual audio, screen-reader or user-testing verification is claimed.
 - **Baseline:** main `84b8b5cbadf7204bf526e8932124b5c4890e2c44`; PR #23 had merged.
 
 ## Individual ADR status table
+
+The first 30 rows retain their *original proposal* states and have not been reconciled with all code changes in PR #24. They are not a live accounting of implemented work. Code is in progress, but Implemented requires merge plus CI evidence and Verified requires independent acceptance evidence.
 
 | ADR | Decision | Implementation | Item progress | Actual evidence |
 |---|---|---|---|---|
@@ -41,6 +43,8 @@
 | [ADR-0075 — Visual regression, usability research and observable release acceptance](adr-0075-visual-research-evidence-and-release-gates.md) | Proposed | Not started | 0/9 | None — plan only |
 | [ADR-0076 — Incremental migration, rollout controls, rollback and delivery order](adr-0076-incremental-migration-rollback-and-go-no-go.md) | Proposed | Not started | 0/9 | None — plan only |
 
+| [ADR-0077 — Choosing light or dark](adr-0077-light-and-dark-theme-choice.md) | Proposed | In progress on PR #24 | 0/6 merged | Theme code present; CI and human verification outstanding |
+
 ## Required future item record
 
 For `S3-XXXX-NN`, record the date, decision owner and status, implementation owner and status, implementing PR/commit/merge, linked historical T/P and parity row, exact acceptance, relevant unit/component/API/E2E test commands/results, reviewed fixture screenshots and browser/viewport/theme, keyboard/AT/zoom evidence, actual audio/FLAC evidence, user-task observations where necessary, race/failure cases, outstanding limitations and rollback disposition.
@@ -55,4 +59,4 @@ This proposal includes source-observed constraints, reasoned design choices and 
 
 ## Current disposition
 
-**30 Proposed decisions; 252 Not started implementation items; zero implemented and zero verified.**
+**31 Proposed decisions, 258 tracked items. PR #24 contains in-progress code, but not all work is reconciled, merged or verified. No item is claimed Verified.**
