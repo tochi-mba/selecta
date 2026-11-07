@@ -1,3 +1,17 @@
+# Selecta — immersive experience and microinteraction ADR programme (2026-11-07)
+
+**New documentation-only proposal:** [30 new ADRs, ADR-0135–0164](selecta-microinteraction-roadmap.md); [240 individually tracked tasks](selecta-microinteraction-implementation-checklist.md); [per-task implementation/verification evidence](selecta-microinteraction-evidence.md); [full interaction/motion specification](selecta-microinteraction-motion-matrix.md); [feature preservation map](selecta-microinteraction-feature-parity.md); [verification matrix](selecta-microinteraction-verification-matrix.md); [historical status reconciliation](selecta-microinteraction-status-reconciliation.md); [NO-GO release gates](selecta-microinteraction-release-gates.md).
+
+**New programme status:** **30 Proposed decisions (not owner-accepted); 240 new MI tasks Not started, 0 Implemented, 0 independently Verified.** Source baseline main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` after merged PR #30. Merging ADR documents is not implementation, visual approval, assistive-technology acceptance or proof that any transition sounds good.
+
+**Vision:** Give Selecta an earned sense of musical anticipation and agency: song-first composition; tactile controls; real seam handoff; delightful but restrained discoveries; expressive energy and stem editing; truthful status; calm recovery. Every animation has a cause, an accessible reduced-motion equivalent and an audio/state truth contract. No fabricated artwork, beat alignment, quality scores or success states.
+
+**Preserve current product boundary:** Browser + local-only server, no desktop packager/launcher, native/browser folder-picker bridge, near-term SaaS, account/cloud sync, remote media upload, telemetry or unsolicited UI sounds. Preserve original media, LRCLIB metadata disclosure, one audio owner, draft/revision guards, consented atomic bridge, eight-lane Studio, blinded research and exact FLAC.
+
+**Status caution:** Earlier T/P/S3/S31/S4/EX ledgers are historical and not rewritten here. Existing behavior that resembles a new requirement does not automatically mark it implemented or verified. See [cross-programme status mapping](selecta-microinteraction-status-reconciliation.md).
+
+---
+
 # Selecta — experience-first UI/UX ADR proposal (2026-11-07)
 
 **New documentation-only proposal:** [21 independent new design decisions, ADR-0114–0134](selecta-experience-roadmap.md); [105-item implementation checklist](selecta-experience-implementation-checklist.md); [per-task implementation/verification ledger](selecta-experience-evidence.md); [feature-parity map](selecta-experience-feature-parity.md); [historical status reconciliation](selecta-experience-status-reconciliation.md); [NO-GO release gates](selecta-experience-release-gates.md).
