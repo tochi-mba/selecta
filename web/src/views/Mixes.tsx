@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { get, MixData, post, VibeCard } from '../api';
+import { ApiError, get, MixData, post, VibeCard } from '../api';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { useLocationText } from '../router';
+import { orderOf } from '../state/readiness';
+import { operationId } from '../state/async';
 import { EXPLORE_TABS } from '../shell/manifest';
 import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
@@ -12,14 +14,20 @@ import { ViewProps } from './shared';
 
 const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 
-type Asked = { key: string; name: string; open: boolean };
+type Asked = { key: string; name: string; open: boolean; order?: string };
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshStatus }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus }: ViewProps) {
   const [cards, setCards] = useState<VibeCard[] | null>(null);
   const [songs, setSongs] = useState(12);
   const [building, setBuilding] = useState('');
   const buildingNow = useRef(false);
+  const hereNow = useRef(true);
+  useEffect(() => {
+    hereNow.current = true;
+    return () => { hereNow.current = false; };
+  }, []);
+  const operations = useRef(new Map<string, string>());
   const [problem, setProblem] = useState('');
   const [customizing, setCustomizing] = useState(false);
   const [cardsAttempt, setCardsAttempt] = useState(0);
@@ -35,25 +43,39 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     return () => { live = false; };
   }, [counts.analysed, counts.lyrics, counts.ready, cardsAttempt]);
 
-  const start = async ({ key, name, open }: Asked) => {
+  const start = async ({ key, name, open, order }: Asked) => {
     // nothing plays or changes until the server has said which mix it made
     if (buildingNow.current) return;
     buildingNow.current = true;
     setBuilding(key);
     setProblem('');
+    const expected = order ?? orderOf(mix);
+    const signature = JSON.stringify([key, songs, expected, open]);
+    const operation = operations.current.get(signature) ?? operationId('build');
+    operations.current.set(signature, operation);
     try {
-      const data = await post<MixData>(`/vibes/${key}/build?count=${songs}`);
+      const data = await post<MixData>(`/vibes/${key}/build?count=${songs}`, undefined, {
+        'x-mix-order': expected,
+        'x-operation-id': operation,
+      });
+      operations.current.delete(signature);
+      // Reconcile the server's actual current mix even after navigating away.
+      // A late request must not steal route or playback focus from a new task.
       setMixData(data);
       rememberStartedAMix();
-      notify(`${name}: ${data.mix.length} songs.`, true);
-      if (open) {
-        setView('Edit');
-      } else {
-        setView('Now');
-        void player.playFrom(0);
+      if (hereNow.current) {
+        notify(`${name}: ${data.mix.length} songs.`, true);
+        if (open) {
+          setView('Edit');
+        } else {
+          setView('Now');
+          void player.playFrom(0);
+        }
       }
     } catch (error) {
-      setProblem((error as Error).message);
+      if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
+      if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
+      if (hereNow.current) setProblem((error as Error).message);
     } finally {
       buildingNow.current = false;
       setBuilding('');
@@ -65,11 +87,20 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     buildingNow.current = true;
     setBuilding(key);
     setProblem('');
+    const signature = JSON.stringify([key, songs, 'draft']);
+    const operation = operations.current.get(signature) ?? operationId('draft');
+    operations.current.set(signature, operation);
     try {
-      const made = await post<{ id: number; name: string; count: number }>(`/vibes/${key}/build?count=${songs}&as_draft=true`);
-      notify(`Saved ${made.name} as a draft, with ${made.count} songs. Nothing changed in what’s playing.`);
+      const made = await post<{ id: number; name: string; count: number }>(
+        `/vibes/${key}/build?count=${songs}&as_draft=true`,
+        undefined,
+        { 'x-operation-id': operation },
+      );
+      operations.current.delete(signature);
+      if (hereNow.current) notify(`Saved ${made.name} as a draft, with ${made.count} songs. Nothing changed in what’s playing.`);
     } catch (error) {
-      setProblem((error as Error).message);
+      if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
+      if (hereNow.current) setProblem((error as Error).message);
     } finally {
       buildingNow.current = false;
       setBuilding('');
@@ -91,11 +122,12 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   // a mix that's playing or paused is what would be replaced, so that's when to ask
   const replacing = mix.length > 0 && now.phase !== 'idle';
   const ask = (asked: Asked) => {
+    const choice = { ...asked, order: orderOf(mix) };
     if (replacing) {
-      setConfirming(asked);
+      setConfirming(choice);
       return Promise.resolve();
     }
-    return start(asked);
+    return start(choice);
   };
 
   if (!readinessAvailable) {

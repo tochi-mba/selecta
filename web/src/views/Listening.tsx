@@ -33,11 +33,14 @@ export function Listening() {
     try { sessionStorage.setItem(progressKey, JSON.stringify({ ids: trials.map((row) => row.id), index, quality, heard })); } catch { /* current answers remain in memory */ }
   }, [progressKey, trials, index, quality, heard]);
   useEffect(() => () => {
-    // the sound goes when this does, and the mix doesn't come back in on its own
+    // A stale event from the previous trial cannot release the new trial's
+    // audio owner. Closing the study also cannot resume the main mix implicitly.
     mainPlayerTouched();
-    releaseAudio('listening-a');
-    releaseAudio('listening-b');
-  }, []);
+    players.a.current?.pause();
+    players.b.current?.pause();
+    releaseAudio(`listening-${trial?.id}-a`);
+    releaseAudio(`listening-${trial?.id}-b`);
+  }, [trial?.id]);
 
   const quiet = () => {
     players.a.current?.pause();
@@ -129,22 +132,33 @@ export function Listening() {
                   preload="none"
                   src={`/api/listening/${trial.id}/${option}/audio`}
                   onPlay={() => {
-                    takeAudio({ id: `listening-${option}`, label: 'A listening test', stop: () => players[option].current?.pause() });
+                    takeAudio({ id: `listening-${trial.id}-${option}`, label: 'A listening test', stop: () => players[option].current?.pause() });
                     setPlaying(option);
-                    setHeard((current) => (current.includes(option) ? current : [...current, option]));
+                  }}
+                  onTimeUpdate={(event) => {
+                    // Pressing Play does not prove anything was audible: an
+                    // unavailable clip must not unlock a preference vote.
+                    if (event.currentTarget.currentTime >= 0.5 && event.currentTarget.readyState >= 2) {
+                      setHeard((current) => current.includes(option) ? current : [...current, option]);
+                    }
                   }}
                   onPause={() => {
                     setPlaying((current) => (current === option ? null : current));
                     // going from one clip to the other, or stopping to think, doesn't bring the mix back in
                     mainPlayerTouched();
-                    releaseAudio(`listening-${option}`);
+                    releaseAudio(`listening-${trial.id}-${option}`);
                   }}
                   onEnded={() => {
                     setPlaying((current) => (current === option ? null : current));
                     mainPlayerTouched();
-                    releaseAudio(`listening-${option}`);
+                    releaseAudio(`listening-${trial.id}-${option}`);
                   }}
-                  onError={() => setError('A comparison clip is unavailable. You can record “cannot judge”.')}
+                  onError={() => {
+                    setPlaying((current) => current === option ? null : current);
+                    mainPlayerTouched();
+                    releaseAudio(`listening-${trial.id}-${option}`);
+                    setError('A comparison clip is unavailable. You can record “cannot judge”.');
+                  }}
                 />
                 <fieldset>
                   <legend>Version {option.toUpperCase()} quality</legend>

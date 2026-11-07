@@ -120,6 +120,13 @@ def create_app(
         order = request.headers.get("x-mix-order")
         if order is None or request.method == "GET":
             return await call_next(request)
+        # Replaying an accepted operation must return its original result, even
+        # though the first successful mutation changed the queue order.
+        operation = request.headers.get("x-operation-id")
+        if operation and (
+            operation in finished_operations or operation in running_operations
+        ):
+            return await call_next(request)
         draft = request.query_params.get("draft")
         try:
             with connect() as conn:

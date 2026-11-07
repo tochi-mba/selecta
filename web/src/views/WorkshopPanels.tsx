@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, FolderCheck, Folders, get, Jobs, post, Storage } from '../api';
 import { gb, storageWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
-import { Action, Problem, Skeleton, Status } from '../ui/controls';
+import { Action, Dialog, Problem, Skeleton, Status } from '../ui/controls';
 import { Field, Slider } from '../ui/primitives';
 import { ViewProps } from './shared';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
@@ -258,6 +258,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   const [list, setList] = useState<Folders | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmUnwatch, setConfirmUnwatch] = useState<string | null>(null);
   const scanPending = useRef(false);
   const scanning = status.scan.status === 'running';
   const reading = scanning || submitting;
@@ -277,7 +278,8 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     setSubmitting(true);
     setProblem('');
     try {
-      const address = folder.trim().replace(/^"|"$/g, '');
+      // File Explorer wraps some copied paths in matching quotes.
+      const address = folder.trim().replace(/^(["'])(.*)\1$/u, '$2').trim();
       const check = await checkFolder(address);
       if (check && !check.ok) {
         setProblem(check.reason);
@@ -292,6 +294,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   };
   const stopWatching = async (path: string) => {
     setList(await post<Folders>('/folders/stop-watching', { folder: path }));
+    setConfirmUnwatch(null);
     notify('Stopped watching that folder. Nothing in it was touched, and its songs are still in your library.');
   };
   const stopReading = async () => {
@@ -313,10 +316,21 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
                 <small className="hint"> {item.songs} song{item.songs === 1 ? '' : 's'}</small>
               </div>
               {item.available ? <Status kind="ready">Watching</Status> : <Status kind="warning">Can’t find it right now. Its songs are kept until it’s back.</Status>}
-              <Action run={() => stopWatching(item.path)}>Stop watching</Action>
+              <button onClick={() => setConfirmUnwatch(item.path)}>Stop watching</button>
             </li>
           ))}
         </ul>
+      )}
+      {confirmUnwatch && (
+        <Dialog title="Stop watching this folder?" onClose={() => setConfirmUnwatch(null)} footer={(
+          <>
+            <button onClick={() => setConfirmUnwatch(null)}>Keep watching</button>
+            <Action className="primary" working="Stopping…" run={() => stopWatching(confirmUnwatch)}>Stop watching</Action>
+          </>
+        )}>
+          <p>Stop automatically checking <b>{confirmUnwatch}</b> for new music?</p>
+          <p className="hint">This never deletes, moves or changes files. Songs already in your Library stay there. You can add this folder again later.</p>
+        </Dialog>
       )}
       <div className="row wrap">
         <span className="hint">New songs added to these show up by themselves within a minute or so. Selecta never changes or deletes your files.</span>

@@ -123,3 +123,67 @@ button[aria-disabled='true'] { cursor: progress; }
   .studio-cell[aria-pressed='true'] { border: 3px solid Highlight; }
   .status, .nav a[aria-current], .inspector-tabs button[aria-selected='true'] { forced-color-adjust: auto; }
 }
+
+/* Keyboard grip state, not just a colour change. A person who has picked up
+   a row can see that it is ready for arrow-key movement. */
+.timeline .grip[aria-pressed='true'] {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  background: var(--surface-selected);
+  border-radius: var(--radius-sm);
+}
+
+/* Make control boundaries, selection and errors survive Windows High Contrast
+   without relying on the theme's custom CSS colours. */
+@media (forced-colors: active) {
+  button.primary, a.button.primary, .primary[aria-pressed='true'] {
+    background: Highlight;
+    color: HighlightText;
+    border: 2px solid Highlight;
+  }
+  button[aria-pressed='true'], .nav a[aria-current='page'],
+  .inspector-tabs button[aria-selected='true'],
+  .menu-list button[aria-checked='true'], .timeline .grip[aria-pressed='true'] {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+  .status-warning, .status-failed, .warn { color: Mark; }
+  .status-ready, .status-needs-action { color: CanvasText; }
+  button:focus-visible, a:focus-visible, input:focus-visible,
+  select:focus-visible, textarea:focus-visible, [role='button']:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  button:disabled, [aria-disabled='true'] { color: GrayText; border-color: GrayText; }
+  .request-row.attention { border-left: 3px solid Highlight; }
+}
+
+@media (forced-colors: active) {
+  /* Platform colours must remain legible even with author colours removed.
+     Focus, selection and disabled states each have a non-colour cue. */
+  :is(button, a, input, select, textarea, summary, [role='tab']):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  :is(.nav a[aria-current='page'], .tabs a[aria-current='page'],
+    .inspector-tabs button[aria-selected='true'], [role='option'][aria-selected='true'],
+    button[aria-pressed='true']) {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+  .status {
+    border: 1px solid CanvasText;
+    border-radius: var(--radius-pill);
+    padding-inline: 4px;
+    color: CanvasText;
+  }
+  .status-failed, .status-warning, .status-needs-action {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  :is(button:disabled, button[aria-disabled='true'], .studio-lane.lost .studio-cell) {
+    border-color: GrayText;
+    color: GrayText;
+  }
+  .studio-cell[aria-pressed='true']::after { background: Highlight; }
+}

@@ -115,7 +115,7 @@ describe('the sections', () => {
   it('say when they can’t find out, rather than saying nothing’s happening', async () => {
     fakeBackend({});
     show({}, 'overview');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t find out what’s running');
+    expect(await screen.findByText(/This running copy of Selecta can’t report background jobs/)).toBeInTheDocument();
   });
 
   it('show folders, and whether each can be found', async () => {
@@ -127,6 +127,12 @@ describe('the sections', () => {
     expect(await screen.findByText('C:\\Music')).toBeInTheDocument();
     expect(screen.getByText(/Can’t find it right now/)).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: 'Stop watching' })[0]);
+    expect(screen.getByRole('dialog', { name: 'Stop watching this folder?' })).toBeInTheDocument();
+    expect(calls.some((call) => call.path === '/folders/stop-watching')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Keep watching' }));
+    expect(calls.some((call) => call.path === '/folders/stop-watching')).toBe(false);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Stop watching' })[0]);
+    fireEvent.click(screen.getByRole('dialog').querySelector('.primary') as HTMLElement);
     await waitFor(() => expect(calls.find((call) => call.path === '/folders/stop-watching')?.body).toEqual({ folder: 'C:\\Music' }));
   });
 

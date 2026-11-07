@@ -42,10 +42,16 @@ export function useLoaded<T>(
   useEffect(() => {
     setValue({ state: 'loading', data: null, problem: null, stale: false });
     void run();
-    const timer = options.every ? window.setInterval(() => void run(), options.every) : undefined;
+    // Poll only while the UI is visible. An immediate read on return makes
+    // stale status truthful without consuming resources in a hidden tab.
+    const tick = () => { if (document.visibilityState !== 'hidden') void run(); };
+    const returned = () => { if (document.visibilityState === 'visible') tick(); };
+    const timer = options.every ? window.setInterval(tick, options.every) : undefined;
+    if (options.every) document.addEventListener('visibilitychange', returned);
     return () => {
       asked.current += 1;
       window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', returned);
     };
   }, [key, options.every, run]);
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityEntry, blockedBy, clearFinishedActivity, markActivitySeen, runUndo, useActivity } from '../state/activity';
 import { Action, Status } from './controls';
+import { PageLink } from '../shell/PageLink';
 
 function when(at: number, now: number): string {
   const seconds = Math.round((now - at) / 1000);
@@ -35,6 +36,18 @@ function Row({ entry, all, now }: { entry: ActivityEntry; all: ActivityEntry[]; 
         <div className="activity-failed">
           <Status kind="failed">Couldn’t undo</Status>
           {entry.problem && <small className="hint">{entry.problem}</small>}
+          {newer ? (
+            <small className="hint">A newer change in this mix must be resolved first.</small>
+          ) : (
+            <div className="row wrap">
+              <Action working="Trying again…" run={() => runUndo(entry.id)}>Try Undo again</Action>
+              {entry.scope && (
+                <PageLink to={entry.scope.startsWith('draft:')
+                  ? `/mixes/drafts/${entry.scope.slice(6)}/edit`
+                  : '/mix/current/edit'}>Check this mix</PageLink>
+              )}
+            </div>
+          )}
         </div>
       )}
     </li>
@@ -56,9 +69,7 @@ export function ActivityPanel() {
   if (!entries.length) {
     return <p className="hint">Nothing yet. Changes you make show up here, with a way to undo them.</p>;
   }
-  const finished = entries.some((entry) => entry.undoState === 'undone'
-    || (entry.undoState === 'failed' && !entries.some((older) =>
-      older.id < entry.id && older.scope && older.scope === entry.scope && older.undoState === 'available')));
+  const finished = entries.some((entry) => entry.undoState === 'undone');
   return (
     <section className="activity" aria-label="Recent activity">
       <ul className="activity-list">

@@ -49,9 +49,7 @@ export function recordActivity(message: string, options: { tone?: ActivityTone; 
   // the wrong server revision.
   while (entries.length > KEEP) {
     const spare = entries.reduce((found, item, index) =>
-      (!item.undo || item.undoState === 'undone' || item.undoState === 'failed')
-      && !(item.undoState === 'failed' && item.scope
-        && entries.some((older) => older.id < item.id && older.scope === item.scope && older.undoState === 'available'))
+      (!item.undo || item.undoState === 'undone')
         ? index : found, -1);
     entries.splice(spare >= 0 ? spare : entries.length - 1, 1);
   }
@@ -70,7 +68,7 @@ export function blockedBy(entry: ActivityEntry, all: ActivityEntry[] = entries):
 
 export function canUndo(id: number): boolean {
   const entry = entries.find((item) => item.id === id);
-  return !!entry && entry.undoState === 'available' && !blockedBy(entry);
+  return !!entry && (entry.undoState === 'available' || entry.undoState === 'failed') && !blockedBy(entry);
 }
 
 function patch(id: number, change: Partial<ActivityEntry>) {
@@ -81,7 +79,10 @@ function patch(id: number, change: Partial<ActivityEntry>) {
 /** Take this one back, once. Throws if it can't, so whoever pressed it can say so. */
 export async function runUndo(id: number): Promise<void> {
   const entry = entries.find((item) => item.id === id);
-  if (!entry?.undo || entry.undoState !== 'available') return;
+  // A lost response doesn't prove the Undo was not applied. The saved
+  // callback contains the original guarded mix order, so retrying either
+  // completes the same reversal or reports the newer revision conflict.
+  if (!entry?.undo || !['available', 'failed'].includes(entry.undoState ?? '')) return;
   const newer = blockedBy(entry);
   if (newer) {
     if (newer.undoState === 'failed') throw new Error('A newer Undo failed. Check this mix and its latest change before trying to undo an older change.');
@@ -90,7 +91,11 @@ export async function runUndo(id: number): Promise<void> {
   }
   patch(id, { undoState: 'running', problem: undefined });
   try {
-    await entry.undo();
+    const reversed = await entry.undo();
+    // Some scopes explicitly answer that there was no newest change to
+    // reverse. False is authoritative: don't announce an Undo that didn't
+    // happen. Void is a valid success for restoration operations.
+    if (reversed === false) throw new Error('There was no change to undo. Check the current mix before trying again.');
     patch(id, { undoState: 'undone' });
   } catch (error) {
     const words = (error as Error).message || 'Couldn’t undo that.';
@@ -108,9 +113,9 @@ export function markNewestUndone(scope: string) {
 export function clearFinishedActivity() {
   // Failed Undo is also a scope lock until a newer authoritative operation
   // confirms what happened. Do not silently unlock an older activity entry.
-  entries = entries.filter((item) => item.undoState === 'available' || item.undoState === 'running'
-    || (item.undoState === 'failed' && item.scope
-      && entries.some((older) => older.id < item.id && older.scope === item.scope && older.undoState === 'available')));
+  entries = entries.filter((item) => item.undoState === 'available'
+    || item.undoState === 'running'
+    || item.undoState === 'failed');
   changed();
 }
 

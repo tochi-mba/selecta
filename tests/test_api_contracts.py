@@ -508,6 +508,53 @@ def test_the_same_operation_sent_twice_only_happens_once(client):
     assert len(client.get("/api/drafts").json()["drafts"]) == 1
 
 
+def test_guarded_replay_returns_original_response_after_its_own_mix_change(client, conn):
+    """The first guarded operation changed the order; its retry must not get a stale 409."""
+    _fill(conn, 1, 2)
+    headers = {"x-mix-order": "1,2", "x-operation-id": "guarded-add-retry"}
+    body = {"song_id": 3, "position": 0}
+
+    first = client.post("/api/mix/songs", json=body, headers=headers)
+    assert first.status_code == 200
+    assert _order(client) == [3, 1, 2]
+
+    repeated = client.post("/api/mix/songs", json=body, headers=headers)
+    assert repeated.status_code == 200
+    assert repeated.json() == first.json()
+    assert _order(client) == [3, 1, 2], "the same song must not be inserted twice"
+
+    stale_new_operation = client.post(
+        "/api/mix/songs",
+        json=body,
+        headers={"x-mix-order": "1,2", "x-operation-id": "different-add"},
+    )
+    assert stale_new_operation.status_code == 409
+    assert stale_new_operation.json()["code"] == "mix_changed"
+    assert _order(client) == [3, 1, 2]
+
+
+def test_slow_build_never_replaces_a_mix_changed_during_planning(client, conn, monkeypatch):
+    """A stale-build guard must be checked after the expensive planner returns."""
+    from selecta.planner import vibes
+
+    _fill(conn, 1, 2)
+    monkeypatch.setattr(vibes, "eligible", lambda *_args: [object()] * vibes.MIN_SONGS)
+
+    def planner(*_args, **_kwargs):
+        # Emulate another tab editing while the generation work is under way.
+        mix.write_order(conn, [(3, None, 0), (1, None, 0)])
+        return [SimpleNamespace(song=SimpleNamespace(id=2))], {}
+
+    monkeypatch.setattr(vibes, "build_vibe", planner)
+    refused = client.post(
+        "/api/vibes/pick/build?count=12",
+        headers={"x-mix-order": "1,2", "x-operation-id": "late-vibe"},
+    )
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "mix_changed"
+    assert _order(client) == [3, 1]
+
+
 def test_sent_twice_at_the_same_moment_it_still_only_happens_once(client):
     async def both():
         transport = httpx.ASGITransport(app=client.app)

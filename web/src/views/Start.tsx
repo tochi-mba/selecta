@@ -37,7 +37,7 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
 
   const start = async (event: FormEvent) => {
     event.preventDefault();
-    const clean = folder.trim().replace(/^"|"$/g, '');
+    const clean = folder.trim().replace(/^(["'])(.*)\1$/u, '$2').trim();
     if (pending.current || scanning || !clean) return;
     pending.current = true;
     setSubmitting(true);
@@ -47,8 +47,10 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
       let verdict: FolderCheck | null = null;
       try {
         verdict = await get<FolderCheck>(`/folders/check?path=${encodeURIComponent(clean)}`);
-      } catch {
-        // an older server can't check first, and reading the folder will say what's wrong with it anyway
+      } catch (error) {
+        // Older servers may lack preflight. Offline errors and server failures
+        // are not permission to skip validation and initiate a scan.
+        if (!(error instanceof ApiError && (error.status === 404 || error.status === 405))) throw error;
       }
       if (verdict && !verdict.ok) {
         setProblem(verdict.reason);

@@ -144,9 +144,15 @@ describe('your drafts', () => {
     expect(screen.getByRole('link', { name: 'Change the limit in Workspace' })).toHaveAttribute('href', '/workshop/storage');
   });
 
-  it('deleting asks nothing, and can be undone', async () => {
+  it('confirms before deleting, preserves the draft on cancel and supports Undo', async () => {
     const { calls, notify } = show(list([draft(1)]), { 'DELETE /drafts/1': { name: 'Draft 1' }, 'POST /drafts/restore': { id: 1 } });
     await fromMenu('Draft 1', 'Delete Draft 1');
+    expect(screen.getByRole('dialog', { name: 'Delete Draft 1?' })).toBeInTheDocument();
+    expect(calls.some((call) => call.path === '/drafts/1')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Keep draft' }));
+    expect(calls.some((call) => call.path === '/drafts/1')).toBe(false);
+    await fromMenu('Draft 1', 'Delete Draft 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete draft' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     const [message, undo] = notify.mock.calls[0];
     expect(message).toBe('Deleted Draft 1.');

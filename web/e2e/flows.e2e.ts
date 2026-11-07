@@ -165,7 +165,7 @@ test('requests: asking, then seeing it find a place, and cancelling for good', a
   await page.goto('/listen');
   await page.keyboard.press('r');
   const drawer = page.getByRole('dialog', { name: 'Requests' });
-  await drawer.getByRole('textbox', { name: 'Request a song' }).fill('Last Call');
+  await drawer.getByRole('combobox', { name: 'Request a song' }).fill('Last Call');
   await drawer.getByRole('button', { name: /Last Call/ }).first().click();
   const yours = drawer.getByRole('list', { name: 'Your requests' });
   await expect(yours.getByText('Last Call')).toBeVisible();

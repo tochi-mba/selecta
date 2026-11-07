@@ -4,7 +4,8 @@ import { del, DraftInfo, DraftList, get, post } from '../api';
 import { etaRangeWords, length, nth } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { draftReadiness } from '../state/readiness';
-import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { Action, Dialog, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { MenuItem } from '../ui/primitives';
 import { ViewProps } from './shared';
 
@@ -56,6 +57,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   const [failures, setFailures] = useState<Record<number, string>>({});
   const [couldntLoad, setCouldntLoad] = useState(false);
   const [renaming, setRenaming] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<DraftInfo | null>(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'recent' | 'name' | 'readiness'>('recent');
   const heading = useRef<HTMLHeadingElement>(null);
@@ -71,11 +73,8 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
       .catch(() => setCouldntLoad(true));
   }, []);
 
-  useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), CHECK_EVERY_MS);
-    return () => window.clearInterval(timer);
-  }, [refresh]);
+  useEffect(() => { void refresh(); }, [refresh]);
+  useVisiblePoll(refresh, CHECK_EVERY_MS);
 
   // once a name has been saved or left alone, focus goes back to that draft
   useEffect(() => {
@@ -251,7 +250,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                       {draft.place !== null && (
                         <MenuItem aria-label={`Out of line: ${draft.name}`} onClick={() => void act(del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</MenuItem>
                       )}
-                      <MenuItem danger aria-label={`Delete ${draft.name}`} onClick={() => void remove(draft)}><Icon name="trash" /> Delete</MenuItem>
+                      <MenuItem danger aria-label={`Delete ${draft.name}`} onClick={() => setDeleting(draft)}><Icon name="trash" /> Delete</MenuItem>
                     </Menu>
                   </div>
                 </li>
@@ -260,6 +259,25 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
           </ul>
         )}
       </section>
+      {deleting && (
+        <Dialog
+          title={`Delete ${deleting.name}?`}
+          onClose={() => setDeleting(null)}
+          footer={(
+            <>
+              <button onClick={() => setDeleting(null)}>Keep draft</button>
+              <Action className="destructive" working="Deleting…" run={async () => {
+                const draft = deleting;
+                await remove(draft);
+                setDeleting(null);
+              }}>Delete draft</Action>
+            </>
+          )}
+        >
+          <p>This removes only the saved draft {deleting.name} and its place in the render line. Your current mix and original music files are untouched.</p>
+          <p className="hint">You can undo this from the notification if the restore point is still available.</p>
+        </Dialog>
+      )}
       {inLine.length > 0 && (
         <RenderLine
           inLine={inLine}

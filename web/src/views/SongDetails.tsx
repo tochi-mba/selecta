@@ -85,6 +85,13 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
     }, 'Saved your correction.');
   };
   const detectedTempo = song.detected_bpm ? Math.round(song.detected_bpm) : null;
+  const useMeasuredTempo = (factor: number) => {
+    const next = String(Math.round((song.detected_bpm ?? 0) * factor));
+    setBpm(next);
+    // A measured tempo at the edge may have a half/double outside the
+    // permitted correction range. Show the problem immediately, not at Save.
+    setBpmError(tempoProblem(next));
+  };
   return (
     <Sheet title={song.title ?? 'Untitled'} onClose={onClose}>
       <p className="song-detail-artist">{song.artist ?? 'Unknown artist'}</p>
@@ -119,8 +126,8 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           </Field>
           {detectedTempo && (
             <div className="row">
-              <button onClick={() => { setBpm(String(Math.round((song.detected_bpm ?? 0) * 2))); setBpmError(''); }}>Double</button>
-              <button onClick={() => { setBpm(String(Math.round((song.detected_bpm ?? 0) / 2))); setBpmError(''); }}>Half</button>
+              <button onClick={() => useMeasuredTempo(2)}>Double</button>
+              <button onClick={() => useMeasuredTempo(0.5)}>Half</button>
             </div>
           )}
         </div>

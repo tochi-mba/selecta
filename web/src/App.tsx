@@ -99,13 +99,23 @@ export function App() {
         if (problemKind(error) !== 'offline') showProblem(`Couldn’t read your mix: ${error.message}`);
       });
   }, [setMixData]);
+  // Status can be requested by a timer and several views at once. Sharing
+  // the same in-flight read prevents an older, slow status reply from
+  // overwriting a newer one and stops a disconnected server being hammered.
+  const statusReading = useRef<Promise<void> | null>(null);
   const refreshStatus = useCallback(() => {
-    return get<Status>('/status')
+    if (statusReading.current) return statusReading.current;
+    const work = get<Status>('/status')
       .then((next) => {
         setStatus(next);
         setProblem('');
       })
-      .catch((error: Error) => setProblem(error.message));
+      .catch((error: Error) => setProblem(error.message))
+      .finally(() => {
+        if (statusReading.current === work) statusReading.current = null;
+      });
+    statusReading.current = work;
+    return work;
   }, []);
 
   // Which draft is open comes from the address, so it can't be confused with the current mix.
@@ -191,14 +201,35 @@ export function App() {
     });
     return () => connectMainPlayer(null);
   }, [player]);
-  const playDraft = useCallback(async (id: number, from = 0) => {
-    const next = await post<MixData>(`/drafts/${id}/play`);
-    setMixData(next);
-    navigate('/listen');
-    void player.playFrom(from);
-    const order = orderOf(next.mix);
-    showToast(`Now playing ${next.name}. What was playing is kept in your drafts.`, { scope: 'current', undo: () => undoIn(null, order) });
-  }, [player, setMixData, undoIn]);
+  const [confirmDraft, setConfirmDraft] = useState<{ id: number; from: number; order: string; replacing: string } | null>(null);
+  const activatingDraft = useRef(false);
+  const activateDraft = useCallback(async (id: number, from: number, expectedOrder: string) => {
+    if (activatingDraft.current) return;
+    activatingDraft.current = true;
+    try {
+      // The server rejects a draft activation if the current mix changed in
+      // another tab since the listener chose which mix to replace.
+      const next = await post<MixData>(`/drafts/${id}/play`, undefined, { 'x-mix-order': expectedOrder });
+      setMixData(next);
+      navigate('/listen');
+      void player.playFrom(from);
+      const order = orderOf(next.mix);
+      showToast(`Now playing ${next.name}. What was playing is kept in your drafts.`, { scope: 'current', undo: () => undoIn(null, order) });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
+      throw error;
+    } finally {
+      activatingDraft.current = false;
+    }
+  }, [player, refreshMix, setMixData, undoIn]);
+  const playDraft = useCallback((id: number, from = 0) => {
+    const order = orderOf(mixRef.current);
+    if (mixRef.current.length && player.state.phase !== 'idle') {
+      setConfirmDraft({ id, from, order, replacing: data.name });
+      return Promise.resolve();
+    }
+    return activateDraft(id, from, order);
+  }, [activateDraft, data.name, player]);
   const requests = useRequests({ mix, player, onMix: setMixData }, notify);
   const foundAt = useRef<number | null>(null);
   useEffect(() => {
@@ -247,8 +278,12 @@ export function App() {
 
   useEffect(() => {
     void refreshStatus();
+    const seen = mixChanges.current;
     get<MixData>('/mix')
       .then((next) => {
+        // A user may act before the first read returns, including from
+        // another tab. Do not replace that newer state with startup data.
+        if (seen !== mixChanges.current) return;
         setMixData(next);
         const resume = loadResume(next.mix);
         if (resume) {
@@ -260,11 +295,24 @@ export function App() {
       .catch((error: Error) => {
         if (problemKind(error) !== 'offline') showProblem(`Couldn’t read your mix: ${error.message}`);
       });
-    const timer = window.setInterval(() => void refreshStatus(), 4000);
-    return () => window.clearInterval(timer);
+    const poll = () => {
+      if (document.visibilityState !== 'hidden') void refreshStatus();
+    };
+    const timer = window.setInterval(poll, 4000);
+    document.addEventListener('visibilitychange', poll);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', poll);
+    };
   }, [refreshStatus, setMixData, player]);
 
-  useEffect(refreshMix, [route.page, refreshMix]);
+  const firstMixRoute = useRef(true);
+  useEffect(() => {
+    // Startup has its own one-time read and resume handling. Route changes
+    // afterwards refresh the authoritative current mix without double reads.
+    if (firstMixRoute.current) { firstMixRoute.current = false; return; }
+    refreshMix();
+  }, [route.page, refreshMix]);
 
   // Coming back after the server was away, everything shown may be out of date.
   const wasAway = useRef(false);
@@ -282,16 +330,26 @@ export function App() {
   const draftBusy = !!draftData && (draftData.draft?.place != null || draftData.mix.some((item) => ['queued', 'rendering'].includes(item.seam?.state.status ?? '')));
   useEffect(() => {
     if (!draftBusy) return;
-    const timer = window.setInterval(refreshDraft, 2000);
-    return () => window.clearInterval(timer);
+    const refresh = () => { if (document.visibilityState !== 'hidden') refreshDraft(); };
+    const timer = window.setInterval(refresh, 2000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, [draftBusy, refreshDraft]);
 
   // Anything still rendering gets checked often, so its status changes on its own.
   const busy = mix.some((item) => ['none', 'queued', 'rendering'].includes(item.seam?.state.status ?? ''));
   useEffect(() => {
     if (!busy) return;
-    const timer = window.setInterval(refreshMix, 1500);
-    return () => window.clearInterval(timer);
+    const refresh = () => { if (document.visibilityState !== 'hidden') refreshMix(); };
+    const timer = window.setInterval(refresh, 1500);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, [busy, refreshMix]);
 
   const playing = mix[now.position];
@@ -588,6 +646,25 @@ export function App() {
           )}
         </Section>
       </Shell>
+      {confirmDraft && (
+        <Dialog
+          title={`Replace ${confirmDraft.replacing}?`}
+          onClose={() => setConfirmDraft(null)}
+          footer={(
+            <>
+              <button onClick={() => setConfirmDraft(null)}>Keep current mix</button>
+              <Action className="primary" working="Switching…" run={async () => {
+                const choice = confirmDraft;
+                setConfirmDraft(null);
+                await activateDraft(choice.id, choice.from, choice.order);
+              }}>Replace with draft</Action>
+            </>
+          )}
+        >
+          <p>Playing this draft will stop the current mix. The old mix is kept in My Mixes, and you can undo the switch.</p>
+          <p className="hint">Cancel to keep listening without changing either mix.</p>
+        </Dialog>
+      )}
       {requesting && (
         <Drawer title="Requests" onClose={() => setRequesting(false)}>
           <RequestsPanel />
