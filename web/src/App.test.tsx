@@ -178,6 +178,45 @@ describe('an open draft', () => {
     expect(window.location.pathname).toBe('/mix/current/edit');
   });
 
+  it('asks before replacing an active mix with a draft, and cancel leaves playback untouched', async () => {
+    window.history.pushState({}, '', '/mixes/mine');
+    const calls = fakeBackend({
+      'GET /status': status(),
+      'GET /vibes': [],
+      'GET /drafts': list([{ id: 7, name: 'Friday' }]),
+      'GET /mix': (_body: unknown, url: string) => (url.includes('draft=7') ? friday : current),
+      'POST /drafts/7/play': { ...current, name: 'Friday' },
+    });
+    const transport = vi.spyOn(SetPlayer.prototype, 'togglePause').mockImplementation(async function (this: SetPlayer) {
+      this.state = { ...this.state, phase: 'playing' };
+      this.onChange(this.state);
+    });
+    render(<App />);
+    const currentArea = within(await screen.findByRole('region', { name: 'Current mix' }));
+    fireEvent.click(currentArea.getByRole('button', { name: 'Play' }));
+    await waitFor(() => expect(window.location.pathname).toBe('/listen'));
+    window.history.pushState({}, '', '/mixes/mine');
+    fireEvent.popState(window);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Play Friday' }));
+    expect(await screen.findByRole('dialog', { name: 'Replace Current?' })).toBeInTheDocument();
+    expect(calls.some((call) => call.path === '/drafts/7/play')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Keep current mix' }));
+    expect(screen.queryByRole('dialog', { name: 'Replace Current?' })).toBeNull();
+    expect(calls.some((call) => call.path === '/drafts/7/play')).toBe(false);
+    expect(window.location.pathname).toBe('/mixes/mine');
+    expect(transport).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play Friday' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Replace with draft' }));
+    await waitFor(() => expect(window.location.pathname).toBe('/listen'));
+    expect(calls.filter((call) => call.path === '/drafts/7/play')).toHaveLength(1);
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/drafts/7/play', expect.objectContaining({
+      headers: expect.objectContaining({ 'x-mix-order': '1,2' }),
+    }));
+    expect(await screen.findByText(/What was playing is kept in your drafts/)).toBeInTheDocument();
+  });
+
   it('playing one goes to Listen, and keeps what was playing in the drafts', async () => {
     window.history.pushState({}, '', '/mixes/mine');
     fakeBackend({
