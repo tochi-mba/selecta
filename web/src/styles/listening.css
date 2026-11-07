@@ -178,3 +178,10 @@
 /* Bidirectional song and lyric identities never alter transport geometry. */
 .listen-identity .display, .listen-identity .artist, .lyrics p { unicode-bidi: plaintext; overflow-wrap: anywhere; }
 .listen-identity .display { min-width: 0; }
+
+/* The five arc stops have the same value whether touched, dragged, adjusted
+   by keyboard or typed numerically. Avoid forcing narrow inputs offscreen. */
+.energy-arc-stops input[type='number'] { max-width: 100%; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) {
+  .energy-arc-stops label { grid-template-columns: 65px minmax(0, 1fr) 72px; }
+}

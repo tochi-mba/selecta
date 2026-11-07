@@ -351,6 +351,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
       </div>
       <h3>Add another folder</h3>
       <p className="hint">Copy a folder address from File Explorer. Your audio stays on this PC. For lyric lookup, Selecta sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file. Selecta also communicates with its local server.</p>
+      <p className="hint">Example folder paths: Windows <code>C:\\Users\\you\\Music</code>; macOS <code>/Users/you/Music</code>; Linux <code>/home/you/Music</code>. Use a path on the computer running Selecta, not a website address.</p>
       <form className="row wrap sources-add" onSubmit={(event) => void scan(event)}>
         <Field label="Music folder" error={problem}>
           {(field) => (
