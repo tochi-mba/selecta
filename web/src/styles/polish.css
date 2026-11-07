@@ -157,3 +157,33 @@ button[aria-disabled='true'] { cursor: progress; }
   button:disabled, [aria-disabled='true'] { color: GrayText; border-color: GrayText; }
   .request-row.attention { border-left: 3px solid Highlight; }
 }
+
+@media (forced-colors: active) {
+  /* Platform colours must remain legible even with author colours removed.
+     Focus, selection and disabled states each have a non-colour cue. */
+  :is(button, a, input, select, textarea, summary, [role='tab']):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  :is(.nav a[aria-current='page'], .tabs a[aria-current='page'],
+    .inspector-tabs button[aria-selected='true'], [role='option'][aria-selected='true'],
+    button[aria-pressed='true']) {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+  .status {
+    border: 1px solid CanvasText;
+    border-radius: var(--radius-pill);
+    padding-inline: 4px;
+    color: CanvasText;
+  }
+  .status-failed, .status-warning, .status-needs-action {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  :is(button:disabled, button[aria-disabled='true'], .studio-lane.lost .studio-cell) {
+    border-color: GrayText;
+    color: GrayText;
+  }
+  .studio-cell[aria-pressed='true']::after { background: Highlight; }
+}
