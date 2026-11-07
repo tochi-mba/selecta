@@ -1,3 +1,13 @@
+# Selecta 4.0 — complete UI/UX overhaul ADR programme (2026-11-07)
+
+**This is a documentation-only proposal: ADR-0089–0113, 25 Proposed decisions, 250 new S4 tasks Not started, 0 Implemented, 0 Verified.** Baseline: `main` `9b663f9f10212619f27ce67ce82f602347065cbd` after PR #25 and #26 merged. Keep the warm charcoal/cream/electric lime scheme, improve dark and light themes, and preserve all existing functionality, original audio, local-first security, requests, Studio, drafts and FLAC.
+
+**Start with:** [Selecta 4.0 roadmap and full ADR index](selecta-4-roadmap.md) · [250-item implementation checklist](selecta-4-implementation-checklist.md) · [per-task status/evidence ledger](selecta-4-evidence.md) · [feature-parity map](selecta-4-feature-parity.md) · [verification and edge-case matrix](selecta-4-verification-matrix.md) · [4.0 implementation release NO-GO](selecta-4-release-gates.md).
+
+**Status discipline:** Decision status Proposed/Accepted is different from implementation Not started/In progress/Implemented and independent Verified. A documentation PR may merge while every new task remains unchecked. Earlier 3.0/3.1 ADRs and status tables are historic and may contain stale PR-open text; do not automatically mark inherited items complete or superseded. Only later implementing PRs with actual tests, reviewed dark/light screenshots, human AT/usability, real audio, performance and rollback evidence can advance S4 statuses.
+
+---
+
 # Selecta 3.1 — verification-led UI/UX finishing proposal (2026-11-07)
 
 **Proposed decisions: ADR-0078–0088. Selected tasks now In progress on PR #25; 116 tasks: 0 Implemented / 0 Verified. Checkboxes remain open.** This programme follows merged PR #24 and focuses on evidence, visual consistency, listener/creator workflow polish and human acceptance—not another feature rewrite. PR #25 began as documentation-only and now includes multiple scoped frontend/test changes and review-only visual CI artifacts, without human verification.
