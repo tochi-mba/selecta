@@ -153,7 +153,10 @@ describe('starting a mix from a song', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Replace and play' }));
     await waitFor(() => expect(setMixData).toHaveBeenCalledOnce());
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/vibes/pick/build?start=1', expect.objectContaining({
-      headers: expect.objectContaining({ 'x-mix-order': '1' }),
+      headers: expect.objectContaining({
+        'x-mix-order': '1',
+        'x-operation-id': expect.stringMatching(/^build-/),
+      }),
     }));
     expect(play).toHaveBeenCalledWith(0);
   });

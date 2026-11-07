@@ -392,7 +392,10 @@ describe('safe activation from Explore', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Replace and play' }));
     await waitFor(() => expect(setMixData).toHaveBeenCalledOnce());
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/vibes/peak/build?count=12', expect.objectContaining({
-      headers: expect.objectContaining({ 'x-mix-order': '1' }),
+      headers: expect.objectContaining({
+        'x-mix-order': '1',
+        'x-operation-id': expect.stringMatching(/^build-/),
+      }),
     }));
   });
 });
