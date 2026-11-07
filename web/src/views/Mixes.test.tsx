@@ -111,6 +111,32 @@ describe('Pick a feeling', () => {
     expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { value?: string }).value === 'seamless')).toBe(true);
   });
 
+  it('serializes rapidly changed feel settings so the last selection wins on the server', async () => {
+    const sent: string[] = [];
+    let finishFirst: () => void = () => {};
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/vibes')) return new Response(JSON.stringify([card('pick', 'Selecta’s pick', '')]), { status: 200 });
+      if (url.includes('/steer') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { value: string };
+        sent.push(body.value);
+        if (body.value === 'seamless') await new Promise<void>((done) => { finishFirst = done; });
+        return new Response(JSON.stringify({ mix_language: body.value }), { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    }));
+    show();
+    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
+    const select = await screen.findByLabelText('Transition feel');
+    fireEvent.change(select, { target: { value: 'seamless' } });
+    await waitFor(() => expect(sent).toEqual(['seamless']));
+    fireEvent.change(select, { target: { value: 'punchy' } });
+    expect(select).toHaveValue('punchy');
+    expect(sent).toEqual(['seamless']);
+    finishFirst();
+    await waitFor(() => expect(sent).toEqual(['seamless', 'punchy']));
+    expect(select).toHaveValue('punchy');
+  });
+
   it('lets the listener set how often new mixes use stem-assisted moves', async () => {
     const calls = fakeBackend({
       'GET /vibes': [card('pick', 'Selecta’s pick', '')],
