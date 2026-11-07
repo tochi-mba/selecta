@@ -210,3 +210,11 @@ html {
     --motion-slow: 0ms;
   }
 }
+
+/* Compact mode condenses rows for pointer-precise desktop work; a touch
+   user still needs reliable 44px targets when the density preference carries
+   over to a tablet or convertible. */
+@media (pointer: coarse) {
+  :root[data-density='compact'] .density,
+  .density[data-density='compact'] { --control-height: 44px; }
+}

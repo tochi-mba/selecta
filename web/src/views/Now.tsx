@@ -363,18 +363,21 @@ function MusicVisualizer({ player, active, stage, intensity }: { player: ViewPro
         gradient.addColorStop(1, soft);
       }
       const spectrum = active ? player.getSpectrum() : null;
+      if (!spectrum || spectrum.length === 0) {
+        // No analyzer bins means there are no measurements. Keep the surface
+        // still; do not draw decorative "frequency levels" in their place.
+        return;
+      }
       const bars = Math.min(72, Math.max(24, Math.floor(width / (ratio * 7))));
       const gap = 2 * ratio;
       const barWidth = Math.max(1, (width - gap * (bars - 1)) / bars);
       context.fillStyle = gradient;
       for (let index = 0; index < bars; index += 1) {
-        const low = Math.floor((index / bars) ** 2 * (spectrum?.length ?? 1));
-        const high = Math.max(low + 1, Math.floor(((index + 1) / bars) ** 2 * (spectrum?.length ?? 1)));
+        const low = Math.floor((index / bars) ** 2 * spectrum.length);
+        const high = Math.max(low + 1, Math.floor(((index + 1) / bars) ** 2 * spectrum.length));
         let value = 0;
-        if (spectrum) {
-          for (let bin = low; bin < Math.min(high, spectrum.length); bin += 1) value = Math.max(value, spectrum[bin] / 255);
-        }
-        const amplitude = spectrum ? Math.max(0.035, value ** 0.8) : 0.025;
+        for (let bin = low; bin < Math.min(high, spectrum.length); bin += 1) value = Math.max(value, spectrum[bin] / 255);
+        const amplitude = Math.max(0.035, value ** 0.8);
         const barHeight = Math.max(2 * ratio, amplitude * height * 0.92);
         const x = index * (barWidth + gap);
         context.fillRect(x, (height - barHeight) / 2, barWidth, barHeight);
