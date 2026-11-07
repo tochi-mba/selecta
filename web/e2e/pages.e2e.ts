@@ -137,10 +137,10 @@ test('the Library’s filters are part of its address', async ({ page }) => {
   await page.goto('/library');
   await page.getByRole('searchbox', { name: 'Search your library' }).fill('Déjà');
   await expect(page).toHaveURL(/q=D/);
-  await expect(page.getByText('Déjà Vu')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Déjà Vu' })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('searchbox', { name: 'Search your library' })).toHaveValue('Déjà');
-  await expect(page.getByText('Déjà Vu')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Déjà Vu' })).toBeVisible();
   await expect(page.getByText('Morning Light')).toHaveCount(0);
 });
 

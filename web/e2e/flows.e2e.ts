@@ -156,7 +156,7 @@ test('songs that can’t be mixed say why', async ({ page }) => {
   await page.keyboard.press('Escape');
   await page.getByRole('searchbox', { name: 'Search your library' }).fill('');
   await page.getByRole('group', { name: 'Show' }).getByRole('button', { name: /attention/i }).click();
-  await expect(page.getByText('Broken File')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Broken File' })).toBeVisible();
   await page.getByRole('button', { name: /^Details for Broken File/ }).click();
   await expect(page.getByRole('dialog', { name: 'Broken File' }).getByText('couldn’t analyse').first()).toBeVisible();
 });
