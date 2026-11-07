@@ -1,9 +1,9 @@
 # Selecta 3.1 — 116-item UI/UX finishing implementation checklist
 
 - **Decision:** Proposed (11 ADRs, ADR-0078–0088).
-- **Implementation:** Not started; **0/116 Implemented; 0/116 Verified.**
+- **Implementation:** Five tasks In progress on PR #25, 111 not started; **0/116 Implemented; 0/116 Verified.**
 - **Baseline:** `main` at `3b01dc1` (merged Selecta 3.0).
-- **Documentation only:** Every checkbox is intentionally unchecked. The planning PR is not implementation.
+- **Checklist discipline:** Every checkbox intentionally remains unchecked. PR #25 now includes a small amount of implementation, but no task yet has independent Verified evidence.
 - **Identity:** `S31-XXXX-NN` is unique to this finishing programme; historical T, P and S3 IDs remain unchanged.
 
 ## How to use
@@ -41,7 +41,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0079 — Unify typography, themes, visual rhythm and CSS ownership](adr-0079-visual-system-and-css-ownership.md)
 
-**Phase:** 1 Foundations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 1 Foundations. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0079-01 — Approve visual hierarchy for page, song, metadata and technical values.** Acceptance: Screens use a documented typographic scale; long/RTL/missing song metadata remains readable.
 - [ ] **S31-0079-02 — Specify semantic colour role mapping for both themes.** Acceptance: Buttons, links, statuses, playback, requests, caution, focus and selections preserve contrast and meaning in light/dark.
@@ -58,7 +58,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0080 — Make controls, asynchronous states, recovery and Undo dependable](adr-0080-interaction-state-recovery-and-undo.md)
 
-**Phase:** 1 Foundations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 1 Foundations. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0080-01 — Define shared initial/empty/partial/refresh/error/offline/recovery presentation rules.** Acceptance: Each state includes visible facts, allowed actions, focus/announcement behaviour and next step.
 - [ ] **S31-0080-02 — Review skeleton geometry for every high-traffic content surface.** Acceptance: Placeholders match real content structure and do not cause large avoidable layout jumps.
@@ -75,7 +75,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0081 — Reduce friction from first music folder to a confident first mix](adr-0081-first-run-explore-and-mix-choice.md)
 
-**Phase:** 2 Listener. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 2 Listener. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0081-01 — Review new-user entry and folder path guidance.** Acceptance: User knows where to find a path, what stays local, what metadata can leave, and why a path can be rejected.
 - [ ] **S31-0081-02 — Design distinct source-check, scan, analysis and mix-ready states.** Acceptance: Every stage has accurate progress or uncertainty, separate failures, and useful next action.
@@ -92,7 +92,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0082 — Polish Listen, navigation, mini-player and Stage without audio regressions](adr-0082-listen-shell-stage-and-audio-trust.md)
 
-**Phase:** 2 Listener. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/11.
+**Phase:** 2 Listener. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
 
 - [ ] **S31-0082-01 — Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete.
 - [ ] **S31-0082-02 — Test Next versus Skip semantics and transition countdown wording.** Acceptance: Users understand whether the next song is immediate or transition-aligned without changing transport behaviour.

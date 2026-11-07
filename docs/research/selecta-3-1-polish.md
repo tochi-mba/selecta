@@ -1,9 +1,9 @@
 # Selecta 3.1 — UI/UX finishing research basis and confidence boundary
 
 - **Date:** 2026-11-07.
-- **Purpose:** trace the existing research and source-observed issues to a verification-first finishing programme, without claiming new experiments or new implementation.
+- **Purpose:** trace existing research and source-observed issues to a verification-first finishing programme; subsequent partial code in PR #25 is not evidence of human experiments.
 - **Source baseline:** `main` merge `3b01dc1336aab0f1cb0a4d85be5eba359de81831` (PR #24).
-- **Evidence limit:** repository code and documents were inspected; source observations are not screenshots, WCAG attestations, participant outcomes, machine measurements or audible reviews.
+- **Evidence limit:** repository code and documentation were inspected and a first small UI/test pass added on PR #25. Source observations and unit tests are not screenshots, WCAG attestations, participant outcomes, machine measurements or audible reviews.
 
 ## Existing implementation and what this plan adds
 

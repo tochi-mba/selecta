@@ -1,6 +1,6 @@
 # Selecta 3.1 — verification, research tasks and release matrix
 
-- **Status:** Proposed verification design; no new tests, snapshots, user studies, benchmarks or audible evaluations run by this docs PR.
+- **Status:** Proposed verification design. PR #25 now includes additional component tests, with full integrated CI and human acceptance still unverified.
 - **Scope:** S31-0078 through S31-0088 (116 tasks). Existing 3.0 and historical T/P tests/feature parity retain ownership.
 - **Baseline:** `main` merge `3b01dc1336aab0f1cb0a4d85be5eba359de81831`.
 - **Separation of evidence:** source inspected ≠ browser rendered ≠ automated assertion ≠ human assistive-technology test ≠ actual listening experience.
@@ -83,4 +83,4 @@ For each route/overlay mark initial, empty, partial, refreshing, saving, queued/
 
 **P0 blocks unconditionally:** source/user data loss, wrong mix/draft revision, unintended playback/silence/overlap/resume, partial/unapproved bridge, wrong or invalid FLAC, unsafe file access/privacy, invented readiness, inaccessible essential task. **P1 blocks unless the owner explicitly accepts documented risk.** P2 visual problems receive a written review and disposition.
 
-An implementing PR must link S31 and inherited S3/parity IDs, preserve existing behaviour assertions and full CI gate, include at least one relevant adverse case, light/dark and width snapshots, keyboard/AT checks, actual audible test when affecting sound, real benchmark when affecting scale, and a rollback path. **Docs-only PR has none of these implemented results.** Update the evidence ledger and checklist honestly.
+An implementing PR must link S31 and inherited S3/parity IDs, preserve existing behaviour assertions and full CI gate, include at least one relevant adverse case, light/dark and width snapshots, keyboard/AT checks, actual audible test when affecting sound, real benchmark when affecting scale, and a rollback path. **PR #25 now contains limited UI and unit-test changes; integrated release gates and real human/audio evidence remain outstanding.** Update the evidence ledger and checklist honestly.
