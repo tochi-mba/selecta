@@ -1,7 +1,7 @@
 # ADR-0161 — Accessible sensory choice, cognitive comfort and non-motion equivalents
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 4/8 Implemented, 3/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Accessibility.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-The immersive ambition must not exclude people with vestibular sensitivity, low vision, hearing differences, keyboard-only input or screen readers. Sound must not be a prerequisite for understanding the control state, even though musical evaluation requires hearing. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+The immersive ambition must not exclude people with vestibular sensitivity, low vision, hearing differences, keyboard-only input or screen readers. Sound must not be a prerequisite for understanding the control state, even though musical evaluation requires hearing. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ The immersive ambition must not exclude people with vestibular sensitivity, low 
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 4 source-level Implemented, 0 independently Verified
 
-1. **MI-0161-01 — Create sensory equivalence map.** Acceptance: Every visual/audio motion has text, icon or static alternative where meaningful. Required verification: A11y component inventory. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0161-02 — Test live reduced-motion switching.** Acceptance: No lingering animation after OS preference changes mid-session. Required verification: Live toggle browser tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0161-03 — Validate critical noncolor states.** Acceptance: Selected/playing/requested/failed/focus distinct in monochrome and forced colors. Required verification: Automated contrast and manual review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0161-04 — Audit screen-reader announcements.** Acceptance: No repeated time/beat/lyric spam; essential transitions announced. Required verification: NVDA/Edge human trace. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0161-05 — Ensure composite control alternatives.** Acceptance: Studio, combobox, timeline and menu usable without pointer. Required verification: Keyboard and screen reader task sessions. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0161-06 — Protect reading and comprehension.** Acceptance: Short labels, explicit scopes and reachable explanations in every screen. Required verification: Cognitive walkthrough with participants. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0161-07 — Check touch and speech-input safety.** Acceptance: Single-key shortcuts can be disabled and touch targets remain usable. Required verification: Speech input plus phone testing. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0161-01 — Create sensory equivalence map.** Acceptance: Every visual/audio motion has text, icon or static alternative where meaningful. Required verification: A11y component inventory. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0161-02 — Test live reduced-motion switching.** Acceptance: No lingering animation after OS preference changes mid-session. Required verification: Live toggle browser tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
+3. **MI-0161-03 — Validate critical noncolor states.** Acceptance: Selected/playing/requested/failed/focus distinct in monochrome and forced colors. Required verification: Automated contrast and manual review. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
+4. **MI-0161-04 — Audit screen-reader announcements.** Acceptance: No repeated time/beat/lyric spam; essential transitions announced. Required verification: NVDA/Edge human trace. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css`; partial behavior or baseline, task acceptance outstanding.**
+5. **MI-0161-05 — Ensure composite control alternatives.** Acceptance: Studio, combobox, timeline and menu usable without pointer. Required verification: Keyboard and screen reader task sessions. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
+6. **MI-0161-06 — Protect reading and comprehension.** Acceptance: Short labels, explicit scopes and reachable explanations in every screen. Required verification: Cognitive walkthrough with participants. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0161-07 — Check touch and speech-input safety.** Acceptance: Single-key shortcuts can be disabled and touch targets remain usable. Required verification: Speech input plus phone testing. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
 8. **MI-0161-08 — Record human accessibility sign-off.** Acceptance: Named reviewers, device/browser/AT, failures, numerators and exact SHA. Required verification: Independent evidence ledger. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

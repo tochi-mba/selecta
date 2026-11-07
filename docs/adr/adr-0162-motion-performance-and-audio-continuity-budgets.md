@@ -1,7 +1,7 @@
 # ADR-0162 — Animation performance budgets, audio continuity and long-session stability
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 2/8 Implemented, 5/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Performance.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Selecta may render audio and analyze tracks while the UI animates. A pleasing interaction that causes dropped playback, long tasks or warm laptop fans defeats the purpose of a calm music experience. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+Selecta may render audio and analyze tracks while the UI animates. A pleasing interaction that causes dropped playback, long tasks or warm laptop fans defeats the purpose of a calm music experience. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ Selecta may render audio and analyze tracks while the UI animates. A pleasing in
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 2 source-level Implemented, 0 independently Verified
 
-1. **MI-0162-01 — Specify reference hardware matrix.** Acceptance: CPU/GPU/OS/browser/power mode recorded for every benchmark. Required verification: Benchmark protocol review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0162-02 — Profile main thread and frame costs.** Acceptance: Animation doesn't create long tasks or meaningful INP regression. Required verification: Performance recording with p95 frame timing. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0162-03 — Profile audio scheduling under load.** Acceptance: Background renders and UI interaction do not produce unexpected gap/overlap. Required verification: Captured real audio and CPU load test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0162-04 — Stress large Library.** Acceptance: 20k songs, search/filter and scroll remain usable. Required verification: Synthetic and real dataset benchmarks. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0162-05 — Stress long Editor and Studio.** Acceptance: 100 songs and 64 cells maintain focus/render performance. Required verification: Trace and keyboard tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0162-06 — Define graceful visual downgrade.** Acceptance: Low power/hidden/reduced motion disable nonessential frames. Required verification: Visibility and resource measurements. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0162-07 — Prevent layout shift of controls.** Acceptance: Current song/time/status updates keep stable transport targets. Required verification: CLS and visual diff review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0162-01 — Specify reference hardware matrix.** Acceptance: CPU/GPU/OS/browser/power mode recorded for every benchmark. Required verification: Benchmark protocol review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0162-02 — Profile main thread and frame costs.** Acceptance: Animation doesn't create long tasks or meaningful INP regression. Required verification: Performance recording with p95 frame timing. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0162-03 — Profile audio scheduling under load.** Acceptance: Background renders and UI interaction do not produce unexpected gap/overlap. Required verification: Captured real audio and CPU load test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0162-04 — Stress large Library.** Acceptance: 20k songs, search/filter and scroll remain usable. Required verification: Synthetic and real dataset benchmarks. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**
+5. **MI-0162-05 — Stress long Editor and Studio.** Acceptance: 100 songs and 64 cells maintain focus/render performance. Required verification: Trace and keyboard tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**
+6. **MI-0162-06 — Define graceful visual downgrade.** Acceptance: Low power/hidden/reduced motion disable nonessential frames. Required verification: Visibility and resource measurements. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; `web/src/views/Now.test.tsx`, `web/src/shell/Shell.test.tsx`; independent checks pending.**
+7. **MI-0162-07 — Prevent layout shift of controls.** Acceptance: Current song/time/status updates keep stable transport targets. Required verification: CLS and visual diff review. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; `web/src/views/Now.test.tsx`, `web/src/shell/Shell.test.tsx`; independent checks pending.**
 8. **MI-0162-08 — Publish exact measured results.** Acceptance: No claimed benchmark pass without machine, SHA, trace and limitations. Required verification: Independent quality ledger. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

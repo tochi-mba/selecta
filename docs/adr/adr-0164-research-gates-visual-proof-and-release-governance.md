@@ -1,7 +1,7 @@
 # ADR-0164 — Visual and audible proof, interaction research, rollback and release governance
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 1/8 Implemented, 5/8 In progress, 2 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Verification.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-The repository has synthetic muted E2E tests, visual review candidates and historical status ledgers. This new motion-and-delight proposal must never become a claim of implementation, test approval or human preference merely because its docs merge. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+The repository has synthetic muted E2E tests, visual review candidates and historical status ledgers. This new motion-and-delight proposal must never become a claim of implementation, test approval or human preference merely because its docs merge. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ The repository has synthetic muted E2E tests, visual review candidates and histo
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 1 source-level Implemented, 0 independently Verified
 
-1. **MI-0164-01 — Publish per-task evidence schema.** Acceptance: MI ID, decision, implement PR, SHA, test, reviewer and result required. Required verification: Ledger schema validation. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0164-02 — Create visual candidate matrix.** Acceptance: Every major surface in three themes, two motion modes and target viewports. Required verification: Named screenshot inventory. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0164-03 — Define auditory continuity protocol.** Acceptance: Gap/overlap, preview ownership and fallback verified on real audio. Required verification: Recorded output and listening notes. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0164-04 — Set uncoached task study.** Acceptance: First play, request, edit, Studio, export and recovery with denominators. Required verification: Study script and results. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0164-01 — Publish per-task evidence schema.** Acceptance: MI ID, decision, implement PR, SHA, test, reviewer and result required. Required verification: Ledger schema validation. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `docs/adr/selecta-microinteraction-evidence.md`, `docs/adr/selecta-microinteraction-implementation-checklist.md`; `docs/adr/selecta-microinteraction-verification-matrix.md`; independent checks pending.**
+2. **MI-0164-02 — Create visual candidate matrix.** Acceptance: Every major surface in three themes, two motion modes and target viewports. Required verification: Named screenshot inventory. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `docs/adr/selecta-microinteraction-evidence.md`, `docs/adr/selecta-microinteraction-implementation-checklist.md`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0164-03 — Define auditory continuity protocol.** Acceptance: Gap/overlap, preview ownership and fallback verified on real audio. Required verification: Recorded output and listening notes. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `docs/adr/selecta-microinteraction-evidence.md`, `docs/adr/selecta-microinteraction-implementation-checklist.md`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0164-04 — Set uncoached task study.** Acceptance: First play, request, edit, Studio, export and recovery with denominators. Required verification: Study script and results. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `docs/adr/selecta-microinteraction-evidence.md`, `docs/adr/selecta-microinteraction-implementation-checklist.md`; partial behavior or baseline, task acceptance outstanding.**
 5. **MI-0164-05 — Review accessibility manually.** Acceptance: NVDA/Edge, touch, zoom, cognitive and reduced-motion checks. Required verification: Named participant evidence. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0164-06 — Set performance thresholds.** Acceptance: Reference hardware, p95 frame/INP and background load recorded. Required verification: Actual traces, not estimates. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0164-07 — Specify rollback and preservation.** Acceptance: Old to candidate to old data retains mix, drafts, prefs and audio. Required verification: Rehearsal with isolated data directory. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+6. **MI-0164-06 — Set performance thresholds.** Acceptance: Reference hardware, p95 frame/INP and background load recorded. Required verification: Actual traces, not estimates. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `docs/adr/selecta-microinteraction-evidence.md`, `docs/adr/selecta-microinteraction-implementation-checklist.md`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0164-07 — Specify rollback and preservation.** Acceptance: Old to candidate to old data retains mix, drafts, prefs and audio. Required verification: Rehearsal with isolated data directory. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `docs/adr/selecta-microinteraction-evidence.md`, `docs/adr/selecta-microinteraction-implementation-checklist.md`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0164-08 — Record owner GO/NO-GO.** Acceptance: No undocumented P0, all P1 dispositioned, decision owners named. Required verification: Signed release gate with SHA. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
