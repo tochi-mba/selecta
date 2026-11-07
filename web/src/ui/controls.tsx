@@ -153,7 +153,10 @@ function Overlay({
     first?.focus();
     return () => {
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
-      if (mine) overlayStack.splice(overlayStack.indexOf(mine), 1);
+      if (mine) {
+        const at = overlayStack.indexOf(mine);
+        if (at >= 0) overlayStack.splice(at, 1);
+      }
       syncInert();
       if (before?.isConnected && before !== document.body) before.focus();
       else document.getElementById('content')?.focus({ preventScroll: true });
@@ -265,7 +268,7 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
       <button ref={opener} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
       {open && (
         // a press on anything inside closes it, because each item is the end of the job
-        <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); opener.current?.focus(); }}>{children}</div>
+        <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); if (opener.current?.isConnected) opener.current.focus(); else document.getElementById('content')?.focus({ preventScroll: true }); }}>{children}</div>
       )}
     </div>
   );

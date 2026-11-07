@@ -5,6 +5,11 @@ import { ViewProps } from './shared';
 
 const ARC_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'];
 const DEFAULT_ARC = [62, 72, 100, 85, 68];
+const ARC_PRESETS = [
+  { label: 'Build to a peak', values: [35, 50, 65, 85, 100] },
+  { label: 'Peak then settle', values: [45, 75, 100, 70, 40] },
+  { label: 'Even energy', values: [72, 75, 75, 75, 72] },
+] as const;
 
 const FEEL_WORDS: Record<string, string> = { balanced: 'Each mix chooses its feel', seamless: 'Smooth blends', punchy: 'Punchy changes' };
 const STEM_WORDS: Record<string, string> = { never: 'no stem moves', sometimes: 'stem moves sometimes', often: 'stem moves often' };
@@ -45,6 +50,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
   const [arcAttempt, setArcAttempt] = useState(0);
   const [destinationQuery, setDestinationQuery] = useState('');
   const [destinationResults, setDestinationResults] = useState<SongRow[]>([]);
+  const [activeDestination, setActiveDestination] = useState(-1);
   const [destinationLoading, setDestinationLoading] = useState(false);
   const [destinationFailed, setDestinationFailed] = useState(false);
   const [destinationAttempt, setDestinationAttempt] = useState(0);
@@ -115,6 +121,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
     }
     let live = true;
     setDestinationLoading(true);
+    setActiveDestination(-1);
     setDestinationFailed(false);
     setDestinationResults([]);
     const timer = window.setTimeout(() => {
@@ -233,6 +240,16 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           </div>
           <button type="button" onClick={() => setEnergyArc(null)} disabled={energyArc === null}>Use each mix’s arc</button>
         </div>
+        <div className="chips energy-presets" role="group" aria-label="Ready-made energy shapes">
+          {ARC_PRESETS.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              aria-pressed={JSON.stringify(energyArc) === JSON.stringify(preset.values)}
+              onClick={() => setEnergyArc([...preset.values])}
+            >{preset.label}</button>
+          ))}
+        </div>
         <svg
           className="energy-arc-preview"
           viewBox="0 0 100 40"
@@ -289,7 +306,26 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           id="destination-search"
           type="search"
           value={destinationQuery}
-          onChange={(event) => setDestinationQuery(event.target.value)}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="destination-results"
+          aria-expanded={destinationQuery.trim().length >= 2}
+          aria-activedescendant={activeDestination >= 0 && destinationResults[activeDestination] ? `destination-option-${destinationResults[activeDestination].id}` : undefined}
+          onChange={(event) => { setDestinationQuery(event.target.value); setActiveDestination(-1); }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && destinationQuery) {
+              event.preventDefault();
+              event.stopPropagation();
+              setDestinationQuery('');
+              setActiveDestination(-1);
+            } else if (destinationResults.length && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+              event.preventDefault();
+              setActiveDestination((before) => (before + (event.key === 'ArrowDown' ? 1 : -1) + destinationResults.length) % destinationResults.length);
+            } else if (event.key === 'Enter' && activeDestination >= 0 && destinationResults[activeDestination]) {
+              event.preventDefault();
+              void chooseDestination(destinationResults[activeDestination]);
+            }
+          }}
           placeholder="Search a mix-ready song"
           autoComplete="off"
         />
@@ -300,12 +336,17 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           </div>
         )}
         {destinationQuery.trim().length >= 2 && (
-          <ul className="destination-results" aria-label="Destination songs">
-            {destinationResults.map((song) => (
-              <li key={song.id}>
-                <Action run={() => chooseDestination(song)}>{song.title ?? 'Untitled'} — {song.artist ?? 'Unknown artist'}</Action>
-              </li>
-            ))}
+          <ul id="destination-results" className="destination-results" role="listbox" aria-label="Destination songs">
+            {destinationResults.map((song, index) => {
+              const duplicate = destinationResults.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist);
+              return (
+                <li key={song.id} id={`destination-option-${song.id}`} role="option" aria-selected={index === activeDestination}>
+                  <Action run={() => chooseDestination(song)}>
+                    {song.title ?? 'Untitled'} — {song.artist ?? 'Unknown artist'}{duplicate ? ` (song ${song.id})` : ''}
+                  </Action>
+                </li>
+              );
+            })}
             {destinationLoading && <li role="status" className="hint">Searching ready songs…</li>}
             {destinationFailed && <li><Problem retry={() => setDestinationAttempt((value) => value + 1)}>Couldn’t search ready songs.</Problem></li>}
             {!destinationLoading && !destinationFailed && !destinationResults.length && <li className="hint">No ready songs match yet.</li>}
