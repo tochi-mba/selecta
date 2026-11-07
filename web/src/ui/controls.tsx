@@ -5,17 +5,21 @@ import { Icon, IconName } from './Icon';
 export { Skeleton } from './Skeleton';
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
- * until that exact thing has finished, can't be pressed twice meanwhile, and says if it went wrong. */
+ * until that exact thing has finished, can't be pressed twice meanwhile, and says if it went wrong.
+ * `waiting` is for when a neighbour's action has to finish first: unlike `disabled`, it leaves the
+ * button in the tab order, so whoever pressed it isn't thrown back to the top of the page. */
 export function Action({
   run,
   working,
   failed,
+  waiting,
   children,
   ...rest
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
   run: () => Promise<unknown> | unknown;
   working?: ReactNode;
   failed?: string;
+  waiting?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const going = useRef(false);
@@ -25,7 +29,7 @@ export function Action({
     return () => { mounted.current = false; };
   }, []);
   const press = async () => {
-    if (going.current) return;
+    if (going.current || waiting) return;
     going.current = true;
     setBusy(true);
     try {
@@ -39,7 +43,7 @@ export function Action({
     }
   };
   return (
-    <button {...rest} aria-disabled={busy || rest.disabled || undefined} aria-busy={busy || undefined} data-working={busy || undefined} onClick={() => void press()}>
+    <button {...rest} aria-disabled={busy || waiting || rest.disabled || undefined} aria-busy={busy || undefined} data-working={busy || undefined} onClick={() => void press()}>
       {working ? <span className="action-labels"><span aria-hidden={busy || undefined} style={{ visibility: busy ? 'hidden' : undefined }}>{children}</span><span aria-hidden={!busy || undefined} style={{ visibility: busy ? undefined : 'hidden' }}>{working}</span></span> : children}
     </button>
   );

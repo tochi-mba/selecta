@@ -167,7 +167,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   const inFlight = useRef(0);
   const nextTemporaryId = useRef(-1);
   const leaving = useRef(new Set<number>());
-  const bridgeBusy = useRef(new Set<number>());
+  const bridgeAnswers = useRef(new Map<number, { line: Promise<unknown>; newest: string; going: number }>());
   const checkNow = useRef<() => void>(() => {});
 
   const playbackBody = () => {
@@ -332,22 +332,37 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       leaving.current.delete(request.id);
     }
   };
+  /** What someone says about a bridge reaches the server one answer at a time, in the order they
+   * said it, so the last thing they said is what stands. Saying the same thing twice sends it once,
+   * and a change of mind is never dropped: that would leave a bridge they said no to going ahead.
+   * An answer they've already taken back by the time its turn comes isn't sent at all. */
+  const answerBridge = (request: RequestRow, answer: string, send: () => Promise<RequestList>) => {
+    const answers = bridgeAnswers.current;
+    const held = answers.get(request.id) ?? { line: Promise.resolve(), newest: '', going: 0 };
+    if (held.going && held.newest === answer) return null;
+    held.newest = answer;
+    held.going += 1;
+    answers.set(request.id, held);
+    const turn = held.line.then(async (): Promise<RequestList | null> => (held.newest === answer ? send() : null));
+    held.line = turn.catch(() => {});
+    return () => turn.finally(() => {
+      held.going -= 1;
+      if (!held.going) answers.delete(request.id);
+    });
+  };
   const chooseBridge = async (request: RequestRow, allow: boolean) => {
-    // Two separate approval buttons mutate the same request and must not
-    // race the server into contradictory consent states.
-    if (bridgeBusy.current.has(request.id)) return;
-    bridgeBusy.current.add(request.id);
-    try {
+    const turn = answerBridge(request, allow ? 'allow' : 'decline', () => post<RequestList>(
+      `/requests/${request.id}/bridge`,
+      allow && request.route?.length ? { allow, songs: request.route.map((song) => song.id) } : { allow },
+    ));
+    if (!turn) return;
     const data = await press(
       (rows) => rows.map((row) => (row.id === request.id ? { ...row, bridge_choice: allow, declined: !allow, seconds: null } : row)),
       (rows) => rows.map((row) => (row.id === request.id ? { ...row, bridge_choice: request.bridge_choice, declined: request.declined, seconds: request.seconds } : row)),
-      () => post<RequestList>(`/requests/${request.id}/bridge`, allow && request.route?.length ? { allow, songs: request.route.map((song) => song.id) } : { allow }),
+      turn,
       allow ? 'Couldn’t save your OK. Try again.' : 'Couldn’t save that. Try again.',
     );
     if (data) settle(data.requests);
-    } finally {
-      bridgeBusy.current.delete(request.id);
-    }
   };
   const whereItsPlaying = () => {
     const active = latest.current;
@@ -358,21 +373,17 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   };
   const findBridges = (request: RequestRow) => post<BridgeSearch>(`/requests/${request.id}/bridges`, whereItsPlaying());
   const pickBridge = async (request: RequestRow, option: BridgeOption) => {
-    if (bridgeBusy.current.has(request.id)) return;
-    bridgeBusy.current.add(request.id);
-    try {
+    const turn = answerBridge(request, `pick:${option.song_ids.join(',')}`, () => post<RequestList>(`/requests/${request.id}/bridge`, { allow: true, songs: option.song_ids }));
+    if (!turn) return;
     const data = await press(
       (rows) => rows.map((row) => (row.id === request.id
         ? { ...row, bridge_choice: true, declined: false, bridge_lost: false, behind: undefined, picked: option.song_ids, route: option.songs, after: option.after, after_id: option.after_id, transitions: option.transitions, stage: 'preparing' as Stage, seconds: null }
         : row)),
       (rows) => rows.map((row) => (row.id === request.id ? request : row)),
-      () => post<RequestList>(`/requests/${request.id}/bridge`, { allow: true, songs: option.song_ids }),
+      turn,
       'Couldn’t save that bridge. Try again.',
     );
     if (data) settle(data.requests);
-    } finally {
-      bridgeBusy.current.delete(request.id);
-    }
   };
   const addAnyway = async (request: RequestRow) => {
     const active = latest.current;
@@ -515,7 +526,6 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
   const [found, setFound] = useState<BridgeSearch | null>(null);
   const [problem, setProblem] = useState('');
   const [hearing, setHearing] = useState<number | null>(null);
-  const choosingNow = useRef(false);
   const title = request.title ?? 'that song';
   useEffect(() => {
     let live = true;
@@ -526,13 +536,8 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
   }, []);
   if (!state) return null;
   const use = (option: BridgeOption) => {
-    if (choosingNow.current) return;
-    choosingNow.current = true;
-    // Preserve the existing instant-close affordance. The optimistic request
-    // row now shows "Getting ready", while the shared request-level guard
-    // blocks any second, contradictory write until the first one settles.
     onClose();
-    void state.pickBridge(request, option).finally(() => { choosingNow.current = false; });
+    void state.pickBridge(request, option);
   };
   return (
     <div className="bridge-finder">

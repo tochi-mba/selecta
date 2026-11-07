@@ -153,14 +153,21 @@ describe('safe next-song steering', () => {
     );
     const bigger = screen.getByRole('button', { name: 'Bigger' });
     const calmer = screen.getByRole('button', { name: 'Calmer' });
+    bigger.focus();
     fireEvent.click(bigger);
     await waitFor(() => expect(writes).toBe(1));
-    expect(calmer).toBeDisabled();
+    // told it has to wait, but still in the tab order: disabling the button someone just pressed
+    // would throw a keyboard or screen reader user back to the top of the page
+    expect(calmer).toHaveAttribute('aria-disabled', 'true');
+    expect(calmer).toBeEnabled();
+    expect(bigger).toBeEnabled();
+    expect(bigger).toHaveFocus();
     fireEvent.click(calmer);
     expect(writes).toBe(1);
     await act(async () => { finish(); });
-    await waitFor(() => expect(calmer).toBeEnabled());
+    await waitFor(() => expect(calmer).not.toHaveAttribute('aria-disabled'));
     expect(writes).toBe(1);
+    expect(bigger).toHaveFocus();
     expect(notify).toHaveBeenCalled();
   });
 });

@@ -32,6 +32,14 @@ function SeamLayersView({ seam, names }: { seam: MixItem['seam']; names: Record<
   );
 }
 
+/** What a person actually chooses. The server keeps more than this beside it, such as whether the
+ * choice was theirs and how long to hold a song back, so comparing everything would never match. */
+const CHOSEN = ['bars', 'exit_bar', 'entry_bar', 'phrase'] as const;
+function sameChoice(one: SeamSettings, other: SeamSettings): boolean {
+  return (one.move ?? 'auto') === (other.move ?? 'auto')
+    && CHOSEN.every((name) => (one[name] ?? null) === (other[name] ?? null));
+}
+
 function SeamEditor(props: {
   position: number;
   item: MixItem;
@@ -52,11 +60,16 @@ function SeamEditor(props: {
   const [intent, setIntent] = useState<SeamSettings | null>(null);
   const latestIntent = useRef<SeamSettings | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  // how many changes are still on their way to the server
+  const sending = useRef(0);
   const onServer = JSON.stringify(item.seam?.settings ?? {});
+  const serverNow = useRef<SeamSettings>({});
+  serverNow.current = item.seam?.settings ?? {};
   useEffect(() => {
-    // Polling the server can return an older choice while a newer one is still queued.
-    // Only relinquish an optimistic choice once the server actually reflects that choice.
-    if (latestIntent.current && JSON.stringify(latestIntent.current) !== onServer) return;
+    // A check that started before a change landed can bring back the older choice, so while
+    // something's on its way only the server agreeing lets go of it. Once nothing is on its way the
+    // server is the truth, whatever it says: Undo, another tab or Selecta itself may have moved it on.
+    if (latestIntent.current && sending.current > 0 && !sameChoice(latestIntent.current, serverNow.current)) return;
     latestIntent.current = null;
     setIntent(null);
   }, [onServer]);
@@ -84,6 +97,7 @@ function SeamEditor(props: {
     latestIntent.current = next;
     setIntent(next);
     setProblem('');
+    sending.current += 1;
     const work = queue.current.then(async () => {
       if (latestIntent.current !== next) return;
       try {
@@ -105,7 +119,15 @@ function SeamEditor(props: {
           setIntent(null);
           setProblem((error as Error).message);
         }
-        if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
+        // the choice may have been saved even if rendering it wasn't, so ask what's really there
+        refreshMix();
+      }
+    }).finally(() => {
+      sending.current -= 1;
+      // choosing what's already there changes nothing on the server, so nothing else would let go
+      if (latestIntent.current === next && sameChoice(next, serverNow.current)) {
+        latestIntent.current = null;
+        setIntent(null);
       }
     });
     queue.current = work;

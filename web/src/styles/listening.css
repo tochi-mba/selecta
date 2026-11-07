@@ -83,6 +83,13 @@
   }
   .now .transport .tooltip-anchor { flex: none; }
   .now .transport .primary.big { flex: 1 1 auto; min-width: 0; }
+  /* The first screen is the song: what's playing, where it is, and the words. Everything else
+     starts below the bottom of the screen, so nothing you can press ends up half hidden behind the
+     player, at whatever height this phone happens to be. The space above the words is a floor, a
+     little under the real thing, because a longer title only pushes things further down. */
+  .now:not(.stage) { --above-lyrics: 432px; }
+  .now:not(.stage):has(.music-visualizer) { --above-lyrics: 540px; }
+  .now:not(.stage) .lyrics:not(.focus) { min-height: max(7.5em, calc(100svh - 36px - var(--above-lyrics))); }
   .seek-note { margin-top: calc(var(--space-3) * -1); }
 }
 

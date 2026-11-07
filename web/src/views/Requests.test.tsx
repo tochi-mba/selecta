@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MixItem } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, seam, songs } from '../test/backend';
-import { ComingSongs, Requests, RequestsContext, RequestsState, RequestTag, requestWords } from './Requests';
+import { ComingSongs, Requests, RequestsContext, RequestsState, RequestTag, requestWords, useRequests } from './Requests';
 
 const row = (more: Record<string, unknown> = {}) => ({ id: 7, song_id: 9, title: 'Wanted', artist: 'Artist', status: 'waiting', available: 1, ...more });
 const playing = (mix: MixItem[]) => {
@@ -526,6 +526,43 @@ describe('a request that needs an extra song', () => {
     expect(writes).toBe(1);
     await act(async () => { finish(); });
     expect(writes).toBe(1);
+  });
+
+  it('sends a changed mind after the first answer, so what they last said is what stands', async () => {
+    const sent: unknown[] = [];
+    const finish: (() => void)[] = [];
+    const configured = { ...route, stage: 'approve' as const };
+    const hold = (url: string, init?: RequestInit) => url.includes('/requests/7/bridge') && init?.method === 'POST';
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (hold(url, init)) {
+        sent.push(JSON.parse(String(init?.body)));
+        await new Promise<void>((done) => { finish.push(done); });
+        const allow = (sent[sent.length - 1] as { allow: boolean }).allow;
+        return new Response(JSON.stringify({ requests: [row({ ...configured, bridge_choice: allow, declined: !allow })] }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ requests: [row(configured)] }), { status: 200 });
+    }));
+    let state = null as unknown as RequestsState;
+    const Watch = () => {
+      state = useRequests();
+      return null;
+    };
+    render(<Watch />);
+    await waitFor(() => expect(state.requests?.length).toBe(1));
+    const request = state.requests![0];
+    act(() => { void state.chooseBridge(request, true); });
+    await waitFor(() => expect(sent).toHaveLength(1));
+    // the answer goes out, and before it's back they say no
+    act(() => { void state.chooseBridge(request, false); });
+    // saying the same again sends nothing more
+    act(() => { void state.chooseBridge(request, false); });
+    expect(sent).toHaveLength(1);
+    await act(async () => { finish[0](); });
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]).toEqual({ allow: false });
+    await act(async () => { finish[1](); });
+    await waitFor(() => expect(state.requests?.[0].declined).toBe(true));
+    expect(sent).toHaveLength(2);
   });
 
   it('an answer that can’t be saved goes back to asking, and says so', async () => {

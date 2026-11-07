@@ -620,8 +620,8 @@ export function Now(props: ViewProps) {
           {!stage && now.lastSeamKey && !rated && (
             <div className="thumbs" role="group" aria-label="Rate that transition">
               <span>How was that transition?</span>
-              <Action disabled={rateBusy} run={() => rate('good')}>Good</Action>
-              <Action disabled={rateBusy} run={() => rate('bad')}>Bad</Action>
+              <Action waiting={rateBusy} run={() => rate('good')}>Good</Action>
+              <Action waiting={rateBusy} run={() => rate('bad')}>Bad</Action>
             </div>
           )}
 
@@ -636,9 +636,9 @@ export function Now(props: ViewProps) {
               </button>
               <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} />
               <div className="chips steer" role="group" aria-label="Change what plays next">
-                <Action disabled={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
-                <Action disabled={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>
-                <Action disabled={swapBusy} run={() => swap(0)} working="Finding one…">Something else</Action>
+                <Action waiting={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
+                <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>
+                <Action waiting={swapBusy} run={() => swap(0)} working="Finding one…">Something else</Action>
               </div>
               {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
               {problem && <p className="warn" role="alert">{problem} Nothing has changed, so the plan above still stands.</p>}

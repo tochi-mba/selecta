@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -522,11 +522,13 @@ describe('transition edit intent', () => {
       { name: 'bass_swap_blend', label: 'Blend', description: 'Blend smoothly', available: true },
       { name: 'cut_on_one', label: 'Cut', description: 'Cut on the beat', available: true },
     ];
-    fakeBackend({
-      'GET /mix/1/options': { moves, exits: [], entries: [], lengths: [], links: [], tempo_gap: 0, keys: ['8A', '8A'] },
-      'POST /mix/1/seam': {},
-      'POST /mix/1/render': {},
-    });
+    // the write is still on its way when an older answer about the mix arrives
+    let landed: (answer: Response) => void = () => {};
+    fakeBackend({ 'GET /mix/1/options': { moves, exits: [], entries: [], lengths: [], links: [], tempo_gap: 0, keys: ['8A', '8A'] } });
+    const answers = globalThis.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => (
+      url.includes('/mix/1/seam') ? new Promise<Response>((done) => { landed = done; }) : answers(url, init)
+    )));
     const [previous, original] = songs(seam('ready', 'a'));
     const props = (item: MixItem) => (
       <SeamInspector
@@ -544,8 +546,8 @@ describe('transition edit intent', () => {
     );
     const rendered = render(props(original));
     const cut = await screen.findByRole('button', { name: 'Cut' });
-    await userEvent.click(cut);
-    expect(cut).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(cut);
+    await waitFor(() => expect(cut).toHaveAttribute('aria-pressed', 'true'));
     // An unrelated or older server-side settings snapshot can arrive after selection.
     // It cannot reset the fresh local choice before the actual matching write returns.
     rendered.rerender(props({
@@ -553,6 +555,61 @@ describe('transition edit intent', () => {
       seam: { ...original.seam!, settings: { move: 'auto' } },
     }));
     expect(screen.getByRole('button', { name: 'Cut' })).toHaveAttribute('aria-pressed', 'true');
+    await act(async () => { landed(new Response(JSON.stringify({}), { status: 200 })); });
+  });
+});
+
+describe('transition edit intent, once the server has it', () => {
+  const moves = [
+    { name: 'bass_swap_blend', label: 'Blend', description: 'Blend smoothly', available: true },
+    { name: 'cut_on_one', label: 'Cut', description: 'Cut on the beat', available: true },
+  ];
+  const props = (item: MixItem, previous: MixItem) => (
+    <SeamInspector
+      item={item}
+      previous={previous}
+      names={{ bass_swap_blend: 'Blend', cut_on_one: 'Cut' }}
+      refreshMix={() => {}}
+      notify={() => {}}
+      guard={{ 'x-mix-order': '1,2' }}
+      tab="change"
+      setTab={() => {}}
+      autoPlay={false}
+      onClose={() => {}}
+    />
+  );
+
+  it('follows the server again, so an Undo shows what’s really there', async () => {
+    fakeBackend({
+      'GET /mix/1/options': { moves, exits: [], entries: [], lengths: [], links: [], tempo_gap: 0, keys: ['8A', '8A'] },
+      'POST /mix/1/seam': {},
+      'POST /mix/1/render': {},
+    });
+    const [previous, original] = songs(seam('ready', 'a'));
+    const rendered = render(props(original, previous));
+    await userEvent.click(await screen.findByRole('button', { name: 'Cut' }));
+    // what the server really keeps: the choice, whose it was, and things it worked out itself
+    rendered.rerender(props({ ...original, seam: { ...original.seam!, settings: { move: 'cut_on_one', soft: false, leave_after: 42 } as never } }, previous));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cut' })).toHaveAttribute('aria-pressed', 'true'));
+    // then the change is undone, from the keyboard or another tab
+    rendered.rerender(props({ ...original, seam: { ...original.seam!, settings: { move: 'bass_swap_blend' } } }, previous));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Blend' })).toHaveAttribute('aria-pressed', 'true'));
+    expect(screen.getByRole('button', { name: 'Cut' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('lets go of a choice that changed nothing on the server', async () => {
+    fakeBackend({
+      'GET /mix/1/options': { moves, exits: [], entries: [], lengths: [], links: [], tempo_gap: 0, keys: ['8A', '8A'] },
+      'POST /mix/1/seam': {},
+      'POST /mix/1/render': {},
+    });
+    const [previous, original] = songs(seam('ready', 'a'));
+    const already = { ...original, seam: { ...original.seam!, settings: { move: 'cut_on_one', soft: false } as never } };
+    const rendered = render(props(already, previous));
+    await userEvent.click(await screen.findByRole('button', { name: 'Cut' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cut' })).not.toHaveAttribute('aria-busy'));
+    rendered.rerender(props({ ...original, seam: { ...original.seam!, settings: { move: 'bass_swap_blend' } } }, previous));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Blend' })).toHaveAttribute('aria-pressed', 'true'));
   });
 });
 

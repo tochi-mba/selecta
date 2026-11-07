@@ -123,6 +123,27 @@ test('on a phone, Listen keeps display options after the song identity and trans
   await expect(page.getByRole('button', { name: /^(Play|Pause|Resume)$/ })).toBeVisible();
 });
 
+test('on a phone, nothing you can press sits half hidden behind the player, at any height', async ({ page }) => {
+  const found: string[] = [];
+  for (const [width, height] of [[320, 568], [360, 640], [360, 740], [375, 667], [375, 812], [390, 844], [412, 915], [430, 932]]) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/listen');
+    await expect(page.locator('.now .transport .primary')).toBeVisible();
+    await expect(page.locator('.lyrics')).toBeVisible();
+    found.push(...await page.evaluate((size) => {
+      const player = document.querySelector('.now .transport')!.getBoundingClientRect().top;
+      return [...document.querySelectorAll<HTMLElement>('main button, main a, main summary, main input, main [role="slider"]')]
+        .filter((control) => !control.closest('.transport'))
+        .filter((control) => {
+          const box = control.getBoundingClientRect();
+          return box.width > 0 && box.top < player && box.bottom > player && player - box.top < 24;
+        })
+        .map((control) => `${size}: ${control.getAttribute('aria-label') ?? control.textContent} shows ${Math.round(player - control.getBoundingClientRect().top)}px`);
+    }, `${width}x${height}`));
+  }
+  expect(found).toEqual([]);
+});
+
 test('reloading any page stays on it', async ({ page }) => {
   for (const address of PAGES) {
     await page.goto(address);
