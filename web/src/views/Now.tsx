@@ -464,6 +464,8 @@ export function Now(props: ViewProps) {
   const swapInFlight = useRef(false);
   const [swapBusy, setSwapBusy] = useState(false);
   const rateInFlight = useRef(false);
+  const latestSeamForRating = useRef(now.lastSeamKey);
+  latestSeamForRating.current = now.lastSeamKey;
   const [rateBusy, setRateBusy] = useState(false);
   const [changed, setChanged] = useState<{ from: string; to: string; id: number } | null>(null);
   const [view, setViewChoice] = useState<ListenView>(savedView);
@@ -499,13 +501,18 @@ export function Now(props: ViewProps) {
 
   const rate = async (rating: string) => {
     if (!now.lastSeamKey || rateInFlight.current) return;
+    const forKey = now.lastSeamKey;
     rateInFlight.current = true;
     setRateBusy(true);
     try {
-      await post(`/seams/${now.lastSeamKey}/rate`, { rating });
-      setRated(rating);
+      await post(`/seams/${forKey}/rate`, { rating });
       refreshMix();
-      notify(rating === 'good' ? 'Noted. More like that.' : 'Noted. Less like that.');
+      // The listener may have moved through another transition while the
+      // rating was saving. Never apply this old result to the new pair.
+      if (latestSeamForRating.current === forKey) {
+        setRated(rating);
+        notify(rating === 'good' ? 'Noted. More like that.' : 'Noted. Less like that.');
+      }
     } finally {
       rateInFlight.current = false;
       setRateBusy(false);
