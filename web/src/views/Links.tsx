@@ -43,14 +43,21 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   const audio = useRef<HTMLAudioElement>(null);
   const keepGoing = useRef(false);
   const preparingRequest = useRef(0);
+  const discoveryChanges = useRef(0);
   // the same answer sent again, because a reply got lost, keeps its name, so it can't count twice
   const verdictNames = useRef(new Map<string, string>());
 
   useEffect(() => {
     let live = true;
-    const load = () => get<HarmonicDiscovery[]>('/discoveries').then((rows) => {
-      if (live) { setItems(rows); setLoaded(true); setError(''); }
-    }).catch(() => { if (live) setError('Couldn’t load these. Try again in a moment.'); });
+    const load = () => {
+      const seen = discoveryChanges.current;
+      return get<HarmonicDiscovery[]>('/discoveries').then((rows) => {
+        if (!live || seen !== discoveryChanges.current) return;
+        setItems(rows);
+        setLoaded(true);
+        setError('');
+      }).catch(() => { if (live && seen === discoveryChanges.current) setError('Couldn’t load these. Try again in a moment.'); });
+    };
     void load();
     const tick = () => { if (document.visibilityState !== 'hidden') void load(); };
     const visible = () => { if (document.visibilityState === 'visible') void load(); };
@@ -153,6 +160,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     verdictNames.current.set(asking, name);
     setSaving(true);
     try {
+      discoveryChanges.current += 1;
       await post(`/discoveries/${target.id}/review`, { verdict }, { 'x-operation-id': name });
       verdictNames.current.delete(asking);
       setItems((rows) => rows.map((row) => (row.id === target.id ? { ...row, status: verdict } : row)));
@@ -364,6 +372,9 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
   // it's in the address, so a search survives a reload, a shared link and coming Back
   const addressQuery = useQueryParam('q') ?? '';
   const [query, setQuery] = useState(addressQuery);
+  // The URL is authoritative across reload, Back and Forward. A history
+  // navigation must update the search input as well as the result set.
+  useEffect(() => setQuery(addressQuery), [addressQuery]);
   const [data, setData] = useState<LinkList | null>(null);
   const [failed, setFailed] = useState(false);
   const [drafts, setDrafts] = useState<{ id: number; name: string }[]>([]);
@@ -378,6 +389,10 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
     return get<LinkList>(`/links?q=${encodeURIComponent(query)}&limit=60`)
       .then((next) => {
         if (mine !== asked.current) return;
+        if (!Array.isArray(next?.links)) {
+          setFailed(true);
+          return;
+        }
         setData(next);
         setFailed(false);
       })
