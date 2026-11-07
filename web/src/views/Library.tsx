@@ -45,6 +45,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // Cursor for each loaded page. Poll whichever deep page is actually in
   // view, not always the last page added (which may be far off screen).
   const pageCursors = useRef<(string | null)[]>([null]);
+  // IDs, not row positions, identify a page: cursor pages can overlap during
+  // background analysis, and deduplicating rows changes their index.
+  const pageBySong = useRef(new Map<number, number>());
   const listRef = useRef<HTMLUListElement>(null);
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
@@ -72,6 +75,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     const mine = asked.current;
     try {
       const found = new Map<number, LibrarySong>();
+      const pagesBySong = new Map<number, number>();
       const cursors: (string | null)[] = [];
       let after: string | null = null;
       let count = 0;
@@ -79,7 +83,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         cursors.push(after);
         const answer: LibraryPage = await get<LibraryPage>(url(after));
         if (mine !== asked.current) return;
-        for (const song of answer.songs) found.set(song.id, song);
+        for (const song of answer.songs) {
+          found.set(song.id, song);
+          if (!pagesBySong.has(song.id)) pagesBySong.set(song.id, page);
+        }
         count = answer.total;
         after = answer.next;
         if (!after) break;
@@ -89,6 +96,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       setTotal(count);
       setNext(after);
       pageCursors.current = cursors;
+      pageBySong.current = pagesBySong;
       setFailed(false);
     } catch {
       if (mine === asked.current) {
@@ -103,7 +111,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     const cursor = next;
     const page = await get<LibraryPage>(url(cursor));
     if (mine !== asked.current) return;
+    const pageIndex = pageCursors.current.length;
     pageCursors.current = [...pageCursors.current, cursor];
+    for (const song of page.songs) {
+      if (!pageBySong.current.has(song.id)) pageBySong.current.set(song.id, pageIndex);
+    }
     setRows((before) => {
       const known = new Set(before?.map((song) => song.id));
       return [...(before ?? []), ...page.songs.filter((song) => !known.has(song.id))];
@@ -117,21 +129,22 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     setAddressQuery({ pages: String(newPageCount) });
   };
 
-  // Find the page at the reading position with a binary search over the
-  // actual rendered rows. No virtualized rows or per-row observers are needed.
+  // Find the visible row in logarithmic time, not by assuming 100
+  // rendered rows per page. Adjacent cursor pages can contain the same ID,
+  // and very long song titles can make rows different heights.
   const visiblePage = () => {
     const items = listRef.current?.children;
     if (!items?.length) return 0;
     let low = 0;
-    let high = Math.min(pageCursors.current.length - 1, Math.floor((items.length - 1) / PAGE_SIZE));
+    let high = items.length - 1;
     const viewLine = Math.min(window.innerHeight / 3, 240);
     while (low < high) {
-      const middle = Math.ceil((low + high) / 2);
-      const element = items[middle * PAGE_SIZE] as HTMLElement | undefined;
-      if (element && element.getBoundingClientRect().top <= viewLine) low = middle;
-      else high = middle - 1;
+      const middle = Math.floor((low + high) / 2);
+      const item = items[middle] as HTMLElement;
+      if (item.getBoundingClientRect().bottom < viewLine) low = middle + 1;
+      else high = middle;
     }
-    return low;
+    return Number((items[low] as HTMLElement).dataset.libraryPage ?? '0');
   };
 
   // Refresh the first two pages and the page the listener is viewing; never
@@ -313,12 +326,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         {rows?.map((song) => {
           const facts = trackReadiness(song);
           const already = inMix.has(song.id);
-          const name = song.title ?? 'Untitled';
+          const title = song.title ?? 'Untitled';
+          const duplicate = rows.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist);
+          const name = duplicate ? `${title} (song ${song.id})` : title;
           return (
-            <li key={song.id} className={`song-row ${song.never ? 'never' : ''}`}>
+            <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''}`}>
               <div className="song-name">
                 <button className="link song-open" onClick={() => setOpened(song.id)} aria-label={`Details for ${name}`}>
-                  <b>{name}</b>
+                  <b>{title}</b>
                 </button>
                 <span>{song.artist ?? 'Unknown artist'}</span>
               </div>
