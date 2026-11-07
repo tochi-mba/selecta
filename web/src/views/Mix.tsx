@@ -2,7 +2,7 @@ import { DragEvent, FormEvent, KeyboardEvent, PointerEvent, useContext, useEffec
 import { ApiError, del, DraftList, MixData, MixItem, post, Suggestion } from '../api';
 import { etaRangeWords, runningTime } from '../lib';
 import { mixReadiness, occurrenceKeys, orderOf } from '../state/readiness';
-import { Action, announce, Sheet } from '../ui/controls';
+import { Action, announce, Dialog, Sheet } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { Adder } from './Adder';
 import { RenameDraft } from './Drafts';
@@ -85,6 +85,8 @@ export function Mix(props: ViewProps) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('listen');
   const [hearNow, setHearNow] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmClear, setConfirmClear] = useState<string | null>(null);
   const [inspectorWidth, setInspectorWidth] = useState(savedInspectorWidth);
   const narrow = useNarrow();
   // where a new song goes is a place in the mix, not a number, so it stays right if the mix moves
@@ -277,7 +279,7 @@ export function Mix(props: ViewProps) {
   };
 
   const renderAll = async () => {
-    setMixData(await post<MixData>(at('/mix/render')));
+    setMixData(await post<MixData>(at('/mix/render'), undefined, guard));
     notify(`Rendering ${waiting} seam${waiting === 1 ? '' : 's'}, in order, ahead of everything else.`);
   };
 
@@ -285,7 +287,7 @@ export function Mix(props: ViewProps) {
     event.preventDefault();
     const clean = name.trim();
     if (!clean) return;
-    const made = await post<{ name: string }>('/drafts', { name: clean, copy_current: true });
+    const made = await post<{ name: string }>('/drafts', { name: clean, copy_current: true }, guard);
     setNaming(false);
     notify(`Saved a copy as a draft: ${made.name}. It’s in My Mixes.`);
   };
@@ -335,11 +337,42 @@ export function Mix(props: ViewProps) {
     else if (event.clientY > window.innerHeight - margin) window.scrollBy?.(0, 18);
   };
 
-  const clear = async () => {
+  const clear = async (expectedOrder: string) => {
+    // Keep listening on a failed/late mutation. The sound only stops after
+    // the server confirms that the exact mix we saw was cleared.
+    const empty = await post<MixData>('/mix/clear', undefined, { 'x-mix-order': expectedOrder });
     player.stop();
-    setMixData(await post<MixData>('/mix/clear'));
+    setMixData(empty);
     notify('Cleared the mix.', true);
   };
+  const deleteConfirmation = confirmDelete && (
+    <Dialog title={`Delete ${mixName}?`} onClose={() => setConfirmDelete(false)} footer={(
+      <>
+        <button onClick={() => setConfirmDelete(false)}>Keep this draft</button>
+        <Action className="destructive" working="Deleting…" run={async () => {
+          await deleteDraft();
+          setConfirmDelete(false);
+        }}>Delete draft</Action>
+      </>
+    )}>
+      <p>Delete this saved draft, not your current mix. Your music files are never touched.</p>
+      <p className="hint">You can use Undo from the notification to restore this draft if no later change has replaced the restore point.</p>
+    </Dialog>
+  );
+  const clearConfirmation = confirmClear !== null && (
+    <Dialog title="Clear the current mix?" onClose={() => setConfirmClear(null)} footer={(
+      <>
+        <button onClick={() => setConfirmClear(null)}>Keep current mix</button>
+        <Action className="destructive" working="Clearing…" run={async () => {
+          await clear(confirmClear);
+          setConfirmClear(null);
+        }}>Clear current mix</Action>
+      </>
+    )}>
+      <p>This stops playback and clears the current mix only. Your saved drafts and original music files stay untouched.</p>
+      <p className="hint">Undo can bring back the cleared mix before any newer edit replaces that restore point.</p>
+    </Dialog>
+  );
 
   const jumpToProblem = () => {
     const index = readiness.firstProblem;
@@ -373,10 +406,11 @@ export function Mix(props: ViewProps) {
         <div className="row wrap">
           <button onClick={() => setAdding('start')}>Add a song</button>
           <button onClick={() => setRenaming(true)}>Rename</button>
-          <button onClick={() => void deleteDraft()}>Delete</button>
+          <button onClick={() => setConfirmDelete(true)}>Delete</button>
           <button onClick={backToCurrent}>Back to current mix</button>
         </div>
         {renameForm}
+        {deleteConfirmation}
         {problem && <p className="warn" role="alert">{problem}</p>}
         {adding === 'start' && adder('start')}
       </main>
@@ -475,13 +509,13 @@ export function Mix(props: ViewProps) {
       {mix.length > 1 && <button onClick={() => setExporting(true)}>Download audio</button>}
       {inDraft ? (
         <>
-          <Action className="destructive" working="Deleting…" run={deleteDraft}><Icon name="trash" /> Delete</Action>
+          <button className="destructive" onClick={() => setConfirmDelete(true)}><Icon name="trash" /> Delete</button>
           <button onClick={backToCurrent}>Back to current mix</button>
         </>
       ) : (
         <>
           <button onClick={() => setView('Mixes')}>New mix</button>
-          <Action className="destructive" working="Clearing…" run={clear}>Clear</Action>
+          <button className="destructive" onClick={() => setConfirmClear(order)}>Clear</button>
         </>
       )}
     </>
@@ -502,6 +536,8 @@ export function Mix(props: ViewProps) {
         actions={actions}
       />
       {renameForm}
+      {deleteConfirmation}
+      {clearConfirmation}
       {naming && (
         <form className="row" onSubmit={saveMix}>
           <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
