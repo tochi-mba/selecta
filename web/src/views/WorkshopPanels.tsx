@@ -393,6 +393,42 @@ function diagnosticFacts(info: Record<string, unknown>): { key: string; words: s
   return facts;
 }
 
+/** The diagnostics endpoint promises no song names or paths. Older/newer
+ * servers can add fields, so copying an unchecked response would silently
+ * break that promise. Keep an explicit privacy-safe client contract too. */
+export function safeDiagnostics(info: Record<string, unknown>): Record<string, unknown> {
+  const allowed = [
+    'api_version', 'analysis_version', 'python', 'platform',
+    'worker_running', 'analysis_failures', 'mix_songs',
+    'drafts_in_line', 'seam_records', 'typical_estimate_miss',
+  ] as const;
+  const safe: Record<string, unknown> = {};
+  for (const key of allowed) {
+    const value = info[key];
+    if (typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value)
+      || typeof value === 'string' && /^[a-zA-Z0-9_.+-]{1,40}$/.test(value)) {
+      safe[key] = value;
+    }
+  }
+  if (info.songs && typeof info.songs === 'object' && !Array.isArray(info.songs)) {
+    const counts = info.songs as Record<string, unknown>;
+    safe.songs = Object.fromEntries(['total', 'music', 'analysed', 'lyrics', 'ready', 'set_aside'].flatMap((key) =>
+      typeof counts[key] === 'number' && Number.isFinite(counts[key]) ? [[key, counts[key]]] : []));
+  }
+  if (Array.isArray(info.recent_operations)) {
+    safe.recent_operations = info.recent_operations.slice(-20).flatMap((item) => {
+      if (!item || typeof item !== 'object') return [];
+      const operation = item as Record<string, unknown>;
+      return [{
+        kind: typeof operation.kind === 'string' && /^[a-z]{1,32}$/.test(operation.kind) ? operation.kind : 'other',
+        ...(typeof operation.status === 'number' && Number.isInteger(operation.status) ? { status: operation.status } : {}),
+        repeat: operation.repeat === true,
+      }];
+    });
+  }
+  return safe;
+}
+
 /** What's useful for working out a problem, with no paths or song names. It stays here unless you
  * copy it somewhere yourself. */
 export function Diagnostics() {
@@ -408,7 +444,7 @@ export function Diagnostics() {
   }, [load]);
   if (failed) return <Problem retry={load}>The server isn’t answering, which is the first thing to look at. Is Selecta still running?</Problem>;
   if (!info) return <Skeleton variant="metrics" label="Gathering details" />;
-  const text = JSON.stringify(info, null, 2);
+  const text = JSON.stringify(safeDiagnostics(info), null, 2);
   const canCopy = typeof navigator.clipboard?.writeText === 'function';
   return (
     <section className="panel stack">
