@@ -1,7 +1,7 @@
 import { Icon } from '../ui/Icon';
 import { Problem, Skeleton } from '../ui/controls';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
-import { SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
+import { ApiError, SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
 import { SetPlayer } from '../player';
@@ -180,6 +180,8 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   const changes = useRef(0);
   const inFlight = useRef(0);
   const nextTemporaryId = useRef(-1);
+  const addingNow = useRef(new Set<number>());
+  const requestOperations = useRef(new Map<number, string>());
   const leaving = useRef(new Set<number>());
   const bridgeAnswers = useRef(new Map<number, { line: Promise<unknown>; newest: string; going: number }>());
   const checkNow = useRef<() => void>(() => {});
@@ -328,16 +330,33 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   };
 
   const add = async (song: SongRow) => {
+    // Two presses in the same frame must not create duplicate optimistic rows.
+    // If a response was lost, retry using the same server operation identity.
+    if (addingNow.current.has(song.id)) return;
+    addingNow.current.add(song.id);
+    const operation = requestOperations.current.get(song.id) ?? operationId(`request-${song.id}`);
+    requestOperations.current.set(song.id, operation);
     const id = nextTemporaryId.current;
     nextTemporaryId.current -= 1;
     const row: RequestRow = { id, song_id: song.id, title: song.title, artist: song.artist, status: 'waiting', available: 1, saving: true };
-    const data = await press(
-      (rows) => [...rows, row],
-      (rows) => rows.filter((other) => other.id !== id),
-      () => post<RequestList>('/requests', { song_id: song.id }, { 'x-operation-id': operationId(`request-${song.id}`) }),
-      `Couldn’t save ${song.title ?? 'that request'}. Try again.`,
-    );
-    if (data) settle(data.requests, id);
+    try {
+      const data = await press(
+        (rows) => [...rows, row],
+        (rows) => rows.filter((other) => other.id !== id),
+        () => post<RequestList>('/requests', { song_id: song.id }, { 'x-operation-id': operation })
+          .catch((error) => {
+            if (error instanceof ApiError && error.status < 500) requestOperations.current.delete(song.id);
+            throw error;
+          }),
+        `Couldn’t save ${song.title ?? 'that request'}. Try again.`,
+      );
+      if (data) {
+        requestOperations.current.delete(song.id);
+        settle(data.requests, id);
+      }
+    } finally {
+      addingNow.current.delete(song.id);
+    }
   };
   const cancel = async (request: RequestRow) => {
     const { show, undo } = removing(request);
