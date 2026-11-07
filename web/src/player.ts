@@ -147,7 +147,8 @@ export class SetPlayer {
   /** Ask for the sound. A browser can refuse without saying so until there's been a tap, by simply
    * never answering, so this stops waiting and reports whether it got it. */
   private async wake(context: AudioContext): Promise<boolean> {
-    if (context.state === 'running') return true;
+    const isRunning = () => context.state === 'running';
+    if (isRunning()) return true;
     let wait: number | undefined;
     try {
       await Promise.race([
@@ -159,7 +160,7 @@ export class SetPlayer {
     } finally {
       window.clearTimeout(wait);
     }
-    return context.state === 'running';
+    return isRunning();
   }
 
   private applySound() {
