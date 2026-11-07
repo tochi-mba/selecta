@@ -52,6 +52,7 @@ a.button:hover { border-color: var(--text); }
 .nav a:hover { color: var(--text); }
 .nav .brand { font: 900 1.25rem var(--display); letter-spacing: -0.02em; color: var(--text); }
 .nav .brand-mark { display: none; }
+.mobile-label { display: none; }
 .nav li a i { font-style: normal; width: 1.4em; text-align: center; flex: none; }
 .nav a[aria-current='true'] { color: var(--text); }
 .nav .count, .mini .count, .context-bar .count { color: var(--request); font-weight: 700; }
@@ -137,10 +138,21 @@ a.button:hover { border-color: var(--text); }
   }
   .nav li a i { font-size: 1.05rem; line-height: 1; }
   .nav-context { display: none; }
+  .mobile-label { display: inline; }
+  .desktop-label { display: none; }
   .mini-volume { display: none; }
   /* with a keyboard up, what's being typed gets the room */
   :root[data-keyboard='open'] .nav, :root[data-keyboard='open'] .mini { display: none; }
 }
+
+.listen-empty {
+  min-height: calc(100dvh - var(--header-height) - var(--bottom-chrome));
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  max-width: 760px;
+}
+.listen-empty .display { max-width: 12ch; }
 .on-stage .content { padding-bottom: 0; }
 
 /* the page's own bar: where you are, and what's reachable from anywhere */
