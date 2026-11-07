@@ -117,7 +117,7 @@ test('Back and Forward go where they should', async ({ page }) => {
   const nav = page.getByRole('navigation', { name: 'Main' });
   await nav.getByRole('link', { name: 'Library' }).click();
   await expect(page).toHaveURL(/\/library$/);
-  await nav.getByRole('link', { name: 'Workshop' }).click();
+  await nav.getByRole('link', { name: 'Workspace' }).click();
   await expect(page).toHaveURL(/\/workshop$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/library$/);

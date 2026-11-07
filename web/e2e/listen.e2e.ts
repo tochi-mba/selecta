@@ -150,7 +150,7 @@ test('moving around the app leaves the music alone, and the mini-player follows'
   await expect.poll(() => soundsStarted(page), { timeout: 30_000 }).toBe(3);
   const started = await soundsStarted(page);
   const nav = page.getByRole('navigation', { name: 'Main' });
-  for (const place of ['Library', 'Mixes', 'Discover', 'Workshop']) {
+  for (const place of ['Library', 'Explore', 'My Mixes', 'Workspace']) {
     await nav.getByRole('link', { name: place, exact: true }).click();
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
     await page.waitForTimeout(300);
