@@ -328,7 +328,7 @@ test('the keyboard alone can request a song, cancel it, and get back to where it
   await page.keyboard.press('r');
   const drawer = page.getByRole('dialog', { name: 'Requests' });
   await expect(drawer).toBeVisible();
-  const box = drawer.getByRole('textbox', { name: 'Request a song' });
+  const box = drawer.getByRole('combobox', { name: 'Request a song' });
   await expect(box).toBeFocused();
   await box.fill('Déjà');
   await expect(drawer.getByRole('button', { name: /Déjà Vu/ })).toBeVisible();
@@ -353,6 +353,13 @@ test('reordering with the keyboard moves the song, and focus stays on it', async
   await page.goto('/mix/current/edit');
   const grip = page.getByRole('button', { name: 'Reorder Morning Light' });
   await grip.focus();
+  // Space is owned by this accessible drag handle, never by the global player.
+  await page.keyboard.press('Space');
+  await expect(grip).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForTimeout(150);
+  await expect(page.locator('.mini')).toHaveCount(0);
+  await page.keyboard.press('Space');
+  await expect(grip).toHaveAttribute('aria-pressed', 'false');
   await page.keyboard.press('ArrowDown');
   const order = async () => ((await (await request.get('/api/mix')).json()).mix as { title: string }[]).map((song) => song.title);
   await expect.poll(order).toEqual(['Slow Tide', 'Morning Light', 'Paper Moon', 'Neon Rain']);

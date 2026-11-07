@@ -12,7 +12,7 @@ const playing = (mix: MixItem[]) => {
   return { mix, player: { state, togglePause: vi.fn(async () => {}) } as unknown as SetPlayer, onMix: vi.fn() };
 };
 const found = (id: number, title: string) => ({ id, title, artist: `${title} artist`, genre: null, duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false });
-const search = () => screen.getByRole('textbox', { name: 'Request a song' });
+const search = () => screen.getByRole('combobox', { name: 'Request a song' });
 
 describe('a request on its way into the mix', () => {
   const state = (rows: unknown[], more: Record<string, unknown> = {}) => ({

@@ -154,7 +154,7 @@
 .report-head:first-child { margin-top: 0; }
 
 /* the Studio */
-.studio { border: 0; padding: 0; }
+.studio { border: 0; padding: 0; min-width: 0; max-width: 100%; }
 .overlay-workspace .overlay-body:has(.studio) { padding-top: 0; }
 .studio-head {
   position: sticky;
@@ -182,7 +182,14 @@
 
 /* It scrolls both ways on a small screen, as a grid has to, with the bar numbers and part names staying
    put, so a square can always be matched to its bar and its part. */
-.studio-grid { --name-width: 76px; max-height: min(72dvh, 680px); overflow: auto; }
+.studio-grid {
+  --name-width: 76px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(72dvh, 680px);
+  overflow: auto;
+}
 .studio-lane {
   grid-template-columns: var(--name-width) repeat(var(--cells, 8), minmax(44px, 1fr));
   min-width: calc(var(--name-width) + var(--cells, 8) * 48px);

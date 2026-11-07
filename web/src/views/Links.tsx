@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
+import { ApiError, DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { EXPLORE_TABS } from '../shell/manifest';
 import { operationId } from '../state/async';
+import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Icon } from '../ui/Icon';
 import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
@@ -36,21 +38,32 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   const [step, setStep] = useState<number | null>(null);
   const [bar, setBar] = useState(-1);
   const [saving, setSaving] = useState(false);
+  const reviewing = useRef(false);
   const [unsaved, setUnsaved] = useState<{ target: HarmonicDiscovery; verdict: string } | null>(null);
   const audio = useRef<HTMLAudioElement>(null);
   const keepGoing = useRef(false);
   const preparingRequest = useRef(0);
+  const discoveryChanges = useRef(0);
   // the same answer sent again, because a reply got lost, keeps its name, so it can't count twice
   const verdictNames = useRef(new Map<string, string>());
 
   useEffect(() => {
     let live = true;
-    const load = () => get<HarmonicDiscovery[]>('/discoveries').then((rows) => {
-      if (live) { setItems(rows); setLoaded(true); setError(''); }
-    }).catch(() => { if (live) setError('Couldn’t load these. Try again in a moment.'); });
+    const load = () => {
+      const seen = discoveryChanges.current;
+      return get<HarmonicDiscovery[]>('/discoveries').then((rows) => {
+        if (!live || seen !== discoveryChanges.current) return;
+        setItems(rows);
+        setLoaded(true);
+        setError('');
+      }).catch(() => { if (live && seen === discoveryChanges.current) setError('Couldn’t load these. Try again in a moment.'); });
+    };
     void load();
-    const timer = window.setInterval(() => void load(), 15000);
-    return () => { live = false; window.clearInterval(timer); };
+    const tick = () => { if (document.visibilityState !== 'hidden') void load(); };
+    const visible = () => { if (document.visibilityState === 'visible') void load(); };
+    const timer = window.setInterval(tick, 15000);
+    document.addEventListener('visibilitychange', visible);
+    return () => { live = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
   }, [attempt]);
 
   const waiting = items
@@ -138,12 +151,16 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   }, [item?.id]);
 
   const review = async (target: HarmonicDiscovery, verdict: string) => {
-    if (saving) return;
+    // The state update does not protect against two taps in the same frame.
+    // Never dispatch competing answers for the same comparison.
+    if (reviewing.current) return;
+    reviewing.current = true;
     const asking = `${target.id}:${verdict}`;
     const name = verdictNames.current.get(asking) ?? operationId('verdict');
     verdictNames.current.set(asking, name);
     setSaving(true);
     try {
+      discoveryChanges.current += 1;
       await post(`/discoveries/${target.id}/review`, { verdict }, { 'x-operation-id': name });
       verdictNames.current.delete(asking);
       setItems((rows) => rows.map((row) => (row.id === target.id ? { ...row, status: verdict } : row)));
@@ -153,6 +170,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
       setError('Couldn’t save that. Try again.');
       setUnsaved({ target, verdict });
     } finally {
+      reviewing.current = false;
       setSaving(false);
     }
   };
@@ -212,9 +230,16 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
               </ol>
               <div className="chord-strip" role="img" aria-label={`The chords Selecta heard: ${audition.chords.join(', ')}`}>
                 {audition.chords.map((chord, index) => (
-                  <span key={index} className={index === bar ? 'now' : ''}>{chord}</span>
+                  <span key={index} className={index === bar ? 'now' : ''} aria-current={index === bar ? 'step' : undefined}>
+                    <span className="visually-hidden">Bar {index + 1}: </span>{chord}
+                  </span>
                 ))}
               </div>
+              <p className="hint chord-position" aria-live="off">
+                {listening && bar >= 0 && audition.chords[bar]
+                  ? `Bar ${bar + 1} of ${audition.chords.length}: ${audition.chords[bar]}`
+                  : `${audition.chords.length} chord bars in this comparison.`}
+              </p>
             </>
           )}
           <div className="row wrap" role="group" aria-label={`Do ${item.title_a} and ${item.title_b} sound connected?`}>
@@ -350,14 +375,20 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
   );
 }
 
-export function Links({ setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
+export function Links({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
   // it's in the address, so a search survives a reload, a shared link and coming Back
   const addressQuery = useQueryParam('q') ?? '';
   const [query, setQuery] = useState(addressQuery);
+  // The URL is authoritative across reload, Back and Forward. A history
+  // navigation must update the search input as well as the result set.
+  useEffect(() => setQuery(addressQuery), [addressQuery]);
   const [data, setData] = useState<LinkList | null>(null);
   const [failed, setFailed] = useState(false);
   const [drafts, setDrafts] = useState<{ id: number; name: string }[]>([]);
   const asked = useRef(0);
+  // The same pair sent again after a lost response keeps its operation ID.
+  // A confirmed success, or a definitive invalid request, clears the key.
+  const pairOperations = useRef(new Map<string, string>());
 
   const load = () => {
     asked.current += 1;
@@ -365,6 +396,10 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
     return get<LinkList>(`/links?q=${encodeURIComponent(query)}&limit=60`)
       .then((next) => {
         if (mine !== asked.current) return;
+        if (!Array.isArray(next?.links)) {
+          setFailed(true);
+          return;
+        }
         setData(next);
         setFailed(false);
       })
@@ -380,26 +415,43 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
     return () => window.clearTimeout(wait);
   }, [query, tab]);
 
-  // Selecta prepares links in spare time, so finished ones appear as they land.
-  useEffect(() => {
-    if (tab !== 'words') return;
-    const timer = window.setInterval(() => void load(), 6000);
-    return () => window.clearInterval(timer);
-  }, [query, tab]);
+  // Selecta prepares links in spare time; refresh after returning to the
+  // tab without burning requests while the listener is elsewhere.
+  useVisiblePoll(load, 6000, tab === 'words');
 
   useEffect(() => {
     get<DraftList>('/drafts').then((list) => setDrafts(list.drafts ?? [])).catch(() => {});
   }, []);
 
-  // both songs and the transition between them go in together, or none of it does
+  // Both songs and their transition must insert atomically. The mix-order
+  // guard prevents an old card acting on a newer current mix or draft.
   const add = async (link: Link, move: string, draft: number | null) => {
-    const answer = await post<MixData>(`/mix/pair${draft === null ? '' : `?draft=${draft}`}`, { a: link.a, b: link.b, move, phrase: link.phrase });
-    if (draft === null) {
-      setMixData(answer);
-      notify(`Added “${link.phrase}” to your mix.`, true);
-      setView('Edit');
-    } else {
-      notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`);
+    const identity = JSON.stringify([link.a, link.b, move, link.phrase, draft]);
+    let operation = pairOperations.current.get(identity);
+    if (!operation) {
+      operation = operationId('pair');
+      pairOperations.current.set(identity, operation);
+    }
+    try {
+      const order = draft === null
+        ? orderOf(mix)
+        : orderOf((await get<MixData>(`/mix?draft=${draft}`)).mix);
+      const answer = await post<MixData>(
+        `/mix/pair${draft === null ? '' : `?draft=${draft}`}`,
+        { a: link.a, b: link.b, move, phrase: link.phrase },
+        { 'x-mix-order': order, 'x-operation-id': operation },
+      );
+      pairOperations.current.delete(identity);
+      if (draft === null) {
+        setMixData(answer);
+        notify(`Added “${link.phrase}” to your mix.`, true);
+        setView('Edit');
+      } else {
+        notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`);
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status < 500) pairOperations.current.delete(identity);
+      throw error;
     }
   };
 

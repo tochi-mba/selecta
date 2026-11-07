@@ -265,16 +265,29 @@ describe('adding a pair', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Add both to the mix' }));
     await waitFor(() => expect(calls.find((call) => call.path === '/mix/pair')?.body).toEqual({ a: 1, b: 2, move: 'word_cut', phrase: 'tonight' }));
     expect(calls.filter((call) => call.path === '/mix/songs')).toHaveLength(0);
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/mix/pair', expect.objectContaining({
+      headers: expect.objectContaining({
+        'x-mix-order': '',
+        'x-operation-id': expect.stringMatching(/^pair-/),
+      }),
+    }));
   });
 
   it('can go in a draft instead, and leaves what’s playing alone', async () => {
-    const calls = fakeBackend({ 'GET /links': { links: [link], prepared: 0, preparing: 0 }, 'GET /drafts': drafts([{ id: 7, name: 'Friday' }]), 'POST /mix/pair': { mix: [], name: 'Friday', can_undo: true } });
+    const calls = fakeBackend({ 'GET /links': { links: [link], prepared: 0, preparing: 0 }, 'GET /drafts': drafts([{ id: 7, name: 'Friday' }]), 'GET /mix': { mix: [], name: 'Friday', can_undo: false }, 'POST /mix/pair': { mix: [], name: 'Friday', can_undo: true } });
     const shown = props();
     render(<Links {...shown} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Add both to…' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Friday' }));
     await waitFor(() => expect(calls.some((call) => call.path === '/mix/pair?draft=7')).toBe(true));
     expect(shown.setMixData).not.toHaveBeenCalled();
+    expect(calls.some((call) => call.path === '/mix?draft=7')).toBe(true);
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/mix/pair?draft=7', expect.objectContaining({
+      headers: expect.objectContaining({
+        'x-mix-order': '',
+        'x-operation-id': expect.stringMatching(/^pair-/),
+      }),
+    }));
   });
 });
 

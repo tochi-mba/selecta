@@ -12,7 +12,7 @@ const playing = (mix: MixItem[]) => {
   return { mix, player: { state, togglePause: vi.fn(async () => {}) } as unknown as SetPlayer, onMix: vi.fn() };
 };
 const found = (id: number, title: string) => ({ id, title, artist: `${title} artist`, genre: null, duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false });
-const search = () => screen.getByRole('textbox', { name: 'Request a song' });
+const search = () => screen.getByRole('combobox', { name: 'Request a song' });
 const listed = () => within(screen.getByRole('list', { name: 'Your requests' }));
 
 describe('song requests joining the mix', () => {
@@ -473,7 +473,7 @@ describe('a request that needs an extra song', () => {
 
   it('names the extra song and asks', async () => {
     open();
-    expect(await screen.findByText('Needs your choice')).toBeInTheDocument();
+    expect(await screen.findByText('Needs your choice', { selector: 'span' })).toBeInTheDocument();
     expect(screen.getByText('Getting to it takes one extra song: Bridge.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add both' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'No, keep waiting' })).toBeEnabled();

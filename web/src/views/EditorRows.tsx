@@ -1,7 +1,7 @@
-import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useRef } from 'react';
+import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useRef, useState } from 'react';
 import { MixItem, post } from '../api';
 import { clock, etaWords, seamStatusWords } from '../lib';
-import { Action, Menu } from '../ui/controls';
+import { Action, announce, Menu } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { seamFacts } from '../ui/seam';
 import { useMixPath } from './mixScope';
@@ -133,6 +133,7 @@ type SongRowProps = {
  * and the arrow keys and the Move buttons do the same job without dragging at all. */
 export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, actions }: SongRowProps) {
   const holding = useRef(false);
+  const [grabbed, setGrabbed] = useState(false);
   const rowUnder = (event: PointerEvent<HTMLElement>) => document.elementFromPoint?.(event.clientX, event.clientY)?.closest<HTMLElement>('[data-song-key]') ?? null;
   const pressHandle = (event: PointerEvent<HTMLElement>) => {
     if (event.pointerType === 'mouse') return;
@@ -155,8 +156,23 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     if (target?.dataset.position) void actions.current.move(item.position, Number(target.dataset.position), 'drag');
   };
   const handleKeys = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === ' ' || event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+      setGrabbed((was) => !was);
+      announce(grabbed ? `Dropped ${item.title} at number ${item.position + 1}.` : `Picked up ${item.title}. Use the up and down arrows to move it. Press Space to drop.`);
+      return;
+    }
+    if (event.key === 'Escape' && grabbed) {
+      event.preventDefault();
+      event.stopPropagation();
+      setGrabbed(false);
+      announce(`Finished moving ${item.title}.`);
+      return;
+    }
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     event.preventDefault();
+    event.stopPropagation();
     const to = item.position + (event.key === 'ArrowUp' ? -1 : 1);
     if (to >= 0 && to < total) void actions.current.move(item.position, to, 'handle');
   };
@@ -189,8 +205,9 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         draggable
         data-handle
         aria-label={`Reorder ${item.title}`}
-        aria-keyshortcuts="ArrowUp ArrowDown"
-        title="Drag to move, or press the up and down arrow keys"
+        aria-pressed={grabbed}
+        aria-keyshortcuts="Space ArrowUp ArrowDown"
+        title="Drag to move, or press Space and then use the arrow keys"
         onKeyDown={handleKeys}
         onPointerDown={pressHandle}
         onPointerMove={moveHandle}

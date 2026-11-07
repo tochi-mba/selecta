@@ -4,7 +4,8 @@ import { del, DraftInfo, DraftList, get, post } from '../api';
 import { etaRangeWords, length, nth } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { draftReadiness } from '../state/readiness';
-import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { Action, Dialog, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { MenuItem } from '../ui/primitives';
 import { ViewProps } from './shared';
 
@@ -56,26 +57,47 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   const [failures, setFailures] = useState<Record<number, string>>({});
   const [couldntLoad, setCouldntLoad] = useState(false);
   const [renaming, setRenaming] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<DraftInfo | null>(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'recent' | 'name' | 'readiness'>('recent');
   const heading = useRef<HTMLHeadingElement>(null);
   const wasRenaming = useRef<number | null>(null);
+  const readVersion = useRef(0);
+  const pendingWrites = useRef(0);
+  const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
 
   const refresh = useCallback(() => {
+    const version = ++readVersion.current;
+    if (pendingWrites.current) return Promise.resolve();
     return get<DraftList>('/drafts')
       .then((next) => {
+        if (version !== readVersion.current || pendingWrites.current) return;
         setList(next);
         setProblem('');
         setCouldntLoad(false);
       })
-      .catch(() => setCouldntLoad(true));
+      .catch(() => {
+        if (version === readVersion.current && !pendingWrites.current) setCouldntLoad(true);
+      });
   }, []);
 
-  useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), CHECK_EVERY_MS);
-    return () => window.clearInterval(timer);
-  }, [refresh]);
+  // A poll that began before a mutation must never replace its acknowledged result.
+  // Serialize changes to the render line so their server snapshots stay in intent order.
+  const write = async <T,>(send: () => Promise<T>): Promise<T> => {
+    pendingWrites.current += 1;
+    readVersion.current += 1;
+    const request = writeQueue.current.then(send);
+    writeQueue.current = request.catch(() => undefined);
+    try {
+      return await request;
+    } finally {
+      pendingWrites.current -= 1;
+      readVersion.current += 1;
+    }
+  };
+
+  useEffect(() => { void refresh(); }, [refresh]);
+  useVisiblePoll(refresh, CHECK_EVERY_MS);
 
   // once a name has been saved or left alone, focus goes back to that draft
   useEffect(() => {
@@ -84,36 +106,38 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   }, [renaming]);
 
   /** Something done to one draft. If it fails, that draft says so and what's saved hasn't changed. */
-  const onDraft = async (draft: DraftInfo, doing: string, work: () => Promise<void>) => {
+  const onDraft = async (draft: DraftInfo, doing: string, work: () => Promise<void>): Promise<boolean> => {
     setFailures((before) => {
       const { [draft.id]: _gone, ...rest } = before;
       return rest;
     });
     try {
       await work();
+      return true;
     } catch (error) {
       setFailures((before) => ({ ...before, [draft.id]: `Couldn’t ${doing}: ${(error as Error).message || 'try again.'}` }));
+      return false;
     }
   };
-  const act = async (work: Promise<DraftList>) => {
+  const act = async (send: () => Promise<DraftList>) => {
     try {
-      setList(await work);
+      setList(await write(send));
       setProblem('');
     } catch (error) {
       setProblem((error as Error).message);
     }
   };
   const startNew = async () => {
-    const made = await post<{ id: number }>('/drafts', {});
+    const made = await write(() => post<{ id: number }>('/drafts', {}));
     openDraft?.(made.id);
   };
   const keepCurrent = async () => {
-    const made = await post<{ id: number; name: string }>('/drafts', { copy_current: true });
+    const made = await write(() => post<{ id: number; name: string }>('/drafts', { copy_current: true }));
     await refresh();
     notify(`Saved a copy of your current mix as ${made.name}. What’s playing hasn’t changed.`);
   };
   const prioritize = (draft: DraftInfo) => onDraft(draft, 'put that in line', async () => {
-    const next = await post<DraftList>(`/drafts/${draft.id}/line`);
+    const next = await write(() => post<DraftList>(`/drafts/${draft.id}/line`));
     setList(next);
     const placed = next.drafts.find((item) => item.id === draft.id);
     if (!placed?.place) notify(`${draft.name} is already ready.`);
@@ -121,13 +145,13 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
     else notify(`Rendering ${draft.name} in the background.`);
   });
   const duplicate = (draft: DraftInfo) => onDraft(draft, 'copy that', async () => {
-    const made = await post<{ name: string }>(`/drafts/${draft.id}/duplicate`);
+    const made = await write(() => post<{ name: string }>(`/drafts/${draft.id}/duplicate`));
     await refresh();
     notify(`Made a copy: ${made.name}.`);
   });
   const remove = (draft: DraftInfo) => onDraft(draft, 'delete that', async () => {
-    await del(`/drafts/${draft.id}`);
-    await refresh();
+    await write(() => del(`/drafts/${draft.id}`));
+    setList((before) => before ? { ...before, drafts: before.drafts.filter((item) => item.id !== draft.id) } : before);
     heading.current?.focus();
     // by its id, so it's this draft that comes back, whatever else has been deleted since
     notify(`Deleted ${draft.name}.`, async () => {
@@ -249,9 +273,9 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                         <MenuItem aria-label={`Prioritize ${draft.name}`} title="Renders in the background, right after your current mix" onClick={() => void prioritize(draft)}>Prioritize</MenuItem>
                       )}
                       {draft.place !== null && (
-                        <MenuItem aria-label={`Out of line: ${draft.name}`} onClick={() => void act(del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</MenuItem>
+                        <MenuItem aria-label={`Out of line: ${draft.name}`} onClick={() => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</MenuItem>
                       )}
-                      <MenuItem danger aria-label={`Delete ${draft.name}`} onClick={() => void remove(draft)}><Icon name="trash" /> Delete</MenuItem>
+                      <MenuItem danger aria-label={`Delete ${draft.name}`} onClick={() => setDeleting(draft)}><Icon name="trash" /> Delete</MenuItem>
                     </Menu>
                   </div>
                 </li>
@@ -260,12 +284,31 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
           </ul>
         )}
       </section>
+      {deleting && (
+        <Dialog
+          title={`Delete ${deleting.name}?`}
+          onClose={() => setDeleting(null)}
+          footer={(
+            <>
+              <button onClick={() => setDeleting(null)}>Keep draft</button>
+              <Action className="destructive" working="Deleting…" run={async () => {
+                const draft = deleting;
+                if (await remove(draft)) setDeleting(null);
+              }}>Delete draft</Action>
+            </>
+          )}
+        >
+          <p>This removes only the saved draft {deleting.name} and its place in the render line. Your current mix and original music files are untouched.</p>
+          <p className="hint">You can undo this from the notification if the restore point is still available.</p>
+          {failures[deleting.id] && <p className="warn" role="alert">{failures[deleting.id]}</p>}
+        </Dialog>
+      )}
       {inLine.length > 0 && (
         <RenderLine
           inLine={inLine}
           current={current}
-          onMove={(draft, step) => void act(post<DraftList>(`/drafts/${draft.id}/line/move`, { step }))}
-          onLeave={(draft) => void act(del<DraftList>(`/drafts/${draft.id}/line`))}
+          onMove={(draft, step) => void act(() => post<DraftList>(`/drafts/${draft.id}/line/move`, { step }))}
+          onLeave={(draft) => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}
         />
       )}
     </>

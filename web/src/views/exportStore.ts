@@ -18,6 +18,21 @@ const SLOW_MS = 15000;
 const ACTIVE = new Set(['preparing', 'encoding', 'cancelling']);
 
 let now: ExportsNow = { jobs: null, stale: false, unsupported: false };
+const EXPORT_STATES = new Set(['preparing', 'encoding', 'ready', 'failed', 'cancelling', 'cancelled', 'interrupted', 'expired']);
+
+function validJob(value: unknown): value is ExportJob {
+  if (!value || typeof value !== 'object') return false;
+  const job = value as Partial<ExportJob>;
+  return typeof job.id === 'string'
+    && typeof job.name === 'string'
+    && typeof job.mix_name === 'string'
+    && typeof job.state === 'string' && EXPORT_STATES.has(job.state)
+    && (job.scope === 'current' || job.scope === 'draft')
+    && Array.isArray(job.songs)
+    && typeof job.created_at === 'number' && Number.isFinite(job.created_at)
+    && typeof job.can_cancel === 'boolean';
+}
+
 let asked = 0;
 let timer: number | undefined;
 const listeners = new Set<() => void>();
@@ -34,7 +49,10 @@ export function refreshExports(): Promise<void> {
   return get<{ jobs: ExportJob[] }>('/exports/jobs').then(
     (answer) => {
       // an answer to an older question can't overwrite a newer one
-      if (mine === asked) changed({ jobs: answer.jobs, stale: false, unsupported: false });
+      if (mine !== asked) return;
+      // An older or partial response is not an empty export list.
+      if (!Array.isArray(answer?.jobs) || !answer.jobs.every(validJob)) changed({ stale: true });
+      else changed({ jobs: answer.jobs, stale: false, unsupported: false });
     },
     (error: unknown) => {
       if (mine !== asked) return;
@@ -46,20 +64,34 @@ export function refreshExports(): Promise<void> {
 
 function schedule() {
   window.clearTimeout(timer);
-  if (!listeners.size) return;
+  if (!listeners.size || document.visibilityState === 'hidden') return;
   const busy = now.jobs?.some(isExportActive);
   timer = window.setTimeout(() => {
     void refreshExports().finally(schedule);
   }, busy ? QUICK_MS : SLOW_MS);
 }
 
+const whenVisible = () => {
+  if (document.visibilityState === 'hidden') {
+    window.clearTimeout(timer);
+  } else if (listeners.size) {
+    void refreshExports().finally(schedule);
+  }
+};
+
 function subscribe(listener: () => void) {
   const first = !listeners.size;
   listeners.add(listener);
-  if (first) void refreshExports().finally(schedule);
+  if (first) {
+    document.addEventListener('visibilitychange', whenVisible);
+    void refreshExports().finally(schedule);
+  }
   return () => {
     listeners.delete(listener);
-    if (!listeners.size) window.clearTimeout(timer);
+    if (!listeners.size) {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', whenVisible);
+    }
   };
 }
 
@@ -77,13 +109,18 @@ function known(job: ExportJob) {
 export async function startExport(path: string, guard: Record<string, string>): Promise<ExportJob> {
   asked += 1;
   const job = await post<ExportJob>(path, undefined, guard);
+  // A job may have been created even if the reply was malformed; callers
+  // retain their operation ID on this uncertain result and can retry safely.
+  if (!validJob(job)) throw new Error('The export started, but its details could not be read. Retry to recover its status.');
   known(job);
   return job;
 }
 
 export async function cancelExport(id: string): Promise<void> {
   asked += 1;
-  known(await del<ExportJob>(`/exports/jobs/${id}`));
+  const job = await del<ExportJob>(`/exports/jobs/${id}`);
+  if (!validJob(job)) throw new Error('Couldn’t confirm the export was cancelled. Check its latest status.');
+  known(job);
 }
 
 /** For the tests: forget everything. */

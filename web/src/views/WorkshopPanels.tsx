@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, FolderCheck, Folders, get, Jobs, post, Storage } from '../api';
 import { gb, storageWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
-import { Action, Problem, Skeleton, Status } from '../ui/controls';
+import { Action, Dialog, Problem, Skeleton, Status } from '../ui/controls';
 import { Field, Slider } from '../ui/primitives';
 import { ViewProps } from './shared';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
@@ -42,19 +42,26 @@ export function StoragePanel() {
   const [limit, setLimit] = useState<number | null>(null);
   const wait = useRef<number | undefined>(undefined);
   const saves = useRef(0);
+  // A slow earlier budget write must not overtake the most recently chosen
+  // limit. Serialise writes and apply only the newest answer to the controls.
+  const writeQueue = useRef<Promise<void>>(Promise.resolve());
+  const budgetEditing = useRef(false);
   const confirmed = useRef<number | null>(null);
   const [saved, setSaved] = useState(true);
   const [problem, setProblem] = useState('');
   const [wanted, setWanted] = useState<number | null>(null);
 
   const [loadFailed, setLoadFailed] = useState(false);
-  const refresh = () =>
-    get<Storage>('/storage').then((data) => {
+  const refresh = () => {
+    const seen = saves.current;
+    return get<Storage>('/storage').then((data) => {
+      if (seen !== saves.current || budgetEditing.current) return;
       setLoadFailed(false);
       setStorage(data);
       confirmed.current = data.budget_bytes / GB;
       setLimit((current) => current ?? data.budget_bytes / GB);
     }).catch(() => setLoadFailed(true));
+  };
   useEffect(() => {
     void refresh().catch(() => {});
     const timer = window.setInterval(() => void refresh().catch(() => {}), 15000);
@@ -69,6 +76,7 @@ export function StoragePanel() {
   const smallest = storage.smallest_budget_bytes / GB;
 
   const move = (value: number) => {
+    budgetEditing.current = true;
     setLimit(value);
     setSaved(false);
     setProblem('');
@@ -77,23 +85,28 @@ export function StoragePanel() {
     const mine = saves.current;
     window.clearTimeout(wait.current);
     wait.current = window.setTimeout(() => {
-      void post<Storage>('/storage', { budget_gb: value })
+      const work = writeQueue.current.then(() => post<Storage>('/storage', { budget_gb: value }))
         .then((answer) => {
-          // only the last one moved counts, and it shows what was really saved
-          if (mine !== saves.current) return;
+          // All successful responses update the confirmed server value; only
+          // the latest choice updates the visible setting. If that choice
+          // later fails, the fallback is the last real accepted limit.
           confirmed.current = answer.budget_bytes / GB;
+          if (mine !== saves.current) return;
           setStorage(answer);
           setLimit(answer.budget_bytes / GB);
+          setProblem('');
+          budgetEditing.current = false;
           setSaved(true);
         })
         .catch((error: Error) => {
           if (mine !== saves.current) return;
-          // it goes back to what's really in force, and what you asked for can be sent again
           setProblem(error.message);
           setWanted(value);
+          budgetEditing.current = false;
           setSaved(true);
           if (confirmed.current !== null) setLimit(confirmed.current);
         });
+      writeQueue.current = work;
     }, 400);
   };
 
@@ -258,6 +271,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   const [list, setList] = useState<Folders | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmUnwatch, setConfirmUnwatch] = useState<string | null>(null);
   const scanPending = useRef(false);
   const scanning = status.scan.status === 'running';
   const reading = scanning || submitting;
@@ -277,7 +291,8 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     setSubmitting(true);
     setProblem('');
     try {
-      const address = folder.trim().replace(/^"|"$/g, '');
+      // File Explorer wraps some copied paths in matching quotes.
+      const address = folder.trim().replace(/^(["'])(.*)\1$/u, '$2').trim();
       const check = await checkFolder(address);
       if (check && !check.ok) {
         setProblem(check.reason);
@@ -292,6 +307,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   };
   const stopWatching = async (path: string) => {
     setList(await post<Folders>('/folders/stop-watching', { folder: path }));
+    setConfirmUnwatch(null);
     notify('Stopped watching that folder. Nothing in it was touched, and its songs are still in your library.');
   };
   const stopReading = async () => {
@@ -313,10 +329,21 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
                 <small className="hint"> {item.songs} song{item.songs === 1 ? '' : 's'}</small>
               </div>
               {item.available ? <Status kind="ready">Watching</Status> : <Status kind="warning">Can’t find it right now. Its songs are kept until it’s back.</Status>}
-              <Action run={() => stopWatching(item.path)}>Stop watching</Action>
+              <button onClick={() => setConfirmUnwatch(item.path)}>Stop watching</button>
             </li>
           ))}
         </ul>
+      )}
+      {confirmUnwatch && (
+        <Dialog title="Stop watching this folder?" onClose={() => setConfirmUnwatch(null)} footer={(
+          <>
+            <button onClick={() => setConfirmUnwatch(null)}>Keep watching</button>
+            <Action className="primary" working="Stopping…" run={() => stopWatching(confirmUnwatch)}>Stop watching</Action>
+          </>
+        )}>
+          <p>Stop automatically checking <b>{confirmUnwatch}</b> for new music?</p>
+          <p className="hint">This never deletes, moves or changes files. Songs already in your Library stay there. You can add this folder again later.</p>
+        </Dialog>
       )}
       <div className="row wrap">
         <span className="hint">New songs added to these show up by themselves within a minute or so. Selecta never changes or deletes your files.</span>
@@ -366,6 +393,46 @@ function diagnosticFacts(info: Record<string, unknown>): { key: string; words: s
   return facts;
 }
 
+/** The diagnostics endpoint promises no song names or paths. Older/newer
+ * servers can add fields, so copying an unchecked response would silently
+ * break that promise. Keep an explicit privacy-safe client contract too. */
+export function safeDiagnostics(info: Record<string, unknown>): Record<string, unknown> {
+  const allowed = [
+    'api_version', 'analysis_version', 'python', 'platform',
+    'worker_running', 'analysis_failures', 'mix_songs',
+    'drafts_in_line', 'seam_records', 'typical_estimate_miss',
+  ] as const;
+  const safe: Record<string, unknown> = {};
+  for (const key of allowed) {
+    const value = info[key];
+    if (typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value)
+      || typeof value === 'string' && /^[a-zA-Z0-9_.+-]{1,40}$/.test(value)) {
+      safe[key] = value;
+    }
+  }
+  if (info.songs && typeof info.songs === 'object' && !Array.isArray(info.songs)) {
+    const counts = info.songs as Record<string, unknown>;
+    const selected: Record<string, number> = {};
+    for (const key of ['total', 'music', 'analysed', 'lyrics', 'ready', 'set_aside']) {
+      const count = counts[key];
+      if (typeof count === 'number' && Number.isFinite(count)) selected[key] = count;
+    }
+    safe.songs = selected;
+  }
+  if (Array.isArray(info.recent_operations)) {
+    safe.recent_operations = info.recent_operations.slice(-20).flatMap((item) => {
+      if (!item || typeof item !== 'object') return [];
+      const operation = item as Record<string, unknown>;
+      return [{
+        kind: typeof operation.kind === 'string' && /^[a-z]{1,32}$/.test(operation.kind) ? operation.kind : 'other',
+        ...(typeof operation.status === 'number' && Number.isInteger(operation.status) ? { status: operation.status } : {}),
+        repeat: operation.repeat === true,
+      }];
+    });
+  }
+  return safe;
+}
+
 /** What's useful for working out a problem, with no paths or song names. It stays here unless you
  * copy it somewhere yourself. */
 export function Diagnostics() {
@@ -381,7 +448,7 @@ export function Diagnostics() {
   }, [load]);
   if (failed) return <Problem retry={load}>The server isn’t answering, which is the first thing to look at. Is Selecta still running?</Problem>;
   if (!info) return <Skeleton variant="metrics" label="Gathering details" />;
-  const text = JSON.stringify(info, null, 2);
+  const text = JSON.stringify(safeDiagnostics(info), null, 2);
   const canCopy = typeof navigator.clipboard?.writeText === 'function';
   return (
     <section className="panel stack">

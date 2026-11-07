@@ -23,13 +23,44 @@ afterEach(() => {
 });
 
 describe('one sound at a time', () => {
-  it('starting a preview pauses the mix, and it carries on afterwards', () => {
+  it('starting a preview pauses the mix, and it carries on afterwards', async () => {
     const main = mainPlayer();
     connectMainPlayer(main);
     takeAudio({ id: 'a', label: 'A', stop: vi.fn() });
     expect(main.pause).toHaveBeenCalled();
     releaseAudio('a');
-    expect(main.resume).toHaveBeenCalled();
+    await vi.waitFor(() => expect(main.resume).toHaveBeenCalled());
+  });
+
+
+  it('waits for a slow main-player suspension before restoring the mix', async () => {
+    const main = mainPlayer();
+    let finishPause: () => void = () => {};
+    main.pause.mockImplementation(() => new Promise<void>((resolve) => {
+      finishPause = () => { main.state.playing = false; resolve(); };
+    }));
+    connectMainPlayer(main);
+    takeAudio({ id: 'slow', label: 'Slow preview', stop: vi.fn() });
+    releaseAudio('slow');
+    expect(main.resume).not.toHaveBeenCalled();
+    finishPause();
+    await vi.waitFor(() => expect(main.resume).toHaveBeenCalledOnce());
+  });
+
+  it('does not revive a mix after the listener pauses while a slow suspension is pending', async () => {
+    const main = mainPlayer();
+    let finishPause: () => void = () => {};
+    main.pause.mockImplementation(() => new Promise<void>((resolve) => {
+      finishPause = () => { main.state.playing = false; resolve(); };
+    }));
+    connectMainPlayer(main);
+    takeAudio({ id: 'slow', label: 'Slow preview', stop: vi.fn() });
+    releaseAudio('slow');
+    mainPlayerTouched();
+    finishPause();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(main.resume).not.toHaveBeenCalled();
   });
 
   it('a preview doesn’t start the mix if it wasn’t playing', () => {
@@ -50,7 +81,7 @@ describe('one sound at a time', () => {
     expect(main.resume).not.toHaveBeenCalled();
   });
 
-  it('a new preview stops the old one, and the mix waits for the last of them', () => {
+  it('a new preview stops the old one, and the mix waits for the last of them', async () => {
     const main = mainPlayer();
     connectMainPlayer(main);
     const stopFirst = vi.fn();
@@ -60,7 +91,7 @@ describe('one sound at a time', () => {
     expect(audioOwner()?.id).toBe('b');
     expect(main.resume).not.toHaveBeenCalled();
     releaseAudio('b');
-    expect(main.resume).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(main.resume).toHaveBeenCalledOnce());
   });
 
   it('something that lost the sound can’t let go of someone else’s', () => {
@@ -100,14 +131,14 @@ describe('a preview on a page', () => {
     expect(second.result.current.playing).toBe('two');
   });
 
-  it('leaving the page lets the sound go, and the mix carries on', () => {
+  it('leaving the page lets the sound go, and the mix carries on', async () => {
     const main = mainPlayer();
     connectMainPlayer(main);
     const { result, unmount } = renderHook(() => usePreview());
     act(() => result.current.play('one', '/one'));
     unmount();
     expect(audioOwner()).toBeNull();
-    expect(main.resume).toHaveBeenCalled();
+    await vi.waitFor(() => expect(main.resume).toHaveBeenCalled());
   });
 
   it('says so if it can’t play, and gives the sound back', async () => {

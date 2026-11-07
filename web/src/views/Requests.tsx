@@ -1,7 +1,7 @@
 import { Icon } from '../ui/Icon';
 import { Problem, Skeleton } from '../ui/controls';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
-import { SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
+import { ApiError, SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
 import { SetPlayer } from '../player';
@@ -180,6 +180,8 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   const changes = useRef(0);
   const inFlight = useRef(0);
   const nextTemporaryId = useRef(-1);
+  const addingNow = useRef(new Set<number>());
+  const requestOperations = useRef(new Map<number, string>());
   const leaving = useRef(new Set<number>());
   const bridgeAnswers = useRef(new Map<number, { line: Promise<unknown>; newest: string; going: number }>());
   const checkNow = useRef<() => void>(() => {});
@@ -235,6 +237,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     let working = false;
     let again = false;
     const consider = async () => {
+      // A hidden tab is not the active listener. It must not autonomously
+      // change the current mix based on an audio position no one can hear.
+      if (document.visibilityState === 'hidden') return;
       // a check already under way was for how things were, so one more follows it
       if (working) { again = true; return; }
       const body = playbackBody();
@@ -275,7 +280,16 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     };
     checkNow.current = () => void consider();
     const timer = window.setInterval(() => void consider(), 5000);
-    return () => { live = false; checkNow.current = () => {}; window.clearInterval(timer); };
+    const visible = () => {
+      if (document.visibilityState === 'visible') void consider();
+    };
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      live = false;
+      checkNow.current = () => {};
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', visible);
+    };
   }, [!!playback]);
 
   // every request is looked at again as soon as anything changes that could affect where it goes
@@ -297,8 +311,15 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       }).catch(() => { if (live) setError('Couldn’t load your requests. They’re still saved.'); });
     };
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 4000);
-    return () => { live = false; window.clearInterval(timer); };
+    const tick = () => { if (document.visibilityState !== 'hidden') void refresh(); };
+    const visible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    const timer = window.setInterval(tick, 4000);
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', visible);
+    };
   }, []);
 
   /** Take a row away for now, and be able to put it back where it was. */
@@ -321,16 +342,33 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   };
 
   const add = async (song: SongRow) => {
+    // Two presses in the same frame must not create duplicate optimistic rows.
+    // If a response was lost, retry using the same server operation identity.
+    if (addingNow.current.has(song.id)) return;
+    addingNow.current.add(song.id);
+    const operation = requestOperations.current.get(song.id) ?? operationId(`request-${song.id}`);
+    requestOperations.current.set(song.id, operation);
     const id = nextTemporaryId.current;
     nextTemporaryId.current -= 1;
     const row: RequestRow = { id, song_id: song.id, title: song.title, artist: song.artist, status: 'waiting', available: 1, saving: true };
-    const data = await press(
-      (rows) => [...rows, row],
-      (rows) => rows.filter((other) => other.id !== id),
-      () => post<RequestList>('/requests', { song_id: song.id }, { 'x-operation-id': operationId(`request-${song.id}`) }),
-      `Couldn’t save ${song.title ?? 'that request'}. Try again.`,
-    );
-    if (data) settle(data.requests, id);
+    try {
+      const data = await press(
+        (rows) => [...rows, row],
+        (rows) => rows.filter((other) => other.id !== id),
+        () => post<RequestList>('/requests', { song_id: song.id }, { 'x-operation-id': operation })
+          .catch((error) => {
+            if (error instanceof ApiError && error.status < 500) requestOperations.current.delete(song.id);
+            throw error;
+          }),
+        `Couldn’t save ${song.title ?? 'that request'}. Try again.`,
+      );
+      if (data) {
+        requestOperations.current.delete(song.id);
+        settle(data.requests, id);
+      }
+    } finally {
+      addingNow.current.delete(song.id);
+    }
   };
   const cancel = async (request: RequestRow) => {
     const { show, undo } = removing(request);
@@ -689,6 +727,7 @@ export function RequestsPanel() {
   const [matches, setMatches] = useState<SongRow[] | null>(null);
   const [searchError, setSearchError] = useState('');
   const [searchAttempt, setSearchAttempt] = useState(0);
+  const [activeMatch, setActiveMatch] = useState(-1);
   const [finding, setFinding] = useState<number | null>(null);
   const box = useRef<HTMLInputElement>(null);
   const text = query.trim();
@@ -697,6 +736,7 @@ export function RequestsPanel() {
     let live = true;
     setMatches(null);
     setSearchError('');
+    setActiveMatch(-1);
     if (!text) return;
     const timer = window.setTimeout(() => {
       void get<SongRow[]>(`/songs?q=${encodeURIComponent(text)}&state=all&limit=20`)
@@ -712,6 +752,7 @@ export function RequestsPanel() {
   const waitingIds = new Set(requests?.map((request) => request.song_id));
   const asBridges = new Set(requests?.flatMap((request) => request.picked ?? []));
   const canPick = (song: SongRow) => !inMix.has(song.id) && !waitingIds.has(song.id) && !asBridges.has(song.id);
+  const availableMatches = matches?.map((song, index) => canPick(song) ? index : -1).filter((index) => index >= 0) ?? [];
   const orderedRequests = [...(requests ?? [])].sort((a, b) => GROUP_ORDER[stageOf(a, playback)] - GROUP_ORDER[stageOf(b, playback)]);
   // the list stays open, so a few songs can be asked for from one search
   const pick = (song: SongRow) => {
@@ -723,10 +764,24 @@ export function RequestsPanel() {
     box.current?.focus();
   };
   const keys = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Escape') setQuery('');
+    if (event.key === 'Escape' && query) {
+      event.preventDefault();
+      event.stopPropagation();
+      setQuery('');
+      setActiveMatch(-1);
+      return;
+    }
+    if (availableMatches.length && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault();
+      const at = availableMatches.indexOf(activeMatch);
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      setActiveMatch(availableMatches[(at + direction + availableMatches.length) % availableMatches.length]);
+      return;
+    }
     if (event.key === 'Enter') {
       event.preventDefault();
-      const first = matches?.find(canPick);
+      const selected = matches?.[activeMatch];
+      const first = selected && canPick(selected) ? selected : matches?.find(canPick);
       if (first) pick(first);
     }
   };
@@ -747,9 +802,14 @@ export function RequestsPanel() {
           data-autofocus={window.matchMedia?.('(pointer: fine)').matches || undefined}
           value={query}
           aria-label="Request a song"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="request-results"
+          aria-expanded={!!text && !!matches?.length}
+          aria-activedescendant={activeMatch >= 0 && matches?.[activeMatch] ? `request-option-${matches[activeMatch].id}` : undefined}
           placeholder="Request a song: search your library"
           autoComplete="off"
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => { setQuery(event.target.value); setActiveMatch(-1); }}
           onKeyDown={keys}
         />
         {text && <button onClick={finish}>Done</button>}
@@ -758,15 +818,17 @@ export function RequestsPanel() {
       {text && matches === null && !searchError && <Skeleton variant="library" lines={2} label="Searching your library" />}
       {text && matches && !searchError && matches.length === 0 && <p className="hint">Nothing in your library matches that.</p>}
       {text && !!matches?.length && (
-        <ul className="request-results">
-          {matches.map((song) => {
+        <ul id="request-results" className="request-results" role="listbox" aria-label="Matching songs">
+          {matches.map((song, index) => {
             const already = inMix.has(song.id) ? 'In your mix' : waitingIds.has(song.id) ? 'Requested' : asBridges.has(song.id) ? 'Coming as a bridge' : '';
+            const duplicate = matches.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist);
+            const identity = `${song.title ?? 'Untitled'} — ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
             return (
-              <li key={song.id}>
-                <button className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
+              <li key={song.id} id={`request-option-${song.id}`} role="option" aria-selected={activeMatch === index}>
+                <button aria-label={`${identity} — ${already || 'Request'}`} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
                   <span className="request-name">
                     <b>{song.title ?? 'Untitled'}</b>
-                    <span>{song.artist ?? 'Unknown artist'}</span>
+                    <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>
                   </span>
                   <small>{already === 'Requested' ? <><Icon name="check" width={14} height={14} /> Requested</> : already || <><Icon name="plus" width={14} height={14} /> Request</>}</small>
                 </button>
@@ -793,7 +855,7 @@ export function RequestsPanel() {
             return (
               <Fragment key={request.id}>
                 {group !== previousGroup && (
-                  <li className="request-group" aria-hidden="true">
+                  <li className="request-group">
                     <h3>{GROUP_WORDS[group].title}</h3>
                     <p>{GROUP_WORDS[group].detail}</p>
                   </li>

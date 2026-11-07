@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import { ApiError, ExportJob, get, MixData, MixItem } from '../api';
 import { length, runningTime } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -33,6 +33,8 @@ export function ExportPanel(props: {
   const { jobs, unsupported } = useExports();
   const [started, setStarted] = useState<string | null>(null);
   const [problem, setProblem] = useState('');
+  const starting = useRef(false);
+  const operation = useRef<string | null>(null);
   const seams = mix.slice(1);
   const ready = seams.filter((item) => item.seam?.state.status === 'ready').length;
   const left = seams.filter((item) => item.seam?.state.status !== 'ready');
@@ -47,18 +49,29 @@ export function ExportPanel(props: {
   const stage = mine ? mine.state : null;
 
   const start = async () => {
+    if (starting.current) return;
+    starting.current = true;
     setProblem('');
+    // Keep the same operation on a lost-response retry. A second submission
+    // cannot silently create a second export of the same frozen mix.
+    operation.current ??= `export-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     try {
-      const job = await startExport(at('/exports/jobs'), guard);
+      const job = await startExport(at('/exports/jobs'), { ...guard, 'x-operation-id': operation.current });
+      operation.current = null;
       setStarted(job.id);
       // the songs on the page show what's now in line
       get<MixData>(at('/mix')).then(setMixData).catch(() => {});
     } catch (error) {
+      // The server answered a definitive client error. A future corrected
+      // request is a new operation; only uncertain connection errors reuse it.
+      if (error instanceof ApiError && error.status >= 400 && error.status < 500) operation.current = null;
       if (error instanceof ApiError && error.status === 404 && error.code === '') {
         setProblem(error.message === 'Not Found' ? 'This running copy of Selecta can’t do this yet. Restart Selecta, then try again.' : error.message);
       } else {
         setProblem((error as Error).message);
       }
+    } finally {
+      starting.current = false;
     }
   };
 
@@ -99,9 +112,9 @@ export function ExportPanel(props: {
         <p className="notice" role="status">Ready{file.seconds != null ? `, ${length(file.seconds)} long` : ''}: <a href={`/api/exports/${encodeURIComponent(file.name)}`} download>download {file.name}</a></p>
       )}
       {(!file || changedSince) && (
-        <button className="primary" disabled={going || mix.length < 2} data-working={going || undefined} onClick={() => void start()}>
+        <Action className="primary" disabled={going || mix.length < 2} working="Starting export…" run={start}>
           {mine?.state === 'encoding' ? 'Saving the file…' : going ? `Rendering ${mine?.seams_ready} of ${mine?.seams_total}…` : 'Save it'}
-        </button>
+        </Action>
       )}
       {mine?.can_cancel && <Action working="Cancelling…" run={() => cancelExport(mine.id)}>Cancel export</Action>}
       <p className="hint">Your original songs aren’t touched.</p>

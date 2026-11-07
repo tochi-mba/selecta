@@ -6,7 +6,7 @@ import math
 import sqlite3
 from collections import deque
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from selecta import db, mix
@@ -33,6 +33,16 @@ def add_routes(app, ctx) -> None:
     wake_the_worker = ctx.wake_the_worker
 
     swapped_out: deque[int] = deque(maxlen=SWAPS_REMEMBERED)
+
+    class ChangedWhileBuilding(Exception):
+        pass
+
+    @app.exception_handler(ChangedWhileBuilding)
+    def changed_while_building(_request: Request, _problem: ChangedWhileBuilding) -> JSONResponse:
+        return JSONResponse(
+            {"detail": "This mix has just changed, so nothing was done.", "code": "mix_changed"},
+            status_code=409,
+        )
 
     @app.post("/api/playback/skip")
     def playback_skip(body: SkipFeedback) -> dict:
@@ -147,7 +157,12 @@ def add_routes(app, ctx) -> None:
         return [describe(vibe, songs, traits) for vibe in VIBES]
 
     def play_vibe(
-        conn: sqlite3.Connection, key: str, count: int, start: int | None, as_draft: bool = False
+        conn: sqlite3.Connection,
+        key: str,
+        count: int,
+        start: int | None,
+        as_draft: bool = False,
+        expected_order: str | None = None,
     ) -> dict:
         from selecta.planner.vibes import BY_KEY, MIN_SONGS, build_vibe, eligible
 
@@ -196,6 +211,12 @@ def add_routes(app, ctx) -> None:
             draft = mix.create_draft(conn, vibe.name)
             mix.merge_with_locks(conn, [item.song.id for item in planned], seams, draft)
             return {"id": draft, "name": mix.mix_name(conn, draft), "count": len(planned)}
+        # Planning can take seconds. Reject when another tab changes this
+        # mix after the middleware's initial check but before installation.
+        if expected_order is not None and expected_order != ",".join(
+            str(item[0]) for item in mix._items(conn)
+        ):
+            raise ChangedWhileBuilding()
         mix.remember(conn, f"changing to {vibe.name}")
         mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
         mix.set_mix_name(conn, vibe.name)
@@ -203,10 +224,14 @@ def add_routes(app, ctx) -> None:
 
     @app.post("/api/vibes/{key}/build")
     def build_vibe_route(
-        key: str, count: int = 12, start: int | None = None, as_draft: bool = False
+        key: str, request: Request,
+        count: int = 12, start: int | None = None, as_draft: bool = False,
     ) -> dict:
         with connect() as conn:
-            return play_vibe(conn, key, count, start, as_draft)
+            return play_vibe(
+                conn, key, count, start, as_draft,
+                expected_order=request.headers.get("x-mix-order"),
+            )
 
     @app.post("/api/mix/build")
     def build_mix(body: BuildRequest) -> dict:

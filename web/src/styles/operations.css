@@ -22,6 +22,17 @@
 .library-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .library-find .search-field { flex: 1 1 260px; }
 .library-density button { min-height: var(--control-height); padding-inline: var(--space-3); font-size: var(--text-sm); }
+.library-column-head {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  padding: var(--space-2) 2px;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--text-soft);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+.library-column-head span:last-child { text-align: end; min-width: 200px; }
 .library-rows { gap: var(--row-gap); }
 .library-rows .song-row {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
@@ -95,3 +106,11 @@
 .request-group:first-child { margin-top: var(--space-2); }
 .request-group h3 { margin: 0; font-size: var(--text-lg); }
 .request-group p { margin: var(--space-1) 0 0; color: var(--text-soft); font-size: var(--text-sm); }
+
+/* At narrow widths the actions move underneath the track; a fake column
+   heading would no longer describe their position, so hide it instead. */
+@media (max-width: 1024px) {
+  .library-column-head { display: none; }
+}
+.library-rows .song-columns { font-variant-numeric: tabular-nums; }
+.library-rows .song-columns > span { white-space: nowrap; }

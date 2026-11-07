@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { DraftInfo, DraftList } from '../api';
 import { fakeBackend } from '../test/backend';
@@ -144,9 +144,15 @@ describe('your drafts', () => {
     expect(screen.getByRole('link', { name: 'Change the limit in Workspace' })).toHaveAttribute('href', '/workshop/storage');
   });
 
-  it('deleting asks nothing, and can be undone', async () => {
+  it('confirms before deleting, preserves the draft on cancel and supports Undo', async () => {
     const { calls, notify } = show(list([draft(1)]), { 'DELETE /drafts/1': { name: 'Draft 1' }, 'POST /drafts/restore': { id: 1 } });
     await fromMenu('Draft 1', 'Delete Draft 1');
+    expect(screen.getByRole('dialog', { name: 'Delete Draft 1?' })).toBeInTheDocument();
+    expect(calls.some((call) => call.path === '/drafts/1')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Keep draft' }));
+    expect(calls.some((call) => call.path === '/drafts/1')).toBe(false);
+    await fromMenu('Draft 1', 'Delete Draft 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete draft' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     const [message, undo] = notify.mock.calls[0];
     expect(message).toBe('Deleted Draft 1.');
@@ -166,6 +172,82 @@ describe('your drafts', () => {
     render(<Drafts notify={vi.fn()} setView={vi.fn()} />);
     expect(await screen.findByRole('alert')).toHaveTextContent('They’re still saved');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
+
+  it('does not let an older, delayed refresh undo a confirmed render-line change', async () => {
+    const before = list([draft(1)]);
+    const after = list([draft(1, { place: 1, eta: { seconds: 100, low: 80, high: 120 } })]);
+    let gets = 0;
+    let releaseRead: (response: Response) => void = () => {};
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'POST') return new Response(JSON.stringify(after), { status: 200 });
+      gets += 1;
+      if (gets === 2) return new Promise<Response>((resolve) => { releaseRead = resolve; });
+      return new Response(JSON.stringify(before), { status: 200 });
+    }));
+    render(<Drafts notify={vi.fn()} setView={vi.fn()} />);
+    await screen.findByRole('button', { name: 'More actions for Draft 1' });
+
+    // A poll leaves with the pre-mutation version and only answers after the POST.
+    fireEvent(document, new Event('visibilitychange'));
+    await waitFor(() => expect(gets).toBe(2));
+    await fromMenu('Draft 1', 'Prioritize Draft 1');
+    expect(await screen.findByText('1st in line')).toBeInTheDocument();
+    await act(async () => { releaseRead(new Response(JSON.stringify(before), { status: 200 })); });
+    expect(screen.getByText('1st in line')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Draft 1 in the render line' })).toBeInTheDocument();
+  });
+
+  it('serializes competing render-line changes in the order the listener made them', async () => {
+    const before = list([
+      draft(1, { place: 1 }), draft(2, { place: 2 }), draft(3, { place: 3 }),
+    ]);
+    const movedUp = list([
+      draft(1, { place: 2 }), draft(2, { place: 1 }), draft(3, { place: 3 }),
+    ]);
+    let releaseFirst: () => void = () => {};
+    let moves = 0;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        moves += 1;
+        if (moves === 1) await new Promise<void>((resolve) => { releaseFirst = resolve; });
+        return new Response(JSON.stringify(moves === 1 ? movedUp : before), { status: 200 });
+      }
+      return new Response(JSON.stringify(before), { status: 200 });
+    }));
+    render(<Drafts notify={vi.fn()} setView={vi.fn()} />);
+    const up = await screen.findByRole('button', { name: 'Move Draft 2 up the line' });
+    fireEvent.click(up);
+    fireEvent.click(screen.getByRole('button', { name: 'Move Draft 2 down the line' }));
+    await waitFor(() => expect(moves).toBe(1));
+    await act(async () => { releaseFirst(); });
+    await waitFor(() => expect(moves).toBe(2));
+    await waitFor(() => expect(within(screen.getByRole('group', { name: 'Draft 2 in the render line' })).getByText('2nd in line')).toBeInTheDocument());
+  });
+
+  it('keeps the delete confirmation and error visible when the server rejects the deletion', async () => {
+    let fail = true;
+    const notify = vi.fn();
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE') {
+        if (fail) return new Response(JSON.stringify({ detail: 'Storage is busy' }), { status: 503 });
+        return new Response(JSON.stringify({ name: 'Draft 1' }), { status: 200 });
+      }
+      return new Response(JSON.stringify(list([draft(1)])), { status: 200 });
+    }));
+    render(<Drafts notify={notify} setView={vi.fn()} />);
+    await fromMenu('Draft 1', 'Delete Draft 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete draft' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete Draft 1?' });
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Storage is busy');
+    expect(notify).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'Draft 1' })).toBeInTheDocument();
+
+    fail = false;
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete draft' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete Draft 1?' })).toBeNull());
+    expect(notify).toHaveBeenCalledWith('Deleted Draft 1.', expect.any(Function));
+    expect(screen.queryByRole('link', { name: 'Draft 1' })).toBeNull();
   });
 
   it('updates by itself while rendering', async () => {

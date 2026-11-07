@@ -336,6 +336,12 @@ describe('a draft on the Edit page', () => {
       'POST /drafts/restore': { id: 7 },
     });
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(screen.getByRole('dialog', { name: 'Delete Friday?' })).toBeInTheDocument();
+    expect(notify).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Keep this draft' }));
+    expect(notify).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Delete draft' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     expect(closeDraft).toHaveBeenCalled();
     expect(setView).toHaveBeenCalledWith('Mixes');

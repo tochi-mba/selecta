@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest';
 import { VibeCard } from '../api';
 import { SetPlayer } from '../player';
-import { fakeBackend, status } from '../test/backend';
+import { fakeBackend, songs, status } from '../test/backend';
 import { Mixes } from './Mixes';
 
 const card = (key: string, name: string, group: string, more: Partial<VibeCard> = {}): VibeCard => ({
@@ -350,5 +350,52 @@ describe('browsing and my mixes', () => {
     show();
     expect(await screen.findByText('needs 4 more')).toBeInTheDocument();
     expect(screen.getByText(/analysed and have timed lyrics/)).toBeInTheDocument();
+  });
+});
+
+describe('safe activation from Explore', () => {
+  it('keeps the active mix until confirmation and guards the mix seen when Play was chosen', async () => {
+    const calls = fakeBackend({
+      'GET /vibes': [card('peak', 'Peak time', 'The moment')],
+      'POST /vibes/peak/build': { mix: songs(), name: 'Peak time', can_undo: true },
+    });
+    const setMixData = vi.fn();
+    const player = new SetPlayer(() => [], () => {});
+    const playing = { ...player.state, phase: 'paused' as const };
+    vi.spyOn(player, 'playFrom').mockResolvedValue(undefined);
+    render(
+      <Mixes
+        status={status()}
+        mix={songs()}
+        mixName="Current"
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={setMixData}
+        refreshStatus={() => {}}
+        player={player}
+        now={playing}
+        setView={() => {}}
+        notify={() => {}}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    const choice = within((await screen.findByRole('heading', { name: 'Peak time' })).closest('article')!);
+    fireEvent.click(choice.getByRole('button', { name: 'Play' }));
+    expect(screen.getByRole('dialog', { name: 'Replace Current?' })).toBeInTheDocument();
+    expect(calls.some((call) => call.path.includes('/vibes/peak/build'))).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(setMixData).not.toHaveBeenCalled();
+    // The previous Action's in-flight flag clears on the next microtask.
+    await waitFor(() => expect(choice.getByRole('button', { name: 'Play' })).toBeEnabled());
+    fireEvent.click(choice.getByRole('button', { name: 'Play' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Replace and play' }));
+    await waitFor(() => expect(setMixData).toHaveBeenCalledOnce());
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/vibes/peak/build?count=12', expect.objectContaining({
+      headers: expect.objectContaining({
+        'x-mix-order': '1',
+        'x-operation-id': expect.stringMatching(/^build-/),
+      }),
+    }));
   });
 });

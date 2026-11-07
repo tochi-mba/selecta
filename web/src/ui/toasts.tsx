@@ -100,6 +100,12 @@ function ToastRow({ toast }: { toast: Toast }) {
     return hold;
   }, []);
   const undo = async () => {
+    // The toast is an opportunity to undo, not permission to reverse an
+    // unrelated newer edit. If blocked, keep this action in place and say why.
+    if (!canUndo(toast.activity)) {
+      showProblem('Undo the newer change in this mix first. Your earlier Undo is kept in Activity.');
+      return;
+    }
     dismissToast(toast.id);
     try {
       await runUndo(toast.activity);
@@ -117,7 +123,13 @@ function ToastRow({ toast }: { toast: Toast }) {
       onBlur={start}
     >
       <span>{toast.message}</span>
-      {toast.undo && <button onClick={() => void undo()} title={canUndo(toast.activity) ? undefined : 'A newer change has to be undone first'}>Undo</button>}
+      {toast.undo && (
+        <button
+          onClick={() => void undo()}
+          aria-disabled={!canUndo(toast.activity) || undefined}
+          title={canUndo(toast.activity) ? undefined : 'Undo the newer change first; this stays in Activity'}
+        >Undo</button>
+      )}
       <button className="toast-close" aria-label="Dismiss" onClick={() => dismissToast(toast.id)}><Icon name="close" /></button>
     </div>
   );

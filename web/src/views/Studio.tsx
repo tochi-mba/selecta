@@ -57,12 +57,13 @@ function keepShape(key: string, shape: Shape | null) {
   }
 }
 
-function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, onToggle, onSolo }: {
+function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disabled, onToggle, onSolo }: {
   shape: Shape;
   titles: Record<Side, string>;
   missing: string[];
   barsPerCell: number;
   soloed: string | null;
+  disabled: boolean;
   onToggle: (side: Side, lane: Lane, index: number) => void;
   onSolo: (name: string) => void;
 }) {
@@ -75,7 +76,7 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, onToggl
             const name = `${side}_${lane}`;
             const lost = missing.includes(name);
             return (
-              <fieldset key={name} disabled={lost}>
+              <fieldset key={name} disabled={lost || disabled}>
                 <legend>{LANE_WORDS[lane]}{lost ? ' — unavailable' : ''}</legend>
                 <button type="button" aria-pressed={soloed === name} onClick={() => onSolo(name)}>
                   {soloed === name ? 'Hear everything' : `Hear only ${LANE_WORDS[lane].toLowerCase()}`}
@@ -130,6 +131,7 @@ export function Studio(props: {
   const [retained, setRetained] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const applying = useRef(false);
+  const tuneAttempt = useRef(0);
   const latestShape = useRef<Shape | null>(null);
   latestShape.current = shape;
   const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
@@ -187,6 +189,7 @@ export function Studio(props: {
     const made = new StemDeck(session.seconds ?? 1, session.cells ?? 8, chosen);
     made.onCell = setCell;
     deck.current = made;
+    latestShape.current = chosen;
     setShape(chosen);
     made
       .load((side, lane) => `/api/studio/${session.key}/${side}/${lane}`)
@@ -198,7 +201,13 @@ export function Studio(props: {
   }, [session]);
 
   const change = (next: Shape) => {
+    // Once Apply has started, this exact working copy is frozen. Otherwise a
+    // late response could clear an unsaved newer arrangement.
+    if (applying.current) return;
+    tuneAttempt.current += 1;
+    latestShape.current = next;
     setShape(next);
+    setAsking('');
     setChanges(null);
     setBefore(null);
     setProblem('');
@@ -208,30 +217,36 @@ export function Studio(props: {
   /** Selecta's turn. What was there can be put back, nothing is final until Apply, and if it fails or
    * the grid changed while it was thinking, what you've got stays exactly as it is. */
   const askSelecta = async (mine: boolean) => {
-    if (!shape) return;
+    if (!shape || applying.current) return;
     const sent = shape;
+    const request = ++tuneAttempt.current;
     setAsking(mine ? 'tune' : 'arrange');
     setProblem('');
     try {
       const answer = await post<{ shape: Shape; changes: string[] }>(at(`/mix/${position}/studio/tune`), { shape: mine ? shape : null });
+      if (request !== tuneAttempt.current) return;
       if (latestShape.current !== sent) {
         setChanges(['You changed the grid while Selecta was working, so your version stays.']);
         return;
       }
       const same = JSON.stringify(answer.shape) === JSON.stringify(shape);
       setBefore(same ? null : shape);
+      latestShape.current = answer.shape;
       setShape(answer.shape);
       deck.current?.setShape(answer.shape);
       if (session?.key) setRetained(keepShape(session.key, answer.shape));
       setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
     } catch (error) {
-      setProblem((error as Error).message);
+      if (request === tuneAttempt.current) setProblem((error as Error).message);
     } finally {
-      setAsking('');
+      if (request === tuneAttempt.current) setAsking('');
     }
   };
   const putBack = () => {
-    if (!before) return;
+    if (!before || applying.current) return;
+    tuneAttempt.current += 1;
+    latestShape.current = before;
+    setAsking('');
     setShape(before);
     if (session?.key) setRetained(keepShape(session.key, before));
     deck.current?.setShape(before);
@@ -267,7 +282,7 @@ export function Studio(props: {
     }
   };
   const solo = async (name: string) => {
-    if (!deck.current || missing.includes(name)) return;
+    if (!deck.current || applying.current || missing.includes(name)) return;
     const next = soloed === name ? null : name;
     setSoloed(next);
     deck.current.solo(next);
@@ -275,7 +290,9 @@ export function Studio(props: {
   };
   const use = async () => {
     if (!shape || applying.current || !session) return;
+    const submitted = latestShape.current ?? shape;
     applying.current = true;
+    tuneAttempt.current += 1;
     setSaving(true);
     deck.current?.stop();
     setPlaying(false);
@@ -289,10 +306,19 @@ export function Studio(props: {
         onConflict?.();
         return;
       }
-      onUsed(await post<MixData>(at(`/mix/${position}/studio/use`), { shape }, guard));
-      keepShape(session.key, null);
-      notify('Rendering your version. It’ll play in the mix when it’s ready.');
-      onClose();
+      const result = await post<MixData>(at(`/mix/${position}/studio/use`), { shape: submitted }, guard);
+      onUsed(result);
+      // A browser may still dispatch a final pointer event before the
+      // disabled state paints. Only delete the stored working copy if it is
+      // the exact shape the server accepted.
+      if (latestShape.current === submitted) {
+        keepShape(session.key, null);
+        notify('Rendering your version. It’ll play in the mix when it’s ready.');
+        onClose();
+      } else {
+        setProblem('An earlier shape was applied. Your newer changes are still here; apply them when ready.');
+        setSaving(false);
+      }
     } catch (error) {
       // the shape stays right here, so nothing's lost by this going wrong
       setProblem((error as Error).message);
@@ -371,13 +397,13 @@ export function Studio(props: {
             </p>
           )}
           <div className="row wrap">
-            <button disabled={!!asking} onClick={() => void askSelecta(false)}>
+            <button disabled={saving || !!asking} onClick={() => void askSelecta(false)}>
               {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
             </button>
-            <button disabled={!!asking} onClick={() => void askSelecta(true)}>
+            <button disabled={saving || !!asking} onClick={() => void askSelecta(true)}>
               {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
             </button>
-            {before && <button onClick={putBack}>Put it back</button>}
+            {before && <button disabled={saving} onClick={putBack}>Put it back</button>}
           </div>
           {changes && (
             <ul className="studio-changes" role="status">
@@ -386,7 +412,7 @@ export function Studio(props: {
           )}
           <div className="chips studio-shapes" role="group" aria-label="Ready-made shapes">
             {SHAPES.map((option) => (
-              <button key={option.name} title={option.about} onClick={() => change(option.change(shape))}>
+              <button key={option.name} disabled={saving} title={option.about} onClick={() => change(option.change(shape))}>
                 {option.name}
               </button>
             ))}
@@ -431,7 +457,7 @@ export function Studio(props: {
                           data-cell={`${row}-${SOLO_COLUMN}`}
                           tabIndex={focusCell.row === row && focusCell.column === SOLO_COLUMN ? 0 : -1}
                           aria-pressed={soloed === name}
-                          aria-disabled={lost || undefined}
+                          aria-disabled={lost || saving || undefined}
                           aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}`}
                           title={lost ? 'This part couldn’t be loaded' : undefined}
                           onFocus={() => setFocusCell({ row, column: SOLO_COLUMN })}
@@ -447,7 +473,7 @@ export function Studio(props: {
                             tabIndex={focusCell.row === row && focusCell.column === index ? 0 : -1}
                             className={`studio-cell ${index === cell ? 'now' : ''}`}
                             aria-pressed={Boolean(value)}
-                            aria-disabled={lost || undefined}
+                            aria-disabled={lost || saving || undefined}
                             aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}
                             title={lost ? 'This part couldn’t be loaded' : `Bar ${index * barsPerCell + 1}`}
                             onFocus={() => setFocusCell({ row, column: index })}
@@ -469,6 +495,7 @@ export function Studio(props: {
               missing={missing}
               barsPerCell={barsPerCell}
               soloed={soloed}
+              disabled={saving}
               onToggle={toggle}
               onSolo={(name) => void solo(name)}
             />

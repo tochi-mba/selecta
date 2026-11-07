@@ -1,9 +1,9 @@
 import { ApiError } from '../api';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SetPlayer } from '../player';
-import { fakeBackend, status } from '../test/backend';
+import { fakeBackend, songs, status } from '../test/backend';
 import { Library } from './Library';
 
 const row = (id: number, title: string) => ({
@@ -116,6 +116,51 @@ describe('starting a mix from a song', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Building your mix…' })).toBeNull());
   });
 
+  it('cancels active playback replacement without building, and guards the confirmed build', async () => {
+    const ready = { ...row(1, 'First'), bpm: 120, readiness: { status: 'mix_ready', reason: '' } };
+    const calls = fakeBackend({
+      'GET /library': page(ready),
+      'POST /vibes/pick/build': { mix: songs(), name: 'From First', can_undo: true },
+    });
+    const player = new SetPlayer(() => [], () => {});
+    const play = vi.spyOn(player, 'playFrom').mockResolvedValue(undefined);
+    const setMixData = vi.fn();
+    render(
+      <Library
+        status={status()}
+        mix={songs()}
+        mixName="Current"
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={setMixData}
+        refreshStatus={() => {}}
+        player={player}
+        now={{ ...player.state, phase: 'playing' }}
+        setView={() => {}}
+        notify={() => {}}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Start a mix' }));
+    expect(screen.getByRole('dialog', { name: 'Replace your current mix?' })).toBeInTheDocument();
+    expect(calls.some((call) => call.path.includes('/vibes/pick/build'))).toBe(false);
+    await userEvent.click(screen.getByRole('button', { name: 'Keep current mix' }));
+    expect(setMixData).not.toHaveBeenCalled();
+    expect(play).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Start a mix' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Replace and play' }));
+    await waitFor(() => expect(setMixData).toHaveBeenCalledOnce());
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/vibes/pick/build?start=1', expect.objectContaining({
+      headers: expect.objectContaining({
+        'x-mix-order': '1',
+        'x-operation-id': expect.stringMatching(/^build-/),
+      }),
+    }));
+    expect(play).toHaveBeenCalledWith(0);
+  });
+
   it('says why if it couldn’t, and can be tried again', async () => {
     const notify = vi.fn();
     backend(async () => new Response(JSON.stringify({ detail: 'Nothing goes with that.' }), { status: 400 }));
@@ -167,6 +212,33 @@ describe('a big library', () => {
     expect(await screen.findByText('Showing 2 of 3 songs.')).toBeInTheDocument();
     expect(screen.queryByText('Third')).toBeNull();
     expect(screen.getByText('First')).toBeInTheDocument();
+  });
+
+  it('reloads an edited song on a middle page, not just the first or last page', async () => {
+    window.history.pushState({}, '', '/library?pages=4');
+    const many = (first: number) => Array.from({ length: 100 }, (_, index) => row(first + index, `Song ${first + index}`));
+    let prioritized = false;
+    const calls = fakeBackend({
+      'GET /library': (_body: unknown, url: string) => {
+        const after = new URLSearchParams(url.split('?')[1]).get('after');
+        if (after === 'c2') return { songs: many(101), total: 400, next: 'c3' };
+        if (after === 'c3') {
+          const batch = many(201);
+          if (prioritized) batch[0] = { ...batch[0], priority: true };
+          return { songs: batch, total: 400, next: 'c4' };
+        }
+        if (after === 'c4') return { songs: many(301), total: 400, next: null };
+        return { songs: many(1), total: 400, next: 'c2' };
+      },
+      'POST /songs/201/priority': () => { prioritized = true; return { saved: true }; },
+    });
+    show();
+    await screen.findByText('Song 400');
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Song 201' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Prioritize' }));
+    await waitFor(() => expect(calls.filter((call) => call.path.includes('after=c3')).length).toBe(2));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Song 201' }));
+    expect(await screen.findByRole('menuitemcheckbox', { name: 'Priority: on' })).toBeInTheDocument();
   });
 
   it('a song that turns up on two pages only shows once', async () => {
