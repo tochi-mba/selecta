@@ -85,6 +85,16 @@ function subscribe(listener: () => void) {
 }
 
 function ToastRow({ toast }: { toast: Toast }) {
+  const row = useRef<HTMLDivElement>(null);
+  // When Undo or Dismiss removes the focused button, return to the nearest
+  // active overlay rather than abandoning keyboard focus on document.body.
+  const restoreFocus = () => {
+    if (!row.current?.contains(document.activeElement)) return;
+    const overlays = [...document.querySelectorAll<HTMLElement>('.overlay-panel')]
+      .filter((panel) => !panel.closest('[inert]'));
+    const target = overlays.at(-1) ?? document.getElementById('content');
+    target?.focus({ preventScroll: true });
+  };
   const timer = useRef<number | null>(null);
   const inFlight = useRef(false);
   const [undoing, setUndoing] = useState(false);
@@ -116,6 +126,7 @@ function ToastRow({ toast }: { toast: Toast }) {
     try {
       await runUndo(toast.activity);
       // Keep Undo and its scope visible until the server confirms the change.
+      restoreFocus();
       dismissToast(toast.id);
     } catch (error) {
       showProblem((error as Error).message || 'Couldn’t undo that.');
@@ -127,6 +138,7 @@ function ToastRow({ toast }: { toast: Toast }) {
   };
   return (
     <div
+      ref={row}
       className={`toast-row ${toast.tone}`}
       aria-busy={undoing || undefined}
       role={toast.tone === 'problem' ? 'alert' : 'status'}
@@ -143,7 +155,7 @@ function ToastRow({ toast }: { toast: Toast }) {
           title={canUndo(toast.activity) ? undefined : 'Undo the newer change first; this stays in Activity'}
         >{undoing ? 'Undoing…' : 'Undo'}</button>
       )}
-      <button className="toast-close" aria-label="Dismiss" onClick={() => dismissToast(toast.id)}><Icon name="close" /></button>
+      <button className="toast-close" aria-label="Dismiss" onClick={() => { restoreFocus(); dismissToast(toast.id); }}><Icon name="close" /></button>
     </div>
   );
 }

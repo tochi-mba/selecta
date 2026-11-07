@@ -590,6 +590,7 @@ export function App() {
         song={playing}
         showPlayer={route.page !== 'listen' && !!playing && active}
         hasMix={mix.length > 0}
+        hasNext={mix.length > now.position + 1}
         stage={stage}
         waitingRequests={waitingRequests}
         onRequests={() => setRequesting(true)}

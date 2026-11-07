@@ -152,6 +152,11 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   return (
     <main className="page mixes" id="main">
       {firstMix && <SetupSteps stage="listen" />}
+      {firstMix && (
+        <p className="notice" role="status">
+          Your library now has enough ready songs to make a first mix. Nothing starts playing until you choose Play.
+        </p>
+      )}
       <LinkTabs label="Make a Mix" items={EXPLORE_TABS} current={EXPLORE_TABS.some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
 
