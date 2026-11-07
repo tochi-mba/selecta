@@ -3,7 +3,7 @@
 - **Decision status:** Proposed (owner review required)
 - **Implementation status:** Not started
 - **Proposed:** 2026-11-07
-- **Programme:** Selecta 3.1 verification-led UI/UX finishing (documentation only)
+- **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 4 — library and discovery
 - **Extends:** ADR-0060, ADR-0061, ADR-0069. No inherited task is automatically complete.
 - **Dependencies:** ADRs 0080, 0082 and 0083.
@@ -48,7 +48,7 @@ More explanation at bridge approval is justified by the irreversible live-playba
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. This documentation-only PR neither modifies runtime nor records implementation success.
+The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now also has limited frontend/test changes in other workstreams. This ADR remains Not started; implementation is tracked by task ID in the evidence ledger and no task is Verified.
 
 ## Status history
 
