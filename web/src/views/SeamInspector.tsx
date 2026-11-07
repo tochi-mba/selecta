@@ -54,6 +54,9 @@ function SeamEditor(props: {
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const onServer = JSON.stringify(item.seam?.settings ?? {});
   useEffect(() => {
+    // Polling the server can return an older choice while a newer one is still queued.
+    // Only relinquish an optimistic choice once the server actually reflects that choice.
+    if (latestIntent.current && JSON.stringify(latestIntent.current) !== onServer) return;
     latestIntent.current = null;
     setIntent(null);
   }, [onServer]);
@@ -86,13 +89,22 @@ function SeamEditor(props: {
       try {
         // anything the person picks is their choice, so it stops being Selecta's to replace
         await post(at(`/mix/${position}/seam`), { ...next, soft: false }, guard);
+        // If another setting was selected while this write was travelling, rendering the
+        // obsolete one wastes work and could briefly substitute an unintended audio move.
+        if (latestIntent.current !== next) return;
         await post(at(`/mix/${position}/render`), undefined, guard);
+        if (latestIntent.current !== next) return;
+        setProblem('');
         refreshMix();
         notify('Changed that seam. Rendering it now.', true);
       } catch (error) {
-        latestIntent.current = null;
-        setIntent(null);
-        setProblem((error as Error).message);
+        // A failed older request must not delete the user's newer selection or prevent
+        // the serialized queue from sending it.
+        if (latestIntent.current === next) {
+          latestIntent.current = null;
+          setIntent(null);
+          setProblem((error as Error).message);
+        }
         if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       }
     });

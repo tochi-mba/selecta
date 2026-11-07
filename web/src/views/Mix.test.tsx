@@ -8,6 +8,7 @@ import { fakeBackend, seam, songs, status } from '../test/backend';
 import { Adder } from './Adder';
 import { refreshExports, resetExports } from './exportStore';
 import { ExportPanel } from './ExportPanel';
+import { SeamInspector } from './SeamInspector';
 import { Mix } from './Mix';
 import { MixScope } from './mixScope';
 import { RequestsContext, RequestsState } from './Requests';
@@ -512,6 +513,46 @@ describe('what’s selected', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Hear it' }));
     await userEvent.click(screen.getByRole('tab', { name: 'Details' }));
     expect(screen.getByText(/Held back to leave Song 1 after 1:30/)).toBeInTheDocument();
+  });
+});
+
+describe('transition edit intent', () => {
+  it('keeps the latest choice visible when an older server response refreshes the inspector', async () => {
+    const moves = [
+      { name: 'bass_swap_blend', label: 'Blend', description: 'Blend smoothly', available: true },
+      { name: 'cut_on_one', label: 'Cut', description: 'Cut on the beat', available: true },
+    ];
+    fakeBackend({
+      'GET /mix/1/options': { moves, exits: [], entries: [], lengths: [], links: [], tempo_gap: 0, keys: ['8A', '8A'] },
+      'POST /mix/1/seam': {},
+      'POST /mix/1/render': {},
+    });
+    const [previous, original] = songs(seam('ready', 'a'));
+    const props = (item: MixItem) => (
+      <SeamInspector
+        item={item}
+        previous={previous}
+        names={{ bass_swap_blend: 'Blend', cut_on_one: 'Cut' }}
+        refreshMix={() => {}}
+        notify={() => {}}
+        guard={{ 'x-mix-order': '1,2' }}
+        tab="change"
+        setTab={() => {}}
+        autoPlay={false}
+        onClose={() => {}}
+      />
+    );
+    const rendered = render(props(original));
+    const cut = await screen.findByRole('button', { name: 'Cut' });
+    await userEvent.click(cut);
+    expect(cut).toHaveAttribute('aria-pressed', 'true');
+    // An unrelated or older server-side settings snapshot can arrive after selection.
+    // It cannot reset the fresh local choice before the actual matching write returns.
+    rendered.rerender(props({
+      ...original,
+      seam: { ...original.seam!, settings: { move: 'auto' } },
+    }));
+    expect(screen.getByRole('button', { name: 'Cut' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
