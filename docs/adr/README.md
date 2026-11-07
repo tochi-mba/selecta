@@ -1,3 +1,11 @@
+# Selecta 3.1 — verification-led UI/UX finishing proposal (2026-11-07)
+
+**Proposed decisions: ADR-0078–0088. Implementation: Not started. 116 tasks: 0 Implemented / 0 Verified. Documentation-only planning PR.** This programme follows Selecta 3.0's merged PR #24 and focuses on reconciling actual implementation evidence, consistent visuals, listener/creator workflow polish and human release acceptance—not another feature rewrite.
+
+Start with the [3.1 roadmap and ADR index](selecta-3-1-roadmap.md), [116-item checklist](selecta-3-1-implementation-checklist.md), [verification matrix](selecta-3-1-verification-matrix.md), [evidence ledger](selecta-3-1-evidence.md) and [research notes](../research/selecta-3-1-polish.md). Prior ADR-0001–0077 and T/P/S3 trackers are preserved. **Historical 3.0 "PR #24 open" statements in older files are stale after the merge and must be reconciled against code/CI before any status is advanced.**
+
+---
+
 # Selecta 2.0 — UI/UX architecture decision records
 
 ## Selecta 3.0 — full experience overhaul proposal (2026-11-07)
