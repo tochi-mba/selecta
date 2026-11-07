@@ -1,0 +1,54 @@
+# ADR-0140 — Persistent mini-player, audio-focus handoff and frictionless microtransport
+
+- **Decision:** Proposed; no owner acceptance is asserted.
+- **Implementation:** Not started (0/8 new MI tasks).
+- **Independent verification:** No (0/8).
+- **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
+- **Priority / phase:** P0 / Playback shell.
+- **Related earlier ADRs:** ADR-0093, ADR-0116, ADR-0131; earlier decisions and historical implementation claims remain intact.
+- **Source touchpoints:** web/src/shell/Shell.tsx; web/src/player.ts; web/src/audio/focus.ts; web/src/state/tabs.ts.
+
+## Context and evidence boundary
+
+The mini-player lives outside routed pages, while previews can temporarily own the sound. Polishing this system must not introduce surprise playback, two audio owners or inaccurate transport status. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+
+## Proposed decision
+
+- Mini-player remains visually quiet, anchored above mobile navigation, with current title, artist, transport and truthful position.
+- Make Play/Pause touch targets easy to distinguish and keep controls in place as player phase changes.
+- A preview takeover explicitly indicates its sound owner without exposing duplicate Play operations; manual Pause always wins over auto-resume.
+- No audio cues, button click sounds or background music overlays are introduced by UI polish; the music itself remains the sound design.
+- Switching tabs, disconnecting the server or opening Stage must not misrepresent whether audio continues.
+- Progress display follows actual player time only, never easing ahead of an unknown seek/render boundary.
+
+## Interaction choreography and visual behavior
+
+- Mini-player entrance when playback first exists: short 160–220 ms fade while page bottom padding is established before paint.
+- Song title updates crossfade at most 180 ms with full accessible identity announced once, not on every clock tick.
+- Pause/Play icon switches within 100 ms, with no spin or delay; scrub progress remains clock-derived.
+- Preview handoff changes ownership label immediately; on completion resume only when intent generation still permits.
+
+## Alternatives, trade-offs and limits
+
+Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
+
+## Implementation tasks — all Not started, none Verified
+
+1. **MI-0140-01 — Define mini-player geometry.** Acceptance: No layout occlusion at 320px, safe-area, landscape and 400% zoom. Required verification: Viewport and touch screenshots. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+2. **MI-0140-02 — Specify transport state machine visuals.** Acceptance: Idle/loading/playing/paused/seam/blocked are distinct without false completion. Required verification: Player fixture and media-session tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+3. **MI-0140-03 — Choreograph preview ownership.** Acceptance: One source audible and explicit Pause never reversed by preview end. Required verification: Real audio race and double-tab tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+4. **MI-0140-04 — Validate title and time changes.** Acceptance: Metadata updates once, progress matches actual player clock. Required verification: Clock fixture and accessible announcements. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+5. **MI-0140-05 — Design volume/mute feedback.** Acceptance: Slider and icon communicate mute, 0 volume and restore distinctly. Required verification: Keyboard/AT and device media-key review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+6. **MI-0140-06 — Audit keyboard and media-session parity.** Acceptance: Global shortcuts, mini controls, headphones and media keys target same engine. Required verification: Browser device matrix. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+7. **MI-0140-07 — Specify disconnected experience.** Acceptance: Already buffered audio continues when possible; stale state is marked. Required verification: Server loss/recovery and stale-status test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+8. **MI-0140-08 — Measure player stability.** Acceptance: Route/modal interactions do not cause audio dropout or extra AudioContext. Required verification: Long-session trace and captured audio. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+
+## Shared invariants and negative cases
+
+Preserve original audio files; current/draft and revision identities; one audio-focus owner; manual Pause authority; explicit bridge consent and atomic join; full eight-lane Studio; existing library/route/search operations; blind-study neutrality; decodable exact-revision FLAC; local-only server and truthful LRCLIB metadata disclosure. **No desktop packager, native/browser folder-picker bridge, accounts, SaaS, cloud media upload, subscriptions, remote telemetry or sound effects.**
+
+Review idle, hovered, focused, pressed, selected, queued, rendering, ready, blocked, failed, retry, cancellation, stale response, missing metadata, long/RTL names, low-resource mode and offline recovery. Run dark/light/system, forced colors, 320–2560px, 200/400% zoom, coarse touch, keyboard, NVDA/Edge, reduced-motion and audio-continuity checks as applicable. Automated screenshots/test passes are not human validation.
+
+## Status, dependencies and records
+
+A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
