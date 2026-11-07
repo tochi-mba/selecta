@@ -21,6 +21,11 @@ type Selection =
   | { kind: 'seam'; a: string; b: string; from: string; into: string }
   | { kind: 'song'; key: string; title: string };
 
+// The same app-wide player survives route changes. Remember which *object*
+// was selected for each scope without persisting a potentially stale
+// transition across browser reloads or sharing it between app instances.
+const selectionByPlayer = new WeakMap<ViewProps['player'], Map<string, Selection | null>>();
+
 /** Above this, rows skip being drawn until they're scrolled near. Everything stays in the page, so
  * focus, find-in-page and screen readers all carry on working, which virtualizing the list would break. */
 const LONG_MIX = 40;
@@ -60,13 +65,22 @@ export function Mix(props: ViewProps) {
   const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta, draftPlace, openDraft, closeDraft, playDraft, renamedDraft, canUndo, undo, currentMixName } = props;
   const draftId = useContext(MixScope);
   const inDraft = draftId !== null;
+  const selectionScope = inDraft ? `draft:${draftId}` : 'current';
   const at = useMixPath();
   const line = status.analysing ?? [];
   const order = orderOf(mix);
   const keys = useMemo(() => occurrenceKeys(mix), [order]);
   const guard = useMemo(() => ({ 'x-mix-order': order }), [order]);
 
-  const [selected, setSelected] = useState<Selection | null>(null);
+  const [selected, setSelected] = useState<Selection | null>(() => selectionByPlayer.get(player)?.get(selectionScope) ?? null);
+  useEffect(() => {
+    let byScope = selectionByPlayer.get(player);
+    if (!byScope) {
+      byScope = new Map();
+      selectionByPlayer.set(player, byScope);
+    }
+    byScope.set(selectionScope, selected);
+  }, [player, selectionScope, selected]);
   const [gone, setGone] = useState('');
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('listen');
   const [hearNow, setHearNow] = useState(false);
