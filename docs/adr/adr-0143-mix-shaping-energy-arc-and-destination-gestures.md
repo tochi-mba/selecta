@@ -1,7 +1,7 @@
 # ADR-0143 — Mix-shaping controls, expressive energy arc and destination selection
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 5/8 Implemented, 2/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P1 / Make a Mix.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Transition feel, stem frequency, five energy stops and a destination song let the user express musical intention. The UI must distinguish preferences for future mixes from a command that edits an already-built set. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+Transition feel, stem frequency, five energy stops and a destination song let the user express musical intention. The UI must distinguish preferences for future mixes from a command that edits an already-built set. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ Transition feel, stem frequency, five energy stops and a destination song let th
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 5 source-level Implemented, 0 independently Verified
 
-1. **MI-0143-01 — Clarify shaping scope text.** Acceptance: Explicit next-build vs persistent-default meaning in all entry points. Required verification: Comprehension trial and settings state test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0143-02 — Specify arc drawing semantics.** Acceptance: Five editable stops, numeric/slider parity, no hidden mouse-only requirement. Required verification: Keyboard, coarse-pointer and AT tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0143-03 — Define energy preset morphs.** Acceptance: Curve reflects values exactly and never masquerades as achieved outcome. Required verification: Reference values, reduced motion screenshots. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0143-04 — Validate destination search.** Acceptance: Duplicate titles, missing metadata, keyboard selection and clear behavior work. Required verification: Search race/combobox test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0143-05 — Design committed vs unsaved state.** Acceptance: Cancel preserves old values, error retains edits, Apply is authoritative. Required verification: API failure/reload test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0143-06 — Specify input and animation performance.** Acceptance: Dragging has no perceptible jitter or input lag on supported hardware. Required verification: Pointer trace, long-task benchmark. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0143-07 — Preserve request and mix semantics.** Acceptance: Shaping cannot silently mutate active playback or draft. Required verification: Guarded current/draft test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0143-01 — Clarify shaping scope text.** Acceptance: Explicit next-build vs persistent-default meaning in all entry points. Required verification: Comprehension trial and settings state test. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; `web/src/views/MixSetup.test.tsx`, `web/src/views/Mixes.test.tsx`; independent checks pending.**
+2. **MI-0143-02 — Specify arc drawing semantics.** Acceptance: Five editable stops, numeric/slider parity, no hidden mouse-only requirement. Required verification: Keyboard, coarse-pointer and AT tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; `web/src/views/MixSetup.test.tsx`, `web/src/views/Mixes.test.tsx`; independent checks pending.**
+3. **MI-0143-03 — Define energy preset morphs.** Acceptance: Curve reflects values exactly and never masquerades as achieved outcome. Required verification: Reference values, reduced motion screenshots. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; `web/src/views/MixSetup.test.tsx`, `web/src/views/Mixes.test.tsx`; independent checks pending.**
+4. **MI-0143-04 — Validate destination search.** Acceptance: Duplicate titles, missing metadata, keyboard selection and clear behavior work. Required verification: Search race/combobox test. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; `web/src/views/MixSetup.test.tsx`, `web/src/views/Mixes.test.tsx`; independent checks pending.**
+5. **MI-0143-05 — Design committed vs unsaved state.** Acceptance: Cancel preserves old values, error retains edits, Apply is authoritative. Required verification: API failure/reload test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; partial behavior or baseline, task acceptance outstanding.**
+6. **MI-0143-06 — Specify input and animation performance.** Acceptance: Dragging has no perceptible jitter or input lag on supported hardware. Required verification: Pointer trace, long-task benchmark. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0143-07 — Preserve request and mix semantics.** Acceptance: Shaping cannot silently mutate active playback or draft. Required verification: Guarded current/draft test. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; `web/src/views/MixSetup.test.tsx`, `web/src/views/Mixes.test.tsx`; independent checks pending.**
 8. **MI-0143-08 — Evaluate musical agency.** Acceptance: Listeners can explain and achieve rough desired journey without technical coaching. Required verification: Observed task and actual resulting mix listening. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

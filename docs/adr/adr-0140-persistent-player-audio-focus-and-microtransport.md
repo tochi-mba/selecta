@@ -1,7 +1,7 @@
 # ADR-0140 — Persistent mini-player, audio-focus handoff and frictionless microtransport
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 2/8 Implemented, 5/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Playback shell.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-The mini-player lives outside routed pages, while previews can temporarily own the sound. Polishing this system must not introduce surprise playback, two audio owners or inaccurate transport status. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+The mini-player lives outside routed pages, while previews can temporarily own the sound. Polishing this system must not introduce surprise playback, two audio owners or inaccurate transport status. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ The mini-player lives outside routed pages, while previews can temporarily own t
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 2 source-level Implemented, 0 independently Verified
 
-1. **MI-0140-01 — Define mini-player geometry.** Acceptance: No layout occlusion at 320px, safe-area, landscape and 400% zoom. Required verification: Viewport and touch screenshots. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0140-02 — Specify transport state machine visuals.** Acceptance: Idle/loading/playing/paused/seam/blocked are distinct without false completion. Required verification: Player fixture and media-session tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0140-03 — Choreograph preview ownership.** Acceptance: One source audible and explicit Pause never reversed by preview end. Required verification: Real audio race and double-tab tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0140-04 — Validate title and time changes.** Acceptance: Metadata updates once, progress matches actual player clock. Required verification: Clock fixture and accessible announcements. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0140-05 — Design volume/mute feedback.** Acceptance: Slider and icon communicate mute, 0 volume and restore distinctly. Required verification: Keyboard/AT and device media-key review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0140-06 — Audit keyboard and media-session parity.** Acceptance: Global shortcuts, mini controls, headphones and media keys target same engine. Required verification: Browser device matrix. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0140-07 — Specify disconnected experience.** Acceptance: Already buffered audio continues when possible; stale state is marked. Required verification: Server loss/recovery and stale-status test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0140-01 — Define mini-player geometry.** Acceptance: No layout occlusion at 320px, safe-area, landscape and 400% zoom. Required verification: Viewport and touch screenshots. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0140-02 — Specify transport state machine visuals.** Acceptance: Idle/loading/playing/paused/seam/blocked are distinct without false completion. Required verification: Player fixture and media-session tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; `web/src/player.test.ts`, `web/src/audio/focus.test.tsx`; independent checks pending.**
+3. **MI-0140-03 — Choreograph preview ownership.** Acceptance: One source audible and explicit Pause never reversed by preview end. Required verification: Real audio race and double-tab tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0140-04 — Validate title and time changes.** Acceptance: Metadata updates once, progress matches actual player clock. Required verification: Clock fixture and accessible announcements. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+5. **MI-0140-05 — Design volume/mute feedback.** Acceptance: Slider and icon communicate mute, 0 volume and restore distinctly. Required verification: Keyboard/AT and device media-key review. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; `web/src/player.test.ts`, `web/src/audio/focus.test.tsx`; independent checks pending.**
+6. **MI-0140-06 — Audit keyboard and media-session parity.** Acceptance: Global shortcuts, mini controls, headphones and media keys target same engine. Required verification: Browser device matrix. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0140-07 — Specify disconnected experience.** Acceptance: Already buffered audio continues when possible; stale state is marked. Required verification: Server loss/recovery and stale-status test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0140-08 — Measure player stability.** Acceptance: Route/modal interactions do not cause audio dropout or extra AudioContext. Required verification: Long-session trace and captured audio. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).

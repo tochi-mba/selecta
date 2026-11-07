@@ -1,7 +1,7 @@
 # ADR-0142 — Mix-idea cards, meaningful recommendation reveals and selection confidence
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 1/8 Implemented, 6/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P1 / Make a Mix.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Make a Mix presents Selecta's pick, categories and Play/Edit/Save. The experience should feel like a DJ making a confident invitation rather than a spreadsheet of settings and unproven suggestions. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+Make a Mix presents Selecta's pick, categories and Play/Edit/Save. The experience should feel like a DJ making a confident invitation rather than a spreadsheet of settings and unproven suggestions. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ Make a Mix presents Selecta's pick, categories and Play/Edit/Save. The experienc
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 1 source-level Implemented, 0 independently Verified
 
-1. **MI-0142-01 — Define featured-card hierarchy.** Acceptance: Music identity/mood, duration and primary action are visually obvious. Required verification: Uncoached choice confidence and screenshot study. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0142-02 — Preserve three action outcomes.** Acceptance: Play/Edit/Save remain keyboard- and touch-accessible with accurate consequences. Required verification: Current/draft E2E assertions. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0142-03 — Specify loading and missing metadata.** Acceptance: No invented artists, durations, score, artwork or stale ready status. Required verification: Empty/partial/error fixture. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0142-04 — Define category transition behavior.** Acceptance: Switching category retains location and never changes playback. Required verification: Back/Forward and focus tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0142-05 — Gate authentic audition.** Acceptance: Preview requires real rendered revision and one audio owner; otherwise absent. Required verification: Audio provenance and focus test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0142-06 — Design replacement confirmation.** Acceptance: Existing mix preserved on cancel or failure, no double activation. Required verification: Delayed API and rollback test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0142-07 — Verify contrast and density.** Acceptance: Cards remain readable across both themes and narrow screens. Required verification: 320–2560 and zoom gallery. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0142-01 — Define featured-card hierarchy.** Acceptance: Music identity/mood, duration and primary action are visually obvious. Required verification: Uncoached choice confidence and screenshot study. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0142-02 — Preserve three action outcomes.** Acceptance: Play/Edit/Save remain keyboard- and touch-accessible with accurate consequences. Required verification: Current/draft E2E assertions. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0142-03 — Specify loading and missing metadata.** Acceptance: No invented artists, durations, score, artwork or stale ready status. Required verification: Empty/partial/error fixture. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0142-04 — Define category transition behavior.** Acceptance: Switching category retains location and never changes playback. Required verification: Back/Forward and focus tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`; partial behavior or baseline, task acceptance outstanding.**
+5. **MI-0142-05 — Gate authentic audition.** Acceptance: Preview requires real rendered revision and one audio owner; otherwise absent. Required verification: Audio provenance and focus test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`; partial behavior or baseline, task acceptance outstanding.**
+6. **MI-0142-06 — Design replacement confirmation.** Acceptance: Existing mix preserved on cancel or failure, no double activation. Required verification: Delayed API and rollback test. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`; `web/src/views/Mixes.test.tsx`; independent checks pending.**
+7. **MI-0142-07 — Verify contrast and density.** Acceptance: Cards remain readable across both themes and narrow screens. Required verification: 320–2560 and zoom gallery. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0142-08 — Measure recommendation understanding.** Acceptance: Record whether users can predict what Play, Edit first and Save do. Required verification: Counterbalanced task study with raw counts. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
