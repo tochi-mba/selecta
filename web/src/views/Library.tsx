@@ -4,7 +4,7 @@ import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { orderOf, trackReadiness } from '../state/readiness';
-import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { Action, Dialog, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SearchField } from '../ui/primitives';
 import { ViewProps } from './shared';
@@ -160,6 +160,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     await refreshShown();
   };
   const [building, setBuilding] = useState(false);
+  const [confirmStart, setConfirmStart] = useState<LibrarySong | null>(null);
   const startFrom = async (song: LibrarySong) => {
     setBuilding(true);
     try {
@@ -173,6 +174,15 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     } finally {
       setBuilding(false);
     }
+  };
+  const requestStart = (song: LibrarySong) => {
+    // A new mix takes over the current one. Ask consistently with Explore
+    // rather than replacing live music directly from a Library row.
+    if (mix.length > 0 && now.phase !== 'idle') {
+      setConfirmStart(song);
+      return;
+    }
+    return startFrom(song);
   };
   const left = Math.max(status.counts.music - status.counts.analysed, 0);
   const analyseAll = async () => {
@@ -276,7 +286,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                 {facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}
               </div>
               <div className="song-actions">
-                {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => startFrom(song)}>Start a mix</Action>}
+                {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => requestStart(song)}>Start a mix</Action>}
                 {facts.canAdd && <Action className="song-add" working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>}
                 {facts.canAdd && now.phase !== 'idle' && <Action working="Adding…" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next</Action>}
                 {facts.canAnalyse && (
@@ -302,6 +312,25 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       </ul>
       {next && <Action className="library-more" working="Loading…" run={more}>Show more songs</Action>}
       {shownDetails && <SongDetails song={shownDetails} onClose={() => setOpened(null)} onChanged={() => void refreshShown()} notify={notify} onPriority={setPriority} onNever={never} />}
+      {confirmStart && (
+        <Dialog
+          title="Replace your current mix?"
+          onClose={() => setConfirmStart(null)}
+          footer={(
+            <>
+              <button onClick={() => setConfirmStart(null)}>Keep current mix</button>
+              <Action className="primary" working="Building…" run={async () => {
+                const selected = confirmStart;
+                setConfirmStart(null);
+                await startFrom(selected);
+              }}>Replace and play</Action>
+            </>
+          )}
+        >
+          <p>Starting a mix from <b>{confirmStart.title ?? 'this song'}</b> replaces your current mix. What is playing now will stop when the new mix starts.</p>
+          <p className="hint">Your saved drafts are not affected. Cancel to keep listening.</p>
+        </Dialog>
+      )}
     </main>
   );
 }
