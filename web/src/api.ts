@@ -295,3 +295,12 @@ export type Folders = {
   folders: { path: string; available: boolean; songs: number }[];
   watch_every: number;
 };
+
+/** What Selecta can say about a folder before reading it, from GET /api/folders/check. */
+export type FolderCheck = {
+  ok: boolean;
+  kind: 'ok' | 'missing' | 'not_a_folder' | 'no_access' | 'already_added' | 'inside_added' | 'no_audio';
+  reason: string;
+  path: string;
+  audio_files: number | null;
+};

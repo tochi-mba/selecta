@@ -16,8 +16,21 @@ export type Route =
 export type WorkshopTab = 'overview' | 'analysis' | 'storage' | 'sources' | 'learning' | 'diagnostics';
 const WORKSHOP_TABS: WorkshopTab[] = ['overview', 'analysis', 'storage', 'sources', 'learning', 'diagnostics'];
 
+/** Friendlier names for the same places. Every older address keeps working and keeps its meaning, so
+ * nothing bookmarked or installed breaks, and no address is ever reinterpreted as something else. */
+export const ALIASES: Record<string, string> = {
+  '/explore': '/mixes',
+  '/explore/mixes': '/mixes',
+  '/explore/words': '/discover',
+  '/explore/harmonic': '/discover/harmonic',
+  '/my-mixes': '/mixes/mine',
+  '/workspace': '/workshop',
+  '/studies': '/listening',
+};
+
 export function parseRoute(pathname: string): Route {
-  const path = pathname.replace(/\/+$/, '') || '/';
+  const trimmed = pathname.replace(/\/+$/, '') || '/';
+  const path = ALIASES[trimmed] ?? trimmed.replace(/^\/workspace\//, '/workshop/');
   if (path === '/' || path === '/mixes') return { page: 'mixes', tab: 'browse' };
   if (path === '/mixes/mine') return { page: 'mixes', tab: 'mine' };
   if (path === '/listen') return { page: 'listen' };
@@ -83,8 +96,9 @@ export function navigate(to: string | Route, options: { replace?: boolean } = {}
   changed();
 }
 
-/** Change what's in the address without it counting as going anywhere, for filters and searches. */
-export function setQuery(values: Record<string, string | null | undefined>) {
+/** Change what's in the address. Typing doesn't count as going anywhere, but a filter someone chose
+ * does when `push` is set, so Back undoes it. */
+export function setQuery(values: Record<string, string | null | undefined>, options: { push?: boolean } = {}) {
   const params = new URLSearchParams(window.location.search);
   for (const [key, value] of Object.entries(values)) {
     if (value) params.set(key, value);
@@ -93,7 +107,12 @@ export function setQuery(values: Record<string, string | null | undefined>) {
   const query = params.toString();
   const path = `${window.location.pathname}${query ? `?${query}` : ''}`;
   if (path === whereNow()) return;
-  window.history.replaceState(window.history.state, '', path);
+  if (options.push) {
+    rememberScroll();
+    window.history.pushState({}, '', path);
+  } else {
+    window.history.replaceState(window.history.state, '', path);
+  }
   changed();
 }
 

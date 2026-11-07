@@ -23,6 +23,18 @@ const paths = {
   help: 'M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 17v.1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
   up: 'm6 14 6-6 6 6',
   down: 'm6 10 6 6 6-6',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5',
+  plus: 'M12 5v14M5 12h14',
+  search: 'm20 20-4.5-4.5M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0',
+  grip: 'M9 6h.1M9 12h.1M9 18h.1M15 6h.1M15 12h.1M15 18h.1',
+  bell: 'M6 16V11a6 6 0 1 1 12 0v5l2 2H4ZM10 21h4',
+  expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  explore: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM16 8l-2.5 5.5L8 16l2.5-5.5Z',
+  folder: 'M3 7h6l2 2h10v10H3Z',
+  rail: 'M4 4h16v16H4ZM10 4v16',
+  command: 'M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3Z',
+  lock: 'M6 11h12v9H6ZM8 11V8a4 4 0 0 1 8 0v3',
+  request: 'M12 4v10M8 10l4 4 4-4M5 20h14',
 } as const;
 
 export type IconName = keyof typeof paths;

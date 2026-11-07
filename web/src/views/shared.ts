@@ -26,5 +26,11 @@ export type ViewProps = {
   notify: (message: string, undo?: Undo) => void;
   stage: boolean;
   toggleStage: () => void;
+  /** The browser said no to fullscreen, so the Stage is filling the page instead. */
+  stageFallback?: boolean;
   openRequests?: () => void;
+  /** Take back the newest change in this mix: `null` is the current mix, a number is that draft. */
+  undo?: (scope: number | null) => Promise<void>;
+  /** The name of the current mix, whatever is being edited, for saying what a change will or won't touch. */
+  currentMixName?: string;
 };
