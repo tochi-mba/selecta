@@ -48,7 +48,10 @@ export function useJobsStatus(): JobsSnapshot {
 }
 
 export function jobAttention(jobs: Jobs | null): number {
-  if (!jobs) return 0;
+  // A partially upgraded server (or a response interrupted at a version
+  // boundary) may omit the failure lists. Never let a status badge take down
+  // navigation and playback while the rest of Selecta remains usable.
+  if (!jobs || !Array.isArray(jobs.failed_seams) || !Array.isArray(jobs.failed_songs) || !jobs.analysis) return 0;
   return Number(jobs.storage_full)
     + jobs.failed_seams.length
     + jobs.failed_songs.length
