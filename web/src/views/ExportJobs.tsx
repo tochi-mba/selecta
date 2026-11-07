@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ExportJob, ExportJobState } from '../api';
 import { length } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -62,6 +63,7 @@ function Row({ job }: { job: ExportJob }) {
  * and in Workspace it also says so when there are none. */
 export function ExportJobs({ always = false }: { always?: boolean }) {
   const { jobs, stale, unsupported } = useExports();
+  const [shown, setShown] = useState(12);
   if (unsupported) {
     return always ? <section className="panel stack"><h2>Exports</h2><p className="hint">This running copy of Selecta doesn’t keep track of exports. Restart Selecta to get them.</p></section> : null;
   }
@@ -78,7 +80,12 @@ export function ExportJobs({ always = false }: { always?: boolean }) {
       {stale && <p className="warn" role="status">Can’t check on these right now, so what’s shown may be out of date.</p>}
       {!jobs.length && <p className="hint">Nothing yet. Choose Download audio while editing a mix to save it as a FLAC file.</p>}
       {going > 0 && <p className="hint">These keep going if you close this or reload. Your mix always renders first.</p>}
-      {!!jobs.length && <ul className="export-jobs">{jobs.slice(0, 12).map((job) => <Row key={job.id} job={job} />)}</ul>}
+      {!!jobs.length && <ul className="export-jobs">{jobs.slice(0, shown).map((job) => <Row key={job.id} job={job} />)}</ul>}
+      {jobs.length > shown && (
+        <button onClick={() => setShown((count) => count + 12)}>
+          Show older exports ({jobs.length - shown} more)
+        </button>
+      )}
     </section>
   );
 }
