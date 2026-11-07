@@ -3,6 +3,7 @@ import { ApiError, get, MixData, post, VibeCard } from '../api';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { useLocationText } from '../router';
 import { orderOf } from '../state/readiness';
+import { operationId } from '../state/async';
 import { EXPLORE_TABS } from '../shell/manifest';
 import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
@@ -21,6 +22,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const [songs, setSongs] = useState(12);
   const [building, setBuilding] = useState('');
   const buildingNow = useRef(false);
+  const operations = useRef(new Map<string, string>());
   const [problem, setProblem] = useState('');
   const [customizing, setCustomizing] = useState(false);
   const [cardsAttempt, setCardsAttempt] = useState(0);
@@ -42,10 +44,16 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     buildingNow.current = true;
     setBuilding(key);
     setProblem('');
+    const expected = order ?? orderOf(mix);
+    const signature = JSON.stringify([key, songs, expected, open]);
+    const operation = operations.current.get(signature) ?? operationId('build');
+    operations.current.set(signature, operation);
     try {
       const data = await post<MixData>(`/vibes/${key}/build?count=${songs}`, undefined, {
-        'x-mix-order': order ?? orderOf(mix),
+        'x-mix-order': expected,
+        'x-operation-id': operation,
       });
+      operations.current.delete(signature);
       setMixData(data);
       rememberStartedAMix();
       notify(`${name}: ${data.mix.length} songs.`, true);
@@ -56,6 +64,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         void player.playFrom(0);
       }
     } catch (error) {
+      if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       setProblem((error as Error).message);
     } finally {
@@ -69,10 +78,19 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     buildingNow.current = true;
     setBuilding(key);
     setProblem('');
+    const signature = JSON.stringify([key, songs, 'draft']);
+    const operation = operations.current.get(signature) ?? operationId('draft');
+    operations.current.set(signature, operation);
     try {
-      const made = await post<{ id: number; name: string; count: number }>(`/vibes/${key}/build?count=${songs}&as_draft=true`);
+      const made = await post<{ id: number; name: string; count: number }>(
+        `/vibes/${key}/build?count=${songs}&as_draft=true`,
+        undefined,
+        { 'x-operation-id': operation },
+      );
+      operations.current.delete(signature);
       notify(`Saved ${made.name} as a draft, with ${made.count} songs. Nothing changed in what’s playing.`);
     } catch (error) {
+      if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
       setProblem((error as Error).message);
     } finally {
       buildingNow.current = false;

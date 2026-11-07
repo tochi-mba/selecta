@@ -5,6 +5,7 @@ import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { orderOf, trackReadiness } from '../state/readiness';
+import { operationId } from '../state/async';
 import { Action, Dialog, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SearchField } from '../ui/primitives';
@@ -212,22 +213,28 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   };
   const [building, setBuilding] = useState(false);
   const buildingNow = useRef(false);
+  const buildOperations = useRef(new Map<string, string>());
   const [confirmStart, setConfirmStart] = useState<{ song: LibrarySong; order: string } | null>(null);
   const startFrom = async (song: LibrarySong, expectedOrder = orderOf(mix)) => {
     // Two different rows can be clicked before React paints the busy state.
     if (buildingNow.current) return;
     buildingNow.current = true;
     setBuilding(true);
+    const signature = JSON.stringify([song.id, expectedOrder]);
+    const operation = buildOperations.current.get(signature) ?? operationId('build');
+    buildOperations.current.set(signature, operation);
     try {
-      // A late build must not replace a mix edited in another tab.
       const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`, undefined, {
         'x-mix-order': expectedOrder,
+        'x-operation-id': operation,
       });
+      buildOperations.current.delete(signature);
       setMixData(data);
       setView('Now');
       void player.playFrom(0);
       notify(`A mix starting from ${song.title}.`, true);
     } catch (error) {
+      if (error instanceof ApiError && error.status < 500) buildOperations.current.delete(signature);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       notify((error as Error).message || 'Couldn’t build that mix. Try again.');
     } finally {
