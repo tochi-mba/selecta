@@ -1,6 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { PAGES, stickingOut } from './helpers';
+import { PAGES, resetMix, stickingOut } from './helpers';
+
+test.beforeEach(async ({ request }) => {
+  // Pages can run in any shard order; never depend on another test's mix changes.
+  await resetMix(request);
+});
 
 const WIDTHS = [
   [320, 568],

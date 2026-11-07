@@ -22,10 +22,12 @@ or skipped prerequisite does not turn into a green `verify`.
 coverage.** Python and browser tests still run on Windows, including real
 FFmpeg and the actual Edge browser. Web unit tests also run on Linux, with the
 production build repeated on Windows for the browser integration checks.
-Playwright keeps **one worker per shard**, because tests within a runner share
-a mutable fixture library. Each Windows runner uses its own isolated server,
-database and port, so the two shards can run simultaneously without sharing
-state. Existing retry-on-CI behavior, failed-browser screenshots/traces,
+Playwright uses `fullyParallel` only for **balanced shard assignment by individual
+test**, not for concurrent execution within a runner: `workers=1` still serializes
+access to each mutable fixture library. Every Windows runner has its own isolated
+server, database and port, so the two shards can run simultaneously without
+sharing state. The per-page tests reset the mix explicitly, regardless of file
+order. Existing retry-on-CI behavior, failed-browser screenshots/traces,
 and failure artifacts are retained, with a distinct artifact name per shard.
 
 ## Where the time is saved
@@ -50,9 +52,10 @@ and failure artifacts are retained, with a distinct artifact name per shard.
   tests or accessibility cases.
 - Changes to a mix, the audio engine, browser fixtures or server API still
   trigger the real end-to-end suite, with its cross-feature state checks.
-- If the two shards are unbalanced, inspect Playwright test durations and
-  consider `fullyParallel` **only after** establishing per-test database
-  isolation; do not increase workers against one mutable server.
+- Test-level sharding should balance suite sizes more closely than file-level
+  sharding. Inspect observed durations; `fullyParallel` is safe here **only because
+  `workers=1`** per isolated runner. Do not raise that worker count against
+  one mutable server without first establishing per-worker database isolation.
 - Compare the durations of the four required job groups and the aggregate
   wall-clock time against prior runs. Report observed gains only after this
   workflow completes successfully. A cache hit is not itself evidence of a
