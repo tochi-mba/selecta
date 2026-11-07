@@ -96,7 +96,7 @@ class FreshFiles(StaticFiles):
         except StarletteHTTPException as problem:
             address = path.replace("\\", "/")
             known = PAGE_ADDRESSES.match(address)
-            # someone opening an old link in a browser gets the app, which says there's nothing there
+            # Old browser links get the app, which can explain that the page is missing.
             # and offers a way back. Anything else asking for a missing file still gets a real 404
             accepts = dict(scope.get("headers", [])).get(b"accept", b"")
             opened = b"text/html" in accepts and "." not in address.rsplit("/", 1)[-1]
