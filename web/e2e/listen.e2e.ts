@@ -195,6 +195,9 @@ test('the keyboard works the player, and pressing Space on a button only does on
   await page.keyboard.type('n m');
   await expect(title(page)).toHaveText('Slow Tide');
   await expect(page.getByRole('button', { name: 'Mute' }).first()).toBeVisible();
+  // The first Escape clears the active song autocomplete; the next closes Requests.
+  await page.keyboard.press('Escape');
+  await expect(drawer.getByRole('combobox', { name: 'Request a song' })).toHaveValue('');
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);
   await expect(pauseButton(page)).toBeVisible();
