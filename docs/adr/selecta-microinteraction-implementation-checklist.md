@@ -19,7 +19,7 @@
 
 ## [ADR-0136 — Visual materials, typography, hierarchy and authentic musical identity](adr-0136-visual-language-and-music-materials.md)
 
-**Phase:** Visual foundation · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Visual foundation · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 4/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0136-01 — Audit all semantic tokens.** Acceptance: One owner for palette, surfaces, type, spacing, motion and status meanings. Required verification: Token diff and dark/light/system contrast review. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/shell/Shell.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0136-02 — Specify song-title composition.** Acceptance: Long, RTL, emoji and missing metadata render without collision or inaccessible truncation. Required verification: Fixture screenshots and screen reader name checks. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/shell/Shell.tsx`; `web/src/views/Now.test.tsx`, `web/src/shell/Shell.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -32,7 +32,7 @@
 
 ## [ADR-0137 — Motion grammar: timings, easing, causality and reduced-motion equivalence](adr-0137-motion-tokens-timing-and-reduced-motion.md)
 
-**Phase:** Motion foundation · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Motion foundation · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 6/8 Implemented, 1/8 In progress · **Verified:** 0/8.
 
 - [x] **MI-0137-01 — Publish semantic motion token catalogue.** Acceptance: Each motion role names duration, easing, properties, cause and fallback. Required verification: Computed styles, visual spec and ADR review. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/styles/tokens.css`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
 - [x] **MI-0137-02 — Define interruption and cancellation.** Acceptance: New user action cancels older animation without reverting newer state. Required verification: Rapid toggle and race tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/styles/tokens.css`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -45,7 +45,7 @@
 
 ## [ADR-0138 — Tactile microinteractions for buttons, menus, fields, chips and feedback](adr-0138-tactile-controls-and-feedback-microstates.md)
 
-**Phase:** Shared interactions · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Shared interactions · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0138-01 — Write complete shared state matrix.** Acceptance: Each component specifies copy, style, ARIA state, trigger and cancellation. Required verification: Control gallery and semantic audit. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/ui/controls.tsx`, `web/src/ui/toasts.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0138-02 — Implementable stable button geometry spec.** Acceptance: Normal/busy/success/failed labels do not cause layout shift. Required verification: Screenshot diff and button width comparison. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/ui/controls.tsx`, `web/src/ui/toasts.tsx`; `web/src/ui/controls.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -58,7 +58,7 @@
 
 ## [ADR-0139 — Navigation choreography, breadcrumbs, page continuity and scene orientation](adr-0139-navigation-scene-transitions-and-orientation.md)
 
-**Phase:** Shell · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Shell · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0139-01 — Storyboard all navigation paths.** Acceptance: Listen, Make a Mix, My Mixes, Library and Workspace show destination/route equivalence. Required verification: Route manifest and direct-link fixtures. **Implementation: Not started; Verified: No; implementing PR/SHA: —; evidence: —; owner: Unassigned.**
 - [ ] **MI-0139-02 — Specify rail and bottom-bar states.** Acceptance: Open/collapsed/mobile states preserve labeling and full target visibility. Required verification: 320–2560 CSS pixel testing. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/views/Mix.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -71,7 +71,7 @@
 
 ## [ADR-0140 — Persistent mini-player, audio-focus handoff and frictionless microtransport](adr-0140-persistent-player-audio-focus-and-microtransport.md)
 
-**Phase:** Playback shell · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Playback shell · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0140-01 — Define mini-player geometry.** Acceptance: No layout occlusion at 320px, safe-area, landscape and 400% zoom. Required verification: Viewport and touch screenshots. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0140-02 — Specify transport state machine visuals.** Acceptance: Idle/loading/playing/paused/seam/blocked are distinct without false completion. Required verification: Player fixture and media-session tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; `web/src/player.test.ts`, `web/src/audio/focus.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -84,7 +84,7 @@
 
 ## [ADR-0141 — First run, library readiness and the first audible reward](adr-0141-onboarding-progress-and-first-musical-reward.md)
 
-**Phase:** Onboarding · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Onboarding · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 4/8 In progress · **Verified:** 0/8.
 
 - [x] **MI-0141-01 — Prototype folder-entry teaching.** Acceptance: Path examples, server access and LRCLIB metadata disclosure are truthful. Required verification: Windows/macOS/Linux source review and first-use testing. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`, `web/src/views/WorkshopPanels.tsx`; `web/src/views/Mixes.test.tsx`, `web/src/views/Setup.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
 - [ ] **MI-0141-02 — Define four readiness labels.** Acceptance: Music found, analyzed, lyrics and mix-ready cannot be conflated. Required verification: Real status fixtures and uncoached comprehension. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx`, `web/src/views/WorkshopPanels.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -97,7 +97,7 @@
 
 ## [ADR-0142 — Mix-idea cards, meaningful recommendation reveals and selection confidence](adr-0142-mix-ideas-cards-and-discovery-delight.md)
 
-**Phase:** Make a Mix · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Make a Mix · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0142-01 — Define featured-card hierarchy.** Acceptance: Music identity/mood, duration and primary action are visually obvious. Required verification: Uncoached choice confidence and screenshot study. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0142-02 — Preserve three action outcomes.** Acceptance: Play/Edit/Save remain keyboard- and touch-accessible with accurate consequences. Required verification: Current/draft E2E assertions. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Mixes.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -110,7 +110,7 @@
 
 ## [ADR-0143 — Mix-shaping controls, expressive energy arc and destination selection](adr-0143-mix-shaping-energy-arc-and-destination-gestures.md)
 
-**Phase:** Make a Mix · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Make a Mix · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 5/8 Implemented, 2/8 In progress · **Verified:** 0/8.
 
 - [x] **MI-0143-01 — Clarify shaping scope text.** Acceptance: Explicit next-build vs persistent-default meaning in all entry points. Required verification: Comprehension trial and settings state test. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; `web/src/views/MixSetup.test.tsx`, `web/src/views/Mixes.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
 - [x] **MI-0143-02 — Specify arc drawing semantics.** Acceptance: Five editable stops, numeric/slider parity, no hidden mouse-only requirement. Required verification: Keyboard, coarse-pointer and AT tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/MixSetup.tsx`, `web/src/styles/listening.css`; `web/src/views/MixSetup.test.tsx`, `web/src/views/Mixes.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -123,7 +123,7 @@
 
 ## [ADR-0144 — Listen as an immersive musical scene: song identity, ambient visuals and restraint](adr-0144-listen-hero-ambient-visuals-and-song-identity.md)
 
-**Phase:** Listen · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Listen · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 5/8 Implemented, 2/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0144-01 — Compose first-glance Listen hierarchy.** Acceptance: Song, artist, playback and next handoff legible without scrolling on baseline viewports. Required verification: Real-metadata visual study. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/listening.css` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0144-02 — Specify ambient color safeguards.** Acceptance: No color-from-genre claims, fabricated artwork or contrast reduction. Required verification: Dark/light/forced-colors computed checks. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/listening.css`; `web/src/views/Now.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -136,7 +136,7 @@
 
 ## [ADR-0145 — Transport precision: play, pause, seeking, jump and honest progress](adr-0145-transport-scrubbing-and-timing-feedback.md)
 
-**Phase:** Listen · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Listen · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 5/8 Implemented, 3/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0145-01 — Audit transport state labels.** Acceptance: Loading, playing, paused, idle, buffering, seam and blocked distinguishable. Required verification: Web Audio fixtures and screen-reader names. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0145-02 — Design scrubbing preview.** Acceptance: Target time and allowed region clear before commit, with reversible cancel. Required verification: Pointer, keyboard and touch seek tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts`; `web/src/views/Now.test.tsx`, `web/src/player.test.ts` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -149,7 +149,7 @@
 
 ## [ADR-0146 — Lyric focus, Stage immersion and real audio-reactive visuals](adr-0146-lyrics-stage-and-musical-visualizer-choreography.md)
 
-**Phase:** Listen · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Listen · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0146-01 — Specify timed lyric semantics.** Acceptance: Current line/word only when cue accuracy known; missing lyrics remain honest. Required verification: Missing/late/RTL lyrics fixtures. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/listening.css` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0146-02 — Design manual lyric interruption.** Acceptance: User scrolling pauses follow and preserves reading position. Required verification: Touch and keyboard reading test. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/listening.css`; `web/src/views/Now.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -162,7 +162,7 @@
 
 ## [ADR-0147 — Up Next anticipation, transition readiness and audible handoff choreography](adr-0147-up-next-seam-countdown-and-musical-handoff.md)
 
-**Phase:** Listen · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Listen · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0147-01 — Specify handoff state diagram.** Acceptance: Planned/queued/rendering/ready/playing/fallback/failed each has truthful copy. Required verification: Seam-state fixture matrix. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0147-02 — Define supported countdowns.** Acceptance: Bars/beats shown only with valid cues and clocks. Required verification: Invalid cue/fallback and timing tests. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -175,7 +175,7 @@
 
 ## [ADR-0148 — Song requests, live queue uncertainty and bridge-route consent](adr-0148-requests-bridges-and-consent-microinteractions.md)
 
-**Phase:** Requests · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Requests · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0148-01 — Create lifecycle microstate board.** Acceptance: Adding/searching/waiting/approve/preparing/ready/stuck/in-mix distinct. Required verification: Request status unit and UI fixture review. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Requests.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0148-02 — Guard duplicate and stale submission.** Acceptance: One request per intended action, no phantom rows after failure. Required verification: Rapid press and network race tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Requests.tsx`; `web/src/views/Requests.test.tsx`, `web/src/views/RequestsJoining.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -188,7 +188,7 @@
 
 ## [ADR-0149 — My Mixes: draft identities, render-line motion and safe activation](adr-0149-draft-cards-render-line-and-safe-activation.md)
 
-**Phase:** My Mixes · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** My Mixes · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0149-01 — Define current/draft visual identity.** Acceptance: Scope is legible before Play/Edit/Delete and in breadcrumbs. Required verification: Current/draft comprehension tests. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/views/Mix.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0149-02 — Choreograph safe Play activation.** Acceptance: Explicit replacement consent and preservation of previous mix. Required verification: Cancel, stale-revision and live audio tests. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/views/Mix.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -201,7 +201,7 @@
 
 ## [ADR-0150 — Arrangement timeline: tactile song movement, insertions, locks and focus](adr-0150-arrangement-timeline-tactility-and-safe-reorder.md)
 
-**Phase:** Editor · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Editor · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 4/8 Implemented, 3/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0150-01 — Define song/seam selection grammar.** Acceptance: Inspector knows selected stable ID across edits. Required verification: 100-song fixture and selection tests. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0150-02 — Specify pointer drag lifecycle.** Acceptance: Handle start, drag threshold, valid drop, cancel and scroll noninterference. Required verification: Coarse-touch and pointer E2E. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`; `web/src/views/Mix.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -214,7 +214,7 @@
 
 ## [ADR-0151 — Transition Inspector: audition-first detail, state truth and precision](adr-0151-transition-inspector-audition-and-truthful-state.md)
 
-**Phase:** Editor · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Editor · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0151-01 — Design audition-first inspector hierarchy.** Acceptance: Pair, actual heard move and Play visible before diagnostics. Required verification: Transition-edit comprehension test. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0151-02 — Specify requested/rendered taxonomy.** Acceptance: Fallback, missing source and failed render differ in words/icons. Required verification: Seam status matrix. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/audio/focus.ts`, `web/src/views/SeamInspector.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -227,7 +227,7 @@
 
 ## [ADR-0152 — Stem Studio: physical grid feel, audible preview, precision and recovery](adr-0152-stem-studio-granular-control-and-audition.md)
 
-**Phase:** Studio · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Studio · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 5/8 Implemented, 2/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0152-01 — Define eight-lane cell feedback.** Acceptance: On/off/solo/muted/failed/loading/unsaved states separately marked. Required verification: 64-cell accessibility and visual fixture. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Studio.tsx`, `web/src/styles/creation.css` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0152-02 — Specify grid painting and keyboard parity.** Acceptance: Each operation reproducible without drag and retains row/column identity. Required verification: Touch, keyboard and NVDA/Edge tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Studio.tsx`, `web/src/styles/creation.css`; `web/src/views/Studio.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -240,7 +240,7 @@
 
 ## [ADR-0153 — Library browsing: instant search, contextual actions and large-collection calm](adr-0153-library-search-filter-and-collection-interactions.md)
 
-**Phase:** Library · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Library · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 - [x] **MI-0153-01 — Design query feedback lifecycle.** Acceptance: Typing, waiting, loading, success, empty, stale, failed all distinct. Required verification: Delayed query and offline simulations. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Library.tsx`; `web/src/views/Library.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
 - [ ] **MI-0153-02 — Preserve URL-backed state.** Acceptance: Filter/sort/page/search recover after Back/Forward/refresh. Required verification: Deep-link E2E. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Library.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -253,7 +253,7 @@
 
 ## [ADR-0154 — Song details: metadata confidence, corrections, validation and safe recovery](adr-0154-song-details-corrections-and-trustful-forms.md)
 
-**Phase:** Library · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Library · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0154-01 — Define metadata provenance layout.** Acceptance: Detected/effective/user override clearly distinguished. Required verification: Example songs and comprehension review. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/SongDetails.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0154-02 — Specify tempo/key field validation.** Acceptance: Invalid, partial and corrected states retain input and focus. Required verification: Keyboard and invalid value tests. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/SongDetails.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -266,7 +266,7 @@
 
 ## [ADR-0155 — Musical discovery: wordplay, harmonic auditions and earned delight](adr-0155-musical-discovery-audition-and-reveal.md)
 
-**Phase:** Discovery · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Discovery · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0155-01 — Design word connection narrative.** Acceptance: Phrase, both song lines, move and actual rendered state clearly linked. Required verification: Pair comprehension and false-positive fixtures. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0155-02 — Preserve candidate/result distinction.** Acceptance: Never imply all discovered phrases sound good or are auto-approved. Required verification: Failed seam and unrated discovery checks. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Links.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -279,7 +279,7 @@
 
 ## [ADR-0156 — Workspace calm: background progress, storage capacity and action-first status](adr-0156-workspace-operational-calm-and-honest-progress.md)
 
-**Phase:** Workspace · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Workspace · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0156-01 — Define operations information priority.** Acceptance: What needs action first; routine work is secondary. Required verification: User triage comprehension test. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0156-02 — Specify honest job states.** Acceptance: Queued/working/paused/blocked/failed and estimates never conflated. Required verification: Job fixture matrix and late-status checks. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -292,7 +292,7 @@
 
 ## [ADR-0157 — FLAC export: frozen revision, trustworthy progress and finished-artifact moment](adr-0157-flac-export-lifecycle-and-artifact-delight.md)
 
-**Phase:** Export · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Export · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 - [x] **MI-0157-01 — Specify frozen export identity.** Acceptance: Source kind, source ID, ordered songs, seam keys and revision visible and enforced. Required verification: Export snapshot/API test. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx`; `web/src/views/Mix.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
 - [ ] **MI-0157-02 — Define job state choreography.** Acceptance: Preparing, encoding, ready, fail, interrupted, canceled, expired distinct. Required verification: Job fixtures and reload tests. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -305,7 +305,7 @@
 
 ## [ADR-0158 — Blind listening studies: neutral feedback, fair comparison and no visual bias](adr-0158-blind-a-b-study-neutral-comparison-design.md)
 
-**Phase:** Listening research · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Listening research · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0158-01 — Audit visual condition masking.** Acceptance: A/B modes have identical styling and DOM/accessibility method anonymity. Required verification: Rendered HTML and screenshot comparison. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0158-02 — Specify identical audio transport.** Acceptance: Switching clips cannot overlap or surprise-resume main mix. Required verification: Audio focus fixture. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Listening.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -318,7 +318,7 @@
 
 ## [ADR-0159 — Dialogs, drawers, toasts, Activity and recoverable mistakes](adr-0159-overlays-toasts-activity-and-recovery-choreography.md)
 
-**Phase:** Shared feedback · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Shared feedback · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 5/8 Implemented, 2/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0159-01 — Specify overlay stacking and focus.** Acceptance: Nested modal/inert/escape behavior correct without focus loss. Required verification: Keyboard, NVDA and portal tests. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0159-02 — Design toast duration policy.** Acceptance: Errors/Undo durable in Activity and not obscured by bottom chrome. Required verification: Burst, timer and mobile tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -331,7 +331,7 @@
 
 ## [ADR-0160 — Responsive gestures: thumb reach, safe-area geometry, keyboard occlusion and zoom](adr-0160-responsive-touch-gestures-and-small-screen-music.md)
 
-**Phase:** Responsive · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Responsive · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0160-01 — Audit viewport geometry.** Acceptance: 320/375/430/760/768/1280 and short-height layouts no essential occlusion. Required verification: Automated and physical screenshots. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/styles/tokens.css`, `web/src/views/EditorRows.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0160-02 — Check dynamic virtual keyboard.** Acceptance: Active input stays visible while bars collapse/restack. Required verification: Android/iOS-compatible browser tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/styles/tokens.css`, `web/src/views/EditorRows.tsx`; `web/src/views/Mix.test.tsx`, `web/src/shell/Shell.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -344,7 +344,7 @@
 
 ## [ADR-0161 — Accessible sensory choice, cognitive comfort and non-motion equivalents](adr-0161-accessible-sensory-choice-and-cognitive-comfort.md)
 
-**Phase:** Accessibility · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Accessibility · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 4/8 Implemented, 3/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0161-01 — Create sensory equivalence map.** Acceptance: Every visual/audio motion has text, icon or static alternative where meaningful. Required verification: A11y component inventory. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [x] **MI-0161-02 — Test live reduced-motion switching.** Acceptance: No lingering animation after OS preference changes mid-session. Required verification: Live toggle browser tests. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/ui/useReducedMotion.ts`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
@@ -357,7 +357,7 @@
 
 ## [ADR-0162 — Animation performance budgets, audio continuity and long-session stability](adr-0162-motion-performance-and-audio-continuity-budgets.md)
 
-**Phase:** Performance · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Performance · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0162-01 — Specify reference hardware matrix.** Acceptance: CPU/GPU/OS/browser/power mode recorded for every benchmark. Required verification: Benchmark protocol review. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0162-02 — Profile main thread and frame costs.** Acceptance: Animation doesn't create long tasks or meaningful INP regression. Required verification: Performance recording with p95 frame timing. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -370,7 +370,7 @@
 
 ## [ADR-0163 — Musical microcopy, consent, explanations and the personality of a good DJ](adr-0163-musical-microcopy-trust-and-emotional-tone.md)
 
-**Phase:** Product language · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Product language · **Priority:** P1 · **Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
 
 - [ ] **MI-0163-01 — Define controlled product lexicon.** Acceptance: Seam/handoff/transition, request/queue/render line and source/draft distinctions documented. Required verification: Content inventory review. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Requests.tsx`, `web/src/views/Mixes.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
 - [ ] **MI-0163-02 — Write action consequence templates.** Acceptance: Every destructive and playback-affecting action names its scope. Required verification: Cross-surface string audit. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `web/src/views/Requests.tsx`, `web/src/views/Mixes.tsx` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
@@ -383,7 +383,7 @@
 
 ## [ADR-0164 — Visual and audible proof, interaction research, rollback and release governance](adr-0164-research-gates-visual-proof-and-release-governance.md)
 
-**Phase:** Verification · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Phase:** Verification · **Priority:** P0 · **Decision:** Proposed · **Implementation:** 1/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 - [x] **MI-0164-01 — Publish per-task evidence schema.** Acceptance: MI ID, decision, implement PR, SHA, test, reviewer and result required. Required verification: Ledger schema validation. **Implementation: Implemented; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `docs/adr/selecta-microinteraction-evidence.md`, `docs/adr/selecta-microinteraction-implementation-checklist.md`; `docs/adr/selecta-microinteraction-verification-matrix.md` (unit/build CI: [run 42424221714](https://github.com/tochi-mba/selecta/actions/runs/42424221714), independent review still required); owner: Unassigned.**
 - [ ] **MI-0164-02 — Create visual candidate matrix.** Acceptance: Every major surface in three themes, two motion modes and target viewports. Required verification: Named screenshot inventory. **Implementation: In progress; Verified: No; implementing PR/SHA: [PR #31](https://github.com/tochi-mba/selecta/pull/31) @ `89641b6a1b81`; evidence: `docs/adr/selecta-microinteraction-evidence.md`, `docs/adr/selecta-microinteraction-implementation-checklist.md` (relevant baseline or partial work; full acceptance evidence pending); owner: Unassigned.**
