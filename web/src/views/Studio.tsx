@@ -130,6 +130,7 @@ export function Studio(props: {
   const [retained, setRetained] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const applying = useRef(false);
+  const tuneAttempt = useRef(0);
   const latestShape = useRef<Shape | null>(null);
   latestShape.current = shape;
   const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
@@ -198,6 +199,10 @@ export function Studio(props: {
   }, [session]);
 
   const change = (next: Shape) => {
+    // Once Apply has started, this exact working copy is frozen. Otherwise a
+    // late response could clear an unsaved newer arrangement.
+    if (applying.current) return;
+    tuneAttempt.current += 1;
     setShape(next);
     setChanges(null);
     setBefore(null);
@@ -208,12 +213,14 @@ export function Studio(props: {
   /** Selecta's turn. What was there can be put back, nothing is final until Apply, and if it fails or
    * the grid changed while it was thinking, what you've got stays exactly as it is. */
   const askSelecta = async (mine: boolean) => {
-    if (!shape) return;
+    if (!shape || applying.current) return;
     const sent = shape;
+    const request = ++tuneAttempt.current;
     setAsking(mine ? 'tune' : 'arrange');
     setProblem('');
     try {
       const answer = await post<{ shape: Shape; changes: string[] }>(at(`/mix/${position}/studio/tune`), { shape: mine ? shape : null });
+      if (request !== tuneAttempt.current) return;
       if (latestShape.current !== sent) {
         setChanges(['You changed the grid while Selecta was working, so your version stays.']);
         return;
@@ -225,13 +232,14 @@ export function Studio(props: {
       if (session?.key) setRetained(keepShape(session.key, answer.shape));
       setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
     } catch (error) {
-      setProblem((error as Error).message);
+      if (request === tuneAttempt.current) setProblem((error as Error).message);
     } finally {
-      setAsking('');
+      if (request === tuneAttempt.current) setAsking('');
     }
   };
   const putBack = () => {
-    if (!before) return;
+    if (!before || applying.current) return;
+    tuneAttempt.current += 1;
     setShape(before);
     if (session?.key) setRetained(keepShape(session.key, before));
     deck.current?.setShape(before);
@@ -275,7 +283,9 @@ export function Studio(props: {
   };
   const use = async () => {
     if (!shape || applying.current || !session) return;
+    const submitted = shape;
     applying.current = true;
+    tuneAttempt.current += 1;
     setSaving(true);
     deck.current?.stop();
     setPlaying(false);
@@ -289,10 +299,19 @@ export function Studio(props: {
         onConflict?.();
         return;
       }
-      onUsed(await post<MixData>(at(`/mix/${position}/studio/use`), { shape }, guard));
-      keepShape(session.key, null);
-      notify('Rendering your version. It’ll play in the mix when it’s ready.');
-      onClose();
+      const result = await post<MixData>(at(`/mix/${position}/studio/use`), { shape: submitted }, guard);
+      onUsed(result);
+      // A browser may still dispatch a final pointer event before the
+      // disabled state paints. Only delete the stored working copy if it is
+      // the exact shape the server accepted.
+      if (latestShape.current === submitted) {
+        keepShape(session.key, null);
+        notify('Rendering your version. It’ll play in the mix when it’s ready.');
+        onClose();
+      } else {
+        setProblem('An earlier shape was applied. Your newer changes are still here; apply them when ready.');
+        setSaving(false);
+      }
     } catch (error) {
       // the shape stays right here, so nothing's lost by this going wrong
       setProblem((error as Error).message);
