@@ -2,6 +2,17 @@ import { expect, Page, test } from '@playwright/test';
 import { allRendered, resetMix, spyOnAudio } from './helpers';
 
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Main' });
+const editorSong = (page: Page, title: string) => page.locator('.song .song-name button').filter({ hasText: title });
+
+async function removeSong(page: Page, title: string) {
+  await page.getByRole('button', { name: `More for ${title}` }).click();
+  await page.getByRole('menuitem', { name: `Remove ${title}` }).click();
+}
+
+async function deleteDraft(page: Page, name: string) {
+  await page.getByRole('button', { name: `More actions for ${name}` }).click();
+  await page.getByRole('menuitem', { name: `Delete ${name}` }).click();
+}
 
 test.beforeEach(async ({ request }) => {
   await resetMix(request);
@@ -32,22 +43,22 @@ test('editing: move with the buttons, undo it, and remove a song', async ({ page
   await expect(rows.first()).toHaveText('Slow Tide');
   await page.getByRole('button', { name: 'Undo' }).first().click();
   await expect(rows.first()).toHaveText('Morning Light');
-  await page.getByRole('button', { name: 'Remove Paper Moon' }).click();
-  await expect(page.getByRole('button', { name: 'Remove Paper Moon' })).toHaveCount(0);
+  await removeSong(page, 'Paper Moon');
+  await expect(editorSong(page, 'Paper Moon')).toHaveCount(0);
   await page.getByRole('button', { name: 'Undo' }).first().click();
-  await expect(page.getByRole('button', { name: 'Remove Paper Moon' })).toBeVisible();
+  await expect(editorSong(page, 'Paper Moon')).toBeVisible();
 });
 
 test('a change to a mix that’s moved on stops, says so, and touches nothing', async ({ page, request }) => {
   await page.goto('/mix/current/edit');
-  await expect(page.getByRole('button', { name: 'Remove Paper Moon' })).toBeVisible();
+  await expect(editorSong(page, 'Paper Moon')).toBeVisible();
   // the mix changes behind this page's back, before its next look
   await page.route('**/api/mix*', async (route) => {
     if (route.request().method() === 'GET') await new Promise((resolve) => setTimeout(resolve, 8000));
     await route.continue();
   });
   await request.post('/api/mix/move', { data: { source: 0, target: 3 } });
-  await page.getByRole('button', { name: 'Remove Paper Moon' }).click();
+  await removeSong(page, 'Paper Moon');
   await expect(page.getByText('This mix has just changed, so nothing was done.').first()).toBeVisible();
   const { mix } = await (await request.get('/api/mix')).json();
   expect((mix as { song_id: number }[]).map((item) => item.song_id)).toContain(3);
@@ -82,11 +93,11 @@ test('drafts: make one, name it, fill it, and it stays apart from the current mi
   expect((current.mix as { song_id: number }[]).map((item) => item.song_id)).toEqual([1, 2, 3, 4]);
 
   await page.goto('/mixes/mine');
-  await page.getByRole('button', { name: 'Delete Friday night' }).click();
+  await deleteDraft(page, 'Friday night');
   await expect(page.getByRole('button', { name: 'Edit Friday night' })).toHaveCount(0);
   await page.getByRole('button', { name: /Undo|Bring it back/ }).first().click();
   await expect(page.getByRole('button', { name: 'Edit Friday night' })).toBeVisible();
-  await page.getByRole('button', { name: 'Delete Friday night' }).click();
+  await deleteDraft(page, 'Friday night');
   await expect(page.getByRole('button', { name: 'Edit Friday night' })).toHaveCount(0);
 });
 
@@ -228,21 +239,21 @@ test('the listening test: nothing gives away which is which, and a failed send c
 test.describe('when the server stops answering', () => {
   test('it says so, keeps what’s on screen, and recovers by itself', async ({ page }) => {
     await page.goto('/mix/current/edit');
-    await expect(page.getByRole('button', { name: 'Remove Paper Moon' })).toBeVisible();
+    await expect(editorSong(page, 'Paper Moon')).toBeVisible();
     await page.route('**/api/**', (route) => route.abort());
     await expect(page.getByText('Can’t reach Selecta.')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole('button', { name: 'Remove Paper Moon' })).toBeVisible();
+    await expect(editorSong(page, 'Paper Moon')).toBeVisible();
     await page.unroute('**/api/**');
     await expect(page.getByText('Can’t reach Selecta.')).toHaveCount(0, { timeout: 15_000 });
-    await expect(page.getByRole('button', { name: 'Remove Paper Moon' })).toBeVisible();
+    await expect(editorSong(page, 'Paper Moon')).toBeVisible();
   });
 
   test('a change that couldn’t be sent says so, and nothing pretends it happened', async ({ page, request }) => {
     await page.goto('/mix/current/edit');
-    await expect(page.getByRole('button', { name: 'Remove Paper Moon' })).toBeVisible();
+    await expect(editorSong(page, 'Paper Moon')).toBeVisible();
     await page.route('**/api/mix/songs/**', (route) => route.abort());
-    await page.getByRole('button', { name: 'Remove Paper Moon' }).click();
-    await expect(page.getByRole('button', { name: 'Remove Paper Moon' })).toBeVisible();
+    await removeSong(page, 'Paper Moon');
+    await expect(editorSong(page, 'Paper Moon')).toBeVisible();
     await page.unroute('**/api/mix/songs/**');
     const { mix } = await (await request.get('/api/mix')).json();
     expect((mix as { song_id: number }[]).map((item) => item.song_id)).toContain(3);
