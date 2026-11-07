@@ -1,7 +1,7 @@
 # ADR-0147 — Up Next anticipation, transition readiness and audible handoff choreography
 
 - **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** Not started (0/8 new MI tasks).
+- **Implementation:** 1/8 Implemented, 6/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Listen.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-A DJ's most memorable moment is often the handoff between songs. Selecta exposes intended and rendered seam status, but the UI must preserve anticipation without claiming a transition is ready before the audio exists. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. No proposed behavior is shipped by merging these documents. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
+A DJ's most memorable moment is often the handoff between songs. Selecta exposes intended and rendered seam status, but the UI must preserve anticipation without claiming a transition is ready before the audio exists. This is a **new experience delta** to existing code and ADR-0114–0134, not a claim that existing implementations are missing. PR #31 includes source-level implementation and tests, but this proposal remains owner-unaccepted and independently unverified. Human visual, audio, screen-reader, touch and comprehension results are not asserted.
 
 ## Proposed decision
 
@@ -32,15 +32,15 @@ A DJ's most memorable moment is often the handoff between songs. Selecta exposes
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — all Not started, none Verified
+## Implementation tasks — 1 source-level Implemented, 0 independently Verified
 
-1. **MI-0147-01 — Specify handoff state diagram.** Acceptance: Planned/queued/rendering/ready/playing/fallback/failed each has truthful copy. Required verification: Seam-state fixture matrix. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-2. **MI-0147-02 — Define supported countdowns.** Acceptance: Bars/beats shown only with valid cues and clocks. Required verification: Invalid cue/fallback and timing tests. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-3. **MI-0147-03 — Design next-card hierarchy.** Acceptance: Upcoming song, arrival expectation and action are first-glance clear. Required verification: Uncoached comprehension study. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-4. **MI-0147-04 — Choreograph real handoff identity.** Acceptance: Visual switch never precedes or lags audible track identity misleadingly. Required verification: Real mixed audio plus screen recording. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-5. **MI-0147-05 — Surface requested vs rendered differences.** Acceptance: Listener can tell chosen and actual move when different. Required verification: Forced fallback test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-6. **MI-0147-06 — Specify error/recovery.** Acceptance: Failed transition provides next action without interrupting continued music. Required verification: Render-failure playback test. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-7. **MI-0147-07 — Audit focus and screen reader changes.** Acceptance: No every-beat announcements; current/next identities named once. Required verification: NVDA/Edge live-region review. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0147-01 — Specify handoff state diagram.** Acceptance: Planned/queued/rendering/ready/playing/fallback/failed each has truthful copy. Required verification: Seam-state fixture matrix. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+2. **MI-0147-02 — Define supported countdowns.** Acceptance: Bars/beats shown only with valid cues and clocks. Required verification: Invalid cue/fallback and timing tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0147-03 — Design next-card hierarchy.** Acceptance: Upcoming song, arrival expectation and action are first-glance clear. Required verification: Uncoached comprehension study. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+4. **MI-0147-04 — Choreograph real handoff identity.** Acceptance: Visual switch never precedes or lags audible track identity misleadingly. Required verification: Real mixed audio plus screen recording. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts`; `web/src/views/Now.test.tsx`, `web/src/player.test.ts`; independent checks pending.**
+5. **MI-0147-05 — Surface requested vs rendered differences.** Acceptance: Listener can tell chosen and actual move when different. Required verification: Forced fallback test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+6. **MI-0147-06 — Specify error/recovery.** Acceptance: Failed transition provides next action without interrupting continued music. Required verification: Render-failure playback test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0147-07 — Audit focus and screen reader changes.** Acceptance: No every-beat announcements; current/next identities named once. Required verification: NVDA/Edge live-region review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/player.ts`; partial behavior or baseline, task acceptance outstanding.**
 8. **MI-0147-08 — Measure anticipation and trust.** Acceptance: Users know what will happen at the handoff and confidence after listening. Required verification: Task survey with time-stamped observations. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
 
 ## Shared invariants and negative cases
@@ -51,4 +51,4 @@ Review idle, hovered, focused, pressed, selected, queued, rendering, ready, bloc
 
 ## Status, dependencies and records
 
-A later implementing PR must provide a task-specific diff, source file, test ID, exact SHA and separately recorded human evidence before advancing **Implemented** or **Verified**. Owner decision must be recorded before **Accepted**. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
+PR #31 records code implementation with referenced source and automation. **Implemented is not independently Verified**; a named reviewer must still record all required real-world theme, accessibility, audio, performance and user results before Yes or owner Acceptance. [Immersive programme roadmap](selecta-microinteraction-roadmap.md) · [240-task checklist](selecta-microinteraction-implementation-checklist.md) · [evidence ledger](selecta-microinteraction-evidence.md) · [state and motion matrix](selecta-microinteraction-motion-matrix.md) · [release gates](selecta-microinteraction-release-gates.md).
