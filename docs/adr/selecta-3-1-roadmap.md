@@ -3,8 +3,8 @@
 - **Date:** 2026-11-07
 - **Baseline:** `main` 3.0 merge `3b01dc1336aab0f1cb0a4d85be5eba359de81831` (PR #24 merged).
 - **Decision status:** Proposed for ADR-0078–0088; the owner has not approved their design decisions.
-- **Implementation status:** Not started (116/116 open); **Verified:** 0/116.
-- **Scope:** Documentation-only: no code, schema, audio, tests, pipeline, configuration, or feature change.
+- **Implementation status:** Selected tasks In progress on PR #25; **Implemented:** 0/116, **Verified:** 0/116.
+- **Scope:** Initially documentation-only; PR #25 now includes a limited frontend and component-test pass. No backend, schema, engine, dependency or CI changes.
 - **History:** Existing ADR-0001–0077 and T/P/S3 task IDs remain intact. Prior roadmap ledgers, including the still-stale 3.0 "PR open" snapshot, are not proof of merged/verified work.
 
 ## Direction
@@ -22,10 +22,10 @@ The [Selecta 3.0 INV-01–INV-20 requirements](selecta-3-roadmap.md) remain bind
 | ADR | Phase | Workstream | Open S31 tasks | Decision | Implementation |
 |---|---|---|---:|---|---|
 | [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | 0 Baseline | Reconcile the shipped 3.0 baseline and govern finishing work | 10 | Proposed | Not started |
-| [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | 1 Foundations | Unify typography, themes, visual rhythm and CSS ownership | 10 | Proposed | Not started |
-| [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | 1 Foundations | Make controls, asynchronous states, recovery and Undo dependable | 10 | Proposed | Not started |
-| [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | 2 Listener | Reduce friction from first music folder to a confident first mix | 10 | Proposed | Not started |
-| [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | 2 Listener | Polish Listen, navigation, mini-player and Stage without audio regressions | 11 | Proposed | Not started |
+| [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | 1 Foundations | Unify typography, themes, visual rhythm and CSS ownership | 10 | Proposed | In progress (partial) |
+| [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | 1 Foundations | Make controls, asynchronous states, recovery and Undo dependable | 10 | Proposed | In progress (partial) |
+| [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | 2 Listener | Reduce friction from first music folder to a confident first mix | 10 | Proposed | In progress (partial) |
+| [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | 2 Listener | Polish Listen, navigation, mini-player and Stage without audio regressions | 11 | Proposed | In progress (partial) |
 | [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | 3 Creator | Make drafts, timeline editing, transition intent and export unambiguous | 12 | Proposed | Not started |
 | [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | 3 Creator | Refine Stem Studio's expert controls without reducing capability | 9 | Proposed | Not started |
 | [ADR-0085](adr-0085-requests-and-music-discovery.md) | 4 Discovery/Operations | Clarify Requests, consented bridges and discovery auditions | 10 | Proposed | Not started |
@@ -62,7 +62,7 @@ Treat web performance references (INP <=200ms, CLS <=0.1) as methodology context
 
 ## PR scope and governance
 
-This **planning PR only** may add ADRs, roadmap, checklist, research, verification matrix, evidence ledger and an ADR index entry. It must not change `src/`, `web/`, `tests/`, dependencies, CI or application behaviour. Opening or merging it does **not** accept ADR decisions, set checkboxes, advance implementation status or authorize automatic future changes. Later implementation PRs should be small, separately accepted, and map to S31 and inherited S3/parity rows with test evidence.
+PR #25 began as planning documentation; it now includes limited source/test work on controls, onboarding, Listen and design tokens. This does **not** accept ADR decisions, justify checking tasks off or satisfy the other release gates. Further work must map each S31 and inherited S3/parity row to code and real automated/human evidence. Do not merge on the strength of partial work.
 
 ## Supporting documents
 
