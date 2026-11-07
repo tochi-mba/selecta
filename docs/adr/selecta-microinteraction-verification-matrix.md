@@ -1,6 +1,6 @@
 # Selecta — immersive microinteraction verification and negative-case matrix
 
-**All status: Not started / Not independently Verified.** Each future result needs exact implementation SHA, device/OS/browser, fixture type, reviewer and limitations; synthetic E2E or visual snapshots alone are not actual-audio or human-quality evidence.
+**Implementation snapshot: 79 source-level Implemented, 125 In progress, 36 Not started on PR #31; independently Verified: 0.** All independent verification and research status rows remain pending. Each future result needs exact implementation SHA, device/OS/browser, fixture type, reviewer and limitations; synthetic E2E or visual snapshots alone are not actual-audio or human-quality evidence.
 
 | Case | Setup and action | Required observable outcome | Evidence mode | Status |
 |---|---|---|---|---|
@@ -59,5 +59,7 @@
 | [0164](adr-0164-research-gates-visual-proof-and-release-governance.md) | Ledger schema validation | Signed release gate with SHA | Not started / No | Unassigned |
 
 ## Evidence discipline
+
+The automated tests and code changes in [PR #31](https://github.com/tochi-mba/selecta/pull/31) are tracked separately in the [implementation checklist](selecta-microinteraction-implementation-checklist.md) and [code status map](selecta-microinteraction-code-status.json); the per-ADR rows below are independent verification work, not code implementation statuses.
 
 Capture raw visual and audible evidence with both real and synthetic fixture labels. Include widths 320–2560, themes, reduced motion, 200/400% zoom, keyboard/touch/NVDA, long/RTL metadata, offline/retry/async races. A generated visual regression candidate is not an approved golden screenshot. A recorded clip is not proof that a song transition is musically good unless evaluated by listeners. [Ledger](selecta-microinteraction-evidence.md) · [Release gates](selecta-microinteraction-release-gates.md).
