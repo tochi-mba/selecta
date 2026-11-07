@@ -133,7 +133,7 @@ test('saving a mix as an audio file makes a real FLAC', async ({ page, request }
 
 test('the Library: search, song details, a correction that can be put back', async ({ page }) => {
   await page.goto('/library');
-  await page.getByRole('textbox', { name: 'Search your library' }).fill('Paper');
+  await page.getByRole('searchbox', { name: 'Search your library' }).fill('Paper');
   await page.getByRole('button', { name: /^Details for Paper Moon/ }).click();
   const sheet = page.getByRole('dialog', { name: 'Paper Moon' });
   await expect(sheet).toBeVisible();
@@ -154,7 +154,7 @@ test('songs that can’t be mixed say why', async ({ page }) => {
   await page.getByRole('button', { name: /^Details for Episode 12/ }).click();
   await expect(page.getByRole('dialog', { name: 'Episode 12' }).getByText('Long and talky').first()).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.getByRole('textbox', { name: 'Search your library' }).fill('');
+  await page.getByRole('searchbox', { name: 'Search your library' }).fill('');
   await page.getByRole('group', { name: 'Show' }).getByRole('button', { name: /attention/i }).click();
   await expect(page.getByText('Broken File')).toBeVisible();
   await page.getByRole('button', { name: /^Details for Broken File/ }).click();

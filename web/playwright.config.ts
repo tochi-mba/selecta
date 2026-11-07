@@ -20,6 +20,9 @@ export default defineConfig({
   outputDir: './test-results',
   use: {
     baseURL: `http://127.0.0.1:${port}`,
+    // A missing or hidden control is a quick failure, not a five-minute hang.
+    // Slow real audio/render waits retain the test's 300-second limit and explicit assertions.
+    actionTimeout: 20_000,
     channel: 'msedge',
     headless: true,
     launchOptions: { args: ['--mute-audio'] },

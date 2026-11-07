@@ -127,7 +127,7 @@ test('a correction made while the page is open shows up, and only touches its ow
 
 test('a hundred quick looks at a page never lose what’s on it', async ({ page }) => {
   await page.goto('/library');
-  const search = page.getByRole('textbox', { name: 'Search your library' });
+  const search = page.getByRole('searchbox', { name: 'Search your library' });
   for (const typed of ['S', 'Sl', 'Slo', 'Slow', 'Slo', 'Sl', 'Slow']) await search.fill(typed);
   await expect(page.getByText('Slow Tide').first()).toBeVisible();
   await expect(page.getByText('Morning Light')).toHaveCount(0);

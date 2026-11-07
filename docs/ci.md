@@ -72,3 +72,8 @@ pnpm e2e
 ```
 
 Edge and FFmpeg must be available for the local browser run.
+
+The browser runner uses a 20-second action timeout for ordinary clicks and
+inputs. This prevents a renamed or missing element from consuming the entire
+five-minute test budget, while explicit audio/render waits retain their longer
+timeouts, the real Edge browser and the same behavioural assertions.
