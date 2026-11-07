@@ -515,7 +515,6 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
   const [found, setFound] = useState<BridgeSearch | null>(null);
   const [problem, setProblem] = useState('');
   const [hearing, setHearing] = useState<number | null>(null);
-  const [choosing, setChoosing] = useState(false);
   const choosingNow = useRef(false);
   const title = request.title ?? 'that song';
   useEffect(() => {
@@ -526,17 +525,14 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
     return () => { live = false; };
   }, []);
   if (!state) return null;
-  const use = async (option: BridgeOption) => {
+  const use = (option: BridgeOption) => {
     if (choosingNow.current) return;
     choosingNow.current = true;
-    setChoosing(true);
-    try {
-      await state.pickBridge(request, option);
-      onClose();
-    } finally {
-      choosingNow.current = false;
-      setChoosing(false);
-    }
+    // Preserve the existing instant-close affordance. The optimistic request
+    // row now shows "Getting ready", while the shared request-level guard
+    // blocks any second, contradictory write until the first one settles.
+    onClose();
+    void state.pickBridge(request, option).finally(() => { choosingNow.current = false; });
   };
   return (
     <div className="bridge-finder">
@@ -578,8 +574,8 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
                   </p>
                   <p className="hint">{option.words}</p>
                   <div className="row wrap">
-                    <button className="primary" disabled={choosing} aria-busy={choosing || undefined} onClick={() => void use(option)}>{choosing ? 'Saving this bridge…' : 'Use this'}</button>
-                    <button disabled={choosing} aria-expanded={hearing === index} onClick={() => setHearing(hearing === index ? null : index)}>
+                    <button className="primary" onClick={() => use(option)}>Use this</button>
+                    <button aria-expanded={hearing === index} onClick={() => setHearing(hearing === index ? null : index)}>
                       {hearing === index ? 'Hide transitions' : 'Hear the transitions'}
                     </button>
                   </div>
@@ -591,7 +587,7 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
             })}
           </ul>
           {(request.picked || request.bridge_choice === true) && (
-            <button disabled={choosing} onClick={() => { onClose(); void state.chooseBridge(request, false); }}>Don’t use a bridge</button>
+            <button onClick={() => { onClose(); void state.chooseBridge(request, false); }}>Don’t use a bridge</button>
           )}
         </>
       )}
