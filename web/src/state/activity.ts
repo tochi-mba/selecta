@@ -44,9 +44,15 @@ export function recordActivity(message: string, options: { tone?: ActivityTone; 
     undoState: options.undo ? 'available' : undefined,
   };
   entries = [entry, ...entries];
-  // old plain messages go first, and something that can still be taken back goes last
+  // Don't evict a failed Undo if an earlier still-actionable change in the same
+  // scope depends on it. Losing that failed entry would make an older Undo target
+  // the wrong server revision.
   while (entries.length > KEEP) {
-    const spare = entries.map((item) => !item.undo || item.undoState !== 'available').lastIndexOf(true);
+    const spare = entries.reduce((found, item, index) =>
+      (!item.undo || item.undoState === 'undone' || item.undoState === 'failed')
+      && !(item.undoState === 'failed' && item.scope
+        && entries.some((older) => older.id < item.id && older.scope === item.scope && older.undoState === 'available'))
+        ? index : found, -1);
     entries.splice(spare >= 0 ? spare : entries.length - 1, 1);
   }
   entries = [...entries];
@@ -58,7 +64,8 @@ export function recordActivity(message: string, options: { tone?: ActivityTone; 
 /** Is there a newer change in the same mix that would be taken back instead of this one? */
 export function blockedBy(entry: ActivityEntry, all: ActivityEntry[] = entries): ActivityEntry | null {
   if (!entry.scope) return null;
-  return all.find((other) => other.id > entry.id && other.scope === entry.scope && other.undoState === 'available') ?? null;
+  return all.find((other) => other.id > entry.id && other.scope === entry.scope
+    && (other.undoState === 'available' || other.undoState === 'running' || other.undoState === 'failed')) ?? null;
 }
 
 export function canUndo(id: number): boolean {
@@ -76,7 +83,11 @@ export async function runUndo(id: number): Promise<void> {
   const entry = entries.find((item) => item.id === id);
   if (!entry?.undo || entry.undoState !== 'available') return;
   const newer = blockedBy(entry);
-  if (newer) throw new Error(`Undo “${newer.message}” first, because it’s the newest change in that mix.`);
+  if (newer) {
+    if (newer.undoState === 'failed') throw new Error('A newer Undo failed. Check this mix and its latest change before trying to undo an older change.');
+    if (newer.undoState === 'running') throw new Error('A newer Undo is still running. Wait for its result before undoing an older change.');
+    throw new Error(`Undo “${newer.message}” first, because it’s the newest change in that mix.`);
+  }
   patch(id, { undoState: 'running', problem: undefined });
   try {
     await entry.undo();
@@ -90,12 +101,16 @@ export async function runUndo(id: number): Promise<void> {
 
 /** The newest change in a mix was undone some other way, such as the Z key. */
 export function markNewestUndone(scope: string) {
-  const newest = entries.find((item) => item.scope === scope && item.undoState === 'available');
+  const newest = entries.find((item) => item.scope === scope && (item.undoState === 'available' || item.undoState === 'failed'));
   if (newest) patch(newest.id, { undoState: 'undone' });
 }
 
 export function clearFinishedActivity() {
-  entries = entries.filter((item) => item.undoState === 'available' || item.undoState === 'running');
+  // Failed Undo is also a scope lock until a newer authoritative operation
+  // confirms what happened. Do not silently unlock an older activity entry.
+  entries = entries.filter((item) => item.undoState === 'available' || item.undoState === 'running'
+    || (item.undoState === 'failed' && item.scope
+      && entries.some((older) => older.id < item.id && older.scope === item.scope && older.undoState === 'available')));
   changed();
 }
 

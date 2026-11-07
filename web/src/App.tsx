@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, DraftList, get, MixData, MixItem, post, problemKind, Status } from './api';
+import { ApiError, DraftList, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { loadResume } from './lib';
 import { NowState, SetPlayer } from './player';
@@ -57,6 +57,8 @@ function rememberSetUp() {
 }
 
 const scopeKey = (scope: number | null) => (scope === null ? 'current' : `draft:${scope}`);
+
+const nameOfControl = (control: HTMLElement) => (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
 
 export function App() {
   const route = useRoute();
@@ -149,10 +151,11 @@ export function App() {
     if (scope === null) setMixData(next);
     else if (draftRef.current === scope) setDraftMix(next);
     showToast(next.undone ? `Undid ${next.undone}.` : 'Nothing to undo.');
+    return !!next.undone;
   }, [setMixData, setDraftMix]);
   const undoNewest = useCallback(async (scope: number | null) => {
-    await undoIn(scope);
-    markNewestUndone(scopeKey(scope));
+    // if the server had nothing to take back, Activity mustn't say something was undone
+    if (await undoIn(scope)) markNewestUndone(scopeKey(scope));
   }, [undoIn]);
   const notify = useCallback((message: string, undo: Undo = false) => {
     if (typeof undo === 'function') {
@@ -171,7 +174,7 @@ export function App() {
   useEffect(() => {
     const failed = (event: PromiseRejectionEvent) => {
       const message = event.reason instanceof Error ? event.reason.message : 'Something went wrong.';
-      showProblem(message === 'Failed to fetch' ? 'Can’t reach Selecta right now. Try again in a moment.' : message);
+      showProblem(message);
     };
     window.addEventListener('unhandledrejection', failed);
     return () => window.removeEventListener('unhandledrejection', failed);
@@ -334,9 +337,11 @@ export function App() {
   }, [active, playing?.title, now.phase, data.name, player]);
 
   // Going on stage hides everything that had focus, so coming back puts focus back where it was.
-  const beforeStage = useRef<HTMLElement | null>(null);
+  const beforeStage = useRef<{ element: HTMLElement | null; name: string } | null>(null);
   const noteFocusForStage = () => {
-    if (!document.fullscreenElement && !stageRef.current) beforeStage.current = document.activeElement as HTMLElement | null;
+    if (document.fullscreenElement || stageRef.current) return;
+    const element = document.activeElement as HTMLElement | null;
+    beforeStage.current = { element, name: element ? nameOfControl(element) : '' };
   };
   const stageRef = useRef(false);
   stageRef.current = stage;
@@ -373,7 +378,16 @@ export function App() {
     if (stage) return;
     const back = beforeStage.current;
     beforeStage.current = null;
-    if (back?.isConnected && back !== document.body) back.focus();
+    if (!back) return;
+    if (back.element?.isConnected && back.element !== document.body) {
+      back.element.focus();
+      return;
+    }
+    // the Stage replaced the controls, so what had focus is a new button with the same name by now
+    const again = back.name
+      ? [...document.querySelectorAll<HTMLElement>('#main button, #main a, #main summary')].find((control) => control.offsetParent !== null && nameOfControl(control) === back.name)
+      : undefined;
+    (again ?? document.getElementById('main'))?.focus({ preventScroll: !again });
   }, [stage]);
 
   useEffect(() => {
@@ -403,7 +417,11 @@ export function App() {
         case 'jump': void player.skip(); break;
         case 'previous': void player.previous(); break;
         case 'mute': player.toggleMute(); break;
-        case 'request': setRequesting(true); break;
+        case 'request':
+          // focus goes to the search box, and this key press isn't what they wanted to search for
+          event.preventDefault();
+          setRequesting(true);
+          break;
         case 'back5':
         case 'forward5':
           if (player.state.phase === 'idle') return;
@@ -442,7 +460,7 @@ export function App() {
       <main className="page" id="main">
         <h1 className="display">Can’t reach Selecta.</h1>
         <p className="lede">
-          {problem}. It may have stopped running. Start it again, and this page will pick up by itself.
+          {problem === OFFLINE_WORDS ? '' : `${problem}. `}It may have stopped running. Start it again, and this page will pick up by itself.
           {hasBeenSetUp() ? ' Your library, mixes and ratings are safe, and you won’t have to set anything up again.' : ''}
         </p>
         <Action className="primary" run={refreshStatus} working="Trying…">Try now</Action>

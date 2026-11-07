@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +12,7 @@ from selecta import db, mix
 from selecta.config import Settings
 from selecta.library.folder_check import check_folder
 from selecta.library.scan import ScanStopped, scan_folder
+from selecta.routes import exports
 from selecta.seams import SeamStore
 
 
@@ -99,3 +101,67 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
     names = [item["name"] for item in client.get("/api/exports/jobs").json()["jobs"]]
     assert saved["name"] in names
     assert client.get("/api/exports/jobs/not-a-real-id").status_code == 404
+
+
+def test_a_job_file_busy_for_a_moment_loses_nothing(client, tmp_path, monkeypatch):
+    """On Windows a job's file can't be replaced while it's being read, or read while it's being
+    replaced, and the page asks about it every second or so while it's written."""
+    settings = Settings(tmp_path)
+    with db.connect(settings.db_path) as conn:
+        mix.add_song(conn, 1)
+        mix.add_song(conn, 2)
+    monkeypatch.setattr(SeamStore, "status", lambda _store, key: {"status": "ready", "key": key})
+
+    def fake_export(_conn, _settings, _store, destination, songs, keys):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"fake FLAC")
+        return {"seconds": 42}
+
+    monkeypatch.setattr(mix, "export_snapshot", fake_export)
+
+    # what Windows does: the first attempt at each is refused, and the next one works
+    real_replace, real_read = exports.os.replace, Path.read_text
+    refused = {"replace": 0, "read": 0}
+
+    def busy_replace(source, target):
+        if refused["replace"] < 2:
+            refused["replace"] += 1
+            raise PermissionError(13, "The process cannot access the file", str(target))
+        real_replace(source, target)
+
+    def busy_read(path, *args, **kwargs):
+        if path.suffix == ".json" and "jobs" in path.parts and refused["read"] < 2:
+            refused["read"] += 1
+            raise PermissionError(13, "The process cannot access the file", str(path))
+        return real_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(exports.os, "replace", busy_replace)
+    monkeypatch.setattr(Path, "read_text", busy_read)
+
+    job = client.post("/api/exports/jobs").json()
+    assert refused["replace"] >= 1
+    saved = {}
+    for _ in range(200):
+        answer = client.get(f"/api/exports/jobs/{job['id']}")
+        assert answer.status_code == 200, "a busy file isn't a missing job"
+        saved = answer.json()
+        if saved["state"] not in {"preparing", "encoding"}:
+            break
+        time.sleep(0.02)
+    assert saved["state"] == "ready", saved
+    assert refused["read"] >= 1
+    assert not list((tmp_path / "exports" / "jobs").glob("*.part")), "nothing left lying around"
+
+
+def test_a_job_file_that_stays_locked_reports_the_real_error(tmp_path, monkeypatch):
+    """Waiting out a moment isn't the same as hiding a real problem."""
+    calls = []
+
+    def always_refused():
+        calls.append(1)
+        raise PermissionError(13, "Access is denied")
+
+    monkeypatch.setattr(exports, "BUSY_FILE_WAIT_SECONDS", 0)
+    with pytest.raises(PermissionError):
+        exports._despite_a_busy_file(always_refused)
+    assert len(calls) == exports.BUSY_FILE_TRIES

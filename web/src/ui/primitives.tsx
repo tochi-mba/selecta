@@ -138,7 +138,7 @@ export function Popover({ label, children, className = '' }: { label: ReactNode;
         }
       }}
     >
-      <button ref={opener} aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>{label}</button>
+      <button ref={opener} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>{label}</button>
       {open && <div id={id} className="popover-panel">{children}</div>}
     </div>
   );

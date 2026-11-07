@@ -48,6 +48,7 @@
 .transition-truth p { margin: var(--space-1) 0 0; }
 .transition-truth .status { white-space: normal; }
 .next-song b, .next-song span { unicode-bidi: plaintext; }
+.next-song .next-edit-hint { margin-top: var(--space-2); color: var(--accent); font-size: var(--text-xs); font-weight: 700; }
 
 @media (max-width: 1040px) {
   .listen-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
@@ -59,7 +60,9 @@
   .listen-layout { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); }
   .listen-main { display: contents; }
   .listen-identity { order: 1; }
-  .now .listen-view { order: 2; margin-block: 0; }
+  /* The disclosure owns the mobile flex order, not its nested fieldset. */
+  .now .view-options { order: 2; margin-block: 0; }
+  .now .listen-view { margin-block: 0; }
   .music-visualizer { order: 3; }
   .strip { order: 4; }
   .seek-note { order: 5; }
@@ -80,6 +83,15 @@
   }
   .now .transport .tooltip-anchor { flex: none; }
   .now .transport .primary.big { flex: 1 1 auto; min-width: 0; }
+  /* moving focus with the keyboard scrolls things clear of the player as well as the bottom bar */
+  :root:has(.now:not(.stage) .transport) { scroll-padding-bottom: calc(var(--bottom-chrome) + 76px + var(--keyboard-inset) + var(--space-4)); }
+  /* The first screen is the song: what's playing, where it is, and the words. Everything else
+     starts below the bottom of the screen, so nothing you can press ends up half hidden behind the
+     player, at whatever height this phone happens to be. The space above the words is a floor, a
+     little under the real thing, because a longer title only pushes things further down. */
+  .now:not(.stage) { --above-lyrics: 432px; }
+  .now:not(.stage):has(.music-visualizer) { --above-lyrics: 540px; }
+  .now:not(.stage) .lyrics:not(.focus) { min-height: max(7.5em, calc(100svh - 36px - var(--above-lyrics))); }
   .seek-note { margin-top: calc(var(--space-3) * -1); }
 }
 

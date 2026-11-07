@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, status } from '../test/backend';
@@ -88,6 +88,90 @@ describe('word focus on the Now and Stage screens', () => {
   });
 });
 
+describe('listener display options', () => {
+  it('keeps expert view controls discoverable without competing with playback', async () => {
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    const { container } = render(
+      <Now
+        status={status()}
+        mix={mix}
+        mixName="Test mix"
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={() => {}}
+        refreshStatus={() => {}}
+        player={player}
+        now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}}
+        notify={() => {}}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeVisible();
+    const details = container.querySelector('details.view-options');
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute('open');
+    expect(screen.getByText('Display options')).toBeVisible();
+    await screen.findByText('Hello');
+  });
+});
+
+describe('safe next-song steering', () => {
+  it('blocks overlapping steering presses until the first server change finishes', async () => {
+    let finish: () => void = () => {};
+    let writes = 0;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/mix/1/swap') && init?.method === 'POST') {
+        writes += 1;
+        await new Promise<void>((done) => { finish = done; });
+        return new Response(JSON.stringify({ mix: [mix[0], { ...mix[0], position: 1, song_id: 2, title: 'New Next' }] }), { status: 200 });
+      }
+      if (url.includes('/songs/1')) return new Response(JSON.stringify(detail), { status: 200 });
+      return new Response('{}', { status: 200 });
+    }));
+    const tracks = [mix[0], { ...mix[0], position: 1, song_id: 2, title: 'Next Song' }];
+    const player = new SetPlayer(() => tracks, () => {});
+    const notify = vi.fn();
+    render(
+      <Now
+        status={status()}
+        mix={tracks}
+        mixName="Test mix"
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={() => {}}
+        refreshStatus={() => {}}
+        player={player}
+        now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}}
+        notify={notify}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    const bigger = screen.getByRole('button', { name: 'Bigger' });
+    const calmer = screen.getByRole('button', { name: 'Calmer' });
+    bigger.focus();
+    fireEvent.click(bigger);
+    await waitFor(() => expect(writes).toBe(1));
+    // told it has to wait, but still in the tab order: disabling the button someone just pressed
+    // would throw a keyboard or screen reader user back to the top of the page
+    expect(calmer).toHaveAttribute('aria-disabled', 'true');
+    expect(calmer).toBeEnabled();
+    expect(bigger).toBeEnabled();
+    expect(bigger).toHaveFocus();
+    fireEvent.click(calmer);
+    expect(writes).toBe(1);
+    await act(async () => { finish(); });
+    await waitFor(() => expect(calmer).not.toHaveAttribute('aria-disabled'));
+    expect(writes).toBe(1);
+    expect(bigger).toHaveFocus();
+    expect(notify).toHaveBeenCalled();
+  });
+});
+
 describe('beat-grid transition countdown', () => {
   it('follows changing bar lengths instead of extrapolating the average BPM', () => {
     const varying = { ...detail, bar_times: [0, 8, 15, 21], beat_times: [0, 2, 4, 6, 8, 9.75, 11.5, 13.25, 15, 16.5, 18, 19.5, 21] };
@@ -128,5 +212,6 @@ describe('beat-grid transition countdown', () => {
     expect(timer).toHaveTextContent('02');
     expect(timer).toHaveTextContent('Bar 1');
     expect(timer).toHaveTextContent('Next Song');
+    expect(screen.getByRole('button', { name: 'Edit upcoming song Next Song and its transition' })).toBeInTheDocument();
   });
 });

@@ -5,17 +5,21 @@ import { Icon, IconName } from './Icon';
 export { Skeleton } from './Skeleton';
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
- * until that exact thing has finished, can't be pressed twice meanwhile, and says if it went wrong. */
+ * until that exact thing has finished, can't be pressed twice meanwhile, and says if it went wrong.
+ * `waiting` is for when a neighbour's action has to finish first: unlike `disabled`, it leaves the
+ * button in the tab order, so whoever pressed it isn't thrown back to the top of the page. */
 export function Action({
   run,
   working,
   failed,
+  waiting,
   children,
   ...rest
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
   run: () => Promise<unknown> | unknown;
   working?: ReactNode;
   failed?: string;
+  waiting?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const going = useRef(false);
@@ -25,21 +29,20 @@ export function Action({
     return () => { mounted.current = false; };
   }, []);
   const press = async () => {
-    if (going.current) return;
+    if (going.current || waiting) return;
     going.current = true;
     setBusy(true);
     try {
       await run();
     } catch (error) {
-      const words = (error as Error).message;
-      showProblem(failed ?? (words && words !== 'Failed to fetch' ? words : 'That didn’t work. Try again.'));
+      showProblem(failed ?? ((error as Error).message || 'That didn’t work. Try again.'));
     } finally {
       going.current = false;
       if (mounted.current) setBusy(false);
     }
   };
   return (
-    <button {...rest} aria-disabled={busy || rest.disabled || undefined} aria-busy={busy || undefined} data-working={busy || undefined} onClick={() => void press()}>
+    <button {...rest} aria-disabled={busy || waiting || rest.disabled || undefined} aria-busy={busy || undefined} data-working={busy || undefined} onClick={() => void press()}>
       {working ? <span className="action-labels"><span aria-hidden={busy || undefined} style={{ visibility: busy ? 'hidden' : undefined }}>{children}</span><span aria-hidden={!busy || undefined} style={{ visibility: busy ? undefined : 'hidden' }}>{working}</span></span> : children}
     </button>
   );
@@ -220,17 +223,23 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const firstOnOpen = useRef<'first' | 'last'>('first');
   useEffect(() => {
     if (!open) return;
     const away = (event: MouseEvent) => {
       if (!holder.current?.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', away);
-    holder.current?.querySelector<HTMLElement>('[role="menu"] button:not([disabled])')?.focus();
+    const items = holder.current?.querySelectorAll<HTMLElement>('[role="menu"] button:not([disabled])');
+    if (items?.length) items[firstOnOpen.current === 'last' ? items.length - 1 : 0].focus();
     return () => document.removeEventListener('mousedown', away);
   }, [open]);
   const keys = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
+      // Only the open menu owns Escape; a closed trigger must not prevent an
+      // enclosing dialog or sheet from handling it.
+      if (!open) return;
       event.stopPropagation();
       setOpen(false);
       opener.current?.focus();
@@ -238,7 +247,12 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
     }
     if (event.key === 'Tab') { setOpen(false); return; }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-    if (!open) { event.preventDefault(); setOpen(true); return; }
+    if (!open) {
+      event.preventDefault();
+      firstOnOpen.current = event.key === 'ArrowUp' || event.key === 'End' ? 'last' : 'first';
+      setOpen(true);
+      return;
+    }
     const items = [...(holder.current?.querySelectorAll<HTMLElement>('[role="menu"] button:not([disabled])') ?? [])];
     if (!items.length) return;
     event.preventDefault();
@@ -248,10 +262,10 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
   };
   return (
     <div className={`menu ${className ?? ''}`} ref={holder} onKeyDown={keys}>
-      <button ref={opener} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>{label}</button>
+      <button ref={opener} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
       {open && (
         // a press on anything inside closes it, because each item is the end of the job
-        <div role="menu" className="menu-list" onClick={() => { setOpen(false); opener.current?.focus(); }}>{children}</div>
+        <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); opener.current?.focus(); }}>{children}</div>
       )}
     </div>
   );
@@ -268,10 +282,17 @@ export function Tooltip({ text, children }: { text: string; children: ReactEleme
       onMouseLeave={() => setDismissed(false)}
       onBlur={() => setDismissed(false)}
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && !dismissed) setDismissed(true);
+        if (event.key === 'Escape' && !dismissed) {
+          // A tooltip is the innermost dismissible UI. Do not close its parent
+          // dialog on the same Escape press.
+          event.stopPropagation();
+          setDismissed(true);
+        }
       }}
     >
-      {cloneElement(children, { 'aria-describedby': id })}
+      {cloneElement(children, {
+        'aria-describedby': [children.props['aria-describedby'], dismissed ? null : id].filter(Boolean).join(' ') || undefined,
+      })}
       <span role="tooltip" id={id} className="tooltip" hidden={dismissed}>{text}</span>
     </span>
   );

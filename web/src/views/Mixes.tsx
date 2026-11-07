@@ -120,7 +120,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   return (
     <main className="page mixes" id="main">
       {firstMix && <SetupSteps stage="listen" />}
-      <LinkTabs label="Explore" items={EXPLORE_TABS} current={here === '/' ? '/mixes' : here} />
+      <LinkTabs label="Explore" items={EXPLORE_TABS} current={EXPLORE_TABS.some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
 
       <section className="hero">

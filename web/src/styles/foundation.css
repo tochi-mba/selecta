@@ -6,6 +6,8 @@
 
 /* a panel inside a drawer doesn't need a second frame or a second heading */
 .overlay-body > .requests { margin: 0; padding: 0; border: 0; background: none; }
+/* the drawer scrolls by itself, so the list needn't stop short with room to spare */
+.overlay-body > .requests .request-results { max-height: none; overflow-y: visible; }
 .overlay-body > .requests .requests-head h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .theme-menu > button { display: inline-flex; align-items: center; justify-content: center; background: none; border-color: transparent; padding: 6px 8px; min-width: var(--control-height); }

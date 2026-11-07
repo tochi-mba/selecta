@@ -1,5 +1,5 @@
 import { ApiError } from '../api';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SetPlayer } from '../player';
@@ -144,6 +144,29 @@ describe('a big library', () => {
     expect(screen.getByText('Song 102')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show more songs' })).toBeNull();
     expect(calls.some((call) => call.path.includes('after=%5B%22song'))).toBe(true);
+  });
+
+  it('restores the requested page depth when navigation changes only the URL', async () => {
+    const calls = fakeBackend({
+      'GET /library': (_body: unknown, url: string) => (url.includes('after=')
+        ? { songs: [row(3, 'Third')], total: 3, next: null }
+        : { songs: [row(1, 'First'), row(2, 'Second')], total: 3, next: 'cursor-next' }),
+    });
+    show();
+    expect(await screen.findByText('Showing 2 of 3 songs.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show more songs' }));
+    expect(await screen.findByText('3 songs.')).toBeInTheDocument();
+    expect(window.location.search).toContain('pages=2');
+    expect(calls.filter((call) => call.path.includes('after=')).length).toBe(1);
+    // A saved address or browser-history entry can change the page count while
+    // leaving q/show/sort exactly as they were.
+    act(() => {
+      window.history.replaceState({}, '', '/library');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(await screen.findByText('Showing 2 of 3 songs.')).toBeInTheDocument();
+    expect(screen.queryByText('Third')).toBeNull();
+    expect(screen.getByText('First')).toBeInTheDocument();
   });
 
   it('a song that turns up on two pages only shows once', async () => {

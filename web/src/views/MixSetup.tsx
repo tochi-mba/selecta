@@ -55,20 +55,42 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
   );
   // only the last thing moved gets saved, and an answer to an older save can't move it back
   const arcSaves = useRef(0);
+  const arcWrites = useRef(0);
   const savedArc = useRef(JSON.stringify(status.steering.energy_arc));
+  const steerQueue = useRef<Promise<void>>(Promise.resolve());
+  const languageVersion = useRef(0);
+  const languageConfirmed = useRef(status.steering.mix_language);
+  const stemsVersion = useRef(0);
+  const stemsConfirmed = useRef(status.steering.stems);
+  const destinationVersion = useRef(0);
+  const destinationConfirmed = useRef(destination);
+
+  // The server accepts one steering write at a time. Sending them in order means an
+  // older slow reply cannot overwrite the last choice, including when the user revises
+  // the same setting before the first request finishes.
+  const enqueueSteer = (action: string, value: string | number[] | null): Promise<void> => {
+    const work = steerQueue.current.then(async () => {
+      await post('/steer', { action, value });
+    });
+    steerQueue.current = work.catch(() => {});
+    return work;
+  };
   useEffect(() => {
-    if (JSON.stringify(energyArc) === savedArc.current) {
+    const snapshot = JSON.stringify(energyArc);
+    const mine = ++arcSaves.current;
+    // Reverting to the previously saved value still needs a write if another,
+    // now-obsolete write is already in flight.
+    if (snapshot === savedArc.current && arcWrites.current === 0) {
       setArcSaving(false);
       return;
     }
     setArcSaving(true);
     const timer = window.setTimeout(() => {
-      arcSaves.current += 1;
-      const mine = arcSaves.current;
-      post('/steer', { action: 'energy_arc', value: energyArc })
+      arcWrites.current += 1;
+      void enqueueSteer('energy_arc', energyArc)
         .then(() => {
+          savedArc.current = snapshot;
           if (mine !== arcSaves.current) return;
-          savedArc.current = JSON.stringify(energyArc);
           setArcSaving(false);
           setProblem('');
           refreshStatus();
@@ -77,7 +99,8 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           if (mine !== arcSaves.current) return;
           setArcSaving(false);
           setProblem(error.message);
-        });
+        })
+        .finally(() => { arcWrites.current -= 1; });
     }, 350);
     return () => window.clearTimeout(timer);
   }, [energyArc, refreshStatus, arcAttempt]);
@@ -105,43 +128,62 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
   }, [destinationQuery, destinationAttempt]);
 
   const chooseMixLanguage = async (value: string) => {
-    const previous = mixLanguage;
+    const mine = ++languageVersion.current;
     setMixLanguage(value);
     try {
-      await post('/steer', { action: 'mix_language', value });
-      refreshStatus();
+      await enqueueSteer('mix_language', value);
+      languageConfirmed.current = value;
+      if (mine === languageVersion.current) {
+        setProblem('');
+        refreshStatus();
+      }
     } catch (error) {
-      setMixLanguage(previous);
-      setProblem((error as Error).message);
+      if (mine === languageVersion.current) {
+        setMixLanguage(languageConfirmed.current);
+        setProblem((error as Error).message);
+      }
     }
   };
   const chooseStemFrequency = async (value: string) => {
-    const previous = stemFrequency;
+    const mine = ++stemsVersion.current;
     setStemFrequency(value);
     try {
-      await post('/steer', { action: 'stems', value });
-      refreshStatus();
+      await enqueueSteer('stems', value);
+      stemsConfirmed.current = value;
+      if (mine === stemsVersion.current) {
+        setProblem('');
+        refreshStatus();
+      }
     } catch (error) {
-      setStemFrequency(previous);
-      setProblem((error as Error).message);
+      if (mine === stemsVersion.current) {
+        setStemFrequency(stemsConfirmed.current);
+        setProblem((error as Error).message);
+      }
     }
   };
   const chooseDestination = async (song: SongRow | null) => {
-    const previous = destination;
+    const mine = ++destinationVersion.current;
     const next = song ? { id: String(song.id), label: `${song.title ?? 'Untitled'} — ${song.artist ?? 'Unknown artist'}` } : null;
     setDestination(next);
     try {
-      await post('/steer', { action: 'take_me_to', value: next?.id ?? '' });
-      setDestinationQuery('');
-      setDestinationResults([]);
-      refreshStatus();
-      notify(next ? `Future mixes will try to land on ${next.label}.` : 'Selecta will choose the ending again.');
+      await enqueueSteer('take_me_to', next?.id ?? '');
+      destinationConfirmed.current = next;
+      if (mine === destinationVersion.current) {
+        setProblem('');
+        setDestinationQuery('');
+        setDestinationResults([]);
+        refreshStatus();
+        notify(next ? `Future mixes will try to land on ${next.label}.` : 'Selecta will choose the ending again.');
+      }
     } catch (error) {
-      setDestination(previous);
-      setProblem((error as Error).message);
+      if (mine === destinationVersion.current) {
+        setDestination(destinationConfirmed.current);
+        setProblem((error as Error).message);
+      }
     }
   };
 
+  const arcSaved = JSON.stringify(energyArc) === savedArc.current;
   const arcPreview = energyArc ?? DEFAULT_ARC;
   const arcPoints = arcPreview.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
   const achieved = achievedArc(mix);
@@ -209,9 +251,11 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           {arcPreview.map((energy, index) => <circle key={ARC_STOPS[index]} cx={index * 25} cy={38 - energy * 0.34} r="2.2" />)}
         </svg>
         <p className="hint" role="status">
-          {arcSaving ? 'Saving your shape…' : energyArc === null ? 'Each mix uses its own shape.' : 'This is the shape you asked for, saved.'}
+          {arcSaving ? 'Saving your shape…'
+            : !arcSaved ? 'Your change was not saved. Try again; the previous setting is still on the server.'
+              : energyArc === null ? 'Each mix uses its own shape.' : 'This is the shape you asked for, saved.'}
         </p>
-        {problem && !arcSaving && energyArc !== null && <button type="button" onClick={() => setArcAttempt((value) => value + 1)}>Try saving the shape again</button>}
+        {!arcSaved && !arcSaving && <button type="button" onClick={() => setArcAttempt((value) => value + 1)}>Try saving the shape again</button>}
         <div className="energy-arc-stops">
           {ARC_STOPS.map((stop, index) => (
             <label key={stop}>

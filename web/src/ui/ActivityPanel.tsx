@@ -20,7 +20,15 @@ function Row({ entry, all, now }: { entry: ActivityEntry; all: ActivityEntry[]; 
       {entry.undoState === 'available' && !newer && (
         <Action working="Undoing…" aria-label={`Undo: ${entry.message}`} run={() => runUndo(entry.id)}>Undo</Action>
       )}
-      {entry.undoState === 'available' && newer && <small className="hint">Undo the newer change in this mix first.</small>}
+      {entry.undoState === 'available' && newer && (
+        <small className="hint">
+          {newer.undoState === 'failed'
+            ? 'A newer Undo failed. Check the mix before attempting to undo an older change.'
+            : newer.undoState === 'running'
+              ? 'A newer Undo is still running.'
+              : 'Undo the newer change in this mix first.'}
+        </small>
+      )}
       {entry.undoState === 'running' && <Status kind="working">Undoing</Status>}
       {entry.undoState === 'undone' && <Status kind="ready">Undone</Status>}
       {entry.undoState === 'failed' && (
@@ -48,7 +56,9 @@ export function ActivityPanel() {
   if (!entries.length) {
     return <p className="hint">Nothing yet. Changes you make show up here, with a way to undo them.</p>;
   }
-  const finished = entries.some((entry) => entry.undoState !== 'available' && entry.undoState !== 'running');
+  const finished = entries.some((entry) => entry.undoState === 'undone'
+    || (entry.undoState === 'failed' && !entries.some((older) =>
+      older.id < entry.id && older.scope && older.scope === entry.scope && older.undoState === 'available')));
   return (
     <section className="activity" aria-label="Recent activity">
       <ul className="activity-list">

@@ -1,12 +1,5 @@
-/* Shared finish: semantic roles are intentionally applied after legacy feature layouts. */
-:root {
-  --content-reading: 880px;
-  --content-browse: 1180px;
-  --control-height: 44px;
-  --motion-ease: cubic-bezier(.2, .7, .2, 1);
-  --page-gutter: clamp(16px, 3vw, 40px);
-  --heading-size: clamp(1.8rem, 3.5vw, 2.8rem);
-}
+/* Shared finish: semantic tokens live only in tokens.css. Rules below refine legacy layouts
+   without redefining global values in a later cascade layer. */
 body { text-rendering: optimizeLegibility; }
 button, a.button, input:not([type='checkbox']):not([type='radio']), select { min-height: var(--control-height); }
 .choice { min-height: var(--control-height); align-items: center; }

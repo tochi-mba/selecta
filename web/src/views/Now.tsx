@@ -447,8 +447,14 @@ export function Now(props: ViewProps) {
   const [detailAttempt, setDetailAttempt] = useState(0);
   const [rated, setRated] = useState('');
   const [problem, setProblem] = useState('');
+  const swapInFlight = useRef(false);
+  const [swapBusy, setSwapBusy] = useState(false);
+  const rateInFlight = useRef(false);
+  const [rateBusy, setRateBusy] = useState(false);
   const [changed, setChanged] = useState<{ from: string; to: string; id: number } | null>(null);
   const [view, setViewChoice] = useState<ListenView>(savedView);
+  // kept here because the Stage takes the controls away, and coming back should find them as they were
+  const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
   const page = useRef<HTMLElement>(null);
   // The Stage hides whatever had focus, so focus waits on the page, where Space still plays and pauses
   useEffect(() => {
@@ -478,16 +484,28 @@ export function Now(props: ViewProps) {
   useEffect(() => setRated(''), [now.lastSeamKey]);
 
   const rate = async (rating: string) => {
-    if (!now.lastSeamKey) return;
-    await post(`/seams/${now.lastSeamKey}/rate`, { rating });
-    setRated(rating);
-    refreshMix();
-    notify(rating === 'good' ? 'Noted. More like that.' : 'Noted. Less like that.');
+    if (!now.lastSeamKey || rateInFlight.current) return;
+    rateInFlight.current = true;
+    setRateBusy(true);
+    try {
+      await post(`/seams/${now.lastSeamKey}/rate`, { rating });
+      setRated(rating);
+      refreshMix();
+      notify(rating === 'good' ? 'Noted. More like that.' : 'Noted. Less like that.');
+    } finally {
+      rateInFlight.current = false;
+      setRateBusy(false);
+    }
   };
 
   // The place it means is the one on screen when pressed, whatever has played by the time it answers,
   // and if the mix has moved on since, it stops rather than swapping a different song.
   const swap = async (direction: number) => {
+    // These are three separate buttons for one planned song. A slow reply from
+    // Bigger must not race a Calmer press into an unknown final mix order.
+    if (swapInFlight.current) return;
+    swapInFlight.current = true;
+    setSwapBusy(true);
     setProblem('');
     const place = now.position + 1;
     const before = mix[place]?.title;
@@ -500,6 +518,9 @@ export function Now(props: ViewProps) {
     } catch (error) {
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       setProblem((error as Error).message);
+    } finally {
+      swapInFlight.current = false;
+      setSwapBusy(false);
     }
   };
 
@@ -547,13 +568,13 @@ export function Now(props: ViewProps) {
                           ? `Resume from ${clock(now.songTime)}`
                           : 'Play'}
                 </button>
-                <Tooltip text="Next song (Shift N)">
-                  <button aria-label="Next song" disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>
+                <Tooltip text="Go straight to the next song (Shift+N)">
+                  <button aria-label="Next song" aria-keyshortcuts="Shift+N" disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>
                 </Tooltip>
               </div>
               <div className="transport-more">
                 <Tooltip text="Shortcut: N">
-                  <button onClick={() => void player.skip()} disabled={idle || !next}>
+                  <button aria-keyshortcuts="N" onClick={() => void player.skip()} disabled={idle || !next}>
                     Jump to the transition
                   </button>
                 </Tooltip>
@@ -565,14 +586,17 @@ export function Now(props: ViewProps) {
                 </Tooltip>
               </div>
               {now.notice && <p className="notice" role="status">{now.notice}</p>}
-              <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
+              <details className="view-options" open={viewOptionsOpen} onToggle={(event) => setViewOptionsOpen(event.currentTarget.open)}>
+                <summary>Display options</summary>
+                <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
                 <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
                 <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
                 <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
                 <Tooltip text="Shortcut: F">
                   <button onClick={toggleStage}>Fullscreen lyrics</button>
                 </Tooltip>
-              </fieldset>
+                </fieldset>
+              </details>
             </>
           )}
 
@@ -598,24 +622,25 @@ export function Now(props: ViewProps) {
           {!stage && now.lastSeamKey && !rated && (
             <div className="thumbs" role="group" aria-label="Rate that transition">
               <span>How was that transition?</span>
-              <Action run={() => rate('good')}>Good</Action>
-              <Action run={() => rate('bad')}>Bad</Action>
+              <Action waiting={rateBusy} run={() => rate('good')}>Good</Action>
+              <Action waiting={rateBusy} run={() => rate('bad')}>Bad</Action>
             </div>
           )}
 
           {!stage && (next ? (
             <section className="next-up">
               <p className="eyebrow">Next</p>
-              <button className="next-song" onClick={() => setView('Edit')}>
+              <button className="next-song" aria-label={`Edit upcoming song ${next.title} and its transition`} onClick={() => setView('Edit')}>
                 <b>{next.title}</b>
                 <span>{next.artist}</span>
                 <RequestTag item={next} />
+                <small className="next-edit-hint">Edit upcoming song and transition</small>
               </button>
               <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} />
               <div className="chips steer" role="group" aria-label="Change what plays next">
-                <Action run={() => swap(1)} working="Finding one…">Bigger</Action>
-                <Action run={() => swap(-1)} working="Finding one…">Calmer</Action>
-                <Action run={() => swap(0)} working="Finding one…">Something else</Action>
+                <Action waiting={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
+                <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>
+                <Action waiting={swapBusy} run={() => swap(0)} working="Finding one…">Something else</Action>
               </div>
               {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
               {problem && <p className="warn" role="alert">{problem} Nothing has changed, so the plan above still stands.</p>}

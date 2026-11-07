@@ -103,6 +103,33 @@ describe('songs that might share chords', () => {
     await waitFor(() => expect(player.src).toContain('/api/discoveries/8/hear/chords'));
   });
 
+  it('never plays an obsolete prepared audition after the user skips that pair', async () => {
+    let finishOld: (response: Response) => void = () => {};
+    let oldStarted = false;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/discoveries/7/hear') && init?.method === 'POST') {
+        oldStarted = true;
+        return new Promise<Response>((resolve) => { finishOld = resolve; });
+      }
+      if (url.endsWith('/discoveries') && init?.method !== 'POST') {
+        return new Response(JSON.stringify([discovery(7, 'First', 'Second'), discovery(8, 'Third', 'Fourth')]), { status: 200 });
+      }
+      if (url.includes('/discoveries/8/hear') && init?.method === 'POST') {
+        return new Response(JSON.stringify(audition), { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    }));
+    render(<HarmonicDiscoveries />);
+    fireEvent.click(await hearButton());
+    await waitFor(() => expect(oldStarted).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+    expect(await screen.findByRole('heading', { name: /Third/ })).toBeInTheDocument();
+    await act(async () => { finishOld(new Response(JSON.stringify(audition), { status: 200 })); });
+    const audio = screen.getByTestId('excerpt-player') as HTMLAudioElement;
+    expect(audio.src).not.toContain('/discoveries/7/hear/');
+    expect(screen.getByRole('heading', { name: /Third/ })).toBeInTheDocument();
+  });
+
   it('gets the next pair ready before you reach it', async () => {
     const calls = fakeBackend({
       'GET /discoveries': [discovery(7, 'First', 'Second'), discovery(8, 'Third', 'Fourth')],
@@ -131,6 +158,26 @@ describe('songs that might share chords', () => {
     render(<HarmonicDiscoveries />);
     await hearButton();
     expect(screen.queryByRole('button', { name: 'Skip for now' })).toBeNull();
+  });
+
+  it('keeps focus on the answer while it saves, so the next key press can’t land on the whole page', async () => {
+    let finish: () => void = () => {};
+    const answers = fakeBackend({ 'GET /discoveries': [discovery(7, 'First', 'Second'), discovery(8, 'Third', 'Fourth')], 'POST /discoveries/7/review': {} });
+    const reply = globalThis.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).includes('/review')) await new Promise<void>((done) => { finish = done; });
+      return reply(url, init);
+    }));
+    render(<HarmonicDiscoveries />);
+    const yes = await screen.findByRole('button', { name: 'Yes' });
+    yes.focus();
+    fireEvent.click(yes);
+    await waitFor(() => expect(yes).toHaveAttribute('aria-disabled', 'true'));
+    expect(yes).toBeEnabled();
+    expect(yes).toHaveFocus();
+    fireEvent.click(yes);
+    expect(answers.filter((call) => call.path.includes('/review'))).toHaveLength(0);
+    await act(async () => { finish(); });
   });
 
   it('never talks about semitones or harmonic shapes', async () => {

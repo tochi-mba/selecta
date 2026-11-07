@@ -1,7 +1,7 @@
 import { Icon } from '../ui/Icon';
 import { Problem, Skeleton } from '../ui/controls';
 import { createContext, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
-import { del, get, MixData, MixItem, post, SongRow } from '../api';
+import { SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
 import { SetPlayer } from '../player';
@@ -167,6 +167,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   const inFlight = useRef(0);
   const nextTemporaryId = useRef(-1);
   const leaving = useRef(new Set<number>());
+  const bridgeAnswers = useRef(new Map<number, { line: Promise<unknown>; newest: string; going: number }>());
   const checkNow = useRef<() => void>(() => {});
 
   const playbackBody = () => {
@@ -195,7 +196,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     } catch (problem) {
       const words = (problem as Error).message;
       setRequests((rows) => undo(rows ?? []));
-      setError(words && !['Failed to fetch', 'Not Found', 'Internal Server Error'].includes(words) ? words : failed);
+      setError(words && !['Not Found', SERVER_FAILED_WORDS].includes(words) ? words : failed);
       return null;
     } finally {
       inFlight.current -= 1;
@@ -331,11 +332,34 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       leaving.current.delete(request.id);
     }
   };
+  /** What someone says about a bridge reaches the server one answer at a time, in the order they
+   * said it, so the last thing they said is what stands. Saying the same thing twice sends it once,
+   * and a change of mind is never dropped: that would leave a bridge they said no to going ahead.
+   * An answer they've already taken back by the time its turn comes isn't sent at all. */
+  const answerBridge = (request: RequestRow, answer: string, send: () => Promise<RequestList>) => {
+    const answers = bridgeAnswers.current;
+    const held = answers.get(request.id) ?? { line: Promise.resolve(), newest: '', going: 0 };
+    if (held.going && held.newest === answer) return null;
+    held.newest = answer;
+    held.going += 1;
+    answers.set(request.id, held);
+    const turn = held.line.then(async (): Promise<RequestList | null> => (held.newest === answer ? send() : null));
+    held.line = turn.catch(() => {});
+    return () => turn.finally(() => {
+      held.going -= 1;
+      if (!held.going) answers.delete(request.id);
+    });
+  };
   const chooseBridge = async (request: RequestRow, allow: boolean) => {
+    const turn = answerBridge(request, allow ? 'allow' : 'decline', () => post<RequestList>(
+      `/requests/${request.id}/bridge`,
+      allow && request.route?.length ? { allow, songs: request.route.map((song) => song.id) } : { allow },
+    ));
+    if (!turn) return;
     const data = await press(
       (rows) => rows.map((row) => (row.id === request.id ? { ...row, bridge_choice: allow, declined: !allow, seconds: null } : row)),
       (rows) => rows.map((row) => (row.id === request.id ? { ...row, bridge_choice: request.bridge_choice, declined: request.declined, seconds: request.seconds } : row)),
-      () => post<RequestList>(`/requests/${request.id}/bridge`, allow && request.route?.length ? { allow, songs: request.route.map((song) => song.id) } : { allow }),
+      turn,
       allow ? 'Couldn’t save your OK. Try again.' : 'Couldn’t save that. Try again.',
     );
     if (data) settle(data.requests);
@@ -349,12 +373,14 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   };
   const findBridges = (request: RequestRow) => post<BridgeSearch>(`/requests/${request.id}/bridges`, whereItsPlaying());
   const pickBridge = async (request: RequestRow, option: BridgeOption) => {
+    const turn = answerBridge(request, `pick:${option.song_ids.join(',')}`, () => post<RequestList>(`/requests/${request.id}/bridge`, { allow: true, songs: option.song_ids }));
+    if (!turn) return;
     const data = await press(
       (rows) => rows.map((row) => (row.id === request.id
         ? { ...row, bridge_choice: true, declined: false, bridge_lost: false, behind: undefined, picked: option.song_ids, route: option.songs, after: option.after, after_id: option.after_id, transitions: option.transitions, stage: 'preparing' as Stage, seconds: null }
         : row)),
       (rows) => rows.map((row) => (row.id === request.id ? request : row)),
-      () => post<RequestList>(`/requests/${request.id}/bridge`, { allow: true, songs: option.song_ids }),
+      turn,
       'Couldn’t save that bridge. Try again.',
     );
     if (data) settle(data.requests);
@@ -702,6 +728,8 @@ export function RequestsPanel() {
           ref={box}
           id="request-song-search"
           className="requests-search"
+          // ready to type into with a keyboard, without throwing an on-screen keyboard over a phone's list
+          data-autofocus={window.matchMedia?.('(pointer: fine)').matches || undefined}
           value={query}
           aria-label="Request a song"
           placeholder="Request a song: search your library"

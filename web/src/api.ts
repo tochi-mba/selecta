@@ -208,6 +208,13 @@ export class ApiError extends Error {
   }
 }
 
+/** What a stopped server looks like to someone using the app, wherever it comes up. It doesn't say
+ * whether a change got through, because when the connection drops nobody can know. */
+export const OFFLINE_WORDS = 'Can’t reach Selecta right now. Try again in a moment.';
+
+/** The server broke, rather than saying no. Its own "Internal Server Error" helps nobody. */
+export const SERVER_FAILED_WORDS = 'Something went wrong inside Selecta. Your music and mixes are safe. Try again.';
+
 export type ProblemKind = 'offline' | 'missing' | 'conflict' | 'invalid' | 'storage' | 'server';
 
 export function problemKind(error: unknown): ProblemKind {
@@ -226,7 +233,8 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
   try {
   const response = await fetch(`/api${path}`, controller ? { ...init, signal: controller.signal } : init);
   if (!response.ok) {
-    let detail = response.statusText;
+    // a page can tell a missing route from anything else, because an older server won't have new ones
+    let detail = response.status === 404 ? 'Not Found' : response.status >= 500 ? SERVER_FAILED_WORDS : 'Selecta couldn’t do that. Try again.';
     let code = '';
     try {
       const body = await response.json();
@@ -240,6 +248,8 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
   return await response.json();
   } catch (error) {
     if (controller?.signal.aborted) throw new ApiError('Selecta is taking too long to respond. Try again.', 408, 'read_timeout');
+    // what a browser throws when nothing answered at all, in words that only make sense to a developer
+    if (error instanceof TypeError) throw new Error(OFFLINE_WORDS);
     throw error;
   } finally {
     if (timeout !== null) window.clearTimeout(timeout);

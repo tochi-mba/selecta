@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { ApiError, ExportJob, get, MixData, MixItem } from '../api';
 import { length, runningTime } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -6,7 +6,7 @@ import { Action, Dialog, Status } from '../ui/controls';
 import { seamFacts } from '../ui/seam';
 import { cancelExport, isExportActive, startExport, useExports } from './exportStore';
 import { exportStage } from './ExportJobs';
-import { useMixPath } from './mixScope';
+import { MixScope, useMixPath } from './mixScope';
 
 /** Is this job a file of the mix exactly as it is now? */
 function sameVersion(job: ExportJob, mix: MixItem[]): boolean {
@@ -29,6 +29,7 @@ export function ExportPanel(props: {
 }) {
   const { mix, mixName, inDraft, guard, setMixData, names, onClose } = props;
   const at = useMixPath();
+  const draftId = useContext(MixScope);
   const { jobs, unsupported } = useExports();
   const [started, setStarted] = useState<string | null>(null);
   const [problem, setProblem] = useState('');
@@ -38,8 +39,8 @@ export function ExportPanel(props: {
   const scope = inDraft ? 'draft' : 'current';
 
   // what this opened to: the export just started here, or one of this very version from earlier
-  const mine = jobs?.find((job) => job.id === started)
-    ?? jobs?.find((job) => job.scope === scope && sameVersion(job, mix) && (isExportActive(job) || job.state === 'ready'));
+  const mine = jobs?.find((job) => job.id === started && job.scope === scope && job.draft === draftId)
+    ?? jobs?.find((job) => job.scope === scope && job.draft === draftId && sameVersion(job, mix) && (isExportActive(job) || job.state === 'ready'));
   const going = !!mine && isExportActive(mine);
   const file = mine?.state === 'ready' ? mine : null;
   const changedSince = !!mine && !sameVersion(mine, mix);
@@ -64,6 +65,10 @@ export function ExportPanel(props: {
   return (
     <Dialog title="Save as an audio file" onClose={onClose}>
       <p><b>{mixName}</b> <span className="soft">{inDraft ? 'draft' : 'current mix'}, {mix.length} songs, about {length(runningTime(mix))}. FLAC.</span></p>
+      <p className="hint">
+        {mix.length ? <>From <b>{mix[0].title}</b> to <b>{mix[mix.length - 1].title}</b>. </> : ''}
+        Save captures exactly the songs and transitions shown for this {inDraft ? 'draft' : 'current mix'} at the moment you start. Later edits will not change the exported file.
+      </p>
       <ol className="export-stages" aria-label="Export progress">
         <li aria-current={!stage || stage === 'preparing' ? 'step' : undefined}>
           Prepare transitions{mine ? ` — ${mine.seams_ready} of ${mine.seams_total} ready` : ''}

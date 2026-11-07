@@ -41,6 +41,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const sort = useQueryParam('sort') ?? 'title';
   const pagesAsked = useQueryParam('pages');
   const pagesWanted = useRef(pagesFrom(pagesAsked));
+  const pagesJustAppended = useRef<number | null>(null);
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
   const [searching, setSearching] = useState(true);
@@ -100,7 +101,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     });
     setNext(page.next);
     setTotal(page.total);
-    setAddressQuery({ pages: String(pagesWanted.current + 1) });
+    const newPageCount = pagesWanted.current + 1;
+    // Already merged the fetched page locally. Do not refetch all earlier pages
+    // just because the shareable URL now records this scroll depth.
+    pagesJustAppended.current = newPageCount;
+    setAddressQuery({ pages: String(newPageCount) });
   };
 
   // what's on screen keeps its place while it's being brought up to date
@@ -119,10 +124,17 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   }, [url, rows?.length]);
 
   useEffect(() => {
+    // Deep links and Back/Forward may change only "pages", without changing
+    // search or sort. That still must restore the corresponding loaded subset.
+    if (pagesJustAppended.current === pagesFrom(pagesAsked)) {
+      pagesJustAppended.current = null;
+      return;
+    }
+    pagesJustAppended.current = null;
     setSearching(true);
     const wait = window.setTimeout(() => void load(), 120);
     return () => { asked.current += 1; window.clearTimeout(wait); };
-  }, [load]);
+  }, [load, pagesAsked]);
 
   useEffect(() => {
     const timer = window.setInterval(() => void refreshShown(), line.length ? 4000 : 15000);
@@ -265,7 +277,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               </div>
               <div className="song-actions">
                 {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => startFrom(song)}>Start a mix</Action>}
-                {facts.canAdd && <Action working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>}
+                {facts.canAdd && <Action className="song-add" working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>}
                 {facts.canAdd && now.phase !== 'idle' && <Action working="Adding…" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next</Action>}
                 {facts.canAnalyse && (
                   <Action disabled={line.includes(song.id)} run={() => analyse(song)}>
