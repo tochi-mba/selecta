@@ -160,6 +160,26 @@ describe('songs that might share chords', () => {
     expect(screen.queryByRole('button', { name: 'Skip for now' })).toBeNull();
   });
 
+  it('keeps focus on the answer while it saves, so the next key press can’t land on the whole page', async () => {
+    let finish: () => void = () => {};
+    const answers = fakeBackend({ 'GET /discoveries': [discovery(7, 'First', 'Second'), discovery(8, 'Third', 'Fourth')], 'POST /discoveries/7/review': {} });
+    const reply = globalThis.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).includes('/review')) await new Promise<void>((done) => { finish = done; });
+      return reply(url, init);
+    }));
+    render(<HarmonicDiscoveries />);
+    const yes = await screen.findByRole('button', { name: 'Yes' });
+    yes.focus();
+    fireEvent.click(yes);
+    await waitFor(() => expect(yes).toHaveAttribute('aria-disabled', 'true'));
+    expect(yes).toBeEnabled();
+    expect(yes).toHaveFocus();
+    fireEvent.click(yes);
+    expect(answers.filter((call) => call.path.includes('/review'))).toHaveLength(0);
+    await act(async () => { finish(); });
+  });
+
   it('never talks about semitones or harmonic shapes', async () => {
     fakeBackend({
       'GET /discoveries': [discovery(7, 'First', 'Second')],

@@ -86,6 +86,52 @@ describe('the seam studio', () => {
     expect(calls.filter((call) => call.path === '/mix/1/studio')).toHaveLength(2);
   });
 
+  it('is one tab stop, moves with the arrow keys, and Space turns a square on or off', async () => {
+    open();
+    const first = await square('Song 1 voice, square 1');
+    const inTabOrder = () => screen.getAllByRole('button').filter((button) => button.closest('[role="grid"]') && button.tabIndex === 0);
+    expect(inTabOrder()).toHaveLength(1);
+    first.focus();
+    fireEvent.keyDown(first, { key: 'ArrowRight' });
+    expect(await square('Song 1 voice, square 2')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+    expect(await square('Song 1 drums, square 2')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'End' });
+    expect(await square('Song 1 drums, square 8')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'Home' });
+    expect(await square('Song 1 drums, square 1')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'End', ctrlKey: true });
+    expect(await square('Song 2 melody, square 8')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'Home', ctrlKey: true });
+    expect(await square('Song 1 voice, square 1')).toHaveFocus();
+    // left of the first square is the part's own button
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+    expect(screen.getByRole('button', { name: 'Hear only Song 1 voice' })).toHaveFocus();
+    expect(inTabOrder()).toHaveLength(1);
+    // the edges stop it, rather than wrapping or leaving the grid
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowUp' });
+    expect(screen.getByRole('button', { name: 'Hear only Song 1 voice' })).toHaveFocus();
+  });
+
+  it('a mix that moved on refuses the shape, and it stays here to try again', async () => {
+    const onConflict = vi.fn();
+    const [previous, item] = songs({ settings: {}, state: { status: 'none', key: 'x' } });
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).includes('/studio/use')) {
+        expect(new Headers(init?.headers).get('x-mix-order')).toBe('1,2');
+        return new Response(JSON.stringify({ detail: 'The mix changed.', code: 'mix_changed' }), { status: 409 });
+      }
+      return new Response(JSON.stringify(ready), { status: 200 });
+    }));
+    render(<Studio position={1} item={item} previous={previous} onClose={vi.fn()} onUsed={vi.fn()} onListen={vi.fn()} notify={vi.fn()} onConflict={onConflict} guard={{ 'x-mix-order': '1,2' }} />);
+    const cell = await square('Song 1 voice, square 8');
+    fireEvent.click(cell);
+    fireEvent.click(await screen.findByRole('button', { name: /Apply to this transition/ }));
+    await waitFor(() => expect(onConflict).toHaveBeenCalled());
+    expect(await square('Song 1 voice, square 8')).toHaveAttribute('aria-pressed', 'false');
+    expect(window.localStorage.getItem('selecta.studio.abc')).not.toBeNull();
+  });
+
   it('shows a square for every part of both songs, named for a screen reader', async () => {
     open();
     await square('Song 1 voice, square 1');

@@ -26,7 +26,7 @@ const DISPLAYS = [
 test.beforeEach(async ({ request }) => resetMix(request));
 
 for (const display of DISPLAYS) {
-  test(`capture 3.1 visual review candidates at ${display.width}px in ${display.scheme}`, async ({ page }, info) => {
+  test(`capture 3.1 visual review candidates at ${display.width}px in ${display.scheme}`, async ({ page, request }, info) => {
     await page.setViewportSize({ width: display.width, height: display.height });
     await page.emulateMedia({ colorScheme: display.scheme, reducedMotion: 'reduce' });
     const capture = async (name: string) => {
@@ -61,5 +61,57 @@ for (const display of DISPLAYS) {
     await page.keyboard.press('r');
     await expect(page.getByRole('dialog', { name: 'Requests' })).toBeVisible();
     await capture('requests-dialog');
+
+    await page.goto('/library');
+    await page.getByRole('button', { name: /^Details for Paper Moon/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Paper Moon' })).toBeVisible();
+    await capture('song-details');
+
+    await page.goto('/library?q=nothing-is-called-this');
+    await expect(page.getByText(/Nothing matches/)).toBeVisible();
+    await capture('library-no-results');
+
+    await page.goto('/mix/current/edit');
+    await page.getByRole('button', { name: 'Change', exact: true }).first().click();
+    await expect(page.getByRole('tab', { name: 'Change' })).toBeVisible();
+    await capture('transition-inspector');
+
+    await resetMix(request, [8, 5, 6, 10, 11]);
+    await page.goto('/mix/current/edit');
+    await expect(page.getByRole('button', { name: 'Download audio' })).toBeVisible();
+    await capture('editor-long-and-rtl-names');
+    await page.goto('/listen');
+    await expect(page.locator('.lyrics')).toBeVisible();
+    await capture('listen-long-title');
+
+    await request.post('/api/mix/clear');
+    await page.goto('/mix/current/edit');
+    await page.waitForTimeout(220);
+    await capture('editor-empty');
+    await page.goto('/listen');
+    await page.waitForTimeout(220);
+    await capture('listen-nothing-to-hear');
+    await resetMix(request);
+
+    // a page that's open when the server goes away, and the same page when it's back
+    await page.goto('/library');
+    await expect(page.locator('.library-rows .song-row').first()).toBeVisible();
+    await page.route('**/api/**', (route) => route.abort());
+    await expect(page.getByRole('alert').filter({ hasText: 'Can’t reach Selecta' })).toBeVisible({ timeout: 15_000 });
+    await capture('server-gone');
+    await page.goto('/mixes').catch(() => {});
+    await expect(page.getByRole('heading', { name: 'Can’t reach Selecta.' })).toBeVisible({ timeout: 15_000 });
+    await capture('server-never-reached');
+    await page.unroute('**/api/**');
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ timeout: 15_000 });
+    await capture('server-back');
+
+    // someone with no music added yet
+    const status = await (await request.get('/api/status')).json();
+    await page.route('**/api/status', (route) => route.fulfill({ json: { ...status, counts: { ...status.counts, total: 0, music: 0, analysed: 0, ready: 0 } } }));
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Where’s your music?' })).toBeVisible();
+    await capture('first-run');
+    await page.unroute('**/api/status');
   });
 }

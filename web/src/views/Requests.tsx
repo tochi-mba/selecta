@@ -1,7 +1,7 @@
 import { Icon } from '../ui/Icon';
 import { Problem, Skeleton } from '../ui/controls';
 import { createContext, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
-import { del, get, MixData, MixItem, post, SongRow } from '../api';
+import { SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
 import { SetPlayer } from '../player';
@@ -196,7 +196,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     } catch (problem) {
       const words = (problem as Error).message;
       setRequests((rows) => undo(rows ?? []));
-      setError(words && !['Not Found', 'Internal Server Error'].includes(words) ? words : failed);
+      setError(words && !['Not Found', SERVER_FAILED_WORDS].includes(words) ? words : failed);
       return null;
     } finally {
       inFlight.current -= 1;

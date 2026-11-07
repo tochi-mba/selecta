@@ -215,6 +215,31 @@ for (const [width, height] of [[1280, 860], [375, 812]]) {
   });
 }
 
+test('pages hold their shape while they load, even when every answer is slow', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { shifted: number }).shifted = 0;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries() as (PerformanceEntry & { value: number; hadRecentInput: boolean })[]) {
+        if (!entry.hadRecentInput) (window as unknown as { shifted: number }).shifted += entry.value;
+      }
+    }).observe({ type: 'layout-shift', buffered: true });
+  });
+  const found: Record<string, number> = {};
+  await page.route('**/api/**', async (route) => {
+    await new Promise((done) => setTimeout(done, 350));
+    await route.continue();
+  });
+  for (const address of PAGES) {
+    await page.goto(address);
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(1200);
+    found[address] = Math.round(await page.evaluate(() => (window as unknown as { shifted: number }).shifted) * 1000) / 1000;
+  }
+  console.log(`layout shift while loading slowly: ${JSON.stringify(found)}`);
+  const bad = Object.entries(found).filter(([, shift]) => shift > 0.25);
+  expect(bad).toEqual([]);
+});
+
 test('the keyboard alone can request a song, cancel it, and get back to where it was', async ({ page, request }) => {
   await page.goto('/listen');
   await expect(page.locator('.lyrics')).toBeVisible();

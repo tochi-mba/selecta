@@ -58,6 +58,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     .sort((a, b) => Number(skipped.includes(a.id)) - Number(skipped.includes(b.id)));
   const answered = items.filter((item) => item.status !== 'new');
   const item = waiting[0];
+  const pairShowing = useRef(item?.id);
+  pairShowing.current = item?.id;
   const following = waiting[1];
 
   const steps = item
@@ -107,9 +109,9 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     setError('');
     try {
       const info = await post<Audition>(`/discoveries/${target.id}/hear`);
-      // A skip, verdict or newer listen may have changed the displayed pair
-      // while this response was being prepared. Never play the old pair then.
-      if (request !== preparingRequest.current || item?.id !== target.id) return;
+      // A skip, a verdict or a newer press may have moved on while this was being prepared, and the
+      // old pair must never play then. Which pair is showing is read now, not when this was pressed.
+      if (request !== preparingRequest.current || pairShowing.current !== target.id) return;
       setAudition(info);
       keepGoing.current = true;
       playStep(target.id, from);
@@ -128,7 +130,6 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 
   // a new pair starts by itself once someone's listening
   useEffect(() => {
-    preparingRequest.current += 1;
     setGetting(false);
     setAudition(null);
     stop();
@@ -218,9 +219,9 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
           )}
           <div className="row wrap" role="group" aria-label={`Do ${item.title_a} and ${item.title_b} sound connected?`}>
             <span>Hear a connection?</span>
-            <button disabled={saving} onClick={() => void review(item, 'approved')}>Yes</button>
-            <button disabled={saving} onClick={() => void review(item, 'rejected')}>No</button>
-            {following && <button disabled={saving} onClick={() => skip(item)}>Skip for now</button>}
+            <button aria-disabled={saving || undefined} onClick={() => void review(item, 'approved')}>Yes</button>
+            <button aria-disabled={saving || undefined} onClick={() => void review(item, 'rejected')}>No</button>
+            {following && <button aria-disabled={saving || undefined} onClick={() => { if (!saving) skip(item); }}>Skip for now</button>}
           </div>
         </article>
       )}
