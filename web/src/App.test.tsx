@@ -95,7 +95,7 @@ describe('requests across the app', () => {
     render(<App />);
     fireEvent.click((await navigation()).getByRole('link', { name: 'Edit' }));
     expect(await screen.findByText('Requested')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^Requests/ }));
+    fireEvent.click((await navigation()).getByRole('button', { name: /^Requests/ }));
     expect(await screen.findByText('Wanted')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Song requests' })).toBeInTheDocument();
   });
@@ -160,7 +160,7 @@ describe('an open draft', () => {
     render(<App />);
     expect(await screen.findByRole('heading', { name: /That draft isn’t there/ })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Current' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'See your mixes' })).toHaveAttribute('href', '/mixes/mine');
+    expect(screen.getByRole('link', { name: 'See my mixes' })).toHaveAttribute('href', '/mixes/mine');
   });
 
   it('being sent to Edit from another page means the mix that’s playing', async () => {

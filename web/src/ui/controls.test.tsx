@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Action, Dialog, Menu, Problem, Section, Status, Tooltip } from './controls';
 import { clearToasts, dismissToast, showProblem, showToast, Toaster } from './toasts';
+import { activityEntries } from '../state/activity';
 
 afterEach(() => clearToasts());
 
@@ -62,20 +63,21 @@ describe('notifications', () => {
   });
 
   it('never shows more than a few at once', () => {
-    const { container } = render(<Toaster />);
+    render(<Toaster />);
     act(() => {
       for (const word of ['One', 'Two', 'Three', 'Four', 'Five']) showToast(word);
     });
-    expect(container.querySelectorAll('.toast-row')).toHaveLength(3);
+    // Notifications use a portal, so count what is actually shown in the document.
+    expect(document.body.querySelectorAll('.toast-row')).toHaveLength(3);
   });
 
   it('the same words twice is one message', () => {
-    const { container } = render(<Toaster />);
+    render(<Toaster />);
     act(() => {
       showToast('Saved.');
       showToast('Saved.');
     });
-    expect(container.querySelectorAll('.toast-row')).toHaveLength(1);
+    expect(document.body.querySelectorAll('.toast-row')).toHaveLength(1);
   });
 
   it('Undo runs what that message was about', async () => {
@@ -119,8 +121,10 @@ describe('notifications', () => {
       act(() => { vi.advanceTimersByTime(5000); });
       expect(screen.queryByText('Saved.')).toBeNull();
       expect(screen.getByText('Moved.')).toBeInTheDocument();
-      act(() => { vi.advanceTimersByTime(6000); });
+      act(() => { vi.advanceTimersByTime(10000); });
       expect(screen.queryByText('Moved.')).toBeNull();
+      // Expiring the toast must not erase the only way to undo the action.
+      expect(activityEntries().find((entry) => entry.message === 'Moved.')?.undoState).toBe('available');
     } finally {
       vi.useRealTimers();
     }
@@ -194,7 +198,7 @@ describe('a menu', () => {
 describe('states', () => {
   it('never rely on colour alone', () => {
     const { container } = render(<Status kind="failed" />);
-    expect(container).toHaveTextContent('✕');
+    expect(container.querySelector('.status-failed svg')).toBeInTheDocument();
     expect(container).toHaveTextContent('Didn’t work');
   });
 

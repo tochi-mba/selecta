@@ -28,7 +28,7 @@ describe('getting around', () => {
     backend();
     render(<App />);
     const links = await nav();
-    for (const [name, path] of [['Listen', '/listen'], ['Mixes', '/mixes'], ['Library', '/library'], ['Discover', '/discover'], ['Workshop', '/workshop']]) {
+    for (const [name, path] of [['Listen', '/listen'], ['Explore', '/mixes'], ['My Mixes', '/mixes/mine'], ['Library', '/library'], ['Workspace', '/workshop']]) {
       expect(links.getByRole('link', { name })).toHaveAttribute('href', path);
     }
   });
@@ -37,11 +37,11 @@ describe('getting around', () => {
     backend();
     render(<App />);
     const links = await nav();
-    expect(links.getByRole('link', { name: 'Mixes' })).toHaveAttribute('aria-current', 'page');
+    expect(links.getByRole('link', { name: 'Explore' })).toHaveAttribute('aria-current', 'page');
     fireEvent.click(links.getByRole('link', { name: 'Library' }));
     await waitFor(() => expect(window.location.pathname).toBe('/library'));
     expect(links.getByRole('link', { name: 'Library' })).toHaveAttribute('aria-current', 'page');
-    expect(links.getByRole('link', { name: 'Mixes' })).not.toHaveAttribute('aria-current');
+    expect(links.getByRole('link', { name: 'Explore' })).not.toHaveAttribute('aria-current');
   });
 
   it('only offers Edit once there’s a mix to edit', async () => {
@@ -62,7 +62,7 @@ describe('getting around', () => {
     backend();
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'There’s nothing at this address.' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Go to Mixes' })).toHaveAttribute('href', '/mixes');
+    expect(screen.getByRole('link', { name: 'Go to Explore' })).toHaveAttribute('href', '/mixes');
   });
 
   it('goes straight to the right page from a link', async () => {
@@ -92,7 +92,7 @@ describe('getting around', () => {
     render(<App />);
     const links = await nav();
     fireEvent.click(links.getByRole('link', { name: 'Library' }));
-    fireEvent.click(links.getByRole('link', { name: 'Workshop' }));
+    fireEvent.click(links.getByRole('link', { name: 'Workspace' }));
     expect(playFrom).not.toHaveBeenCalled();
   });
 });
