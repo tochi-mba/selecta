@@ -83,9 +83,11 @@ test('a transition’s inspector: its four areas, and a change of move renders t
 test('drafts: make one, name it, fill it, and it stays apart from the current mix', async ({ page, request }) => {
   await page.goto('/mixes/mine');
   const made = await (await request.post('/api/drafts', { data: { name: 'Friday night' } })).json();
+  // Retries may find a previous attempt's draft; address the exact ID/name returned.
+  const draftName = made.name as string;
   await request.post(`/api/mix/songs?draft=${made.id}`, { data: { song_id: 5 } });
   await page.reload();
-  const draft = page.getByRole('button', { name: 'Edit Friday night', exact: true });
+  const draft = page.getByRole('button', { name: `Edit ${draftName}`, exact: true });
   await expect(draft).toBeVisible();
   await draft.click();
   await expect(page).toHaveURL(new RegExp(`/mixes/drafts/${made.id}/edit$`));
@@ -96,12 +98,12 @@ test('drafts: make one, name it, fill it, and it stays apart from the current mi
   expect((current.mix as { song_id: number }[]).map((item) => item.song_id)).toEqual([1, 2, 3, 4]);
 
   await page.goto('/mixes/mine');
-  await deleteDraft(page, 'Friday night');
-  await expect(page.getByRole('button', { name: 'Edit Friday night', exact: true })).toHaveCount(0);
+  await deleteDraft(page, draftName);
+  await expect(page.getByRole('button', { name: `Edit ${draftName}`, exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: /Undo|Bring it back/ }).first().click();
-  await expect(page.getByRole('button', { name: 'Edit Friday night', exact: true })).toBeVisible();
-  await deleteDraft(page, 'Friday night');
-  await expect(page.getByRole('button', { name: 'Edit Friday night', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: `Edit ${draftName}`, exact: true })).toBeVisible();
+  await deleteDraft(page, draftName);
+  await expect(page.getByRole('button', { name: `Edit ${draftName}`, exact: true })).toHaveCount(0);
 });
 
 test('a draft that’s been deleted is explained, and never quietly swapped for another mix', async ({ page, request }) => {
