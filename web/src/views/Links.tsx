@@ -38,6 +38,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   const [step, setStep] = useState<number | null>(null);
   const [bar, setBar] = useState(-1);
   const [saving, setSaving] = useState(false);
+  const reviewing = useRef(false);
   const [unsaved, setUnsaved] = useState<{ target: HarmonicDiscovery; verdict: string } | null>(null);
   const audio = useRef<HTMLAudioElement>(null);
   const keepGoing = useRef(false);
@@ -143,7 +144,10 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   }, [item?.id]);
 
   const review = async (target: HarmonicDiscovery, verdict: string) => {
-    if (saving) return;
+    // The state update does not protect against two taps in the same frame.
+    // Never dispatch competing answers for the same comparison.
+    if (reviewing.current) return;
+    reviewing.current = true;
     const asking = `${target.id}:${verdict}`;
     const name = verdictNames.current.get(asking) ?? operationId('verdict');
     verdictNames.current.set(asking, name);
@@ -158,6 +162,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
       setError('Couldn’t save that. Try again.');
       setUnsaved({ target, verdict });
     } finally {
+      reviewing.current = false;
       setSaving(false);
     }
   };
