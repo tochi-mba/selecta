@@ -191,7 +191,7 @@ a.button:hover { border-color: var(--text); }
 .crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
 .crumbs a { color: var(--text-soft); }
 .crumbs [aria-current='page'] { color: var(--text); font-weight: 600; }
-.context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; }
+.context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; min-width: 0; }
 .context-button { display: inline-flex; align-items: center; gap: var(--space-2); background: none; border-color: transparent; padding: 6px 8px; min-width: var(--control-height); justify-content: center; }
 .context-button:hover:not(:disabled) { border-color: var(--border); }
 .context-button.health-attention { color: var(--status-warning); text-decoration: none; border-color: var(--status-warning); }
@@ -200,6 +200,12 @@ a.button:hover { border-color: var(--text); }
 @media (max-width: 760px) {
   .context-request { display: inline-flex; }
   .context-label { display: none; }
+  /* Mobile has a full Search path and the keyboard shortcut. Avoid cutting
+     off critical Request, Activity, Theme and Help buttons at 320px. */
+  .palette-button { display: none; }
+  .context-bar { gap: var(--space-1); }
+  .context-actions { gap: 0; }
+  .crumbs { flex: 1 1 0; }
 }
 
 .mini {
