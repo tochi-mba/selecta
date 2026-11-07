@@ -91,7 +91,11 @@ export async function runUndo(id: number): Promise<void> {
   }
   patch(id, { undoState: 'running', problem: undefined });
   try {
-    await entry.undo();
+    const reversed = await entry.undo();
+    // Some scopes explicitly answer that there was no newest change to
+    // reverse. False is authoritative: don't announce an Undo that didn't
+    // happen. Void is a valid success for restoration operations.
+    if (reversed === false) throw new Error('There was no change to undo. Check the current mix before trying again.');
     patch(id, { undoState: 'undone' });
   } catch (error) {
     const words = (error as Error).message || 'Couldn’t undo that.';
