@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { get, post } from '../api';
+import { ApiError, get, post } from '../api';
+import { operationId } from '../state/async';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { Action } from '../ui/controls';
 import { Field } from '../ui/primitives';
@@ -22,6 +23,14 @@ export function Listening() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const operation = useRef(false);
+  // An uncertain response may have been accepted by the server. Keep the
+  // exact payload and operation identifier so retry cannot silently replace
+  // a choice with a different body under the same idempotency key.
+  const pendingResponse = useRef<{
+    trial: string; listener: string; setup: string; choice: string;
+    quality: Record<string, { grade: number; tags: string[] }>; id: string;
+  } | null>(null);
+  const [retryChoice, setRetryChoice] = useState<string | null>(null);
   const [progressKey, setProgressKey] = useState('');
   const [heard, setHeard] = useState<string[]>([]);
   const [playing, setPlaying] = useState<'a' | 'b' | null>(null);
@@ -61,6 +70,12 @@ export function Listening() {
       let restored: { ids: string[]; index: number; quality: typeof quality; heard: string[] } | null = null;
       try { restored = JSON.parse(sessionStorage.getItem(key) ?? 'null'); } catch { /* invalid cached progress is ignored */ }
       const valid = restored && JSON.stringify(restored.ids) === JSON.stringify(rows.map((row) => row.id)) && Number.isInteger(restored.index) && restored.index >= 0 && restored.index <= rows.length;
+      if (pendingResponse.current?.trial !== rows[index]?.id
+        || pendingResponse.current?.listener !== listener
+        || pendingResponse.current?.setup !== setup) {
+        pendingResponse.current = null;
+        setRetryChoice(null);
+      }
       setTrials(rows);
       setProgressKey(key);
       setIndex(valid ? restored!.index : 0);
@@ -72,23 +87,47 @@ export function Listening() {
   };
 
   const answer = async (choice: string) => {
-    if (!trial || operation.current) return;
+    if (!trial || operation.current || (retryChoice !== null && retryChoice !== choice)) return;
     operation.current = true;
     setSaving(true);
     setError('');
     quiet();
+    const submitted = pendingResponse.current ?? {
+      trial: trial.id,
+      listener,
+      setup,
+      choice,
+      quality: Object.fromEntries(Object.entries(quality).map(([option, details]) =>
+        [option, { grade: details.grade, tags: [...details.tags] }])),
+      id: operationId('listening'),
+    };
+    pendingResponse.current = submitted;
     try {
-      // sending the same answer again, because the first reply got lost, doesn't count it twice
-      await post(`/listening/${trial.id}/response`, { listener, setup, choice, quality }, { 'x-operation-id': `listening-${trial.id}-${listener}-${choice}` });
-      setIndex(index + 1);
+      await post(`/listening/${submitted.trial}/response`, {
+        listener: submitted.listener, setup: submitted.setup, choice: submitted.choice, quality: submitted.quality,
+      }, { 'x-operation-id': submitted.id });
+      pendingResponse.current = null;
+      setRetryChoice(null);
+      setIndex((current) => current + 1);
       setHeard([]);
       setQuality({});
-    } catch {
-      setError('Your response was not saved. Everything’s still here, so try again.');
+    } catch (error) {
+      // A definitive validation refusal means nothing was saved, whereas a
+      // dropped response may mean the server accepted it. Only the latter
+      // freezes the exact answer until an idempotent retry confirms it.
+      if (error instanceof ApiError && error.status < 500 && error.status !== 408) {
+        pendingResponse.current = null;
+        setRetryChoice(null);
+        setError(error.message);
+      } else {
+        setRetryChoice(submitted.choice);
+        setError('Could not confirm whether your response was saved. Retry the same answer to continue. Your ratings are kept.');
+      }
     } finally { operation.current = false; setSaving(false); }
   };
 
   const toggleTag = (option: string, tag: string) => {
+    if (retryChoice !== null) return;
     setQuality((current) => {
       const tags = current[option]?.tags ?? [];
       return {
@@ -119,6 +158,7 @@ export function Listening() {
       {trial && (
         <div key={trial.id} className="stack study-trial">
           <p className="study-progress">Comparison {index + 1} of {trials!.length}</p>
+          {retryChoice !== null && <p className="hint" role="status">Your last answer may already be on the server. The original version and ratings are held for an exact retry.</p>}
           <p className="study-now" role="status">{playing ? `Now playing: Version ${playing.toUpperCase()}` : 'Nothing is playing'}</p>
           <div className="study-versions">
             {VERSIONS.map((option) => (
@@ -168,6 +208,7 @@ export function Listening() {
                         <input
                           type="radio"
                           name={`grade-${option}`}
+                          disabled={saving || retryChoice !== null}
                           checked={quality[option]?.grade === grade}
                           onChange={() => setQuality((current) => ({ ...current, [option]: { grade, tags: current[option]?.tags ?? [] } }))}
                         />
@@ -180,7 +221,7 @@ export function Listening() {
                       <label className="choice" key={tag}>
                         <input
                           type="checkbox"
-                          disabled={!quality[option]}
+                          disabled={!quality[option] || saving || retryChoice !== null}
                           checked={quality[option]?.tags?.includes(tag) ?? false}
                           onChange={() => toggleTag(option, tag)}
                         />
@@ -197,10 +238,10 @@ export function Listening() {
               <Action
                 key={value}
                 working="Saving…"
-                disabled={saving || loading || !listener.trim() || !setup.trim() || (value !== 'cannot_judge' && heard.length < 2)}
+                disabled={saving || loading || !listener.trim() || !setup.trim() || (retryChoice !== null && retryChoice !== value) || (retryChoice === null && value !== 'cannot_judge' && heard.length < 2)}
                 run={() => answer(value)}
               >
-                {label}
+                {retryChoice === value ? 'Retry the same answer' : label}
               </Action>
             ))}
           </div>
