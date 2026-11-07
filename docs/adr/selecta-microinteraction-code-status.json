@@ -1,0 +1,626 @@
+{
+  "schema_version": 1,
+  "scope": "MI-0135-01 through MI-0164-08",
+  "implementation_branch": "docs/immersive-microinteraction-adrs-0135-0164",
+  "implementation_source_head": "89641b6a1b8156e1b83abaa542beea687af29adb",
+  "verification": "Independent verification remains No for all tasks. An implementation checkmark is not release verification.",
+  "groups": {
+    "0135": {
+      "implemented": [
+        "03",
+        "04"
+      ],
+      "in_progress": [
+        "02",
+        "05",
+        "07"
+      ],
+      "source": [
+        "web/src/views/Now.tsx",
+        "web/src/ui/toasts.tsx"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx",
+        "web/src/ui/controls.test.tsx"
+      ]
+    },
+    "0136": {
+      "implemented": [
+        "02"
+      ],
+      "in_progress": [
+        "01",
+        "03",
+        "07",
+        "08"
+      ],
+      "source": [
+        "web/src/views/Now.tsx",
+        "web/src/shell/Shell.tsx",
+        "web/src/styles/listening.css"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx",
+        "web/src/shell/Shell.test.tsx"
+      ]
+    },
+    "0137": {
+      "implemented": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06"
+      ],
+      "in_progress": [
+        "08"
+      ],
+      "source": [
+        "web/src/styles/tokens.css",
+        "web/src/styles/polish.css",
+        "web/src/views/Now.tsx"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx",
+        "web/src/ui/controls.test.tsx"
+      ]
+    },
+    "0138": {
+      "implemented": [
+        "02",
+        "06"
+      ],
+      "in_progress": [
+        "01",
+        "03",
+        "04",
+        "05",
+        "07"
+      ],
+      "source": [
+        "web/src/ui/controls.tsx",
+        "web/src/ui/toasts.tsx",
+        "web/src/styles/polish.css"
+      ],
+      "tests": [
+        "web/src/ui/controls.test.tsx"
+      ]
+    },
+    "0139": {
+      "implemented": [
+        "03",
+        "05",
+        "06"
+      ],
+      "in_progress": [
+        "02",
+        "04",
+        "07",
+        "08"
+      ],
+      "source": [
+        "web/src/shell/Shell.tsx",
+        "web/src/views/Mix.tsx",
+        "web/src/styles/polish.css"
+      ],
+      "tests": [
+        "web/src/shell/Shell.test.tsx",
+        "web/src/views/Mix.test.tsx"
+      ]
+    },
+    "0140": {
+      "implemented": [
+        "02",
+        "05"
+      ],
+      "in_progress": [
+        "01",
+        "03",
+        "04",
+        "06",
+        "07"
+      ],
+      "source": [
+        "web/src/shell/Shell.tsx",
+        "web/src/player.ts",
+        "web/src/audio/focus.ts"
+      ],
+      "tests": [
+        "web/src/player.test.ts",
+        "web/src/audio/focus.test.tsx",
+        "web/src/shell/Shell.test.tsx"
+      ]
+    },
+    "0141": {
+      "implemented": [
+        "01",
+        "04"
+      ],
+      "in_progress": [
+        "02",
+        "03",
+        "05",
+        "06"
+      ],
+      "source": [
+        "web/src/views/Mixes.tsx",
+        "web/src/views/WorkshopPanels.tsx",
+        "web/src/views/Setup.tsx"
+      ],
+      "tests": [
+        "web/src/views/Mixes.test.tsx",
+        "web/src/views/Setup.test.tsx"
+      ]
+    },
+    "0142": {
+      "implemented": [
+        "06"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "07"
+      ],
+      "source": [
+        "web/src/views/Mixes.tsx"
+      ],
+      "tests": [
+        "web/src/views/Mixes.test.tsx"
+      ]
+    },
+    "0143": {
+      "implemented": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "07"
+      ],
+      "in_progress": [
+        "05",
+        "06"
+      ],
+      "source": [
+        "web/src/views/MixSetup.tsx",
+        "web/src/styles/listening.css"
+      ],
+      "tests": [
+        "web/src/views/MixSetup.test.tsx",
+        "web/src/views/Mixes.test.tsx"
+      ]
+    },
+    "0144": {
+      "implemented": [
+        "02",
+        "03",
+        "04",
+        "05",
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "06"
+      ],
+      "source": [
+        "web/src/views/Now.tsx",
+        "web/src/styles/listening.css"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx"
+      ]
+    },
+    "0145": {
+      "implemented": [
+        "02",
+        "03",
+        "05",
+        "06",
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "04",
+        "08"
+      ],
+      "source": [
+        "web/src/views/Now.tsx",
+        "web/src/player.ts",
+        "web/src/shell/Shell.tsx"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx",
+        "web/src/player.test.ts"
+      ]
+    },
+    "0146": {
+      "implemented": [
+        "02",
+        "05",
+        "06"
+      ],
+      "in_progress": [
+        "01",
+        "03",
+        "04",
+        "07"
+      ],
+      "source": [
+        "web/src/views/Now.tsx",
+        "web/src/styles/listening.css"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx"
+      ]
+    },
+    "0147": {
+      "implemented": [
+        "04"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "03",
+        "05",
+        "06",
+        "07"
+      ],
+      "source": [
+        "web/src/views/Now.tsx",
+        "web/src/player.ts"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx",
+        "web/src/player.test.ts"
+      ]
+    },
+    "0148": {
+      "implemented": [
+        "02",
+        "04",
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "03",
+        "05",
+        "06"
+      ],
+      "source": [
+        "web/src/views/Requests.tsx"
+      ],
+      "tests": [
+        "web/src/views/Requests.test.tsx",
+        "web/src/views/RequestsJoining.test.tsx"
+      ]
+    },
+    "0149": {
+      "implemented": [
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "08"
+      ],
+      "source": [
+        "web/src/ui/toasts.tsx",
+        "web/src/views/Mix.tsx"
+      ],
+      "tests": [
+        "web/src/ui/controls.test.tsx",
+        "web/src/views/Mix.test.tsx"
+      ]
+    },
+    "0150": {
+      "implemented": [
+        "02",
+        "04",
+        "06",
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "03",
+        "05"
+      ],
+      "source": [
+        "web/src/views/EditorRows.tsx",
+        "web/src/views/Mix.tsx",
+        "web/src/styles/creation.css"
+      ],
+      "tests": [
+        "web/src/views/Mix.test.tsx"
+      ]
+    },
+    "0151": {
+      "implemented": [
+        "04"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "03",
+        "05",
+        "06",
+        "07"
+      ],
+      "source": [
+        "web/src/audio/focus.ts",
+        "web/src/views/SeamInspector.tsx"
+      ],
+      "tests": [
+        "web/src/audio/focus.test.tsx",
+        "web/src/views/Mix.test.tsx"
+      ]
+    },
+    "0152": {
+      "implemented": [
+        "02",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "03"
+      ],
+      "source": [
+        "web/src/views/Studio.tsx",
+        "web/src/styles/creation.css"
+      ],
+      "tests": [
+        "web/src/views/Studio.test.tsx"
+      ]
+    },
+    "0153": {
+      "implemented": [
+        "01"
+      ],
+      "in_progress": [
+        "02",
+        "03",
+        "04",
+        "05",
+        "07"
+      ],
+      "source": [
+        "web/src/views/Library.tsx"
+      ],
+      "tests": [
+        "web/src/views/Library.test.tsx"
+      ]
+    },
+    "0154": {
+      "implemented": [
+        "03"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
+      "source": [
+        "web/src/views/SongDetails.tsx"
+      ],
+      "tests": [
+        "web/src/views/Library.test.tsx"
+      ]
+    },
+    "0155": {
+      "implemented": [
+        "03",
+        "04"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "05",
+        "06",
+        "07"
+      ],
+      "source": [
+        "web/src/views/Links.tsx"
+      ],
+      "tests": [
+        "web/src/views/Links.test.tsx"
+      ]
+    },
+    "0156": {
+      "implemented": [
+        "05",
+        "06"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "07"
+      ],
+      "source": [
+        "web/src/views/WorkshopPanels.tsx"
+      ],
+      "tests": [
+        "web/src/views/Workshop.test.tsx"
+      ]
+    },
+    "0157": {
+      "implemented": [
+        "01",
+        "05"
+      ],
+      "in_progress": [
+        "02",
+        "03",
+        "04",
+        "06",
+        "07"
+      ],
+      "source": [
+        "web/src/views/ExportPanel.tsx",
+        "web/src/views/ExportJobs.tsx"
+      ],
+      "tests": [
+        "web/src/views/Mix.test.tsx"
+      ]
+    },
+    "0158": {
+      "implemented": [
+        "03"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
+      "source": [
+        "web/src/views/Listening.tsx"
+      ],
+      "tests": [
+        "web/src/views/Listening.test.tsx"
+      ]
+    },
+    "0159": {
+      "implemented": [
+        "02",
+        "03",
+        "05",
+        "06",
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "04"
+      ],
+      "source": [
+        "web/src/ui/toasts.tsx",
+        "web/src/ui/controls.tsx",
+        "web/src/state/activity.ts"
+      ],
+      "tests": [
+        "web/src/ui/controls.test.tsx"
+      ]
+    },
+    "0160": {
+      "implemented": [
+        "02",
+        "03",
+        "05"
+      ],
+      "in_progress": [
+        "01",
+        "04",
+        "06",
+        "07"
+      ],
+      "source": [
+        "web/src/styles/tokens.css",
+        "web/src/views/EditorRows.tsx",
+        "web/src/shell/Shell.tsx"
+      ],
+      "tests": [
+        "web/src/views/Mix.test.tsx",
+        "web/src/shell/Shell.test.tsx"
+      ]
+    },
+    "0161": {
+      "implemented": [
+        "02",
+        "03",
+        "05",
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "04",
+        "06"
+      ],
+      "source": [
+        "web/src/ui/useReducedMotion.ts",
+        "web/src/styles/polish.css",
+        "web/src/views/Now.tsx"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx",
+        "web/src/ui/controls.test.tsx"
+      ]
+    },
+    "0162": {
+      "implemented": [
+        "06",
+        "07"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05"
+      ],
+      "source": [
+        "web/src/views/Now.tsx",
+        "web/src/styles/tokens.css",
+        "web/src/shell/Shell.tsx"
+      ],
+      "tests": [
+        "web/src/views/Now.test.tsx",
+        "web/src/shell/Shell.test.tsx"
+      ]
+    },
+    "0163": {
+      "implemented": [
+        "04",
+        "05",
+        "06"
+      ],
+      "in_progress": [
+        "01",
+        "02",
+        "03",
+        "07"
+      ],
+      "source": [
+        "web/src/views/Requests.tsx",
+        "web/src/views/Mixes.tsx",
+        "web/src/views/WorkshopPanels.tsx"
+      ],
+      "tests": [
+        "web/src/views/Requests.test.tsx",
+        "web/src/views/Mixes.test.tsx"
+      ]
+    },
+    "0164": {
+      "implemented": [
+        "01"
+      ],
+      "in_progress": [
+        "02",
+        "03",
+        "04",
+        "06",
+        "07"
+      ],
+      "source": [
+        "docs/adr/selecta-microinteraction-evidence.md",
+        "docs/adr/selecta-microinteraction-implementation-checklist.md"
+      ],
+      "tests": [
+        "docs/adr/selecta-microinteraction-verification-matrix.md"
+      ]
+    }
+  }
+}
