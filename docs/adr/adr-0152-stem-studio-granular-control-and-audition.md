@@ -6,7 +6,7 @@
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Studio.
 - **Related earlier ADRs:** ADR-0122, ADR-0102, ADR-0132; earlier decisions and historical implementation claims remain intact.
-- **Source touchpoints:** web/src/views/Studio.tsx; web/src/views/StudioGrid.tsx; web/src/styles/creation.css.
+- **Source touchpoints:** web/src/views/Studio.tsx; web/src/ui/primitives.tsx; web/src/styles/creation.css.
 
 ## Context and evidence boundary
 
