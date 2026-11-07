@@ -96,5 +96,6 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
     assert saved["state"] == "ready", saved
     assert captured["songs"] == [1, 2]
     assert captured["keys"] == [job["seams"][0]["key"]]
-    assert saved["name"] in [item["name"] for item in client.get("/api/exports/jobs").json()["jobs"]]
+    names = [item["name"] for item in client.get("/api/exports/jobs").json()["jobs"]]
+    assert saved["name"] in names
     assert client.get("/api/exports/jobs/not-a-real-id").status_code == 404
