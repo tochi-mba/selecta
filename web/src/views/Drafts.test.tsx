@@ -34,6 +34,12 @@ function show(answer: DraftList, routes: Record<string, unknown> = {}) {
   return { calls, ...props };
 }
 
+/** Rename, Copy, Prioritize, Out of line and Delete live behind each draft's own menu. */
+async function fromMenu(draft: string, item: string) {
+  fireEvent.click(await screen.findByRole('button', { name: `More actions for ${draft}` }));
+  fireEvent.click(screen.getByRole('menuitem', { name: item }));
+}
+
 describe('your drafts', () => {
   it('invites you to start one when there are none, and starts it in one press', async () => {
     const { calls, openDraft } = show(list([]), { 'POST /drafts': { id: 4, name: 'Draft 1' } });
@@ -85,7 +91,7 @@ describe('your drafts', () => {
       current: { name: 'Current', songs: 10, left: 2, eta: { seconds: 240, low: 200, high: 300 } },
     });
     const { calls, notify } = show(list([draft(1)]), { 'POST /drafts/1/line': inLine });
-    fireEvent.click(await screen.findByRole('button', { name: 'Prioritize Draft 1' }));
+    await fromMenu('Draft 1', 'Prioritize Draft 1');
     await waitFor(() => expect(notify).toHaveBeenCalled());
     expect(calls.some((call) => call.path === '/drafts/1/line')).toBe(true);
     expect(notify.mock.calls[0][0]).toContain('about 10 minutes');
@@ -96,7 +102,7 @@ describe('your drafts', () => {
   it('says it has started when nothing is ahead', async () => {
     const inLine = list([draft(1, { place: 1, eta: { seconds: 100, low: 80, high: 120 } })]);
     const { notify } = show(list([draft(1)]), { 'POST /drafts/1/line': inLine });
-    fireEvent.click(await screen.findByRole('button', { name: 'Prioritize Draft 1' }));
+    await fromMenu('Draft 1', 'Prioritize Draft 1');
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Rendering Draft 1 in the background.'));
     expect(screen.getByText(/Your current mix is done/)).toBeInTheDocument();
   });
@@ -104,7 +110,12 @@ describe('your drafts', () => {
   it('doesn’t offer to prioritize what has nothing left to render', async () => {
     show(list([draft(1, { ready: 3, waiting: 0 }), draft(2, { songs: 1, seams: 0, waiting: 0, ready: 0 })]));
     await screen.findByText(/Ready to play/);
-    expect(screen.queryByRole('button', { name: /^Prioritize/ })).toBeNull();
+    for (const name of ['Draft 1', 'Draft 2']) {
+      fireEvent.click(screen.getByRole('button', { name: `More actions for ${name}` }));
+      expect(screen.getByRole('menuitem', { name: `Copy ${name}` })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: /^Prioritize/ })).toBeNull();
+      fireEvent.keyDown(screen.getByRole('menuitem', { name: `Copy ${name}` }), { key: 'Escape' });
+    }
   });
 
   it('can move through the line, but not past the ends', async () => {
@@ -121,29 +132,32 @@ describe('your drafts', () => {
     const before = list([draft(1, { place: 1, eta: { seconds: 100, low: 80, high: 120 } })]);
     const { calls } = show(before, { 'DELETE /drafts/1/line': list([draft(1)]) });
     fireEvent.click(await screen.findByRole('button', { name: 'Take Draft 1 out of the line' }));
-    expect(await screen.findByRole('button', { name: 'Prioritize Draft 1' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('group', { name: 'Draft 1 in the render line' })).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Draft 1' }));
+    expect(screen.getByRole('menuitem', { name: 'Prioritize Draft 1' })).toBeInTheDocument();
     expect(calls.some((call) => call.method === 'DELETE')).toBe(true);
   });
 
   it('says when rendering has stopped for lack of room, and where to fix it', async () => {
     show(list([draft(1, { place: 1, eta: { seconds: 100, low: 80, high: 120 } })], { out_of_room: true }));
     expect(await screen.findByText(/storage limit/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Change the limit in Workshop' })).toHaveAttribute('href', '/workshop/storage');
+    expect(screen.getByRole('link', { name: 'Change the limit in Workspace' })).toHaveAttribute('href', '/workshop/storage');
   });
 
   it('deleting asks nothing, and can be undone', async () => {
     const { calls, notify } = show(list([draft(1)]), { 'DELETE /drafts/1': { name: 'Draft 1' }, 'POST /drafts/restore': { id: 1 } });
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete Draft 1' }));
+    await fromMenu('Draft 1', 'Delete Draft 1');
     await waitFor(() => expect(notify).toHaveBeenCalled());
     const [message, undo] = notify.mock.calls[0];
     expect(message).toBe('Deleted Draft 1.');
+    expect(screen.queryByRole('dialog')).toBeNull();
     await (undo as () => Promise<void>)();
-    expect(calls.some((call) => call.path === '/drafts/restore')).toBe(true);
+    expect(calls.some((call) => call.path === '/drafts/restore?id=1')).toBe(true);
   });
 
   it('copies a draft', async () => {
     const { notify } = show(list([draft(1)]), { 'POST /drafts/1/duplicate': { id: 2, name: 'Draft 1 copy' } });
-    fireEvent.click(await screen.findByRole('button', { name: 'Copy Draft 1' }));
+    await fromMenu('Draft 1', 'Copy Draft 1');
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Made a copy: Draft 1 copy.'));
   });
 
