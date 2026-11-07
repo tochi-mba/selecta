@@ -472,9 +472,18 @@ export function Now(props: ViewProps) {
   // kept here because the Stage takes the controls away, and coming back should find them as they were
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
   const page = useRef<HTMLElement>(null);
-  // The Stage hides whatever had focus, so focus waits on the page, where Space still plays and pauses
+  const stageWasOpen = useRef(stage);
+  // Stage removes the launching button while fullscreen. Put focus on a
+  // stable landmark while entering, then restore the recreated launcher on
+  // exit so a keyboard listener doesn't restart at the top of the page.
   useEffect(() => {
-    if (stage) page.current?.focus({ preventScroll: true });
+    if (stage) {
+      page.current?.focus({ preventScroll: true });
+    } else if (stageWasOpen.current) {
+      const launcher = page.current?.querySelector<HTMLButtonElement>('[data-stage-launcher]');
+      (launcher ?? page.current)?.focus({ preventScroll: true });
+    }
+    stageWasOpen.current = stage;
   }, [stage]);
   const choose = (change: Partial<ListenView>) => {
     const chosen = { ...view, ...change };
@@ -614,7 +623,7 @@ export function Now(props: ViewProps) {
                 <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
                 <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
                 <Tooltip text="Shortcut: F">
-                  <button onClick={toggleStage}>Fullscreen lyrics</button>
+                  <button data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>
                 </Tooltip>
                 </fieldset>
               </details>
