@@ -42,9 +42,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const pagesAsked = useQueryParam('pages');
   const pagesWanted = useRef(pagesFrom(pagesAsked));
   const pagesJustAppended = useRef<number | null>(null);
-  // Cursor before the most recently loaded page. Refreshing only the first 200
-  // songs leaves a deep list stale for the rest of an analysis session.
-  const lastPageAfter = useRef<string | null>(null);
+  // Cursor for each loaded page. Poll whichever deep page is actually in
+  // view, not always the last page added (which may be far off screen).
+  const pageCursors = useRef<(string | null)[]>([null]);
+  const listRef = useRef<HTMLUListElement>(null);
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
   const [searching, setSearching] = useState(true);
@@ -71,11 +72,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     const mine = asked.current;
     try {
       const found = new Map<number, LibrarySong>();
+      const cursors: (string | null)[] = [];
       let after: string | null = null;
       let count = 0;
-      let lastCursor: string | null = null;
       for (let page = 0; page < pagesWanted.current; page += 1) {
-        lastCursor = after;
+        cursors.push(after);
         const answer: LibraryPage = await get<LibraryPage>(url(after));
         if (mine !== asked.current) return;
         for (const song of answer.songs) found.set(song.id, song);
@@ -87,7 +88,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       setRows([...found.values()]);
       setTotal(count);
       setNext(after);
-      lastPageAfter.current = lastCursor;
+      pageCursors.current = cursors;
       setFailed(false);
     } catch {
       if (mine === asked.current) {
@@ -102,7 +103,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     const cursor = next;
     const page = await get<LibraryPage>(url(cursor));
     if (mine !== asked.current) return;
-    lastPageAfter.current = cursor;
+    pageCursors.current = [...pageCursors.current, cursor];
     setRows((before) => {
       const known = new Set(before?.map((song) => song.id));
       return [...(before ?? []), ...page.songs.filter((song) => !known.has(song.id))];
@@ -116,18 +117,35 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     setAddressQuery({ pages: String(newPageCount) });
   };
 
-  // Refresh both the beginning and the newly loaded deep page. Polling every
-  // loaded page would produce hundreds of requests per interval for a 20k-song
-  // collection; polling only the first 200 hides analysis progress deeper down.
-  // Merge by stable song ID so reordering never updates the wrong track.
+  // Find the page at the reading position with a binary search over the
+  // actual rendered rows. No virtualized rows or per-row observers are needed.
+  const visiblePage = () => {
+    const items = listRef.current?.children;
+    if (!items?.length) return 0;
+    let low = 0;
+    let high = Math.min(pageCursors.current.length - 1, Math.floor((items.length - 1) / PAGE_SIZE));
+    const viewLine = Math.min(window.innerHeight / 3, 240);
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      const element = items[middle * PAGE_SIZE] as HTMLElement | undefined;
+      if (element && element.getBoundingClientRect().top <= viewLine) low = middle;
+      else high = middle - 1;
+    }
+    return low;
+  };
+
+  // Refresh the first two pages and the page the listener is viewing; never
+  // poll all 20k rows. Merge by stable ID, even when songs reorder during analysis.
   const refreshShown = useCallback(() => {
+    if (searching || rows === null) return Promise.resolve();
     const mine = asked.current;
-    const loaded = rows?.length ?? PAGE_SIZE;
+    const loaded = rows.length;
     const requests = [
       get<LibraryPage>(url(null, Math.min(Math.max(loaded, PAGE_SIZE), MOST_REFRESHED))),
     ];
-    const deepCursor = lastPageAfter.current;
-    if (loaded > MOST_REFRESHED && deepCursor) {
+    const page = visiblePage();
+    const deepCursor = page >= 2 ? pageCursors.current[page] : null;
+    if (deepCursor) {
       requests.push(get<LibraryPage>(url(deepCursor, PAGE_SIZE)));
     }
     return Promise.all(requests).then((pages) => {
@@ -140,7 +158,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         return before.map((song) => fresh.get(song.id) ?? song);
       });
     }).catch(() => { if (mine === asked.current) setFailed(true); });
-  }, [url, rows?.length]);
+  }, [url, rows?.length, searching]);
 
   useEffect(() => {
     // Deep links and Back/Forward may change only "pages", without changing
@@ -150,6 +168,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       return;
     }
     pagesJustAppended.current = null;
+    pageCursors.current = [null];
     setSearching(true);
     const wait = window.setTimeout(() => void load(), 120);
     return () => { asked.current += 1; window.clearTimeout(wait); };
@@ -180,8 +199,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   };
   const [building, setBuilding] = useState(false);
   const buildingNow = useRef(false);
-  const [confirmStart, setConfirmStart] = useState<LibrarySong | null>(null);
-  const startFrom = async (song: LibrarySong) => {
+  const [confirmStart, setConfirmStart] = useState<{ song: LibrarySong; order: string } | null>(null);
+  const startFrom = async (song: LibrarySong, expectedOrder = orderOf(mix)) => {
     // Two different rows can be clicked before React paints the busy state.
     if (buildingNow.current) return;
     buildingNow.current = true;
@@ -189,7 +208,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     try {
       // A late build must not replace a mix edited in another tab.
       const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`, undefined, {
-        'x-mix-order': orderOf(mix),
+        'x-mix-order': expectedOrder,
       });
       setMixData(data);
       setView('Now');
@@ -207,7 +226,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     // A new mix takes over the current one. Ask consistently with Explore
     // rather than replacing live music directly from a Library row.
     if (mix.length > 0 && now.phase !== 'idle') {
-      setConfirmStart(song);
+      setConfirmStart({ song, order: orderOf(mix) });
       return;
     }
     return startFrom(song);
@@ -290,7 +309,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           </div>
         </section>
       )}
-      <ul className="rows library-rows" aria-busy={searching}>
+      <ul ref={listRef} className="rows library-rows" aria-busy={searching}>
         {rows?.map((song) => {
           const facts = trackReadiness(song);
           const already = inMix.has(song.id);
@@ -350,12 +369,12 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <Action className="primary" working="Building…" run={async () => {
                 const selected = confirmStart;
                 setConfirmStart(null);
-                await startFrom(selected);
+                await startFrom(selected.song, selected.order);
               }}>Replace and play</Action>
             </>
           )}
         >
-          <p>Starting a mix from <b>{confirmStart.title ?? 'this song'}</b> replaces your current mix. What is playing now will stop when the new mix starts.</p>
+          <p>Starting a mix from <b>{confirmStart.song.title ?? 'this song'}</b> replaces your current mix. What is playing now will stop when the new mix starts.</p>
           <p className="hint">Your saved drafts are not affected. Cancel to keep listening.</p>
         </Dialog>
       )}

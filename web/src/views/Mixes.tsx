@@ -13,7 +13,7 @@ import { ViewProps } from './shared';
 
 const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 
-type Asked = { key: string; name: string; open: boolean };
+type Asked = { key: string; name: string; open: boolean; order?: string };
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
 export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus }: ViewProps) {
@@ -36,7 +36,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     return () => { live = false; };
   }, [counts.analysed, counts.lyrics, counts.ready, cardsAttempt]);
 
-  const start = async ({ key, name, open }: Asked) => {
+  const start = async ({ key, name, open, order }: Asked) => {
     // nothing plays or changes until the server has said which mix it made
     if (buildingNow.current) return;
     buildingNow.current = true;
@@ -44,7 +44,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     setProblem('');
     try {
       const data = await post<MixData>(`/vibes/${key}/build?count=${songs}`, undefined, {
-        'x-mix-order': orderOf(mix),
+        'x-mix-order': order ?? orderOf(mix),
       });
       setMixData(data);
       rememberStartedAMix();
@@ -95,11 +95,12 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   // a mix that's playing or paused is what would be replaced, so that's when to ask
   const replacing = mix.length > 0 && now.phase !== 'idle';
   const ask = (asked: Asked) => {
+    const choice = { ...asked, order: orderOf(mix) };
     if (replacing) {
-      setConfirming(asked);
+      setConfirming(choice);
       return Promise.resolve();
     }
-    return start(asked);
+    return start(choice);
   };
 
   if (!readinessAvailable) {
