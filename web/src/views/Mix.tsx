@@ -1,4 +1,4 @@
-import { DragEvent, FormEvent, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { DragEvent, FormEvent, KeyboardEvent, PointerEvent, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, del, DraftList, MixData, MixItem, post, Suggestion } from '../api';
 import { etaRangeWords, runningTime } from '../lib';
 import { mixReadiness, occurrenceKeys, orderOf } from '../state/readiness';
@@ -24,6 +24,18 @@ type Selection =
 /** Above this, rows skip being drawn until they're scrolled near. Everything stays in the page, so
  * focus, find-in-page and screen readers all carry on working, which virtualizing the list would break. */
 const LONG_MIX = 40;
+const INSPECTOR_WIDTH_KEY = 'selecta.inspectorWidth';
+const MIN_INSPECTOR_WIDTH = 320;
+const MAX_INSPECTOR_WIDTH = 520;
+
+function savedInspectorWidth(): number {
+  try {
+    const saved = Number(window.localStorage.getItem(INSPECTOR_WIDTH_KEY));
+    return Number.isFinite(saved) ? Math.min(Math.max(saved, MIN_INSPECTOR_WIDTH), MAX_INSPECTOR_WIDTH) : 380;
+  } catch {
+    return 380;
+  }
+}
 
 function useNarrow(width = 1100): boolean {
   const query = `(max-width: ${width}px)`;
@@ -59,6 +71,7 @@ export function Mix(props: ViewProps) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('listen');
   const [hearNow, setHearNow] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [inspectorWidth, setInspectorWidth] = useState(savedInspectorWidth);
   const narrow = useNarrow();
   // where a new song goes is a place in the mix, not a number, so it stays right if the mix moves
   const [adding, setAdding] = useState<string | null>(inDraft && !mix.length ? 'start' : null);
@@ -68,6 +81,30 @@ export function Mix(props: ViewProps) {
   const [name, setName] = useState(mixName);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const focusAfter = useRef<{ key: string; how: 'up' | 'down' | 'handle' } | null>(null);
+
+  const resizeInspector = (next: number) => {
+    const safe = Math.min(Math.max(Math.round(next), MIN_INSPECTOR_WIDTH), MAX_INSPECTOR_WIDTH);
+    setInspectorWidth(safe);
+    try { window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(safe)); } catch { /* it remains in memory */ }
+  };
+  const beginInspectorResize = (event: PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = inspectorWidth;
+    const move = (next: globalThis.PointerEvent) => resizeInspector(startWidth + startX - next.clientX);
+    const finish = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', finish);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', finish, { once: true });
+  };
+  const resizeInspectorWithKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const change = event.key === 'ArrowLeft' ? 16 : event.key === 'ArrowRight' ? -16 : 0;
+    if (!change && event.key !== 'Home' && event.key !== 'End') return;
+    event.preventDefault();
+    resizeInspector(event.key === 'Home' ? MIN_INSPECTOR_WIDTH : event.key === 'End' ? MAX_INSPECTOR_WIDTH : inspectorWidth + change);
+  };
 
   const readiness = useMemo(() => mixReadiness(mix), [mix]);
   const total = runningTime(mix);
@@ -462,7 +499,7 @@ export function Mix(props: ViewProps) {
       {gone && <p className="notice" role="status">{gone}</p>}
       {exporting && <ExportPanel mix={mix} mixName={mixName} inDraft={inDraft} guard={guard} setMixData={setMixData} names={status.moves} onClose={() => setExporting(false)} />}
 
-      <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`}>
+      <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`} style={inspecting && !narrow ? { '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties : undefined}>
         <ol className={`timeline density ${mix.length > LONG_MIX ? 'long' : ''}`} onDragOver={scrollWhileDragging}>
           {mix.map((item, index) => (
             <FragmentRow key={keys[index]}>
@@ -496,13 +533,27 @@ export function Mix(props: ViewProps) {
           ))}
         </ol>
         {inspecting && !narrow && (
-          <aside className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
-            <div className="inspector-head">
-              <h2>{seamInspector ? 'Transition' : 'Song'}</h2>
-              <button aria-label="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
-            </div>
-            {seamInspector || songInspector}
-          </aside>
+          <div className="inspector-column">
+            <div
+              className="inspector-resize"
+              role="separator"
+              aria-label="Resize inspector"
+              aria-orientation="vertical"
+              aria-valuemin={MIN_INSPECTOR_WIDTH}
+              aria-valuemax={MAX_INSPECTOR_WIDTH}
+              aria-valuenow={inspectorWidth}
+              tabIndex={0}
+              onPointerDown={beginInspectorResize}
+              onKeyDown={resizeInspectorWithKeys}
+            />
+            <aside className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
+              <div className="inspector-head">
+                <h2>{seamInspector ? 'Transition' : 'Song'}</h2>
+                <button aria-label="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
+              </div>
+              {seamInspector || songInspector}
+            </aside>
+          </div>
         )}
       </div>
       {inspecting && narrow && (
