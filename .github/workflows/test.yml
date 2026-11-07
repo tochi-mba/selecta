@@ -5,7 +5,6 @@ on:
     branches: [main, build/v1]
   pull_request:
 
-# A new commit makes older results obsolete. Never cancel main's push checks for a PR run.
 concurrency:
   group: test-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -15,8 +14,13 @@ permissions:
 
 jobs:
   python:
-    name: Python / lint, tests and coverage
+    # Every pytest case is assigned to exactly one isolated Windows runner.
+    name: Python / tests (shard ${{ matrix.shard }}/2)
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -29,7 +33,19 @@ jobs:
       - run: uv run ruff check .
       - name: No file over 1,000 lines
         run: uv run pytest tests/test_file_length.py -q
-      - run: uv run pytest --cov=selecta --cov-report=term-missing --cov-fail-under=70
+      - name: Run full assigned pytest shard with coverage
+        env:
+          SELECTA_TEST_SHARD: ${{ matrix.shard }}/2
+        run: uv run pytest --cov=selecta --cov-report=term-missing --cov-fail-under=0
+      - name: Rename per-runner coverage
+        run: Rename-Item .coverage ".coverage.${{ matrix.shard }}"
+      - name: Upload coverage for aggregate verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-${{ matrix.shard }}
+          path: .coverage.${{ matrix.shard }}
+          include-hidden-files: true
+          if-no-files-found: error
 
   web:
     name: Web / unit tests and production build
@@ -52,9 +68,7 @@ jobs:
         working-directory: web
 
   browser:
-    # Each Windows runner has its own server, database and port 8799. Playwright retains
-    # workers=1 inside a shard because its tests mutate one fixture library.
-    # Two independent shards parallelize the slow real-Edge suite without skipping tests.
+    # One worker per isolated Windows server; two shards split all real Edge tests.
     name: Edge E2E (shard ${{ matrix.shard }}/2)
     runs-on: windows-latest
     strategy:
@@ -85,7 +99,7 @@ jobs:
       - name: Browser tests, in Edge, muted
         run: pnpm e2e --shard=${{ matrix.shard }}/2
         working-directory: web
-      - name: Keep what the browser tests saw when one fails
+      - name: Keep failed browser artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -94,14 +108,14 @@ jobs:
           if-no-files-found: ignore
 
   verify:
-    # Preserve one unambiguous gate for branches and reviewers: any failed, cancelled
-    # or skipped prerequisite is a failed PR. Both shards must finish successfully.
+    # A canceled, missing or failing shard cannot yield a green verification.
+    # Combined Python coverage, not a partial shard, must meet the original 70%.
     name: verify
     if: ${{ always() }}
     needs: [python, web, browser]
     runs-on: ubuntu-latest
     steps:
-      - name: Require all checks to pass
+      - name: Require all prerequisite jobs to pass
         env:
           PYTHON_RESULT: ${{ needs.python.result }}
           WEB_RESULT: ${{ needs.web.result }}
@@ -111,3 +125,18 @@ jobs:
           test "$PYTHON_RESULT" = success
           test "$WEB_RESULT" = success
           test "$BROWSER_RESULT" = success
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Download every Python coverage result
+        uses: actions/download-artifact@v4
+        with:
+          pattern: python-coverage-*
+          path: .
+          merge-multiple: true
+      - name: Combine measured coverage and enforce 70 percent minimum
+        run: |
+          uvx --from coverage==7.17.2 coverage combine
+          uvx --from coverage==7.17.2 coverage report --fail-under=70

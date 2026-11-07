@@ -1,72 +1,74 @@
-# CI: parallel checks without weakening acceptance
+# CI: faster without cutting corners
 
-The required `test` workflow is in [`.github/workflows/test.yml`](../.github/workflows/test.yml).
-It runs for PRs and pushes to `main` and `build/v1`. A new commit cancels
-stale runs of the same PR, but **not** a different PR or the `main` push.
+The required [test workflow](../.github/workflows/test.yml) runs on every PR
+and on main/build/v1 pushes. New commits cancel obsolete PR runs, not other PRs
+or main runs.
 
-## What runs
+## Parallel jobs
 
-| Job | Runner | Required work |
+| Job | Execution | Required proof |
 |---|---|---|
-| Python | Windows, Python 3.12 | `uv sync --locked`, Ruff, the 1,000-line rule, the full Python suite with `--cov=selecta --cov-fail-under=70` |
-| Web | Ubuntu, Node 22 / pnpm 10 | frozen-lockfile install, all Vitest tests, TypeScript check and production Vite build |
-| Edge E2E (1/2) | Windows | locked Python environment, FFmpeg, frozen pnpm dependencies, production build, first Playwright shard in real muted Edge |
-| Edge E2E (2/2) | Windows | the same, with the other Playwright shard |
-| verify | Ubuntu | fails unless Python, Web **and both Edge shards** succeeded |
+| Python shards 1/2 and 2/2 | Separate Windows runners, Python 3.12, FFmpeg | Locked dependencies, Ruff, 1,000-line rule, complete distributed pytest collection |
+| Web | Ubuntu, Node 22, pnpm 10 | Frozen dependencies, all unit tests, TypeScript, production build |
+| Edge shards 1/2 and 2/2 | Separate Windows runners, real muted Edge and FFmpeg | All Playwright E2E tests, real audio, accessibility checks, error recovery |
+| verify | Ubuntu | Every prerequisite succeeded **and** combined Python coverage reached at least 70% |
 
-These jobs run in parallel; the final `verify` check is the single
-conservative status gate for the PR and branch protection. A failed, cancelled
-or skipped prerequisite does not turn into a green `verify`.
+A failed, skipped, missing, or cancelled prerequisite fails the final verify gate.
+There are no paths-ignore shortcuts, no continue-on-error and no removed tests.
 
-**No tests have been deleted, filtered, marked optional or assigned reduced
-coverage.** Python and browser tests still run on Windows, including real
-FFmpeg and the actual Edge browser. Web unit tests also run on Linux, with the
-production build repeated on Windows for the browser integration checks.
-Playwright uses `fullyParallel` only for **balanced shard assignment by individual
-test**, not for concurrent execution within a runner: `workers=1` still serializes
-access to each mutable fixture library. Every Windows runner has its own isolated
-server, database and port, so the two shards can run simultaneously without
-sharing state. The per-page tests reset the mix explicitly, regardless of file
-order. Existing retry-on-CI behavior, failed-browser screenshots/traces,
-and failure artifacts are retained, with a distinct artifact name per shard.
+## Python: sharded execution with whole-suite coverage
 
-## Where the time is saved
+Historically the full Python suite required around 18 minutes on one Windows
+runner. Every collected test node ID, including each parametrized instance, is
+assigned deterministically using SHA-256 to exactly one of two isolated
+runners. The helper is tested for exhaustive and disjoint partitioning. Slow
+tests remain opt-in as before; standard tests run once across the two shards.
 
-1. Python tests no longer block web unit tests and the browser suite from
-   starting. Errors in independent suites are visible at the same time.
-2. The browser suite is split across two isolated runners, reducing its
-   critical path while executing all test files. This uses more runner-minutes;
-   it is a wall-clock optimization, not a claim of lower compute cost.
-3. `setup-uv` caches Python downloads and `setup-node` caches the pnpm store.
-   Lockfiles remain mandatory. We do not cache `node_modules`, virtual
-   environments or previously built application artifacts across commits.
-4. The lightweight Ubuntu runner performs the unit/build checks while Windows
-   remains responsible for platform-specific behavior.
-5. New pushes cancel obsolete runs. `main` builds are not accidentally
-   cancelled by pull-request checks.
+Each runner uploads its actual coverage data with relative source paths, not
+its percentage. The Ubuntu verifier combines **both** files and runs
+`coverage report --fail-under=70`. It only does so if all Python shards
+succeeded. If a coverage artifact is missing, combining/reporting fails.
+The per-shard `--cov-fail-under=0` is deliberate: the 70% threshold is
+enforced on the **aggregate**, exactly as it was for the original full run.
+Locally, without SELECTA_TEST_SHARD, all Python tests still run unchanged.
 
-## Guardrails and follow-up measurements
+## Edge: real-browser tests, isolated and balanced
 
-- No `paths-ignore` rule: a documentation/config change still exercises all
-  gates. No `continue-on-error` for tests and no blanket exclusion of flaky
-  tests or accessibility cases.
-- Changes to a mix, the audio engine, browser fixtures or server API still
-  trigger the real end-to-end suite, with its cross-feature state checks.
-- Test-level sharding should balance suite sizes more closely than file-level
-  sharding. Inspect observed durations; `fullyParallel` is safe here **only because
-  `workers=1`** per isolated runner. Do not raise that worker count against
-  one mutable server without first establishing per-worker database isolation.
-- Compare the durations of the four required job groups and the aggregate
-  wall-clock time against prior runs. Report observed gains only after this
-  workflow completes successfully. A cache hit is not itself evidence of a
-  passing test.
-- Future improvements could preinstall FFmpeg in a pinned runner image or
-  reuse an attested web build artifact, but only after verifying the resulting
-  runtime environment and actual performance. Avoid trading test fidelity for
-  an unmeasured optimization.
+Playwright uses `fullyParallel` only for balanced *assignment by test* to
+each shard. `workers=1` still serializes tests within each Windows runner,
+so its mutable fixture library and server cannot be accessed by concurrent
+test workers. Each runner has its own database and local port 8799.
+The per-page tests explicitly reset their mix before every test so they do
+not depend on file order. Existing retries, screenshots and traces on failure
+are retained with separate artifact names.
 
-To reproduce locally, run `uv sync --locked`, `uv run ruff check .`,
-`uv run pytest tests/test_file_length.py -q`,
-`uv run pytest --cov=selecta --cov-report=term-missing --cov-fail-under=70`,
-then in `web/` run `pnpm install --frozen-lockfile`, `pnpm test`,
-`pnpm build` and `pnpm e2e` with Edge and FFmpeg available.
+Both Python and Edge use the locked Python environment and FFmpeg; Edge
+builds and runs the real production web app. No audio, security, API,
+accessibility or recovery checks have been disabled.
+
+## Caches and measurement
+
+UV and pnpm caches accelerate dependency downloads while lockfiles stay
+authoritative. Cached build outputs, virtual environments and node_modules
+are **not** shared across commits. Web checks run on fast Linux, while
+platform-specific Python/Edge checks stay on Windows. These optimizations
+target wall-clock latency, not necessarily fewer billable runner-minutes.
+
+Only completed and comparable full runs demonstrate a real speedup. Do not
+raise Playwright workers above one without per-worker database isolation.
+
+To reproduce the full gate locally, run:
+
+```sh
+uv sync --locked
+uv run ruff check .
+uv run pytest tests/test_file_length.py -q
+uv run pytest --cov=selecta --cov-report=term-missing --cov-fail-under=70
+cd web
+pnpm install --frozen-lockfile
+pnpm test
+pnpm build
+pnpm e2e
+```
+
+Edge and FFmpeg must be available for the local browser run.
