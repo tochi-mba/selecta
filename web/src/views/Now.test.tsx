@@ -158,5 +158,6 @@ describe('beat-grid transition countdown', () => {
     expect(timer).toHaveTextContent('02');
     expect(timer).toHaveTextContent('Bar 1');
     expect(timer).toHaveTextContent('Next Song');
+    expect(screen.getByRole('button', { name: 'Edit upcoming song Next Song and its transition' })).toBeInTheDocument();
   });
 });
