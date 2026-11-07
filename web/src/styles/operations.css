@@ -91,3 +91,7 @@
 .study-version .chips + .chips { margin-top: var(--space-2); }
 .study-done { padding: var(--space-4); border: 1px solid var(--status-ready); border-radius: var(--radius); }
 .study-done p { margin: 0; }
+.request-group { list-style: none; margin: var(--space-5) 0 var(--space-2); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
+.request-group:first-child { margin-top: var(--space-2); }
+.request-group h3 { margin: 0; font-size: var(--text-lg); }
+.request-group p { margin: var(--space-1) 0 0; color: var(--text-soft); font-size: var(--text-sm); }
