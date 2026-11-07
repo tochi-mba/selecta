@@ -64,7 +64,9 @@ export function takeAudio(next: AudioOwner) {
       // AudioContext.suspend() can finish after the preview has already
       // ended. Keep the promise so releasing the preview cannot resume too
       // early, then have a late pause override that resume.
-      const work = Promise.resolve().then(() => main?.pause()).then(() => {});
+      // Start suspending immediately inside the same user activation,
+      // rather than delaying it until after the preview has started.
+      const work = Promise.resolve(main.pause()).then(() => {});
       pauseWork = work;
       void work.catch(() => {}).finally(() => {
         if (pauseWork === work) pauseWork = null;
