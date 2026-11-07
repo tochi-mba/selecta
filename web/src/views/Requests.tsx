@@ -297,8 +297,15 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       }).catch(() => { if (live) setError('Couldn’t load your requests. They’re still saved.'); });
     };
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 4000);
-    return () => { live = false; window.clearInterval(timer); };
+    const tick = () => { if (document.visibilityState !== 'hidden') void refresh(); };
+    const visible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    const timer = window.setInterval(tick, 4000);
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', visible);
+    };
   }, []);
 
   /** Take a row away for now, and be able to put it back where it was. */

@@ -5,6 +5,7 @@ import { etaRangeWords, length, nth } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { draftReadiness } from '../state/readiness';
 import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { MenuItem } from '../ui/primitives';
 import { ViewProps } from './shared';
 
@@ -71,11 +72,8 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
       .catch(() => setCouldntLoad(true));
   }, []);
 
-  useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), CHECK_EVERY_MS);
-    return () => window.clearInterval(timer);
-  }, [refresh]);
+  useEffect(() => { void refresh(); }, [refresh]);
+  useVisiblePoll(refresh, CHECK_EVERY_MS);
 
   // once a name has been saved or left alone, focus goes back to that draft
   useEffect(() => {

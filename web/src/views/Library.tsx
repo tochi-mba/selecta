@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, get, LibraryPage, LibrarySong, MixData, post } from '../api';
 import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
@@ -187,10 +188,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     return () => { asked.current += 1; window.clearTimeout(wait); };
   }, [load, pagesAsked]);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => void refreshShown(), line.length ? 4000 : 15000);
-    return () => window.clearInterval(timer);
-  }, [line.length, refreshShown]);
+  // The active page refreshes during analysis; a hidden tab does no work and
+  // catches up as soon as it becomes visible again.
+  useVisiblePoll(refreshShown, line.length ? 4000 : 15000);
 
   useEffect(() => {
     if (typed === query) return;

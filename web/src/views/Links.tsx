@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
@@ -49,8 +50,11 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
       if (live) { setItems(rows); setLoaded(true); setError(''); }
     }).catch(() => { if (live) setError('Couldn’t load these. Try again in a moment.'); });
     void load();
-    const timer = window.setInterval(() => void load(), 15000);
-    return () => { live = false; window.clearInterval(timer); };
+    const tick = () => { if (document.visibilityState !== 'hidden') void load(); };
+    const visible = () => { if (document.visibilityState === 'visible') void load(); };
+    const timer = window.setInterval(tick, 15000);
+    document.addEventListener('visibilitychange', visible);
+    return () => { live = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
   }, [attempt]);
 
   const waiting = items
@@ -380,12 +384,9 @@ export function Links({ setMixData, setView, notify, status, tab = 'words' }: Vi
     return () => window.clearTimeout(wait);
   }, [query, tab]);
 
-  // Selecta prepares links in spare time, so finished ones appear as they land.
-  useEffect(() => {
-    if (tab !== 'words') return;
-    const timer = window.setInterval(() => void load(), 6000);
-    return () => window.clearInterval(timer);
-  }, [query, tab]);
+  // Selecta prepares links in spare time; refresh after returning to the
+  // tab without burning requests while the listener is elsewhere.
+  useVisiblePoll(load, 6000, tab === 'words');
 
   useEffect(() => {
     get<DraftList>('/drafts').then((list) => setDrafts(list.drafts ?? [])).catch(() => {});
