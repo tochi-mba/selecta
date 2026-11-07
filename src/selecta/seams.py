@@ -139,6 +139,17 @@ MIX_CHECK_SECONDS = 2.0
 URGENT, REQUEST, MIX, LINE, LATER, PREPARING = range(6)
 
 
+def _unlink_after_readers(path: Path) -> None:
+    """Windows refuses deletion while a status request has the file open. Wait at most a second."""
+    for _ in range(49):
+        try:
+            path.unlink(missing_ok=True)
+            return
+        except PermissionError:
+            time.sleep(0.02)
+    path.unlink(missing_ok=True)
+
+
 def _swapped_by_old_fallback(state: dict) -> bool:
     """Seams from before cuts became the last resort, where something else stood in for the move."""
     if state.get("status") != "ready" or "tried" in state:
@@ -266,9 +277,9 @@ class SeamStore:
             except (OSError, ValueError):
                 continue
             if song_id in {request.get("a"), request.get("b")}:
-                meta.unlink(missing_ok=True)
+                _unlink_after_readers(meta)
                 if meta.name == "seam.json":
-                    (meta.parent / "clip.flac").unlink(missing_ok=True)
+                    _unlink_after_readers(meta.parent / "clip.flac")
                     forgotten += 1
                 key = request.get("key")
                 if key:
