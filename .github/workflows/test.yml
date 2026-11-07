@@ -106,6 +106,13 @@ jobs:
           name: browser-test-results-${{ matrix.shard }}
           path: web/test-results
           if-no-files-found: ignore
+      - name: Upload synthetic visual-review candidates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selecta-3-1-visual-review-${{ matrix.shard }}
+          path: web/test-results/**/candidate-*.png
+          if-no-files-found: ignore
 
   verify:
     # A canceled, missing or failing shard cannot yield a green verification.
