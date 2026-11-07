@@ -352,6 +352,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           </div>
         </section>
       )}
+      {!!rows?.length && (
+        <div className="library-column-head" aria-hidden="true">
+          <span>Song and artist</span>
+          <span>Tempo · Key · Length</span>
+          <span>Mix readiness</span>
+          <span>Actions</span>
+        </div>
+      )}
       <ul ref={listRef} className="rows library-rows" aria-busy={searching}>
         {rows?.map((song) => {
           const facts = trackReadiness(song);
