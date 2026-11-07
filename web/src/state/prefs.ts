@@ -88,6 +88,18 @@ function subscribe(listener: () => void) {
   };
 }
 
+// Preferences are browser-local, but every open Selecta tab should present the same choice. Storage
+// events only arrive in the other tabs, so the tab that made the change still updates synchronously
+// in setPrefs while its neighbours adopt the saved value here.
+function storageChanged(event: StorageEvent) {
+  if (event.key !== KEY && event.key !== null) return;
+  current = read();
+  apply(current);
+  for (const listener of listeners) listener();
+}
+
+if (typeof window !== 'undefined') window.addEventListener('storage', storageChanged);
+
 export function usePrefs(): Prefs {
   return useSyncExternalStore(subscribe, prefs);
 }
