@@ -52,6 +52,7 @@ a.button:hover { border-color: var(--text); }
 .nav a:hover { color: var(--text); }
 .nav .brand { font: 900 1.25rem var(--display); letter-spacing: -0.02em; color: var(--text); }
 .nav .brand-mark { display: none; }
+.nav-more-mobile { display: none; }
 .nav li a i { font-style: normal; width: 1.4em; text-align: center; flex: none; }
 .nav a[aria-current='true'] { color: var(--text); }
 .nav .count, .mini .count, .context-bar .count { color: var(--request); font-weight: 700; }
@@ -137,10 +138,38 @@ a.button:hover { border-color: var(--text); }
   }
   .nav li a i { font-size: 1.05rem; line-height: 1; }
   .nav-context { display: none; }
+  .nav-more-desktop { display: none !important; }
+  .nav-more-mobile {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 0.68rem;
+  }
+  .nav-more-mobile[aria-current='page'] { color: var(--text); background: var(--surface-control); }
   .mini-volume { display: none; }
   /* with a keyboard up, what's being typed gets the room */
   :root[data-keyboard='open'] .nav, :root[data-keyboard='open'] .mini { display: none; }
 }
+.more-nav ul { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-2); }
+.more-nav a { display: block; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); text-decoration: none; }
+.more-nav a[aria-current='page'] { border-color: var(--focus); background: var(--surface-selected); }
+.listen-empty {
+  min-height: calc(100dvh - var(--header-height) - var(--bottom-chrome));
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  max-width: 760px;
+}
+.listen-empty .display { max-width: 12ch; }
 .on-stage .content { padding-bottom: 0; }
 
 /* the page's own bar: where you are, and what's reachable from anywhere */
@@ -165,6 +194,7 @@ a.button:hover { border-color: var(--text); }
 .context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; }
 .context-button { display: inline-flex; align-items: center; gap: var(--space-2); background: none; border-color: transparent; padding: 6px 8px; min-width: var(--control-height); justify-content: center; }
 .context-button:hover:not(:disabled) { border-color: var(--border); }
+.context-button.health-attention { color: var(--status-warning); text-decoration: none; border-color: var(--status-warning); }
 .palette-button { border-color: var(--border); color: var(--text-soft); }
 .context-request { display: none; }
 @media (max-width: 760px) {
@@ -354,7 +384,18 @@ button[data-working]::after {
 
 /* the timeline, with whatever's selected beside it */
 .page.mix { max-width: 1320px; }
-.edit-layout.has-inspector { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: var(--space-5); align-items: start; }
+.edit-layout.has-inspector { display: grid; grid-template-columns: minmax(420px, 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
+.inspector-column { position: relative; min-width: 0; }
+.inspector-resize {
+  position: absolute;
+  z-index: 2;
+  inset: 20px auto 0 -18px;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.inspector-resize::after { content: ""; position: absolute; inset: 0 5px; border-radius: var(--radius-pill); background: var(--border); }
+.inspector-resize:hover::after, .inspector-resize:focus-visible::after { background: var(--focus); }
 .edit-inspector {
   position: sticky;
   top: var(--space-4);

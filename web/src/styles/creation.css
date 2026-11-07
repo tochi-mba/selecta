@@ -207,3 +207,15 @@
 .studio-lane.silenced .studio-cell, .studio-lane.silenced .studio-name { opacity: 0.45; }
 .studio-lane.lost .studio-cell { cursor: not-allowed; opacity: 0.35; background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--border) 4px 6px); }
 .studio-lane.lost .studio-name { cursor: not-allowed; text-decoration: line-through; }
+.studio-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: var(--space-5); }
+.studio-list section { min-width: 0; }
+.studio-list h4 { overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.studio-list fieldset { margin: 0 0 var(--space-3); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.studio-list fieldset > button { margin-bottom: var(--space-2); }
+.studio-list-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: var(--space-1); }
+.studio-list-cells label { display: flex; align-items: center; gap: var(--space-1); min-height: var(--control-height); padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.studio-list-cells input { width: auto; min-height: 0; }
+.draft-tools { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; margin: var(--space-4) 0; }
+.draft-tools label { display: grid; gap: var(--space-1); color: var(--text-soft); font-size: var(--text-sm); }
+.draft-tools input { min-width: min(320px, 80vw); }
+.draft-tools select { min-width: 160px; }

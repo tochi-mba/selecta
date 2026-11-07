@@ -4,11 +4,12 @@ import { NowState, SetPlayer } from '../player';
 import { Route, savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
-import { announce, LiveRegion } from '../ui/controls';
+import { jobAttention, useJobsStatus } from '../state/jobs';
+import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
-import { CLASSIC_DESTINATIONS, describeRoute, DESTINATIONS, destinationOf } from './manifest';
+import { CLASSIC_DESTINATIONS, describeRoute, DESTINATIONS, destinationOf, WORKSPACE_TABS } from './manifest';
 import { PageLink } from './PageLink';
 
 export { PageLink };
@@ -70,6 +71,8 @@ function MiniPlayer({ player, now, song, onRequests, waiting }: { player: SetPla
 function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette }: { route: Route; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean }) {
   const { crumbs } = describeRoute(route);
   const unseen = useUnseenActivity();
+  const { jobs } = useJobsStatus();
+  const attention = jobAttention(jobs);
   return (
     <header className="context-bar">
       <nav className="crumbs" aria-label="Breadcrumb">
@@ -96,6 +99,11 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
         <button className="context-button" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
           <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
         </button>
+        {attention > 0 && (
+          <PageLink className="context-button health-attention" to="/workshop" aria-label={`Workspace, ${attention} ${attention === 1 ? 'item needs' : 'items need'} your attention`} title="Workspace needs your attention">
+            <Icon name="warning" /><span className="count">{attention}</span>
+          </PageLink>
+        )}
         <button className="context-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={onHelp}><Icon name="help" /></button>
       </div>
     </header>
@@ -162,6 +170,7 @@ export function Shell({
   const content = useRef<HTMLDivElement>(null);
   const first = useRef(true);
   const [popped, setPopped] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const prefs = usePrefs();
   useKeyboardInset();
 
@@ -197,6 +206,8 @@ export function Shell({
   const editing = route.page === 'edit';
   const here = destinationOf(route);
   const collapsed = prefs.railCollapsed;
+  const primaryDestinations = DESTINATIONS.filter((item) => item.id !== 'workspace');
+  const workspace = DESTINATIONS.find((item) => item.id === 'workspace');
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`}>
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
@@ -213,7 +224,7 @@ export function Shell({
                     </PageLink>
                   </li>
                 ))
-              : DESTINATIONS.map((item) => (
+              : primaryDestinations.map((item) => (
                   <li key={item.id}>
                     <PageLink to={item.path} data-tip={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
                       <Icon name={item.icon} />
@@ -221,6 +232,18 @@ export function Shell({
                     </PageLink>
                   </li>
                 ))}
+            {!prefs.classicNav && workspace && (
+              <li className="nav-more">
+                <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
+                  <Icon name={workspace.icon} />
+                  <span className="nav-label">{workspace.label}</span>
+                </PageLink>
+                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
+                  <Icon name={workspace.icon} />
+                  <span className="nav-label">More</span>
+                </button>
+              </li>
+            )}
             {hasMix && (
               <li className="nav-context">
                 <PageLink to="/mix/current/edit" data-tip="Edit" aria-current={editing ? 'page' : undefined}>
@@ -252,6 +275,21 @@ export function Shell({
         {children}
       </div>
       {withPlayer && song && <MiniPlayer player={player} now={now} song={song} onRequests={onRequests} waiting={waitingRequests} />}
+      {moreOpen && (
+        <Drawer title="More" onClose={() => setMoreOpen(false)}>
+          <nav className="more-nav" aria-label="Workspace">
+            <p className="eyebrow">Workspace</p>
+            <p className="hint">Analysis, sources, storage, learning and diagnostics.</p>
+            <ul>
+              {WORKSPACE_TABS.map((item) => (
+                <li key={item.tab}>
+                  <PageLink to={item.path} aria-current={route.page === 'workshop' && route.tab === item.tab ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{item.label}</PageLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </Drawer>
+      )}
       <Toaster />
       <LiveRegion />
     </div>

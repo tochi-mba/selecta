@@ -1,0 +1,56 @@
+import { useSyncExternalStore } from 'react';
+import { ApiError, get, Jobs } from '../api';
+
+type JobsSnapshot = { jobs: Jobs | null; stale: boolean; unsupported: boolean };
+
+let snapshot: JobsSnapshot = { jobs: null, stale: false, unsupported: false };
+let timer: number | null = null;
+let reading: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+
+function publish(next: JobsSnapshot) {
+  snapshot = next;
+  for (const listener of listeners) listener();
+}
+
+export function refreshJobs(): Promise<void> {
+  if (reading) return reading;
+  reading = get<Jobs>('/jobs')
+    .then((jobs) => publish({ jobs, stale: false, unsupported: false }))
+    .catch((error) => {
+      if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
+        publish({ jobs: null, stale: false, unsupported: true });
+      } else {
+        publish({ ...snapshot, stale: true });
+      }
+    })
+    .finally(() => { reading = null; });
+  return reading;
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  if (listeners.size === 1) {
+    void refreshJobs();
+    timer = window.setInterval(() => void refreshJobs(), 5000);
+  }
+  return () => {
+    listeners.delete(listener);
+    if (!listeners.size && timer !== null) {
+      window.clearInterval(timer);
+      timer = null;
+    }
+  };
+}
+
+export function useJobsStatus(): JobsSnapshot {
+  return useSyncExternalStore(subscribe, () => snapshot);
+}
+
+export function jobAttention(jobs: Jobs | null): number {
+  if (!jobs) return 0;
+  return Number(jobs.storage_full)
+    + jobs.failed_seams.length
+    + jobs.failed_songs.length
+    + Number(jobs.analysis.paused && jobs.analysis.left > 0);
+}

@@ -1,6 +1,6 @@
 import { Icon } from '../ui/Icon';
 import { Problem, Skeleton } from '../ui/controls';
-import { createContext, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
 import { SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
@@ -62,6 +62,20 @@ const GROUP_ORDER: Record<Stage, number> = {
   in_mix: 5,
 };
 const EXTRA_WORDS: Record<number, string> = { 1: 'one extra song', 2: 'two extra songs', 3: 'three extra songs' };
+type RequestGroup = 'choice' | 'coming' | 'preparing' | 'waiting';
+const GROUP_WORDS: Record<RequestGroup, { title: string; detail: string }> = {
+  choice: { title: 'Needs your choice', detail: 'Nothing joins until you approve or decline the proposed route.' },
+  coming: { title: 'Coming up', detail: 'These routes are ready and will join when their guarded position is still valid.' },
+  preparing: { title: 'Preparing', detail: 'Selecta is analysing or rendering what these requests need.' },
+  waiting: { title: 'Waiting', detail: 'These are still looking for a safe place and are not a promise of strict order.' },
+};
+
+function groupOf(stage: Stage): RequestGroup {
+  if (stage === 'approve') return 'choice';
+  if (stage === 'ready') return 'coming';
+  if (stage === 'preparing' || stage === 'analysing' || stage === 'adding') return 'preparing';
+  return 'waiting';
+}
 
 function playingNow(playback?: Playback): boolean {
   return !!playback && ['playing', 'paused'].includes(playback.player.state.phase);
@@ -698,6 +712,7 @@ export function RequestsPanel() {
   const waitingIds = new Set(requests?.map((request) => request.song_id));
   const asBridges = new Set(requests?.flatMap((request) => request.picked ?? []));
   const canPick = (song: SongRow) => !inMix.has(song.id) && !waitingIds.has(song.id) && !asBridges.has(song.id);
+  const orderedRequests = [...(requests ?? [])].sort((a, b) => GROUP_ORDER[stageOf(a, playback)] - GROUP_ORDER[stageOf(b, playback)]);
   // the list stays open, so a few songs can be asked for from one search
   const pick = (song: SongRow) => {
     void add(song);
@@ -768,13 +783,22 @@ export function RequestsPanel() {
       )}
       {!!requests?.length && (
         <ul className="request-list" aria-label="Your requests">
-          {[...requests].sort((a, b) => GROUP_ORDER[stageOf(a, playback)] - GROUP_ORDER[stageOf(b, playback)]).map((request) => {
+          {orderedRequests.map((request, index) => {
             const stage = stageOf(request, playback);
+            const group = groupOf(stage);
+            const previousGroup = index > 0 ? groupOf(stageOf(orderedRequests[index - 1], playback)) : null;
             const words = requestWords(request, stage);
             const title = request.title ?? 'Unavailable song';
             const hasBridge = request.route?.some((song) => song.id !== request.song_id);
             return (
-              <li key={request.id} className={`request-row ${words.tone}`} data-stage={stage}>
+              <Fragment key={request.id}>
+                {group !== previousGroup && (
+                  <li className="request-group" aria-hidden="true">
+                    <h3>{GROUP_WORDS[group].title}</h3>
+                    <p>{GROUP_WORDS[group].detail}</p>
+                  </li>
+                )}
+                <li className={`request-row ${words.tone}`} data-stage={stage}>
                 <span className="request-name">
                   <b>{title}</b>
                   <span>{request.artist ?? 'Unknown artist'}</span>
@@ -835,7 +859,8 @@ export function RequestsPanel() {
                 {finding === request.id && CAN_BRIDGE.has(stage) && (
                   <BridgeFinder request={request} onClose={() => setFinding(null)} />
                 )}
-              </li>
+                </li>
+              </Fragment>
             );
           })}
         </ul>
