@@ -42,6 +42,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const pagesAsked = useQueryParam('pages');
   const pagesWanted = useRef(pagesFrom(pagesAsked));
   const pagesJustAppended = useRef<number | null>(null);
+  // Cursor before the most recently loaded page. Refreshing only the first 200
+  // songs leaves a deep list stale for the rest of an analysis session.
+  const lastPageAfter = useRef<string | null>(null);
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
   const [searching, setSearching] = useState(true);
@@ -70,7 +73,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       const found = new Map<number, LibrarySong>();
       let after: string | null = null;
       let count = 0;
+      let lastCursor: string | null = null;
       for (let page = 0; page < pagesWanted.current; page += 1) {
+        lastCursor = after;
         const answer: LibraryPage = await get<LibraryPage>(url(after));
         if (mine !== asked.current) return;
         for (const song of answer.songs) found.set(song.id, song);
@@ -82,6 +87,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       setRows([...found.values()]);
       setTotal(count);
       setNext(after);
+      lastPageAfter.current = lastCursor;
       setFailed(false);
     } catch {
       if (mine === asked.current) {
@@ -93,8 +99,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
 
   const more = async () => {
     const mine = asked.current;
-    const page = await get<LibraryPage>(url(next));
+    const cursor = next;
+    const page = await get<LibraryPage>(url(cursor));
     if (mine !== asked.current) return;
+    lastPageAfter.current = cursor;
     setRows((before) => {
       const known = new Set(before?.map((song) => song.id));
       return [...(before ?? []), ...page.songs.filter((song) => !known.has(song.id))];
@@ -108,16 +116,27 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     setAddressQuery({ pages: String(newPageCount) });
   };
 
-  // what's on screen keeps its place while it's being brought up to date
+  // Refresh both the beginning and the newly loaded deep page. Polling every
+  // loaded page would produce hundreds of requests per interval for a 20k-song
+  // collection; polling only the first 200 hides analysis progress deeper down.
+  // Merge by stable song ID so reordering never updates the wrong track.
   const refreshShown = useCallback(() => {
     const mine = asked.current;
-    return get<LibraryPage>(url(null, Math.min(Math.max(rows?.length ?? PAGE_SIZE, PAGE_SIZE), MOST_REFRESHED))).then((page) => {
+    const loaded = rows?.length ?? PAGE_SIZE;
+    const requests = [
+      get<LibraryPage>(url(null, Math.min(Math.max(loaded, PAGE_SIZE), MOST_REFRESHED))),
+    ];
+    const deepCursor = lastPageAfter.current;
+    if (loaded > MOST_REFRESHED && deepCursor) {
+      requests.push(get<LibraryPage>(url(deepCursor, PAGE_SIZE)));
+    }
+    return Promise.all(requests).then((pages) => {
       if (mine !== asked.current) return;
       setFailed(false);
-      setTotal(page.total);
+      setTotal(pages[0].total);
       setRows((before) => {
-        if (!before) return page.songs;
-        const fresh = new Map(page.songs.map((song) => [song.id, song]));
+        if (!before) return pages[0].songs;
+        const fresh = new Map(pages.flatMap((page) => page.songs).map((song) => [song.id, song]));
         return before.map((song) => fresh.get(song.id) ?? song);
       });
     }).catch(() => { if (mine === asked.current) setFailed(true); });
