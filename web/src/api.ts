@@ -208,6 +208,10 @@ export class ApiError extends Error {
   }
 }
 
+/** What a stopped server looks like to someone using the app, wherever it comes up. It doesn't say
+ * whether a change got through, because when the connection drops nobody can know. */
+export const OFFLINE_WORDS = 'Can’t reach Selecta right now. Try again in a moment.';
+
 export type ProblemKind = 'offline' | 'missing' | 'conflict' | 'invalid' | 'storage' | 'server';
 
 export function problemKind(error: unknown): ProblemKind {
@@ -240,6 +244,8 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
   return await response.json();
   } catch (error) {
     if (controller?.signal.aborted) throw new ApiError('Selecta is taking too long to respond. Try again.', 408, 'read_timeout');
+    // what a browser throws when nothing answered at all, in words that only make sense to a developer
+    if (error instanceof TypeError) throw new Error(OFFLINE_WORDS);
     throw error;
   } finally {
     if (timeout !== null) window.clearTimeout(timeout);

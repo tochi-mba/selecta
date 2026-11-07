@@ -196,7 +196,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     } catch (problem) {
       const words = (problem as Error).message;
       setRequests((rows) => undo(rows ?? []));
-      setError(words && !['Failed to fetch', 'Not Found', 'Internal Server Error'].includes(words) ? words : failed);
+      setError(words && !['Not Found', 'Internal Server Error'].includes(words) ? words : failed);
       return null;
     } finally {
       inFlight.current -= 1;
@@ -728,6 +728,8 @@ export function RequestsPanel() {
           ref={box}
           id="request-song-search"
           className="requests-search"
+          // ready to type into with a keyboard, without throwing an on-screen keyboard over a phone's list
+          data-autofocus={window.matchMedia?.('(pointer: fine)').matches || undefined}
           value={query}
           aria-label="Request a song"
           placeholder="Request a song: search your library"

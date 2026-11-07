@@ -64,8 +64,9 @@ export function seamStatusWords(status: string, passed?: boolean): string {
     case 'failed':
       return 'Can’t do this one';
     case 'none':
+      return 'Not rendered yet';
     case 'queued':
-      return 'Waiting to render';
+      return 'In line';
     default:
       return 'Rendering…';
   }

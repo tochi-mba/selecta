@@ -30,7 +30,7 @@ describe('the badges', () => {
     });
     render(<App />);
     await userEvent.click((await navigation()).getByRole('link', { name: 'Edit' }));
-    expect(await screen.findByText('Waiting to render')).toBeInTheDocument();
+    expect(await screen.findByText('Not rendered yet')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument(), { timeout: 6000 });
   });
 

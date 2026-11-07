@@ -385,6 +385,8 @@ button[data-working]::after {
 .library-find { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; margin-bottom: var(--space-2); }
 .library-find input.wide { flex: 1 1 260px; margin: 0; width: auto; }
 .library-sort { display: flex; align-items: center; gap: var(--space-2); color: var(--text-soft); font-size: var(--text-sm); }
+.library-find label.library-sort { display: flex; }
+.library-sort select { margin: 0; }
 .library-sort select { width: auto; }
 .library-count { margin: var(--space-2) 0; }
 .library-more { display: block; margin: var(--space-4) auto; }

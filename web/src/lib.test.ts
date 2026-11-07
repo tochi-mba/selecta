@@ -11,8 +11,8 @@ describe('words on screen', () => {
   });
 
   it('says a seam that hasn’t started is waiting, since the mix renders by itself', () => {
-    expect(seamStatusWords('none')).toBe('Waiting to render');
-    expect(seamStatusWords('queued')).toBe('Waiting to render');
+    expect(seamStatusWords('none')).toBe('Not rendered yet');
+    expect(seamStatusWords('queued')).toBe('In line');
     expect(seamStatusWords('rendering')).toBe('Rendering…');
     expect(seamStatusWords('ready', true)).toBe('Ready');
     expect(seamStatusWords('ready', false)).toBe('Ready, with a warning');

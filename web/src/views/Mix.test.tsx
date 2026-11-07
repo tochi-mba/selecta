@@ -49,7 +49,7 @@ describe('rendering every seam', () => {
       'POST /mix/render': { mix: songs(seam('queued', 'a'), seam('queued', 'b')), name: 'Test mix', can_undo: false },
     });
     render(<Harness start={songs(seam('none', 'a'), seam('none', 'b'))} />);
-    expect(screen.getAllByText('Waiting to render')).toHaveLength(2);
+    expect(screen.getAllByText('Not rendered yet')).toHaveLength(2);
     await userEvent.click(screen.getByRole('button', { name: 'Render every transition' }));
     await waitFor(() => expect(calls.filter((call) => call.path === '/mix/render')).toHaveLength(1));
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);

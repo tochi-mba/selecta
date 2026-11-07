@@ -35,8 +35,7 @@ export function Action({
     try {
       await run();
     } catch (error) {
-      const words = (error as Error).message;
-      showProblem(failed ?? (words && words !== 'Failed to fetch' ? words : 'That didn’t work. Try again.'));
+      showProblem(failed ?? ((error as Error).message || 'That didn’t work. Try again.'));
     } finally {
       going.current = false;
       if (mounted.current) setBusy(false);

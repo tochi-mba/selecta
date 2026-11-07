@@ -20,6 +20,7 @@ import sqlite3
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -36,6 +37,21 @@ JOBS_KEPT = 50
 ROUGH_FLAC_BYTES_PER_SECOND = SAMPLE_RATE * 2
 NO_ROOM = "There isn't enough free space on this drive to save the file."
 JOB_ID = re.compile(r"^[0-9a-f]{32}$")
+# On Windows, replacing a file someone is reading, or reading one being replaced, is refused for
+# the moment it takes. A job's file is looked at every second or so while it's written, so they meet.
+BUSY_FILE_TRIES = 50
+BUSY_FILE_WAIT_SECONDS = 0.02
+
+
+def _despite_a_busy_file[T](action: Callable[[], T]) -> T:
+    """Do this, waiting out another thread having the file open for a moment. It's only ever a
+    moment, so after a second or so whatever's wrong isn't that, and the error is the real one."""
+    for _ in range(BUSY_FILE_TRIES - 1):
+        try:
+            return action()
+        except PermissionError:
+            time.sleep(BUSY_FILE_WAIT_SECONDS)
+    return action()
 
 
 def _words_for(problem: Exception) -> str:
@@ -67,13 +83,16 @@ def add_routes(app, ctx) -> None:
         """All or nothing, so a job file is never half written."""
         folder().mkdir(parents=True, exist_ok=True)
         job["updated_at"] = time.time()
-        partial = record_of(job["id"]).with_suffix(".part")
+        record = record_of(job["id"])
+        # its own working copy, so two saves of one job can't trip over each other's
+        partial = record.with_suffix(f".{threading.get_ident()}.part")
         partial.write_text(json.dumps(job), "utf-8")
-        os.replace(partial, record_of(job["id"]))
+        _despite_a_busy_file(lambda: os.replace(partial, record))
 
     def read(job_id: str) -> dict | None:
+        record = record_of(job_id)
         try:
-            return json.loads(record_of(job_id).read_text("utf-8"))
+            return json.loads(_despite_a_busy_file(lambda: record.read_text("utf-8")))
         except (OSError, ValueError):
             return None
 

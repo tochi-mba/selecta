@@ -28,6 +28,12 @@
 }
 .mix-head { margin-bottom: 0; }
 .editor-actions { justify-content: flex-start; }
+/* on a phone the songs are what you came for, so the actions take as little of the first screen as they can */
+@media (max-width: 760px) {
+  .editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .editor-actions > .primary { grid-column: 1 / -1; }
+  .editor-actions > button, .editor-actions > a { width: 100%; padding-inline: var(--space-2); }
+}
 .editor-actions .destructive .ui-icon, .editor-actions button .ui-icon { margin-right: 4px; }
 
 /* the timeline: songs are solid rows, transitions hang between them */

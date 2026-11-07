@@ -453,6 +453,8 @@ export function Now(props: ViewProps) {
   const [rateBusy, setRateBusy] = useState(false);
   const [changed, setChanged] = useState<{ from: string; to: string; id: number } | null>(null);
   const [view, setViewChoice] = useState<ListenView>(savedView);
+  // kept here because the Stage takes the controls away, and coming back should find them as they were
+  const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
   const page = useRef<HTMLElement>(null);
   // The Stage hides whatever had focus, so focus waits on the page, where Space still plays and pauses
   useEffect(() => {
@@ -584,7 +586,7 @@ export function Now(props: ViewProps) {
                 </Tooltip>
               </div>
               {now.notice && <p className="notice" role="status">{now.notice}</p>}
-              <details className="view-options">
+              <details className="view-options" open={viewOptionsOpen} onToggle={(event) => setViewOptionsOpen(event.currentTarget.open)}>
                 <summary>Display options</summary>
                 <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
                 <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>

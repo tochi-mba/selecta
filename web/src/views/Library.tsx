@@ -277,7 +277,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               </div>
               <div className="song-actions">
                 {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => startFrom(song)}>Start a mix</Action>}
-                {facts.canAdd && <Action working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>}
+                {facts.canAdd && <Action className="song-add" working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>}
                 {facts.canAdd && now.phase !== 'idle' && <Action working="Adding…" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next</Action>}
                 {facts.canAnalyse && (
                   <Action disabled={line.includes(song.id)} run={() => analyse(song)}>

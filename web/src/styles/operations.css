@@ -40,6 +40,8 @@
 .song-why { margin: 0; font-size: var(--text-xs); overflow-wrap: anywhere; }
 :root[data-density='compact'] .song-why { display: none; }
 .library-rows .song-actions button { min-height: var(--control-height); }
+/* Add and In the mix are the same button, so a row doesn't shift when one changes to the other */
+.library-rows .song-actions .song-add { min-width: 5.6em; }
 @media (max-width: 1024px) {
   .library-rows .song-row {
     grid-template-columns: minmax(0, 1fr) auto;
