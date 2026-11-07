@@ -2,10 +2,10 @@
 
     python tests/scale_server.py 8821 20000 100
 
-The first number after the port is how many songs the library gets, and the next how many of them are
-in the current mix. Every extra song is the same few database rows and shares a synthesized recording,
-so 20,000 songs take no real disk. What's measured is the database, the server and the page, which is
-what a big library costs. Nothing here is real music.
+The first number after the port is how many songs the library gets, and the next how many of
+them are in the current mix. Every extra song is the same few database rows and shares a
+synthesized recording, so 20,000 songs take no real disk. What's measured is the database,
+the server and the page, which is what a big library costs. Nothing here is real music.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from selecta.config import Settings  # noqa: E402
 
 
 def grow(settings: Settings, songs: int, in_mix: int) -> None:
-    """Copies of the first song's rows, each under its own name, and into the mix for the first few."""
+    """Copy the first song's rows under new names, adding the first few to the mix."""
     conn = db.connect(settings.db_path)
     source = conn.execute("SELECT * FROM songs WHERE id=1").fetchone()
     analysis = conn.execute("SELECT * FROM analysis WHERE song_id=1").fetchone()
@@ -70,7 +70,10 @@ def grow(settings: Settings, songs: int, in_mix: int) -> None:
     conn.commit()
     conn.execute("DELETE FROM queue")
     conn.commit()
-    ids = [row[0] for row in conn.execute("SELECT id FROM songs WHERE id>14 ORDER BY id LIMIT ?", (in_mix,))]
+    ids = [
+        row[0]
+        for row in conn.execute("SELECT id FROM songs WHERE id>14 ORDER BY id LIMIT ?", (in_mix,))
+    ]
     for song_id in ids:
         mix.add_song(conn, song_id)
     conn.close()
