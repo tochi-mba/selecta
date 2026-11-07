@@ -34,7 +34,7 @@ export function refreshJobs(): Promise<void> {
   reading = get<Jobs>('/jobs')
     .then((jobs) => {
       if (completeJobs(jobs)) publish({ jobs, stale: false, unsupported: false });
-      else publish({ ...snapshot, jobs: null, stale: true, unsupported: false });
+      else publish({ ...snapshot, stale: true, unsupported: false });
     })
     .catch((error) => {
       if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
