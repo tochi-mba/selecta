@@ -230,9 +230,16 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
               </ol>
               <div className="chord-strip" role="img" aria-label={`The chords Selecta heard: ${audition.chords.join(', ')}`}>
                 {audition.chords.map((chord, index) => (
-                  <span key={index} className={index === bar ? 'now' : ''}>{chord}</span>
+                  <span key={index} className={index === bar ? 'now' : ''} aria-current={index === bar ? 'step' : undefined}>
+                    <span className="visually-hidden">Bar {index + 1}: </span>{chord}
+                  </span>
                 ))}
               </div>
+              <p className="hint chord-position" aria-live="off">
+                {listening && bar >= 0 && audition.chords[bar]
+                  ? `Bar ${bar + 1} of ${audition.chords.length}: ${audition.chords[bar]}`
+                  : `${audition.chords.length} chord bars in this comparison.`}
+              </p>
             </>
           )}
           <div className="row wrap" role="group" aria-label={`Do ${item.title_a} and ${item.title_b} sound connected?`}>
