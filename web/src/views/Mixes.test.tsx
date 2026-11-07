@@ -341,7 +341,7 @@ describe('browsing and my mixes', () => {
     expect(screen.queryByLabelText('Transition feel')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Customize' }));
     expect(screen.getByText(/They don’t change a mix you’ve already got/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done shaping' }));
     expect(screen.queryByLabelText('Transition feel')).toBeNull();
   });
 

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import threading
 import time
-import re
 from pathlib import Path
 
 import pytest
