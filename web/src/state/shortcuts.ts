@@ -32,7 +32,6 @@ export const SHORTCUTS: Shortcut[] = [
 ];
 
 const OWNS_ITS_KEYS = '[role="grid"],[role="menu"],[role="dialog"],[role="tablist"],[role="slider"],[role="listbox"],[role="combobox"],[role="radiogroup"]';
-const ACTIVATES_WITH_SPACE = 'button,a[href],summary,[role="button"],[role="checkbox"],[role="menuitem"],[role="menuitemcheckbox"],[role="option"],[role="radio"],[role="switch"],[role="tab"]';
 
 /** Does whatever has focus need this key for itself? */
 export function focusOwnsKeys(target: EventTarget | null): boolean {
@@ -51,7 +50,7 @@ export function shortcutFor(event: Pick<KeyboardEvent, 'key' | 'code' | 'target'
   if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === 'k') return anOverlayIsOpen() ? null : 'palette';
   if (focusOwnsKeys(event.target) || event.ctrlKey || event.metaKey || event.altKey) return null;
   if (event.code === 'Space') {
-    return event.target instanceof HTMLElement && !!event.target.closest(ACTIVATES_WITH_SPACE) ? null : 'playPause';
+    return event.target instanceof HTMLButtonElement || event.target instanceof HTMLAnchorElement || event.target instanceof HTMLElement && event.target.tagName === 'SUMMARY' ? null : 'playPause';
   }
   if (key === 'n') return event.shiftKey ? 'next' : 'jump';
   if (key === 'p') return 'previous';

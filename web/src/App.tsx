@@ -19,7 +19,6 @@ import { setToastsQuiet, showProblem, showToast } from './ui/toasts';
 import { ExportJobs } from './views/ExportJobs';
 import { Library } from './views/Library';
 import { Links } from './views/Links';
-import { ListenEmpty } from './views/ListenEmpty';
 import { Mix } from './views/Mix';
 import { Mixes } from './views/Mixes';
 import { MyMixes } from './views/MyMixes';
@@ -547,8 +546,7 @@ export function App() {
       >
         <Section name={pageTitle} key={route.page}>
           {route.page === 'mixes' && route.tab === 'mine' && <MyMixes {...shared} />}
-          {route.page === 'mixes' && route.tab === 'browse' && <Mixes {...shared} />}
-          {nothingToHear && <ListenEmpty />}
+          {((route.page === 'mixes' && route.tab === 'browse') || nothingToHear) && <Mixes {...shared} />}
           {route.page === 'listen' && !nothingToHear && <Now {...shared} />}
           {route.page === 'edit' && draftId === null && <Mix {...shared} key="current" />}
           {route.page === 'edit' && draftId !== null && draftGone && (

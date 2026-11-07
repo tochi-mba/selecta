@@ -197,8 +197,6 @@ export function Shell({
   const editing = route.page === 'edit';
   const here = destinationOf(route);
   const collapsed = prefs.railCollapsed;
-  const primaryDestinations = DESTINATIONS.filter((item) => item.id !== 'workspace');
-  const workspace = DESTINATIONS.find((item) => item.id === 'workspace');
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`}>
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
@@ -215,7 +213,7 @@ export function Shell({
                     </PageLink>
                   </li>
                 ))
-              : primaryDestinations.map((item) => (
+              : DESTINATIONS.map((item) => (
                   <li key={item.id}>
                     <PageLink to={item.path} data-tip={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
                       <Icon name={item.icon} />
@@ -223,14 +221,6 @@ export function Shell({
                     </PageLink>
                   </li>
                 ))}
-            {!prefs.classicNav && workspace && (
-              <li className="nav-more">
-                <PageLink to={workspace.path} data-tip="More" aria-current={here === workspace.id ? 'page' : undefined}>
-                  <Icon name={workspace.icon} />
-                  <span className="nav-label"><span className="desktop-label">{workspace.label}</span><span className="mobile-label">More</span></span>
-                </PageLink>
-              </li>
-            )}
             {hasMix && (
               <li className="nav-context">
                 <PageLink to="/mix/current/edit" data-tip="Edit" aria-current={editing ? 'page' : undefined}>
