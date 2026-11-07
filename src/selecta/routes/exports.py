@@ -38,7 +38,7 @@ ROUGH_FLAC_BYTES_PER_SECOND = SAMPLE_RATE * 2
 NO_ROOM = "There isn't enough free space on this drive to save the file."
 JOB_ID = re.compile(r"^[0-9a-f]{32}$")
 # On Windows, replacing a file someone is reading, or reading one being replaced, is refused for
-# the moment it takes. A job's file is looked at every second or so while it's written, so they meet.
+# the moment it takes. A job's file is looked at every second or so as it's written, so they meet.
 BUSY_FILE_TRIES = 50
 BUSY_FILE_WAIT_SECONDS = 0.02
 

@@ -5,10 +5,10 @@ Run by the browser tests, on a file downloaded the way a person would get it:
     python tests/check_export_audio.py report.json export.flac one.flac two.flac --not other.flac
 
 It decodes the export, then looks for each song's own audio inside it. Everything outside a
-transition is copied from the song untouched, so a stretch of each one should turn up almost exactly,
-and those places should be in the order given. A song that isn't in the mix should turn up nowhere,
-which is what shows this can tell songs apart at all. It measures what's in the file. It can't say
-how it sounds.
+transition is copied from the song untouched, so a stretch of each one should turn up almost
+exactly, and those places should be in the order given. A song that isn't in the mix should turn
+up nowhere, which is what shows this can tell songs apart at all. It measures what's in the file.
+It can't say how it sounds.
 """
 
 from __future__ import annotations
