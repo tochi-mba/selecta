@@ -57,6 +57,46 @@ function keepShape(key: string, shape: Shape | null) {
   }
 }
 
+function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, onToggle, onSolo }: {
+  shape: Shape;
+  titles: Record<Side, string>;
+  missing: string[];
+  barsPerCell: number;
+  soloed: string | null;
+  onToggle: (side: Side, lane: Lane, index: number) => void;
+  onSolo: (name: string) => void;
+}) {
+  return (
+    <div className="studio-list" aria-label="Stem controls by song and part">
+      {SIDES.map((side) => (
+        <section key={side} aria-labelledby={`studio-list-${side}`}>
+          <h4 id={`studio-list-${side}`}>{titles[side]}</h4>
+          {LANES.map((lane) => {
+            const name = `${side}_${lane}`;
+            const lost = missing.includes(name);
+            return (
+              <fieldset key={name} disabled={lost}>
+                <legend>{LANE_WORDS[lane]}{lost ? ' — unavailable' : ''}</legend>
+                <button type="button" aria-pressed={soloed === name} onClick={() => onSolo(name)}>
+                  {soloed === name ? 'Hear everything' : `Hear only ${LANE_WORDS[lane].toLowerCase()}`}
+                </button>
+                <div className="studio-list-cells">
+                  {shape[side][lane].map((value, index) => (
+                    <label key={index}>
+                      <input type="checkbox" checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
+                      <span>Bar {index * barsPerCell + 1}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 /** Both songs' voice, drums, bass and melody on one grid. Tap a square and it's heard straight away.
  * Press a name to hear only that part. Four things are kept apart here: the copy you're working on, one
  * recovered from this browser, what's applied to the mix, and the audio that was rendered from it.
@@ -93,6 +133,7 @@ export function Studio(props: {
   const latestShape = useRef<Shape | null>(null);
   latestShape.current = shape;
   const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
+  const [editorMode, setEditorMode] = useState<'grid' | 'list'>('grid');
   const deck = useRef<StemDeck | null>(null);
   const grid = useRef<HTMLDivElement>(null);
   const at = useMixPath();
@@ -351,15 +392,21 @@ export function Studio(props: {
             ))}
           </div>
           {restored && <p className="hint" role="status">This is what you were working on before. Start again to go back to what’s in the mix.</p>}
-          <p className="hint">Arrow keys move around the grid, and Space turns a square on or off. Left of the first square is the part’s name, which plays that part alone.</p>
-          <div
+          <div className="chips" role="group" aria-label="Studio editor layout">
+            <button aria-pressed={editorMode === 'grid'} onClick={() => setEditorMode('grid')}>Time grid</button>
+            <button aria-pressed={editorMode === 'list'} onClick={() => setEditorMode('list')}>Controls by part</button>
+          </div>
+          {editorMode === 'grid' ? (
+            <>
+              <p className="hint">Arrow keys move around the grid, and Space turns a square on or off. Left of the first square is the part’s name, which plays that part alone.</p>
+              <div
             className="studio-grid"
             role="grid"
             aria-label={`Stems for ${titles.a} and ${titles.b}`}
             ref={grid}
             onKeyDown={gridKeys}
             style={{ '--cells': columns } as React.CSSProperties}
-          >
+              >
             <div className="studio-lane studio-ruler" role="row" aria-label="Bars">
               <span className="studio-name" role="columnheader">Bar</span>
               {Array.from({ length: columns }, (_, index) => (
@@ -413,7 +460,19 @@ export function Studio(props: {
                 })}
               </div>
             ))}
-          </div>
+              </div>
+            </>
+          ) : (
+            <StudioListEditor
+              shape={shape}
+              titles={titles}
+              missing={missing}
+              barsPerCell={barsPerCell}
+              soloed={soloed}
+              onToggle={toggle}
+              onSolo={(name) => void solo(name)}
+            />
+          )}
           <div className="row wrap">
             <button className="primary" disabled={saving || !!asking} onClick={() => void use()}>
               {saving ? 'Applying…' : 'Apply to this transition'}
