@@ -22,6 +22,11 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const [songs, setSongs] = useState(12);
   const [building, setBuilding] = useState('');
   const buildingNow = useRef(false);
+  const hereNow = useRef(true);
+  useEffect(() => {
+    hereNow.current = true;
+    return () => { hereNow.current = false; };
+  }, []);
   const operations = useRef(new Map<string, string>());
   const [problem, setProblem] = useState('');
   const [customizing, setCustomizing] = useState(false);
@@ -54,19 +59,23 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         'x-operation-id': operation,
       });
       operations.current.delete(signature);
+      // Reconcile the server's actual current mix even after navigating away.
+      // A late request must not steal route or playback focus from a new task.
       setMixData(data);
       rememberStartedAMix();
-      notify(`${name}: ${data.mix.length} songs.`, true);
-      if (open) {
-        setView('Edit');
-      } else {
-        setView('Now');
-        void player.playFrom(0);
+      if (hereNow.current) {
+        notify(`${name}: ${data.mix.length} songs.`, true);
+        if (open) {
+          setView('Edit');
+        } else {
+          setView('Now');
+          void player.playFrom(0);
+        }
       }
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
-      setProblem((error as Error).message);
+      if (hereNow.current) setProblem((error as Error).message);
     } finally {
       buildingNow.current = false;
       setBuilding('');
@@ -88,10 +97,10 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         { 'x-operation-id': operation },
       );
       operations.current.delete(signature);
-      notify(`Saved ${made.name} as a draft, with ${made.count} songs. Nothing changed in what’s playing.`);
+      if (hereNow.current) notify(`Saved ${made.name} as a draft, with ${made.count} songs. Nothing changed in what’s playing.`);
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
-      setProblem((error as Error).message);
+      if (hereNow.current) setProblem((error as Error).message);
     } finally {
       buildingNow.current = false;
       setBuilding('');

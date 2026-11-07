@@ -213,6 +213,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   };
   const [building, setBuilding] = useState(false);
   const buildingNow = useRef(false);
+  const hereNow = useRef(true);
+  useEffect(() => {
+    hereNow.current = true;
+    return () => { hereNow.current = false; };
+  }, []);
   const buildOperations = useRef(new Map<string, string>());
   const [confirmStart, setConfirmStart] = useState<{ song: LibrarySong; order: string } | null>(null);
   const startFrom = async (song: LibrarySong, expectedOrder = orderOf(mix)) => {
@@ -230,13 +235,15 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       });
       buildOperations.current.delete(signature);
       setMixData(data);
-      setView('Now');
-      void player.playFrom(0);
-      notify(`A mix starting from ${song.title}.`, true);
+      if (hereNow.current) {
+        setView('Now');
+        void player.playFrom(0);
+        notify(`A mix starting from ${song.title}.`, true);
+      }
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) buildOperations.current.delete(signature);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
-      notify((error as Error).message || 'Couldn’t build that mix. Try again.');
+      if (hereNow.current) notify((error as Error).message || 'Couldn’t build that mix. Try again.');
     } finally {
       buildingNow.current = false;
       setBuilding(false);
