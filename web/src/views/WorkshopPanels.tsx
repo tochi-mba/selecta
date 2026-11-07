@@ -45,19 +45,23 @@ export function StoragePanel() {
   // A slow earlier budget write must not overtake the most recently chosen
   // limit. Serialise writes and apply only the newest answer to the controls.
   const writeQueue = useRef<Promise<void>>(Promise.resolve());
+  const budgetEditing = useRef(false);
   const confirmed = useRef<number | null>(null);
   const [saved, setSaved] = useState(true);
   const [problem, setProblem] = useState('');
   const [wanted, setWanted] = useState<number | null>(null);
 
   const [loadFailed, setLoadFailed] = useState(false);
-  const refresh = () =>
-    get<Storage>('/storage').then((data) => {
+  const refresh = () => {
+    const seen = saves.current;
+    return get<Storage>('/storage').then((data) => {
+      if (seen !== saves.current || budgetEditing.current) return;
       setLoadFailed(false);
       setStorage(data);
       confirmed.current = data.budget_bytes / GB;
       setLimit((current) => current ?? data.budget_bytes / GB);
     }).catch(() => setLoadFailed(true));
+  };
   useEffect(() => {
     void refresh().catch(() => {});
     const timer = window.setInterval(() => void refresh().catch(() => {}), 15000);
@@ -72,6 +76,7 @@ export function StoragePanel() {
   const smallest = storage.smallest_budget_bytes / GB;
 
   const move = (value: number) => {
+    budgetEditing.current = true;
     setLimit(value);
     setSaved(false);
     setProblem('');
@@ -90,12 +95,14 @@ export function StoragePanel() {
           setStorage(answer);
           setLimit(answer.budget_bytes / GB);
           setProblem('');
+          budgetEditing.current = false;
           setSaved(true);
         })
         .catch((error: Error) => {
           if (mine !== saves.current) return;
           setProblem(error.message);
           setWanted(value);
+          budgetEditing.current = false;
           setSaved(true);
           if (confirmed.current !== null) setLimit(confirmed.current);
         });
