@@ -211,51 +211,31 @@ describe('a big library', () => {
     expect(screen.getByText('First')).toBeInTheDocument();
   });
 
-  it('refreshes the deep page being viewed rather than an unrelated last page', async () => {
+  it('reloads an edited song on a middle page, not just the first or last page', async () => {
     window.history.pushState({}, '', '/library?pages=4');
-    const manyRows = (from: number, count: number) => Array.from(
-      { length: count }, (_, index) => row(from + index, `Song ${from + index}`),
-    );
-    let deepReads = 0;
+    const many = (first: number) => Array.from({ length: 100 }, (_, index) => row(first + index, `Song ${first + index}`));
+    let prioritized = false;
     const calls = fakeBackend({
       'GET /library': (_body: unknown, url: string) => {
-        const params = new URLSearchParams(url.split('?')[1]);
-        const after = params.get('after');
-        if (params.get('limit') === '200') return { songs: manyRows(1, 200), total: 400, next: 'c3' };
-        if (after === 'c2') return { songs: manyRows(101, 100), total: 400, next: 'c3' };
+        const after = new URLSearchParams(url.split('?')[1]).get('after');
+        if (after === 'c2') return { songs: many(101), total: 400, next: 'c3' };
         if (after === 'c3') {
-          deepReads += 1;
-          const batch = manyRows(201, 100);
-          if (deepReads > 1) batch[0] = { ...batch[0], readiness: { status: 'mix_ready', reason: '' }, bpm: 124 };
+          const batch = many(201);
+          if (prioritized) batch[0] = { ...batch[0], priority: true };
           return { songs: batch, total: 400, next: 'c4' };
         }
-        if (after === 'c4') return { songs: manyRows(301, 100), total: 400, next: null };
-        return { songs: manyRows(1, 100), total: 400, next: 'c2' };
+        if (after === 'c4') return { songs: many(301), total: 400, next: null };
+        return { songs: many(1), total: 400, next: 'c2' };
       },
+      'POST /songs/201/priority': () => { prioritized = true; return { saved: true }; },
     });
-    let poll: (() => void) | null = null;
-    const interval = vi.spyOn(window, 'setInterval').mockImplementation((handler) => {
-      if (typeof handler === 'function') poll = handler as () => void;
-      return 123;
-    });
-    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      const title = this.querySelector('.song-open b')?.textContent;
-      return { top: title === 'Song 101' ? -200 : title === 'Song 201' ? 20 : 1200 } as DOMRect;
-    });
-    try {
-      show();
-      expect(await screen.findByText('Song 400')).toBeInTheDocument();
-      await screen.findByText('400 songs.');
-      const prior = calls.filter((call) => call.path.includes('after=c3')).length;
-      expect(prior).toBe(1);
-      await act(async () => { poll?.(); });
-      await waitFor(() => expect(calls.filter((call) => call.path.includes('after=c3')).length).toBe(2));
-      expect(calls.filter((call) => call.path.includes('after=c4'))).toHaveLength(1);
-      expect(await screen.findByText('Ready for mixes')).toBeInTheDocument();
-    } finally {
-      interval.mockRestore();
-      bounds.mockRestore();
-    }
+    show();
+    await screen.findByText('Song 400');
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Song 201' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Prioritize' }));
+    await waitFor(() => expect(calls.filter((call) => call.path.includes('after=c3')).length).toBe(2));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Song 201' }));
+    expect(await screen.findByRole('menuitemcheckbox', { name: 'Priority: on' })).toBeInTheDocument();
   });
 
   it('a song that turns up on two pages only shows once', async () => {

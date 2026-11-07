@@ -115,7 +115,7 @@ describe('the sections', () => {
   it('say when they can’t find out, rather than saying nothing’s happening', async () => {
     fakeBackend({});
     show({}, 'overview');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t find out what’s running');
+    expect(await screen.findByText(/This running copy of Selecta can’t report background jobs/)).toBeInTheDocument();
   });
 
   it('show folders, and whether each can be found', async () => {

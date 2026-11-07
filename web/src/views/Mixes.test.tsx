@@ -386,6 +386,8 @@ describe('safe activation from Explore', () => {
     expect(calls.some((call) => call.path.includes('/vibes/peak/build'))).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(setMixData).not.toHaveBeenCalled();
+    // The previous Action's in-flight flag clears on the next microtask.
+    await waitFor(() => expect(choice.getByRole('button', { name: 'Play' })).toBeEnabled());
     fireEvent.click(choice.getByRole('button', { name: 'Play' }));
     fireEvent.click(screen.getByRole('button', { name: 'Replace and play' }));
     await waitFor(() => expect(setMixData).toHaveBeenCalledOnce());

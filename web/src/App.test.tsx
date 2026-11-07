@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from './api';
 import { App } from './App';
 import { SetPlayer } from './player';
+import { clearToasts } from './ui/toasts';
 import { fakeBackend, seam, songs, status } from './test/backend';
 
 const data = (...items: Parameters<typeof songs>) => ({ mix: songs(...items), name: 'Test mix', can_undo: false });
@@ -11,7 +12,10 @@ const data = (...items: Parameters<typeof songs>) => ({ mix: songs(...items), na
 const navigation = async () => within(await screen.findByRole('navigation', { name: 'Main' }));
 
 // every test starts at the front door, and the address is part of what each one checks
-beforeEach(() => window.history.pushState({}, '', '/'));
+beforeEach(() => {
+  clearToasts();
+  window.history.pushState({}, '', '/');
+});
 
 function backend(mix: () => unknown) {
   return fakeBackend({
