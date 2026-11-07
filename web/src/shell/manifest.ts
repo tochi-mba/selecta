@@ -11,7 +11,7 @@ export type Destination = { id: DestinationId; label: string; path: string; icon
 
 export const DESTINATIONS: Destination[] = [
   { id: 'listen', label: 'Listen', path: '/listen', icon: 'music', about: 'What’s playing, what’s next and the lyrics' },
-  { id: 'explore', label: 'Explore', path: '/mixes', icon: 'explore', about: 'New mixes, word connections and harmonic matches' },
+  { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it' },
   { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line' },
   { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections' },
   { id: 'workspace', label: 'Workspace', path: '/workshop', icon: 'settings', about: 'Analysis, folders, storage, learning and diagnostics' },
@@ -27,7 +27,7 @@ export const CLASSIC_DESTINATIONS: { path: string; label: string; icon: IconName
 ];
 
 export const EXPLORE_TABS = [
-  { path: '/mixes', label: 'Mixes' },
+  { path: '/mixes', label: 'Mix ideas' },
   { path: '/discover', label: 'Word connections' },
   { path: '/discover/harmonic', label: 'Harmonic matches' },
 ];
@@ -58,14 +58,14 @@ export type Crumb = { label: string; path?: string };
 
 /** What this page is called, and how it fits under where it belongs. */
 export function describeRoute(route: Route): { title: string; crumbs: Crumb[] } {
-  const explore: Crumb = { label: 'Explore', path: '/mixes' };
+  const explore: Crumb = { label: 'Make a Mix', path: '/mixes' };
   const mine: Crumb = { label: 'My Mixes', path: '/mixes/mine' };
   const workspace: Crumb = { label: 'Workspace', path: '/workshop' };
   switch (route.page) {
     case 'listen': return { title: 'Listen', crumbs: [{ label: 'Listen' }] };
     case 'mixes': return route.tab === 'mine'
       ? { title: 'My Mixes', crumbs: [{ label: 'My Mixes' }] }
-      : { title: 'Explore', crumbs: [{ label: 'Explore' }] };
+      : { title: 'Make a Mix', crumbs: [{ label: 'Make a Mix' }] };
     case 'edit': return route.draft === null
       ? { title: 'Edit current mix', crumbs: [mine, { label: 'Edit current mix' }] }
       : { title: 'Edit draft', crumbs: [mine, { label: 'Edit draft' }] };

@@ -113,7 +113,7 @@ describe('requests across the app', () => {
       'GET /requests': { requests: [] },
     });
     render(<App />);
-    await screen.findByText('Pick a feeling');
+    await screen.findByText('Choose another feeling');
     expect(screen.queryByRole('region', { name: 'Song requests' })).toBeNull();
   });
 });

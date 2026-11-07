@@ -641,7 +641,7 @@ export function App() {
             <main className="page" id="main">
               <h1 className="display small">There’s nothing at this address.</h1>
               <p className="lede">Your music and mixes are fine. It may be an old link.</p>
-              <PageLink to="/mixes" className="button primary">Go to Explore</PageLink>
+              <PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink>
             </main>
           )}
         </Section>

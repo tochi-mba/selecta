@@ -152,11 +152,11 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   return (
     <main className="page mixes" id="main">
       {firstMix && <SetupSteps stage="listen" />}
-      <LinkTabs label="Explore" items={EXPLORE_TABS} current={EXPLORE_TABS.some((tab) => tab.path === here) ? here : '/mixes'} />
+      <LinkTabs label="Make a Mix" items={EXPLORE_TABS} current={EXPLORE_TABS.some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
 
       <section className="hero">
-        <p className="eyebrow">{firstMix ? 'Your library is ready' : 'Tap and play'}</p>
+        <p className="eyebrow">Choose · {firstMix ? 'Your library is ready' : 'Tap and play'}</p>
         <h1 className="display">{hero?.name ?? 'Selecta’s pick'}</h1>
         <p className="lede">{hero?.blurb ?? 'The strongest run it can find through your library.'}</p>
         <div className="row wrap">
@@ -176,12 +176,12 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
               </button>
             ))}
           </div>
-          <button onClick={() => setCustomizing(true)}>Customize</button>
+          <button aria-label="Customize" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>
         </div>
         {hero && !hero.ready && <p className="hint">{hero.name} needs {hero.needs} more mix-ready {hero.needs === 1 ? 'song' : 'songs'} before it can play.</p>}
-        <p className="hint build-summary">Next mix: {buildSummary(status.steering)}.</p>
+        <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>
         <p className="hint">
-          {songs} songs. How long it really runs depends on where the transitions fall.
+          <b>Commit</b> · Play now, edit first, or save a draft. {songs} songs. How long it really runs depends on where the transitions fall.
           {replacing ? ` Playing a new mix replaces ${mixName}, which you can undo. To keep it playing, use Save as draft.` : ''}
         </p>
       </section>
@@ -189,7 +189,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       {problem && <p className="warn" role="alert">{problem}</p>}
 
       <section>
-        <h2 className="section-title">Pick a feeling</h2>
+        <h2 className="section-title">Choose another feeling</h2>
         <p className="hint">Every one is built from your own songs, fresh each time you press play.</p>
         {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when Selecta is available.</Problem>}
         {!cards && !cardsFailed && <Skeleton variant="cards" lines={4} label="Finding what your library can do" />}

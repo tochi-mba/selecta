@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -538,11 +539,13 @@ def test_slow_build_never_replaces_a_mix_changed_during_planning(client, conn, m
     from selecta.planner import vibes
 
     _fill(conn, 1, 2)
+    database_path = conn.execute("PRAGMA database_list").fetchone()[2]
     monkeypatch.setattr(vibes, "eligible", lambda *_args: [object()] * vibes.MIN_SONGS)
 
     def planner(*_args, **_kwargs):
         # Emulate another tab editing while the generation work is under way.
-        mix.write_order(conn, [(3, None, 0), (1, None, 0)])
+        with sqlite3.connect(database_path) as other_tab:
+            mix.write_order(other_tab, [(3, None, 0), (1, None, 0)])
         return [SimpleNamespace(song=SimpleNamespace(id=2))], {}
 
     monkeypatch.setattr(vibes, "build_vibe", planner)

@@ -316,6 +316,8 @@ export type ExportJob = {
   scope: 'current' | 'draft';
   draft: number | null;
   mix_name: string;
+  /** Stable identity of the frozen song order and rendered transitions. Older saved jobs may omit it. */
+  revision?: string;
   songs: { song_id: number; title: string; artist: string }[];
   seams: { key: string; from: string; to: string }[];
   seams_total: number;

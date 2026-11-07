@@ -5,7 +5,7 @@ import pytest
 
 from selecta import db
 from selecta.analysis.song import SongInfo
-from selecta.discovery.search import MOST_PER_SONG, audio_search, spread_out
+from selecta.discovery.search import MOST_PER_SONG, audio_search, lyric_links, spread_out
 from selecta.discovery.sweep import sweep
 
 
@@ -42,6 +42,15 @@ def _insert_songs(conn, *ids: int) -> None:
         "INSERT INTO songs(id,path,folder,size,mtime,duration) VALUES(?,?,?,?,?,?)",
         [(song_id, f"{song_id}.wav", "", 1, 0.0, 60.0) for song_id in ids],
     )
+
+
+def test_lyric_links_ignore_legacy_synced_rows_without_text(tmp_path):
+    conn = db.connect(tmp_path / "test.sqlite")
+    _insert_songs(conn, 1)
+    conn.execute("INSERT INTO lyrics(song_id,status,synced) VALUES(1,'synced',NULL)")
+    conn.commit()
+
+    assert lyric_links(conn) == []
 
 
 def test_legacy_melody_claims_are_relabelled_without_losing_reviews(tmp_path):

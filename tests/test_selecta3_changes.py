@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 from pathlib import Path
@@ -82,6 +83,7 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
     job = response.json()
     assert [song["song_id"] for song in job["songs"]] == [1, 2]
     assert len(job["seams"]) == 1
+    assert re.fullmatch(r"[0-9a-f]{12}", job["revision"])
 
     try:
         assert started.wait(timeout=3), "The export did not reach the encoding step"
@@ -96,6 +98,7 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
             break
         time.sleep(0.02)
     assert saved["state"] == "ready", saved
+    assert saved["revision"] == job["revision"]
     assert captured["songs"] == [1, 2]
     assert captured["keys"] == [job["seams"][0]["key"]]
     names = [item["name"] for item in client.get("/api/exports/jobs").json()["jobs"]]
@@ -165,3 +168,14 @@ def test_a_job_file_that_stays_locked_reports_the_real_error(tmp_path, monkeypat
     with pytest.raises(PermissionError):
         exports._despite_a_busy_file(always_refused)
     assert len(calls) == exports.BUSY_FILE_TRIES
+
+
+def test_desktop_inspector_column_allows_the_panel_to_stick_while_scrolling():
+    """The sticky inspector needs a container as tall as the editor timeline."""
+    css = Path("web/src/styles/shell.css").read_text(encoding="utf-8")
+    assert re.search(
+        r"\.inspector-column\s*\{[^}]*align-self:\s*stretch",
+        css,
+        re.DOTALL,
+    )
+    assert re.search(r"\.edit-inspector\s*\{[^}]*position:\s*sticky", css, re.DOTALL)

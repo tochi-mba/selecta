@@ -12,6 +12,7 @@ job that was under way when the server stopped is reported as interrupted, not a
 from __future__ import annotations
 
 import errno
+import hashlib
 import json
 import os
 import re
@@ -133,7 +134,7 @@ def add_routes(app, ctx) -> None:
         items = mix.read_mix(conn, store, draft)
         if len(items) < 2:
             raise HTTPException(400, "A mix needs at least two songs.")
-        return {
+        snapshot = {
             "scope": "current" if draft is None else "draft",
             "draft": draft,
             "mix_name": mix.mix_name(conn, draft),
@@ -154,6 +155,21 @@ def add_routes(app, ctx) -> None:
             ],
             "seconds_estimate": sum(item["duration"] or 0 for item in items),
         }
+        # A short, deterministic identity lets the UI name the frozen source
+        # precisely without exposing paths or pretending the live mix still is
+        # that version. It covers both order and rendered transition identity.
+        identity = json.dumps(
+            {
+                "scope": snapshot["scope"],
+                "draft": snapshot["draft"],
+                "songs": [song["song_id"] for song in snapshot["songs"]],
+                "seams": [seam["key"] for seam in snapshot["seams"]],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        snapshot["revision"] = hashlib.sha256(identity).hexdigest()[:12]
+        return snapshot
 
     def same_snapshot(job: dict, snapshot: dict) -> bool:
         return (

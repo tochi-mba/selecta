@@ -234,6 +234,34 @@ describe('the seam studio', () => {
     expect(cell).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('switches between guided Shape and Detailed without changing the grid', async () => {
+    open();
+    const detailedCell = await square('Song 1 voice, square 1');
+    const before = deck.made[0].setShape.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Shape' }));
+    expect(screen.getByRole('region', { name: 'Guided shape controls' })).toBeInTheDocument();
+    expect(deck.made[0].setShape).toHaveBeenCalledTimes(before);
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+    expect(await square('Song 1 voice, square 1')).toHaveAttribute('aria-pressed', 'true');
+    expect(deck.made[0].setShape).toHaveBeenCalledTimes(before);
+  });
+
+  it('guided Shape edits the same exact lane shown by Detailed', async () => {
+    open();
+    await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Shape' }));
+    const guided = screen.getByRole('region', { name: 'Guided shape controls' });
+    const songTwo = within(guided).getByRole('region', { name: 'Song 2' });
+    const bass = within(songTwo).getByRole('group', { name: 'Bass' });
+    expect(within(bass).getByRole('status')).toHaveTextContent('Left out');
+    fireEvent.click(within(bass).getByRole('button', { name: 'Use throughout' }));
+    expect(within(bass).getByRole('status')).toHaveTextContent('Used throughout');
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+    for (let index = 1; index <= 8; index += 1) {
+      expect(await square(`Song 2 bass, square ${index}`)).toHaveAttribute('aria-pressed', 'true');
+    }
+  });
+
   it('using it saves the shape, closes and says what happens next', async () => {
     const data = { mix: songs(), name: 'Mix', can_undo: true };
     const { calls, onClose, onUsed, notify } = open(ready, { 'POST /mix/1/studio/use': data });

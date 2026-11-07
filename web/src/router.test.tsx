@@ -8,6 +8,8 @@ describe('addresses', () => {
   it.each([
     ['/', { page: 'mixes', tab: 'browse' }],
     ['/mixes', { page: 'mixes', tab: 'browse' }],
+    ['/make', { page: 'mixes', tab: 'browse' }],
+    ['/make-a-mix', { page: 'mixes', tab: 'browse' }],
     ['/mixes/mine', { page: 'mixes', tab: 'mine' }],
     ['/listen', { page: 'listen' }],
     ['/library', { page: 'library' }],

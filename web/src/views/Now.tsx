@@ -469,8 +469,9 @@ export function Now(props: ViewProps) {
   const [rateBusy, setRateBusy] = useState(false);
   const [changed, setChanged] = useState<{ from: string; to: string; id: number } | null>(null);
   const [view, setViewChoice] = useState<ListenView>(savedView);
-  // kept here because the Stage takes the controls away, and coming back should find them as they were
-  const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
+  // Kept here because Stage takes the controls away. Returning should restore the listener's
+  // chosen level of detail without making expert controls compete with Play and Up Next.
+  const [djControlsOpen, setDjControlsOpen] = useState(false);
   const page = useRef<HTMLElement>(null);
   const stageWasOpen = useRef(stage);
   // Stage removes the launching button while fullscreen. Put focus on a
@@ -609,24 +610,8 @@ export function Now(props: ViewProps) {
                   </button>
                 </Tooltip>
                 <VolumeControl player={player} now={now} />
-                <Tooltip text="Shortcut: R">
-                  <button onClick={() => openRequests?.()}>
-                    Request a song{waiting ? ` (${waiting} waiting)` : ''}
-                  </button>
-                </Tooltip>
               </div>
               {now.notice && <p className="notice" role="status">{now.notice}</p>}
-              <details className="view-options" open={viewOptionsOpen} onToggle={(event) => setViewOptionsOpen(event.currentTarget.open)}>
-                <summary>Display options</summary>
-                <fieldset className="listen-view" aria-label="What to show"><legend className="visually-hidden">Listening display</legend>
-                <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
-                <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
-                <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
-                <Tooltip text="Shortcut: F">
-                  <button data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>
-                </Tooltip>
-                </fieldset>
-              </details>
             </>
           )}
 
@@ -649,17 +634,9 @@ export function Now(props: ViewProps) {
             />
           )}
 
-          {!stage && now.lastSeamKey && !rated && (
-            <div className="thumbs" role="group" aria-label="Rate that transition">
-              <span>How was that transition?</span>
-              <Action waiting={rateBusy} run={() => rate('good')}>Good</Action>
-              <Action waiting={rateBusy} run={() => rate('bad')}>Bad</Action>
-            </div>
-          )}
-
           {!stage && (next ? (
             <section className="next-up">
-              <p className="eyebrow">Next</p>
+              <p className="eyebrow">Up Next</p>
               <button className="next-song" aria-label={`Edit upcoming song ${next.title} and its transition`} onClick={() => setView('Edit')}>
                 <b>{next.title}</b>
                 <span>{next.artist}</span>
@@ -667,14 +644,6 @@ export function Now(props: ViewProps) {
                 <small className="next-edit-hint">Edit upcoming song and transition</small>
               </button>
               <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} />
-              <div className="chips steer" role="group" aria-label="Change what plays next">
-                <Action waiting={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
-                <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>
-                <Action waiting={swapBusy} run={() => swap(0)} working="Finding one…">Something else</Action>
-              </div>
-              {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
-              {problem && <p className="warn" role="alert">{problem} Nothing has changed, so the plan above still stands.</p>}
-              <WhyThisTransition from={item} into={next} names={names} />
             </section>
           ) : (
             <section className="next-up">
@@ -683,6 +652,45 @@ export function Now(props: ViewProps) {
               <button onClick={() => setView('Edit')}>Add more songs</button>
             </section>
           ))}
+
+          {!stage && (
+            <details className="dj-controls view-options" open={djControlsOpen} onToggle={(event) => setDjControlsOpen(event.currentTarget.open)}>
+              <summary>DJ controls</summary>
+              <p className="hint">Shape what comes next, rate transitions, request a song, or change the listening display.</p>
+              <Tooltip text="Shortcut: R">
+                <button onClick={() => openRequests?.()}>
+                  Request a song{waiting ? ` (${waiting} waiting)` : ''}
+                </button>
+              </Tooltip>
+              <fieldset className="listen-view" aria-label="What to show"><legend>Display options</legend>
+                <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
+                <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
+                <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
+                <Tooltip text="Shortcut: F">
+                  <button data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>
+                </Tooltip>
+              </fieldset>
+              {now.lastSeamKey && !rated && (
+                <div className="thumbs" role="group" aria-label="Rate that transition">
+                  <span>How was that transition?</span>
+                  <Action waiting={rateBusy} run={() => rate('good')}>Good</Action>
+                  <Action waiting={rateBusy} run={() => rate('bad')}>Bad</Action>
+                </div>
+              )}
+              {next && (
+                <>
+                  <div className="chips steer" role="group" aria-label="Change what plays next">
+                    <Action waiting={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
+                    <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>
+                    <Action waiting={swapBusy} run={() => swap(0)} working="Finding one…">Something else</Action>
+                  </div>
+                  {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
+                  {problem && <p className="warn" role="alert">{problem} Nothing has changed, so the plan above still stands.</p>}
+                  <WhyThisTransition from={item} into={next} names={names} />
+                </>
+              )}
+            </details>
+          )}
         </aside>
       </div>
 

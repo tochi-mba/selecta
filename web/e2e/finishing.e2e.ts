@@ -158,7 +158,7 @@ test('fullscreen refused: the lyrics still fill the page, Escape gets out, focus
     Element.prototype.requestFullscreen = () => Promise.reject(new TypeError('Permissions check failed'));
   });
   await startPlaying(page);
-  await page.locator('details.view-options summary').click();
+  await page.getByText('DJ controls', { exact: true }).click();
   const started = await soundsStarted(page);
   const open = page.getByRole('button', { name: 'Fullscreen lyrics' });
   await open.focus();

@@ -1,3 +1,17 @@
+# Selecta — experience-first UI/UX ADR proposal (2026-11-07)
+
+**New documentation-only proposal:** [21 independent new design decisions, ADR-0114–0134](selecta-experience-roadmap.md); [105-item implementation checklist](selecta-experience-implementation-checklist.md); [per-task implementation/verification ledger](selecta-experience-evidence.md); [feature-parity map](selecta-experience-feature-parity.md); [historical status reconciliation](selecta-experience-status-reconciliation.md); [NO-GO release gates](selecta-experience-release-gates.md).
+
+**New ADR status:** 21 **Proposed** (not owner-accepted). **New implementation:** 105 **Not started**, 0 Implemented. **New independent verification:** 0 Verified. **Reviewed source baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged [PR #29](https://github.com/tochi-mba/selecta/pull/29).
+
+**Direction:** Listening effortless; mix creation expressive; expert editing precise; operations quiet. These decisions go beyond cosmetics and independently reconsider navigation, optional mix shaping, card action hierarchy, editor song/seam objects and an audition-first inspector. All are user-testable proposals, not claims of measured failure or approved implementation.
+
+**Owner-directed scope:** **Do not build a desktop launcher/installer, native folder picker or browser directory bridge.** Selecta may move to SaaS much later, but **no SaaS implementation now**. The current browser plus local server must keep working, along with original media safety, audio ownership, routes, drafts, requests, Studio, privacy, studies and exact-revision FLAC.
+
+**Status caution:** The 4.0 tracker was written before merged PR #29. Its 250 unchecked / 0 documented Implemented tasks are historical *tracker entries*, **not** proof of current post-merge code completeness. The new [reconciliation file](selecta-experience-status-reconciliation.md) explicitly preserves older S4/S31/S3/T/P records and requires task-specific evidence before changing any implementation or verification state.
+
+---
+
 # Selecta 4.0 — complete UI/UX overhaul ADR programme (2026-11-07)
 
 **This is a documentation-only proposal: ADR-0089–0113, 25 Proposed decisions, 250 new S4 tasks Not started, 0 Implemented, 0 Verified.** Baseline: `main` `9b663f9f10212619f27ce67ce82f602347065cbd` after PR #25 and #26 merged. Keep the warm charcoal/cream/electric lime scheme, improve dark and light themes, and preserve all existing functionality, original audio, local-first security, requests, Studio, drafts and FLAC.

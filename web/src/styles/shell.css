@@ -328,8 +328,9 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 .status i { font-style: normal; }
 .status-planned, .status-unavailable, .status-queued { color: var(--status-planned); }
 .status-working { color: var(--status-working); }
+.status-recovering { color: var(--status-recovering); }
 .status-ready { color: var(--status-ready); }
-.status-warning, .status-failed { color: var(--status-failed); }
+.status-warning, .status-blocked, .status-failed { color: var(--status-failed); }
 .status-needs-action { color: var(--status-action); font-weight: 700; }
 
 .skeleton { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }
@@ -391,7 +392,7 @@ button[data-working]::after {
 /* the timeline, with whatever's selected beside it */
 .page.mix { max-width: 1320px; }
 .edit-layout.has-inspector { display: grid; grid-template-columns: minmax(420px, 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
-.inspector-column { position: relative; min-width: 0; }
+.inspector-column { position: relative; min-width: 0; align-self: stretch; }
 .inspector-resize {
   position: absolute;
   z-index: 2;
@@ -407,12 +408,16 @@ button[data-working]::after {
   top: var(--space-4);
   max-height: calc(100vh - var(--space-6) - var(--player-height));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-raised);
   padding: var(--space-4);
   margin-top: 20px;
 }
+@media (prefers-reduced-motion: reduce) { .edit-inspector { scroll-behavior: auto; } }
 .inspector-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .inspector-pair { overflow-wrap: anywhere; margin: var(--space-2) 0; }
 .inspector-tabs { display: flex; gap: var(--space-1); margin: var(--space-3) 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }

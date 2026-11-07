@@ -54,7 +54,7 @@ for (const display of DISPLAYS) {
 
     await page.goto('/mixes');
     await page.getByRole('button', { name: 'Customize' }).click();
-    await expect(page.getByRole('dialog', { name: 'How mixes get built' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Shape the next mix' })).toBeVisible();
     await capture('customize-dialog');
 
     await page.goto('/listen');

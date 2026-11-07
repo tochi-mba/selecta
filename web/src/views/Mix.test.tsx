@@ -482,6 +482,13 @@ describe('what’s selected', () => {
     expect(within(side).getByRole('tab', { name: 'Listen' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('smoothly resets the inspector when a transition is opened', async () => {
+    const scrollTo = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: scrollTo });
+    await pick();
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' }));
+  });
+
   it('plays the exact render, and the same stays selected when others move', async () => {
     await pick();
     const side = screen.getByRole('complementary', { name: 'This transition' });
@@ -659,6 +666,7 @@ describe('saving as a file', () => {
     scope: 'current',
     draft: null,
     mix_name: 'Test mix',
+    revision: 'a1b2c3d4e5f6',
     songs: [{ song_id: 1, title: 'Song 1', artist: 'Artist 1' }, { song_id: 2, title: 'Song 2', artist: 'Artist 2' }],
     seams: [{ key: 'a', from: 'Song 1', to: 'Song 2' }],
     seams_total: 1,
@@ -686,6 +694,7 @@ describe('saving as a file', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Save it' }));
     expect(await screen.findByText(/Prepare transitions — 0 of 1 ready/)).toBeInTheDocument();
+    expect(screen.getByText(/Frozen revision/)).toHaveTextContent('a1b2c3d4e5f6');
     rendered.rerender(
       <MixScope.Provider value={9}><ExportPanel {...props} inDraft /></MixScope.Provider>,
     );
