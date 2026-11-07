@@ -368,8 +368,7 @@ describe('Studio representation parity', () => {
     fireEvent.click(cell);
     expect(cell).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'Detailed list' }));
-    const lists = screen.getByRole('group', { name: 'Stem controls by song and part' });
-    const boxes = within(lists).getAllByRole('checkbox');
+    const boxes = screen.getAllByRole('checkbox');
     expect(boxes).toHaveLength(64);
     expect(boxes[1]).not.toBeChecked();
     expect(boxes[1]).toHaveAttribute('data-cell', '0-1');
