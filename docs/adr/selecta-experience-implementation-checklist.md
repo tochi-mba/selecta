@@ -1,6 +1,6 @@
 # Selecta — experience-first implementation checklist (105 EX tasks)
 
-**Proposal only:** 2026-11-07, baseline `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, docs-only. **21 ADRs Proposed; 105 new tasks Not started; 0 Implemented; 0 Verified.** A checked box means independently **Verified**, never only coded. Current code can be credited only after actual mapping and verification; do not inherit old S4 completion assumptions.
+**Historical baseline:** Created 2026-11-07 at `6638ec2313ce53843adfaf363306f8e79c4c8c7e` as a docs-only proposal. Implementation PR #30 later merged as `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`; the 105 task-specific acceptance and independent-verification states remain unreconciled/open in this ledger. A checked box means independently **Verified**, never only coded.
 
 **Lifecycle:** Not started → In progress (named PR) → Implemented (merged code/tests); Verified No → Yes after applicable human, visual, keyboard/AT, real audio, performance and data/revision evidence.
 

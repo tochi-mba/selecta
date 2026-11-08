@@ -220,3 +220,76 @@ describe('beat-grid transition countdown', () => {
     expect(screen.getByRole('button', { name: 'Edit upcoming song Next Song and its transition' })).toBeInTheDocument();
   });
 });
+
+describe('pointer seeking', () => {
+  it('previews the target without seeking until release', async () => {
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    const seek = vi.spyOn(player, 'seek').mockResolvedValue(undefined);
+    render(
+      <Now
+        status={status()}
+        mix={mix}
+        mixName="Test mix"
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={() => {}}
+        refreshStatus={() => {}}
+        player={player}
+        now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}}
+        notify={() => {}}
+        stage={false}
+        toggleStage={() => {}}
+      />,
+    );
+    const slider = await screen.findByRole('slider', { name: 'Where in the song' });
+    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 200 } as DOMRect);
+    fireEvent.pointerDown(slider, { pointerId: 3, isPrimary: true, button: 0, clientX: 100 });
+    expect(slider.querySelector('.scrub-ghost')).toBeInTheDocument();
+    expect(slider).toHaveAttribute('aria-valuenow', '2');
+    expect(seek).not.toHaveBeenCalled();
+    fireEvent.pointerUp(slider, { pointerId: 3, isPrimary: true, button: 0, clientX: 100 });
+    expect(slider.querySelector('.scrub-ghost')).toBeNull();
+    expect(seek).toHaveBeenCalledWith(10);
+  });
+});
+
+describe('listener-controlled presentation', () => {
+  it('can read a full static lyric sheet and resume following without affecting audio', async () => {
+    window.localStorage.removeItem('selecta.listen');
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    render(
+      <Now status={status()} mix={mix} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    const button = await screen.findByRole('button', { name: 'Read all lyrics' });
+    fireEvent.click(button);
+    expect(screen.getByRole('region', { name: 'All timed lyrics, scroll manually' })).toHaveTextContent('Hello, beautiful world!');
+    fireEvent.click(screen.getByRole('button', { name: 'Resume lyric follow' }));
+    expect(screen.queryByRole('region', { name: 'All timed lyrics, scroll manually' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Read all lyrics' })).toBeInTheDocument();
+  });
+
+  it('keeps visual intensity independent from playback and remembers the choice', async () => {
+    window.localStorage.removeItem('selecta.listen');
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    const { container } = render(
+      <Now status={status()} mix={mix} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    await screen.findByText('Hello');
+    fireEvent.click(screen.getByRole('button', { name: 'Quiet visuals' }));
+    expect(container.querySelector('.music-visualizer')).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem('selecta.listen') ?? '{}').intensity).toBe('quiet');
+    fireEvent.click(screen.getByRole('button', { name: 'Focused visuals' }));
+    expect(container.querySelector('.music-visualizer.focused')).toBeInTheDocument();
+    expect(player.state.phase).toBe('idle');
+  });
+});

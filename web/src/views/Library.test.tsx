@@ -322,9 +322,9 @@ describe('correcting a song', () => {
 
   it('double and half fill in what was measured', async () => {
     await open();
-    await userEvent.click(screen.getByRole('button', { name: 'Double' }));
+    await userEvent.click(screen.getByRole('button', { name: /Double measured tempo/ }));
     expect(screen.getByRole('spinbutton')).toHaveValue(160);
-    await userEvent.click(screen.getByRole('button', { name: 'Half' }));
+    await userEvent.click(screen.getByRole('button', { name: /Halve measured tempo/ }));
     expect(screen.getByRole('spinbutton')).toHaveValue(40);
   });
 

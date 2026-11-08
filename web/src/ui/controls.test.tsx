@@ -310,3 +310,38 @@ describe('a tooltip', () => {
     expect(screen.getByRole('tooltip', { hidden: true })).not.toHaveAttribute('hidden');
   });
 });
+
+describe('Undo confirmation timing', () => {
+  it('retains the exact Undo notification while the server is still responding', async () => {
+    let finish: () => void = () => {};
+    const undo = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    render(<Toaster />);
+    act(() => { showToast('Moved song three.', { undo }); });
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(undo).toHaveBeenCalledOnce();
+    expect(screen.getByText('Moved song three.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undoing…' })).toHaveAttribute('aria-disabled', 'true');
+    await act(async () => { finish(); });
+    expect(screen.queryByText('Moved song three.')).toBeNull();
+  });
+});
+
+describe('toast focus continuity', () => {
+  it('restores focus to the active page after a confirmed Undo removes its button', async () => {
+    const main = document.createElement('div');
+    main.id = 'content';
+    main.tabIndex = -1;
+    document.body.append(main);
+    try {
+      render(<Toaster />);
+      act(() => { showToast('Undo this change.', { undo: async () => {} }); });
+      const undo = screen.getByRole('button', { name: 'Undo' });
+      undo.focus();
+      fireEvent.click(undo);
+      await waitFor(() => expect(screen.queryByText('Undo this change.')).toBeNull());
+      expect(main).toHaveFocus();
+    } finally {
+      main.remove();
+    }
+  });
+});

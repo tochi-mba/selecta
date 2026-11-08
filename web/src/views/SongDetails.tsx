@@ -126,8 +126,8 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           </Field>
           {detectedTempo && (
             <div className="row">
-              <button onClick={() => useMeasuredTempo(2)}>Double</button>
-              <button onClick={() => useMeasuredTempo(0.5)}>Half</button>
+              <button type="button" aria-label={`Double measured tempo to ${Math.round((song.detected_bpm ?? 0) * 2)} BPM`} onClick={() => useMeasuredTempo(2)}>Double measured</button>
+              <button type="button" aria-label={`Halve measured tempo to ${Math.round((song.detected_bpm ?? 0) / 2)} BPM`} onClick={() => useMeasuredTempo(0.5)}>Half measured</button>
             </div>
           )}
         </div>

@@ -1,8 +1,8 @@
 # Selecta 3.0 — implementation status and evidence ledger
 
-- **Programme decision:** Proposed. **Implementation:** In progress on PR #24; not merged or verified.
+- **Programme decision:** Proposed. **Implementation:** PR #24 merged as `3b01dc1336aab0f1cb0a4d85be5eba359de81831`; task-level reconciliation and independent verification remain open.
 - **Date:** 2026-11-07.
-- **ADR count:** 31; **individual task count:** 258; **Merged/verified:** 0/258 while PR #24 is open.
+- **ADR count:** 31; **individual task count:** 258; **programme PR merged / independently Verified tasks:** yes / 0.
 - **Scope:** Began as a documentation-only plan. PR #24 now also contains implementation changes; no complete manual audio, screen-reader or user-testing verification is claimed.
 - **Baseline:** main `84b8b5cbadf7204bf526e8932124b5c4890e2c44`; PR #23 had merged.
 

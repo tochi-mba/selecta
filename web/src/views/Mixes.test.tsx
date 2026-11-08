@@ -9,6 +9,7 @@ const card = (key: string, name: string, group: string, more: Partial<VibeCard> 
   key,
   name,
   group,
+  family: null,
   blurb: `${name} words`,
   songs: 40,
   ready: true,
@@ -273,8 +274,24 @@ describe('Pick a feeling', () => {
     expect(inside.getByText('Someone, Someone Else')).toBeInTheDocument();
     expect(inside.getByText(/100–124 BPM/)).toBeInTheDocument();
     expect(inside.getByText(/Vocal rides and long blends/)).toBeInTheDocument();
-    expect(inside.getByText('40 songs, up to 1 hr 5 min')).toBeInTheDocument();
-    expect(inside.getByRole('button', { name: 'Edit first' })).toBeEnabled();
+    expect(inside.getByText('40 matching songs')).toBeInTheDocument();
+    expect(inside.getByText('Up to 1 hr 5 min')).toBeInTheDocument();
+    expect(inside.getByRole('button', { name: 'Shape first' })).toBeEnabled();
+  });
+
+  it('shows and filters truthful family-specific candidates', async () => {
+    fakeBackend({
+      'GET /vibes': [
+        card('peak', 'Peak time', 'The moment'),
+        card('slow_burn__afro', 'Afrobeats & amapiano · Slow burn', 'The journey', { family: 'Afrobeats & amapiano' }),
+      ],
+    });
+    show();
+    const candidate = await screen.findByRole('heading', { name: 'Afrobeats & amapiano · Slow burn' });
+    expect(within(candidate.closest('article')!).getByText('Stays within Afrobeats & amapiano')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'The journey' }));
+    expect(screen.queryByRole('heading', { name: 'Peak time' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Afrobeats & amapiano · Slow burn' })).toBeInTheDocument();
   });
 
   it('keeps Christmas off the waiting list until there are enough songs for it', async () => {

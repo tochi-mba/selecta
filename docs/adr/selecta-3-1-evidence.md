@@ -2,7 +2,7 @@
 
 - **Date:** 2026-11-07.
 - **Programme decisions:** 11 Proposed (ADR-0078–0088); none accepted as part of this proposal.
-- **Implementation:** 29 selected S31 tasks In progress on PR #25; 87 not started; **0/116 Implemented, 0/116 Verified**.
+- **Implementation:** PR #25 merged as `6d78cf420c55817e967fc3b8db45749c9817926e`; 29 selected S31 tasks had partial source mapping, while **0/116 are independently Verified** in this ledger.
 - **Scope:** PR #25 began as docs-only, now contains targeted frontend/unit/Edge changes and synthetic screenshot upload. No backend/schema/audio-engine/dependency changes. Baseline `main` is `3b01dc1336aab0f1cb0a4d85be5eba359de81831`.
 - **Important historical distinction:** PR #24 is **merged**. The earlier 3.0 ledger still records it as in progress/open and 0 merged; that is a stale planning snapshot requiring item-by-item reconciliation, **not** a basis for retroactively marking any S3 item complete.
 - **Evidence presently available:** source inspection, existing suites, new concurrency/identity/keyboard regressions and Web unit/build success on earlier PR heads. Final-head aggregate CI must be checked after the last commit. Synthetic screenshots are *review candidates only*: no approved images, human AT/usability, real audio audition or scale benchmarks are claimed.

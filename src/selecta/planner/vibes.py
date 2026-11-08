@@ -145,6 +145,8 @@ class Vibe:
     seasonal: bool = False
     steady: float = 0.35
     """How strongly to stick to pairs that can carry a real move, rather than the best next song."""
+    family: str | None = None
+    """When set, this candidate has a hard musical-family boundary, not a ranking preference."""
 
 
 MOMENT = "The moment"
@@ -152,6 +154,18 @@ MOOD = "The mood"
 SOUND = "The sound"
 JOURNEY = "The journey"
 GROUPS = (MOMENT, MOOD, SOUND, JOURNEY)
+
+FAMILY_NAMES = {
+    "afro": "Afrobeats & amapiano",
+    "dance": "Dance & house",
+    "hiphop": "Hip-hop",
+    "latin": "Latin",
+    "pop": "Pop",
+    "rnb": "R&B & soul",
+    "rock": "Rock & indie",
+    "other": "Alternative",
+}
+COHESIVE_JOURNEYS = {"slow_burn", "lift_off", "cool_down", "no_dips", "wordplay"}
 
 VIBES: tuple[Vibe, ...] = (
     Vibe(
@@ -222,6 +236,30 @@ VIBES: tuple[Vibe, ...] = (
         group=MOMENT,
         belongs=lambda _, t: t.hook + 0.6 * t.about("open_road") + (0.2 if not t.minor else 0.0),
     ),
+    Vibe(
+        "dinner_party",
+        "Dinner with friends",
+        "Warm, familiar songs that leave room for conversation and still move.",
+        lambda s, t: (
+            s.family in {"rnb", "pop", "afro", "latin", "rock", "other"}
+            and 78 <= t.felt <= 126
+            and 0.18 <= t.energy <= 0.7
+        ),
+        group=MOMENT,
+        belongs=lambda _, t: 0.6 * t.hook + 0.4 * (1.0 - abs(t.energy - 0.45)),
+        language="seamless",
+        arc="slow_burn",
+        steady=0.55,
+    ),
+    Vibe(
+        "commute",
+        "On the move",
+        "A bright, forward-moving run for the train, the car or the walk home.",
+        lambda _, t: 84 <= t.felt <= 140 and 0.28 <= t.energy <= 0.86,
+        group=MOMENT,
+        belongs=lambda _, t: 0.55 * t.hook + 0.45 * t.energy,
+        arc="climb",
+    ),
     # ---- the mood: how you're feeling
     Vibe(
         "feelings",
@@ -285,6 +323,27 @@ VIBES: tuple[Vibe, ...] = (
         arc="wind_down",
         steady=0.5,
     ),
+    Vibe(
+        "confidence",
+        "Main character",
+        "Hooks, swagger and lift — songs that make the room feel like yours.",
+        lambda _, t: t.energy >= 0.42 and (t.about("flex") >= 0.55 or t.hook >= 0.62),
+        group=MOOD,
+        belongs=lambda _, t: t.about("flex") + 0.55 * t.hook + 0.25 * t.energy,
+        language="punchy",
+        arc="climb",
+    ),
+    Vibe(
+        "quiet_focus",
+        "Quiet focus",
+        "Low-distraction songs that settle in and keep the energy even.",
+        lambda _, t: t.energy <= 0.48 and 68 <= t.felt <= 122 and t.about("party") < 0.7,
+        group=MOOD,
+        belongs=lambda _, t: (1.0 - t.energy) + 0.2 * (1.0 - t.wordy),
+        language="seamless",
+        arc="steady",
+        steady=0.65,
+    ),
     # ---- the sound: what you want to hear
     Vibe(
         "afro_heat",
@@ -323,6 +382,26 @@ VIBES: tuple[Vibe, ...] = (
         belongs=lambda _, t: t.hook + 0.3 * t.energy,
     ),
     Vibe(
+        "dance_floor",
+        "Dance floor",
+        "Dance, house and Latin energy with clean momentum and room to blend.",
+        lambda s, t: s.family in {"dance", "latin", "afro"} and t.energy >= 0.38,
+        group=SOUND,
+        belongs=lambda _, t: t.energy + 0.35 * t.about("party"),
+        language="seamless",
+        arc="peak_time",
+        steady=0.58,
+    ),
+    Vibe(
+        "guitars",
+        "Guitars out",
+        "Rock, indie and guitar-led songs with choruses given space to land.",
+        lambda s, _: s.family in {"rock", "other"},
+        group=SOUND,
+        belongs=lambda _, t: 0.65 * t.hook + 0.35 * t.energy,
+        language="punchy",
+    ),
+    Vibe(
         "christmas",
         "Christmas",
         "Only the Christmas songs, kept out of every other mix.",
@@ -342,6 +421,35 @@ VIBES: tuple[Vibe, ...] = (
         steady=0.5,
     ),
     Vibe(
+        "lift_off",
+        "Lift off",
+        "Starts easy, keeps finding another gear and finishes at full height.",
+        _anything,
+        group=JOURNEY,
+        language="balanced",
+        arc="climb",
+    ),
+    Vibe(
+        "cool_down",
+        "Bring it home",
+        "Begins with energy, then lands somewhere warmer and more spacious.",
+        _anything,
+        group=JOURNEY,
+        language="seamless",
+        arc="wind_down",
+        steady=0.5,
+    ),
+    Vibe(
+        "no_dips",
+        "No dips",
+        "A high, steady run picked across your library when you want momentum over genre.",
+        lambda _, t: t.energy >= 0.5,
+        group=JOURNEY,
+        language="punchy",
+        arc="steady",
+        steady=0.68,
+    ),
+    Vibe(
         "wordplay",
         "Wordplay showcase",
         "Runs through the phrases your songs share, one hand-off after another.",
@@ -352,6 +460,65 @@ VIBES: tuple[Vibe, ...] = (
     ),
 )
 BY_KEY = {vibe.key: vibe for vibe in VIBES}
+
+
+def family_vibe(vibe: Vibe, family: str) -> Vibe:
+    """Bind a broad energy journey to one musical family.
+
+    Energy shape is not permission to ignore musical identity. A journey can vary within
+    Afrobeats, R&B or any other supported family, but it must not silently fill an Afrobeats
+    candidate with unrelated songs merely because their energy curve happens to fit.
+    """
+    label = FAMILY_NAMES.get(family, family.replace("_", " ").title())
+    original_fits = vibe.fits
+    return replace(
+        vibe,
+        key=f"{vibe.key}__{family}",
+        name=f"{label} · {vibe.name}",
+        blurb=f"{vibe.blurb} Drawn only from your {label.lower()} songs.",
+        fits=lambda song, traits: song.family == family and original_fits(song, traits),
+        family=family,
+    )
+
+
+def candidate_vibes(songs: list[SongInfo], traits: dict[int, Traits]) -> tuple[Vibe, ...]:
+    """Return only truthful cards, including every family-specific journey the library supports."""
+    families = sorted(
+        FAMILY_NAMES,
+        key=lambda family: (
+            -sum(song.family == family and not traits[song.id].seasonal for song in songs),
+            FAMILY_NAMES[family],
+        ),
+    )
+    supported = [
+        family
+        for family in families
+        if sum(
+            song.family == family and not traits[song.id].seasonal for song in songs
+        )
+        >= MIN_SONGS
+    ]
+    cards: list[Vibe] = []
+    for vibe in VIBES:
+        if vibe.key not in COHESIVE_JOURNEYS:
+            cards.append(vibe)
+            continue
+        for family in supported:
+            candidate = family_vibe(vibe, family)
+            if len(eligible(candidate, songs, traits)) >= MIN_SONGS:
+                cards.append(candidate)
+    return tuple(cards)
+
+
+def resolve_vibe(key: str) -> Vibe | None:
+    """Resolve static cards and the family-bound journey keys emitted by ``candidate_vibes``."""
+    if "__" not in key:
+        return BY_KEY.get(key)
+    base, family = key.rsplit("__", 1)
+    vibe = BY_KEY.get(base)
+    if vibe is None or base not in COHESIVE_JOURNEYS or family not in FAMILY_NAMES:
+        return None
+    return family_vibe(vibe, family)
 
 
 def _ranks(values: list[float]) -> np.ndarray:
@@ -426,6 +593,7 @@ def describe(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> di
         "name": vibe.name,
         "blurb": vibe.blurb,
         "group": vibe.group,
+        "family": FAMILY_NAMES.get(vibe.family) if vibe.family else None,
         "songs": len(found),
         "ready": len(found) >= MIN_SONGS,
         "needs": max(MIN_SONGS - len(found), 0),
@@ -471,10 +639,15 @@ def build_vibe(
         if destination is None:
             raise ValueError(f"destination song {end_id} is not available in the mix-ready library")
         if all(song.id != end_id for song in found):
+            if vibe.family:
+                family = FAMILY_NAMES.get(vibe.family, vibe.family)
+                raise ValueError(f"Choose a {family} song for this mix destination")
             if vibe.seasonal:
                 raise ValueError("choose a Christmas song for the Christmas mix destination")
             found.append(destination)
     rng = np.random.default_rng(seed)
+    if start is not None and all(song.id != start for song in found):
+        raise ValueError(f"That starting song does not belong in {vibe.name}.")
     first = start if start is not None else _opening_song(vibe, found, traits, rng, energy_arc).id
     memory = memory or SeamMemory()
     belongs = {song.id: vibe.belongs(song, traits[song.id]) for song in found}

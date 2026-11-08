@@ -128,32 +128,45 @@ type SongRowProps = {
   actions: RefObject<RowActions>;
 };
 
+/** A private drag format stops arbitrary dropped text from becoming a song position. */
+const SONG_DRAG_TYPE = 'application/x-selecta-song-position';
+
 /** One song in the timeline. Only the handle starts a drag, so scrolling a long mix on a phone can't
  * pick a song up by accident. A mouse drags it the ordinary way, a finger or pen uses pointer events,
  * and the arrow keys and the Move buttons do the same job without dragging at all. */
 export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, actions }: SongRowProps) {
-  const holding = useRef(false);
+  const holding = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
   const [grabbed, setGrabbed] = useState(false);
   const rowUnder = (event: PointerEvent<HTMLElement>) => document.elementFromPoint?.(event.clientX, event.clientY)?.closest<HTMLElement>('[data-song-key]') ?? null;
   const pressHandle = (event: PointerEvent<HTMLElement>) => {
-    if (event.pointerType === 'mouse') return;
+    if (event.pointerType === 'mouse' || !event.isPrimary) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    holding.current = true;
+    holding.current = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
   };
   const moveHandle = (event: PointerEvent<HTMLElement>) => {
-    if (!holding.current) return;
+    const started = holding.current;
+    if (!started || started.id !== event.pointerId) return;
+    // A tap is not a reorder. The handle only enters drag mode after an
+    // intentional move of at least eight CSS pixels.
+    if (!started.moved) {
+      if (Math.hypot(event.clientX - started.x, event.clientY - started.y) < 8) return;
+      started.moved = true;
+    }
     actions.current.dragOver(rowUnder(event)?.dataset.songKey ?? null);
     const margin = 90;
     if (event.clientY < margin) window.scrollBy?.(0, -14);
     else if (event.clientY > window.innerHeight - margin) window.scrollBy?.(0, 14);
   };
   const releaseHandle = (event: PointerEvent<HTMLElement>) => {
-    if (!holding.current) return;
-    holding.current = false;
-    const target = rowUnder(event);
+    const started = holding.current;
+    if (!started || started.id !== event.pointerId) return;
+    holding.current = null;
+    const target = started.moved ? rowUnder(event) : null;
     actions.current.dragOver(null);
-    if (target?.dataset.position) void actions.current.move(item.position, Number(target.dataset.position), 'drag');
+    if (target?.dataset.position && Number(target.dataset.position) !== item.position) {
+      void actions.current.move(item.position, Number(target.dataset.position), 'drag');
+    }
   };
   const handleKeys = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === ' ' || event.key === 'Enter') {
@@ -183,18 +196,30 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
       data-position={item.position}
       onClick={(event) => { if (pickedTheRow(event)) actions.current.selectSong(rowKey); }}
       onDragStart={(event: DragEvent<HTMLLIElement>) => {
-        event.dataTransfer.setData('text/plain', String(item.position));
+        if (!(event.target as HTMLElement).closest('[data-handle]')) {
+          event.preventDefault();
+          return;
+        }
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData(SONG_DRAG_TYPE, String(item.position));
         event.dataTransfer.setDragImage?.(event.currentTarget, 24, 24);
       }}
       onDragOver={(event) => {
+        if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
         event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
         actions.current.dragOver(rowKey);
       }}
       onDragLeave={() => actions.current.dragOver(null)}
+      onDragEnd={() => actions.current.dragOver(null)}
       onDrop={(event) => {
+        if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
         event.preventDefault();
         actions.current.dragOver(null);
-        const from = Number(event.dataTransfer.getData('text/plain'));
+        const raw = event.dataTransfer.getData(SONG_DRAG_TYPE);
+        if (!/^\d+$/.test(raw)) return;
+        const from = Number(raw);
+        if (!Number.isSafeInteger(from) || from < 0 || from >= total) return;
         if (from !== item.position) void actions.current.move(from, item.position, 'drag');
       }}
     >
@@ -212,7 +237,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         onPointerDown={pressHandle}
         onPointerMove={moveHandle}
         onPointerUp={releaseHandle}
-        onPointerCancel={() => { holding.current = false; actions.current.dragOver(null); }}
+        onPointerCancel={() => { holding.current = null; actions.current.dragOver(null); }}
+        onLostPointerCapture={() => { holding.current = null; actions.current.dragOver(null); }}
       >
         <Icon name="grip" />
       </span>

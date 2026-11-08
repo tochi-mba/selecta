@@ -1,4 +1,4 @@
-import { KeyboardEvent, MouseEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, PointerEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ApiError, get, MixData, post, SongDetail } from '../api';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
@@ -13,13 +13,15 @@ import { ViewProps } from './shared';
 
 const VIEW_KEY = 'selecta.listen';
 
-type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean };
+type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean; intensity: 'quiet' | 'standard' | 'focused' };
 
 function savedView(): ListenView {
+  const defaults: ListenView = { lyrics: false, spectrum: true, timing: true, intensity: 'standard' };
   try {
-    return { lyrics: false, spectrum: true, timing: true, ...JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') };
+    const saved = JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') as Partial<ListenView>;
+    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard' };
   } catch {
-    return { lyrics: false, spectrum: true, timing: true };
+    return defaults;
   }
 }
 
@@ -66,6 +68,14 @@ const CANT_SEEK = 'You can’t move around during a transition, because it plays
  * something else. */
 function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDetail; time: number; seamAt: number | null; onSeek: (seconds: number) => void; seekBlocked?: boolean }) {
   const noteId = useId();
+  // A pointer drag is a proposal, not an actual seek. Keep the real playhead
+  // anchored to the audio clock until the pointer is released and the player accepts it.
+  const [seekPreview, setSeekPreview] = useState<number | null>(null);
+  const dragging = useRef<number | null>(null);
+  useEffect(() => {
+    dragging.current = null;
+    setSeekPreview(null);
+  }, [detail.id, seekBlocked]);
   const percent = (seconds: number) =>
     100 * Math.min(Math.max(Number.isFinite(seconds) ? seconds : 0, 0), Math.max(detail.duration, 0)) / Math.max(detail.duration, 1);
   const shape = useMemo(() => {
@@ -80,13 +90,38 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
   const sections = useMemo(() => mergedSections(detail), [detail]);
   const barTimes = detail.bar_times ?? [];
   const clip = `played-${detail.id}`;
-  const pointAt = (event: MouseEvent<HTMLDivElement>) => {
+  const pointAt = (event: PointerEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    if (!box.width) return null;
+    return Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1) * detail.duration;
+  };
+  const beginSeek = (event: PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
     if (seekBlocked) {
       announce(CANT_SEEK);
       return;
     }
-    const box = event.currentTarget.getBoundingClientRect();
-    if (box.width) onSeek(detail.duration * Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1));
+    const target = pointAt(event);
+    if (target === null) return;
+    dragging.current = event.pointerId;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setSeekPreview(target);
+  };
+  const moveSeek = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragging.current !== event.pointerId) return;
+    const target = pointAt(event);
+    if (target !== null) setSeekPreview(target);
+  };
+  const endSeek = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragging.current !== event.pointerId) return;
+    dragging.current = null;
+    const target = pointAt(event);
+    setSeekPreview(null);
+    if (!seekBlocked && target !== null) onSeek(target);
+  };
+  const cancelSeek = () => {
+    dragging.current = null;
+    setSeekPreview(null);
   };
   const keys = (event: KeyboardEvent<HTMLDivElement>) => {
     const moves: Record<string, number> = { ArrowLeft: time - 5, ArrowDown: time - 5, ArrowRight: time + 5, ArrowUp: time + 5, Home: 0, End: detail.duration - 1, PageDown: time - 30, PageUp: time + 30 };
@@ -109,7 +144,11 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       aria-valuetext={`${clock(time)} of ${clock(detail.duration)}`}
       aria-disabled={seekBlocked || undefined}
       aria-describedby={seekBlocked ? noteId : undefined}
-      onClick={pointAt}
+      onPointerDown={beginSeek}
+      onPointerMove={moveSeek}
+      onPointerUp={endSeek}
+      onPointerCancel={cancelSeek}
+      onLostPointerCapture={cancelSeek}
       onKeyDown={keys}
     >
       <svg className="peaks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -139,9 +178,12 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
         })}
       </div>
       {seamAt !== null && <b className="seam-mark" style={{ left: `${percent(seamAt)}%` }} title={`Seam at ${clock(seamAt)}`} />}
-      <b className="playhead" style={{ left: `${percent(time)}%` }} />
+      <b className="playhead" style={{ left: `${percent(time)}%` }} aria-hidden="true" />
+      {seekPreview !== null && (
+        <b className="scrub-ghost" style={{ left: `${percent(seekPreview)}%` }} aria-hidden="true" />
+      )}
       <span className="time">
-        {clock(time)} / {clock(detail.duration)}
+        {seekPreview === null ? clock(time) : `Seek to ${clock(seekPreview)}`} / {clock(detail.duration)}
       </span>
     </div>
     <p className="hint seek-note" id={noteId}>{seekBlocked ? CANT_SEEK : ' '}</p>
@@ -272,7 +314,7 @@ function TransitionCountdown({
   );
 }
 
-function MusicVisualizer({ player, active, stage }: { player: ViewProps['player']; active: boolean; stage: boolean }) {
+function MusicVisualizer({ player, active, stage, intensity }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity'] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
   // its colours come from the page, so a change of theme has to draw it again
@@ -283,6 +325,7 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     const context = node?.getContext('2d');
     if (!node || !context) return;
     let frame = 0;
+    let visible = true;
     const style = getComputedStyle(node);
     // Canvas cannot resolve CSS custom properties inside a fillStyle. Read
     // the theme's rendered tokens instead; system high-contrast foreground
@@ -295,17 +338,17 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
     let lastDraw = -Infinity;
     const draw = (timestamp = 0) => {
       // nothing to look at while the tab is hidden, and the music mustn't pay for it
-      if (document.hidden) {
+      if (document.hidden || !visible) {
         frame = 0;
         return;
       }
-      if (active && !reduceMotion && timestamp - lastDraw < 1000 / 30) {
+      if (active && !reduceMotion && timestamp - lastDraw < 1000 / 15) {
         frame = window.requestAnimationFrame(draw);
         return;
       }
       lastDraw = timestamp;
       const rect = node.getBoundingClientRect();
-      const ratio = window.devicePixelRatio || 1;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
       const width = Math.max(1, Math.round(rect.width * ratio));
       const height = Math.max(1, Math.round(rect.height * ratio));
       if (node.width !== width || node.height !== height) {
@@ -320,18 +363,24 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
         gradient.addColorStop(1, soft);
       }
       const spectrum = active ? player.getSpectrum() : null;
+      if (!spectrum || spectrum.length === 0) {
+        // No analyzer bins means there are no measurements. Keep the surface
+        // still; do not draw decorative "frequency levels" in their place.
+        // Continue the visibility-limited sampling loop so a late-starting
+        // audio context can begin drawing as soon as real data is available.
+        if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
+        return;
+      }
       const bars = Math.min(72, Math.max(24, Math.floor(width / (ratio * 7))));
       const gap = 2 * ratio;
       const barWidth = Math.max(1, (width - gap * (bars - 1)) / bars);
       context.fillStyle = gradient;
       for (let index = 0; index < bars; index += 1) {
-        const low = Math.floor((index / bars) ** 2 * (spectrum?.length ?? 1));
-        const high = Math.max(low + 1, Math.floor(((index + 1) / bars) ** 2 * (spectrum?.length ?? 1)));
+        const low = Math.floor((index / bars) ** 2 * spectrum.length);
+        const high = Math.max(low + 1, Math.floor(((index + 1) / bars) ** 2 * spectrum.length));
         let value = 0;
-        if (spectrum) {
-          for (let bin = low; bin < Math.min(high, spectrum.length); bin += 1) value = Math.max(value, spectrum[bin] / 255);
-        }
-        const amplitude = spectrum ? Math.max(0.035, value ** 0.8) : 0.025;
+        for (let bin = low; bin < Math.min(high, spectrum.length); bin += 1) value = Math.max(value, spectrum[bin] / 255);
+        const amplitude = Math.max(0.035, value ** 0.8);
         const barHeight = Math.max(2 * ratio, amplitude * height * 0.92);
         const x = index * (barWidth + gap);
         context.fillRect(x, (height - barHeight) / 2, barWidth, barHeight);
@@ -339,8 +388,16 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
       if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
     };
     const wake = () => {
-      if (!document.hidden && !frame) draw();
+      if (!document.hidden && visible && !frame) draw(performance.now());
     };
+    const intersection = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(([entry]) => {
+      visible = entry?.isIntersecting ?? false;
+      if (!visible) {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+      } else wake();
+    });
+    intersection?.observe(node);
     document.addEventListener('visibilitychange', wake);
     window.addEventListener('resize', wake);
     // An inactive or reduced-motion canvas still needs to redraw when its
@@ -352,10 +409,11 @@ function MusicVisualizer({ player, active, stage }: { player: ViewProps['player'
       document.removeEventListener('visibilitychange', wake);
       window.removeEventListener('resize', wake);
       observer?.disconnect();
+      intersection?.disconnect();
       window.cancelAnimationFrame(frame);
     };
   }, [player, active, stage, reduceMotion, theme]);
-  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''}`} role="img" aria-label="Live music frequency visualizer" />;
+  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? 'Live audio frequency levels' : 'Audio frequency visualizer paused'} />;
 }
 
 /** Why there's nothing to follow along with. A song's timing is never made up to fill the gap. */
@@ -371,7 +429,9 @@ function noLyricsWords(status: string | null | undefined): string {
   }
 }
 
-function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; focus?: boolean }) {
+function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail; time: number; focus?: boolean; canBrowse?: boolean }) {
+  const [reading, setReading] = useState(false);
+  useEffect(() => setReading(false), [detail.id]);
   const lines = detail.lines;
   const starts = useMemo(() => lines.map((line) => line.start), [lines]);
   // Audio ticks many times per second; a long lyric sheet should not be
@@ -386,16 +446,31 @@ function Lyrics({ detail, time, focus }: { detail: SongDetail; time: number; foc
   const wordIndex = current?.words?.findIndex((word) => word.start <= time && time < word.end) ?? -1;
   const around = focus ? 3 : 1;
   return (
-    <div className={`lyrics ${focus ? 'focus' : ''}`} aria-live="off">
+    <div className={`lyrics ${focus ? 'focus' : ''} ${reading ? 'reading' : ''}`} aria-live="off">
+      {canBrowse && (
+        <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReading(!reading)}>
+          {reading ? 'Resume lyric follow' : 'Read all lyrics'}
+        </button>
+      )}
+      {reading ? (
+        <div className="lyrics-scroll" tabIndex={0} role="region" aria-label="All timed lyrics, scroll manually">
+          {lines.map((line, at) => (
+            <p key={at} dir="auto" className={at === index && singing ? 'sung' : 'dim'}>{line.text}</p>
+          ))}
+        </div>
+      ) : (
+        <>
       {Array.from({ length: around }, (_, gap) => around - gap).map((back) => (
-        <p className="dim" key={`before-${back}`}>{lines[index - back]?.text ?? ' '}</p>
+        <p dir="auto" className="dim" key={`before-${back}`}>{lines[index - back]?.text ?? ' '}</p>
       ))}
-      <p className={singing ? 'sung' : 'dim'}>
+      <p dir="auto" className={singing ? 'sung' : 'dim'}>
         {current ? highlightedLine(current.text, singing ? wordIndex : -1) : ' '}
       </p>
       {Array.from({ length: around }, (_, gap) => gap + 1).map((ahead) => (
-        <p className="dim" key={`after-${ahead}`}>{lines[index + ahead]?.text ?? ' '}</p>
+        <p dir="auto" className="dim" key={`after-${ahead}`}>{lines[index + ahead]?.text ?? ' '}</p>
       ))}
+        </>
+      )}
     </div>
   );
 }
@@ -577,9 +652,9 @@ export function Now(props: ViewProps) {
         <div className="listen-main">
           <header className="listen-identity">
             <p className="eyebrow">{eyebrow}</p>
-            <h1 className="display">{item?.title}</h1>
+            <h1 className="display" dir="auto">{item?.title ?? 'Untitled'}</h1>
             {item && <RequestTag item={item} />}
-            <p className="artist">{item?.artist}</p>
+            <p className="artist" dir="auto">{item?.artist ?? 'Unknown artist'}</p>
           </header>
 
           {!stage && (
@@ -615,10 +690,10 @@ export function Now(props: ViewProps) {
             </>
           )}
 
-          {(stage || (view.spectrum && !view.lyrics)) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} />}
+          {(view.intensity !== 'quiet' && (stage || (view.spectrum && !view.lyrics))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} />}
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>Couldn’t load lyrics and song details. Playback controls are still available.</Problem>}
-          {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
+          {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} canBrowse={!stage} /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
         </div>
 
         <aside className="listen-side" aria-label="Coming up">
@@ -666,6 +741,13 @@ export function Now(props: ViewProps) {
                 <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
                 <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
                 <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
+                <div className="listen-intensity" role="group" aria-label="Visual intensity">
+                  {(['quiet', 'standard', 'focused'] as const).map((intensity) => (
+                    <button key={intensity} type="button" aria-pressed={view.intensity === intensity} onClick={() => choose({ intensity })}>
+                      {intensity === 'quiet' ? 'Quiet visuals' : intensity === 'focused' ? 'Focused visuals' : 'Standard visuals'}
+                    </button>
+                  ))}
+                </div>
                 <Tooltip text="Shortcut: F">
                   <button data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>
                 </Tooltip>

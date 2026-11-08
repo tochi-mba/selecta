@@ -1,9 +1,9 @@
-import { KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { KeyboardEvent, PointerEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, Eta, MixData, MixItem, post } from '../api';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
-import { Action, Problem } from '../ui/controls';
+import { Action, announce, Problem } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { moveInGrid } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
@@ -69,11 +69,12 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
 }) {
   return (
     <div className="studio-list" aria-label="Stem controls by song and part">
-      {SIDES.map((side) => (
+      {SIDES.map((side, sideIndex) => (
         <section key={side} aria-labelledby={`studio-list-${side}`}>
           <h4 id={`studio-list-${side}`}>{titles[side]}</h4>
-          {LANES.map((lane) => {
+          {LANES.map((lane, laneIndex) => {
             const name = `${side}_${lane}`;
+            const row = sideIndex * LANES.length + laneIndex;
             const lost = missing.includes(name);
             return (
               <fieldset key={name} disabled={lost || disabled}>
@@ -84,7 +85,7 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
                 <div className="studio-list-cells">
                   {shape[side][lane].map((value, index) => (
                     <label key={index}>
-                      <input type="checkbox" checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
+                      <input type="checkbox" data-cell={`${row}-${index}`} checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
                       <span>Bar {index * barsPerCell + 1}</span>
                     </label>
                   ))}
@@ -174,8 +175,14 @@ export function Studio(props: {
   latestShape.current = shape;
   const [focusCell, setFocusCell] = useState({ row: 0, column: 0 });
   const [editorMode, setEditorMode] = useState<'shape' | 'grid' | 'list'>('grid');
+  const changeEditorMode = (next: 'shape' | 'grid' | 'list') => {
+    if (next === editorMode) return;
+    setEditorMode(next);
+    announce(`${next === 'shape' ? 'Shape' : next === 'grid' ? 'Detailed grid' : 'Detailed list'} controls. All eight lanes and every square are unchanged.`);
+  };
   const deck = useRef<StemDeck | null>(null);
   const grid = useRef<HTMLDivElement>(null);
+  const paintStroke = useRef<{ id: number; value: 0 | 1; visited: Set<string> } | null>(null);
   const at = useMixPath();
   const owner = useRef({
     id: `studio-${position}-${item.song_id}`,
@@ -292,10 +299,53 @@ export function Studio(props: {
     setChanges(null);
   };
   const toggle = (side: Side, lane: Lane, index: number) => {
-    if (!shape || missing.includes(`${side}_${lane}`)) return;
-    const cells = shape[side][lane].map((value, at) => (at === index ? (value ? 0 : 1) : value));
-    change({ ...shape, [side]: { ...shape[side], [lane]: cells } });
+    const current = latestShape.current;
+    if (!current || applying.current || missing.includes(`${side}_${lane}`)) return;
+    const cells = current[side][lane].map((value, at) => (at === index ? (value ? 0 : 1) : value));
+    change({ ...current, [side]: { ...current[side], [lane]: cells } });
   };
+  // Each pointer stroke paints a single on/off value. Revisiting a square
+  // within the same stroke cannot undo it; every edit is immediately
+  // persisted to the local recoverable working shape, not the server.
+  const paint = (target: Element | null, stroke: NonNullable<typeof paintStroke.current>) => {
+    const button = target?.closest<HTMLButtonElement>('button.studio-cell[data-cell]');
+    if (!button || !grid.current?.contains(button) || button.getAttribute('aria-disabled') === 'true') return;
+    const match = /^(\d+)-(\d+)$/.exec(button.dataset.cell ?? '');
+    if (!match) return;
+    const row = Number(match[1]);
+    const column = Number(match[2]);
+    const side = SIDES[Math.floor(row / LANES.length)];
+    const lane = LANES[row % LANES.length];
+    const current = latestShape.current;
+    if (!side || !lane || !current?.[side]?.[lane] || column >= current[side][lane].length ||
+        missing.includes(`${side}_${lane}`) || applying.current || saving) return;
+    const key = `${row}-${column}`;
+    if (stroke.visited.has(key)) return;
+    stroke.visited.add(key);
+    if (current[side][lane][column] === stroke.value) return;
+    const updated = current[side][lane].map((value, index) => index === column ? stroke.value : value);
+    change({ ...current, [side]: { ...current[side], [lane]: updated } });
+  };
+  const startPaint = (event: PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || event.button !== 0 || saving || applying.current) return;
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button.studio-cell[data-cell]');
+    const match = /^(\d+)-(\d+)$/.exec(button?.dataset.cell ?? '');
+    if (!button || !match || button.getAttribute('aria-disabled') === 'true') return;
+    const side = SIDES[Math.floor(Number(match[1]) / LANES.length)];
+    const lane = LANES[Number(match[1]) % LANES.length];
+    const current = latestShape.current;
+    if (!side || !lane || !current?.[side]?.[lane]) return;
+    paintStroke.current = { id: event.pointerId, value: current[side][lane][Number(match[2])] ? 0 : 1, visited: new Set() };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    paint(button, paintStroke.current);
+  };
+  const movePaint = (event: PointerEvent<HTMLDivElement>) => {
+    const stroke = paintStroke.current;
+    if (!stroke || stroke.id !== event.pointerId) return;
+    const under = document.elementFromPoint?.(event.clientX, event.clientY);
+    paint(under ?? (event.target as HTMLElement), stroke);
+  };
+  const stopPaint = () => { paintStroke.current = null; };
   const setLane = (side: Side, lane: Lane, value: 0 | 1) => {
     if (!shape || missing.includes(`${side}_${lane}`)) return;
     change({ ...shape, [side]: { ...shape[side], [lane]: shape[side][lane].map(() => value) } });
@@ -439,10 +489,10 @@ export function Studio(props: {
             </p>
           )}
           <div className="row wrap">
-            <button disabled={saving || !!asking} onClick={() => void askSelecta(false)}>
+            <button disabled={saving || !!asking} aria-busy={asking === 'arrange'} onClick={() => void askSelecta(false)}>
               {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
             </button>
-            <button disabled={saving || !!asking} onClick={() => void askSelecta(true)}>
+            <button disabled={saving || !!asking} aria-busy={asking === 'tune'} onClick={() => void askSelecta(true)}>
               {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
             </button>
             {before && <button disabled={saving} onClick={putBack}>Put it back</button>}
@@ -461,9 +511,9 @@ export function Studio(props: {
           </div>
           {restored && <p className="hint" role="status">This is what you were working on before. Start again to go back to what’s in the mix.</p>}
           <div className="chips" role="group" aria-label="Studio editor mode">
-            <button aria-pressed={editorMode === 'shape'} onClick={() => setEditorMode('shape')}>Shape</button>
-            <button aria-pressed={editorMode === 'grid'} onClick={() => setEditorMode('grid')}>Detailed grid</button>
-            <button aria-pressed={editorMode === 'list'} onClick={() => setEditorMode('list')}>Detailed list</button>
+            <button aria-pressed={editorMode === 'shape'} onClick={() => changeEditorMode('shape')}>Shape</button>
+            <button aria-pressed={editorMode === 'grid'} onClick={() => changeEditorMode('grid')}>Detailed grid</button>
+            <button aria-pressed={editorMode === 'list'} onClick={() => changeEditorMode('list')}>Detailed list</button>
           </div>
           {editorMode === 'shape' ? (
             <StudioShapeEditor
@@ -475,13 +525,18 @@ export function Studio(props: {
             />
           ) : editorMode === 'grid' ? (
             <>
-              <p className="hint">Arrow keys move around the grid, and Space turns a square on or off. Left of the first square is the part’s name, which plays that part alone.</p>
+              <p className="hint">Arrow keys move around the grid, and Space turns a square on or off. Drag from a square to paint the same on/off value across the squares you touch. Left of the first square is the part’s name, which plays that part alone.</p>
               <div
             className="studio-grid"
             role="grid"
             aria-label={`Stems for ${titles.a} and ${titles.b}`}
             ref={grid}
             onKeyDown={gridKeys}
+            onPointerDown={startPaint}
+            onPointerMove={movePaint}
+            onPointerUp={stopPaint}
+            onPointerCancel={stopPaint}
+            onLostPointerCapture={stopPaint}
             style={{ '--cells': columns } as React.CSSProperties}
               >
             <div className="studio-lane studio-ruler" role="row" aria-label="Bars">
@@ -528,7 +583,7 @@ export function Studio(props: {
                             aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}
                             title={lost ? 'This part couldn’t be loaded' : `Bar ${index * barsPerCell + 1}`}
                             onFocus={() => setFocusCell({ row, column: index })}
-                            onClick={() => toggle(side, lane, index)}
+                            onClick={(event) => { if (event.detail === 0) toggle(side, lane, index); }}
                           />
                         </span>
                       ))}

@@ -1,7 +1,7 @@
 # Selecta 3.1 — 116-item UI/UX finishing implementation checklist
 
 - **Decision:** Proposed (11 ADRs, ADR-0078–0088).
-- **Implementation:** 29 tasks In progress on PR #25, 87 not started; **0/116 Implemented; 0/116 Verified.**
+- **Implementation:** PR #25 merged as `6d78cf420c55817e967fc3b8db45749c9817926e` with 29 historically mapped partial tasks; this ledger still records **0/116 independently Verified**.
 - **Baseline:** `main` at `3b01dc1` (merged Selecta 3.0).
 - **Checklist discipline:** Every checkbox intentionally remains unchecked. PR #25 now includes a small amount of implementation, but no task yet has independent Verified evidence.
 - **Identity:** `S31-XXXX-NN` is unique to this finishing programme; historical T, P and S3 IDs remain unchanged.

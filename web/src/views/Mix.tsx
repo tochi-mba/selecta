@@ -96,6 +96,9 @@ export function Mix(props: ViewProps) {
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState(mixName);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  // Multiple pointer/keyboard drops must not race each other against the
+  // same order guard and then steal focus with an obsolete server response.
+  const moving = useRef(false);
   const focusAfter = useRef<{ key: string; how: 'up' | 'down' | 'handle' } | null>(null);
   const inspector = useRef<HTMLElement | null>(null);
   const selectedIdentity = selected?.kind === 'seam' ? `${selected.a}>${selected.b}` : selected?.kind === 'song' ? selected.key : '';
@@ -216,6 +219,11 @@ export function Mix(props: ViewProps) {
   const moveSong = async (from: number, to: number, how: MoveHow) => {
     const moved = mix[from];
     if (!moved || from === to || to < 0 || to >= mix.length) return;
+    if (moving.current) {
+      announce('A song is still moving. Try the next move when this one finishes.');
+      return;
+    }
+    moving.current = true;
     const words = how === 'up' ? `Moved ${moved.title} up.` : how === 'down' ? `Moved ${moved.title} down.` : 'Moved that song.';
     if (how !== 'drag') focusAfter.current = { key: keys[from], how };
     try {
@@ -227,6 +235,9 @@ export function Mix(props: ViewProps) {
       // the row goes back where it was, because nothing actually moved
       setProblem((error as Error).message);
       refreshMix();
+    } finally {
+      moving.current = false;
+      setDragOver(null);
     }
   };
 

@@ -226,3 +226,22 @@
 .draft-tools label { display: grid; gap: var(--space-1); color: var(--text-soft); font-size: var(--text-sm); }
 .draft-tools input { min-width: min(320px, 80vw); }
 .draft-tools select { min-width: 160px; }
+.draft-list.long > li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 148px;
+}
+.draft-list.long > li:focus-within,
+.draft-list.long > li:has([aria-expanded='true']) { content-visibility: visible; }
+
+/* Only an actual grid cell takes ownership of a painting gesture. The
+   containing grid and the rest of the workspace still scroll naturally. */
+.studio-grid .studio-cell { touch-action: none; }
+.studio-grid .studio-cell:active { border-color: var(--focus); }
+
+/* The frozen export identity is deliberately inspectable, not hidden behind
+   first/last titles when two exports happen to share those endpoints. */
+.export-snapshot { margin-block: var(--space-3); }
+.export-snapshot > summary { min-height: 44px; cursor: pointer; }
+.export-snapshot-songs, .export-snapshot-seams { display: grid; gap: var(--space-1); padding-left: 1.6em; }
+.export-snapshot li { overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.export-snapshot code { overflow-wrap: anywhere; }

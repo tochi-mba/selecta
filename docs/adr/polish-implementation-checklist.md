@@ -1,10 +1,10 @@
 # Selecta UI/UX polish — implementation checklist
 
 - **Decision status:** Accepted for implementation by the owner
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
+- **Implementation status:** PR [#23](https://github.com/tochi-mba/selecta/pull/23) merged as `84b8b5cbadf7204bf526e8932124b5c4890e2c44`; the original 0/143 task snapshot still requires item-by-item source and independent-evidence reconciliation.
 - **Created:** 2026-11-06
 - **Scope:** 143 tasks across 14 new ADRs and 8 phases. **Completed: 0.**
-- **Implementation PR:** [#23](https://github.com/tochi-mba/selecta/pull/23). The owner explicitly requested implementation here after the planning phase, with code first, tests afterward, and merge once CI is green.
+- **Implementation PR:** [#23](https://github.com/tochi-mba/selecta/pull/23), merged. See the [repository checklist audit](implementation-checklist-audit.md); merge state is not a blanket verification claim.
 
 ## How to use this checklist
 

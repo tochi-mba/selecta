@@ -195,15 +195,18 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
   const arcPoints = arcPreview.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
   const achieved = achievedArc(mix);
   const achievedPoints = achieved?.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
+  const updateStop = (index: number, value: number) => {
+    const next = [...arcPreview];
+    next[index] = Math.round(Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0)));
+    setEnergyArc(next);
+  };
   const drawArcAt = (event: PointerEvent<SVGSVGElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const x = ((event.clientX - bounds.left) / (bounds.width || 1)) * 100;
     const y = ((event.clientY - bounds.top) / (bounds.height || 1)) * 40;
     const stop = Math.round(Math.max(0, Math.min(100, x)) / 25);
     const energy = Math.round(Math.max(0, Math.min(100, (38 - y) / 0.34)));
-    const next = [...arcPreview];
-    next[stop] = energy;
-    setEnergyArc(next);
+    updateStop(stop, energy);
   };
 
   return (
@@ -285,11 +288,17 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
                 min="0"
                 max="100"
                 value={arcPreview[index]}
-                onChange={(event) => {
-                  const next = [...arcPreview];
-                  next[index] = Number(event.target.value);
-                  setEnergyArc(next);
-                }}
+                onChange={(event) => updateStop(index, Number(event.target.value))}
+              />
+              <input
+                aria-label={`Energy arc ${stop.toLowerCase()} numeric value`}
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={100}
+                step={1}
+                value={arcPreview[index]}
+                onChange={(event) => updateStop(index, Number(event.target.value))}
               />
             </label>
           ))}

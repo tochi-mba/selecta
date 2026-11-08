@@ -34,9 +34,11 @@ describe('songs that might share chords', () => {
     fireEvent.click(await hearButton());
     const player = screen.getByTestId('excerpt-player') as HTMLAudioElement;
     await waitFor(() => expect(player.src).toContain('/api/discoveries/7/hear/chords'));
+    fireEvent.playing(player);
     for (const step of ['a', 'b', 'both']) {
       fireEvent.ended(player);
       expect(player.src).toContain(`/api/discoveries/7/hear/${step}`);
+      fireEvent.playing(player);
     }
     fireEvent.ended(player);
     expect(await hearButton()).toBeInTheDocument();
@@ -52,6 +54,9 @@ describe('songs that might share chords', () => {
     expect(await screen.findByText('Am')).toBeInTheDocument();
     const player = screen.getByTestId('excerpt-player') as HTMLAudioElement;
     Object.defineProperty(player, 'currentTime', { value: 2.5, configurable: true });
+    Object.defineProperty(player, 'paused', { value: false, configurable: true });
+    Object.defineProperty(player, 'readyState', { value: 2, configurable: true });
+    fireEvent.playing(player);
     fireEvent.timeUpdate(player);
     expect(screen.getByText('F')).toHaveClass('now');
     expect(screen.getByText('C')).not.toHaveClass('now');
@@ -66,6 +71,7 @@ describe('songs that might share chords', () => {
     fireEvent.click(await hearButton());
     fireEvent.click(await screen.findByRole('button', { name: 'Both at once' }));
     expect((screen.getByTestId('excerpt-player') as HTMLAudioElement).src).toContain('/hear/both');
+    fireEvent.playing(screen.getByTestId('excerpt-player'));
     expect(screen.getByRole('button', { name: 'Both at once' })).toHaveAttribute('aria-current', 'step');
   });
 
@@ -312,5 +318,20 @@ describe('the two kinds of discovery', () => {
     fakeBackend({ 'GET /drafts': { drafts: [] } });
     render(<Links {...props('words')} />);
     expect(await screen.findByRole('alert', {}, { timeout: 2000 })).toHaveTextContent('Couldn’t search your lyrics');
+  });
+});
+
+describe('audition audio-truth state', () => {
+  it('never calls a requested harmonic stage playing until the media element starts', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(async () => {});
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    fakeBackend({ 'GET /discoveries': [discovery(7, 'First', 'Second')], 'POST /discoveries/7/hear': audition });
+    render(<HarmonicDiscoveries />);
+    fireEvent.click(await hearButton());
+    const player = screen.getByTestId('excerpt-player');
+    expect(await screen.findByText(/Loading stage 1; no audio confirmed yet/)).toBeInTheDocument();
+    expect(screen.queryByText(/Now playing: The chords/)).toBeNull();
+    fireEvent.playing(player);
+    expect(screen.getByText(/Now playing: The chords Selecta heard/)).toBeInTheDocument();
   });
 });

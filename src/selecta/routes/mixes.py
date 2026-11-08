@@ -150,11 +150,11 @@ def add_routes(app, ctx) -> None:
 
     @app.get("/api/vibes")
     def vibes() -> list[dict]:
-        from selecta.planner.vibes import VIBES, describe
+        from selecta.planner.vibes import candidate_vibes, describe
 
         with connect() as conn:
             songs, traits = library_now(conn)
-        return [describe(vibe, songs, traits) for vibe in VIBES]
+        return [describe(vibe, songs, traits) for vibe in candidate_vibes(songs, traits)]
 
     def play_vibe(
         conn: sqlite3.Connection,
@@ -164,9 +164,9 @@ def add_routes(app, ctx) -> None:
         as_draft: bool = False,
         expected_order: str | None = None,
     ) -> dict:
-        from selecta.planner.vibes import BY_KEY, MIN_SONGS, build_vibe, eligible
+        from selecta.planner.vibes import MIN_SONGS, build_vibe, eligible, resolve_vibe
 
-        vibe = BY_KEY.get(key)
+        vibe = resolve_vibe(key)
         if vibe is None:
             raise HTTPException(404, f"There's no mix called {key}.")
         songs, traits = library_now(conn)

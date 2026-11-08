@@ -97,7 +97,11 @@
   --row-gap: var(--space-2);
 
   /* movement */
+  --motion-feedback: 80ms;
   --motion-fast: 120ms;
+  --motion-reveal: 160ms;
+  --motion-handoff: 200ms;
+  --motion-overlay: 220ms;
   --motion-slow: 240ms;
   --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
@@ -198,7 +202,19 @@ html {
 
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --motion-feedback: 0ms;
     --motion-fast: 0ms;
+    --motion-reveal: 0ms;
+    --motion-handoff: 0ms;
+    --motion-overlay: 0ms;
     --motion-slow: 0ms;
   }
+}
+
+/* Compact mode condenses rows for pointer-precise desktop work; a touch
+   user still needs reliable 44px targets when the density preference carries
+   over to a tablet or convertible. */
+@media (pointer: coarse) {
+  :root[data-density='compact'] .density,
+  .density[data-density='compact'] { --control-height: 44px; }
 }

@@ -94,6 +94,13 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton .skeleton-region { height: 88px; }
 .skeleton-cards .skeleton-content, .skeleton-pairs .skeleton-content { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
 .skeleton-cards .skeleton-unit, .skeleton-pairs .skeleton-unit { border: 1px solid var(--border); padding: var(--space-5); border-radius: var(--radius); min-height: 240px; }
+.skeleton-vibes { padding-top: var(--space-5); }
+.skeleton-vibes::before { content: ''; display: block; width: min(560px, 100%); height: 40px; margin-bottom: var(--space-5); border-radius: 999px; background: var(--surface-control); }
+.skeleton-vibes .skeleton-content { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.skeleton-vibes .skeleton-unit { border: 1px solid var(--border); padding: var(--space-5); border-radius: var(--radius); min-height: 286px; grid-template-rows: auto auto 1fr auto; }
+.skeleton-vibes .skeleton-action { width: 100%; height: 48px; }
+@media (max-width: 1040px) { .skeleton-vibes .skeleton-content { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .skeleton-vibes .skeleton-content { grid-template-columns: 1fr; } .skeleton-vibes .skeleton-unit:nth-child(n + 4) { display: none; } }
 .skeleton-library .skeleton-unit { min-height: 108px; padding-block: var(--space-4); border-bottom: 1px solid var(--border); grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .skeleton-library .skeleton-detail { grid-row: 2; }
 .skeleton-library .skeleton-meta { grid-column: 2; grid-row: 1; width: 80%; }
@@ -186,4 +193,31 @@ button[aria-disabled='true'] { cursor: progress; }
     color: GrayText;
   }
   .studio-cell[aria-pressed='true']::after { background: Highlight; }
+}
+
+/* Causal, short microinteractions. All state changes stay textual and immediate;
+   animation only decorates an already committed UI state. */
+.toast-row { animation: toast-appear var(--motion-reveal) var(--motion-ease) both; }
+.overlay-panel { animation: overlay-appear var(--motion-overlay) var(--motion-ease) both; }
+@keyframes toast-appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes overlay-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  /* Existing feature-specific keyframes have a fully static equivalent. */
+  *, *::before, *::after { animation-duration: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; }
+}
+@media (forced-colors: active) {
+  .toast-row { color: CanvasText; background: Canvas; border: 1px solid CanvasText; }
+  .toast-row.problem { color: CanvasText; background: Canvas; border-color: Mark; }
+}
+
+/* Entering a route reveals only its new content. Navigation and the player never
+   move, and focused controls keep their exact hit boxes during the transition. */
+.content > main.page { animation: route-reveal var(--motion-reveal) ease-out both; }
+.on-stage .content > main.page { animation: none; }
+@keyframes route-reveal { from { opacity: 0.9; } to { opacity: 1; } }
+
+/* These small focus and target cues remain present with animation turned off. */
+.strip.can-seek:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .content > main.page { animation: none; }
 }

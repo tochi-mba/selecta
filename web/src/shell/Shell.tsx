@@ -24,8 +24,8 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
     <div className="volume">
       <button
         className="icon"
-        aria-label={now.muted ? 'Turn the sound back on' : 'Mute'}
-        aria-pressed={now.muted}
+        aria-label={now.volume === 0 ? 'Restore sound at 50 percent' : now.muted ? 'Unmute' : 'Mute'}
+        aria-pressed={now.muted || now.volume === 0}
         onClick={() => player.toggleMute()}
       >
         <Icon name={now.muted || now.volume === 0 ? 'muted' : 'volume'} />
@@ -33,7 +33,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
       <input
         type="range"
         aria-label="Volume"
-        aria-valuetext={now.muted ? 'Muted' : `${Math.round(now.volume * 100)} percent`}
+        aria-valuetext={now.muted ? 'Muted' : now.volume === 0 ? 'Silent, 0 percent' : `${Math.round(now.volume * 100)} percent`}
         min={0}
         max={100}
         value={Math.round((now.muted ? 0 : now.volume) * 100)}
@@ -46,19 +46,19 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
 /** The song that's playing, on every page but the one that's all about it. It only presents the
  * player. The player itself lives above every page, so nothing here can start or stop the music by
  * appearing or going away. */
-function MiniPlayer({ player, now, song, onRequests, waiting }: { player: SetPlayer; now: NowState; song: MixItem; onRequests: () => void; waiting: number }) {
+function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { player: SetPlayer; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number }) {
   const progress = now.duration ? Math.min(now.songTime / now.duration, 1) : 0;
   return (
-    <aside className="mini" aria-label="Now playing">
+    <aside className="mini" aria-label={now.inSeam ? 'Playing transition' : now.phase === 'paused' ? 'Paused playback' : now.phase === 'loading' ? 'Loading playback' : 'Now playing'}>
       <i className="mini-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-      <button className="round" onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : 'Play'}>
+      <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : now.phase === 'loading' ? 'Loading song' : now.phase === 'paused' ? 'Resume' : 'Play'}>
         <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
       </button>
       <PageLink to="/listen" className="mini-song" title={`${song.title} — ${song.artist}`}>
-        <b title={song.title}>{song.title}</b>
-        <span title={song.artist}>{song.artist} · {clock(now.songTime)} / {clock(now.duration)}</span>
+        <b title={song.title} dir="auto">{song.title || 'Untitled'}</b>
+        <span title={song.artist} dir="auto">{song.artist || 'Unknown artist'} · {clock(now.songTime)} / {clock(now.duration)}{now.inSeam ? ' · Transition playing' : ''}</span>
       </PageLink>
-      <button className="mini-next" onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
+      <button className="mini-next" disabled={now.phase === 'loading' || !hasNext} onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
       <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
         Request{waiting ? <span className="count"> {waiting}</span> : ''}
       </button>
@@ -142,6 +142,7 @@ export function Shell({
   song,
   showPlayer,
   hasMix,
+  hasNext,
   stage,
   waitingRequests,
   onRequests,
@@ -157,6 +158,7 @@ export function Shell({
   song?: MixItem;
   showPlayer: boolean;
   hasMix: boolean;
+  hasNext?: boolean;
   stage: boolean;
   waitingRequests: number;
   onRequests: () => void;
@@ -274,7 +276,7 @@ export function Shell({
         {banner}
         {children}
       </div>
-      {withPlayer && song && <MiniPlayer player={player} now={now} song={song} onRequests={onRequests} waiting={waitingRequests} />}
+      {withPlayer && song && <MiniPlayer player={player} now={now} song={song} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} />}
       {moreOpen && (
         <Drawer title="More" onClose={() => setMoreOpen(false)}>
           <nav className="more-nav" aria-label="Workspace">
