@@ -66,7 +66,7 @@ for (const viewport of VIEWPORTS) {
           JSON.stringify([...main.querySelectorAll('button, input, select, textarea, summary, [role="tab"], a[href]')].map((node) => ({
             tag: node.tagName,
             role: node.getAttribute('role'),
-            label: (node.getAttribute('aria-label') ?? node.textContent ?? '').trim().replace(/\\s+/g, ' ').slice(0, 120),
+            label: (node.getAttribute('aria-label') ?? node.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 120),
             pressed: node.getAttribute('aria-pressed'),
             selected: node.getAttribute('aria-selected'),
             checked: node.getAttribute('aria-checked'),
