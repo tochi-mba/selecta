@@ -363,6 +363,7 @@
   font-size: var(--text-sm);
 }
 .listen-display-toggles button:last-child { grid-column: 1 / -1; }
+.listen-display-note { margin: 0; line-height: 1.5; }
 .listen-spectrum-settings { display: grid; gap: var(--space-3); min-width: 0; }
 .listen-setting-label, .listen-spectrum-settings .spectrum-choice > span {
   font-weight: 600;
@@ -416,6 +417,9 @@
 }
 .listen-next-steering .steer button { min-width: 0; min-height: 44px; white-space: normal; }
 .listen-next-steering .steer-note { margin: 0; line-height: 1.5; }
+@media (max-width: 760px) {
+  .now .listen-view { margin-block: 0; }
+}
 @media (max-width: 420px) {
   .now .listen-view { padding: var(--space-3); }
 }
