@@ -1,4 +1,4 @@
-# ADR-200 — Distinctive editorial and cinematic art direction
+# ADR-0200 — Distinctive editorial and cinematic art direction
 
 - **Decision:** Proposed (owner acceptance pending).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -30,14 +30,14 @@ Avoid copied UI, unlicensed artwork, meaningless neon and uniform decorative noi
 
 ## Implementation checklist — 0/8 Implemented, 0/8 Verified
 
-1. **SF-200-01 — Generate three design directions.** **Acceptance:** Each covers Listen/Explore/Create/Library. **Required verification:** Side-by-side responsive boards. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-200-02 — Define visual signature.** **Acceptance:** Recognisable distinct brand traits and exclusions. **Required verification:** Blind brand-comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-200-03 — Design material hierarchy.** **Acceptance:** Surface, depth, grain and contrast serve intent. **Required verification:** Both-theme specimen review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-200-04 — Specify expressive editorial layouts.** **Acceptance:** Whitespace and asymmetry retain clear controls. **Required verification:** Five-second task comprehension. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-200-05 — Design artwork and missing-art states.** **Acceptance:** Aesthetic remains cohesive with absent media. **Required verification:** Real/missing artwork fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-200-06 — Establish light and dark art direction.** **Acceptance:** Both modes designed independently. **Required verification:** Screenshot contrast review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-200-07 — Review cultural/genre neutrality.** **Acceptance:** No false genre or mood assumptions. **Required verification:** Diverse-library test set. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-200-08 — Approve direction and migration.** **Acceptance:** Selected direction has measurable criteria and rollback. **Required verification:** Decision record and QA plan. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0200-01 — Generate three design directions.** **Acceptance:** Each covers Listen/Explore/Create/Library. **Required verification:** Side-by-side responsive boards. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0200-02 — Define visual signature.** **Acceptance:** Recognisable distinct brand traits and exclusions. **Required verification:** Blind brand-comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0200-03 — Design material hierarchy.** **Acceptance:** Surface, depth, grain and contrast serve intent. **Required verification:** Both-theme specimen review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0200-04 — Specify expressive editorial layouts.** **Acceptance:** Whitespace and asymmetry retain clear controls. **Required verification:** Five-second task comprehension. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0200-05 — Design artwork and missing-art states.** **Acceptance:** Aesthetic remains cohesive with absent media. **Required verification:** Real/missing artwork fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0200-06 — Establish light and dark art direction.** **Acceptance:** Both modes designed independently. **Required verification:** Screenshot contrast review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0200-07 — Review cultural/genre neutrality.** **Acceptance:** No false genre or mood assumptions. **Required verification:** Diverse-library test set. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0200-08 — Approve direction and migration.** **Acceptance:** Selected direction has measurable criteria and rollback. **Required verification:** Decision record and QA plan. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 
 ## Invariants and required negative cases
 

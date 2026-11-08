@@ -1,4 +1,4 @@
-# ADR-199 — Head baseline and historical ADR implementation reconciliation
+# ADR-0199 — Head baseline and historical ADR implementation reconciliation
 
 - **Decision:** Proposed (owner acceptance pending).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -30,14 +30,14 @@ Do not erase prior evidence, confuse screenshot candidates with approval, or cla
 
 ## Implementation checklist — 0/8 Implemented, 0/8 Verified
 
-1. **SF-199-01 — Pin baseline commit and tree.** **Acceptance:** All new tasks reference exact parent SHA. **Required verification:** GitHub tree comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-199-02 — Inventory visual and interactive states.** **Acceptance:** Every core scene including errors captured. **Required verification:** Screenshot and state matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-199-03 — Map CI/MI and historic overlap.** **Acceptance:** Existing features distinguished from new design outcomes. **Required verification:** Cross-programme audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-199-04 — Record source test catalogue.** **Acceptance:** Automated checks separated from independent acceptance. **Required verification:** Test-file inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-199-05 — Define screen review protocol.** **Acceptance:** Candidates versus approved visuals have separate status. **Required verification:** Reviewer and SHA record. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-199-06 — Record real hardware baseline.** **Acceptance:** OS, browser, CPU/GPU and loads documented. **Required verification:** Reproducible benchmark protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-199-07 — List known existing limitations.** **Acceptance:** Baseline issues not misattributed to changes. **Required verification:** Evidence issue register. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-199-08 — Enforce truthful status promotion.** **Acceptance:** Every task needs implementation and independent proof separately. **Required verification:** Evidence ledger audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0199-01 — Pin baseline commit and tree.** **Acceptance:** All new tasks reference exact parent SHA. **Required verification:** GitHub tree comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0199-02 — Inventory visual and interactive states.** **Acceptance:** Every core scene including errors captured. **Required verification:** Screenshot and state matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0199-03 — Map CI/MI and historic overlap.** **Acceptance:** Existing features distinguished from new design outcomes. **Required verification:** Cross-programme audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0199-04 — Record source test catalogue.** **Acceptance:** Automated checks separated from independent acceptance. **Required verification:** Test-file inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0199-05 — Define screen review protocol.** **Acceptance:** Candidates versus approved visuals have separate status. **Required verification:** Reviewer and SHA record. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0199-06 — Record real hardware baseline.** **Acceptance:** OS, browser, CPU/GPU and loads documented. **Required verification:** Reproducible benchmark protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0199-07 — List known existing limitations.** **Acceptance:** Baseline issues not misattributed to changes. **Required verification:** Evidence issue register. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0199-08 — Enforce truthful status promotion.** **Acceptance:** Every task needs implementation and independent proof separately. **Required verification:** Evidence ledger audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 
 ## Invariants and required negative cases
 

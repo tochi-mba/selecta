@@ -1,4 +1,4 @@
-# ADR-198 — Artistic product charter and music-first experience
+# ADR-0198 — Artistic product charter and music-first experience
 
 - **Decision:** Proposed (owner acceptance pending).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -30,14 +30,14 @@ No decorative audio claims, surprise playback or present-day SaaS. Prefer a calm
 
 ## Implementation checklist — 0/8 Implemented, 0/8 Verified
 
-1. **SF-198-01 — Inventory all user journeys.** **Acceptance:** Every current action and state accounted for. **Required verification:** Source review and browser walkthrough. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-198-02 — Define three expressive scene modes.** **Acceptance:** Each has clear focal object and primary action. **Required verification:** Light/dark design critique and five-second study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-198-03 — Define safety preservation contract.** **Acceptance:** Player, media, requests, Studio, drafts and FLAC explicitly protected. **Required verification:** Source-to-parity audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-198-04 — Set attention and interruption budgets.** **Acceptance:** Motion and modal events serve music and actual decisions. **Required verification:** Real listening observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-198-05 — Define non-negotiable user control.** **Acceptance:** Pause, cancel, Undo and scope remain obvious. **Required verification:** Input and race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-198-06 — Specify progressive expertise.** **Acceptance:** Novice tasks simple but advanced tools discoverable. **Required verification:** Novice/DJ task tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-198-07 — Approve art-first success metrics.** **Acceptance:** Delight and task completion assessed independently. **Required verification:** Owner review and participant protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-198-08 — Prepare incremental migration.** **Acceptance:** Old routes and functions survive redesigned interfaces. **Required verification:** E2E and rollback walkthrough. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0198-01 — Inventory all user journeys.** **Acceptance:** Every current action and state accounted for. **Required verification:** Source review and browser walkthrough. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0198-02 — Define three expressive scene modes.** **Acceptance:** Each has clear focal object and primary action. **Required verification:** Light/dark design critique and five-second study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0198-03 — Define safety preservation contract.** **Acceptance:** Player, media, requests, Studio, drafts and FLAC explicitly protected. **Required verification:** Source-to-parity audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0198-04 — Set attention and interruption budgets.** **Acceptance:** Motion and modal events serve music and actual decisions. **Required verification:** Real listening observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0198-05 — Define non-negotiable user control.** **Acceptance:** Pause, cancel, Undo and scope remain obvious. **Required verification:** Input and race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0198-06 — Specify progressive expertise.** **Acceptance:** Novice tasks simple but advanced tools discoverable. **Required verification:** Novice/DJ task tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0198-07 — Approve art-first success metrics.** **Acceptance:** Delight and task completion assessed independently. **Required verification:** Owner review and participant protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0198-08 — Prepare incremental migration.** **Acceptance:** Old routes and functions survive redesigned interfaces. **Required verification:** E2E and rollback walkthrough. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 
 ## Invariants and required negative cases
 

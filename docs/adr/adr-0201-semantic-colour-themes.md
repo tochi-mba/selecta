@@ -1,4 +1,4 @@
-# ADR-201 — Semantic palette, dark/light themes and contrast
+# ADR-0201 — Semantic palette, dark/light themes and contrast
 
 - **Decision:** Proposed (owner acceptance pending).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -30,14 +30,14 @@ Never encode readiness by hue alone or permit illegible text on artistic gradien
 
 ## Implementation checklist — 0/8 Implemented, 0/8 Verified
 
-1. **SF-201-01 — Create semantic token hierarchy.** **Acceptance:** Surface/text/status/focus distinct from raw hues. **Required verification:** Token inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-201-02 — Design dark theme depth.** **Acceptance:** Surfaces and typography remain readable in dim settings. **Required verification:** Dark specimen reviews. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-201-03 — Design light theme character.** **Acceptance:** Not merely inverted dark tokens. **Required verification:** Light specimen reviews. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-201-04 — Map status colors to meaning.** **Acceptance:** Ready/pending/blocked/error persist across variants. **Required verification:** State fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-201-05 — Verify contrast quantitatively.** **Acceptance:** Relevant text and graphics meet WCAG AA. **Required verification:** Computed contrast audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-201-06 — Support forced-colors.** **Acceptance:** Controls remain visible under OS overrides. **Required verification:** Edge High Contrast test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-201-07 — Preserve theme system choice.** **Acceptance:** System/manual settings apply without audio changes. **Required verification:** Theme/transport E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-201-08 — Approve all-screen theme coverage.** **Acceptance:** Every relevant screen checked at mobile/desktop. **Required verification:** Reviewer screenshot gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0201-01 — Create semantic token hierarchy.** **Acceptance:** Surface/text/status/focus distinct from raw hues. **Required verification:** Token inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0201-02 — Design dark theme depth.** **Acceptance:** Surfaces and typography remain readable in dim settings. **Required verification:** Dark specimen reviews. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0201-03 — Design light theme character.** **Acceptance:** Not merely inverted dark tokens. **Required verification:** Light specimen reviews. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0201-04 — Map status colors to meaning.** **Acceptance:** Ready/pending/blocked/error persist across variants. **Required verification:** State fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0201-05 — Verify contrast quantitatively.** **Acceptance:** Relevant text and graphics meet WCAG AA. **Required verification:** Computed contrast audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0201-06 — Support forced-colors.** **Acceptance:** Controls remain visible under OS overrides. **Required verification:** Edge High Contrast test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0201-07 — Preserve theme system choice.** **Acceptance:** System/manual settings apply without audio changes. **Required verification:** Theme/transport E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0201-08 — Approve all-screen theme coverage.** **Acceptance:** Every relevant screen checked at mobile/desktop. **Required verification:** Reviewer screenshot gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 
 ## Invariants and required negative cases
 
