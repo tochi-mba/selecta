@@ -124,6 +124,8 @@ class LucyCtx:
     permissions: list[str] = field(default_factory=list)
     finished_steps: set[str] = field(default_factory=set)
     steps_run: int = 0
+    attempt: int = 1
+    """Which try at this turn: a retried turn's cards say so (LU-304-06)."""
     _lib: Library | None = None
 
     def lib(self) -> Library:
@@ -290,7 +292,7 @@ def _status(result: dict) -> str:
     return "failed"
 
 
-def card_payload(step: Any, result: dict) -> dict:
+def card_payload(step: Any, result: dict, attempt: int = 1) -> dict:
     count = result.get("count")
     shown = count if result.get("present") == "full" or count is None else min(count, PREVIEW)
     return {
@@ -298,7 +300,7 @@ def card_payload(step: Any, result: dict) -> dict:
         "family": family_of(result["operation"]),
         "title": title_of(result["operation"]),
         "status": _status(result),
-        "attempt": 1,
+        "attempt": attempt,
         "count": count,
         "returned": shown,
         "capped": count is not None and shown is not None and shown < count,
@@ -319,7 +321,7 @@ async def _before(args: dict) -> None:
     name = step.operation.name
     ctx.emit("step.started", {
         "op": name, "family": family_of(name), "title": title_of(name), "status": "running",
-        "attempt": 1, "note": step.note, "notices": [], "visual": {}, "progress": None,
+        "attempt": ctx.attempt, "note": step.note, "notices": [], "visual": {}, "progress": None,
     }, step=step.id)
 
 
@@ -328,7 +330,7 @@ async def _after(args: dict) -> None:
     result = args.get("result")
     if result is None:
         return
-    payload = card_payload(args["step"], result)
+    payload = card_payload(args["step"], result, ctx.attempt)
     ctx.finished_steps.add(args["step"].id)
     ctx.emit(f"step.{payload['status']}", payload, step=args["step"].id)
 

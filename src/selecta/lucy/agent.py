@@ -47,6 +47,7 @@ class Active:
     conversation: str
     cancel: threading.Event
     abort: AbortController
+    attempt: int = 1
 
 
 class Runner:
@@ -73,7 +74,8 @@ class Runner:
             if older is not None:
                 older.cancel.set()
                 older.abort.abort("superseded by a newer message")
-            active = Active(run, turn["id"], conversation, threading.Event(), AbortController())
+            active = Active(run, turn["id"], conversation, threading.Event(), AbortController(),
+                            attempt)
             self.active[conversation] = active
         events.append(conn, conversation, "run.state", {"state": "queued", "cycles": 0,
                                                         "steps": 0}, turn=turn["id"], run=run)
@@ -230,7 +232,7 @@ async def _run(app: Any, active: Active) -> None:
     ctx = tools.LucyCtx(
         conn=conn, app=app, conversation=active.conversation, turn=active.turn, run=active.run,
         turn_text=turn["text"], turn_kind=intent.classify(turn["text"], has_proposal),
-        selection=turn["selection"], expected=turn["expected_revision"],
+        selection=turn["selection"], expected=turn["expected_revision"], attempt=active.attempt,
     )
     if ctx.expected is None and has_proposal:
         row = conn.execute("SELECT p.current_revision FROM lucy_proposals p JOIN "
@@ -281,10 +283,12 @@ async def _run(app: Any, active: Active) -> None:
             for s in steps if isinstance(s, dict)]
         _set_state(ctx, "running_tools", cycles)
         ctx.emit("plan.started", {"steps": listed})
+        waiting = "queued" if active.attempt == 1 else "retrying"
         for item in listed:
-            ctx.emit("step.queued", {"op": item["op"], "family": item["family"],
-                                     "title": item["title"], "status": "queued", "attempt": 1,
-                                     "note": item["note"], "notices": [], "visual": {}},
+            ctx.emit(f"step.{waiting}", {"op": item["op"], "family": item["family"],
+                                         "title": item["title"], "status": waiting,
+                                         "attempt": active.attempt, "note": item["note"],
+                                         "notices": [], "visual": {}},
                      step=item["id"])
         started = time.monotonic()
         result = await runtime.execute(parsed.data, {
@@ -293,12 +297,12 @@ async def _run(app: Any, active: Active) -> None:
         })
         for step in result["steps"]:
             if step["id"] not in ctx.finished_steps:
-                payload = tools.card_payload(None, step)
+                payload = tools.card_payload(None, step, active.attempt)
                 ctx.emit(f"step.{payload['status']}", payload, step=step["id"])
         reported = {step["id"] for step in result["steps"]}
         for item in listed:
             if item["id"] not in reported:
-                ctx.emit("step.failed", {**item, "status": "failed", "attempt": 1,
+                ctx.emit("step.failed", {**item, "status": "failed", "attempt": active.attempt,
                                          "error": policy.clean_text(result["text"], 400),
                                          "notices": [], "visual": {}}, step=item["id"])
         ctx.emit("plan.completed", {"ok": result["ok"],
