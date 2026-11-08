@@ -7,7 +7,7 @@
 - **Priority / phase:** P0 / Requests.
 - **Owner:** Unassigned.
 - **Related earlier ADRs:** ADR-0148/0175/0124; no earlier status changed.
-- **Existing source touchpoints:** web/src/views/Requests.tsx; web/src/views/RequestsJoining.tsx.
+- **Existing source touchpoints:** web/src/views/Requests.tsx; web/src/views/RequestsJoining.test.tsx.
 
 ## Context and evidence boundary
 
