@@ -1,6 +1,6 @@
 # ADR-0328 — Rendering lifecycle, real job streaming and musical readiness truth
 
-- **Decision:** Proposed (owner review pending; documentation only).
+- **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
@@ -43,4 +43,4 @@ No original music edits, autoplay or audio-focus theft; preserve current/draft s
 
 ## Decision and proof governance
 
-Decision Proposed; all tasks Not started and unverified. A later accepted decision must record owner/date; code-level implementation requires concrete PR/SHA and passing relevant tests, and independent verification requires named reviewer/date/device/real audio. [Roadmap](selecta-lucy-roadmap.md) · [checklist](selecta-lucy-implementation-checklist.md) · [evidence](selecta-lucy-implementation-evidence.md) · [verification](selecta-lucy-verification-matrix.md) · [gates](selecta-lucy-release-gates.md).
+Decision Accepted; all tasks Not started and unverified. A later accepted decision must record owner/date; code-level implementation requires concrete PR/SHA and passing relevant tests, and independent verification requires named reviewer/date/device/real audio. [Roadmap](selecta-lucy-roadmap.md) · [checklist](selecta-lucy-implementation-checklist.md) · [evidence](selecta-lucy-implementation-evidence.md) · [verification](selecta-lucy-verification-matrix.md) · [gates](selecta-lucy-release-gates.md).
