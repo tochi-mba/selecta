@@ -144,10 +144,14 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
   const songs = snap.songs ?? [];
   const needed = Math.max(0, songs.length - 1);
   const ledger = shown.ledger;
-  // The ledger's aggregate must never turn unverified or historical render state into playable proof.
-  const ready = Math.min(needed, ledger
-    ? ledger.seams.filter((seam) => seam.verified && isReadyStatus(seam.status)).length
-    : (snap.seams ?? []).filter((seam) => seam.ready.verified && isReadyStatus(seam.ready.status)).length);
+  // Count verified audio for each current *directed neighbouring pair*, not
+  // unrelated ledger rows or a stale aggregate from a previous order.
+  const readyPairs = new Set((ledger ? ledger.seams
+    .filter((seam) => seam.verified && isReadyStatus(seam.status))
+    : (snap.seams ?? []).filter((seam) => seam.ready.verified && isReadyStatus(seam.ready.status)))
+    .map((seam) => JSON.stringify([seam.a_occ, seam.b_occ])));
+  const ready = songs.slice(1).filter((song, index) =>
+    readyPairs.has(JSON.stringify([songs[index].occurrence, song.occurrence]))).length;
   const currentNumber = proposal.history.find((item) => item.id === currentId)?.number ?? revision?.number;
   const warnings = [...new Set(snap.evaluation?.warnings ?? [])];
 
