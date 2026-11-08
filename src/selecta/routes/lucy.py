@@ -562,5 +562,22 @@ def add_routes(app, ctx) -> None:
                 fail(400, str(problem), "invalid")
             return {"recorded": recorded}
 
+    @app.get("/api/lucy/diagnostics")
+    def lucy_diagnostics(limit: int = 30) -> dict:
+        """Run traces without message text, lyrics, paths or keys (LU-333-04)."""
+        with connect() as conn:
+            rows = conn.execute(
+                "SELECT id,conversation_id,state,provider,cycles,steps,tokens_in,tokens_out,"
+                "usage,error,started_at,ended_at FROM lucy_runs ORDER BY started_at DESC "
+                "LIMIT ?", (max(1, min(limit, 200)),)).fetchall()
+            failures = conn.execute(
+                "SELECT type, COUNT(*) n FROM lucy_events WHERE type IN ('step.failed','error',"
+                "'run.limit') GROUP BY type").fetchall()
+            return {
+                "runs": [{**{k: row[k] for k in row.keys() if k != "usage"},
+                          "usage": json.loads(row["usage"])} for row in rows],
+                "problems": {row["type"]: row["n"] for row in failures},
+            }
+
     ctx.lucy_snapshot = snapshot
     app.state.lucy = ctx

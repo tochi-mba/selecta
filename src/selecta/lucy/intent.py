@@ -141,7 +141,7 @@ QUESTION = re.compile(
     re.I,
 )
 MAKE = re.compile(
-    r"\b(make|build|create|plan|put together|give me|i want|i'?d like|let'?s|mix me|"
+    r"\b(make|build|create|plan|put together|give me|i want|i'?d like|let'?s|mix me|improve|"
     r"need a|can you (make|do|build|put)|another|try again|redo|again)\b",
     re.I,
 )
@@ -318,7 +318,7 @@ def classify(text: str, has_proposal: bool) -> str:
     if MAKE.search(text) and not edits and (not has_proposal or rules or "another" in
                                             text.casefold() or "new" in text.casefold()):
         return "plan"
-    if has_proposal and (edits or rules):
+    if edits or (has_proposal and rules):
         return "revise"
     if rules or MAKE.search(text):
         return "plan"

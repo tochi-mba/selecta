@@ -181,6 +181,8 @@ FAMILY_BY_PREFIX = {
     "proposals": "planning",
     "proposalSongs": "planning",
     "memory": "memory",
+    "mix": "planning",
+    "proposals.fromScope": "planning",
 }
 
 TITLES = {
@@ -198,6 +200,7 @@ TITLES = {
     "transitions.readyFrom": "Ready transitions out of these songs",
     "transitions.readyTo": "Ready transitions into these songs",
     "transitions.evaluate": "Checking how these songs connect",
+    "transitions.evaluateOrder": "Checking how this order connects",
     "transitions.bridges": "Looking for songs to bridge a gap",
     "transitions.history": "What happened with these transitions before",
     "proposals.current": "Reading the current proposal",
@@ -205,6 +208,8 @@ TITLES = {
     "proposals.plan": "Planning a mix",
     "proposals.revise": "Revising the proposal",
     "proposals.removeRule": "Removing a rule",
+    "mix.scope": "Reading the mix you asked about",
+    "proposals.fromScope": "Copying your mix into a proposal",
     "memory.facts": "Reading what Lucy remembers",
     "memory.remember": "Remembering what you said",
 }

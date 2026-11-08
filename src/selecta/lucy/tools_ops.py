@@ -11,7 +11,7 @@ from weftai import ref, value
 from weftai.schema.spec import any_schema, integer_schema, object_schema, string_schema
 
 from selecta.lucy import catalog, memory, policy, readiness
-from selecta.lucy.tools import Seam, Seams, Track, Tracks, define
+from selecta.lucy.tools import ProposalSongs, Seam, Seams, Track, Tracks, define
 
 LIST_LIMIT = 200
 DETAIL_LIMIT = 20
@@ -273,9 +273,11 @@ def _evaluate(run) -> list[dict]:
     found = readiness.inventory(ctx.conn, ctx.app.store, lib.songs)
     out = []
     for first, second in zip(tracks, tracks[1:], strict=False):
-        a, b = lib.by_id.get(first.id), lib.by_id.get(second.id)
-        known = lib.memory.best_known(first.id, second.id) if lib.memory else None
-        ready = [edge for edge in found.adjacency.get(first.id, ()) if edge.b == second.id]
+        one = getattr(first, "song_id", None) or first.id
+        two = getattr(second, "song_id", None) or second.id
+        a, b = lib.by_id.get(one), lib.by_id.get(two)
+        known = lib.memory.best_known(one, two) if lib.memory else None
+        ready = [edge for edge in found.adjacency.get(one, ()) if edge.b == two]
         gap = _tempo_gap(a, b)
         out.append({
             "a": first.title, "b": second.title,
@@ -348,7 +350,7 @@ def _remember(run) -> dict:
 
 
 def operations() -> list:
-    from selecta.lucy import proposal_ops
+    from selecta.lucy import proposal_ops, scope_ops
 
     tracks_ref = object_schema({"from": ref(Tracks)})
     return [
@@ -387,6 +389,9 @@ def operations() -> list:
         define("transitions.evaluate", "Check each neighbouring pair in the given order: tempo "
                "gap, key distance, ready clips and history.", tracks_ref, value(any_schema()),
                _evaluate),
+        define("transitions.evaluateOrder", "The same check for proposal or mix songs, in their "
+               "order (from proposals.current or mix.scope).",
+               object_schema({"from": ref(ProposalSongs)}), value(any_schema()), _evaluate),
         define("transitions.bridges", "Songs that could sit between song a and song b.",
                object_schema({"a": ref(Tracks), "b": ref(Tracks)}), Tracks, _bridges),
         define("transitions.history", "Past results (liked, clean, failed) of transitions "
@@ -400,4 +405,5 @@ def operations() -> list:
                                                  "scope": string_schema().optional()}),
                value(any_schema()), _remember, tier="save"),
         *proposal_ops.operations(),
+        *scope_ops.operations(),
     ]

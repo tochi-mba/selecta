@@ -126,6 +126,18 @@ async def respond(ctx: Any, say: Say, run_plan: RunPlan) -> None:
     if kind == "chat":
         await say(HELP)
         return
+    scoped = _scope(ctx)
+    about_it = re.search(r"\b(this|my|the) (mix|draft|one)\b|\bit\b", text, re.I)
+    if scoped and about_it and not _has_proposal(ctx) and kind in {"plan", "revise"}:
+        await say("Copying your mix into a proposal first, so the original stays as it is… ")
+        steps = [{"id": "copy", "op": "proposals.fromScope"}]
+        if intent.critique_ops(text) or intent.parse(text):
+            steps.append({"id": "revise", "op": "proposals.revise", "input": {"text": text}})
+        result = await run_plan({"steps": steps})
+        if await _say_step_failures(result, say):
+            return
+        await say(describe_outcome(_value(result, steps[-1]["id"]) or {}))
+        return
     if kind == "plan":
         rules = intent.parse(text, ctx.turn)
         steps: list[dict] = []
@@ -151,8 +163,42 @@ async def respond(ctx: Any, say: Say, run_plan: RunPlan) -> None:
     await say(describe_outcome(_value(result, "revise") or {}))
 
 
+def _scope(ctx: Any) -> dict:
+    import json
+
+    row = ctx.conn.execute("SELECT scope FROM lucy_conversations WHERE id=?",
+                           (ctx.conversation,)).fetchone()
+    return json.loads(row["scope"]) if row else {}
+
+
+def _has_proposal(ctx: Any) -> bool:
+    row = ctx.conn.execute("SELECT proposal_id FROM lucy_conversations WHERE id=?",
+                           (ctx.conversation,)).fetchone()
+    return bool(row and row["proposal_id"])
+
+
 async def _answer(ctx: Any, text: str, say: Say, run_plan: RunPlan) -> None:
     lowered = text.casefold()
+    if _scope(ctx) and not _has_proposal(ctx) and re.search(r"\b(this|my) (mix|draft)\b",
+                                                             lowered):
+        result = await run_plan({"steps": [{"id": "mix", "op": "mix.scope"},
+                                           {"id": "check", "op": "transitions.evaluateOrder",
+                                            "input": {"from": "$mix"}}]})
+        if await _say_step_failures(result, say):
+            return
+        step = next((s for s in result["steps"] if s["id"] == "mix"), None)
+        pairs = _value(result, "check") or []
+        if step and step["status"] == "ok":
+            far = [p for p in pairs if (p.get("tempo_gap_percent") or 0) > 8]
+            ready = sum(1 for p in pairs if p.get("ready_clips"))
+            await say(f"That mix has {step['count']} songs. {ready} of {len(pairs)} checked "
+                      "transitions have a rendered clip ready. ")
+            if far:
+                await say("The biggest tempo jumps: " + "; ".join(
+                    f"{p['a']} → {p['b']} ({p['tempo_gap_percent']}%)" for p in far[:3]) + ". ")
+            await say("Say “improve this mix” and I’ll copy it into a proposal to work on; the "
+                      "original stays as it is.")
+        return
     if re.search(r"\b(ready|rendered|render|play now|wait)\b", lowered):
         result = await run_plan({"steps": [{"id": "ready", "op": "transitions.readyInventory"}]})
         step = next((s for s in result["steps"] if s["id"] == "ready"), None)
