@@ -84,11 +84,20 @@ export function Mix(props: ViewProps) {
   }, [draftId, order]);
 
   const [selected, setSelected] = useState<Selection | null>(() => selectionByPlayer.get(player)?.get(selectionScope) ?? null);
+  const selectedScope = useRef(selectionScope);
   useEffect(() => {
     let byScope = selectionByPlayer.get(player);
     if (!byScope) {
       byScope = new Map();
       selectionByPlayer.set(player, byScope);
+    }
+    // A draft switch can reuse this mounted editor. Restore that scope's own
+    // object before persisting anything, rather than briefly assigning the
+    // previous draft's occurrence or pair to the newly opened mix.
+    if (selectedScope.current !== selectionScope) {
+      selectedScope.current = selectionScope;
+      setSelected(byScope.get(selectionScope) ?? null);
+      return;
     }
     byScope.set(selectionScope, selected);
   }, [player, selectionScope, selected]);
