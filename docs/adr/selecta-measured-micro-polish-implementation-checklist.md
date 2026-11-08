@@ -1,17 +1,17 @@
 # Selecta — MP measured micro-polish 224-task checklist
 
-**Status:** 28 Proposed ADRs (0272–0299); 224 acceptance tasks Not started; 0 In progress; 0 Implemented; 0 Independently Verified. Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Docs only.
+**Status:** 28 Proposed ADRs (0272–0299); 213 acceptance tasks Not started; 7 In progress; 4 Implemented; 0 Independently Verified. Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Implementation candidate; independently unverified.
 
 Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. Each source-present feature must be credited after exact old-ADR/source comparison.
 
 ## [ADR-272 — Selector-level pixel baseline and defect register](adr-0272-selector-visual-baseline.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 5/8 Not started, 3/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0272-01 — Inventory every route, persistent surface and overlay.** **Acceptance:** Each has a source owner, fixture ID and state denominator. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0272-02 — Record computed geometry.** **Acceptance:** Capture exact element rectangles, margins, gaps, padding, borders and type metrics. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0272-03 — Extend dynamic fixtures.** **Acceptance:** Cover playing Listen, handoff, Stage, Studio, Requests bridge, export and failures. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0272-04 — Audit widths and heights.** **Acceptance:** Inspect 320, 375, 620, 760, 768, 1024, 1280, 1440, 1920, 3840 and short landscape. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **MP-0272-02 — Record computed geometry.** **Acceptance:** Capture exact element rectangles, margins, gaps, padding, borders and type metrics. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `db11a2822241`; **Evidence/reviewer:** web/e2e/micro-polish-geometry.e2e.ts records geometry candidates; test run and broader states pending; independent reviewer —.
+- [ ] **MP-0272-03 — Extend dynamic fixtures.** **Acceptance:** Cover playing Listen, handoff, Stage, Studio, Requests bridge, export and failures. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `2588f96a3fb4`; **Evidence/reviewer:** Playing mini-player, keyboard yield and overlay candidate added; Stage, Studio, bridge, export and failure still needed; independent reviewer —.
+- [ ] **MP-0272-04 — Audit widths and heights.** **Acceptance:** Inspect 320, 375, 620, 760, 768, 1024, 1280, 1440, 1920, 3840 and short landscape. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `2588f96a3fb4`; **Evidence/reviewer:** 11 viewport geometry cases added; test execution and human audit pending; independent reviewer —.
 - [ ] **MP-0272-05 — Stress metadata.** **Acceptance:** Use private-data-free long, duplicate, missing, RTL and CJK song names. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0272-06 — Log pixel defects.** **Acceptance:** Every defect identifies severity, selector, state, measured baseline and proposed target. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0272-07 — Document justified exceptions.** **Acceptance:** Keep good existing layouts and specialist 1–3px offsets with rationale. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -19,20 +19,20 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-273 — Spacing, margins, padding and visual rhythm](adr-0273-spacing-and-vertical-rhythm.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 7/8 Not started, 0/8 In progress, 1/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0273-01 — Map margin and gap rules.** **Acceptance:** Every important spacing value has a token role or documented exception. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0273-02 — Align icons to labels.** **Acceptance:** Use a consistent optical gap near 8px except for reviewed dense controls. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0273-03 — Group field help and errors.** **Acceptance:** Input, label, hint and validation are visually adjacent without overlap. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0273-04 — Define heading rhythm.** **Acceptance:** Related text and distinct sections use coherent 12–48px spacing. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0273-05 — Resolve card padding conflicts.** **Acceptance:** Reconcile legacy 16px cards and 18px panels with later 24px overrides. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [x] **MP-0273-05 — Resolve card padding conflicts.** **Acceptance:** Reconcile legacy 16px cards and 18px panels with later 24px overrides. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Implemented; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `6a55b1643b0b`; **Evidence/reviewer:** web/src/style.css and web/src/styles/polish.css now own 24px card/panel padding without duplicate override; web/e2e/micro-polish-geometry.e2e.ts asserts computed padding (unrun); independent reviewer —.
 - [ ] **MP-0273-06 — Specify compact-density variants.** **Acceptance:** Dense rows retain readable type and adequate interaction targets. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0273-07 — Check end-of-page clearance.** **Acceptance:** Final actions remain reachable above mini-player, nav and safe areas. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0273-08 — Review exception geometry.** **Acceptance:** Musical grid/beat 1–3px gaps remain deliberate and source-owned. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 
 ## [ADR-274 — Optical alignment, grid guides and one-pixel details](adr-0274-optical-alignment-and-pixel-edges.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 7/8 Not started, 1/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0274-01 — Align page anchors.** **Acceptance:** Titles, breadcrumbs, filters, cards and lists share intended edges. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0274-02 — Centre icon glyphs.** **Acceptance:** Icons and labels align optically inside control hitboxes. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -40,15 +40,15 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 - [ ] **MP-0274-04 — Fix wrapped action alignment.** **Acceptance:** Buttons retain intentional card and row baselines when text wraps. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0274-05 — Audit border joins.** **Acceptance:** Remove accidental doubled 1px edges, asymmetric corners and clipped focus rings. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0274-06 — Audit sticky offsets.** **Acceptance:** Header, editor scope, inspector and Studio ruler never collide. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0274-07 — Prevent scrollbar movement.** **Acceptance:** Scrollbar changes do not shift navigation or content anchors. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **MP-0274-07 — Prevent scrollbar movement.** **Acceptance:** Scrollbar changes do not shift navigation or content anchors. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `6a55b1643b0b`; **Evidence/reviewer:** web/src/style.css sets scrollbar-gutter: stable; scroll-state measurement pending; independent reviewer —.
 - [ ] **MP-0274-08 — Approve optical exceptions.** **Acceptance:** Record measured source-owned offsets with independent reviewer rationale. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 
 ## [ADR-275 — Typography scale, text wrapping and numeric metadata](adr-0275-typography-and-long-song-names.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 7/8 Not started, 0/8 In progress, 1/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0275-01 — Map typographic hierarchy.** **Acceptance:** Display, page, section, track title, caption and metadata have distinct roles. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0275-02 — Resolve duplicate display styling.** **Acceptance:** Global and later .display line-height/font rules have intentional ownership. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [x] **MP-0275-02 — Resolve duplicate display styling.** **Acceptance:** Global and later .display line-height/font rules have intentional ownership. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Implemented; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `6a55b1643b0b`; **Evidence/reviewer:** web/src/style.css owns .display and .display.small metrics; duplicate rules removed from polish.css; computed type E2E added (unrun); independent reviewer —.
 - [ ] **MP-0275-03 — Keep focal song names readable.** **Acceptance:** Listen, Stage and details favour complete titles over arbitrary shrinking. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0275-04 — Truncate dense rows accessibly.** **Acceptance:** Full identity remains accessible when Library/Editor visually ellipsises. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0275-05 — Use stable numbers.** **Acceptance:** Time, BPM, percentages and song counts preserve alignment while changing. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -58,7 +58,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-276 — Surface depth, borders, shadows and accent hierarchy](adr-0276-colour-surface-depth-and-borders.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0276-01 — Map surface roles.** **Acceptance:** Base, raised, control, panel and overlay backgrounds have distinct semantics. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0276-02 — Reduce nested panel noise.** **Acceptance:** Avoid competing border-shadow-background combinations when whitespace suffices. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -71,7 +71,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-277 — Icon sizes, badge baselines and button microgeometry](adr-0277-iconography-badges-and-button-geometry.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0277-01 — Inventory icon usage.** **Acceptance:** Each icon has a purpose, size, owner and appropriate text or accessible name. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0277-02 — Define icon-size slots.** **Acceptance:** Compact, toolbar, standard and hero icons follow deliberate dimensions. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -84,11 +84,11 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-278 — CSS cascade collisions and visual ownership cleanup](adr-0278-css-ownership-and-cascade-cleanup.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 7/8 Not started, 0/8 In progress, 1/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0278-01 — Inventory repeated selectors.** **Acceptance:** Report .card, .panel, .row, .display, .count, .song and .seam overlaps. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0278-02 — Assign source owners.** **Acceptance:** Each visual rule belongs to a named component/feature stylesheet. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0278-03 — Remove unnecessary overrides.** **Acceptance:** Consolidate duplicates only when effective behaviour is preserved. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [x] **MP-0278-03 — Remove unnecessary overrides.** **Acceptance:** Consolidate duplicates only when effective behaviour is preserved. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Implemented; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `6a55b1643b0b`; **Evidence/reviewer:** Duplicate .panel, .card, .row and .display overrides consolidated in web/src/style.css and polish.css; computed cascade test added (unrun); independent reviewer —.
 - [ ] **MP-0278-04 — Tokenise unexplained literals.** **Acceptance:** Arbitrary margin and padding pixels become tokens or approved exceptions. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0278-05 — Prevent generic selector bleed.** **Acceptance:** Library and Requests classes do not unintentionally alter other views. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0278-06 — Review breakpoint precedence.** **Acceptance:** 620, 760, 1024 and short-height rules have clear ownership. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -97,7 +97,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-279 — Shared component state gallery and visual acceptance](adr-0279-shared-component-visual-specimens.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0279-01 — Catalogue component variants.** **Acceptance:** Controls, fields, tabs, menus, skeletons, overlays and statuses represented. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0279-02 — Capture normal interaction states.** **Acceptance:** Rest, hover, focus, pressed and selected geometry documented. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -110,7 +110,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-280 — Navigation rail, breadcrumbs and mobile bar polish](adr-0280-navigation-shell-and-breadcrumbs.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0280-01 — Refine expanded rail.** **Acceptance:** 212px rail, brand, rows and selected marker align. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0280-02 — Refine collapsed rail.** **Acceptance:** 72px icon positions, tooltips and focus remain balanced. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -123,11 +123,11 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-281 — Persistent mini-player and fixed chrome micro-polish](adr-0281-persistent-mini-player.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 6/8 Not started, 2/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0281-01 — Balance 66px player interior.** **Acceptance:** Progress, title, artist and transport share deliberate vertical alignment. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0281-02 — Prioritise transport.** **Acceptance:** Play/Pause dominates Next without sacrificing accessible targets. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0281-03 — Prevent title-induced shift.** **Acceptance:** Changing artist, song duration or long title never moves controls unexpectedly. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **MP-0281-02 — Prioritise transport.** **Acceptance:** Play/Pause dominates Next without sacrificing accessible targets. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `4b13e68dcda9`; **Evidence/reviewer:** web/src/styles/shell.css enforces 44px primary and Next targets; narrow geometry E2E added (unrun); independent reviewer —.
+- [ ] **MP-0281-03 — Prevent title-induced shift.** **Acceptance:** Changing artist, song duration or long title never moves controls unexpectedly. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `6a55b1643b0b`; **Evidence/reviewer:** web/src/shell/Shell.tsx guards progress/title and reserves count width; dynamic stress not independently measured; independent reviewer —.
 - [ ] **MP-0281-04 — Position request button.** **Acceptance:** Count and Request affordance remain clear at narrow widths. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0281-05 — Align mobile bottom chrome.** **Acceptance:** 58px navigation and mini-player never overlap or double-pad content. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0281-06 — Yield to keyboard and overlays.** **Acceptance:** Mini controls hide or reflow without stopping sound. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -136,7 +136,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-282 — First run, folder setup and readiness hierarchy](adr-0282-onboarding-and-readiness.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0282-01 — Compose first-run hierarchy.** **Acceptance:** Title, explanation, path field and Start create a clear visual sequence. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0282-02 — Refine music-folder input.** **Acceptance:** Long path, label, error and action align without discarding typed input. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -149,7 +149,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-283 — Make a Mix hero, idea cards and filters polish](adr-0283-explore-hero-and-idea-cards.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0283-01 — Polish featured idea hierarchy.** **Acceptance:** Title, matching songs, description and primary Play align. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0283-02 — Unify card interiors.** **Acceptance:** Motif, tempo badge, summary and facts use consistent padding and baselines. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -162,7 +162,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-284 — Listen hero, lyrics, music spectrum and handoff polish](adr-0284-listen-hero-and-spectrum.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0284-01 — Balance song identity.** **Acceptance:** Artist, song title, motif and time have intentional hierarchy. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0284-02 — Refine main transport.** **Acceptance:** Play/Pause, Next, Volume and Seek align and remain usable. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -175,7 +175,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-285 — Stage fullscreen lyric theatre and immersive balance](adr-0285-stage-immersive-lyrics.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0285-01 — Balance Stage gutters.** **Acceptance:** Short/wide/tall viewports show full lyric composition without clipping. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0285-02 — Refine active lyric size.** **Acceptance:** Readable multi-line, CJK, RTL and instrumental states. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -188,7 +188,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-286 — My Mixes, draft cards and render queue finishing](adr-0286-my-mixes-and-render-line.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0286-01 — Distinguish current and draft.** **Acceptance:** Card appearance and words cannot imply a draft is playing. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0286-02 — Align card metadata.** **Acceptance:** Title, song count, duration and render state use stable baselines. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -201,7 +201,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-287 — Editor timeline row grid, grips, seams and selection](adr-0287-editor-song-seam-geometry.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0287-01 — Align song grid.** **Acceptance:** Grip, number, motif, title, facts and actions share stable columns. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0287-02 — Attach seam visually.** **Acceptance:** Transition row clearly belongs between the corresponding song pair. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -214,7 +214,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-288 — Seam inspector selected pair, audition and parameter hierarchy](adr-0288-seam-inspector-audition-and-forms.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0288-01 — Balance pair header.** **Acceptance:** Two exact song identities and seam number remain legible at narrow width. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0288-02 — Align four tabs.** **Acceptance:** Listen, Change, Studio and Details share geometry and keyboard semantics. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -227,7 +227,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-289 — Stem Studio eight-lane grid, ruler and unapplied changes](adr-0289-stem-studio-grid-and-controls.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0289-01 — Align grid rulers.** **Acceptance:** Lane names, bar columns and 8–64 cell positions match pixel geometry. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0289-02 — Express cell states.** **Acceptance:** On/off/selected/missing/focused retain shape and textual meaning. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -240,7 +240,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-290 — Requests drawer, pending status and bridge consent polish](adr-0290-requests-bridge-proposal-and-status.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0290-01 — Align drawer content.** **Acceptance:** Title, search, close and request list fit mobile and desktop widths. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0290-02 — Refine result density.** **Acceptance:** Song, availability, reason and Ask remain readable with long titles. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -253,7 +253,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-291 — Library search, column alignment, density and selection rail](adr-0291-library-search-rows-and-batch-actions.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0291-01 — Align toolbar.** **Acceptance:** Search, filters, sort, density and counts share clean anchors. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0291-02 — Align column headers to rows.** **Acceptance:** Track, facts, readiness and actions use matching grid columns. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -266,7 +266,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-292 — Word connections and harmonic discovery cards/audition finishing](adr-0292-harmonic-and-word-discovery.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0292-01 — Align ordered pair headers.** **Acceptance:** Both source tracks and connection type are unambiguous. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0292-02 — Refine route/seam diagrams.** **Acceptance:** Bar lengths, labels and arrows preserve musical evidence meaning. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -279,7 +279,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-293 — Workspace operations, storage, analysis and local backup layout](adr-0293-workspace-operations-and-backups.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0293-01 — Prioritise actionable issue.** **Acceptance:** Workspace Overview puts repair ahead of passive metrics. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0293-02 — Align workspace tabs.** **Acceptance:** Analysis, Sources, Storage, Learning and Diagnostics use common rhythm. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -292,7 +292,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-294 — Export job progression and blind listening-study precision](adr-0294-export-and-blind-listening-study.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0294-01 — Group export identity.** **Acceptance:** Mix name, revision, FLAC and prerequisites form clear hierarchy. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0294-02 — Stabilise progress rows.** **Acceptance:** Encoding, ETA, completion and failure state changes do not shift controls. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -305,24 +305,24 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-295 — Global overlays, command palette, Activity and toast geometry](adr-0295-overlays-toasts-and-command-palette.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 7/8 Not started, 0/8 In progress, 1/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0295-01 — Standardise overlay frames.** **Acceptance:** Dialog, Sheet, Drawer headers, bodies, footers and corners align. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0295-02 — Align modal actions.** **Acceptance:** Primary, Cancel and destructive choices fit shallow heights. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0295-03 — Refine command result hierarchy.** **Acceptance:** Song, page, shortcut and command groups scan cleanly. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0295-04 — Tune toast/Undo placement.** **Acceptance:** Notification texts and controls never obscure tasks. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0295-05 — Restore focus through nested layers.** **Acceptance:** Escape closes correct overlay and returns to opener. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [x] **MP-0295-05 — Restore focus through nested layers.** **Acceptance:** Escape closes correct overlay and returns to opener. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Implemented; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `11aa13ec25af`; **Evidence/reviewer:** web/src/ui/controls.tsx focusable summary and hidden-control filter; web/src/ui/controls.test.tsx tests nested Escape/inert/focus return and Tab loop (unrun); independent reviewer —.
 - [ ] **MP-0295-06 — Audit consequence wording.** **Acceptance:** Delete, replace, bridge and restore name actual scope. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0295-07 — Validate keyboard collision.** **Acceptance:** Software keyboard and fixed chrome yield to essential actions. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0295-08 — Review distraction budget.** **Acceptance:** Routine toasts are calm and critical errors remain obvious. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 
 ## [ADR-296 — Motion tokens, interruptions and truthful musical animation](adr-0296-motion-and-music-clock.md) (P1)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 7/8 Not started, 1/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0296-01 — Inventory animated surfaces.** **Acceptance:** Button, dialog, card, skeleton, drag, spectrum and lyric motion triggers listed. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0296-02 — Use semantic motion tokens.** **Acceptance:** 80/120/160/200/220/240ms choices tied to intended purpose. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **MP-0296-03 — Keep click targets stable.** **Acceptance:** Pressed and hovered controls never move out from under pointer. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **MP-0296-03 — Keep click targets stable.** **Acceptance:** Pressed and hovered controls never move out from under pointer. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `6a55b1643b0b`; **Evidence/reviewer:** web/src/style.css and polish.css remove active transform; pointer-down box measurement pending; independent reviewer —.
 - [ ] **MP-0296-04 — Bind music movement to clock.** **Acceptance:** Countdown, lyric focus and playhead follow actual player data. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0296-05 — Stop interrupted motion.** **Acceptance:** Rapid close/seek/route change cannot leave stale animation. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0296-06 — Respect Still and reduced motion.** **Acceptance:** Decorative movement absent while critical data still updates. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -331,7 +331,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-297 — Skeletons, async feedback, errors and local recovery](adr-0297-loading-recovery-and-layout-stability.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0297-01 — Match loading geometry.** **Acceptance:** Skeleton placeholders resemble actual layout without fake music data. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0297-02 — Differentiate empty and failed.** **Acceptance:** Network and server failures cannot masquerade as no results. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -344,7 +344,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-298 — Responsive geometry, accessibility and real-device performance acceptance](adr-0298-responsive-accessibility-and-budgets.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0298-01 — Count width coverage.** **Acceptance:** 320–3840px, 620/760 breakpoint boundary and short landscape assessed. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0298-02 — Verify zoom.** **Acceptance:** 200/400% zoom retains actionable content and Studio alternate representation. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -357,7 +357,7 @@ Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. 
 
 ## [ADR-299 — Human pixel review, task validation and independent release gate](adr-0299-human-acceptance-and-go-no-go.md) (P0)
 
-**Decision:** Proposed; **Implementation:** 8/8 Not started; **Independently Verified:** 0/8; **Owner:** Unassigned.
+**Decision:** Proposed; **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented; **Independently Verified:** 0/8; **Owner:** Unassigned.
 
 - [ ] **MP-0299-01 — Publish review denominator.** **Acceptance:** Required, captured, reviewed viewport/theme/state counts explicit. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **MP-0299-02 — Sign visual before/after.** **Acceptance:** Named reviewer accepts or rejects each critical measured adjustment. **Verification:** source-linked geometry/functional tests and independent reviewer where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
