@@ -419,3 +419,107 @@
 - [ ] **SF-0229-06 — Handle slow or interrupted scan.** **Acceptance:** Resume/retry never pretend completed work. **Required verification:** Offline/interrupt tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0229-07 — Make first play obvious.** **Acceptance:** One safe action and accessible audio expectations. **Required verification:** Novice task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0229-08 — Evaluate first handoff milestone.** **Acceptance:** Actual audio audition plus understanding measured. **Required verification:** Uncoached real-music session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0230 — Workspace for truthful analysis, source health, storage and diagnostics](adr-0230-workspace.md)
+
+**Priority / phase:** P1 / Workspace. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0230-01 — Define Workspace information hierarchy.** **Acceptance:** Health, source, analysis and storage are findable. **Required verification:** Operator findability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0230-02 — Design health summary.** **Acceptance:** Actionable issues above passive metrics. **Required verification:** Known-fault fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0230-03 — Clarify processing state.** **Acceptance:** Queued/running/blocked/failed counts use real backend values. **Required verification:** Job API test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0230-04 — Refine source management.** **Acceptance:** Paths, errors and safe removal consequences explicit. **Required verification:** Filesystem safety E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0230-05 — Design storage maintenance.** **Acceptance:** Preview, confirmation and accurate reclaim result. **Required verification:** Cancel/failure tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0230-06 — Make diagnostics usable.** **Acceptance:** Logs and identifiers locally safe with clear export actions. **Required verification:** Privacy review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0230-07 — Protect background calm.** **Acceptance:** Job updates never steal focus or auto-play. **Required verification:** Audio/attention E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0230-08 — Test operational recovery.** **Acceptance:** Users recover a stuck source without wrong action. **Required verification:** Scenario study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0231 — Export Studio: frozen revision, honest render progress and finished artifact](adr-0231-export-experience.md)
+
+**Priority / phase:** P0 / Export. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0231-01 — Show frozen revision before export.** **Acceptance:** Selected mix ID and revision explicitly confirmed. **Required verification:** Snapshot fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0231-02 — Design job phase visualization.** **Acceptance:** Queued, rendering, finalizing, done and failed accurate. **Required verification:** Backend job tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0231-03 — Display only real progress.** **Acceptance:** Indeterminate used when no reliable percentage. **Required verification:** Slow-job and no-progress tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0231-04 — Protect edit during export.** **Acceptance:** Changes after submission cannot mutate existing job. **Required verification:** Concurrent edit E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0231-05 — Handle cancel/retry safely.** **Acceptance:** Actions reflect actual backend semantics. **Required verification:** Cancel failure tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0231-06 — Present finished artifact.** **Acceptance:** Real path, format, metadata and next action correct. **Required verification:** FLAC decode and metadata validation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0231-07 — Design failure recovery.** **Acceptance:** Specific cause and retry do not lose context. **Required verification:** Corrupt/storage-full fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0231-08 — Evaluate finishing moment.** **Acceptance:** Artistic completion never sacrifices job truth. **Required verification:** User and music output review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0232 — System-wide feedback, Undo, intentional interruptions and resilient recovery](adr-0232-feedback-recovery.md)
+
+**Priority / phase:** P0 / Cross-cutting. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0232-01 — Define feedback taxonomy.** **Acceptance:** Success, pending, blocked, failed and conflict distinct. **Required verification:** State inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0232-02 — Specify Undo availability.** **Acceptance:** Only actually reversible actions offer Undo. **Required verification:** Source semantics audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0232-03 — Standardize progress copy.** **Acceptance:** Indeterminate and determinate jobs honest. **Required verification:** No-percentage fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0232-04 — Build error recovery patterns.** **Acceptance:** Retry and fallback actions tied to actual failure. **Required verification:** Injected network errors. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0232-05 — Clarify destructive confirmations.** **Acceptance:** Consequence and scope stated before commit. **Required verification:** Cancel safety tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0232-06 — Protect focus and announcements.** **Acceptance:** No unexpected modal or speech spam. **Required verification:** Keyboard/NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0232-07 — Handle stale async responses.** **Acceptance:** Old success cannot overwrite current failure or revision. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0232-08 — Measure recovery success.** **Acceptance:** People restore a failed edit or job correctly. **Required verification:** Fault-injection user study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0233 — Responsive cinematic-to-precision layouts from 320px to wide screens](adr-0233-responsive-scenes.md)
+
+**Priority / phase:** P0 / Cross-cutting. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0233-01 — Specify breakpoint behavior.** **Acceptance:** Every major scene has explicit spatial transformations. **Required verification:** Layout matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0233-02 — Design mobile player and navigation.** **Acceptance:** Safe area and keyboard inset correct. **Required verification:** 320–430 touch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0233-03 — Make Create panels adaptive.** **Acceptance:** Inspector reachable without shrinking primary actions. **Required verification:** Narrow arrangement test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0233-04 — Ensure Studio editor access.** **Acceptance:** Eight lanes and 64 cells operable at narrow widths. **Required verification:** Touch plus keyboard test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0233-05 — Handle library table reflow.** **Acceptance:** Sorting/filtering and titles accessible at zoom. **Required verification:** 400%/320px tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0233-06 — Support landscape and shallow heights.** **Acceptance:** Sticky layers never cover active controls. **Required verification:** Viewport matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0233-07 — Test text and RTL stress.** **Acceptance:** Long localized metadata does not break grid. **Required verification:** Unicode fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0233-08 — Independently approve each scene.** **Acceptance:** No critical obstruction across named device sizes. **Required verification:** Visual and AT sign-off. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0234 — Accessibility as an artistic constraint, WCAG 2.2 AA and semantic parity](adr-0234-accessible-art.md)
+
+**Priority / phase:** P0 / Quality. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0234-01 — Map focus and reading order.** **Acceptance:** Each scene has correct semantic structure. **Required verification:** Keyboard and DOM audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0234-02 — Validate all core journeys by AT.** **Acceptance:** Listen, Explore, Create, Studio, Requests and Export operable. **Required verification:** NVDA/Edge session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0234-03 — Enforce 2.2 AA contrast and target sizing.** **Acceptance:** Text and essential indicators pass applicable criteria. **Required verification:** Measured contrast and touch-target report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0234-04 — Protect focus under overlays.** **Acceptance:** Nav, toasts, modals and dialogs restore focus correctly. **Required verification:** Dialog Escape/Return E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0234-05 — Define live announcement budget.** **Acceptance:** Lyric ticks and meters do not chatter. **Required verification:** Screen reader listening study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0234-06 — Ensure full motion parity.** **Acceptance:** Still and reduced-motion show all data. **Required verification:** Motion emulator review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0234-07 — Validate 320px and 400% zoom.** **Acceptance:** No hidden or clipped critical action. **Required verification:** Reflow matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0234-08 — Record independent access sign-off.** **Acceptance:** Named reviewer and SHA with blockers resolved. **Required verification:** AT evidence report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0235 — Audio-first performance and power-aware artistic rendering](adr-0235-performance.md)
+
+**Priority / phase:** P0 / Quality. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0235-01 — Baseline real devices.** **Acceptance:** Record OS, browser, cores, memory and real media. **Required verification:** Reproducible trace register. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0235-02 — Define input and layout budgets.** **Acceptance:** Target p75 INP at most 200ms and low CLS where applicable. **Required verification:** Web vitals capture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0235-03 — Profile visualizer loads.** **Acceptance:** Adaptive frames, device pixel ratio and visibility handling. **Required verification:** CPU/GPU profiling. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0235-04 — Stress analysis plus playback.** **Acceptance:** No audible dropout during background render load. **Required verification:** Real-audio observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0235-05 — Stress 20k-song Library.** **Acceptance:** Search and paging remain responsive. **Required verification:** 20k fixture and heap trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0235-06 — Stress 100-song editor.** **Acceptance:** Reorder and inspection stay interactive. **Required verification:** 100-song browser test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0235-07 — Stress 64-cell Studio.** **Acceptance:** Painting remains responsive and audio focus stable. **Required verification:** 64-cell recording. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0235-08 — Gate degraded motion automatically.** **Acceptance:** Low-power fallback preserves information. **Required verification:** Forced throttle and device review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0236 — Modular frontend visual architecture and safe migration seams](adr-0236-frontend-architecture.md)
+
+**Priority / phase:** P0 / Architecture. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0236-01 — Map ownership boundaries.** **Acceptance:** Transport, route, scene, library and editor each have one owner. **Required verification:** Module dependency graph. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0236-02 — Define component seams.** **Acceptance:** Shared tokens/primitives avoid cross-screen coupling. **Required verification:** Architecture review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0236-03 — Separate state and presentation.** **Acceptance:** Actual domain status remains source-of-truth. **Required verification:** Type/API tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0236-04 — Plan CSS consolidation.** **Acceptance:** Tokens and page modules replace brittle overrides incrementally. **Required verification:** Cascade audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0236-05 — Preserve route and API contracts.** **Acceptance:** Existing deep links and endpoint shapes remain compatible. **Required verification:** Contract E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0236-06 — Enforce source maintainability.** **Acceptance:** Code files under repo limit with coherent tests. **Required verification:** CI file-size and review checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0236-07 — Define reversible feature rollout.** **Acceptance:** New view can fall back without data migration. **Required verification:** Rollback test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0236-08 — Plan future-proof boundaries only.** **Acceptance:** Local data/storage interfaces do not add SaaS features. **Required verification:** Architecture acceptance review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0237 — Shared data provenance and authoritative music-state truth](adr-0237-truth-provenance.md)
+
+**Priority / phase:** P0 / Architecture. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0237-01 — Enumerate provenance types.** **Acceptance:** All musical objects have declared authority and uncertainty. **Required verification:** Domain schema audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0237-02 — Map current readiness states.** **Acceptance:** Song, seam, stem and job conditions use canonical values. **Required verification:** API and fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0237-03 — Define visual-state contracts.** **Acceptance:** Cards, lines and badges never mix plan with real status. **Required verification:** Design state matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0237-04 — Handle unknown explicitly.** **Acceptance:** Missing values display unknown instead of fake estimates. **Required verification:** Null fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0237-05 — Bind exact object identity.** **Acceptance:** Occurrence, seam and revision stable through async work. **Required verification:** Race and duplicate ID tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0237-06 — Design AT descriptions.** **Acceptance:** Readiness accessible without colors or diagrams. **Required verification:** NVDA inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0237-07 — Test errors and fallback semantics.** **Acceptance:** Failed render and technique fallback visible. **Required verification:** Error fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0237-08 — Validate user comprehension.** **Acceptance:** Novices distinguish prepared versus playing versus requested. **Required verification:** Uncoached status study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
