@@ -421,7 +421,10 @@ def add_routes(app, ctx) -> None:
                     isinstance(last, bool)
                     or not isinstance(last, int)
                     or last <= 0
-                    or (numeric and (isinstance(value, bool) or not isinstance(value, (int, float))))
+                    or (
+                        numeric
+                        and (isinstance(value, bool) or not isinstance(value, (int, float)))
+                    )
                     or (not numeric and not isinstance(value, str))
                     or (isinstance(value, float) and not math.isfinite(value))
                 ):
