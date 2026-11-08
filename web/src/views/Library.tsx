@@ -76,12 +76,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // dimension invalidates it rather than selecting a different filtered row.
   const [batchSelection, setBatchSelection] = useState<{ identity: string; ids: number[] }>({ identity: '', ids: [] });
   const selectedIds = batchSelection.identity === selectionIdentity ? batchSelection.ids : [];
+  // A selected set keeps 20k-item row scans O(n), not O(n × 200), as playback updates arrive.
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [batchSelection, selectionIdentity]);
   type BatchAction = 'prioritize' | 'deprioritize' | 'never' | 'allow';
   const [confirmBatch, setConfirmBatch] = useState<{
     action: BatchAction; identity: string;
     songs: { id: number; title: string; artist: string; priority: boolean; never: boolean }[];
   } | null>(null);
-  const visibleSelected = (committedRows ?? []).filter((song) => selectedIds.includes(song.id));
+  const visibleSelected = useMemo(() => (committedRows ?? []).filter((song) => selectedIdSet.has(song.id)), [committedRows, selectedIdSet]);
   const toggleBatch = (id: number) => setBatchSelection((before) => {
     const ids = before.identity === selectionIdentity ? before.ids : [];
     return { identity: selectionIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : ids.length >= 200 ? ids : [...ids, id] };
@@ -501,11 +503,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           const duplicate = duplicateIds.has(song.id);
           const name = duplicate ? `${title} (song ${song.id})` : title;
           return (
-            <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''} ${selectedIds.includes(song.id) ? 'selected' : ''}`}>
+            <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''} ${selectedIdSet.has(song.id) ? 'selected' : ''}`}>
               <div className="song-name">
                 {filter !== 'set_aside' && <label className="library-batch-check">
                   <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
-                    checked={selectedIds.includes(song.id)} disabled={searching || failed || selectedIds.length >= 200 && !selectedIds.includes(song.id)}
+                    checked={selectedIdSet.has(song.id)} disabled={searching || failed || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
                     onChange={() => toggleBatch(song.id)} />
                 </label>}
                 <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`}>
@@ -570,7 +572,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         <p>You are about to <b>{confirmBatch.action === 'never' ? 'exclude from future mixes' : confirmBatch.action === 'allow' ? 'allow in future mixes' : confirmBatch.action === 'prioritize' ? 'prioritize for analysis' : 'remove analysis priority from'}</b> precisely {confirmBatch.songs.length} recording{confirmBatch.songs.length === 1 ? '' : 's'}.</p>
         <p className="hint">Only these exact song IDs will be changed. If any were changed in another tab or scan, the entire action is refused. Original audio and current mix are untouched.</p>
         <ul className="batch-preview">{confirmBatch.songs.slice(0, 15).map((song) =>
-          <li key={song.id}>{song.title} - {song.artist} (ID {song.id})</li>
+          <li key={song.id}>{song.title} - {song.artist} (ID {song.id}; priority {song.priority ? 'on' : 'off'}; excluded {song.never ? 'yes' : 'no'})</li>
         )}</ul>
         {confirmBatch.songs.length > 15 && <p>…and {confirmBatch.songs.length - 15} more selected recordings.</p>}
       </Dialog>}
