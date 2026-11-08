@@ -5,6 +5,7 @@ import { mixReadiness, occurrenceKeys, orderOf } from '../state/readiness';
 import { Action, announce, Dialog, Sheet } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { useReducedMotion } from '../ui/useReducedMotion';
+import { PageLink } from '../shell/PageLink';
 import { Adder } from './Adder';
 import { RenameDraft } from './Drafts';
 import { AddGap, MoveHow, RowActions, SeamUnlessReplaced, SongInspector, SongLine } from './EditorRows';
@@ -609,6 +610,11 @@ export function Mix(props: ViewProps) {
     />
   );
   const inspecting = !!seamInspector || !!songInspector;
+  // Lucy is told which mix this is, and the selected song or transition by its position, never more.
+  const askLucy = new URLSearchParams({ scope: inDraft ? `draft:${draftId}` : 'current' });
+  if (selectedSongIndex >= 0) askLucy.set('occurrence', String(selectedSongIndex));
+  else if (selectedIndex > 0) askLucy.set('seam', String(selectedIndex));
+  askLucy.set('from', inDraft ? `/mixes/drafts/${draftId}/edit` : '/mix/current/edit');
 
   const actions = (
     <>
@@ -651,6 +657,7 @@ export function Mix(props: ViewProps) {
         </Action>
       )}
       {mix.length > 1 && <button onClick={() => setExporting(true)}>Download audio</button>}
+      <PageLink className="button" to={`/mixes/lucy?${askLucy.toString()}`}>Ask Lucy about this mix</PageLink>
       {inDraft ? (
         <>
           <button className="destructive" onClick={() => setConfirmDelete(true)}><Icon name="trash" /> Delete</button>

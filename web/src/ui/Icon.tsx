@@ -41,6 +41,8 @@ const paths = {
   sun: 'M12 3V2M12 22v-1M4 12H3M21 12h-1M6.3 6.3l-.7-.7M18.4 18.4l-.7-.7M17.7 6.3l.7-.7M5.6 18.4l.7-.7M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   moon: 'M21 13.5A9 9 0 1 1 10.5 3a7 7 0 0 0 10.5 10.5Z',
   system: 'M3 5h18v12H3ZM8 21h8M12 17v4',
+  mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3',
+  thread: 'M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0',
 } as const;
 
 export type IconName = keyof typeof paths;

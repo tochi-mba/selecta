@@ -1,6 +1,7 @@
 import { MixItem, post, SeamState } from './api';
 import { mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { saveResume } from './lib';
+import { listenEnded, listenStarted } from './lucy/listening';
 
 /** Plays a mix with no gaps, by scheduling finished audio on the sound card's own clock.
  *
@@ -354,6 +355,7 @@ export class SetPlayer {
     this.current = { ...playing, songId: item.song_id, position, startedAt, offset, duration: buffer.duration };
     this.requested.clear();
     this.update({ phase: 'playing', duration: buffer.duration });
+    listenStarted(item.song_id, offset, this.heard.get(item.song_id) ?? 0);
     if (this.timer === null) this.timer = window.setInterval(() => this.tick(), 50);
     this.tick();
   }
@@ -397,6 +399,7 @@ export class SetPlayer {
     }
     const heard = (this.heard.get(current.songId) ?? 0) + Math.max(0, (this.context?.currentTime ?? current.startedAt) - current.startedAt);
     void post('/playback/skip', { song_id: current.songId, heard_seconds: heard, source_position: this.songTime() }).catch(() => {});
+    listenEnded(current.songId, 'skip', heard, this.songTime());
     await this.playFrom(position + 1);
   }
 
@@ -473,6 +476,7 @@ export class SetPlayer {
     if (mix[current.position + 1]) {
       const heard = (this.heard.get(current.songId) ?? 0) + Math.max(0, (this.context?.currentTime ?? current.startedAt) - current.startedAt);
       void post('/playback/skip', { song_id: current.songId, heard_seconds: heard, source_position: this.songTime() }).catch(() => {});
+      listenEnded(current.songId, 'skip', heard, this.songTime());
       await this.playFrom(current.position + 1);
       this.update({ notice: seam?.status === 'ready' ? '' : 'That seam wasn’t ready, so this skipped straight on.' });
     }
@@ -486,6 +490,11 @@ export class SetPlayer {
       this.timer = null;
     }
     this.update({ phase: 'idle', notice: '', position: 0, songTime: 0, inSeam: false, seamAt: null });
+  }
+
+  /** How much of this song the main player has sounded, up to `at` on the audio clock. */
+  private heardOf(current: Current, at = this.context?.currentTime ?? current.startedAt): number {
+    return (this.heard.get(current.songId) ?? 0) + Math.max(0, at - current.startedAt);
   }
 
   private songTime(): number {
@@ -552,8 +561,11 @@ export class SetPlayer {
 
     // A planned seam has passed its switch point: B is now the song on screen.
     if (this.planned && now >= this.planned.whenA + this.planned.switchAt) {
+      const left = this.current;
+      listenEnded(left.songId, 'complete', this.heardOf(left, this.planned.whenA), left.offset + Math.max(0, this.planned.whenA - left.startedAt));
       this.seamTailEnd = this.planned.next.startedAt + SEAM_FADE;
       this.current = this.planned.next;
+      listenStarted(this.current.songId, this.current.offset, this.heard.get(this.current.songId) ?? 0);
       const key = this.planned.key;
       this.planned = null;
       this.requested.clear();
@@ -593,7 +605,10 @@ export class SetPlayer {
     }
 
     if (!nextItem) {
-      if (now > current.startedAt + (current.duration - current.offset)) this.update({ phase: 'idle', songTime: 0 });
+      if (now > current.startedAt + (current.duration - current.offset)) {
+        listenEnded(current.songId, 'complete', this.heardOf(current), time);
+        this.update({ phase: 'idle', songTime: 0 });
+      }
       return;
     }
     if (seam) this.requestSeam(nextItem, seam);
@@ -730,7 +745,9 @@ export class SetPlayer {
     playing.gain.gain.setValueAtTime(0, at);
     playing.gain.gain.linearRampToValueAtTime(1, at + END_FADE);
     playing.source.start(at);
+    listenEnded(current.songId, 'complete', this.heardOf(current, at), current.offset + Math.max(0, at - current.startedAt));
     this.current = { ...playing, songId: item.song_id, position, startedAt: at, offset: 0, duration: buffer.duration };
+    listenStarted(item.song_id, 0, this.heard.get(item.song_id) ?? 0);
     this.requested.clear();
     this.ending = false;
     this.update({

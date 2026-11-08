@@ -5,6 +5,7 @@ import { useLocationText } from '../router';
 import { orderOf } from '../state/readiness';
 import { operationId } from '../state/async';
 import { EXPLORE_TABS } from '../shell/manifest';
+import { PageLink } from '../shell/PageLink';
 import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
@@ -196,6 +197,11 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           {replacing ? ` Playing a new mix replaces ${mixName}, which you can undo. To keep it playing, use Save as draft.` : ''}
         </p>
       </section>
+
+      <div className="row wrap lucy-entry">
+        <PageLink to="/mixes/lucy" className="button">Make it with Lucy</PageLink>
+        <span className="hint">Describe a mix in your own words. Lucy plans it; nothing is built until you approve it.</span>
+      </div>
 
       {problem && <p className="warn" role="alert">{problem}</p>}
 

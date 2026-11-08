@@ -227,7 +227,7 @@ export function problemKind(error: unknown): ProblemKind {
   return 'server';
 }
 
-async function send<T>(path: string, init?: RequestInit): Promise<T> {
+export async function send<T>(path: string, init?: RequestInit): Promise<T> {
   // Reads have a recovery deadline. Never abort a mutation and imply it did not happen.
   const controller = !init?.method || init.method === 'GET' ? new AbortController() : null;
   const timeout = controller ? window.setTimeout(() => controller.abort(), 20000) : null;
