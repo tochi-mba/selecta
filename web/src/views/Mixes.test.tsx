@@ -294,7 +294,7 @@ describe('Pick a feeling', () => {
     expect(inside.getByText(/100–124 BPM/)).toBeInTheDocument();
     expect(inside.getByText(/Vocal rides and long blends/)).toBeInTheDocument();
     expect(inside.getByText('40 matching songs')).toBeInTheDocument();
-    expect(inside.getByText('Up to 1 hr 5 min')).toBeInTheDocument();
+    expect(inside.getByText('About 1 hr 5 min of matching source songs')).toBeInTheDocument();
     expect(inside.getByRole('button', { name: 'Shape first' })).toBeEnabled();
   });
 
@@ -358,7 +358,7 @@ describe('a feeling kept as a draft', () => {
     await waitFor(() => expect(notify).toHaveBeenCalled());
     expect(calls.find((call) => call.method === 'POST')?.path).toContain('as_draft=true');
     expect(setMixData).not.toHaveBeenCalled();
-    expect(notify.mock.calls[0][0]).toContain('Nothing changed in what’s playing');
+    expect(notify.mock.calls[0][0]).toContain('Your current playback was not changed');
   });
 });
 
@@ -385,7 +385,7 @@ describe('browsing and my mixes', () => {
     fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', ''), { ...card('rap', 'Rap run', ''), ready: false, needs: 4, group: 'The sound' }] });
     show();
     expect(await screen.findByText('needs 4 more')).toBeInTheDocument();
-    expect(screen.getByText(/analysed and have timed lyrics/)).toBeInTheDocument();
+    expect(screen.getByText(/mix-ready songs/)).toBeInTheDocument();
   });
 });
 
