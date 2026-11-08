@@ -1,0 +1,70 @@
+# Selecta / Flow — per-task implementation and independent verification evidence ledger
+
+**50 Proposed ADRs, 400 new SF tasks Not started, 0 In progress, 0 Implemented, 0 independently Verified.** All owner, implementing PR/SHA and independent evidence fields are unassigned. Baseline: main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` (2026-11-08). The planning PR is not an implementing PR.
+
+| SF task | ADR | Implementation | Independently Verified | Owner | Implementing PR / SHA | Evidence / reviewer |
+|---|---|---|---|---|---|---|
+| SF-0198-01 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | — | — |
+| SF-0198-02 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | — | — |
+| SF-0198-03 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | — | — |
+| SF-0198-04 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | — | — |
+| SF-0198-05 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | — | — |
+| SF-0198-06 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | — | — |
+| SF-0198-07 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | — | — |
+| SF-0198-08 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | — | — |
+| SF-0199-01 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | — | — |
+| SF-0199-02 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | — | — |
+| SF-0199-03 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | — | — |
+| SF-0199-04 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | — | — |
+| SF-0199-05 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | — | — |
+| SF-0199-06 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | — | — |
+| SF-0199-07 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | — | — |
+| SF-0199-08 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | — | — |
+| SF-0200-01 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | — | — |
+| SF-0200-02 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | — | — |
+| SF-0200-03 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | — | — |
+| SF-0200-04 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | — | — |
+| SF-0200-05 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | — | — |
+| SF-0200-06 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | — | — |
+| SF-0200-07 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | — | — |
+| SF-0200-08 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | — | — |
+| SF-0201-01 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | — | — |
+| SF-0201-02 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | — | — |
+| SF-0201-03 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | — | — |
+| SF-0201-04 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | — | — |
+| SF-0201-05 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | — | — |
+| SF-0201-06 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | — | — |
+| SF-0201-07 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | — | — |
+| SF-0201-08 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | — | — |
+| SF-0202-01 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | — | — |
+| SF-0202-02 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | — | — |
+| SF-0202-03 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | — | — |
+| SF-0202-04 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | — | — |
+| SF-0202-05 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | — | — |
+| SF-0202-06 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | — | — |
+| SF-0202-07 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | — | — |
+| SF-0202-08 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | — | — |
+| SF-0203-01 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | — | — |
+| SF-0203-02 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | — | — |
+| SF-0203-03 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | — | — |
+| SF-0203-04 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | — | — |
+| SF-0203-05 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | — | — |
+| SF-0203-06 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | — | — |
+| SF-0203-07 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | — | — |
+| SF-0203-08 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | — | — |
+| SF-0204-01 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | — | — |
+| SF-0204-02 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | — | — |
+| SF-0204-03 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | — | — |
+| SF-0204-04 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | — | — |
+| SF-0204-05 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | — | — |
+| SF-0204-06 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | — | — |
+| SF-0204-07 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | — | — |
+| SF-0204-08 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | — | — |
+| SF-0205-01 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | — | — |
+| SF-0205-02 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | — | — |
+| SF-0205-03 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | — | — |
+| SF-0205-04 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | — | — |
+| SF-0205-05 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | — | — |
+| SF-0205-06 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | — | — |
+| SF-0205-07 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | — | — |
+| SF-0205-08 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | — | — |
