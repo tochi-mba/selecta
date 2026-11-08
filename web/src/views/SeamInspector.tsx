@@ -178,6 +178,15 @@ function SeamEditor(props: {
         </div>
         <p className="hint">{move?.description}</p>
         <p className="hint">{options.tempo_gap}% tempo gap, keys {options.keys.join(' and ')}.</p>
+        <details className="music-context-help">
+          <summary>What do these music terms mean for this transition?</summary>
+          <dl>
+            <div><dt>Tempo / BPM</dt><dd>Beats per minute measures speed, not energy. A {options.tempo_gap}% gap is the measured tempo difference between these two songs; a larger gap can make some moves harder. It does not prove the mix sounds good or bad.</dd></div>
+            <div><dt>Key</dt><dd>{options.keys.length ? `The analysed keys are ${options.keys.join(' and ')}.` : 'Key information is unavailable.'} A key describes a tonal centre; a matching label is not proof of compatible melodies.</dd></div>
+            <div><dt>Bars and phrase cues</dt><dd>Bars group beats. The leave and enter controls below use analysed musical boundaries where available; they do not guarantee a satisfying transition.</dd></div>
+            <div><dt>Available moves</dt><dd>The choices above come from this exact pair's current analysis. A greyed-out move has a specific reason under “Why moves are greyed out”, rather than being a permanent rule for a genre.</dd></div>
+          </dl>
+        </details>
         {off.length > 0 && (
           <details className="why-not">
             <summary>Why {off.length === 1 ? 'one move is' : `${off.length} moves are`} greyed out</summary>
