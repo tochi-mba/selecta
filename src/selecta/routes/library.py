@@ -242,7 +242,9 @@ def add_routes(app, ctx) -> None:
                     ids,
                 ).fetchall()
                 if len(selected) != len(ids):
-                    raise HTTPException(409, "The Library selection changed. Refresh and try again.")
+                    raise HTTPException(
+                        409, "The Library selection changed. Refresh and try again."
+                    )
                 by_id = {row["id"]: row for row in selected}
                 current_never = never_played(conn)
                 for entry in body.entries:
@@ -251,7 +253,9 @@ def add_routes(app, ctx) -> None:
                         if is_priority else entry.id in current_never
                     )
                     if existing != entry.expected:
-                        raise HTTPException(409, "A song changed since selection. Refresh and try again.")
+                        raise HTTPException(
+                            409, "A song changed since selection. Refresh and try again."
+                        )
                 if is_priority:
                     wanted = 100 if body.action == "prioritize" else 0
                     conn.executemany(
