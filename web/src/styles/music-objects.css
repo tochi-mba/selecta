@@ -126,3 +126,11 @@
   .energy-overview button[aria-current='true'] { border-color: Highlight; }
   .studio-cell.ai-changed { outline: 2px dashed Highlight; outline-offset: -2px; box-shadow: none; }
 }
+
+/* Compact routes reuse the already visible song rows and names. The visual itself
+   has one accessible name, without duplicating the ordered timeline as list items. */
+.music-route.compact .music-route-icons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.music-route.compact .music-route-icons > span { display: inline-flex; align-items: center; gap: var(--space-1); border-radius: var(--radius-sm); }
+.music-route.compact .music-route-icons > span.wanted { outline: 1px solid var(--selected); outline-offset: 1px; }
+.music-route.compact .music-route-arrow { font-weight: 700; color: var(--text-soft); }
+.music-route.compact .song-motif { width: 22px; height: 22px; margin: 0; }

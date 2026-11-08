@@ -97,7 +97,8 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
     return Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1) * detail.duration;
   };
   const beginSeek = (event: PointerEvent<HTMLDivElement>) => {
-    if (!event.isPrimary || event.button !== 0) return;
+    // Real browsers expose isPrimary; tolerate older PointerEvent shims that omit it.
+    if (event.isPrimary === false || event.button !== 0) return;
     if (seekBlocked) {
       announce(CANT_SEEK);
       return;

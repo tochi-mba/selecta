@@ -541,7 +541,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
               </span>
               <button aria-label={`Cancel request for ${title}`} title="Cancel this request" onClick={() => void cancel(request)}>Cancel</button>
             </div>
-            <RouteDiagram songs={songs} requestedId={request.song_id} state={stage === 'ready' ? 'ready' : 'preparing'} />
+            <RouteDiagram songs={songs} requestedId={request.song_id} state={stage === 'ready' ? 'ready' : 'preparing'} compact />
             <ol className="coming-rows">
               {seams[0] && <ComingSeam item={seams[0]} />}
               {songs.map((song, index) => {
@@ -624,8 +624,14 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
                     <b>{extras.map((song) => song.title).join(' and ')}</b>
                     <span>{extras.length > 1 ? `${EXTRA_WORDS[extras.length]} on the way` : extras[0]?.artist ?? 'Unknown artist'}</span>
                   </div>
-                  <p className="hint">After {option.after}{option.before ? ', before ' + option.before : ''}. These songs have not joined.</p>
-                  <RouteDiagram songs={option.songs} requestedId={request.song_id} state="proposed" />
+                  <p className="bridge-chain">
+                    <span>{option.after}</span>
+                    {option.songs.map((song) => (
+                      <span key={song.id} className={song.bridge ? 'bridge-step' : 'bridge-wanted'}> → {song.title}</span>
+                    ))}
+                    {option.before && <span> → {option.before}</span>}
+                  </p>
+                  <RouteDiagram songs={option.songs} requestedId={request.song_id} state="proposed" compact />
                   <p className="hint">{option.words}</p>
                   <div className="row wrap">
                     <button className="primary" onClick={() => use(option)}>Use this</button>

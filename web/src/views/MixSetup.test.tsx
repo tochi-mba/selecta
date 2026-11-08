@@ -17,7 +17,7 @@ describe('five-stop energy arc input parity', () => {
   it('cancels an interrupted pointer stroke without leaving a half-drawn energy choice', () => {
     fakeBackend({ 'POST /steer': {} });
     render(<MixSetup status={status()} mix={[]} refreshStatus={() => {}} notify={() => {}} onClose={() => {}} />);
-    const graphic = screen.getByRole('img', { name: /Draw the requested five-stop energy journey/ });
+    const graphic = screen.getByRole('img', { name: /Draw energy arc/ });
     const numeric = screen.getByRole('spinbutton', { name: 'Energy arc start numeric value' });
     vi.spyOn(graphic, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 100, height: 40 } as DOMRect);
     Object.defineProperty(graphic, 'setPointerCapture', { configurable: true, value: vi.fn() });

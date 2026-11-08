@@ -63,13 +63,27 @@ export function SeamDiagram({ seam, from, into, names = {}, compact = false }: {
 
 /** This route is an actual returned ordering, not a predicted connection or an inserted track.
  * Consent and the eventual atomic join remain with the existing request controller. */
-export function RouteDiagram({ songs, requestedId, state }: {
+export function RouteDiagram({ songs, requestedId, state, compact = false }: {
   songs: { id: number; title: string; artist?: string | null }[];
   requestedId: number;
   state: 'proposed' | 'preparing' | 'ready';
+  compact?: boolean;
 }) {
   if (!songs.length) return null;
   const heading = state === 'proposed' ? 'Proposed route — nothing added' : state === 'ready' ? 'Prepared route — waiting to join' : 'Preparing route — not playable yet';
+  if (compact) return (
+    <div className={'music-route compact ' + state} role="img" aria-label={heading + '. ' + songs.map((song) => song.title).join(' → ')}>
+      <span className="music-route-state">{heading}</span>
+      <div className="music-route-icons" aria-hidden="true">
+        {songs.map((song, index) => (
+          <span className={song.id === requestedId ? 'wanted' : 'bridge'} key={song.id + '-' + index}>
+            {index > 0 && <span className="music-route-arrow">→</span>}
+            <SongMotif songId={song.id} />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
   return (
     <div className={'music-route ' + state}>
       <p className="music-route-state">{heading}</p>
@@ -101,7 +115,7 @@ export function EnergyHorizon({ values, source, onPointerDown, onPointerMove, on
   const points = values.map((energy, index) => String(index * 25) + ',' + String(38 - energy * 0.34)).join(' ');
   return (
     <svg className={'energy-arc-preview energy-horizon ' + source} viewBox="0 0 100 40" preserveAspectRatio="none"
-      role="img" aria-label={source === 'measured' ? 'Measured relative energy of the current mix, from start to finish' : 'Draw the requested five-stop energy journey'}
+      role="img" aria-label={source === 'measured' ? 'Measured relative energy of the current mix, from start to finish' : 'Draw energy arc'}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel} onLostPointerCapture={onLostPointerCapture}>
       <polyline className={source === 'measured' ? 'achieved' : undefined} points={points} />

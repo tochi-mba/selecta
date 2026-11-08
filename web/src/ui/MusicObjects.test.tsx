@@ -55,7 +55,7 @@ describe('honest shared musical objects', () => {
 
   it('keeps requested and measured energy explicitly separate, with no invented measurement', () => {
     const { container } = render(<EnergyHorizon values={[20, 40, 60, 80, 100]} source="intention" />);
-    expect(screen.getByRole('img', { name: /requested five-stop/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Draw energy arc/ })).toBeInTheDocument();
     expect(container.querySelector('polyline.achieved')).toBeNull();
     const { container: measured } = render(<EnergyHorizon values={[0, 25, 50, 75, 100]} source="measured" />);
     expect(measured.querySelector('polyline.achieved')).toBeInTheDocument();
