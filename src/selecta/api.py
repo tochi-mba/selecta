@@ -165,6 +165,15 @@ def create_app(
             operation in finished_operations or operation in running_operations
         ):
             return await call_next(request)
+        # Export jobs persist across server restarts. A retried operation that
+        # already created a frozen job must recover that exact job even if the
+        # audible mix changed since its original submission.
+        if (
+            operation and request.method == "POST"
+            and request.url.path == "/api/exports/jobs"
+            and ctx.has_export_operation(operation)
+        ):
+            return await call_next(request)
         draft = request.query_params.get("draft")
         try:
             with connect() as conn:
