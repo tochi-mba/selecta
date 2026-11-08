@@ -162,6 +162,31 @@ def test_a_bad_page_marker_says_so(client):
     assert client.get("/api/library", params={"after": "{nope"}).status_code == 400
 
 
+@pytest.mark.parametrize(
+    ("after", "sort", "q"),
+    [
+        ("null", "title", ""),
+        ("{}", "title", ""),
+        ("[1]", "title", ""),
+        ("[1,2,3]", "title", ""),
+        ('["first",false]', "title", ""),
+        ('["first",0]', "title", ""),
+        ('[12,1]', "title", ""),
+        ('["first",1]', "tempo", ""),
+        ('["first",1]', "title", "Song"),
+        ('[true,1]', "recent", ""),
+        ('[NaN,1]', "tempo", ""),
+        ('[0,1]', "artist", ""),
+        ("[" + "a" * 1100 + "]", "title", ""),
+    ],
+)
+def test_library_cursor_refuses_bad_shapes_and_sort_types(client, after, sort, q):
+    answer = client.get(
+        "/api/library", params={"state": "all", "sort": sort, "q": q, "after": after}
+    )
+    assert answer.status_code == 400
+    assert answer.json()["detail"] == "That page marker isn't valid."
+
 def test_a_page_is_never_enormous(client, conn):
     for song_id in range(100, 400):
         _add(conn, song_id)
