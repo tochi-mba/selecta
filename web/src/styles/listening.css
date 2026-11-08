@@ -99,6 +99,25 @@
 .listen-side .next-up { border-top: 0; margin-top: 0; padding-top: 0; }
 .now:not(.stage) .listen-side .handoff { margin-top: 0; grid-template-columns: minmax(0, 1fr); }
 .listen-identity .artist { margin-bottom: var(--space-4); }
+/* Track titles have their own measured role, distinct from mix headers and
+   Stage. The JS size fit is a progressive enhancement; never clip metadata. */
+.listen-identity .track-title {
+  font-size: clamp(1.4rem, 5cqi, 3.25rem);
+  line-height: 1.08;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  max-width: 100%;
+  margin-bottom: var(--space-2);
+}
+.listen-identity .artist {
+  font-size: clamp(1rem, 1.6cqi, 1.25rem);
+  line-height: 1.4;
+  max-width: 100%;
+}
+.listen-identity { container-type: inline-size; }
+.stage .listen-identity .track-title { font-size: clamp(1.35rem, 3cqi, 2.5rem); }
+
 /* A quiet editorial sleeve, not album art or a representation of measured audio.
    During a real handoff the trim changes state without adding fake movement. */
 .now:not(.stage) .listen-identity {
