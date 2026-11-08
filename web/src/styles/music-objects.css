@@ -167,6 +167,9 @@
   background: var(--surface-raised);
   contain-intrinsic-size: auto 240px;
 }
+.library-rows .song-row.selected { background: var(--surface-selected); box-shadow: inset 3px 0 0 var(--edge-selected); }
+.library-rows .song-row.selected:focus-within { outline: 2px solid var(--edge-focus); outline-offset: 2px; }
+.library-rows.library-cards .song-row.selected { border-color: var(--edge-selected); }
 .library-rows.library-cards .song-row:focus-within { content-visibility: visible; border-color: var(--selected); }
 .library-rows.library-cards .song-name { min-width: 0; }
 .library-rows.library-cards .song-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: var(--space-1); }
