@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Command } from '../shell/commands';
+import { fakeBackend } from '../test/backend';
 import { CommandPalette } from './CommandPalette';
 
 const command = (id: string, run = vi.fn()): Command => ({
@@ -31,5 +32,29 @@ describe('command palette safety', () => {
     fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
     expect(screen.getByRole('status')).toHaveTextContent('Wait for this draft to load.');
     expect(run).not.toHaveBeenCalled();
+  });
+  it('opens the exact recording ID even when different results share a title', async () => {
+    window.history.pushState({}, '', '/listen');
+    const calls = fakeBackend({
+      'GET /library': {
+        songs: [
+          { id: 11, title: 'Shared', artist: 'Artist', bpm: null, readiness: { status: 'queued', reason: '' } },
+          { id: 72, title: 'Shared', artist: 'Artist', bpm: null, readiness: { status: 'queued', reason: '' } },
+        ],
+        total: 2, next: null,
+      },
+    });
+    const close = vi.fn();
+    render(<CommandPalette commands={[]} onClose={close} />);
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Shared' } });
+    const exact = await screen.findByRole('option', { name: /Song: Shared.*song 72/ });
+    fireEvent.click(exact);
+    expect(close).toHaveBeenCalledOnce();
+    expect(window.location.pathname).toBe('/library');
+    const query = new URLSearchParams(window.location.search);
+    expect(query.get('q')).toBe('72');
+    expect(query.get('song')).toBe('72');
+    expect(query.get('show')).toBe('all');
+    expect(calls.some((call) => call.path.includes('q=Shared'))).toBe(true);
   });
 });
