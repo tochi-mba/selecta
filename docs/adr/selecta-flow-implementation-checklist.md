@@ -627,3 +627,37 @@
 - [ ] **SF-0245-06 — Audit content edge cases.** **Acceptance:** Long strings, tiny counts, nulls and overflow handled. **Required verification:** RTL/zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0245-07 — Audit motion finishing.** **Acceptance:** Transitions cancel without jitter or ghost surfaces. **Required verification:** Slow-motion capture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0245-08 — Sign off across devices.** **Acceptance:** Independent reviewer approves exact candidate SHA. **Required verification:** Signed visual QA dossier. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0246 — Complete listening-to-creation journey and musical delight milestones](adr-0246-end-to-end-journey.md)
+
+**Priority / phase:** P0 / Experience. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0246-01 — Storyboard first playable set.** **Acceptance:** From folder to six ready tracks to Listen recorded. **Required verification:** Journey protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0246-02 — Storyboard first handoff.** **Acceptance:** Actual audio event and truthful visual moment identified. **Required verification:** Real playback review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0246-03 — Storyboard first edit.** **Acceptance:** User navigates to correct song and seam. **Required verification:** Task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0246-04 — Storyboard Studio recovery.** **Acceptance:** Unapplied cells survive intentional route changes. **Required verification:** Recovery E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0246-05 — Storyboard request and consent.** **Acceptance:** Listener understands route and bridge decision. **Required verification:** Consent usability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0246-06 — Storyboard finish and export.** **Acceptance:** Frozen rendered artifact validated. **Required verification:** FLAC decode and review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0246-07 — Evaluate cross-scene memory.** **Acceptance:** Song, mix and intent recognizable after navigation. **Required verification:** Uncoached session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0246-08 — Record delight and correctness.** **Acceptance:** Music satisfaction separate from task accuracy. **Required verification:** Listener and DJ feedback. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0247 — Implementation-status integrity and independent GO/NO-GO governance](adr-0247-release-governance.md)
+
+**Priority / phase:** P0 / Delivery. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0247-01 — Define decision state transitions.** **Acceptance:** Proposed, Accepted, Rejected, Superseded documented with dates. **Required verification:** ADR governance audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0247-02 — Define implementation state transitions.** **Acceptance:** Not started/In progress/Implemented require source evidence. **Required verification:** Ledger check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0247-03 — Define independent verification.** **Acceptance:** Reviewer, environment, media and SHA traceable. **Required verification:** Evidence template audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0247-04 — Set P0/P1/P2 rules.** **Acceptance:** Audio/data/privacy/access failures block release. **Required verification:** Failure triage review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0247-05 — Require full parity checks.** **Acceptance:** Every core feature maps to source and tested journey. **Required verification:** Feature parity matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0247-06 — Define visual sign-off protocol.** **Acceptance:** Candidate images separate from approved baselines. **Required verification:** Reviewer approval record. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0247-07 — Prove safe rollback.** **Acceptance:** Old/current/new state preserved without migration loss. **Required verification:** Rollback E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0247-08 — Publish final release verdict.** **Acceptance:** No GO without signed exact-SHA gate and music evaluation. **Required verification:** Independent release report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## Status update policy and implementing evidence
+
+1. Owner records Proposed → Accepted/Rejected/Superseded with date and rationale; design approval is not implementation.
+2. Implementation moves Not started → In progress → Implemented only with matching code, fixtures, tests and implementing PR/commit SHA. Prior MI/CI/source features may be reused but require a task-specific check against current evidence.
+3. Independently Verified Yes requires a named reviewer, exact tested SHA, test device/OS/browser, real audio and accessibility results as applicable, and a recorded GO/NO-GO disposition. CI or screenshot-candidate generation alone cannot confer verification.
+4. Every released slice preserves single player/manual Pause, original files, current/draft revisions and Undo, consented atomic bridge, eight-lane Studio, Library readiness, blind A/B neutrality, frozen-revision FLAC and local privacy.
+5. Never silently change historic task counts in T/P/S3/S31/S4/EX/MI/CI ledgers. See [status reconciliation](selecta-flow-status-reconciliation.md) and [independent release gates](selecta-flow-release-gates.md).
