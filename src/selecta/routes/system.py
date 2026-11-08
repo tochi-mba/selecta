@@ -183,7 +183,7 @@ def add_routes(app, ctx) -> None:
     @app.get("/api/backup/status")
     def backup_restore_status() -> dict:
         return {
-            "pending_restart": (settings.home / PENDING).is_file(),
+            "pending_restart": (settings.home / PENDING).is_dir(),
             "rollback_available": (settings.home / ROLLBACK).is_file(),
             "problem": getattr(ctx, "restore_problem", None),
         }
