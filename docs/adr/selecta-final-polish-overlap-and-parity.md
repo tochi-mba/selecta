@@ -24,7 +24,7 @@ Before any implementation, pin the **current** source SHA and map each FP task t
 | Workspace, Sources, Storage, diagnostics | ADR-0230, 0232; GP-0253, 0263 | FP-0269 action tiers; FP-0270 stacked chrome; FP-0271 theme pairs | `Workshop.tsx`, `WorkshopPanels.tsx`; local/privacy safe |
 | Backup / Restore | GP-0253; ADR-0230, 0238 | FP-0271 UI-state pairing only | `LocalBackup.tsx`, `backup.py`; staged restore/rollback |
 | Export jobs and saved FLAC | ADR-0231; GP existing preservation | FP-0271 UI-state pairing only | `ExportPanel.tsx`, `ExportJobs.tsx`; frozen revision, decodable file |
-| Blind A/B study | ADR-0236; prior neutral evaluation contracts | FP-0271 evidence coverage; no protocol change | `Listening.tsx`; do not reveal treatment identity |
+| Blind A/B study | ADR-0158, ADR-0129, ADR-0109; prior neutral evaluation contracts | FP-0271 evidence coverage; no protocol change | `Listening.tsx`; do not reveal treatment identity |
 | Shell, overlays, PWA, mobile | ADR-0208/0209, 0233/0234; GP-0254 | FP-0265 browser chrome, FP-0270 simultaneous collision contract | `Shell.tsx`, `tokens.css`, `index.html` |
 | QA, human research and release | ADR-0239, 0240, 0247; GP release gates | FP-0271 same-fixture Light/Dark pairs and signed denominator | `web/e2e/visual.e2e.ts`; candidates not verified goldens |
 
