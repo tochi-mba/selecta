@@ -388,3 +388,23 @@
 | SF-0245-06 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | — | — |
 | SF-0245-07 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | — | — |
 | SF-0245-08 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | — | — |
+| SF-0246-01 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | — | — |
+| SF-0246-02 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | — | — |
+| SF-0246-03 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | — | — |
+| SF-0246-04 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | — | — |
+| SF-0246-05 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | — | — |
+| SF-0246-06 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | — | — |
+| SF-0246-07 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | — | — |
+| SF-0246-08 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | — | — |
+| SF-0247-01 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | — | — |
+| SF-0247-02 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | — | — |
+| SF-0247-03 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | — | — |
+| SF-0247-04 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | — | — |
+| SF-0247-05 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | — | — |
+| SF-0247-06 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | — | — |
+| SF-0247-07 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | — | — |
+| SF-0247-08 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | — | — |
+
+## Independent verification discipline
+
+Every row remains Not started / Verified No until separately evidenced. Implementation needs source PR/SHA and task-specific passing regression. Verification needs an independent reviewer and dated SHA-tied visual, audio, accessibility, touch and real-device results where applicable. No rows were marked complete by this documentation-only PR. [Checklist](selecta-flow-implementation-checklist.md) · [Gates](selecta-flow-release-gates.md).
