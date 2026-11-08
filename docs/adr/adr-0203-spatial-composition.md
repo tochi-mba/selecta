@@ -1,4 +1,4 @@
-# ADR-203 — Spacing, surfaces, density and flexible compositions
+# ADR-0203 — Spacing, surfaces, density and flexible compositions
 
 - **Decision:** Proposed (owner acceptance pending).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -30,14 +30,14 @@ No card-in-card clutter, sticky occlusion or shrinking critical touch targets in
 
 ## Implementation checklist — 0/8 Implemented, 0/8 Verified
 
-1. **SF-203-01 — Audit CSS ownership and conflicting overrides.** **Acceptance:** Known selectors mapped to owners. **Required verification:** CSS inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-203-02 — Define spacing/width tokens.** **Acceptance:** Rhythm consistent between screens. **Required verification:** Computed specimen review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-203-03 — Specify surfaces and elevation.** **Acceptance:** Sticky layers and modals use deliberate z-axis. **Required verification:** Scroll testing. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-203-04 — Reduce unnecessary nested cards.** **Acceptance:** Music objects retain hierarchy without box clutter. **Required verification:** Visual critique. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-203-05 — Design compact and comfortable density.** **Acceptance:** Both preserve full function and hit areas. **Required verification:** Coarse touch tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-203-06 — Implement adaptable split panes.** **Acceptance:** Inspector and player remain reachable at 320px. **Required verification:** Responsive E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-203-07 — Prevent sticky/focus obstruction.** **Acceptance:** Browser zoom and virtual keyboard supported. **Required verification:** 400% focus audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-203-08 — Test layout stability under load.** **Acceptance:** Async data does not shift important controls. **Required verification:** CLS and slow-server traces. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0203-01 — Audit CSS ownership and conflicting overrides.** **Acceptance:** Known selectors mapped to owners. **Required verification:** CSS inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0203-02 — Define spacing/width tokens.** **Acceptance:** Rhythm consistent between screens. **Required verification:** Computed specimen review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0203-03 — Specify surfaces and elevation.** **Acceptance:** Sticky layers and modals use deliberate z-axis. **Required verification:** Scroll testing. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0203-04 — Reduce unnecessary nested cards.** **Acceptance:** Music objects retain hierarchy without box clutter. **Required verification:** Visual critique. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0203-05 — Design compact and comfortable density.** **Acceptance:** Both preserve full function and hit areas. **Required verification:** Coarse touch tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0203-06 — Implement adaptable split panes.** **Acceptance:** Inspector and player remain reachable at 320px. **Required verification:** Responsive E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0203-07 — Prevent sticky/focus obstruction.** **Acceptance:** Browser zoom and virtual keyboard supported. **Required verification:** 400% focus audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0203-08 — Test layout stability under load.** **Acceptance:** Async data does not shift important controls. **Required verification:** CLS and slow-server traces. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 
 ## Invariants and required negative cases
 

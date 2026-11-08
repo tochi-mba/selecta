@@ -1,4 +1,4 @@
-# ADR-205 — Causal motion and Still/Subtle/Expressive intensity
+# ADR-0205 — Causal motion and Still/Subtle/Expressive intensity
 
 - **Decision:** Proposed (owner acceptance pending).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -30,14 +30,14 @@ No fake beat pulse, strobe, surprise sound, moving hit targets or animated delay
 
 ## Implementation checklist — 0/8 Implemented, 0/8 Verified
 
-1. **SF-205-01 — Inventory animations and owners.** **Acceptance:** Triggers and data authority recorded. **Required verification:** Source and video audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-205-02 — Define timing/easing grammar.** **Acceptance:** Short feedback and scene transitions coherent. **Required verification:** Motion gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-205-03 — Add sensory intensity setting.** **Acceptance:** Still/Subtle/Expressive saved locally. **Required verification:** Preference E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-205-04 — Honor reduced-motion priority.** **Acceptance:** OS reduce overrides nonessential effects. **Required verification:** Emulation and visual inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-205-05 — Bind musical movement to audio.** **Acceptance:** Handoff and analyzer use real clocks/samples. **Required verification:** Audio/video timing review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-205-06 — Handle interruptions.** **Acceptance:** Fast navigation/escape settle correctly. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-205-07 — Budget render and power cost.** **Acceptance:** Stop hidden loops, cap expensive effects. **Required verification:** Real hardware profiler. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-205-08 — Validate comfort and delight.** **Acceptance:** User benefits not outweighed by distraction. **Required verification:** Counterbalanced participant study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0205-01 — Inventory animations and owners.** **Acceptance:** Triggers and data authority recorded. **Required verification:** Source and video audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0205-02 — Define timing/easing grammar.** **Acceptance:** Short feedback and scene transitions coherent. **Required verification:** Motion gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0205-03 — Add sensory intensity setting.** **Acceptance:** Still/Subtle/Expressive saved locally. **Required verification:** Preference E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0205-04 — Honor reduced-motion priority.** **Acceptance:** OS reduce overrides nonessential effects. **Required verification:** Emulation and visual inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0205-05 — Bind musical movement to audio.** **Acceptance:** Handoff and analyzer use real clocks/samples. **Required verification:** Audio/video timing review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0205-06 — Handle interruptions.** **Acceptance:** Fast navigation/escape settle correctly. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0205-07 — Budget render and power cost.** **Acceptance:** Stop hidden loops, cap expensive effects. **Required verification:** Real hardware profiler. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0205-08 — Validate comfort and delight.** **Acceptance:** User benefits not outweighed by distraction. **Required verification:** Counterbalanced participant study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 
 ## Invariants and required negative cases
 
