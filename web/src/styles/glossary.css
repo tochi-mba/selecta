@@ -1,0 +1,73 @@
+/* Music terms: the glossary dialog and the small ? hints beside specialist words. Hints sit in the
+   flow of the page, never over it, so they can't hide anything and survive any zoom. */
+
+.overlay-dialog .overlay-panel:has(.glossary) { width: min(640px, 100%); }
+.glossary { display: grid; gap: var(--space-3); }
+.glossary > .hint { margin: 0; }
+.glossary .field { display: grid; gap: var(--space-1); }
+.glossary .field input { width: 100%; }
+.glossary .field-help { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
+.glossary-count { margin: 0; }
+.glossary-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.glossary-entry { padding-block: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); min-width: 0; }
+.glossary-entry h3 { margin: 0; font-size: var(--text-md); overflow-wrap: anywhere; scroll-margin-block: var(--space-3); }
+.glossary-entry h3:focus { outline: none; }
+.glossary-entry h3:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.glossary-entry p { margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.glossary-aka { font-size: var(--text-sm); }
+.glossary-related { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+.glossary-related .hint { margin: 0; }
+.glossary-related .link { min-height: var(--control-height); }
+.glossary-hints-choice { justify-self: start; max-width: 100%; }
+
+/* The ? itself, and the short definition it opens just below. */
+.term-hint { display: contents; }
+.term-hint-button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  margin-inline: var(--space-1);
+  vertical-align: middle;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+}
+.term-hint-button[aria-expanded='true'] { color: var(--text); border-color: var(--selected); background: var(--surface-selected); }
+.term-hint-panel {
+  display: block;
+  flex: 1 1 100%;
+  grid-column: 1 / -1;
+  max-width: var(--content-reading);
+  margin-block: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--selected);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-style: normal;
+  font-weight: normal;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.term-hint-more { display: inline-flex; align-items: center; margin-inline-start: var(--space-2); min-height: var(--control-height); }
+
+@media (pointer: coarse) {
+  .term-hint-button { min-width: 36px; min-height: 36px; }
+}
+
+@media (forced-colors: active) {
+  .term-hint-button { border-color: ButtonText; color: ButtonText; background: ButtonFace; forced-color-adjust: none; }
+  .term-hint-button[aria-expanded='true'] { border-color: Highlight; }
+  .term-hint-panel { border-color: CanvasText; border-inline-start-color: Highlight; }
+  .glossary-entry h3:focus-visible { outline-color: Highlight; }
+}

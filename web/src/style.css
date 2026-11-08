@@ -154,7 +154,7 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .song.over { border-color: var(--accent); }
 .song.playing { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--accent); }
 .grip { grid-area: grip; color: var(--soft); cursor: grab; user-select: none; }
-.count { grid-area: count; font: 0.85rem var(--mono); color: var(--soft); min-width: 1.4em; text-align: right; }
+.song .count { grid-area: count; font: 0.85rem var(--mono); color: var(--soft); min-width: 1.4em; text-align: right; }
 .song-name { grid-area: name; min-width: 0; display: grid; }
 .song-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .song-name span { color: var(--soft); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -5,6 +5,7 @@ import { VolumeControl } from '../shell/Shell';
 import { orderOf } from '../state/readiness';
 import { Action, announce, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
 import { useShownTheme } from '../state/prefs';
+import { TermHint } from '../ui/Glossary';
 import { Icon } from '../ui/Icon';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
@@ -573,9 +574,9 @@ function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number
   const rendered = state?.status === 'ready';
   return (
     <div className="transition-truth">
-      <p><Status kind={facts.kind}>{facts.words}</Status></p>
+      <p><Status kind={facts.kind}>{facts.words}</Status><TermHint term="transition" /></p>
       {rendered && facts.asked && state?.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What will play is {state.label}.</p>}
-      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'Selecta’s choice'}. It hasn’t been made yet, so what plays can still change.</p>}
+      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'Selecta’s choice'}. It hasn’t been made yet, so what plays can still change.<TermHint term="planned" /></p>}
       {!ready && !rendered && <p className="hint">If it isn’t ready in time, this song plays on and the next one fades in, so the music doesn’t stop.</p>}
       {state?.status === 'failed' && <p className="hint">If it can’t be made, Selecta falls back to its own pick. You can choose another in Edit.</p>}
     </div>
@@ -831,6 +832,7 @@ export function Now(props: ViewProps) {
                     <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>
                     <Action waiting={swapBusy} run={() => swap(0)} working="Finding one…">Something else</Action>
                   </div>
+                  <p className="hint steer-note">Bigger and Calmer swap the next song for one with more or less measured energy<TermHint term="measured-energy" />. Something else picks a different one that fits.<TermHint term="steering" /></p>
                   {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
                   {problem && <p className="warn" role="alert">{problem} Nothing has changed, so the plan above still stands.</p>}
                   <WhyThisTransition from={item} into={next} names={names} />

@@ -7,6 +7,9 @@ test.beforeEach(async ({ request }) => {
 
 test('measured energy bars use real varied heights rather than collapsing to identical lines', async ({ page }) => {
   await page.goto('/mix/current/edit');
+  // A mix under 12 songs folds the overview away above Arrange until it's asked for.
+  const toggle = page.getByRole('button', { name: 'Measured song energy' });
+  if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
   const bars = page.locator('.energy-overview-bar');
   await expect(bars).toHaveCount(4);
   const heights = await bars.evaluateAll((elements) => elements.map((element) =>

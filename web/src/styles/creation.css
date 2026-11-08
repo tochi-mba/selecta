@@ -245,3 +245,187 @@
 .export-snapshot-songs, .export-snapshot-seams { display: grid; gap: var(--space-1); padding-left: 1.6em; }
 .export-snapshot li { overflow-wrap: anywhere; unicode-bidi: plaintext; }
 .export-snapshot code { overflow-wrap: anywhere; }
+
+/* Story, Arrange and Detail: three views of one mix. Ordinary radios, so the checked one shows as
+   checked in every theme and in forced colours, not only by its background. */
+.editor-view { margin-top: var(--space-3); }
+.view-switch { margin: 0; padding: 0; border: 0; min-width: 0; }
+.view-switch legend {
+  float: inline-start;
+  display: flex;
+  align-items: center;
+  min-height: calc(var(--control-height) + 6px);
+  margin: 0;
+  margin-inline-end: var(--space-3);
+  padding: 0;
+  font-weight: 700;
+}
+.view-switch-options {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 100%;
+  padding: 2px;
+  background: var(--surface-control);
+  border: 1px solid var(--edge-interactive);
+  border-radius: var(--radius-pill);
+}
+.view-switch-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.view-switch-option input { width: auto; min-height: 0; margin: 0; accent-color: var(--text); }
+.view-switch-option input:focus-visible { outline: none; }
+.view-switch-option:has(input:checked) { background: var(--surface-selected); border-color: var(--selected); font-weight: 700; }
+.view-switch-option:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.view-switch-about { clear: both; margin: var(--space-1) 0 0; }
+
+/* Arrange and Detail share the timeline. In Story it stays in the page, hidden, so nothing in it is lost. */
+.page.mix .editor-arrange[hidden] { display: none; }
+.editor-mode-heading { margin: var(--space-2) 0 0; font-size: var(--text-md); }
+.editor-mode-heading:not(:focus) { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.editor-mode-heading:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Story: songs as numbered chapters, each transition hanging between two of them in words. */
+.editor-story { margin-top: var(--space-4); }
+.editor-story-title { margin: 0 0 var(--space-1); font: var(--type-section); }
+.editor-story-title:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+.story-chapters { display: grid; max-width: var(--content-reading); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+.story-chapter { min-width: 0; }
+.story-song {
+  display: grid;
+  grid-template-columns: var(--control-height) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.story-song.selected { background: var(--surface-selected); border-color: var(--selected); box-shadow: 0 0 0 1px var(--selected); }
+.story-song.playing { box-shadow: inset 3px 0 0 var(--playing); }
+.story-song.selected.playing { box-shadow: 0 0 0 1px var(--selected), inset 3px 0 0 var(--playing); }
+.story-number {
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  border: 1px solid var(--edge-interactive);
+  border-radius: 50%;
+  font: var(--type-counter);
+  font-weight: 700;
+}
+.story-song-words { min-width: 0; }
+.story-song-words h3 { margin: 0; font: var(--type-song); overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.story-song-words p { margin: 2px 0 0; color: var(--text-soft); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.story-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.story-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--space-2);
+  color: var(--text);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border: 1px solid var(--edge-interactive);
+  border-radius: var(--radius-pill);
+}
+.story-edit { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-height); }
+.story-seam {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-inline-start: calc(var(--control-height) / 2 + var(--space-3) - 1px);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border-inline-start: 2px solid var(--edge-interactive);
+}
+.story-seam.selected {
+  background: var(--surface-selected);
+  border-inline-start: 4px solid var(--selected);
+  border-start-end-radius: var(--radius-sm);
+  border-end-end-radius: var(--radius-sm);
+}
+.story-seam-words { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-width: 0; margin: 0; }
+.story-seam-words .status { white-space: normal; }
+.story-seam-detail { flex-basis: 100%; margin: 0; overflow-wrap: anywhere; }
+.story-seam .story-edit { font-size: var(--text-sm); }
+@media (max-width: 620px) {
+  .story-song { grid-template-columns: 36px minmax(0, 1fr); }
+  .story-number { width: 36px; height: 36px; }
+  .story-song .story-edit { grid-column: 1 / -1; justify-self: start; }
+  .story-seam { margin-inline-start: 17px; padding-inline: var(--space-3) 0; }
+}
+.editor-story.long .story-chapter { content-visibility: auto; contain-intrinsic-size: auto 150px; }
+.editor-story.long .story-chapter:focus-within { content-visibility: visible; }
+
+/* The measured energy overview, folded away above Arrange until it's wanted. */
+.energy-disclosure { margin-block: var(--space-3); }
+.energy-disclosure-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.energy-disclosure-toggle { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-height); }
+.energy-disclosure .energy-overview { margin-top: var(--space-2); }
+/* Unknown energy is a hatched gap with a "?", never a bar: a pattern and a mark, not colour alone. */
+.energy-overview button { position: relative; }
+.energy-overview button .energy-overview-unknown {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 100%;
+  color: var(--text);
+  font-weight: 700;
+  border: 1px dashed var(--border-strong);
+  border-radius: 2px;
+  background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--border-strong) 55%, transparent) 4px 5px);
+}
+.energy-overview-playing {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 10px;
+  height: 8px;
+  translate: -50% 0;
+  background: var(--text);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.energy-overview-now, .energy-overview-summary { margin: var(--space-1) 0 0; color: var(--text-soft); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.energy-overview-now > span { color: var(--text); font-weight: 600; unicode-bidi: plaintext; }
+.energy-overview-summary { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+.energy-overview-key { display: inline-flex; align-items: center; gap: var(--space-1); }
+.energy-overview-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px dashed var(--border-strong);
+  background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--border-strong) 3px 4px);
+}
+
+/* A small, non-interactive energy picture for mix cards. Its words are its accessible name. */
+.energy-thumb {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  width: 96px;
+  height: 28px;
+  padding: 2px;
+  vertical-align: middle;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.energy-thumb > span { flex: 1 1 0; min-width: 1px; }
+.energy-thumb-bar { min-height: 2px; background: var(--text-soft); border-radius: 1px 1px 0 0; }
+.energy-thumb-unknown { align-self: stretch; background-image: repeating-linear-gradient(135deg, transparent 0 2px, var(--border-strong) 2px 3px); }
+
+@media (forced-colors: active) {
+  .view-switch-option:has(input:checked) { border-color: Highlight; }
+  .story-song.selected, .story-seam.selected { border-color: Highlight; }
+  .energy-overview-playing { forced-color-adjust: none; background: CanvasText; }
+  .energy-overview button .energy-overview-unknown { border-color: CanvasText; }
+  .energy-thumb-bar { forced-color-adjust: none; background: CanvasText; }
+  .energy-thumb-unknown { forced-color-adjust: none; border: 1px dashed CanvasText; background-image: repeating-linear-gradient(135deg, transparent 0 2px, GrayText 2px 3px); }
+}

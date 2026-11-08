@@ -4,6 +4,7 @@ import { gb, storageWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Dialog, Problem, Skeleton, Status } from '../ui/controls';
 import { Field, Slider } from '../ui/primitives';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ViewProps } from './shared';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
 
@@ -64,9 +65,8 @@ export function StoragePanel() {
   };
   useEffect(() => {
     void refresh().catch(() => {});
-    const timer = window.setInterval(() => void refresh().catch(() => {}), 15000);
-    return () => window.clearInterval(timer);
   }, []);
+  useVisiblePoll(() => refresh().catch(() => {}), 15000);
 
   if ((!storage || limit === null) && loadFailed) return <Problem retry={refresh}>Couldn’t read storage information.</Problem>;
   if (!storage || limit === null) return <Skeleton variant="metrics" label="Working out how much room there is" />;

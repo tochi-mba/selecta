@@ -64,8 +64,10 @@ export function EditorHeader(props: {
   totalSeconds: number;
   switcher: ReactNode;
   actions: ReactNode;
+  /** Story, Arrange or Detail: how the same mix is shown below. */
+  view?: ReactNode;
 }) {
-  const { draftId, mix, mixName, mixEta, draftPlace, currentMixName, readiness, totalSeconds, switcher, actions } = props;
+  const { draftId, mix, mixName, mixEta, draftPlace, currentMixName, readiness, totalSeconds, switcher, actions, view } = props;
   const inDraft = draftId !== null;
   const facts = readinessWords(readiness);
   const { seams, ready } = readiness;
@@ -99,6 +101,7 @@ export function EditorHeader(props: {
         </div>
         <div className="row wrap editor-actions">{actions}</div>
       </div>
+      {view && <div className="editor-view">{view}</div>}
     </header>
   );
 }

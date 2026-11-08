@@ -329,6 +329,21 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     await load();
   };
   const shownDetails = rows?.find((song) => song.id === opened) ?? null;
+  // `song` in the address opens that exact recording's details once its row is loaded, and only it.
+  // If it isn't among the results, nothing opens. Closing takes it back out of the address.
+  const songAsked = useQueryParam('song');
+  const songWanted = songAsked && /^\d+$/.test(songAsked) ? Number(songAsked) : null;
+  const openedFromAddress = useRef<number | null>(null);
+  useEffect(() => {
+    if (songWanted === null) { openedFromAddress.current = null; return; }
+    if (openedFromAddress.current === songWanted || !committedRows?.some((song) => song.id === songWanted)) return;
+    openedFromAddress.current = songWanted;
+    setOpened(songWanted);
+  }, [songWanted, committedRows]);
+  const closeDetails = () => {
+    setOpened(null);
+    if (songAsked !== null) setAddressQuery({ song: null });
+  };
   // One pass rather than comparing every row against every other row: long
   // libraries can reach 20,000 songs, and identical titles must still select
   // the correct ID without a quadratic render or name collisions.
@@ -502,7 +517,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         })}
       </ul>
       {next && <Action className="library-more" working="Loading…" run={more}>Show more songs</Action>}
-      {shownDetails && <SongDetails song={shownDetails} onClose={() => setOpened(null)} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} />}
+      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} />}
       {confirmBatch && <Dialog title="Apply batch Library action?" onClose={() => setConfirmBatch(null)}
         footer={<>
           <button onClick={() => setConfirmBatch(null)}>Cancel — change nothing</button>
