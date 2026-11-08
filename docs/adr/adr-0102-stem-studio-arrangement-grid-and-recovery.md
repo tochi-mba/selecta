@@ -1,6 +1,6 @@
 # ADR-0102: Stem Studio eight-lane arrangement, accessible time grid and recovery-safe Apply
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -29,18 +29,18 @@ Recompose Studio as a compact musical workstation with persistent pair context, 
 - Working copy may be local-only; applying requires exact current seam and revision validation.
 - AI-assisted arrangement may suggest changes but a late response cannot override newer human edits.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0102-01 — Redesign Studio pair header, ruler and eight-lane grid hierarchy.** Acceptance: Track/stem/time identities are always understandable. Required verification: 8/16/32/64-cell screenshot and screen reader tests. **Implementation: Not started; Verified: No.**
-2. **S4-0102-02 — Preserve mouse, touch, Space, arrow, Home/End and Ctrl+Home/End grid actions.** Acceptance: All grid operations act on correct cell with visible focus. Required verification: ARIA grid keyboard and touch-scroll suite. **Implementation: Not started; Verified: No.**
-3. **S4-0102-03 — Make labels and time orientation sticky where appropriate.** Acceptance: Horizontal scroll never hides which stem or song is edited. Required verification: Narrow viewport, zoom, scroll tests. **Implementation: Not started; Verified: No.**
-4. **S4-0102-04 — Preserve solo/mute and missing-stem disabling truthfully.** Acceptance: Missing media cannot be toggled as if auditionable. Required verification: Partial/missing/corrupt stem fixtures. **Implementation: Not started; Verified: No.**
-5. **S4-0102-05 — Unify preview transport and audio-focus lifecycle.** Acceptance: Closing, failing, switching preview cannot overlap main mix. Required verification: Studio→Inspector→Listen audio-owner races. **Implementation: Not started; Verified: No.**
-6. **S4-0102-06 — Clarify dirty, recovered, applied and rendered states.** Acceptance: User knows if work has reached the mix or audio file. Required verification: Apply pending/complete/failure screenshot + data assertions. **Implementation: Not started; Verified: No.**
-7. **S4-0102-07 — Preserve validated local working-copy recovery.** Acceptance: Malformed, wrong cell count or wrong pair data not misapplied. Required verification: Storage blocked, invalid JSON, 64-to-8 migration tests. **Implementation: Not started; Verified: No.**
-8. **S4-0102-08 — Preserve human/AI arrangements and undo Put it back.** Acceptance: Late generated suggestions cannot erase more recent manual edit. Required verification: AI response ordering, rapid toggles and retry. **Implementation: Not started; Verified: No.**
-9. **S4-0102-09 — Harden Apply against stale pair, draft and revision.** Acceptance: Failed Apply retains local work and does not modify other draft. Required verification: Concurrent reorder, draft switch and server timeout tests. **Implementation: Not started; Verified: No.**
-10. **S4-0102-10 — Explore alternate accessible nonspatial lane editor without capability loss.** Acceptance: All toggles could be operated via conventional controls if adopted. Required verification: Human NVDA tasks before acceptance. **Implementation: Not started; Verified: No.**
+1. **S4-0102-01 - Redesign Studio pair header, ruler and eight-lane grid hierarchy.** Acceptance: Track/stem/time identities are always understandable. Required verification: 8/16/32/64-cell screenshot and screen reader tests. **Implementation: Not started; Verified: No.**
+2. **S4-0102-02 - Preserve mouse, touch, Space, arrow, Home/End and Ctrl+Home/End grid actions.** Acceptance: All grid operations act on correct cell with visible focus. Required verification: ARIA grid keyboard and touch-scroll suite. **Implementation: Not started; Verified: No.**
+3. **S4-0102-03 - Make labels and time orientation sticky where appropriate.** Acceptance: Horizontal scroll never hides which stem or song is edited. Required verification: Narrow viewport, zoom, scroll tests. **Implementation: Not started; Verified: No.**
+4. **S4-0102-04 - Preserve solo/mute and missing-stem disabling truthfully.** Acceptance: Missing media cannot be toggled as if auditionable. Required verification: Partial/missing/corrupt stem fixtures. **Implementation: Not started; Verified: No.**
+5. **S4-0102-05 - Unify preview transport and audio-focus lifecycle.** Acceptance: Closing, failing, switching preview cannot overlap main mix. Required verification: Studio→Inspector→Listen audio-owner races. **Implementation: Not started; Verified: No.**
+6. **S4-0102-06 - Clarify dirty, recovered, applied and rendered states.** Acceptance: User knows if work has reached the mix or audio file. Required verification: Apply pending/complete/failure screenshot + data assertions. **Implementation: Not started; Verified: No.**
+7. **S4-0102-07 - Preserve validated local working-copy recovery.** Acceptance: Malformed, wrong cell count or wrong pair data not misapplied. Required verification: Storage blocked, invalid JSON, 64-to-8 migration tests. **Implementation: Not started; Verified: No.**
+8. **S4-0102-08 - Preserve human/AI arrangements and undo Put it back.** Acceptance: Late generated suggestions cannot erase more recent manual edit. Required verification: AI response ordering, rapid toggles and retry. **Implementation: Not started; Verified: No.**
+9. **S4-0102-09 - Harden Apply against stale pair, draft and revision.** Acceptance: Failed Apply retains local work and does not modify other draft. Required verification: Concurrent reorder, draft switch and server timeout tests. **Implementation: Not started; Verified: No.**
+10. **S4-0102-10 - Explore alternate accessible nonspatial lane editor without capability loss.** Acceptance: All toggles could be operated via conventional controls if adopted. Required verification: Human NVDA tasks before acceptance. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

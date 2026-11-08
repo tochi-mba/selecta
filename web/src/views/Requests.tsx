@@ -9,6 +9,8 @@ import { SetPlayer } from '../player';
 import { operationId } from '../state/async';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
+import { TermHint } from '../ui/Glossary';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 
 type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
@@ -298,30 +300,25 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   const playerNow = playback?.player.state;
   useEffect(() => { checkNow.current(); }, [mixNow, playerNow?.position, playerNow?.phase, playerNow?.inSeam]);
 
+  const mounted = useRef(true);
+  const refreshList = () => {
+    if (inFlight.current) return Promise.resolve();
+    const seen = changes.current;
+    return get<RequestList>('/requests').then((data) => {
+      if (!mounted.current || seen !== changes.current) return;
+      setError((words) => (words.startsWith('Couldn’t load') ? '' : words));
+      setRequests((before) => data.requests
+        .filter((row) => !leaving.current.has(row.id))
+        .map((row) => ({ ...before?.find((old) => old.id === row.id), ...row })));
+    }).catch(() => { if (mounted.current) setError('Couldn’t load your requests. They’re still saved.'); });
+  };
   useEffect(() => {
-    let live = true;
-    const refresh = () => {
-      if (inFlight.current) return Promise.resolve();
-      const seen = changes.current;
-      return get<RequestList>('/requests').then((data) => {
-        if (!live || seen !== changes.current) return;
-        setError((words) => (words.startsWith('Couldn’t load') ? '' : words));
-        setRequests((before) => data.requests
-          .filter((row) => !leaving.current.has(row.id))
-          .map((row) => ({ ...before?.find((old) => old.id === row.id), ...row })));
-      }).catch(() => { if (live) setError('Couldn’t load your requests. They’re still saved.'); });
-    };
-    void refresh();
-    const tick = () => { if (document.visibilityState !== 'hidden') void refresh(); };
-    const visible = () => { if (document.visibilityState === 'visible') void refresh(); };
-    const timer = window.setInterval(tick, 4000);
-    document.addEventListener('visibilitychange', visible);
-    return () => {
-      live = false;
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', visible);
-    };
+    mounted.current = true;
+    void refreshList();
+    return () => { mounted.current = false; };
   }, []);
+  // the saved list only; looking for a spot above stays its own, already visibility-aware loop
+  useVisiblePoll(refreshList, 4000);
 
   /** Take a row away for now, and be able to put it back where it was. */
   const removing = (request: RequestRow) => {
@@ -537,7 +534,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
                 </span>
               </div>
               <span className="coming-progress" role="status">
-                {stage === 'ready' ? 'Ready — waiting for a valid opening' : seams.length ? `${done} of ${seams.length} ready${wait}` : `Getting it ready${wait}`}
+                {stage === 'ready' ? 'Ready - waiting for a valid opening' : seams.length ? `${done} of ${seams.length} ready${wait}` : `Getting it ready${wait}`}
               </span>
               <button aria-label={`Cancel request for ${title}`} title="Cancel this request" onClick={() => void cancel(request)}>Cancel</button>
             </div>
@@ -825,10 +822,10 @@ export function RequestsPanel() {
           {matches.map((song, index) => {
             const already = inMix.has(song.id) ? 'In your mix' : waitingIds.has(song.id) ? 'Requested' : asBridges.has(song.id) ? 'Coming as a bridge' : '';
             const duplicate = matches.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist);
-            const identity = `${song.title ?? 'Untitled'} — ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
+            const identity = `${song.title ?? 'Untitled'} - ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
             return (
               <li key={song.id} id={`request-option-${song.id}`} role="option" aria-selected={activeMatch === index}>
-                <button aria-label={`${identity} — ${already || 'Request'}`} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
+                <button aria-label={`${identity} - ${already || 'Request'}`} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
                   <span className="request-name">
                     <b>{song.title ?? 'Untitled'}</b>
                     <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>
@@ -844,9 +841,9 @@ export function RequestsPanel() {
       {message && <p className="hint" role="status">{message}</p>}
       {requests === null && !error && <p className="hint">Loading your requests…</p>}
       {requests?.length === 0 && !text && (
-        <p className="hint">Ask for a song any time. Selecta finds a spot where it fits, without interrupting the mix.</p>
+        <p className="hint">Ask for a song any time. Selecta finds a spot where it fits, without interrupting the mix.<TermHint term="request" /></p>
       )}
-      {!!requests?.length && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.</p>}
+      {!!requests?.length && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.<TermHint term="request" /></p>}
        {!!requests?.length && (
         <ul className="request-list" aria-label="Your requests">
           {orderedRequests.map((request, index) => {
@@ -887,7 +884,7 @@ export function RequestsPanel() {
                 {stage === 'approve' && (
                   <div className="request-approve" role="group" aria-label={`Approve the route to ${title}`}>
                     <h3>Getting to {title}</h3>
-                    <p className="hint">Nothing joins until you say so. These {request.route?.length ?? 0} songs join together once every transition is ready, or none of them do. None of them can play before that.</p>
+                    <p className="hint">Nothing joins until you say so. These {request.route?.length ?? 0} songs join together once every transition is ready, or none of them do. None of them can play before that.<TermHint term="bridge" /></p>
                     <ol className="bridge-route" aria-label={`Proposed route to ${title}`}>
                       {request.route?.map((song) => (
                         <li key={song.id} className={song.id === request.song_id ? 'bridge-wanted' : 'bridge-step'}>

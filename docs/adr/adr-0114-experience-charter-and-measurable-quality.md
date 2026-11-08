@@ -1,6 +1,6 @@
-# ADR-0114 — Experience-first product charter and measurable quality
+# ADR-0114 - Experience-first product charter and measurable quality
 
-- **Decision:** Proposed; owner sign-off pending.
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 new EX tasks); **Independent verification:** No (0/5).
 - **Date:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).
 - **Related:** ADR-0089 and ADR-0113; these are neither automatically superseded nor retroactively completed.
@@ -28,11 +28,11 @@ More up-front research and scoped review are needed. Never weaken regression ass
 
 ## Implementation tasks (all new, Not started / Not verified)
 
-1. **EX-0114-01 — Inventory end-to-end user journeys.** Acceptance: listener, creator and expert goals have action/error/recovery maps. Verification: route/control/API inspection and uncoached baseline tasks. **Implementation: Not started; Verified: No.**
-2. **EX-0114-02 — Reconcile current main against prior programmes.** Acceptance: PR #29 and older S4 task claims separated from implemented source. Verification: exact SHA, merged diff and task evidence crosswalk. **Implementation: Not started; Verified: No.**
-3. **EX-0114-03 — Set measurable quality criteria.** Acceptance: clear user task success, confidence, error and recovery metrics with denominators. Verification: research protocol review. **Implementation: Not started; Verified: No.**
-4. **EX-0114-04 — Define every feature's preservation owner.** Acceptance: no action, route or persisted state silently disappears. Verification: old/new feature map and E2E coverage. **Implementation: Not started; Verified: No.**
-5. **EX-0114-05 — Gate small reversible implementation slices.** Acceptance: each implementing PR includes named owner, verification and rollback. Verification: actual PR evidence and final release decision. **Implementation: Not started; Verified: No.**
+1. **EX-0114-01 - Inventory end-to-end user journeys.** Acceptance: listener, creator and expert goals have action/error/recovery maps. Verification: route/control/API inspection and uncoached baseline tasks. **Implementation: Not started; Verified: No.**
+2. **EX-0114-02 - Reconcile current main against prior programmes.** Acceptance: PR #29 and older S4 task claims separated from implemented source. Verification: exact SHA, merged diff and task evidence crosswalk. **Implementation: Not started; Verified: No.**
+3. **EX-0114-03 - Set measurable quality criteria.** Acceptance: clear user task success, confidence, error and recovery metrics with denominators. Verification: research protocol review. **Implementation: Not started; Verified: No.**
+4. **EX-0114-04 - Define every feature's preservation owner.** Acceptance: no action, route or persisted state silently disappears. Verification: old/new feature map and E2E coverage. **Implementation: Not started; Verified: No.**
+5. **EX-0114-05 - Gate small reversible implementation slices.** Acceptance: each implementing PR includes named owner, verification and rollback. Verification: actual PR evidence and final release decision. **Implementation: Not started; Verified: No.**
 
 ## References and status
 

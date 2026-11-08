@@ -83,4 +83,4 @@ def match_label(rank: int | None) -> str | None:
         return "Artist match"
     if rank < 60:
         return "Title and artist words"
-    return "Approximate match — check the recording"
+    return "Approximate match - check the recording"

@@ -1,4 +1,4 @@
-# Vocal interleaving follow-up — 6 November 2026
+# Vocal interleaving follow-up - 6 November 2026
 
 ## Sources and their limits
 
@@ -18,7 +18,7 @@ breaks; or deliberately interleave complementary phrases. One participant distin
 singing from competing lyrics and recommends trying exceptional pairings in advance. These are
 anecdotes, not calibrated thresholds or proof that simultaneous vocals usually work.
 
-## Consequences for Selecta — hypotheses to test
+## Consequences for Selecta - hypotheses to test
 
 - Treat competing intelligible phrases differently from a sustained background vocal. Current
   stem-energy measurements cannot reliably make that distinction; do not weaken collision checks

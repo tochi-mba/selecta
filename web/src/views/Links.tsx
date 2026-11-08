@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
@@ -10,6 +10,7 @@ import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Icon } from '../ui/Icon';
 import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
+import { TermHint } from '../ui/Glossary';
 import { LinkTabs, SearchField } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
 import { ViewProps } from './shared';
@@ -48,24 +49,23 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   // the same answer sent again, because a reply got lost, keeps its name, so it can't count twice
   const verdictNames = useRef(new Map<string, string>());
 
+  const here = useRef(true);
+  const loadDiscoveries = useCallback(() => {
+    const seen = discoveryChanges.current;
+    return get<HarmonicDiscovery[]>('/discoveries').then((rows) => {
+      if (!here.current || seen !== discoveryChanges.current) return;
+      setItems(rows);
+      setLoaded(true);
+      setError('');
+    }).catch(() => { if (here.current && seen === discoveryChanges.current) setError('Couldn’t load these. Try again in a moment.'); });
+  }, []);
   useEffect(() => {
-    let live = true;
-    const load = () => {
-      const seen = discoveryChanges.current;
-      return get<HarmonicDiscovery[]>('/discoveries').then((rows) => {
-        if (!live || seen !== discoveryChanges.current) return;
-        setItems(rows);
-        setLoaded(true);
-        setError('');
-      }).catch(() => { if (live && seen === discoveryChanges.current) setError('Couldn’t load these. Try again in a moment.'); });
-    };
-    void load();
-    const tick = () => { if (document.visibilityState !== 'hidden') void load(); };
-    const visible = () => { if (document.visibilityState === 'visible') void load(); };
-    const timer = window.setInterval(tick, 15000);
-    document.addEventListener('visibilitychange', visible);
-    return () => { live = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
-  }, [attempt]);
+    here.current = true;
+    void loadDiscoveries();
+    return () => { here.current = false; };
+  }, [attempt, loadDiscoveries]);
+  // new pairs turn up in spare time; a hidden tab doesn't ask, and asks at once when it's back
+  useVisiblePoll(loadDiscoveries, 15000);
 
   const waiting = items
     .filter((item) => item.status === 'new')
@@ -193,7 +193,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         {waiting.length > 0 && <span className="hint">{waiting.length} to hear</span>}
       </div>
       <p className="hint">
-        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.
+        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.<TermHint term="harmonic-match" />
       </p>
       {error && <p role="alert" className="warn">{error}</p>}
       {unsaved && <button disabled={saving} onClick={() => void review(unsaved.target, unsaved.verdict)}>Try saving that again</button>}
@@ -495,7 +495,7 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
         <>
           <p className="lede">
             One song ends a line on these words, another opens a line with them, and the music fits too. Selecta prepares the
-            best ones in the background, so they’re ready to play.
+            best ones in the background, so they’re ready to play.<TermHint term="word-link" />
           </p>
           {data && data.preparing > 0 && (
             <p className="hint" role="status">

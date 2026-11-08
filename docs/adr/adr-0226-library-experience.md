@@ -1,4 +1,4 @@
-# ADR-0226 — Library as both personal record collection and fast professional index
+# ADR-0226 - Library as both personal record collection and fast professional index
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Offer expressive collection browsing and information-dense list modes for 20,000
 
 No full-library eager DOM render, false playability or lost query/focus after result changes. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0226-01 — Design collection view.** **Acceptance:** Artwork and identity support discovery without fake traits. **Required verification:** Real/empty media tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0226-02 — Refine professional table.** **Acceptance:** Sorting, columns and dense scanning remain clear. **Required verification:** Expert task review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0226-03 — Protect large-library paging.** **Acceptance:** Twenty thousand items navigable without long stalls. **Required verification:** Scale performance fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0226-04 — Improve search and filters.** **Acceptance:** Active filter state and cursor boundaries accurate. **Required verification:** Query E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0226-05 — Preserve focus and scroll.** **Acceptance:** Pagination never unpredictably moves keyboard focus. **Required verification:** Keyboard fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0226-06 — Expose readiness honestly.** **Acceptance:** Ready, analyzing, blocked and missing distinct. **Required verification:** Readiness tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0226-07 — Handle empty and errors.** **Acceptance:** No results versus offline versus missing source differentiated. **Required verification:** Failure fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0226-08 — Compare modes with users.** **Acceptance:** Both casual browsing and DJ retrieval efficient. **Required verification:** Timed task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0226-01 - Design collection view.** **Acceptance:** Artwork and identity support discovery without fake traits. **Required verification:** Real/empty media tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0226-02 - Refine professional table.** **Acceptance:** Sorting, columns and dense scanning remain clear. **Required verification:** Expert task review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0226-03 - Protect large-library paging.** **Acceptance:** Twenty thousand items navigable without long stalls. **Required verification:** Scale performance fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0226-04 - Improve search and filters.** **Acceptance:** Active filter state and cursor boundaries accurate. **Required verification:** Query E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0226-05 - Preserve focus and scroll.** **Acceptance:** Pagination never unpredictably moves keyboard focus. **Required verification:** Keyboard fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0226-06 - Expose readiness honestly.** **Acceptance:** Ready, analyzing, blocked and missing distinct. **Required verification:** Readiness tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0226-07 - Handle empty and errors.** **Acceptance:** No results versus offline versus missing source differentiated. **Required verification:** Failure fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0226-08 - Compare modes with users.** **Acceptance:** Both casual browsing and DJ retrieval efficient. **Required verification:** Timed task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

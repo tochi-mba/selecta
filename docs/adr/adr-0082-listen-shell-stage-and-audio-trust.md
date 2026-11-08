@@ -1,10 +1,10 @@
 # ADR-0082: Polish Listen, navigation, mini-player and Stage without audio regressions
 
-- **Decision status:** Proposed (owner review required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 2 — listener journeys
+- **Phase:** 2 - listener journeys
 - **Extends:** ADR-0048, ADR-0049, ADR-0055, ADR-0069. No inherited task is automatically complete.
 - **Dependencies:** ADRs 0078–0080; shared visual hierarchy.
 - **Checklist:** S31-0082-01 through S31-0082-11 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,17 +23,17 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0082-01 — Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete.
-2. **S31-0082-02 — Test Next versus Skip semantics and transition countdown wording.** Acceptance: Users understand whether the next song is immediate or transition-aligned without changing transport behaviour.
-3. **S31-0082-03 — Verify waveform seek and disabled-seek feedback with real audio.** Acceptance: Time, output and accessibility value agree; unavailable areas explain why.
-4. **S31-0082-04 — Review timed/untimed/instrumental/missing lyrics presentation.** Acceptance: Readable line and word focus; no fabricated timing; explicit no-lyrics fallback.
-5. **S31-0082-05 — Review Spectrum, Beat countdown, Lyrics focus and Why disclosure.** Acceptance: View options are discoverable but do not obscure transport, player state or song title.
-6. **S31-0082-06 — Review next-song, steering, rating and requests grouping.** Acceptance: Users can inspect the next song and shape energy without mistaking a preview for a live edit.
-7. **S31-0082-07 — Re-test mini-player and bottom nav geometry at narrow widths.** Acceptance: No overlap or obscured last row at 320–430px, short height, orientation or display safe area.
-8. **S31-0082-08 — Verify visual keyboard and focus changes on narrow screens.** Acceptance: Input is visible, navigation/player step away predictably, and focus resumes correctly.
-9. **S31-0082-09 — Verify Stage fullscreen denial and exit fallbacks.** Acceptance: Exit/Escape work, focus returns, audio continues, reduced motion and announcements remain appropriate.
-10. **S31-0082-10 — Exercise main/preview/multi-tab audio ownership on real media.** Acceptance: One active owner, no unintended overlap, silence, play restart or surprise resume.
-11. **S31-0082-11 — Review route, history, breadcrumbs and deep-link continuity.** Acceptance: Listen and mini-player survive page navigation, Back/Forward and old aliases with correct page titles.
+1. **S31-0082-01 - Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete.
+2. **S31-0082-02 - Test Next versus Skip semantics and transition countdown wording.** Acceptance: Users understand whether the next song is immediate or transition-aligned without changing transport behaviour.
+3. **S31-0082-03 - Verify waveform seek and disabled-seek feedback with real audio.** Acceptance: Time, output and accessibility value agree; unavailable areas explain why.
+4. **S31-0082-04 - Review timed/untimed/instrumental/missing lyrics presentation.** Acceptance: Readable line and word focus; no fabricated timing; explicit no-lyrics fallback.
+5. **S31-0082-05 - Review Spectrum, Beat countdown, Lyrics focus and Why disclosure.** Acceptance: View options are discoverable but do not obscure transport, player state or song title.
+6. **S31-0082-06 - Review next-song, steering, rating and requests grouping.** Acceptance: Users can inspect the next song and shape energy without mistaking a preview for a live edit.
+7. **S31-0082-07 - Re-test mini-player and bottom nav geometry at narrow widths.** Acceptance: No overlap or obscured last row at 320–430px, short height, orientation or display safe area.
+8. **S31-0082-08 - Verify visual keyboard and focus changes on narrow screens.** Acceptance: Input is visible, navigation/player step away predictably, and focus resumes correctly.
+9. **S31-0082-09 - Verify Stage fullscreen denial and exit fallbacks.** Acceptance: Exit/Escape work, focus returns, audio continues, reduced motion and announcements remain appropriate.
+10. **S31-0082-10 - Exercise main/preview/multi-tab audio ownership on real media.** Acceptance: One active owner, no unintended overlap, silence, play restart or surprise resume.
+11. **S31-0082-11 - Review route, history, breadcrumbs and deep-link continuity.** Acceptance: Listen and mini-player survive page navigation, Back/Forward and old aliases with correct page titles.
 
 ## Required adverse cases and evidence
 
@@ -49,13 +49,14 @@ Less always-visible detail improves attention, but lyrics, Why, waveform, steeri
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
+The owner accepted this decision on 2026-11-08. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
 
 ## Status history
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Original documentation-only finishing plan |\n| 2026-11-07 | Proposed | In progress | Selected UI/test code now on PR #25; complete verification still outstanding |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

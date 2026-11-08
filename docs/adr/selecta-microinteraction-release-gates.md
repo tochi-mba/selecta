@@ -1,4 +1,4 @@
-# Selecta immersive experience and microinteraction programme — independent NO-GO release gates
+# Selecta immersive experience and microinteraction programme - independent NO-GO release gates
 
 **Current programme verdict: NO-GO, because implementation is partial and independent acceptance has not occurred.** 30 ADRs Proposed; **208 source-level Implemented, 4 In progress, 28 Not started; 0 independently Verified**. [PR #31](https://github.com/tochi-mba/selecta/pull/31) contains code and tests, not a release approval. This does not mean the currently shipping local-first application is broken; it describes this newly proposed experience delta.
 

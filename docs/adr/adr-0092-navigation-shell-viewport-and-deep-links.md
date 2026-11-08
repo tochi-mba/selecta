@@ -1,6 +1,6 @@
 # ADR-0092: Responsive navigation shell, optional inspector, global header and route integrity
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -29,18 +29,18 @@ Preserve the conceptual destinations and existing URLs; build a desktop rail, re
 - Inspector present only for relevant selection; large-screen resize has pointer and keyboard alternatives.
 - /listen without an active mix displays a true Listen empty state linking to Explore; no silent route/content mismatch.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0092-01 — Inventory deep links, aliases, search params and browser history.** Acceptance: All current routes still load directly and Back/Forward restores context. Required verification: Router E2E for old paths and query combinations. **Implementation: Not started; Verified: No.**
-2. **S4-0092-02 — Implement desktop rail with active and focus identity.** Acceptance: Nested edits retain their correct parent nav destination. Required verification: Keyboard navigation, collapsed rail and screen reader current-page. **Implementation: Not started; Verified: No.**
-3. **S4-0092-03 — Implement mobile bottom navigation and Workspace under More.** Acceptance: Essential services and blockers remain discoverable. Required verification: 320/375/390/430px and orientation tests. **Implementation: Not started; Verified: No.**
-4. **S4-0092-04 — Build contextual header with bounded global utilities.** Acceptance: No redundant button flood; breadcrumb/title reflect actual route. Required verification: Header action audit on all routes. **Implementation: Not started; Verified: No.**
-5. **S4-0092-05 — Create optional inspector region and accessible resize controls.** Acceptance: Resize persists safely; timeline retains usable minimum width. Required verification: Pointer/keyboard resize, 200/400% zoom. **Implementation: Not started; Verified: No.**
-6. **S4-0092-06 — Centralize sticky chrome/safe-area/visual-viewport calculations.** Acceptance: Player and nav do not cover last list row or focused input. Required verification: Mobile keyboard/short viewport/landscape tests. **Implementation: Not started; Verified: No.**
-7. **S4-0092-07 — Preserve per-route selection and scroll where safe by stable ID.** Acceptance: Returning from Library to editor restores same valid transition. Required verification: Back/Forward and removal invalidation tests. **Implementation: Not started; Verified: No.**
-8. **S4-0092-08 — Remove content/route ambiguity on empty Listen.** Acceptance: Route, heading and selected nav match visible content. Required verification: No-current-mix deep-link test. **Implementation: Not started; Verified: No.**
-9. **S4-0092-09 — Make status and task blockers available without Workspace clutter.** Acceptance: Critical storage/analysis blocker cannot be hidden in More. Required verification: Attention indicator and accessible announcement tests. **Implementation: Not started; Verified: No.**
-10. **S4-0092-10 — Validate standalone PWA, browser tab and reload shell geometry.** Acceptance: No false offline-without-server promise and no state loss. Required verification: Installed Edge and server-disconnected checks. **Implementation: Not started; Verified: No.**
+1. **S4-0092-01 - Inventory deep links, aliases, search params and browser history.** Acceptance: All current routes still load directly and Back/Forward restores context. Required verification: Router E2E for old paths and query combinations. **Implementation: Not started; Verified: No.**
+2. **S4-0092-02 - Implement desktop rail with active and focus identity.** Acceptance: Nested edits retain their correct parent nav destination. Required verification: Keyboard navigation, collapsed rail and screen reader current-page. **Implementation: Not started; Verified: No.**
+3. **S4-0092-03 - Implement mobile bottom navigation and Workspace under More.** Acceptance: Essential services and blockers remain discoverable. Required verification: 320/375/390/430px and orientation tests. **Implementation: Not started; Verified: No.**
+4. **S4-0092-04 - Build contextual header with bounded global utilities.** Acceptance: No redundant button flood; breadcrumb/title reflect actual route. Required verification: Header action audit on all routes. **Implementation: Not started; Verified: No.**
+5. **S4-0092-05 - Create optional inspector region and accessible resize controls.** Acceptance: Resize persists safely; timeline retains usable minimum width. Required verification: Pointer/keyboard resize, 200/400% zoom. **Implementation: Not started; Verified: No.**
+6. **S4-0092-06 - Centralize sticky chrome/safe-area/visual-viewport calculations.** Acceptance: Player and nav do not cover last list row or focused input. Required verification: Mobile keyboard/short viewport/landscape tests. **Implementation: Not started; Verified: No.**
+7. **S4-0092-07 - Preserve per-route selection and scroll where safe by stable ID.** Acceptance: Returning from Library to editor restores same valid transition. Required verification: Back/Forward and removal invalidation tests. **Implementation: Not started; Verified: No.**
+8. **S4-0092-08 - Remove content/route ambiguity on empty Listen.** Acceptance: Route, heading and selected nav match visible content. Required verification: No-current-mix deep-link test. **Implementation: Not started; Verified: No.**
+9. **S4-0092-09 - Make status and task blockers available without Workspace clutter.** Acceptance: Critical storage/analysis blocker cannot be hidden in More. Required verification: Attention indicator and accessible announcement tests. **Implementation: Not started; Verified: No.**
+10. **S4-0092-10 - Validate standalone PWA, browser tab and reload shell geometry.** Acceptance: No false offline-without-server promise and no state loss. Required verification: Installed Edge and server-disconnected checks. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

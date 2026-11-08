@@ -1,4 +1,4 @@
-# Selecta — creative-interface independent verification matrix
+# Selecta - creative-interface independent verification matrix
 
 **Status: 20 Accepted ADRs; 140 CI tasks Not started; 0 Implemented; 0 independently Verified.** This matrix defines future acceptance, not performed testing.
 

@@ -1,6 +1,6 @@
 # ADR-0093: Persistent playback presentation, previews, audio focus and immersive Stage lifecycle
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -29,18 +29,18 @@ Keep one authoritative audio controller independent of routes, with a documented
 - Short transient preview may restore only if the user has not issued a newer explicit playback command.
 - Stage must work when fullscreen is denied; focus/route and audio remain continuous.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0093-01 — Specify audio-owner state graph for every audition surface.** Acceptance: At most one active owner; no implicit resume after explicit Pause. Required verification: Pairwise preview owner race tests. **Implementation: Not started; Verified: No.**
-2. **S4-0093-02 — Decouple transport lifecycle from routes, themes and overlay mounts.** Acceptance: Playback survives navigation/density/theme changes. Required verification: Real-media route/nav/theme E2E. **Implementation: Not started; Verified: No.**
-3. **S4-0093-03 — Redesign desktop and mobile mini-player hierarchy.** Acceptance: Primary transport available without text/icon collision. Required verification: Long-title and 320–430px screenshots. **Implementation: Not started; Verified: No.**
-4. **S4-0093-04 — Document play, pause, resume, next, previous and Jump semantics.** Acceptance: User can distinguish immediate skip from transition jump. Required verification: Audio timing and copy comprehension checks. **Implementation: Not started; Verified: No.**
-5. **S4-0093-05 — Preserve seeking and disabled transition-seek feedback.** Acceptance: Position remains accurate and unavailable areas explain why. Required verification: Seek near boundaries and during transition tests. **Implementation: Not started; Verified: No.**
-6. **S4-0093-06 — Preserve and test volume, mute and Media Session behaviours.** Acceptance: System media controls work where supported; in-app fallback always works. Required verification: Windows/Edge real hardware plus browser API tests. **Implementation: Not started; Verified: No.**
-7. **S4-0093-07 — Implement preview interruption/cleanup rules.** Acceptance: Late preview cannot resume stale owner or leave silence. Required verification: Open/close/switch/fail preview adversarial tests. **Implementation: Not started; Verified: No.**
-8. **S4-0093-08 — Rebuild Stage fullscreen/fallback/exit and focus handling.** Acceptance: Escape/Close recover without interrupting playback. Required verification: Fullscreen denial, tab switch, reduced motion. **Implementation: Not started; Verified: No.**
-9. **S4-0093-09 — Test paused, last-song, no-mix, missing-file and interrupted audio states.** Acceptance: UI never falsely claims audio playing or downloadable. Required verification: Fault-injected transport suite. **Implementation: Not started; Verified: No.**
-10. **S4-0093-10 — Validate multi-tab and background lifecycle.** Acceptance: Existing leader/ownership protections remain intact. Required verification: Two tabs, hidden tab, suspension, wake and server restart. **Implementation: Not started; Verified: No.**
+1. **S4-0093-01 - Specify audio-owner state graph for every audition surface.** Acceptance: At most one active owner; no implicit resume after explicit Pause. Required verification: Pairwise preview owner race tests. **Implementation: Not started; Verified: No.**
+2. **S4-0093-02 - Decouple transport lifecycle from routes, themes and overlay mounts.** Acceptance: Playback survives navigation/density/theme changes. Required verification: Real-media route/nav/theme E2E. **Implementation: Not started; Verified: No.**
+3. **S4-0093-03 - Redesign desktop and mobile mini-player hierarchy.** Acceptance: Primary transport available without text/icon collision. Required verification: Long-title and 320–430px screenshots. **Implementation: Not started; Verified: No.**
+4. **S4-0093-04 - Document play, pause, resume, next, previous and Jump semantics.** Acceptance: User can distinguish immediate skip from transition jump. Required verification: Audio timing and copy comprehension checks. **Implementation: Not started; Verified: No.**
+5. **S4-0093-05 - Preserve seeking and disabled transition-seek feedback.** Acceptance: Position remains accurate and unavailable areas explain why. Required verification: Seek near boundaries and during transition tests. **Implementation: Not started; Verified: No.**
+6. **S4-0093-06 - Preserve and test volume, mute and Media Session behaviours.** Acceptance: System media controls work where supported; in-app fallback always works. Required verification: Windows/Edge real hardware plus browser API tests. **Implementation: Not started; Verified: No.**
+7. **S4-0093-07 - Implement preview interruption/cleanup rules.** Acceptance: Late preview cannot resume stale owner or leave silence. Required verification: Open/close/switch/fail preview adversarial tests. **Implementation: Not started; Verified: No.**
+8. **S4-0093-08 - Rebuild Stage fullscreen/fallback/exit and focus handling.** Acceptance: Escape/Close recover without interrupting playback. Required verification: Fullscreen denial, tab switch, reduced motion. **Implementation: Not started; Verified: No.**
+9. **S4-0093-09 - Test paused, last-song, no-mix, missing-file and interrupted audio states.** Acceptance: UI never falsely claims audio playing or downloadable. Required verification: Fault-injected transport suite. **Implementation: Not started; Verified: No.**
+10. **S4-0093-10 - Validate multi-tab and background lifecycle.** Acceptance: Existing leader/ownership protections remain intact. Required verification: Two tabs, hidden tab, suspension, wake and server restart. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

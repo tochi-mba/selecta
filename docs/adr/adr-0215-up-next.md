@@ -1,4 +1,4 @@
-# ADR-0215 — Up Next as musical anticipation with safe steering
+# ADR-0215 - Up Next as musical anticipation with safe steering
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Present real upcoming song and transition status, optional steering, and calm en
 
 No ghost next track, invented countdown, stealth mutation or playing claim for a queued request. Reject spectacle when it costs accessibility, audio continuity or task comprehension. This ADR approves no new SaaS, login, account, cloud upload, telemetry, audio engine rewrite or code change by itself.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0215-01 — Design next-song hierarchy.** **Acceptance:** Future identity understood immediately. **Required verification:** First-glance task. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0215-02 — Show seam readiness.** **Acceptance:** Planned, ready and failed distinct. **Required verification:** Readiness tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0215-03 — Refine steering actions.** **Acceptance:** Requested change scope is explicit. **Required verification:** Revision E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0215-04 — Integrate request entry.** **Acceptance:** Request lifecycle distinguished from steering. **Required verification:** Usability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0215-05 — Design end-of-set scene.** **Acceptance:** No phantom next track and clear closure. **Required verification:** Player end-state test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0215-06 — Adapt responsive panel.** **Acceptance:** Mobile and desktop maintain actions. **Required verification:** 320px and 400% zoom. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0215-07 — Reduce announcement noise.** **Acceptance:** Single essential updates only. **Required verification:** NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0215-08 — Evaluate listening attention.** **Acceptance:** No secondary panel dominates music. **Required verification:** Participant listening study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0215-01 - Design next-song hierarchy.** **Acceptance:** Future identity understood immediately. **Required verification:** First-glance task. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0215-02 - Show seam readiness.** **Acceptance:** Planned, ready and failed distinct. **Required verification:** Readiness tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0215-03 - Refine steering actions.** **Acceptance:** Requested change scope is explicit. **Required verification:** Revision E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0215-04 - Integrate request entry.** **Acceptance:** Request lifecycle distinguished from steering. **Required verification:** Usability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0215-05 - Design end-of-set scene.** **Acceptance:** No phantom next track and clear closure. **Required verification:** Player end-state test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0215-06 - Adapt responsive panel.** **Acceptance:** Mobile and desktop maintain actions. **Required verification:** 320px and 400% zoom. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0215-07 - Reduce announcement noise.** **Acceptance:** Single essential updates only. **Required verification:** NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0215-08 - Evaluate listening attention.** **Acceptance:** No secondary panel dominates music. **Required verification:** Participant listening study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

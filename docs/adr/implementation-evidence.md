@@ -6,7 +6,7 @@ Each of the 279 tasks in [#22](https://github.com/tochi-mba/selecta/pull/22), an
 
 Passing these checks doesn't mean it sounds good. That's for people to judge, using [the listening procedure](../listening-procedure.md).
 
-## Phase 00 — Baseline, parity and implementation governance
+## Phase 00 - Baseline, parity and implementation governance
 
 ### [Product contract and parity](adr-0001-product-contract-and-parity.md)
 
@@ -45,7 +45,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0021 Agree the status update protocol: proposed/accepted decision separate from not-started/in-progress/implemented/verified execution. | Needs a person | The protocol is written in `docs/adr/README.md`. Agreeing to it is yours. |
 | T0022 Approve ADR-0030 release governance; keep user music and durable data untouched. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 01 — Design system, interaction primitives and accessibility
+## Phase 01 - Design system, interaction primitives and accessibility
 
 ### [Semantic visual language](adr-0003-design-tokens-and-brand.md)
 
@@ -85,7 +85,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0044 Run keyboard-only, NVDA/VoiceOver and 200/400% zoom journeys; log fixes with evidence. | Needs a person | Keyboard and zoomed layouts are tested. NVDA and VoiceOver need a person. |
 | T0045 Approve ADR-0023 accessibility standards. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 02 — Navigation, responsiveness and PWA
+## Phase 02 - Navigation, responsiveness and PWA
 
 ### [Routing and persistent app shell](adr-0002-routing-and-shell.md)
 
@@ -123,7 +123,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0065 Test Chrome/Edge installed mode and documented Firefox/Safari fallbacks. | Not done | Only Edge was run. Chrome install and Firefox and Safari fallbacks weren't tried. |
 | T0066 Approve ADR-0031 support matrix. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 03 — State, backend contracts, security and resilience
+## Phase 03 - State, backend contracts, security and resilience
 
 ### [Typed frontend state and mutations](adr-0005-domain-state-mutations.md)
 
@@ -177,7 +177,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0097 Test backend stop/restart during edit, request, export and storage update; test tab sleep/wake. | Partly | Server loss is simulated in the browser. A real restart mid-edit and tab sleep weren't tested. |
 | T0098 Approve ADR-0028 reliability policy. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 04 — Playback, listening, lyrics and explanations
+## Phase 04 - Playback, listening, lyrics and explanations
 
 ### [Web Audio transport and conventional controls](adr-0006-audio-transport-and-media.md)
 
@@ -242,7 +242,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0135 Test explanatory fallback, missing backend factors, stale rating and screen-reader announcements. | Partly | Fallback and missing factors are tested. Screen readers need a person. |
 | T0136 Approve ADR-0027. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 05 — Mix creation and steering
+## Phase 05 - Mix creation and steering
 
 ### [Mix discovery and building](adr-0010-mix-discovery.md)
 
@@ -270,7 +270,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0151 Test extreme curve, reset, rapid input, invalid target and persisted settings. | Partly | Saving, resetting and persistence are in `web/src/views/Mixes.test.tsx`. Extreme curves and rapid input have no test of their own. |
 | T0152 Approve ADR-0011. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 06 — Drafts, mix editing, seam inspection and export
+## Phase 06 - Drafts, mix editing, seam inspection and export
 
 ### [Drafts and render queue](adr-0012-drafts-and-queue.md)
 
@@ -322,7 +322,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0181 Test partial seam, disk full, failed render, retry, stale URL and playable FLAC decode. | Partly | Stale, retry and real FLAC bytes are tested. A full disk wasn't. |
 | T0182 Approve ADR-0022. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 07 — Live song requests and bridge transactions
+## Phase 07 - Live song requests and bridge transactions
 
 ### [Live Requests and bridge atomicity](adr-0015-requests-and-bridges.md)
 
@@ -340,7 +340,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0192 Test duplicate submit, approval-vs-cancel race, bridge partial render, preemption and imminent seam. | Partly | Duplicate submits, approving a cancelled request and bridges that are not finished are tested. Preemption and an imminent seam have no test of their own. |
 | T0193 Approve ADR-0015 and verify original request tests. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 08 — Stem Studio
+## Phase 08 - Stem Studio
 
 ### [Stem Studio](adr-0016-stem-studio.md)
 
@@ -356,7 +356,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0201 Test every cell, rapid toggling, all presets, incomplete stems, AI success/failure, undo and A/B audio. | Partly | Unit tests. Real stems weren't run in the browser tests, so A/B audio is unverified. |
 | T0202 Approve ADR-0016. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 09 — Library, overrides and Discover
+## Phase 09 - Library, overrides and Discover
 
 ### [Library readiness and scale](adr-0017-library-scale-and-readiness.md)
 
@@ -397,7 +397,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0225 Test missing lyric timing, same word many times, failed render, stage skip and duplicate songs. | Partly | Most covered in `Links.test.tsx`. Failed render with a real stage skip isn't in a browser test. |
 | T0226 Approve ADR-0019. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 10 — Workshop, listening research and diagnostics
+## Phase 10 - Workshop, listening research and diagnostics
 
 ### [Workshop and cache/processing](adr-0020-workshop-and-storage.md)
 
@@ -437,7 +437,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0248 Test redaction, worker restart, slow status, storage block and operation correlation. | Partly | Redaction and slow answers are tested. Worker restart and correlation aren't. |
 | T0249 Approve ADR-0032. | Needs a person | Approving a decision is yours to do. |
 
-## Phase 11 — Cross-feature integration
+## Phase 11 - Cross-feature integration
 
 ### Cross-feature integration scenarios
 
@@ -453,7 +453,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0257 Confirm no preserved feature in feature-parity ledger has lost navigation or an authoritative backend side effect. | Done | `docs/adr/feature-parity.md`, `web/e2e/pages.e2e.ts`. |
 | T0258 Run end-to-end integration tests with representative song fixtures and audit all discovered regressions. | Partly | `web/e2e` runs on made-up songs. All the problems found were fixed. Real songs need a person listening. |
 
-## Phase 12 — Quality, accessibility, performance and verification
+## Phase 12 - Quality, accessibility, performance and verification
 
 ### Full quality and acceptance gates
 
@@ -472,7 +472,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0269 Audit every ADR acceptance criterion and link concrete CI/QA proof before marking Verified. | Partly | This file is that audit against the tracker. Each ADR's own criteria weren't linked one by one. |
 | T0270 Update ADR decision/implementation status history, the ADR index, parity matrix and roadmap with merged implementation PR links. | Done | `docs/adr/` updated in this PR. |
 
-## Phase 13 — Release, rollback and final sign-off
+## Phase 13 - Release, rollback and final sign-off
 
 ### Controlled release and rollback
 

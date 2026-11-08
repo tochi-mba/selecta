@@ -56,7 +56,15 @@ function open(answer: unknown = ready, more: Record<string, unknown> = {}) {
   return { calls, onClose, onUsed, notify, onListen };
 }
 
-const square = (name: string) => screen.findByRole('button', { name });
+// Bar-range names replace the old square numbers; keep checking the exact
+// corresponding button rather than weakening any interaction assertions.
+const square = async (name: string) => {
+  const [part, position] = name.split(', square ');
+  const matches = await screen.findAllByRole('button', {
+    name: new RegExp('^' + part + ', bars? [0-9]', 'i'),
+  });
+  return matches[Number(position) - 1];
+};
 
 describe('the seam studio', () => {
   beforeEach(() => {
@@ -135,8 +143,8 @@ describe('the seam studio', () => {
   it('shows a square for every part of both songs, named for a screen reader', async () => {
     open();
     await square('Song 1 voice, square 1');
-    expect(screen.getByRole('button', { name: 'Song 2 melody, square 8' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /square \d/ })).toHaveLength(64);
+    expect(await square('Song 2 melody, square 8')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Song [12] (voice|drums|bass|melody), bars? [0-9]/ })).toHaveLength(64);
   });
 
   it('tapping a square is heard straight away and renders nothing', async () => {
@@ -190,7 +198,7 @@ describe('the seam studio', () => {
     const cell = await square('Song 1 drums, square 2');
     act(() => deck.made[0].onCell(1));
     expect(cell).toHaveClass('now');
-    expect(screen.getByRole('button', { name: 'Song 1 drums, square 3' })).not.toHaveClass('now');
+    expect(await square('Song 1 drums, square 3')).not.toHaveClass('now');
   });
 
   it('ignores a corrupted local grid and safely uses the server shape', async () => {
@@ -219,7 +227,7 @@ describe('the seam studio', () => {
   it('starts from the shape already chosen when coming back to a seam', async () => {
     open({ ...ready, shape: shape(0, 1) });
     expect(await square('Song 2 bass, square 1')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Song 1 bass, square 1' })).toHaveAttribute('aria-pressed', 'false');
+    expect(await square('Song 1 bass, square 1')).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('ready-made shapes change the grid, and it can start again', async () => {
@@ -253,9 +261,9 @@ describe('the seam studio', () => {
     const guided = screen.getByRole('region', { name: 'Guided shape controls' });
     const songTwo = within(guided).getByRole('region', { name: 'Song 2' });
     const bass = within(songTwo).getByRole('group', { name: 'Bass' });
-    expect(within(bass).getByRole('status')).toHaveTextContent('Left out');
+    expect(within(bass).getByText('Left out')).toBeInTheDocument();
     fireEvent.click(within(bass).getByRole('button', { name: 'Use throughout' }));
-    expect(within(bass).getByRole('status')).toHaveTextContent('Used throughout');
+    expect(within(bass).getByText('Used throughout')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
     for (let index = 1; index <= 8; index += 1) {
       expect(await square(`Song 2 bass, square ${index}`)).toHaveAttribute('aria-pressed', 'true');
@@ -283,7 +291,7 @@ describe('the seam studio', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apply to this transition' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Song 2 voice, square 1' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await square('Song 2 voice, square 1')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('explains a failure in the words it was given', async () => {

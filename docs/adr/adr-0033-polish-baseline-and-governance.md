@@ -4,7 +4,7 @@
 - **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
-- **Delivery phase:** 0 — Baseline and scope
+- **Delivery phase:** 0 - Baseline and scope
 - **Extends:** [ADR-0001](adr-0001-product-contract-and-parity.md), [ADR-0029](adr-0029-testing-and-quality.md), [ADR-0030](adr-0030-migration-and-release.md); does not silently supersede their behavioural contracts.
 - **Dependencies:** None. Capture the baseline before changes.
 - **Checklist:** P0001–P0010 in [polish implementation checklist](polish-implementation-checklist.md).

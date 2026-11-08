@@ -1,4 +1,4 @@
-# Selecta 3.1 — finishing implementation and independent verification ledger
+# Selecta 3.1 - finishing implementation and independent verification ledger
 
 - **Date:** 2026-11-07.
 - **Programme decisions:** 11 Proposed (ADR-0078–0088); none accepted as part of this proposal.
@@ -11,20 +11,20 @@
 
 | ADR | Decision | Implementation | Verified | Workstream |
 |---|---|---|---:|---|
-| [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | Proposed | In progress (partial) | 0/10 | Reconcile the shipped 3.0 baseline and govern finishing work |
-| [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | Proposed | In progress (partial) | 0/10 | Unify typography, themes, visual rhythm and CSS ownership |
-| [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | Proposed | In progress (partial) | 0/10 | Make controls, asynchronous states, recovery and Undo dependable |
-| [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | Proposed | In progress (partial) | 0/10 | Reduce friction from first music folder to a confident first mix |
-| [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | Proposed | In progress (partial) | 0/11 | Polish Listen, navigation, mini-player and Stage without audio regressions |
-| [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | Proposed | In progress (partial) | 0/12 | Make drafts, timeline editing, transition intent and export unambiguous |
-| [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | Proposed | In progress (partial) | 0/9 | Refine Stem Studio's expert controls without reducing capability |
-| [ADR-0085](adr-0085-requests-and-music-discovery.md) | Proposed | In progress (partial) | 0/10 | Clarify Requests, consented bridges and discovery auditions |
-| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | Proposed | In progress (partial) | 0/11 | Polish Library, Workspace, studies and operational status |
-| [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | Proposed | In progress (partial) | 0/11 | Verify WCAG, device reflow, audio latency and scale |
-| [ADR-0088](adr-0088-research-visual-regression-and-release.md) | Proposed | In progress (partial) | 0/12 | Require observable user, visual and product acceptance before release |
+| [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | Accepted | In progress (partial) | 0/10 | Reconcile the shipped 3.0 baseline and govern finishing work |
+| [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | Accepted | In progress (partial) | 0/10 | Unify typography, themes, visual rhythm and CSS ownership |
+| [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | Accepted | In progress (partial) | 0/10 | Make controls, asynchronous states, recovery and Undo dependable |
+| [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | Accepted | In progress (partial) | 0/10 | Reduce friction from first music folder to a confident first mix |
+| [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | Accepted | In progress (partial) | 0/11 | Polish Listen, navigation, mini-player and Stage without audio regressions |
+| [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | Accepted | In progress (partial) | 0/12 | Make drafts, timeline editing, transition intent and export unambiguous |
+| [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | Accepted | In progress (partial) | 0/9 | Refine Stem Studio's expert controls without reducing capability |
+| [ADR-0085](adr-0085-requests-and-music-discovery.md) | Accepted | In progress (partial) | 0/10 | Clarify Requests, consented bridges and discovery auditions |
+| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | Accepted | In progress (partial) | 0/11 | Polish Library, Workspace, studies and operational status |
+| [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | Accepted | In progress (partial) | 0/11 | Verify WCAG, device reflow, audio latency and scale |
+| [ADR-0088](adr-0088-research-visual-regression-and-release.md) | Accepted | In progress (partial) | 0/12 | Require observable user, visual and product acceptance before release |
 | **Total** | 11 proposed | 0 implemented | **0/116** | |
 
-## Implementation on PR #25 — 29 partial tasks, none Verified
+## Implementation on PR #25 - 29 partial tasks, none Verified
 
 | Task | Status | Source or automated evidence | Still required before Verified |
 |---|---|---|---|

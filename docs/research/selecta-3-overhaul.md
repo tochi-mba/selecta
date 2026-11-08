@@ -1,4 +1,4 @@
-# Selecta 3.0 — source inspection, design references and research boundaries
+# Selecta 3.0 - source inspection, design references and research boundaries
 
 - **Decision status:** Proposed.
 - **Implementation status:** Not started.
@@ -19,18 +19,18 @@
 
 ## Design and engineering references
 
-1. [Nielsen Norman Group — Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/): prefer immediate common tasks and discoverable advanced control.
-2. [Microsoft Research — Guidelines for Human-AI Interaction](https://www.microsoft.com/en-us/research/blog/guidelines-for-human-ai-interaction-design/): disclose limitations, support human correction and explain automation decisions.
-3. [W3C — WCAG 2.2](https://www.w3.org/TR/WCAG22/): focus not obscured, pointer target size minimum and alternatives to drag-only gestures.
-4. [W3C — Understanding Target Size (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum): 24×24 CSS px with defined spacing/other exceptions, rather than pretending every button must be 44px.
-5. [WAI-ARIA APG — Modal Dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/): focus and background interaction semantics.
-6. [WAI-ARIA APG — Grid](https://www.w3.org/WAI/ARIA/apg/patterns/grid/): Studio's roving focus/arrow and nested input choices.
-7. [WAI-ARIA APG — Tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/): inspector selection and arrow behavior.
-8. [WAI-ARIA APG — Combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/): destination search and optional command palette.
-9. [MDN — showDirectoryPicker](https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker): limited browser support; returned browser handle is not a guaranteed server-readable absolute local path.
-10. [Playwright — Visual Snapshots](https://playwright.dev/docs/test-snapshots): deterministic state screenshots and diff review.
-11. [Playwright — Clock](https://playwright.dev/docs/clock): freeze/advance clocks to test timed UI behavior.
-12. [Google — Core Web Vitals](https://developers.google.com/search/docs/appearance/core-web-vitals): interaction responsiveness and visual stability reference guidance.
+1. [Nielsen Norman Group - Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/): prefer immediate common tasks and discoverable advanced control.
+2. [Microsoft Research - Guidelines for Human-AI Interaction](https://www.microsoft.com/en-us/research/blog/guidelines-for-human-ai-interaction-design/): disclose limitations, support human correction and explain automation decisions.
+3. [W3C - WCAG 2.2](https://www.w3.org/TR/WCAG22/): focus not obscured, pointer target size minimum and alternatives to drag-only gestures.
+4. [W3C - Understanding Target Size (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum): 24×24 CSS px with defined spacing/other exceptions, rather than pretending every button must be 44px.
+5. [WAI-ARIA APG - Modal Dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/): focus and background interaction semantics.
+6. [WAI-ARIA APG - Grid](https://www.w3.org/WAI/ARIA/apg/patterns/grid/): Studio's roving focus/arrow and nested input choices.
+7. [WAI-ARIA APG - Tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/): inspector selection and arrow behavior.
+8. [WAI-ARIA APG - Combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/): destination search and optional command palette.
+9. [MDN - showDirectoryPicker](https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker): limited browser support; returned browser handle is not a guaranteed server-readable absolute local path.
+10. [Playwright - Visual Snapshots](https://playwright.dev/docs/test-snapshots): deterministic state screenshots and diff review.
+11. [Playwright - Clock](https://playwright.dev/docs/clock): freeze/advance clocks to test timed UI behavior.
+12. [Google - Core Web Vitals](https://developers.google.com/search/docs/appearance/core-web-vitals): interaction responsiveness and visual stability reference guidance.
 
 These sources guide pattern choices; they do not establish actual Selecta performance, accessibility, subjective transition quality or participant success.
 

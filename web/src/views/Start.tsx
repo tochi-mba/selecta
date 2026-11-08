@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, FolderCheck, get, post, Status } from '../api';
 import { Action } from '../ui/controls';
 import { Field } from '../ui/primitives';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { SetupSteps } from './Setup';
 
 /** What to try next, for each reason a folder can't be read. */
@@ -29,11 +30,10 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
   const scanning = scan.status === 'running';
 
   useEffect(() => {
-    if (!scanning) return;
-    setCannotStop(false);
-    const timer = window.setInterval(onChange, 1000);
-    return () => window.clearInterval(timer);
-  }, [scanning, onChange]);
+    if (scanning) setCannotStop(false);
+  }, [scanning]);
+  // The folder keeps being read with the tab hidden. Progress is only asked for while it can be seen.
+  useVisiblePoll(onChange, 1000, scanning);
 
   const start = async (event: FormEvent) => {
     event.preventDefault();

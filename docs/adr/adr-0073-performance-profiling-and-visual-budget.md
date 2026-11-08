@@ -1,11 +1,11 @@
 # ADR-0073: Rendering performance, 20k-track scale, 100-song edits and animation budgets
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 6 — Cross-cutting quality
+- **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0017, ADR-0029, ADR-0046
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0073-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Profile before optimizing, set measurable interactive responsiveness budgets and
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0073-01 — Not started.** Capture baseline bundle, memory, mount, navigation, interaction and audio timing measurements.
-2. **S3-0073-02 — Not started.** Create deterministic 20k-library, 100-song-timeline, 64-cell Studio and background-load fixtures.
-3. **S3-0073-03 — Not started.** Profile long-list and panel interactions before deciding on virtualization or state architecture changes.
-4. **S3-0073-04 — Not started.** Define frame/interaction budgets and layout-shift acceptance based on measured devices.
-5. **S3-0073-05 — Not started.** Audit spectrum/lyrics animations under hidden tabs, reduced motion and low power.
-6. **S3-0073-06 — Not started.** Optimize loading splits and render boundaries without altering audio scheduling semantics.
-7. **S3-0073-07 — Not started.** Run memory/cleanup tests for repeated Studio, inspectors, overlays and preview mounts.
-8. **S3-0073-08 — Not started.** Track performance regression thresholds in CI where deterministic and manually when hardware-specific.
+1. **S3-0073-01 - Not started.** Capture baseline bundle, memory, mount, navigation, interaction and audio timing measurements.
+2. **S3-0073-02 - Not started.** Create deterministic 20k-library, 100-song-timeline, 64-cell Studio and background-load fixtures.
+3. **S3-0073-03 - Not started.** Profile long-list and panel interactions before deciding on virtualization or state architecture changes.
+4. **S3-0073-04 - Not started.** Define frame/interaction budgets and layout-shift acceptance based on measured devices.
+5. **S3-0073-05 - Not started.** Audit spectrum/lyrics animations under hidden tabs, reduced motion and low power.
+6. **S3-0073-06 - Not started.** Optimize loading splits and render boundaries without altering audio scheduling semantics.
+7. **S3-0073-07 - Not started.** Run memory/cleanup tests for repeated Studio, inspectors, overlays and preview mounts.
+8. **S3-0073-08 - Not started.** Track performance regression thresholds in CI where deterministic and manually when hardware-specific.
 
 ## Preservation and integration constraints
 
@@ -64,6 +64,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

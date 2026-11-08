@@ -1,11 +1,11 @@
 # ADR-0076: Incremental migration, rollout controls, rollback and delivery order
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 7 — Verification
+- **Phase:** 7 - Verification
 - **Extends existing decisions:** ADR-0030, ADR-0033, ADR-0046
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0076-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Deliver Selecta 3.0 through dependency-gated, reviewable PRs with reversible fro
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0076-01 — Not started.** Establish dependency graph, implementation PR boundaries and minimum reviewable migration slices.
-2. **S3-0076-02 — Not started.** Assign ownership of each ADR and exact feature-parity/test mapping.
-3. **S3-0076-03 — Not started.** Define old/new navigation coexistence, feature flags and required kill-switch conditions.
-4. **S3-0076-04 — Not started.** Enforce zero unapproved backend schema, engine or privacy change as part of visual-only PRs.
-5. **S3-0076-05 — Not started.** Implement rollback rehearsal with realistic local data, drafts, request jobs and long mixes.
-6. **S3-0076-06 — Not started.** Reconcile existing polish programme tasks without rewriting historical completion.
-7. **S3-0076-07 — Not started.** Require build/unit/Python/E2E/visual/security/a11y/audio gates appropriate to each slice.
-8. **S3-0076-08 — Not started.** Record manual release sign-off, accepted limitations and go/no-go for integrated release.
-9. **S3-0076-09 — Not started.** Update all S3 statuses, roadmap and evidence after actual implementation rather than pre-emptively.
+1. **S3-0076-01 - Not started.** Establish dependency graph, implementation PR boundaries and minimum reviewable migration slices.
+2. **S3-0076-02 - Not started.** Assign ownership of each ADR and exact feature-parity/test mapping.
+3. **S3-0076-03 - Not started.** Define old/new navigation coexistence, feature flags and required kill-switch conditions.
+4. **S3-0076-04 - Not started.** Enforce zero unapproved backend schema, engine or privacy change as part of visual-only PRs.
+5. **S3-0076-05 - Not started.** Implement rollback rehearsal with realistic local data, drafts, request jobs and long mixes.
+6. **S3-0076-06 - Not started.** Reconcile existing polish programme tasks without rewriting historical completion.
+7. **S3-0076-07 - Not started.** Require build/unit/Python/E2E/visual/security/a11y/audio gates appropriate to each slice.
+8. **S3-0076-08 - Not started.** Record manual release sign-off, accepted limitations and go/no-go for integrated release.
+9. **S3-0076-09 - Not started.** Update all S3 statuses, roadmap and evidence after actual implementation rather than pre-emptively.
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

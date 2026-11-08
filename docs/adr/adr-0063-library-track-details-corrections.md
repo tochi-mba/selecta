@@ -1,11 +1,11 @@
 # ADR-0063: Library detail inspector, canonical readiness and protected corrections
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 5 — Discovery and operations
+- **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0018, ADR-0017, ADR-0043
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0063-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Create one authoritative track-detail presentation and readiness projection. Sep
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0063-01 — Not started.** Specify canonical track readiness from existing API fields and map each user-facing reason.
-2. **S3-0063-02 — Not started.** Build responsive song inspector with measured/effective BPM and key provenance.
-3. **S3-0063-03 — Not started.** Retain Double, Half, manual tempo, key override, reset, exclusions, priority and classification operations.
-4. **S3-0063-04 — Not started.** Validate inputs, preserve edit focus and never turn a stale measurement into a successful correction.
-5. **S3-0063-05 — Not started.** Protect user overrides during concurrent reanalysis, watcher updates and duplicate-title results.
-6. **S3-0063-06 — Not started.** Keep library and mix availability actions consistent with a single readiness computation.
-7. **S3-0063-07 — Not started.** Describe reversible overrides and possible downstream rerender effects.
-8. **S3-0063-08 — Not started.** Verify persistence, correct song identity, long metadata and missing-field fallbacks.
+1. **S3-0063-01 - Not started.** Specify canonical track readiness from existing API fields and map each user-facing reason.
+2. **S3-0063-02 - Not started.** Build responsive song inspector with measured/effective BPM and key provenance.
+3. **S3-0063-03 - Not started.** Retain Double, Half, manual tempo, key override, reset, exclusions, priority and classification operations.
+4. **S3-0063-04 - Not started.** Validate inputs, preserve edit focus and never turn a stale measurement into a successful correction.
+5. **S3-0063-05 - Not started.** Protect user overrides during concurrent reanalysis, watcher updates and duplicate-title results.
+6. **S3-0063-06 - Not started.** Keep library and mix availability actions consistent with a single readiness computation.
+7. **S3-0063-07 - Not started.** Describe reversible overrides and possible downstream rerender effects.
+8. **S3-0063-08 - Not started.** Verify persistence, correct song identity, long metadata and missing-field fallbacks.
 
 ## Preservation and integration constraints
 
@@ -64,6 +64,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

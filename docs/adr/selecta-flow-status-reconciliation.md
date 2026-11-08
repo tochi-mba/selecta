@@ -1,4 +1,4 @@
-# Selecta / Flow — cross-programme status and source evidence reconciliation
+# Selecta / Flow - cross-programme status and source evidence reconciliation
 
 **This new documentation-only design programme:** 50 **Accepted** ADRs, 400 new SF tasks **Not started**, 0 In progress, 0 Implemented, **0 independently Verified**. Source baseline: main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` (2026-11-08). Do not interpret the 400 tasks as 400 missing existing capabilities. Many current code features are already present and may satisfy portions of new acceptance requirements; they are not automatically credited until examined at the *new task's exact acceptance level*.
 

@@ -1,4 +1,4 @@
-# ADR-0177 — Library: expressive collection browsing and trustworthy track identity
+# ADR-0177 - Library: expressive collection browsing and trustworthy track identity
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This ADR proposes a **new cross-surface design and acceptance delta**, not a cla
 
 Prefer the existing restrained and proven UI when added visuals distract or reduce correctness. No artificial music, artwork, beat, lyric accuracy, quality score or fake render status. All sensory interactions require a usable static, keyboard, high-contrast and reduced-motion alternative. Source truth and explicit human consent outrank polish.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0177-01 — Prototype alternative song browse layout.** **Acceptance:** Song/artist legible and unknown artwork doesn't imply a real cover. **Required verification:** 1000-song and missing-art fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0177-02 — Preserve list feature parity and deep links.** **Acceptance:** Query/filter/sort/density/search continue identically. **Required verification:** URL and pagination/regression tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0177-03 — Surface readiness reasons at every density.** **Acceptance:** Blocked song's reason accessible in compact and card layouts. **Required verification:** Readiness and screen-reader review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0177-04 — Connect Start a mix to song identity.** **Acceptance:** Chosen source track identifiable in resulting set. **Required verification:** Build response and route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0177-05 — Expose validated related discoveries.** **Acceptance:** Only existing song connections with candidate labels displayed. **Required verification:** No links/partial analysis fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0177-06 — Clarify measured versus corrected BPM/key.** **Acceptance:** Active override and restoration consequence transparent. **Required verification:** Correction/reanalysis/rerender tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0177-07 — Validate performance and browser access.** **Acceptance:** Large collection remains responsive with keyboard-first list available. **Required verification:** Scroll/frame/zoom and assistive technology review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0177-01 - Prototype alternative song browse layout.** **Acceptance:** Song/artist legible and unknown artwork doesn't imply a real cover. **Required verification:** 1000-song and missing-art fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0177-02 - Preserve list feature parity and deep links.** **Acceptance:** Query/filter/sort/density/search continue identically. **Required verification:** URL and pagination/regression tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0177-03 - Surface readiness reasons at every density.** **Acceptance:** Blocked song's reason accessible in compact and card layouts. **Required verification:** Readiness and screen-reader review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0177-04 - Connect Start a mix to song identity.** **Acceptance:** Chosen source track identifiable in resulting set. **Required verification:** Build response and route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0177-05 - Expose validated related discoveries.** **Acceptance:** Only existing song connections with candidate labels displayed. **Required verification:** No links/partial analysis fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0177-06 - Clarify measured versus corrected BPM/key.** **Acceptance:** Active override and restoration consequence transparent. **Required verification:** Correction/reanalysis/rerender tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0177-07 - Validate performance and browser access.** **Acceptance:** Large collection remains responsive with keyboard-first list available. **Required verification:** Scroll/frame/zoom and assistive technology review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

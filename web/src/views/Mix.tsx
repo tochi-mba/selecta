@@ -1,14 +1,16 @@
-import { DragEvent, FormEvent, KeyboardEvent, PointerEvent, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { DragEvent, FormEvent, KeyboardEvent, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, del, DraftList, MixData, MixItem, post, Suggestion } from '../api';
 import { etaRangeWords, runningTime } from '../lib';
 import { mixReadiness, occurrenceKeys, orderOf } from '../state/readiness';
 import { Action, announce, Dialog, Sheet } from '../ui/controls';
 import { Icon } from '../ui/Icon';
-import { EnergyOverview } from '../ui/MusicObjects';
+import { useReducedMotion } from '../ui/useReducedMotion';
 import { Adder } from './Adder';
 import { RenameDraft } from './Drafts';
 import { AddGap, MoveHow, RowActions, SeamUnlessReplaced, SongInspector, SongLine } from './EditorRows';
 import { EditorHeader, MixSwitcher } from './EditorHeader';
+import { EditorMode, useEditorMode } from './editorMode';
+import { EditorStory, EnergyDisclosure, ViewSwitch } from './EditorStory';
 import { ExportPanel } from './ExportPanel';
 import { MixScope, useMixPath } from './mixScope';
 import { ComingSongs } from './Requests';
@@ -73,6 +75,16 @@ export function Mix(props: ViewProps) {
   const order = orderOf(mix);
   const keys = useMemo(() => occurrenceKeys(mix), [order]);
   const guard = useMemo(() => ({ 'x-mix-order': order }), [order]);
+  // Story, Arrange or Detail is only how this same mix, scope and selection are shown.
+  const [mode, setMode] = useEditorMode();
+  const reduceMotion = useReducedMotion();
+  const page = useRef<HTMLElement>(null);
+  const storyHeading = useId();
+  const arrangeHeading = useId();
+  // What to bring into view once a change of view or selection has been drawn. 'focus' moves focus too.
+  const reveal = useRef<'focus' | 'scroll' | null>(null);
+  // The view last shown, so Detail opens a transition on the way in rather than every time one closes.
+  const shownMode = useRef<EditorMode | null>(null);
 
   // Only the stable draft ID and exact saved order are remembered in this browser.
   // Reopening is opt-in and the My Mixes shortcut validates both against the server.
@@ -209,6 +221,90 @@ export function Mix(props: ViewProps) {
     setSelected({ kind: 'seam', a: keys[index - 1], b: keys[index], from: mix[index - 1].title, into: mix[index].title });
   };
 
+  // Detail is the timeline with a transition open, so arriving there with nothing selected opens the
+  // first one on its Change tab. That's a selection only: nothing is sent and nothing plays.
+  useEffect(() => {
+    if (shownMode.current === mode) return;
+    shownMode.current = mode;
+    if (mode !== 'detail' || selected || !mix.length) return;
+    setHearNow(false);
+    if (mix.length > 1) {
+      setInspectorTab('change');
+      selectSeamAt(1);
+    } else {
+      setGone('');
+      setSelected({ kind: 'song', key: keys[0], title: mix[0].title });
+    }
+    reveal.current = reveal.current ?? 'scroll';
+  }, [mode, selected, mix.length]);
+
+  // After a change of view, the same song or transition is found again by its key and brought into view.
+  // Focus only moves when what had it has gone, and goes to the view's heading if nothing is selected.
+  useLayoutEffect(() => {
+    const how = reveal.current;
+    if (!how) return;
+    reveal.current = null;
+    const root = page.current;
+    if (!root) return;
+    const story = mode === 'story';
+    let box: HTMLElement | null = null;
+    if (selected?.kind === 'seam') {
+      const key = seamKeyOf(selected.a, selected.b);
+      box = root.querySelector(story ? `[data-story-seam="${key}"]` : `[data-seam="${key}"]`);
+    } else if (selected?.kind === 'song') {
+      box = root.querySelector(story ? `[data-story-song="${selected.key}"] .story-song` : `[data-song-key="${selected.key}"]`);
+    }
+    const heading = root.querySelector<HTMLElement>(`[data-mode-heading="${story ? 'story' : 'arrange'}"]`);
+    if (how === 'focus') {
+      const control = box?.querySelector<HTMLElement>(story ? '.story-edit' : selected?.kind === 'seam' ? '.seam-name' : '.song-select');
+      (control ?? heading)?.focus({ preventScroll: true });
+    }
+    (box ?? (how === 'focus' ? heading : null))?.scrollIntoView?.({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+  });
+
+  const playingIndex = !inDraft && now.phase !== 'idle' ? now.position : -1;
+  // Detail is for exact cues, bars and moves, so a transition opened there starts on Change.
+  const seamTab: InspectorTab = mode === 'detail' ? 'change' : 'listen';
+  const chooseMode = (next: EditorMode) => {
+    // The View radios keep focus, so the arrow keys carry on moving between views.
+    reveal.current = 'scroll';
+    setMode(next);
+  };
+  const openInDetail = () => {
+    // what to open has already been chosen, so Detail mustn't pick the first transition instead
+    shownMode.current = 'detail';
+    reveal.current = 'focus';
+    setMode('detail');
+  };
+  const selectSongAt = (index: number) => {
+    if (!keys[index]) return;
+    setGone('');
+    setHearNow(false);
+    setSelected({ kind: 'song', key: keys[index], title: mix[index].title });
+    reveal.current = 'scroll';
+  };
+  const editSong = (key: string) => {
+    const index = keys.indexOf(key);
+    if (index < 0) return;
+    if (selected?.kind !== 'song' || selected.key !== key) {
+      setGone('');
+      setHearNow(false);
+      setSelected({ kind: 'song', key, title: mix[index].title });
+    }
+    openInDetail();
+  };
+  const editSeam = (a: string, b: string) => {
+    const index = keys.findIndex((key, at) => at > 0 && key === b && keys[at - 1] === a);
+    if (index <= 0) return;
+    // the same transition, already open, keeps its tab and anything it's playing
+    if (selectedIndex !== index) {
+      setHearNow(false);
+      setInspectorTab('change');
+      selectSeamAt(index);
+    }
+    openInDetail();
+  };
+
   const addSong = async (song: Suggestion, anchor: string) => {
     const position = placeOf(anchor);
     if (position < 0) return;
@@ -299,7 +395,7 @@ export function Mix(props: ViewProps) {
       const index = keys.indexOf(rowKey);
       if (index <= 0 || selectedIndex === index) return;
       setHearNow(false);
-      setInspectorTab('listen');
+      setInspectorTab(seamTab);
       selectSeamAt(index);
     },
     toggleSeam: (rowKey) => {
@@ -423,6 +519,11 @@ export function Mix(props: ViewProps) {
     setHearNow(false);
     setInspectorTab('change');
     selectSeamAt(index);
+    if (mode === 'story') {
+      // Story shows every transition too, so this stays in Story and goes to that transition's Edit button.
+      reveal.current = 'focus';
+      return;
+    }
     const row = document.querySelector<HTMLElement>(`[data-seam="${seamKeyOf(keys[index - 1], keys[index])}"]`);
     row?.scrollIntoView?.({ block: 'center' });
     row?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
@@ -503,8 +604,8 @@ export function Mix(props: ViewProps) {
         setAdding(keys[selectedSongIndex]);
         setSelected(null);
       }}
-      onSeamIn={() => { setHearNow(false); setInspectorTab('listen'); selectSeamAt(selectedSongIndex); }}
-      onSeamOut={() => { setHearNow(false); setInspectorTab('listen'); selectSeamAt(selectedSongIndex + 1); }}
+      onSeamIn={() => { setHearNow(false); setInspectorTab(seamTab); selectSeamAt(selectedSongIndex); }}
+      onSeamOut={() => { setHearNow(false); setInspectorTab(seamTab); selectSeamAt(selectedSongIndex + 1); }}
     />
   );
   const inspecting = !!seamInspector || !!songInspector;
@@ -565,7 +666,7 @@ export function Mix(props: ViewProps) {
   );
 
   return (
-    <main className="page mix" id="main">
+    <main className="page mix" id="main" ref={page}>
       <EditorHeader
         draftId={draftId}
         mix={mix}
@@ -577,6 +678,7 @@ export function Mix(props: ViewProps) {
         totalSeconds={total}
         switcher={<MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} />}
         actions={actions}
+        view={<ViewSwitch mode={mode} onChange={chooseMode} />}
       />
       {renameForm}
       {deleteConfirmation}
@@ -592,70 +694,87 @@ export function Mix(props: ViewProps) {
       {gone && <p className="notice" role="status">{gone}</p>}
       {exporting && <ExportPanel mix={mix} mixName={mixName} inDraft={inDraft} guard={guard} setMixData={setMixData} names={status.moves} onClose={() => setExporting(false)} />}
 
-      {mix.length > 1 && <EnergyOverview items={mix} selectedIndex={selectedSongIndex} onSelect={(index) => {
-        setGone('');
-        setHearNow(false);
-        setSelected({ kind: 'song', key: keys[index], title: mix[index].title });
-      }} />}
+      {mode === 'story' && (
+        <EditorStory
+          mix={mix}
+          keys={keys}
+          names={status.moves}
+          selected={selected}
+          playingIndex={playingIndex}
+          headingId={storyHeading}
+          onSelectSong={selectSongAt}
+          onEditSong={editSong}
+          onEditSeam={editSeam}
+        />
+      )}
 
-      <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`} style={inspecting && !narrow ? { '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties : undefined}>
-        <ol className={`timeline density ${mix.length > LONG_MIX ? 'long' : ''}`} onDragOver={scrollWhileDragging}>
-          {mix.map((item, index) => (
-            <FragmentRow key={keys[index]}>
-              {index > 0 && (
-                <SeamUnlessReplaced
-                  inDraft={inDraft}
+      {/* Arrange and Detail share one timeline. In Story it stays mounted but hidden, so an open
+          transition keeps its pending choice, its tab and any preview exactly as they were. */}
+      <section className="editor-arrange" aria-labelledby={arrangeHeading} hidden={mode === 'story'}>
+        <h2 id={arrangeHeading} className="editor-mode-heading" tabIndex={-1} data-mode-heading="arrange">
+          {mode === 'detail' ? 'Timeline, with a transition open' : 'Timeline'}
+        </h2>
+        {mix.length > 1 && <EnergyDisclosure items={mix} selectedIndex={selectedSongIndex} playingIndex={playingIndex} onSelect={selectSongAt} />}
+
+        <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`} style={inspecting && !narrow ? { '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties : undefined}>
+          <ol className={`timeline density ${mix.length > LONG_MIX ? 'long' : ''}`} onDragOver={scrollWhileDragging}>
+            {mix.map((item, index) => (
+              <FragmentRow key={keys[index]}>
+                {index > 0 && (
+                  <SeamUnlessReplaced
+                    inDraft={inDraft}
+                    item={item}
+                    previous={mix[index - 1]}
+                    rowKey={keys[index]}
+                    seamKey={seamKeyOf(keys[index - 1], keys[index])}
+                    names={status.moves}
+                    guard={guard}
+                    open={selectedIndex === index}
+                    actions={rowActions}
+                  />
+                )}
+                <SongLine
                   item={item}
-                  previous={mix[index - 1]}
                   rowKey={keys[index]}
-                  seamKey={seamKeyOf(keys[index - 1], keys[index])}
-                  names={status.moves}
-                  guard={guard}
-                  open={selectedIndex === index}
+                  total={mix.length}
+                  playing={!inDraft && now.phase !== 'idle' && now.position === index}
+                  selected={selectedSongIndex === index}
+                  over={dragOver === keys[index]}
                   actions={rowActions}
                 />
-              )}
-              <SongLine
-                item={item}
-                rowKey={keys[index]}
-                total={mix.length}
-                playing={!inDraft && now.phase !== 'idle' && now.position === index}
-                selected={selectedSongIndex === index}
-                over={dragOver === keys[index]}
-                actions={rowActions}
+                {!inDraft && <ComingSongs afterSongId={item.song_id} />}
+                {adding === keys[index]
+                  ? <li className="adder-row">{adder(keys[index])}</li>
+                  : <AddGap title={item.title} landsAt={index + 2} onAdd={() => setAdding(keys[index])} />}
+              </FragmentRow>
+            ))}
+          </ol>
+          {inspecting && !narrow && (
+            <div className="inspector-column">
+              <div
+                className="inspector-resize"
+                role="separator"
+                aria-label="Resize inspector"
+                aria-orientation="vertical"
+                aria-valuemin={MIN_INSPECTOR_WIDTH}
+                aria-valuemax={MAX_INSPECTOR_WIDTH}
+                aria-valuenow={inspectorWidth}
+                tabIndex={0}
+                onPointerDown={beginInspectorResize}
+                onKeyDown={resizeInspectorWithKeys}
               />
-              {!inDraft && <ComingSongs afterSongId={item.song_id} />}
-              {adding === keys[index]
-                ? <li className="adder-row">{adder(keys[index])}</li>
-                : <AddGap title={item.title} landsAt={index + 2} onAdd={() => setAdding(keys[index])} />}
-            </FragmentRow>
-          ))}
-        </ol>
-        {inspecting && !narrow && (
-          <div className="inspector-column">
-            <div
-              className="inspector-resize"
-              role="separator"
-              aria-label="Resize inspector"
-              aria-orientation="vertical"
-              aria-valuemin={MIN_INSPECTOR_WIDTH}
-              aria-valuemax={MAX_INSPECTOR_WIDTH}
-              aria-valuenow={inspectorWidth}
-              tabIndex={0}
-              onPointerDown={beginInspectorResize}
-              onKeyDown={resizeInspectorWithKeys}
-            />
-            <aside ref={inspector} className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
-              <div className="inspector-head">
-                <h2>{seamInspector ? 'Transition' : 'Song'}</h2>
-                <button aria-label="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
-              </div>
-              {seamInspector || songInspector}
-            </aside>
-          </div>
-        )}
-      </div>
-      {inspecting && narrow && (
+              <aside ref={inspector} className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
+                <div className="inspector-head">
+                  <h2>{seamInspector ? 'Transition' : 'Song'}</h2>
+                  <button aria-label="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
+                </div>
+                {seamInspector || songInspector}
+              </aside>
+            </div>
+          )}
+        </div>
+      </section>
+      {inspecting && narrow && mode !== 'story' && (
         <Sheet title={seamInspector ? 'Transition' : 'Song'} onClose={() => setSelected(null)}>{seamInspector || songInspector}</Sheet>
       )}
     </main>

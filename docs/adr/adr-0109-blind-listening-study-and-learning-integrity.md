@@ -1,6 +1,6 @@
 # ADR-0109: Blind A/B listening study, harmonic feedback and learning-data integrity
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -29,18 +29,18 @@ Give study tasks a dedicated minimal interface with clear session/progress/Versi
 - Separate overall preference, quality scoring, issue tags and skip with explicit choices.
 - Session reload, errors and duplicate submission must retain trial identity and blinding.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0109-01 — Inventory exact trial protocol and field requirements before UI changes.** Acceptance: No study variable is removed or accidentally exposed. Required verification: Protocol comparison against backend and tests. **Implementation: Not started; Verified: No.**
-2. **S4-0109-02 — Redesign enrollment, session status and progress hierarchy.** Acceptance: Study code/input failure and session recovery understandable. Required verification: Invalid/expired code/reload tests. **Implementation: Not started; Verified: No.**
-3. **S4-0109-03 — Create accessible Version A/B transport.** Acceptance: Correct clip, no main-player overlap or wrong label. Required verification: Real media and focus/keyboard tests. **Implementation: Not started; Verified: No.**
-4. **S4-0109-04 — Preserve exact heard-before-answer constraint where applicable.** Acceptance: UI cannot accept unsupported judgement or bypass required listen. Required verification: Missing clip and incomplete audition tests. **Implementation: Not started; Verified: No.**
-5. **S4-0109-05 — Preserve preference, quality and multi-tag form.** Acceptance: Data values correspond to existing response schema. Required verification: Validation/boundary/selection tests. **Implementation: Not started; Verified: No.**
-6. **S4-0109-06 — Prevent version provenance leakage in UI/logs.** Acceptance: Blind A/B identity not inferable from labels, URLs or status. Required verification: Protocol/privacy review and E2E. **Implementation: Not started; Verified: No.**
-7. **S4-0109-07 — Make submit pending/success/failure and retry truthful.** Acceptance: Duplicate or timed-out submit cannot record multiple trials. Required verification: Idempotent save and reordered response tests. **Implementation: Not started; Verified: No.**
-8. **S4-0109-08 — Handle skip, no trials left and early exit safely.** Acceptance: No false completion and session state recoverable. Required verification: Skip/reload/end-of-study tests. **Implementation: Not started; Verified: No.**
-9. **S4-0109-09 — Protect main audio ownership during study.** Acceptance: Explicit pause/resume policy never surprises listener. Required verification: Listen→study→Listen handoff tests. **Implementation: Not started; Verified: No.**
-10. **S4-0109-10 — Record human comprehension and actual protocol acceptance.** Acceptance: No claimed scientific validity without review. Required verification: Researcher sign-off and task observation. **Implementation: Not started; Verified: No.**
+1. **S4-0109-01 - Inventory exact trial protocol and field requirements before UI changes.** Acceptance: No study variable is removed or accidentally exposed. Required verification: Protocol comparison against backend and tests. **Implementation: Not started; Verified: No.**
+2. **S4-0109-02 - Redesign enrollment, session status and progress hierarchy.** Acceptance: Study code/input failure and session recovery understandable. Required verification: Invalid/expired code/reload tests. **Implementation: Not started; Verified: No.**
+3. **S4-0109-03 - Create accessible Version A/B transport.** Acceptance: Correct clip, no main-player overlap or wrong label. Required verification: Real media and focus/keyboard tests. **Implementation: Not started; Verified: No.**
+4. **S4-0109-04 - Preserve exact heard-before-answer constraint where applicable.** Acceptance: UI cannot accept unsupported judgement or bypass required listen. Required verification: Missing clip and incomplete audition tests. **Implementation: Not started; Verified: No.**
+5. **S4-0109-05 - Preserve preference, quality and multi-tag form.** Acceptance: Data values correspond to existing response schema. Required verification: Validation/boundary/selection tests. **Implementation: Not started; Verified: No.**
+6. **S4-0109-06 - Prevent version provenance leakage in UI/logs.** Acceptance: Blind A/B identity not inferable from labels, URLs or status. Required verification: Protocol/privacy review and E2E. **Implementation: Not started; Verified: No.**
+7. **S4-0109-07 - Make submit pending/success/failure and retry truthful.** Acceptance: Duplicate or timed-out submit cannot record multiple trials. Required verification: Idempotent save and reordered response tests. **Implementation: Not started; Verified: No.**
+8. **S4-0109-08 - Handle skip, no trials left and early exit safely.** Acceptance: No false completion and session state recoverable. Required verification: Skip/reload/end-of-study tests. **Implementation: Not started; Verified: No.**
+9. **S4-0109-09 - Protect main audio ownership during study.** Acceptance: Explicit pause/resume policy never surprises listener. Required verification: Listen→study→Listen handoff tests. **Implementation: Not started; Verified: No.**
+10. **S4-0109-10 - Record human comprehension and actual protocol acceptance.** Acceptance: No claimed scientific validity without review. Required verification: Researcher sign-off and task observation. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

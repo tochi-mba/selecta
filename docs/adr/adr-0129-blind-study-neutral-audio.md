@@ -1,6 +1,6 @@
-# ADR-0129 — Neutral blind A/B listening study with protocol integrity
+# ADR-0129 - Neutral blind A/B listening study with protocol integrity
 
-- **Decision:** Proposed (requires named owner acceptance).
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 newly defined EX tasks).
 - **Verified:** No (0/5 independent acceptance).
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
@@ -30,11 +30,11 @@ Do not change randomization, normalization, study data model or reports through 
 
 ## New implementation status per task
 
-1. **EX-0129-01 — Audit all method leakage**. **Acceptance:** No method/renderer names visible or announced. **Verification:** Screenreader, DOM and protocol audit. **Implementation: Not started; Verified: No.**
-2. **EX-0129-02 — Design balanced A/B interface**. **Acceptance:** Equal control treatment and order clarity. **Verification:** Counterbalanced human pilot. **Implementation: Not started; Verified: No.**
-3. **EX-0129-03 — Separate listening, grading and save**. **Acceptance:** Missing ratings and submissions explained. **Verification:** Study form validation E2E. **Implementation: Not started; Verified: No.**
-4. **EX-0129-04 — Preserve once-only identity**. **Acceptance:** Retry/race cannot double-submit or misattribute answer. **Verification:** API and delayed response tests. **Implementation: Not started; Verified: No.**
-5. **EX-0129-05 — Verify with real blind sessions**. **Acceptance:** Method remains hidden and ratings recorded accurately. **Verification:** Named listener/protocol reviewer. **Implementation: Not started; Verified: No.**
+1. **EX-0129-01 - Audit all method leakage**. **Acceptance:** No method/renderer names visible or announced. **Verification:** Screenreader, DOM and protocol audit. **Implementation: Not started; Verified: No.**
+2. **EX-0129-02 - Design balanced A/B interface**. **Acceptance:** Equal control treatment and order clarity. **Verification:** Counterbalanced human pilot. **Implementation: Not started; Verified: No.**
+3. **EX-0129-03 - Separate listening, grading and save**. **Acceptance:** Missing ratings and submissions explained. **Verification:** Study form validation E2E. **Implementation: Not started; Verified: No.**
+4. **EX-0129-04 - Preserve once-only identity**. **Acceptance:** Retry/race cannot double-submit or misattribute answer. **Verification:** API and delayed response tests. **Implementation: Not started; Verified: No.**
+5. **EX-0129-05 - Verify with real blind sessions**. **Acceptance:** Method remains hidden and ratings recorded accurately. **Verification:** Named listener/protocol reviewer. **Implementation: Not started; Verified: No.**
 
 ## Independent verification
 

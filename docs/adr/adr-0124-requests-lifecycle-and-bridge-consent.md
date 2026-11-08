@@ -1,6 +1,6 @@
-# ADR-0124 — Requests: truthful lifecycle and explicit bridge consent
+# ADR-0124 - Requests: truthful lifecycle and explicit bridge consent
 
-- **Decision status:** Proposed (owner approval pending).
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/5 new tasks).
 - **Independent verification:** Not verified (0/5).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
@@ -30,11 +30,11 @@ A stale or duplicate confirmation can affect the mix; preserve server guards and
 
 ## New implementation tasks and evidence
 
-1. **EX-0124-01 — Define canonical user-facing lifecycle**. Acceptance: Every actual stage has truthful display and recovery. Required verification: Backend state map and error fixtures. **Implementation: Not started; Verified: No.**
-2. **EX-0124-02 — Redesign pending requests panel**. Acceptance: User sees what is likely versus merely asked. Required verification: Listener comprehension test. **Implementation: Not started; Verified: No.**
-3. **EX-0124-03 — Specify bridge consent presentation**. Acceptance: Each extra song and route explicitly approved or declined. Required verification: Consent/decline/reopen scenarios. **Implementation: Not started; Verified: No.**
-4. **EX-0124-04 — Verify atomic/duplicate safeguards**. Acceptance: No partial or duplicated bridge under races. Required verification: Concurrent API and browser E2E. **Implementation: Not started; Verified: No.**
-5. **EX-0124-05 — Test audible handover and preview focus**. Acceptance: No unexpected overlap or transport interruption. Required verification: Real music request-join test. **Implementation: Not started; Verified: No.**
+1. **EX-0124-01 - Define canonical user-facing lifecycle**. Acceptance: Every actual stage has truthful display and recovery. Required verification: Backend state map and error fixtures. **Implementation: Not started; Verified: No.**
+2. **EX-0124-02 - Redesign pending requests panel**. Acceptance: User sees what is likely versus merely asked. Required verification: Listener comprehension test. **Implementation: Not started; Verified: No.**
+3. **EX-0124-03 - Specify bridge consent presentation**. Acceptance: Each extra song and route explicitly approved or declined. Required verification: Consent/decline/reopen scenarios. **Implementation: Not started; Verified: No.**
+4. **EX-0124-04 - Verify atomic/duplicate safeguards**. Acceptance: No partial or duplicated bridge under races. Required verification: Concurrent API and browser E2E. **Implementation: Not started; Verified: No.**
+5. **EX-0124-05 - Test audible handover and preview focus**. Acceptance: No unexpected overlap or transport interruption. Required verification: Real music request-join test. **Implementation: Not started; Verified: No.**
 
 ## Adversarial cases and research
 

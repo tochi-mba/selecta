@@ -1,4 +1,4 @@
-# ADR-0209 — Transport hierarchy, persistent audio focus and media session
+# ADR-0209 - Transport hierarchy, persistent audio focus and media session
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Keep the authoritative player alive while redesigning song progress, transport a
 
 No player duplication, auto-resume after manual Pause or false playing visualization. Prefer a calm and reliable existing control when a novel expression does not improve musical comprehension or agency. No new cloud, subscription, telemetry, audio asset, or backend contract is approved by this documentation alone.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0209-01 — Model all player states.** **Acceptance:** Idle/loading/playing/paused/seam/failure mapped. **Required verification:** State tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0209-02 — Redesign desktop transport.** **Acceptance:** Primary controls and identity coherent. **Required verification:** Wide/shallow visual review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0209-03 — Redesign mobile mini-player.** **Acceptance:** Safe area, nav and keyboard insets work. **Required verification:** 320–430 touch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0209-04 — Use authentic playback clock.** **Acceptance:** Progress and transition match actual sound. **Required verification:** Audio/video sync study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0209-05 — Guarantee single owner.** **Acceptance:** Preview/Studio/Listen cannot overlap unexpectedly. **Required verification:** Focus race test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0209-06 — Preserve intentional Pause.** **Acceptance:** Theme, navigation, failure never restart sound. **Required verification:** Pause/route E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0209-07 — Verify supported media keys.** **Acceptance:** OS controls reflect actual session. **Required verification:** Windows/Edge device test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0209-08 — Audit accessible transport.** **Acceptance:** Control names and state announcements work. **Required verification:** Keyboard and NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0209-01 - Model all player states.** **Acceptance:** Idle/loading/playing/paused/seam/failure mapped. **Required verification:** State tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0209-02 - Redesign desktop transport.** **Acceptance:** Primary controls and identity coherent. **Required verification:** Wide/shallow visual review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0209-03 - Redesign mobile mini-player.** **Acceptance:** Safe area, nav and keyboard insets work. **Required verification:** 320–430 touch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0209-04 - Use authentic playback clock.** **Acceptance:** Progress and transition match actual sound. **Required verification:** Audio/video sync study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0209-05 - Guarantee single owner.** **Acceptance:** Preview/Studio/Listen cannot overlap unexpectedly. **Required verification:** Focus race test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0209-06 - Preserve intentional Pause.** **Acceptance:** Theme, navigation, failure never restart sound. **Required verification:** Pause/route E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0209-07 - Verify supported media keys.** **Acceptance:** OS controls reflect actual session. **Required verification:** Windows/Edge device test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0209-08 - Audit accessible transport.** **Acceptance:** Control names and state announcements work. **Required verification:** Keyboard and NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

@@ -1,10 +1,10 @@
 # ADR-0080: Make controls, asynchronous states, recovery and Undo dependable
 
-- **Decision status:** Proposed (owner review required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 1 — cross-cutting interaction foundations
+- **Phase:** 1 - cross-cutting interaction foundations
 - **Extends:** ADR-0051, ADR-0052, ADR-0068, ADR-0070. No inherited task is automatically complete.
 - **Dependencies:** ADR-0078 baseline; coordinate with ADR-0079 design primitives.
 - **Checklist:** S31-0080-01 through S31-0080-10 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,16 +23,16 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0080-01 — Define shared initial/empty/partial/refresh/error/offline/recovery presentation rules.** Acceptance: Each state includes visible facts, allowed actions, focus/announcement behaviour and next step.
-2. **S31-0080-02 — Review skeleton geometry for every high-traffic content surface.** Acceptance: Placeholders match real content structure and do not cause large avoidable layout jumps.
-3. **S31-0080-03 — Unify busy and duplicate-submit behaviour.** Acceptance: One action has immediate feedback, prevents duplicate mutations, and remains recoverable after timeout or failure.
-4. **S31-0080-04 — Audit global toast, Activity and scoped Undo lifetimes.** Acceptance: Burst messages never make the only undo inaccessible; undo never targets a newer or different mix.
-5. **S31-0080-05 — Review all dialog, drawer, sheet, menu and tooltip focus paths.** Acceptance: Escape, Tab, trigger-return, focus restore, outside click and stacked overlay behaviour match expected patterns.
-6. **S31-0080-06 — Audit stale-response reconciliation and persistent data survival.** Acceptance: Late search, poll, request, render or edit response cannot overwrite the latest user action.
-7. **S31-0080-07 — Make error text specific and actionable.** Acceptance: Every meaningful failure states what failed, what remains safe and how to retry or recover.
-8. **S31-0080-08 — Review command palette and shortcut discoverability.** Acceptance: Disabled commands explain why; typed search, pointer selection, arrow keys and keyboard shortcut opt-out work.
-9. **S31-0080-09 — Review accessible announcements for non-chattering progress.** Acceptance: Song/page/action outcome is announced once; clocks, polling and repeated progress do not flood live regions.
-10. **S31-0080-10 — Test rapid user input while the server is slow or disconnected.** Acceptance: No silent lost clicks, fabricated success, duplicate request, or focus reset during reconnect.
+1. **S31-0080-01 - Define shared initial/empty/partial/refresh/error/offline/recovery presentation rules.** Acceptance: Each state includes visible facts, allowed actions, focus/announcement behaviour and next step.
+2. **S31-0080-02 - Review skeleton geometry for every high-traffic content surface.** Acceptance: Placeholders match real content structure and do not cause large avoidable layout jumps.
+3. **S31-0080-03 - Unify busy and duplicate-submit behaviour.** Acceptance: One action has immediate feedback, prevents duplicate mutations, and remains recoverable after timeout or failure.
+4. **S31-0080-04 - Audit global toast, Activity and scoped Undo lifetimes.** Acceptance: Burst messages never make the only undo inaccessible; undo never targets a newer or different mix.
+5. **S31-0080-05 - Review all dialog, drawer, sheet, menu and tooltip focus paths.** Acceptance: Escape, Tab, trigger-return, focus restore, outside click and stacked overlay behaviour match expected patterns.
+6. **S31-0080-06 - Audit stale-response reconciliation and persistent data survival.** Acceptance: Late search, poll, request, render or edit response cannot overwrite the latest user action.
+7. **S31-0080-07 - Make error text specific and actionable.** Acceptance: Every meaningful failure states what failed, what remains safe and how to retry or recover.
+8. **S31-0080-08 - Review command palette and shortcut discoverability.** Acceptance: Disabled commands explain why; typed search, pointer selection, arrow keys and keyboard shortcut opt-out work.
+9. **S31-0080-09 - Review accessible announcements for non-chattering progress.** Acceptance: Song/page/action outcome is announced once; clocks, polling and repeated progress do not flood live regions.
+10. **S31-0080-10 - Test rapid user input while the server is slow or disconnected.** Acceptance: No silent lost clicks, fabricated success, duplicate request, or focus reset during reconnect.
 
 ## Required adverse cases and evidence
 
@@ -48,13 +48,14 @@ More explicit statuses use screen space but lower uncertainty, especially when r
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
+The owner accepted this decision on 2026-11-08. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
 
 ## Status history
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Original documentation-only finishing plan |\n| 2026-11-07 | Proposed | In progress | Selected UI/test code now on PR #25; complete verification still outstanding |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

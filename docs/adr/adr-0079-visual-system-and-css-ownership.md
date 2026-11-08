@@ -1,10 +1,10 @@
 # ADR-0079: Unify typography, themes, visual rhythm and CSS ownership
 
-- **Decision status:** Proposed (owner review required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 1 — design foundations
+- **Phase:** 1 - design foundations
 - **Extends:** ADR-0050, ADR-0070, ADR-0077, ADR-0034. No inherited task is automatically complete.
 - **Dependencies:** ADR-0078 baseline and owner visual-direction approval.
 - **Checklist:** S31-0079-01 through S31-0079-10 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,16 +23,16 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0079-01 — Approve visual hierarchy for page, song, metadata and technical values.** Acceptance: Screens use a documented typographic scale; long/RTL/missing song metadata remains readable.
-2. **S31-0079-02 — Specify semantic colour role mapping for both themes.** Acceptance: Buttons, links, statuses, playback, requests, caution, focus and selections preserve contrast and meaning in light/dark.
-3. **S31-0079-03 — Audit existing CSS cascade and overlapping selectors.** Acceptance: Ownership map names each rule's canonical file; proposals identify obsolete overrides without changing code in this PR.
-4. **S31-0079-04 — Standardize spacing, gutters, radii, separators and depth.** Acceptance: Listen, browse, work, panel, dialog and toast examples use a reviewed common rhythm with justified exceptions.
-5. **S31-0079-05 — Standardize SVG icon dimensions, stroke and accessible names.** Acceptance: All core actions have consistent icon alignment, discernible names and non-glyph fallback behaviour.
-6. **S31-0079-06 — Review button, input, checkbox, tab, menu and status variants.** Acceptance: Control gallery covers default, hover, focus, pressed, busy, disabled, failure and destructive states.
-7. **S31-0079-07 — Review light/dark/system theme and first-paint transitions.** Acceptance: No theme flash, incorrect title-bar colour, unreadable lime text, or unexpected audio reaction on switch.
-8. **S31-0079-08 — Audit visible numerical values and truncation.** Acceptance: BPM, keys, durations, counts, storage, waveforms and titles align and remain understandable.
-9. **S31-0079-09 — Review screen composition at every density and content width.** Acceptance: No arbitrary giant heading, excessive dead space, clipping or giant unstructured action clusters in representative screenshots.
-10. **S31-0079-10 — Approve visual regression fixtures and change-review rules.** Acceptance: Reviewed baselines exist for representative pages and state changes; no blind snapshot acceptance.
+1. **S31-0079-01 - Approve visual hierarchy for page, song, metadata and technical values.** Acceptance: Screens use a documented typographic scale; long/RTL/missing song metadata remains readable.
+2. **S31-0079-02 - Specify semantic colour role mapping for both themes.** Acceptance: Buttons, links, statuses, playback, requests, caution, focus and selections preserve contrast and meaning in light/dark.
+3. **S31-0079-03 - Audit existing CSS cascade and overlapping selectors.** Acceptance: Ownership map names each rule's canonical file; proposals identify obsolete overrides without changing code in this PR.
+4. **S31-0079-04 - Standardize spacing, gutters, radii, separators and depth.** Acceptance: Listen, browse, work, panel, dialog and toast examples use a reviewed common rhythm with justified exceptions.
+5. **S31-0079-05 - Standardize SVG icon dimensions, stroke and accessible names.** Acceptance: All core actions have consistent icon alignment, discernible names and non-glyph fallback behaviour.
+6. **S31-0079-06 - Review button, input, checkbox, tab, menu and status variants.** Acceptance: Control gallery covers default, hover, focus, pressed, busy, disabled, failure and destructive states.
+7. **S31-0079-07 - Review light/dark/system theme and first-paint transitions.** Acceptance: No theme flash, incorrect title-bar colour, unreadable lime text, or unexpected audio reaction on switch.
+8. **S31-0079-08 - Audit visible numerical values and truncation.** Acceptance: BPM, keys, durations, counts, storage, waveforms and titles align and remain understandable.
+9. **S31-0079-09 - Review screen composition at every density and content width.** Acceptance: No arbitrary giant heading, excessive dead space, clipping or giant unstructured action clusters in representative screenshots.
+10. **S31-0079-10 - Approve visual regression fixtures and change-review rules.** Acceptance: Reviewed baselines exist for representative pages and state changes; no blind snapshot acceptance.
 
 ## Required adverse cases and evidence
 
@@ -48,13 +48,14 @@ System-font and lightweight CSS maintain local-first performance; more elaborate
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
+The owner accepted this decision on 2026-11-08. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
 
 ## Status history
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Original documentation-only finishing plan |\n| 2026-11-07 | Proposed | In progress | Selected UI/test code now on PR #25; complete verification still outstanding |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

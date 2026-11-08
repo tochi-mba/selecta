@@ -1,4 +1,4 @@
-# ADR-0204 — Polished controls, icons, inputs and feedback primitives
+# ADR-0204 - Polished controls, icons, inputs and feedback primitives
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Establish a professional interaction system with complete states for buttons, se
 
 No hover-only actions, fake disabled states, duplicate commits or missing accessible names. Prefer a calm and reliable existing control when a novel expression does not improve musical comprehension or agency. No new cloud, subscription, telemetry, audio asset, or backend contract is approved by this documentation alone.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0204-01 — Specify full control states.** **Acceptance:** Focus/pressed/pending/error/success all defined. **Required verification:** Component gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0204-02 — Standardise button hierarchy.** **Acceptance:** Primary action unique and reachable. **Required verification:** Usability and keyboard test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0204-03 — Refine icon semantics.** **Acceptance:** Size, stroke and accessible label consistent. **Required verification:** Icon audit/NVDA. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0204-04 — Harden forms and validation.** **Acceptance:** Clear labels/units/errors and stable focus. **Required verification:** Error injection E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0204-05 — Define popover and dialog contracts.** **Acceptance:** Escape/outside/return focus predictable. **Required verification:** Keyboard and mobile tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0204-06 — Differentiate selection and focus.** **Acceptance:** Both visible in forced-colors. **Required verification:** High contrast test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0204-07 — Standardise feedback and undo.** **Acceptance:** Every commit has truthful outcome. **Required verification:** Async race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0204-08 — Approve complete primitive QA.** **Acceptance:** All states across themes inspected. **Required verification:** Independent visual review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0204-01 - Specify full control states.** **Acceptance:** Focus/pressed/pending/error/success all defined. **Required verification:** Component gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0204-02 - Standardise button hierarchy.** **Acceptance:** Primary action unique and reachable. **Required verification:** Usability and keyboard test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0204-03 - Refine icon semantics.** **Acceptance:** Size, stroke and accessible label consistent. **Required verification:** Icon audit/NVDA. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0204-04 - Harden forms and validation.** **Acceptance:** Clear labels/units/errors and stable focus. **Required verification:** Error injection E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0204-05 - Define popover and dialog contracts.** **Acceptance:** Escape/outside/return focus predictable. **Required verification:** Keyboard and mobile tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0204-06 - Differentiate selection and focus.** **Acceptance:** Both visible in forced-colors. **Required verification:** High contrast test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0204-07 - Standardise feedback and undo.** **Acceptance:** Every commit has truthful outcome. **Required verification:** Async race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0204-08 - Approve complete primitive QA.** **Acceptance:** All states across themes inspected. **Required verification:** Independent visual review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

@@ -22,9 +22,11 @@ export type Prefs = {
   singleKeys: boolean;
   /** The kill switch: the older navigation labels and grouping, over exactly the same pages. */
   classicNav: boolean;
+  /** The small ? beside music terms. Off hides only those optional hints, never a warning or status. */
+  termHints: boolean;
 };
 
-export const DEFAULT_PREFS: Prefs = { theme: 'system', motion: 'subtle', railCollapsed: false, density: 'comfortable', libraryLayout: 'list', palette: true, singleKeys: true, classicNav: false };
+export const DEFAULT_PREFS: Prefs = { theme: 'system', motion: 'subtle', railCollapsed: false, density: 'comfortable', libraryLayout: 'list', palette: true, singleKeys: true, classicNav: false, termHints: true };
 
 /** What the browser's own title bar should be, matching each theme's background in tokens.css. */
 const BAR_COLOUR = { dark: '#100f0c', light: '#f5f2e9' };
@@ -44,6 +46,7 @@ function read(): Prefs {
       palette: saved.palette !== false,
       singleKeys: saved.singleKeys !== false,
       classicNav: saved.classicNav === true,
+      termHints: saved.termHints !== false,
     };
   } catch {
     return DEFAULT_PREFS;

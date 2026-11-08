@@ -1,4 +1,4 @@
-# ADR-0168 — Make a Mix: expressive idea selection and honest result reveal
+# ADR-0168 - Make a Mix: expressive idea selection and honest result reveal
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -33,15 +33,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained layout when a richer animation does not measurably improve comprehension, creative control or delight. A preview or graphic is illustrative until connected to actual source data. No fake waveform, beat, word timing, quality score, cover art, render status, autoplay sound or processing percentage. Every animated or direct-manipulation state requires an accessible static/keyboard equivalent.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0168-01 — Design featured hero and one primary CTA.** **Acceptance:** Intent, Play and approximate length readable at first glance. **Required verification:** 375/1440px screenshots and glance testing. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0168-02 — Create distinct card motif set.** **Acceptance:** The moment/mood/sound/journey distinguishable without made-up facts. **Required verification:** Motif provenance and comprehension review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0168-03 — Retain all three card commitments.** **Acceptance:** Play/Shape/Save reachable and correctly scoped on keyboard/touch. **Required verification:** Replacement and draft creation tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0168-04 — Design approximate-length effect.** **Acceptance:** Choice changes intention graphic without promising exact minutes. **Required verification:** Short/long fixtures and copy review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0168-05 — Reveal generated track order honestly.** **Acceptance:** Only server-returned songs and seam states are shown as created. **Required verification:** Slow, error, stale and success build tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0168-06 — Avoid button-heavy mobile cards.** **Acceptance:** No accidental change of current playing mix from card surface. **Required verification:** Usability and 320px touch test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0168-07 — Measure first choice confidence.** **Acceptance:** Users choose intended feeling without technical coaching. **Required verification:** Uncoached task completion and hesitation counts. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0168-01 - Design featured hero and one primary CTA.** **Acceptance:** Intent, Play and approximate length readable at first glance. **Required verification:** 375/1440px screenshots and glance testing. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0168-02 - Create distinct card motif set.** **Acceptance:** The moment/mood/sound/journey distinguishable without made-up facts. **Required verification:** Motif provenance and comprehension review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0168-03 - Retain all three card commitments.** **Acceptance:** Play/Shape/Save reachable and correctly scoped on keyboard/touch. **Required verification:** Replacement and draft creation tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0168-04 - Design approximate-length effect.** **Acceptance:** Choice changes intention graphic without promising exact minutes. **Required verification:** Short/long fixtures and copy review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0168-05 - Reveal generated track order honestly.** **Acceptance:** Only server-returned songs and seam states are shown as created. **Required verification:** Slow, error, stale and success build tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0168-06 - Avoid button-heavy mobile cards.** **Acceptance:** No accidental change of current playing mix from card surface. **Required verification:** Usability and 320px touch test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0168-07 - Measure first choice confidence.** **Acceptance:** Users choose intended feeling without technical coaching. **Required verification:** Uncoached task completion and hesitation counts. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

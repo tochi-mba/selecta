@@ -1,6 +1,6 @@
-# ADR-0118 — Recommendations: clear music-first cards and authentic previews
+# ADR-0118 - Recommendations: clear music-first cards and authentic previews
 
-- **Decision status:** Proposed, owner review pending.
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/5 new tasks implemented).
 - **Independent verification:** No (0/5).
 - **Programme/date:** Experience-first UI/UX; 2026-11-07; baseline `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).
@@ -15,7 +15,7 @@ Existing cards can give Play, Edit first and Save draft similar visual weight. S
 ## Proposed decision
 
 - Establish one dominant card action supported by precise readiness, mood description and real artist examples.
-- Preserve Edit first and Save as draft through visible, accessible secondary actions—not hover-only.
+- Preserve Edit first and Save as draft through visible, accessible secondary actions-not hover-only.
 - Show a curated first selection while all existing categories and unavailable explanations remain reachable.
 - Prototype short audio previews only when actual fitting, rendered audio exists and single-owner playback can be proven; otherwise do not show preview.
 - Never fabricate album artwork, duration, confidence, musical links or perceived mix quality.
@@ -30,11 +30,11 @@ No preview API/audio generator is approved by this proposal. Feasibility and con
 
 ## Implementation tasks (all Not started / Not verified)
 
-1. **EX-0118-01 — Create feature and category card variants.** Acceptance: Main action and musical identity clear in both themes. Verification: Responsive screenshots plus comprehension test. **Implementation: Not started; Verified: No.**
-2. **EX-0118-02 — Check secondary action parity.** Acceptance: Play/Edit/Save accessible to keyboard and touch. Verification: Backend result and E2E mapping. **Implementation: Not started; Verified: No.**
-3. **EX-0118-03 — Handle partial/unknown metadata.** Acceptance: Cards truthful on missing artists, no-ready suggestions and timing. Verification: Fixture and error-state review. **Implementation: Not started; Verified: No.**
-4. **EX-0118-04 — Document preview feasibility gate.** Acceptance: Source audio and revision exact, or preview rejected. Verification: Code inspection and audio focus proof. **Implementation: Not started; Verified: No.**
-5. **EX-0118-05 — Measure choice confidence.** Acceptance: Better task outcome than baseline, not just prettier layout. Verification: Counterbalanced uncoached selection study. **Implementation: Not started; Verified: No.**
+1. **EX-0118-01 - Create feature and category card variants.** Acceptance: Main action and musical identity clear in both themes. Verification: Responsive screenshots plus comprehension test. **Implementation: Not started; Verified: No.**
+2. **EX-0118-02 - Check secondary action parity.** Acceptance: Play/Edit/Save accessible to keyboard and touch. Verification: Backend result and E2E mapping. **Implementation: Not started; Verified: No.**
+3. **EX-0118-03 - Handle partial/unknown metadata.** Acceptance: Cards truthful on missing artists, no-ready suggestions and timing. Verification: Fixture and error-state review. **Implementation: Not started; Verified: No.**
+4. **EX-0118-04 - Document preview feasibility gate.** Acceptance: Source audio and revision exact, or preview rejected. Verification: Code inspection and audio focus proof. **Implementation: Not started; Verified: No.**
+5. **EX-0118-05 - Measure choice confidence.** Acceptance: Better task outcome than baseline, not just prettier layout. Verification: Counterbalanced uncoached selection study. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and references
 

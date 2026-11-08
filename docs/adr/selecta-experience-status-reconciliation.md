@@ -1,8 +1,8 @@
-# Selecta — historical ADR implementation-status reconciliation
+# Selecta - historical ADR implementation-status reconciliation
 
 **As-of source baseline:** main `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, [PR #29](https://github.com/tochi-mba/selecta/pull/29) merged, 50 changed files. **No historical task status has been changed by this documentation-only PR.**
 
-## What the existing status files say — versus the current merged code
+## What the existing status files say - versus the current merged code
 
 | Programme | Existing document | Recorded status meaning |
 |---|---|---|

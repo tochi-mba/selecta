@@ -1,4 +1,4 @@
-# ADR-0222 — Intended versus achieved Energy Horizon composition
+# ADR-0222 - Intended versus achieved Energy Horizon composition
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Make five-point energy shaping tactile and precise, while separating user-reques
 
 No promise that a requested arc will be exactly heard and no incomparable scales overlaid. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0222-01 — Document energy provenance.** **Acceptance:** Intent, measured and absent data typed. **Required verification:** Schema audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0222-02 — Redesign five-stop gesture.** **Acceptance:** Pointer/touch updates precise repeatable stops. **Required verification:** Value tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0222-03 — Preserve exact keyboard controls.** **Acceptance:** Every stop reachable with known value. **Required verification:** AT and zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0222-04 — Create reversible presets.** **Acceptance:** Preset shape transparent and undoable. **Required verification:** Preset mapping test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0222-05 — Distinctly draw measured journey.** **Acceptance:** Measured data labeled with scale and uncertainty. **Required verification:** Data/graphic fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0222-06 — Guard settings scope.** **Acceptance:** Current edit, draft and default never conflated. **Required verification:** Persistence E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0222-07 — Profile editing performance.** **Acceptance:** Dragging does not hurt audio playback. **Required verification:** Frame trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0222-08 — Test musical comprehension.** **Acceptance:** Users interpret rise/drop and uncertainty correctly. **Required verification:** Novice/DJ study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0222-01 - Document energy provenance.** **Acceptance:** Intent, measured and absent data typed. **Required verification:** Schema audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0222-02 - Redesign five-stop gesture.** **Acceptance:** Pointer/touch updates precise repeatable stops. **Required verification:** Value tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0222-03 - Preserve exact keyboard controls.** **Acceptance:** Every stop reachable with known value. **Required verification:** AT and zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0222-04 - Create reversible presets.** **Acceptance:** Preset shape transparent and undoable. **Required verification:** Preset mapping test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0222-05 - Distinctly draw measured journey.** **Acceptance:** Measured data labeled with scale and uncertainty. **Required verification:** Data/graphic fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0222-06 - Guard settings scope.** **Acceptance:** Current edit, draft and default never conflated. **Required verification:** Persistence E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0222-07 - Profile editing performance.** **Acceptance:** Dragging does not hurt audio playback. **Required verification:** Frame trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0222-08 - Test musical comprehension.** **Acceptance:** Users interpret rise/drop and uncertainty correctly. **Required verification:** Novice/DJ study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

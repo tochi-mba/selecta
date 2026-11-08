@@ -12,11 +12,14 @@ import { markNewestUndone } from './state/activity';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
 import { orderOf } from './state/readiness';
 import { SHORTCUTS, shortcutFor } from './state/shortcuts';
+import { openGlossary } from './state/glossaryRequests';
 import { sayThisTabIsPlaying, whenAnotherTabPlays } from './state/tabs';
 import { ActivityPanel } from './ui/ActivityPanel';
 import { CommandPalette } from './ui/CommandPalette';
 import { Action, announce, Dialog, Drawer, Section, Skeleton } from './ui/controls';
+import { GlossaryHost } from './ui/Glossary';
 import { setToastsQuiet, showProblem, showToast } from './ui/toasts';
+import { useVisiblePoll } from './ui/useVisiblePoll';
 import { ExportJobs } from './views/ExportJobs';
 import { Library } from './views/Library';
 import { Links } from './views/Links';
@@ -69,6 +72,8 @@ export function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [problem, setProblem] = useState('');
   const [data, setData] = useState<MixData>({ mix: [], name: 'Your mix', can_undo: false });
+  const currentCanUndo = useRef(data.can_undo);
+  currentCanUndo.current = data.can_undo;
   const [helping, setHelping] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [commanding, setCommanding] = useState(false);
@@ -122,6 +127,10 @@ export function App() {
   // Which draft is open comes from the address, so it can't be confused with the current mix.
   const draftId = route.page === 'edit' ? route.draft : null;
   const [draftData, setDraftData] = useState<MixData | null>(null);
+  // The global keyboard handler must read the latest loaded identity synchronously,
+  // including between a render and its effect re-subscription.
+  const draftDataRef = useRef(draftData);
+  draftDataRef.current = draftData;
   const [draftGone, setDraftGone] = useState(false);
   const draftRef = useRef(draftId);
   draftRef.current = draftId;
@@ -296,16 +305,9 @@ export function App() {
       .catch((error: Error) => {
         if (problemKind(error) !== 'offline') showProblem(`Couldn’t read your mix: ${error.message}`);
       });
-    const poll = () => {
-      if (document.visibilityState !== 'hidden') void refreshStatus();
-    };
-    const timer = window.setInterval(poll, 4000);
-    document.addEventListener('visibilitychange', poll);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', poll);
-    };
   }, [refreshStatus, setMixData, player]);
+  // A hidden tab stops asking the server and catches up the moment it's looked at again.
+  useVisiblePoll(refreshStatus, 4000);
 
   const firstMixRoute = useRef(true);
   useEffect(() => {
@@ -329,29 +331,11 @@ export function App() {
 
   // A draft being rendered has to show that as it happens too.
   const draftBusy = !!draftData && (draftData.draft?.place != null || draftData.mix.some((item) => ['queued', 'rendering'].includes(item.seam?.state.status ?? '')));
-  useEffect(() => {
-    if (!draftBusy) return;
-    const refresh = () => { if (document.visibilityState !== 'hidden') refreshDraft(); };
-    const timer = window.setInterval(refresh, 2000);
-    document.addEventListener('visibilitychange', refresh);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', refresh);
-    };
-  }, [draftBusy, refreshDraft]);
+  useVisiblePoll(refreshDraft, 2000, draftBusy);
 
   // Anything still rendering gets checked often, so its status changes on its own.
   const busy = mix.some((item) => ['none', 'queued', 'rendering'].includes(item.seam?.state.status ?? ''));
-  useEffect(() => {
-    if (!busy) return;
-    const refresh = () => { if (document.visibilityState !== 'hidden') refreshMix(); };
-    const timer = window.setInterval(refresh, 1500);
-    document.addEventListener('visibilitychange', refresh);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', refresh);
-    };
-  }, [busy, refreshMix]);
+  useVisiblePoll(refreshMix, 1500, busy);
 
   const playing = mix[now.position];
   const active = now.phase !== 'idle';
@@ -488,15 +472,16 @@ export function App() {
           if (scope !== null) {
             // A draft link can be open before its response arrives, or after a different
             // draft's response. In neither case may the shortcut mutate a guessed scope.
-            if (draftRef.current !== scope || draftData?.draft?.id !== scope) {
+            const loaded = draftDataRef.current;
+            if (draftRef.current !== scope || loaded?.draft?.id !== scope) {
               announce('Wait for this draft to load before undoing.');
               break;
             }
-            if (!draftData.can_undo) {
+            if (!loaded.can_undo) {
               announce('Nothing to undo in this draft.');
               break;
             }
-          } else if (!data.can_undo) {
+          } else if (!currentCanUndo.current) {
             announce('Nothing to undo in the current mix.');
             break;
           }
@@ -516,7 +501,7 @@ export function App() {
     };
     window.addEventListener('keydown', keys);
     return () => window.removeEventListener('keydown', keys);
-  }, [player, undoNewest, toggleStage, draftData, data.can_undo]);
+  }, [player, undoNewest, toggleStage]);
 
   // the drafts it can jump to are only ever as old as this opening of it
   useEffect(() => {
@@ -704,7 +689,7 @@ export function App() {
       )}
       {commanding && <CommandPalette commands={commands} onClose={() => setCommanding(false)} />}
       {helping && (
-        <Dialog title="Keyboard shortcuts" onClose={() => setHelping(false)} footer={<button autoFocus data-autofocus onClick={() => setHelping(false)}>Close</button>}>
+        <Dialog title="Keyboard shortcuts" onClose={() => setHelping(false)} footer={<><button onClick={() => openGlossary()}>Music terms</button><button autoFocus data-autofocus onClick={() => setHelping(false)}>Close</button></>}>
           <dl className="keys">
             {SHORTCUTS.filter((shortcut) => shortcut.id !== 'palette' || preferences.palette).map((shortcut) => (
               <div key={shortcut.id}>
@@ -725,6 +710,7 @@ export function App() {
           </div>
         </Dialog>
       )}
+      <GlossaryHost />
     </RequestsContext.Provider>
   );
 }

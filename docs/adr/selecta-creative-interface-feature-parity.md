@@ -1,4 +1,4 @@
-# Selecta — creative-interface feature preservation map
+# Selecta - creative-interface feature preservation map
 
 **State:** Accepted (owner approved 2026-11-08), 140 tasks Not started, 0 independently Verified. The table names source capabilities that future creative polish must preserve; it is not current independent testing.
 

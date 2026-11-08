@@ -1,3 +1,4 @@
+import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import type { MixItem } from '../api';
 
 /** A stable, decorative identity from the real library ID. This is neither album art nor audio analysis. */
@@ -135,7 +136,7 @@ export function RouteDiagram({ songs, requestedId, state, compact = false }: {
   compact?: boolean;
 }) {
   if (!songs.length) return null;
-  const heading = state === 'proposed' ? 'Proposed route — nothing added' : state === 'ready' ? 'Prepared route — waiting to join' : 'Preparing route — not playable yet';
+  const heading = state === 'proposed' ? 'Proposed route - nothing added' : state === 'ready' ? 'Prepared route - waiting to join' : 'Preparing route - not playable yet';
   if (compact) return (
     <div className={'music-route compact ' + state} role="img" aria-label={heading + '. ' + songs.map((song) => song.title).join(' → ')}>
       <span className="music-route-state">{heading}</span>
@@ -191,44 +192,163 @@ export function EnergyHorizon({ values, source, onPointerDown, onPointerMove, on
   );
 }
 
+/** A song's measured energy, or null when there isn't one. Nothing is ever filled in from its neighbours. */
+export function measuredEnergy(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** How measured energy moves from song to song, in words. Unknown songs are skipped, never guessed,
+ * and a wobble smaller than a quarter of this mix's own range isn't called a change. */
+function energyShape(values: number[]): string {
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  if (high - low < 0.05) return 'stays about level';
+  const step = Math.max(0.05, (high - low) * 0.25);
+  const moves: ('up' | 'down')[] = [];
+  let lowest = values[0];
+  let highest = values[0];
+  let extreme = values[0];
+  for (const value of values.slice(1)) {
+    const going = moves[moves.length - 1];
+    if (!going) {
+      lowest = Math.min(lowest, value);
+      highest = Math.max(highest, value);
+      if (value - lowest >= step) moves.push('up');
+      else if (highest - value >= step) moves.push('down');
+      extreme = value;
+    } else if (going === 'up' ? value > extreme : value < extreme) {
+      extreme = value;
+    } else if (Math.abs(extreme - value) >= step) {
+      moves.push(going === 'up' ? 'down' : 'up');
+      extreme = value;
+    }
+  }
+  const rises = moves[0] === 'up';
+  if (moves.length === 1) return rises ? 'rises' : 'falls';
+  if (moves.length === 2) return rises ? 'rises, then falls' : 'falls, then rises';
+  if (moves.length === 3) return rises ? 'rises, falls, then rises again' : 'falls, rises, then falls again';
+  return moves.length ? 'rises and falls several times' : 'stays about level';
+}
+
+/** One honest sentence about a mix's measured song energy, such as "Measured energy rises, then falls;
+ * 2 songs unknown". It describes only the values given, in their order. */
+export function energySummary(values: ReadonlyArray<number | null | undefined>): string {
+  const known = values.map(measuredEnergy).filter((energy): energy is number => energy !== null);
+  const missing = values.length - known.length;
+  const unknown = missing ? `; ${missing} ${missing === 1 ? 'song' : 'songs'} unknown` : '';
+  if (!values.length) return 'No songs yet';
+  if (!known.length) return values.length === 1 ? 'Energy unknown for this song' : `Energy unknown for all ${values.length} songs`;
+  if (known.length === 1) return `Measured energy for only one song${unknown}`;
+  return `Measured energy ${energyShape(known)}${unknown}`;
+}
+
 /** A per-song snapshot, not a generated energy shape or a promised result. Gaps stay unknown.
- * The parent owns the exact mix scope and selection; clicking here cannot edit or play anything. */
-export function EnergyOverview({ items, selectedIndex, onSelect }: {
+ * The parent owns the exact mix scope and selection; choosing a song here selects it and nothing else:
+ * it cannot edit or play anything. One tab stop, with the arrow keys moving between songs. */
+export function EnergyOverview({ items, selectedIndex, onSelect, playingIndex = -1 }: {
   items: MixItem[];
   selectedIndex: number;
   onSelect: (index: number) => void;
+  /** The song the player is on, only when the parent already knows it for this same mix. */
+  playingIndex?: number;
 }) {
-  const measured = items.map((item) => item.energy).filter((energy): energy is number => typeof energy === 'number' && Number.isFinite(energy));
+  const list = useRef<HTMLOListElement>(null);
+  const [cursor, setCursor] = useState<number | null>(null);
+  useEffect(() => setCursor(null), [selectedIndex]);
+  const anchor = selectedIndex >= 0 ? selectedIndex : playingIndex;
+  useEffect(() => {
+    // A long mix scrolls sideways here. Keep its selected (or playing) song in view without moving the page.
+    const strip = list.current;
+    const segment = anchor >= 0 ? strip?.children[anchor] : null;
+    if (!strip || !segment || strip.scrollWidth <= strip.clientWidth) return;
+    const outer = strip.getBoundingClientRect();
+    const inner = segment.getBoundingClientRect();
+    if (inner.left < outer.left) strip.scrollLeft += inner.left - outer.left - 8;
+    else if (inner.right > outer.right) strip.scrollLeft += inner.right - outer.right + 8;
+  }, [anchor, items.length]);
+  const energies = items.map((item) => measuredEnergy(item.energy));
+  const measured = energies.filter((energy): energy is number => energy !== null);
   if (measured.length < 2) {
     return <p className="hint energy-overview-empty">Not enough measured song energy to show a journey yet.</p>;
   }
   const low = Math.min(...measured);
   const high = Math.max(...measured);
   const span = high - low;
+  const describe = (index: number) => {
+    const energy = energies[index];
+    const height = energy === null ? 0 : span === 0 ? 50 : 10 + (energy - low) / span * 90;
+    const level = energy === null ? 'not measured' : span === 0 ? 'even' : height < 38 ? 'lower' : height > 71 ? 'higher' : 'middle';
+    return { energy, height, words: items[index].title + ', song ' + (index + 1) + ', energy ' + level + (energy === null ? '' : ' (' + energy.toFixed(2) + ')') };
+  };
+  const last = items.length - 1;
+  const stop = Math.min(Math.max(cursor ?? (selectedIndex >= 0 ? selectedIndex : playingIndex >= 0 ? playingIndex : 0), 0), last);
+  const move = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
+    const forwards = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwards = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? last : event.key === forwards ? index + 1 : event.key === backwards ? index - 1 : null;
+    if (next === null) return;
+    event.preventDefault();
+    const target = Math.min(Math.max(next, 0), last);
+    setCursor(target);
+    list.current?.children[target]?.querySelector<HTMLButtonElement>('button')?.focus();
+  };
+  const unknown = items.length - measured.length;
+  const selected = items[selectedIndex] ? describe(selectedIndex) : null;
+  const playing = playingIndex >= 0 && playingIndex !== selectedIndex && items[playingIndex] ? items[playingIndex] : null;
   return (
     <section className="energy-overview" aria-label="Measured energy overview">
       <div className="energy-overview-head">
         <strong>Energy through this mix</strong>
-        <small>Relative measured song energy only — not your requested shape or a quality score</small>
+        <small>Relative measured song energy only - not your requested shape or a quality score</small>
       </div>
-      <ol>
+      <ol ref={list}>
         {items.map((item, index) => {
-          const known = typeof item.energy === 'number' && Number.isFinite(item.energy);
-          const height = known ? (span === 0 ? 50 : 10 + (item.energy! - low) / span * 90) : 0;
-          const level = !known ? 'not measured' : span === 0 ? 'even' : height < 38 ? 'lower' : height > 71 ? 'higher' : 'middle';
+          const { energy, height, words } = describe(index);
+          const isPlaying = playingIndex === index;
           return (
             <li key={item.song_id + '-' + index}>
-              <button type="button" aria-current={selectedIndex === index ? 'true' : undefined}
-                aria-label={'Select ' + item.title + ', song ' + (index + 1) + ', energy ' + level}
-                onClick={() => onSelect(index)}>
-                {known
+              <button type="button" tabIndex={index === stop ? 0 : -1}
+                aria-current={selectedIndex === index ? 'true' : undefined}
+                aria-label={'Select ' + words + (isPlaying ? ', playing now' : '')}
+                title={words + (isPlaying ? ', playing now' : '')}
+                onClick={() => { setCursor(index); onSelect(index); }}
+                onKeyDown={(event) => move(event, index)}>
+                {energy !== null
                   ? <span className="energy-overview-bar" style={{ height: height + '%' }} aria-hidden="true" />
                   : <span className="energy-overview-unknown" aria-hidden="true">?</span>}
+                {isPlaying && <span className="energy-overview-playing" aria-hidden="true" />}
               </button>
             </li>
           );
         })}
       </ol>
+      <p className="energy-overview-now">
+        {selected ? <>Selected: <span dir="auto">{selected.words}</span>.</> : 'Choose a bar, or use the arrow keys, to select a song.'}
+        {playing && <> Playing now: <span dir="auto">{playing.title}</span>, song {playingIndex + 1}.</>}
+      </p>
+      <p className="energy-overview-summary">
+        <span>{energySummary(energies)}.</span>
+        {unknown > 0 && <span className="energy-overview-key"><span className="energy-overview-swatch" aria-hidden="true" /> Hatched with “?”: energy not measured</span>}
+      </p>
     </section>
+  );
+}
+
+/** A small picture of measured song energy for a mix card. It can't be pressed, and it says in words
+ * what it shows, worked out from the same values. Unknown songs are gaps, never guesses. */
+export function EnergyThumb({ values, className = '' }: { values: ReadonlyArray<number | null | undefined>; className?: string }) {
+  if (!values.length) return null;
+  const energies = values.map(measuredEnergy);
+  const measured = energies.filter((energy): energy is number => energy !== null);
+  const low = measured.length ? Math.min(...measured) : 0;
+  const span = measured.length ? Math.max(...measured) - low : 0;
+  const summary = energySummary(values);
+  return (
+    <span className={'energy-thumb' + (className ? ' ' + className : '')} role="img" aria-label={summary} title={summary}>
+      {energies.map((energy, index) => energy === null
+        ? <span key={index} className="energy-thumb-unknown" />
+        : <span key={index} className="energy-thumb-bar" style={{ height: (span === 0 ? 50 : 15 + (energy - low) / span * 85) + '%' }} />)}
+    </span>
   );
 }

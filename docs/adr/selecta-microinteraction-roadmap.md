@@ -1,4 +1,4 @@
-# Selecta — immersive UI/UX, microinteraction and animation roadmap
+# Selecta - immersive UI/UX, microinteraction and animation roadmap
 
 **Planning baseline:** main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (2026-11-07, merged PR #30). **Current PR #31:** 30 Accepted ADRs; **208 source-level Implemented, 4 In progress, 28 Not started**, 0 independently Verified. This programme extends but does not silently supersede ADR-0114–0134 or older programmes.
 
@@ -55,7 +55,7 @@ Selecta is a locally running autonomous DJ with optional precision creation. The
 
 - Decision: Accepted by the repository owner on 2026-11-07. Any future rejection or supersession requires a recorded rationale.
 - Implementation: Not started → In progress → source-level Implemented on a linked PR head when behavior and appropriate automation are present. Merging and independent release verification are separate steps; checkboxes track code completion, not approved release.
-- Independent verification: No → Yes with named real-world evidence—visual, uncoached usability, actual audio, keyboard/NVDA/touch, reduced motion, performance or privacy as applicable. Green CI, muted synthetic clips, proposed screenshots and docs-only merge cannot establish human enjoyment or verified accessibility.
+- Independent verification: No → Yes with named real-world evidence-visual, uncoached usability, actual audio, keyboard/NVDA/touch, reduced motion, performance or privacy as applicable. Green CI, muted synthetic clips, proposed screenshots and docs-only merge cannot establish human enjoyment or verified accessibility.
 - All new tasks have a unique `MI-0135-01`…`MI-0164-08` key, acceptance statement, verification demand, status and owner field in the [checklist](selecta-microinteraction-implementation-checklist.md) and [ledger](selecta-microinteraction-evidence.md).
 
 ## Non-negotiable parity and scope

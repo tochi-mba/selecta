@@ -1,11 +1,11 @@
 # ADR-0054: Explore mixes, presets, creation defaults and energy journeys
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 3 — Core journeys
+- **Phase:** 3 - Core journeys
 - **Extends existing decisions:** ADR-0010, ADR-0011, ADR-0038
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0054-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Use an intent-led Explore landing page with a prominent playable recommendation,
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0054-01 — Not started.** Create Explore hierarchy with Mixes, Word Connections and Harmonic Matches subnavigation.
-2. **S3-0054-02 — Not started.** Redesign featured Play and the sixteen preset cards with accessible primary and secondary actions.
-3. **S3-0054-03 — Not started.** Provide context on active-mix replacement, reversible activation, and create-as-draft alternative.
-4. **S3-0054-04 — Not started.** Reorganize customization into grouped accessible controls with visible current summary.
-5. **S3-0054-05 — Not started.** Preserve Smooth/Punchy equivalent, Never/Sometimes/Often stem settings, approximate duration presets and saved defaults.
-6. **S3-0054-06 — Not started.** Redesign five-stop energy arc as keyboard-operable desired target with honest observed-comparison labeling.
-7. **S3-0054-07 — Not started.** Build robust destination search, clear/remove controls and stale-response protection.
-8. **S3-0054-08 — Not started.** Define eligible/ineligible state messages and first-mix call to action backed by actual library readiness.
-9. **S3-0054-09 — Not started.** Usability-test novice selection and expert customization separately.
+1. **S3-0054-01 - Not started.** Create Explore hierarchy with Mixes, Word Connections and Harmonic Matches subnavigation.
+2. **S3-0054-02 - Not started.** Redesign featured Play and the sixteen preset cards with accessible primary and secondary actions.
+3. **S3-0054-03 - Not started.** Provide context on active-mix replacement, reversible activation, and create-as-draft alternative.
+4. **S3-0054-04 - Not started.** Reorganize customization into grouped accessible controls with visible current summary.
+5. **S3-0054-05 - Not started.** Preserve Smooth/Punchy equivalent, Never/Sometimes/Often stem settings, approximate duration presets and saved defaults.
+6. **S3-0054-06 - Not started.** Redesign five-stop energy arc as keyboard-operable desired target with honest observed-comparison labeling.
+7. **S3-0054-07 - Not started.** Build robust destination search, clear/remove controls and stale-response protection.
+8. **S3-0054-08 - Not started.** Define eligible/ineligible state messages and first-mix call to action backed by actual library readiness.
+9. **S3-0054-09 - Not started.** Usability-test novice selection and expert customization separately.
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

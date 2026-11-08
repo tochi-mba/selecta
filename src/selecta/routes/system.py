@@ -12,10 +12,7 @@ from urllib.parse import urlsplit
 from fastapi import HTTPException, Request, Response
 from pydantic import BaseModel
 
-from selecta.library.relink import RelinkError, commit_relink, preview_relink
-
 from selecta import db, jobs, mix
-from selecta.backup import BackupError, MAX_ARCHIVE, PENDING, ROLLBACK, export_backup, stage_restore, validate_backup
 from selecta.api_common import (
     API_FEATURES,
     API_VERSION,
@@ -27,8 +24,18 @@ from selecta.api_common import (
     StorageRequest,
     _counts,
 )
+from selecta.backup import (
+    MAX_ARCHIVE,
+    PENDING,
+    ROLLBACK,
+    BackupError,
+    export_backup,
+    stage_restore,
+    validate_backup,
+)
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_left, analysis_line_left
+from selecta.library.relink import RelinkError, commit_relink, preview_relink
 from selecta.seams import MOVES
 from selecta.session import get_steering, queue, steer
 from selecta.stems import MIN_CACHE_BYTES, cache_bytes, largest_cache_bytes, prune_cache
@@ -66,7 +73,7 @@ def add_routes(app, ctx) -> None:
                 else None
             )
             steering["target_label"] = (
-                f"{target_song['artist'] or 'Unknown artist'} — "
+                f"{target_song['artist'] or 'Unknown artist'} - "
                 f"{target_song['title'] or 'Untitled'}"
                 if target_song
                 else None

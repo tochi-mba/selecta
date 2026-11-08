@@ -4,7 +4,7 @@
 - **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
-- **Delivery phase:** 7 — Integrated verification and release
+- **Delivery phase:** 7 - Integrated verification and release
 - **Extends:** [ADR-0001](adr-0001-product-contract-and-parity.md), [ADR-0029](adr-0029-testing-and-quality.md), [ADR-0030](adr-0030-migration-and-release.md); does not silently supersede their behavioural contracts.
 - **Dependencies:** Phases 0–6, reviewed evidence and all applicable existing behavioural gates.
 - **Checklist:** P0132–P0143 in [polish implementation checklist](polish-implementation-checklist.md).

@@ -1,6 +1,6 @@
 # ADR-0097: Explore discovery, energy and cue customization, and safe current-mix activation
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -29,18 +29,18 @@ Make one obvious featured mix, grouped discovery cards and advanced customizatio
 - Five-point energy curve with keyboard/value controls and optional presets mapping to the same schema.
 - Selected final track search must disambiguate identity and never guarantee an unreachable ending.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0097-01 — Redesign featured suggestion and category card hierarchy.** Acceptance: Listener sees one clear Play; every other action remains discoverable. Required verification: Light/dark/mobile card screenshots and task completion. **Implementation: Not started; Verified: No.**
-2. **S4-0097-02 — Provide Play/Edit first/Save draft action parity.** Acceptance: Same resulting backend behaviour from all card entry points. Required verification: Generated mix and draft comparison tests. **Implementation: Not started; Verified: No.**
-3. **S4-0097-03 — Define shared current-mix replacement consequence policy.** Acceptance: Explore/Library/Drafts do not silently disrupt playback inconsistently. Required verification: Cross-entry current playing/paused/empty E2E. **Implementation: Not started; Verified: No.**
-4. **S4-0097-04 — Group feel/duration/stem/energy/destination controls predictably.** Acceptance: Every old control and saved preference remains available. Required verification: Feature parity audit and preference persistence tests. **Implementation: Not started; Verified: No.**
-5. **S4-0097-05 — Improve five-point energy graph, sliders and option presets.** Acceptance: Visual graph matches actual stored values with keyboard alternative. Required verification: Rapid edits, keyboard, out-of-range and stale saves. **Implementation: Not started; Verified: No.**
-6. **S4-0097-06 — Harden destination song autocomplete and scope wording.** Acceptance: Duplicate title/artists identified; desired end not promised as guaranteed. Required verification: Search stale-order, unavailable destination tests. **Implementation: Not started; Verified: No.**
-7. **S4-0097-07 — Clarify settings affect next generation versus current mix.** Acceptance: No accidental current audio changes from preference edit. Required verification: Listen-while-customizing E2E. **Implementation: Not started; Verified: No.**
-8. **S4-0097-08 — Create unavailable recommendation and partial library states.** Acceptance: Specific blocker without misleading ready label. Required verification: No matches, empty, partial-analysis and server-error fixtures. **Implementation: Not started; Verified: No.**
-9. **S4-0097-09 — Protect build submission and result reconciliation.** Acceptance: Double click/failure/latest build cannot erase current mix. Required verification: Idempotency and late-result tests. **Implementation: Not started; Verified: No.**
-10. **S4-0097-10 — Measure time and confidence selecting first mix.** Acceptance: Observe task errors rather than infer from screenshots. Required verification: Listener/creator usability session. **Implementation: Not started; Verified: No.**
+1. **S4-0097-01 - Redesign featured suggestion and category card hierarchy.** Acceptance: Listener sees one clear Play; every other action remains discoverable. Required verification: Light/dark/mobile card screenshots and task completion. **Implementation: Not started; Verified: No.**
+2. **S4-0097-02 - Provide Play/Edit first/Save draft action parity.** Acceptance: Same resulting backend behaviour from all card entry points. Required verification: Generated mix and draft comparison tests. **Implementation: Not started; Verified: No.**
+3. **S4-0097-03 - Define shared current-mix replacement consequence policy.** Acceptance: Explore/Library/Drafts do not silently disrupt playback inconsistently. Required verification: Cross-entry current playing/paused/empty E2E. **Implementation: Not started; Verified: No.**
+4. **S4-0097-04 - Group feel/duration/stem/energy/destination controls predictably.** Acceptance: Every old control and saved preference remains available. Required verification: Feature parity audit and preference persistence tests. **Implementation: Not started; Verified: No.**
+5. **S4-0097-05 - Improve five-point energy graph, sliders and option presets.** Acceptance: Visual graph matches actual stored values with keyboard alternative. Required verification: Rapid edits, keyboard, out-of-range and stale saves. **Implementation: Not started; Verified: No.**
+6. **S4-0097-06 - Harden destination song autocomplete and scope wording.** Acceptance: Duplicate title/artists identified; desired end not promised as guaranteed. Required verification: Search stale-order, unavailable destination tests. **Implementation: Not started; Verified: No.**
+7. **S4-0097-07 - Clarify settings affect next generation versus current mix.** Acceptance: No accidental current audio changes from preference edit. Required verification: Listen-while-customizing E2E. **Implementation: Not started; Verified: No.**
+8. **S4-0097-08 - Create unavailable recommendation and partial library states.** Acceptance: Specific blocker without misleading ready label. Required verification: No matches, empty, partial-analysis and server-error fixtures. **Implementation: Not started; Verified: No.**
+9. **S4-0097-09 - Protect build submission and result reconciliation.** Acceptance: Double click/failure/latest build cannot erase current mix. Required verification: Idempotency and late-result tests. **Implementation: Not started; Verified: No.**
+10. **S4-0097-10 - Measure time and confidence selecting first mix.** Acceptance: Observe task errors rather than infer from screenshots. Required verification: Listener/creator usability session. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

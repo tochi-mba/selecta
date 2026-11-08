@@ -10,7 +10,7 @@
   "status_scope_note": "New acceptance deltas, not missing source features. Earlier programmes unchanged.",
   "groups": {
     "0248": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -29,7 +29,7 @@
       "implementation_sha": null
     },
     "0249": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -48,7 +48,7 @@
       "implementation_sha": null
     },
     "0250": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -67,7 +67,7 @@
       "implementation_sha": null
     },
     "0251": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -86,7 +86,7 @@
       "implementation_sha": null
     },
     "0252": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -105,7 +105,7 @@
       "implementation_sha": null
     },
     "0253": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -124,7 +124,7 @@
       "implementation_sha": null
     },
     "0254": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -143,7 +143,7 @@
       "implementation_sha": null
     },
     "0255": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -162,7 +162,7 @@
       "implementation_sha": null
     },
     "0256": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -181,7 +181,7 @@
       "implementation_sha": null
     },
     "0257": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -200,7 +200,7 @@
       "implementation_sha": null
     },
     "0258": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -219,7 +219,7 @@
       "implementation_sha": null
     },
     "0259": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -238,7 +238,7 @@
       "implementation_sha": null
     },
     "0260": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -257,7 +257,7 @@
       "implementation_sha": null
     },
     "0261": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -276,7 +276,7 @@
       "implementation_sha": null
     },
     "0262": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [
@@ -295,7 +295,7 @@
       "implementation_sha": null
     },
     "0263": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "implemented": [],
       "in_progress": [],
       "not_started": [

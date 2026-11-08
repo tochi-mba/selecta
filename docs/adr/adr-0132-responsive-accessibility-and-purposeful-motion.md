@@ -1,6 +1,6 @@
-# ADR-0132 — Responsive compositions, WCAG 2.2 AA and purposeful motion
+# ADR-0132 - Responsive compositions, WCAG 2.2 AA and purposeful motion
 
-- **Decision:** Proposed; no owner acceptance is asserted.
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 new EX tasks).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
@@ -30,11 +30,11 @@ One stacked layout for everything can destroy useful expert context; desktop-onl
 
 ## Implementation tasks (all Not started; Verified: No)
 
-1. **EX-0132-01 — Review mobile/zoom layouts**. Acceptance: Essential controls visible at short heights and virtual keyboard. Required verification: 320/375/430, 200/400% zoom tests. **Implementation: Not started; Verified: No.**
-2. **EX-0132-02 — Ensure non-drag equivalents**. Acceptance: Reorder and grid changes possible without drag. Required verification: WCAG 2.5.7 pointer/keyboard checks. **Implementation: Not started; Verified: No.**
-3. **EX-0132-03 — Audit composite ARIA behavior**. Acceptance: Focus, navigation and naming correct for all widgets. Required verification: APG pattern testing and NVDA. **Implementation: Not started; Verified: No.**
-4. **EX-0132-04 — Specify reduced-motion fidelity**. Acceptance: Same task feedback without decorative animation. Required verification: OS preference and performance tests. **Implementation: Not started; Verified: No.**
-5. **EX-0132-05 — Conduct named human AT acceptance**. Acceptance: Essential listener/creator/expert tasks completed accessibly. Required verification: Recorded NVDA/Edge and available AT sessions. **Implementation: Not started; Verified: No.**
+1. **EX-0132-01 - Review mobile/zoom layouts**. Acceptance: Essential controls visible at short heights and virtual keyboard. Required verification: 320/375/430, 200/400% zoom tests. **Implementation: Not started; Verified: No.**
+2. **EX-0132-02 - Ensure non-drag equivalents**. Acceptance: Reorder and grid changes possible without drag. Required verification: WCAG 2.5.7 pointer/keyboard checks. **Implementation: Not started; Verified: No.**
+3. **EX-0132-03 - Audit composite ARIA behavior**. Acceptance: Focus, navigation and naming correct for all widgets. Required verification: APG pattern testing and NVDA. **Implementation: Not started; Verified: No.**
+4. **EX-0132-04 - Specify reduced-motion fidelity**. Acceptance: Same task feedback without decorative animation. Required verification: OS preference and performance tests. **Implementation: Not started; Verified: No.**
+5. **EX-0132-05 - Conduct named human AT acceptance**. Acceptance: Essential listener/creator/expert tasks completed accessibly. Required verification: Recorded NVDA/Edge and available AT sessions. **Implementation: Not started; Verified: No.**
 
 ## Verification and sources
 

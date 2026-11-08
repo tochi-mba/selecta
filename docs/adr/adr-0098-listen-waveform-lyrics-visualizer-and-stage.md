@@ -1,6 +1,6 @@
 # ADR-0098: Listening-first Now view, accurate waveform, lyrics, spectrum and Stage
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -29,18 +29,18 @@ Offer one default listening-focused composition and an optional DJ detail prefer
 - Lyric line focus is calm with accurate timed/untimed/instrumental states and reduced-motion alternatives.
 - Stage retains working controls/escape when browser refuses fullscreen; no double player.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0098-01 — Rebuild Listen hierarchy for idle/playing/paused/transition.** Acceptance: Transport and current song are immediate and readable. Required verification: Real media listener testing. **Implementation: Not started; Verified: No.**
-2. **S4-0098-02 — Add optional DJ detail without branching audio behaviour.** Acceptance: All core actions remain in both views. Required verification: Preference change while playing E2E. **Implementation: Not started; Verified: No.**
-3. **S4-0098-03 — Redesign waveform layers and seek semantics.** Acceptance: Rendered markers correspond to real audio and controls report exact values. Required verification: Seek near start/end, non-seekable clip and metadata tests. **Implementation: Not started; Verified: No.**
-4. **S4-0098-04 — Improve lyric typography, active line and auto-scroll.** Acceptance: Long/missing/untimed/RTL text is readable without jumping. Required verification: Lyric fixtures, reduced motion, visual screenshots. **Implementation: Not started; Verified: No.**
-5. **S4-0098-05 — Contain visualizer canvas work and theme redraw.** Acceptance: No excessive React renders or frame work when hidden. Required verification: Profile plus light/dark switch while playing. **Implementation: Not started; Verified: No.**
-6. **S4-0098-06 — Clarify Up next and pending requests.** Acceptance: Future plan is not falsely promised when request may alter order. Required verification: Request join near transition E2E. **Implementation: Not started; Verified: No.**
-7. **S4-0098-07 — Clarify Bigger/Calmer/Something else intent and feedback.** Acceptance: Accepted request distinct from successful track selection. Required verification: Steering failure/stale-race tests. **Implementation: Not started; Verified: No.**
-8. **S4-0098-08 — Tie feedback/rating to actually heard transition identity.** Acceptance: Late rating never attaches to newer transition. Required verification: Rating key and cross-song tests. **Implementation: Not started; Verified: No.**
-9. **S4-0098-09 — Redesign Stage focus/fullscreen and long-song display.** Acceptance: Escape/fallback and resume focus work without audio interruption. Required verification: Fullscreen denial, small screen, keyboard tests. **Implementation: Not started; Verified: No.**
-10. **S4-0098-10 — Create honest Listen empty/no lyrics/missing-media states.** Acceptance: No Explore content silently under Listen URL; no fabricated playback. Required verification: Deep-link, empty and fault injection tests. **Implementation: Not started; Verified: No.**
+1. **S4-0098-01 - Rebuild Listen hierarchy for idle/playing/paused/transition.** Acceptance: Transport and current song are immediate and readable. Required verification: Real media listener testing. **Implementation: Not started; Verified: No.**
+2. **S4-0098-02 - Add optional DJ detail without branching audio behaviour.** Acceptance: All core actions remain in both views. Required verification: Preference change while playing E2E. **Implementation: Not started; Verified: No.**
+3. **S4-0098-03 - Redesign waveform layers and seek semantics.** Acceptance: Rendered markers correspond to real audio and controls report exact values. Required verification: Seek near start/end, non-seekable clip and metadata tests. **Implementation: Not started; Verified: No.**
+4. **S4-0098-04 - Improve lyric typography, active line and auto-scroll.** Acceptance: Long/missing/untimed/RTL text is readable without jumping. Required verification: Lyric fixtures, reduced motion, visual screenshots. **Implementation: Not started; Verified: No.**
+5. **S4-0098-05 - Contain visualizer canvas work and theme redraw.** Acceptance: No excessive React renders or frame work when hidden. Required verification: Profile plus light/dark switch while playing. **Implementation: Not started; Verified: No.**
+6. **S4-0098-06 - Clarify Up next and pending requests.** Acceptance: Future plan is not falsely promised when request may alter order. Required verification: Request join near transition E2E. **Implementation: Not started; Verified: No.**
+7. **S4-0098-07 - Clarify Bigger/Calmer/Something else intent and feedback.** Acceptance: Accepted request distinct from successful track selection. Required verification: Steering failure/stale-race tests. **Implementation: Not started; Verified: No.**
+8. **S4-0098-08 - Tie feedback/rating to actually heard transition identity.** Acceptance: Late rating never attaches to newer transition. Required verification: Rating key and cross-song tests. **Implementation: Not started; Verified: No.**
+9. **S4-0098-09 - Redesign Stage focus/fullscreen and long-song display.** Acceptance: Escape/fallback and resume focus work without audio interruption. Required verification: Fullscreen denial, small screen, keyboard tests. **Implementation: Not started; Verified: No.**
+10. **S4-0098-10 - Create honest Listen empty/no lyrics/missing-media states.** Acceptance: No Explore content silently under Listen URL; no fabricated playback. Required verification: Deep-link, empty and fault injection tests. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

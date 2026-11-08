@@ -1,11 +1,11 @@
 # ADR-0047: Selecta 3.0 charter, feature preservation and decision governance
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 0 — Baseline and governance
+- **Phase:** 0 - Baseline and governance
 - **Extends existing decisions:** ADR-0001, ADR-0029, ADR-0030, ADR-0033
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0047-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Create a separately numbered, evidence-based experience programme. Keep the warm
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0047-01 — Not started.** Pin the current exact commit, inventory the current app, enumerate all routes, subviews, overlays, notifications, and state transitions, and record supported OS/browser/PWA assumptions.
-2. **S3-0047-02 — Not started.** Map each row of existing feature-parity.md and each unverified T/P task to one or more new S3 decisions; avoid duplicate completion claims.
-3. **S3-0047-03 — Not started.** Publish a signed-off feature preservation and no-regression contract covering source audio, preferences, drafts, learning/rating data, audio ownership, bridge consent, revisions, security, lyric metadata and FLAC.
-4. **S3-0047-04 — Not started.** Create three task scripts (listener, creator, expert) and capture current first-run, everyday and failure-state experience with sanitized fixtures.
-5. **S3-0047-05 — Not started.** Classify defects by P0 integrity/access, P1 task/recovery and P2 presentation/detail; record affected flows and reproductions.
-6. **S3-0047-06 — Not started.** Require decision review, a separate design review, implementation PR, code/test evidence, screenshot comparison, keyboard check and any needed audible evidence for each item.
-7. **S3-0047-07 — Not started.** Set status rules, ownership, change control and dependency gates; unresolved risks must appear explicitly in a release disposition.
-8. **S3-0047-08 — Not started.** Publish a verified no-runtime-change statement for this documentation PR; after code work starts, maintain an immutable evidence trail.
+1. **S3-0047-01 - Not started.** Pin the current exact commit, inventory the current app, enumerate all routes, subviews, overlays, notifications, and state transitions, and record supported OS/browser/PWA assumptions.
+2. **S3-0047-02 - Not started.** Map each row of existing feature-parity.md and each unverified T/P task to one or more new S3 decisions; avoid duplicate completion claims.
+3. **S3-0047-03 - Not started.** Publish a signed-off feature preservation and no-regression contract covering source audio, preferences, drafts, learning/rating data, audio ownership, bridge consent, revisions, security, lyric metadata and FLAC.
+4. **S3-0047-04 - Not started.** Create three task scripts (listener, creator, expert) and capture current first-run, everyday and failure-state experience with sanitized fixtures.
+5. **S3-0047-05 - Not started.** Classify defects by P0 integrity/access, P1 task/recovery and P2 presentation/detail; record affected flows and reproductions.
+6. **S3-0047-06 - Not started.** Require decision review, a separate design review, implementation PR, code/test evidence, screenshot comparison, keyboard check and any needed audible evidence for each item.
+7. **S3-0047-07 - Not started.** Set status rules, ownership, change control and dependency gates; unresolved risks must appear explicitly in a release disposition.
+8. **S3-0047-08 - Not started.** Publish a verified no-runtime-change statement for this documentation PR; after code work starts, maintain an immutable evidence trail.
 
 ## Preservation and integration constraints
 
@@ -64,6 +64,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

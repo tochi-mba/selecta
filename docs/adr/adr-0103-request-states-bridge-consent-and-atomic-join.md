@@ -1,6 +1,6 @@
 # ADR-0103: Requests drawer, bridge alternatives, explicit consent and atomic joining
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -20,7 +20,7 @@ This is a **proposal**. Source inspection and earlier planning documents establi
 
 ## Proposed decision
 
-Use four understandable visible groups—Waiting, Needs your choice, Preparing, Coming up—while retaining all detailed backend states. Present proposed multi-song bridges as entire routes with explicit consent and atomic insertion.
+Use four understandable visible groups-Waiting, Needs your choice, Preparing, Coming up-while retaining all detailed backend states. Present proposed multi-song bridges as entire routes with explicit consent and atomic insertion.
 
 ## Experience, frontend and interaction specification
 
@@ -29,18 +29,18 @@ Use four understandable visible groups—Waiting, Needs your choice, Preparing, 
 - Bridge proposal shows requested destination, all extra songs, why route is needed, preview state and Accept/Decline.
 - Play it anyway remains available with understandable rough-transition warning and exact semantics.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0103-01 — Rebuild request search and matching results with song identity.** Acceptance: No wrong duplicate-title selection or inaccessible result. Required verification: Rapid search, Unicode, duplicate ID and keyboard tests. **Implementation: Not started; Verified: No.**
-2. **S4-0103-02 — Map all backend request states to truthful user-facing groups.** Acceptance: Waiting/approval/preparing/ready are not conflated. Required verification: State transition matrix including stalled/offline. **Implementation: Not started; Verified: No.**
-3. **S4-0103-03 — Prioritize decisions needing human action within drawer.** Acceptance: Pending approvals cannot be buried in long list. Required verification: 50+ requests scrolling and focus tests. **Implementation: Not started; Verified: No.**
-4. **S4-0103-04 — Design entire bridge path and extra-song consent.** Acceptance: Every inserted extra track is explicitly approved. Required verification: Proposed/declined/approved route E2E. **Implementation: Not started; Verified: No.**
-5. **S4-0103-05 — Preserve alternate bridge finder and preview.** Acceptance: Selection controls don't imply a path is already inserted. Required verification: Unavailable preview, missing bridge and selection race tests. **Implementation: Not started; Verified: No.**
-6. **S4-0103-06 — Preserve Play it anyway as deliberate override.** Acceptance: Warning clear and backend override behaves as before. Required verification: Rough transition and failure tests. **Implementation: Not started; Verified: No.**
-7. **S4-0103-07 — Represent uncommitted requests as provisional editor rows.** Acceptance: Ghost rows never claim they already play or render. Required verification: Timeline request join/reorder tests. **Implementation: Not started; Verified: No.**
-8. **S4-0103-08 — Guarantee atomic insertion and operation idempotency.** Acceptance: Whole approved route inserts once or not at all. Required verification: Partial render fail/retry/two-tab duplicate tests. **Implementation: Not started; Verified: No.**
-9. **S4-0103-09 — Harden cancel/approval and late polling reconciliation.** Acceptance: Cancelled request cannot reappear due to older result. Required verification: Cancellation vs join and out-of-order poll tests. **Implementation: Not started; Verified: No.**
-10. **S4-0103-10 — Explain request dependencies and no-mix waiting.** Acceptance: Request order never falsely promised when music routing varies. Required verification: Multi-request/dependency/empty-mix scenarios. **Implementation: Not started; Verified: No.**
+1. **S4-0103-01 - Rebuild request search and matching results with song identity.** Acceptance: No wrong duplicate-title selection or inaccessible result. Required verification: Rapid search, Unicode, duplicate ID and keyboard tests. **Implementation: Not started; Verified: No.**
+2. **S4-0103-02 - Map all backend request states to truthful user-facing groups.** Acceptance: Waiting/approval/preparing/ready are not conflated. Required verification: State transition matrix including stalled/offline. **Implementation: Not started; Verified: No.**
+3. **S4-0103-03 - Prioritize decisions needing human action within drawer.** Acceptance: Pending approvals cannot be buried in long list. Required verification: 50+ requests scrolling and focus tests. **Implementation: Not started; Verified: No.**
+4. **S4-0103-04 - Design entire bridge path and extra-song consent.** Acceptance: Every inserted extra track is explicitly approved. Required verification: Proposed/declined/approved route E2E. **Implementation: Not started; Verified: No.**
+5. **S4-0103-05 - Preserve alternate bridge finder and preview.** Acceptance: Selection controls don't imply a path is already inserted. Required verification: Unavailable preview, missing bridge and selection race tests. **Implementation: Not started; Verified: No.**
+6. **S4-0103-06 - Preserve Play it anyway as deliberate override.** Acceptance: Warning clear and backend override behaves as before. Required verification: Rough transition and failure tests. **Implementation: Not started; Verified: No.**
+7. **S4-0103-07 - Represent uncommitted requests as provisional editor rows.** Acceptance: Ghost rows never claim they already play or render. Required verification: Timeline request join/reorder tests. **Implementation: Not started; Verified: No.**
+8. **S4-0103-08 - Guarantee atomic insertion and operation idempotency.** Acceptance: Whole approved route inserts once or not at all. Required verification: Partial render fail/retry/two-tab duplicate tests. **Implementation: Not started; Verified: No.**
+9. **S4-0103-09 - Harden cancel/approval and late polling reconciliation.** Acceptance: Cancelled request cannot reappear due to older result. Required verification: Cancellation vs join and out-of-order poll tests. **Implementation: Not started; Verified: No.**
+10. **S4-0103-10 - Explain request dependencies and no-mix waiting.** Acceptance: Request order never falsely promised when music routing varies. Required verification: Multi-request/dependency/empty-mix scenarios. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

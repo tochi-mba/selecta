@@ -1,10 +1,10 @@
 # ADR-0084: Refine Stem Studio's expert controls without reducing capability
 
-- **Decision status:** Proposed (owner review required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 3 — creator journeys
+- **Phase:** 3 - creator journeys
 - **Extends:** ADR-0059, ADR-0067, ADR-0069. No inherited task is automatically complete.
 - **Dependencies:** ADR-0083 inspector semantics; ADRs 0079–0080.
 - **Checklist:** S31-0084-01 through S31-0084-09 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,15 +23,15 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0084-01 — Review session identity and the A/B song context.** Acceptance: User can always tell which songs/pair and revision are being changed.
-2. **S31-0084-02 — Improve lane and square visual/readable semantics.** Acceptance: Voice, drums, bass and melody cells are distinguishable without colour alone.
-3. **S31-0084-03 — Verify keyboard grid movement and entry/exit.** Acceptance: One grid Tab stop, arrow/Home/End navigation, Space toggle and a reliable way out.
-4. **S31-0084-04 — Review solo, audition, shape preset and AI actions.** Acceptance: Each control describes its audio effect and has predictable active/busy/unavailable feedback.
-5. **S31-0084-05 — Separate dirty, retained, saved, applying and rendered states.** Acceptance: No wording implies locally retained edits have already been committed or heard.
-6. **S31-0084-06 — Review missing stem, separation wait, stale pair and partial failure states.** Acceptance: Unavailable lanes say why; viable work is preserved and next recovery step is clear.
-7. **S31-0084-07 — Review narrow layouts, horizontal pan and large-zoom access.** Acceptance: Grid remains operable and controls/focus are not covered by sheets or keyboard.
-8. **S31-0084-08 — Verify preview/main audio takeover and return behaviour.** Acceptance: No overlapping audio, stale preview or unintended resume after navigation/close.
-9. **S31-0084-09 — Confirm guarded Apply and restoration after concurrent edit.** Acceptance: A changed/deleted/reordered pair cannot receive stale Studio edits; recovery is traceable.
+1. **S31-0084-01 - Review session identity and the A/B song context.** Acceptance: User can always tell which songs/pair and revision are being changed.
+2. **S31-0084-02 - Improve lane and square visual/readable semantics.** Acceptance: Voice, drums, bass and melody cells are distinguishable without colour alone.
+3. **S31-0084-03 - Verify keyboard grid movement and entry/exit.** Acceptance: One grid Tab stop, arrow/Home/End navigation, Space toggle and a reliable way out.
+4. **S31-0084-04 - Review solo, audition, shape preset and AI actions.** Acceptance: Each control describes its audio effect and has predictable active/busy/unavailable feedback.
+5. **S31-0084-05 - Separate dirty, retained, saved, applying and rendered states.** Acceptance: No wording implies locally retained edits have already been committed or heard.
+6. **S31-0084-06 - Review missing stem, separation wait, stale pair and partial failure states.** Acceptance: Unavailable lanes say why; viable work is preserved and next recovery step is clear.
+7. **S31-0084-07 - Review narrow layouts, horizontal pan and large-zoom access.** Acceptance: Grid remains operable and controls/focus are not covered by sheets or keyboard.
+8. **S31-0084-08 - Verify preview/main audio takeover and return behaviour.** Acceptance: No overlapping audio, stale preview or unintended resume after navigation/close.
+9. **S31-0084-09 - Confirm guarded Apply and restoration after concurrent edit.** Acceptance: A changed/deleted/reordered pair cannot receive stale Studio edits; recovery is traceable.
 
 ## Required adverse cases and evidence
 
@@ -47,7 +47,7 @@ A wider expert grid may scroll horizontally on a phone as an inherently two-dime
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Only the explicitly identified S31 tasks in the evidence ledger are **In progress**; all other tasks in this ADR remain Not started. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now also has limited frontend/test changes in other workstreams. This ADR remains Not started; implementation is tracked by task ID in the evidence ledger and no task is Verified.
+The owner accepted this decision on 2026-11-08. Only the explicitly identified S31 tasks in the evidence ledger are **In progress**; all other tasks in this ADR remain Not started. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now also has limited frontend/test changes in other workstreams. This ADR remains Not started; implementation is tracked by task ID in the evidence ledger and no task is Verified.
 
 ## Status history
 
@@ -55,6 +55,7 @@ The decision remains **Proposed** pending owner approval. Only the explicitly id
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Initial documentation-only finishing plan | 
 | 2026-11-07 | Proposed | In progress | Selected UI/Edge/test or visual-review infrastructure on draft PR #25; no human acceptance or task Verified |
+| 2026-11-08 | Accepted | In progress | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

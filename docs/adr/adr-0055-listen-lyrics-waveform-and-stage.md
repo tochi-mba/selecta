@@ -1,11 +1,11 @@
 # ADR-0055: Calm Listen experience, accurate waveform, lyrics and Stage
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 3 — Core journeys
+- **Phase:** 3 - Core journeys
 - **Extends existing decisions:** ADR-0006, ADR-0008, ADR-0009, ADR-0027, ADR-0039
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0055-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Make song identity and transport visually dominant, show upcoming and transition
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0055-01 — Not started.** Redesign song identity, artist, mix identity and stable transport in the Listen layout.
-2. **S3-0055-02 — Not started.** Create waveform section markers, playhead, actual seam boundaries, focus/seek and non-seekable feedback.
-3. **S3-0055-03 — Not started.** Specify upcoming card with requested/actual transition distinction and real readiness.
-4. **S3-0055-04 — Not started.** Preserve Bigger/Calmer/Something else with confirmation, changed plan display and failure recovery.
-5. **S3-0055-05 — Not started.** Design lyrics focus with word, line, untimed, instrumental and no-lyrics fallbacks.
-6. **S3-0055-06 — Not started.** Preserve spectrum with reduced-motion and hidden-page performance budgets.
-7. **S3-0055-07 — Not started.** Redesign Stage for large-screen legibility, fullscreen denial, exit and restoration.
-8. **S3-0055-08 — Not started.** Retain exact Good/Bad rating scope and 'Why this transition?' layered explanations.
-9. **S3-0055-09 — Not started.** Test transport during navigation, seek, pause, preview, end-of-set and multi-tab takeover.
+1. **S3-0055-01 - Not started.** Redesign song identity, artist, mix identity and stable transport in the Listen layout.
+2. **S3-0055-02 - Not started.** Create waveform section markers, playhead, actual seam boundaries, focus/seek and non-seekable feedback.
+3. **S3-0055-03 - Not started.** Specify upcoming card with requested/actual transition distinction and real readiness.
+4. **S3-0055-04 - Not started.** Preserve Bigger/Calmer/Something else with confirmation, changed plan display and failure recovery.
+5. **S3-0055-05 - Not started.** Design lyrics focus with word, line, untimed, instrumental and no-lyrics fallbacks.
+6. **S3-0055-06 - Not started.** Preserve spectrum with reduced-motion and hidden-page performance budgets.
+7. **S3-0055-07 - Not started.** Redesign Stage for large-screen legibility, fullscreen denial, exit and restoration.
+8. **S3-0055-08 - Not started.** Retain exact Good/Bad rating scope and 'Why this transition?' layered explanations.
+9. **S3-0055-09 - Not started.** Test transport during navigation, seek, pause, preview, end-of-set and multi-tab takeover.
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

@@ -1,4 +1,4 @@
-# ADR-0224 — Explainable Studio arrangement proposals and safe local recovery
+# ADR-0224 - Explainable Studio arrangement proposals and safe local recovery
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Show human and Selecta arrangements as a concrete returned cell-level difference
 
 No fabricated AI reasoning, overwriting newer cells, claiming a shape is rendered audio or losing recovery after failure. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0224-01 — Define source-backed diff model.** **Acceptance:** Only returned cell changes and provenance shown. **Required verification:** Proposal fixture test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0224-02 — Design side-by-side comparison.** **Acceptance:** Before/after and unchanged cells readable. **Required verification:** Visual task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0224-03 — Preserve human edit authority.** **Acceptance:** Stale proposal cannot overwrite newer strokes. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0224-04 — Make Apply explicit.** **Acceptance:** Working, applied and rendered have distinct stages. **Required verification:** Status matrix tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0224-05 — Refine Undo and restore.** **Acceptance:** Changes recoverable after interruption. **Required verification:** Local recovery tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0224-06 — Explain unavailable stems.** **Acceptance:** Missing data and failed preview honest. **Required verification:** Failure injection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0224-07 — Maintain preview focus contract.** **Acceptance:** Studio preview returns control without surprise resume. **Required verification:** Audio session test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0224-08 — Evaluate perceived control.** **Acceptance:** Users predict impact of AI suggestion and undo. **Required verification:** Producer study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0224-01 - Define source-backed diff model.** **Acceptance:** Only returned cell changes and provenance shown. **Required verification:** Proposal fixture test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0224-02 - Design side-by-side comparison.** **Acceptance:** Before/after and unchanged cells readable. **Required verification:** Visual task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0224-03 - Preserve human edit authority.** **Acceptance:** Stale proposal cannot overwrite newer strokes. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0224-04 - Make Apply explicit.** **Acceptance:** Working, applied and rendered have distinct stages. **Required verification:** Status matrix tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0224-05 - Refine Undo and restore.** **Acceptance:** Changes recoverable after interruption. **Required verification:** Local recovery tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0224-06 - Explain unavailable stems.** **Acceptance:** Missing data and failed preview honest. **Required verification:** Failure injection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0224-07 - Maintain preview focus contract.** **Acceptance:** Studio preview returns control without surprise resume. **Required verification:** Audio session test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0224-08 - Evaluate perceived control.** **Acceptance:** Users predict impact of AI suggestion and undo. **Required verification:** Producer study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

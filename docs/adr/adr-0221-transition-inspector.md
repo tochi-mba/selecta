@@ -1,4 +1,4 @@
-# ADR-0221 — Hear-first Transition Inspector with technique truth and conditional A/B
+# ADR-0221 - Hear-first Transition Inspector with technique truth and conditional A/B
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Organize the exact selected pair into Hear, Shape and Understand, putting real a
 
 No phantom audio, invented quality judgment, mismatched seam, or fake comparison result. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0221-01 — Design inspector hierarchy.** **Acceptance:** Hear, technique and exact pair understandable. **Required verification:** First-glance test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0221-02 — Refine preview transport.** **Acceptance:** Real clip loading, playing and stop states accurate. **Required verification:** Real-audio focus tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0221-03 — Explain requested versus rendered.** **Acceptance:** Technique and fallback not conflated. **Required verification:** Seam data fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0221-04 — Expose technique compatibility.** **Acceptance:** Unavailable move shows reason. **Required verification:** AT and capability tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0221-05 — Refine exact cue and length.** **Acceptance:** Units and edit scope consistent. **Required verification:** Keyboard and range tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0221-06 — Gate A/B on real clips.** **Acceptance:** Comparison absent without verified alternatives. **Required verification:** Clip/revision contract tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0221-07 — Keep inspector context.** **Acceptance:** Sticky panel does not lose selection on reorder. **Required verification:** Large-mix E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0221-08 — Validate listen-first design.** **Acceptance:** Users judge transition without false status trust. **Required verification:** DJ and novice study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0221-01 - Design inspector hierarchy.** **Acceptance:** Hear, technique and exact pair understandable. **Required verification:** First-glance test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0221-02 - Refine preview transport.** **Acceptance:** Real clip loading, playing and stop states accurate. **Required verification:** Real-audio focus tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0221-03 - Explain requested versus rendered.** **Acceptance:** Technique and fallback not conflated. **Required verification:** Seam data fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0221-04 - Expose technique compatibility.** **Acceptance:** Unavailable move shows reason. **Required verification:** AT and capability tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0221-05 - Refine exact cue and length.** **Acceptance:** Units and edit scope consistent. **Required verification:** Keyboard and range tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0221-06 - Gate A/B on real clips.** **Acceptance:** Comparison absent without verified alternatives. **Required verification:** Clip/revision contract tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0221-07 - Keep inspector context.** **Acceptance:** Sticky panel does not lose selection on reorder. **Required verification:** Large-mix E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0221-08 - Validate listen-first design.** **Acceptance:** Users judge transition without false status trust. **Required verification:** DJ and novice study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

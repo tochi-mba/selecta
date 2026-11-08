@@ -15,7 +15,7 @@ import shutil
 import sqlite3
 import tempfile
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from selecta.config import Settings
@@ -33,7 +33,9 @@ ACTIVATING = ".restore-activating"
 MAX_HISTORY_FILES = 10000
 MAX_HISTORY_ENTRY = 256 * 1024
 _HISTORY_FILE = re.compile(r"^seam-history/[A-Za-z0-9_-]{1,128}\.json$")
-_REQUIRED_TABLES = {"songs", "analysis", "lyrics", "preferences", "queue", "drafts", "ratings", "seam_book"}
+_REQUIRED_TABLES = {
+    "songs", "analysis", "lyrics", "preferences", "queue", "drafts", "ratings", "seam_book"
+}
 
 
 class BackupError(ValueError):
@@ -52,7 +54,9 @@ def _check_database(path: Path) -> dict[str, int]:
                 raise BackupError("The backup database has failed its integrity check.")
             if conn.execute("PRAGMA foreign_key_check").fetchone():
                 raise BackupError("The backup has broken database references.")
-            tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            tables = {
+                row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            }
             if not _REQUIRED_TABLES.issubset(tables):
                 raise BackupError("This backup is missing required data tables.")
             return {
@@ -89,7 +93,10 @@ def export_backup(conn: sqlite3.Connection, settings: Settings) -> bytes:
                 raise BackupError("Too many transition records for a single backup.")
             if file.stat().st_size > MAX_HISTORY_ENTRY:
                 raise BackupError("A transition record is too large to back up safely.")
-            if sum(len(contents) for contents in payload.values()) + file.stat().st_size > MAX_UNCOMPRESSED:
+            if (
+                sum(len(contents) for contents in payload.values()) + file.stat().st_size
+                > MAX_UNCOMPRESSED
+            ):
                 raise BackupError("Local records exceed the safe uncompressed backup limit.")
             raw = file.read_bytes()
             try:
@@ -101,13 +108,15 @@ def export_backup(conn: sqlite3.Connection, settings: Settings) -> bytes:
             payload[name] = raw
         manifest = {
             "format": FORMAT, "version": VERSION,
-            "created_utc": datetime.now(timezone.utc).isoformat(),
+            "created_utc": datetime.now(UTC).isoformat(),
             "files": {name: {"sha256": _sha(data), "bytes": len(data)}
                       for name, data in payload.items()},
             "excluded": ["original music", "audio caches", "generated stems", "models", "exports"],
         }
         out = io.BytesIO()
-        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+        with zipfile.ZipFile(
+            out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
+        ) as archive:
             archive.writestr("manifest.json", json.dumps(manifest, indent=2))
             for name, data in payload.items():
                 archive.writestr(name, data)
@@ -140,7 +149,11 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
                    if name.startswith("seam-history/")):
                 raise BackupError("Backup contains oversized transition history.")
             manifest = json.loads(bundle.read("manifest.json"))
-            if not isinstance(manifest, dict) or manifest.get("format") != FORMAT or manifest.get("version") != VERSION:
+            if (
+                not isinstance(manifest, dict)
+                or manifest.get("format") != FORMAT
+                or manifest.get("version") != VERSION
+            ):
                 raise BackupError("This backup format is not supported by this Selecta version.")
             if not isinstance(manifest.get("created_utc"), str):
                 raise BackupError("Backup manifest is missing its creation date.")
@@ -210,7 +223,9 @@ def stage_restore(settings: Settings, data: bytes, token: str) -> dict:
 
 def _snapshot_database(current: Path, rollback: Path, home: Path) -> None:
     """Create a consistent rollback image even when the source used WAL."""
-    with tempfile.NamedTemporaryFile(dir=home, prefix=".restore-rollback-writing-", delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(
+        dir=home, prefix=".restore-rollback-writing-", delete=False
+    ) as tmp:
         snapshot = Path(tmp.name)
     try:
         source = sqlite3.connect(current, timeout=1)
@@ -245,7 +260,9 @@ def _recover_interrupted(settings: Settings) -> None:
             if not rollback.is_file():
                 raise BackupError("The restore rollback database is missing.")
             _check_database(rollback)
-            with tempfile.NamedTemporaryFile(dir=home, prefix=".restore-recover-", delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(
+                dir=home, prefix=".restore-recover-", delete=False
+            ) as tmp:
                 recovered = Path(tmp.name)
             try:
                 shutil.copyfile(rollback, recovered)
@@ -267,7 +284,9 @@ def _recover_interrupted(settings: Settings) -> None:
             shutil.rmtree(pending)
         marker.unlink()
     except (OSError, ValueError, KeyError, TypeError) as problem:
-        raise BackupError("The interrupted restore needs manual recovery; do not use the database yet.") from problem
+        raise BackupError(
+            "The interrupted restore needs manual recovery; do not use the database yet."
+        ) from problem
     raise BackupError("An interrupted restore was rolled back. Your previous local data was kept.")
 
 

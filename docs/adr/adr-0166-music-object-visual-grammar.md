@@ -1,4 +1,4 @@
-# ADR-0166 — Shared song, seam, Energy Horizon and route visual grammar
+# ADR-0166 - Shared song, seam, Energy Horizon and route visual grammar
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -33,15 +33,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained layout when a richer animation does not measurably improve comprehension, creative control or delight. A preview or graphic is illustrative until connected to actual source data. No fake waveform, beat, word timing, quality score, cover art, render status, autoplay sound or processing percentage. Every animated or direct-manipulation state requires an accessible static/keyboard equivalent.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0166-01 — Specify four reusable musical objects.** **Acceptance:** Each has stable identity, semantic variants and known/unknown representations. **Required verification:** Component specimens at compact and full sizes. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0166-02 — Design decorative song fingerprint provenance.** **Acceptance:** Identical song yields stable motif with no genre or quality inference. **Required verification:** Missing metadata, duplicate title and re-render fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0166-03 — Define seam visual technique catalogue.** **Acceptance:** Supported methods are recognizably different and accurately named. **Required verification:** Expert diagram versus rendered seam review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0166-04 — Separate requested and achieved energy.** **Acceptance:** Unknown/relative analysis never appears numerically comparable with user shape. **Required verification:** Data provenance and user interpretation audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0166-05 — Encode semantic colours and patterns.** **Acceptance:** Status remains legible without color and on light/dark/forced colours. **Required verification:** Computed contrast and AT snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0166-06 — Validate visual scaling across surfaces.** **Acceptance:** Mini-player/card/timeline/inspector share object without overflow. **Required verification:** 320–2560px and 400% zoom review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0166-07 — Evaluate diagram meaning without legend.** **Acceptance:** Listeners can distinguish planned, audible and unavailable states. **Required verification:** Uncoached graphic comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0166-01 - Specify four reusable musical objects.** **Acceptance:** Each has stable identity, semantic variants and known/unknown representations. **Required verification:** Component specimens at compact and full sizes. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0166-02 - Design decorative song fingerprint provenance.** **Acceptance:** Identical song yields stable motif with no genre or quality inference. **Required verification:** Missing metadata, duplicate title and re-render fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0166-03 - Define seam visual technique catalogue.** **Acceptance:** Supported methods are recognizably different and accurately named. **Required verification:** Expert diagram versus rendered seam review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0166-04 - Separate requested and achieved energy.** **Acceptance:** Unknown/relative analysis never appears numerically comparable with user shape. **Required verification:** Data provenance and user interpretation audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0166-05 - Encode semantic colours and patterns.** **Acceptance:** Status remains legible without color and on light/dark/forced colours. **Required verification:** Computed contrast and AT snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0166-06 - Validate visual scaling across surfaces.** **Acceptance:** Mini-player/card/timeline/inspector share object without overflow. **Required verification:** 320–2560px and 400% zoom review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0166-07 - Evaluate diagram meaning without legend.** **Acceptance:** Listeners can distinguish planned, audible and unavailable states. **Required verification:** Uncoached graphic comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

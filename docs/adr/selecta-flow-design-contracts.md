@@ -1,4 +1,4 @@
-# Selecta / Flow — artistic system and screen-by-screen design contracts
+# Selecta / Flow - artistic system and screen-by-screen design contracts
 
 **Status: owner-accepted design programme (2026-11-08), not implemented or independently verified. Individual visual specimens still need review.** Consult [ADR-0198–0247](selecta-flow-roadmap.md) for individual decisions and [400-task checklist](selecta-flow-implementation-checklist.md) for acceptance tasks. The existing app and all older designs can be reconsidered, subject to preservation and approval.
 
@@ -8,9 +8,9 @@
 
 **Three emotional presentations:**
 
-- **Listen — the theatre:** cinematic quiet, emotional confidence, artwork plus genuine audio movement, responsive persistent transport and real transition anticipation.
-- **Explore — the gallery:** musical ideas as inviting editorial objects with real eligibility and no synthetic audio claims. Optional intent shaping is explicitly scoped.
-- **Create — the instrument:** tangible song blocks and seam edges, audition-first inspection, exact cues and energy values, all tied to server revision. Dense Studio and Library are intentionally practical.
+- **Listen - the theatre:** cinematic quiet, emotional confidence, artwork plus genuine audio movement, responsive persistent transport and real transition anticipation.
+- **Explore - the gallery:** musical ideas as inviting editorial objects with real eligibility and no synthetic audio claims. Optional intent shaping is explicitly scoped.
+- **Create - the instrument:** tangible song blocks and seam edges, audition-first inspection, exact cues and energy values, all tied to server revision. Dense Studio and Library are intentionally practical.
 
 ## 2. Candidate visual system (to be measured, not hard-coded without review)
 

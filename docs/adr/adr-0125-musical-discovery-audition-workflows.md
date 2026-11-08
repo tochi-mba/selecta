@@ -1,6 +1,6 @@
-# ADR-0125 — Musical discovery as clear word and harmonic audition flows
+# ADR-0125 - Musical discovery as clear word and harmonic audition flows
 
-- **Decision:** Proposed (requires named owner acceptance).
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 newly defined EX tasks).
 - **Verified:** No (0/5 independent acceptance).
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
@@ -30,11 +30,11 @@ No invented lyrical timing, technique certainty or instant audio availability; h
 
 ## New implementation status per task
 
-1. **EX-0125-01 — Redesign word pair context**. **Acceptance:** Two exact track identities and meaningful shared lyric readable. **Verification:** Duplicate title and untimed lyric fixtures. **Implementation: Not started; Verified: No.**
-2. **EX-0125-02 — Design four-stage harmonic audition**. **Acceptance:** Comparison order and purpose evident. **Verification:** Real audio and uncoached comprehension. **Implementation: Not started; Verified: No.**
-3. **EX-0125-03 — Maintain preview focus**. **Acceptance:** No overlapping preview or unsolicited resume. **Verification:** Concurrent preview/transport tests. **Implementation: Not started; Verified: No.**
-4. **EX-0125-04 — Guard feedback binding**. **Acceptance:** Rating remains attached to exact pair/version. **Verification:** Late response and changed-pair E2E. **Implementation: Not started; Verified: No.**
-5. **EX-0125-05 — Verify safe add-to-mix flow**. **Acceptance:** Edit/draft/current destinations and Undo explicit. **Verification:** Active mix and draft parity test. **Implementation: Not started; Verified: No.**
+1. **EX-0125-01 - Redesign word pair context**. **Acceptance:** Two exact track identities and meaningful shared lyric readable. **Verification:** Duplicate title and untimed lyric fixtures. **Implementation: Not started; Verified: No.**
+2. **EX-0125-02 - Design four-stage harmonic audition**. **Acceptance:** Comparison order and purpose evident. **Verification:** Real audio and uncoached comprehension. **Implementation: Not started; Verified: No.**
+3. **EX-0125-03 - Maintain preview focus**. **Acceptance:** No overlapping preview or unsolicited resume. **Verification:** Concurrent preview/transport tests. **Implementation: Not started; Verified: No.**
+4. **EX-0125-04 - Guard feedback binding**. **Acceptance:** Rating remains attached to exact pair/version. **Verification:** Late response and changed-pair E2E. **Implementation: Not started; Verified: No.**
+5. **EX-0125-05 - Verify safe add-to-mix flow**. **Acceptance:** Edit/draft/current destinations and Undo explicit. **Verification:** Active mix and draft parity test. **Implementation: Not started; Verified: No.**
 
 ## Independent verification
 

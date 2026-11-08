@@ -1,4 +1,4 @@
-# ADR-0239 — Automated regression strategy and visual-evidence governance
+# ADR-0239 - Automated regression strategy and visual-evidence governance
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Expand source-level unit, interaction E2E and screenshot candidates to cover new
 
 No snapshot update that masks a real functional break, no CI-only audio quality claims and no doctored baselines. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0239-01 — Map existing tests to new tasks.** **Acceptance:** Every task has relevant automated and independent evidence gap. **Required verification:** Test crosswalk. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0239-02 — Build stable visual fixtures.** **Acceptance:** Light/dark, no-data, errors, loading and sizes captured. **Required verification:** Deterministic screenshot runs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0239-03 — Protect audio ownership E2E.** **Acceptance:** Theme, scene, preview and route changes never duplicate player. **Required verification:** Real-browser counter tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0239-04 — Test revision and request contracts.** **Acceptance:** Optimistic edits, conflicts and bridge consent resilient. **Required verification:** API stubs and integration tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0239-05 — Specify a11y automation.** **Acceptance:** Contrast, labels, focus and reduced motion checked where possible. **Required verification:** Automated audit plus manual gap. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0239-06 — Define exact screenshot approval.** **Acceptance:** Candidates not considered golden until signed review. **Required verification:** Evidence manifest checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0239-07 — Build low-power stress suites.** **Acceptance:** Live playback during analysis and render measured. **Required verification:** Hardware logs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0239-08 — Require per-PR evidence record.** **Acceptance:** SHA, fixture, reviewer and unresolved findings attached. **Required verification:** CI and independent sign-off checklist. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0239-01 - Map existing tests to new tasks.** **Acceptance:** Every task has relevant automated and independent evidence gap. **Required verification:** Test crosswalk. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0239-02 - Build stable visual fixtures.** **Acceptance:** Light/dark, no-data, errors, loading and sizes captured. **Required verification:** Deterministic screenshot runs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0239-03 - Protect audio ownership E2E.** **Acceptance:** Theme, scene, preview and route changes never duplicate player. **Required verification:** Real-browser counter tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0239-04 - Test revision and request contracts.** **Acceptance:** Optimistic edits, conflicts and bridge consent resilient. **Required verification:** API stubs and integration tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0239-05 - Specify a11y automation.** **Acceptance:** Contrast, labels, focus and reduced motion checked where possible. **Required verification:** Automated audit plus manual gap. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0239-06 - Define exact screenshot approval.** **Acceptance:** Candidates not considered golden until signed review. **Required verification:** Evidence manifest checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0239-07 - Build low-power stress suites.** **Acceptance:** Live playback during analysis and render measured. **Required verification:** Hardware logs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0239-08 - Require per-PR evidence record.** **Acceptance:** SHA, fixture, reviewer and unresolved findings attached. **Required verification:** CI and independent sign-off checklist. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

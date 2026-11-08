@@ -1,4 +1,4 @@
-# ADR-0240 — Independent listening research and artistic quality acceptance
+# ADR-0240 - Independent listening research and artistic quality acceptance
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Test the full journey with uncoached listeners, creators and DJs. Qualitative de
 
 No confounded blind A/B, self-certified screenshot, unreported sample size or assertion of completed studies. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0240-01 — Define listener journey scripts.** **Acceptance:** First run, first play, first handoff covered. **Required verification:** Uncoached research protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0240-02 — Define creator journey scripts.** **Acceptance:** Shape, reorder, audition, Studio and export covered. **Required verification:** Task outcome forms. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0240-03 — Define DJ expert review.** **Acceptance:** Real technique, cue and handoff precision assessed. **Required verification:** Recorded expert feedback. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0240-04 — Define accessibility participant testing.** **Acceptance:** AT and motion preferences included. **Required verification:** Named environment and protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0240-05 — Protect blind comparison neutrality.** **Acceptance:** No visual/source labels leak treatment condition. **Required verification:** Neutral A/B review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0240-06 — Separate joy from correctness.** **Acceptance:** Ratings and measured task errors reported separately. **Required verification:** Analysis plan. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0240-07 — Record reproducible findings.** **Acceptance:** Denominator, hardware, SHA and fixtures accompany claims. **Required verification:** Review dossier. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0240-08 — Specify approval and rejection criteria.** **Acceptance:** P0 blocks and P1 thresholds explicit before testing. **Required verification:** Owner and independent reviewer decision. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0240-01 - Define listener journey scripts.** **Acceptance:** First run, first play, first handoff covered. **Required verification:** Uncoached research protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0240-02 - Define creator journey scripts.** **Acceptance:** Shape, reorder, audition, Studio and export covered. **Required verification:** Task outcome forms. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0240-03 - Define DJ expert review.** **Acceptance:** Real technique, cue and handoff precision assessed. **Required verification:** Recorded expert feedback. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0240-04 - Define accessibility participant testing.** **Acceptance:** AT and motion preferences included. **Required verification:** Named environment and protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0240-05 - Protect blind comparison neutrality.** **Acceptance:** No visual/source labels leak treatment condition. **Required verification:** Neutral A/B review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0240-06 - Separate joy from correctness.** **Acceptance:** Ratings and measured task errors reported separately. **Required verification:** Analysis plan. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0240-07 - Record reproducible findings.** **Acceptance:** Denominator, hardware, SHA and fixtures accompany claims. **Required verification:** Review dossier. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0240-08 - Specify approval and rejection criteria.** **Acceptance:** P0 blocks and P1 thresholds explicit before testing. **Required verification:** Owner and independent reviewer decision. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

@@ -1,4 +1,4 @@
-# ADR-0206 — Honest cover art, song motifs and Mix Sleeves
+# ADR-0206 - Honest cover art, song motifs and Mix Sleeves
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Use genuine local covers when available and deterministic decorative identity ot
 
 Never infer actual album art, music quality, genre or mood from a hash. Prefer a calm and reliable existing control when a novel expression does not improve musical comprehension or agency. No new cloud, subscription, telemetry, audio asset, or backend contract is approved by this documentation alone.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0206-01 — Define artwork provenance.** **Acceptance:** Real, decorative and measured identities distinguishable. **Required verification:** Metadata contract audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0206-02 — Build deterministic song motifs.** **Acceptance:** Stable ID produces stable repeatable identity. **Required verification:** Duplicate-title and refresh test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0206-03 — Handle actual cover media.** **Acceptance:** Corrupt, missing and oversized images safe. **Required verification:** Media-fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0206-04 — Design Mix Sleeve component.** **Acceptance:** Mix object looks consistent across surfaces. **Required verification:** Cross-route snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0206-05 — Create a limited art-family system.** **Acceptance:** Options fit product aesthetic. **Required verification:** Theme gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0206-06 — Guard local-only media access.** **Acceptance:** No unrequested remote song/image upload. **Required verification:** Network inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0206-07 — Validate legibility over art.** **Acceptance:** Contrast, crop and 320px usability. **Required verification:** Responsive test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0206-08 — Preserve identity through revision.** **Acceptance:** Current and draft never show wrong sleeves. **Required verification:** Revision/source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0206-01 - Define artwork provenance.** **Acceptance:** Real, decorative and measured identities distinguishable. **Required verification:** Metadata contract audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0206-02 - Build deterministic song motifs.** **Acceptance:** Stable ID produces stable repeatable identity. **Required verification:** Duplicate-title and refresh test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0206-03 - Handle actual cover media.** **Acceptance:** Corrupt, missing and oversized images safe. **Required verification:** Media-fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0206-04 - Design Mix Sleeve component.** **Acceptance:** Mix object looks consistent across surfaces. **Required verification:** Cross-route snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0206-05 - Create a limited art-family system.** **Acceptance:** Options fit product aesthetic. **Required verification:** Theme gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0206-06 - Guard local-only media access.** **Acceptance:** No unrequested remote song/image upload. **Required verification:** Network inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0206-07 - Validate legibility over art.** **Acceptance:** Contrast, crop and 320px usability. **Required verification:** Responsive test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0206-08 - Preserve identity through revision.** **Acceptance:** Current and draft never show wrong sleeves. **Required verification:** Revision/source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

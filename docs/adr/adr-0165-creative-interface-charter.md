@@ -1,4 +1,4 @@
-# ADR-0165 — Creative-interface charter and attention modes
+# ADR-0165 - Creative-interface charter and attention modes
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -33,15 +33,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained layout when a richer animation does not measurably improve comprehension, creative control or delight. A preview or graphic is illustrative until connected to actual source data. No fake waveform, beat, word timing, quality score, cover art, render status, autoplay sound or processing percentage. Every animated or direct-manipulation state requires an accessible static/keyboard equivalent.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0165-01 — Inventory current scenes and interruptions.** **Acceptance:** Map primary action, supporting data, conflicts and source state for every core journey. **Required verification:** Annotated source baseline and uncoached observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0165-02 — Define Explore Create Listen scene hierarchy.** **Acceptance:** Each has one first-glance focal object without losing advanced actions. **Required verification:** Design specimens in both themes and five-second glance test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0165-03 — Specify entry, exit and context retention.** **Acceptance:** Route, Back/Forward, current/draft and selected seam survive changes. **Required verification:** History, focus, audio and revision regression tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0165-04 — Establish intentional interruption policy.** **Acceptance:** Only consent, requested overlay and significant failure may interrupt. **Required verification:** Injected render/request/error fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0165-05 — Define music-led language and affordance policy.** **Acceptance:** Intent controls do not require BPM/cues while experts can still reach them. **Required verification:** Novice/expert comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0165-06 — Document attention and visual-intensity limits.** **Acceptance:** No unrelated autoplay, constant pulsing, competing CTA or disguised status. **Required verification:** Audited scene checklist and reduced-motion fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0165-07 — Record end-to-end quality baseline.** **Acceptance:** First play, edit, seam preview, request and export remain complete without hidden changes. **Required verification:** Real-audio, keyboard and participant protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0165-01 - Inventory current scenes and interruptions.** **Acceptance:** Map primary action, supporting data, conflicts and source state for every core journey. **Required verification:** Annotated source baseline and uncoached observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0165-02 - Define Explore Create Listen scene hierarchy.** **Acceptance:** Each has one first-glance focal object without losing advanced actions. **Required verification:** Design specimens in both themes and five-second glance test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0165-03 - Specify entry, exit and context retention.** **Acceptance:** Route, Back/Forward, current/draft and selected seam survive changes. **Required verification:** History, focus, audio and revision regression tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0165-04 - Establish intentional interruption policy.** **Acceptance:** Only consent, requested overlay and significant failure may interrupt. **Required verification:** Injected render/request/error fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0165-05 - Define music-led language and affordance policy.** **Acceptance:** Intent controls do not require BPM/cues while experts can still reach them. **Required verification:** Novice/expert comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0165-06 - Document attention and visual-intensity limits.** **Acceptance:** No unrelated autoplay, constant pulsing, competing CTA or disguised status. **Required verification:** Audited scene checklist and reduced-motion fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0165-07 - Record end-to-end quality baseline.** **Acceptance:** First play, edit, seam preview, request and export remain complete without hidden changes. **Required verification:** Real-audio, keyboard and participant protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

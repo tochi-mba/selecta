@@ -1,4 +1,4 @@
-# ADR-0178 — Onboarding: honest library awakening and first audible DJ reward
+# ADR-0178 - Onboarding: honest library awakening and first audible DJ reward
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This ADR proposes a **new cross-surface design and acceptance delta**, not a cla
 
 Prefer the existing restrained and proven UI when added visuals distract or reduce correctness. No artificial music, artwork, beat, lyric accuracy, quality score or fake render status. All sensory interactions require a usable static, keyboard, high-contrast and reduced-motion alternative. Source truth and explicit human consent outrank polish.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0178-01 — Design inviting but clear folder start.** **Acceptance:** Creative purpose understandable while path entry/privacy remain visible. **Required verification:** Cold-start usability and accessible form test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0178-02 — Preserve local path validation.** **Acceptance:** All existing missing/inside-added/no-audio/no-access errors recover. **Required verification:** Filesystem preflight fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0178-03 — Visualize honest readiness milestone.** **Acceptance:** Six ready songs distinguished from total analysis count. **Required verification:** Mixed ready/analysed/lyric fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0178-04 — Show genuine new-musical-possibility events.** **Acceptance:** Reveals appear only with verified backend song/link data. **Required verification:** Event and no-result provenance tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0178-05 — Create first-seam earned-reward moment.** **Acceptance:** Only audible finished seam triggers nonblocking reveal. **Required verification:** Real first-play, Pause and dismissed-state tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0178-06 — Keep background analysis independent.** **Acceptance:** User can hear a first set while analysis continues safely. **Required verification:** Large-library slow-job tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0178-07 — Measure time to first understood value.** **Acceptance:** Users recognize difference from ordinary playlist without explanation. **Required verification:** Observed first-use task metrics and interviews. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0178-01 - Design inviting but clear folder start.** **Acceptance:** Creative purpose understandable while path entry/privacy remain visible. **Required verification:** Cold-start usability and accessible form test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0178-02 - Preserve local path validation.** **Acceptance:** All existing missing/inside-added/no-audio/no-access errors recover. **Required verification:** Filesystem preflight fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0178-03 - Visualize honest readiness milestone.** **Acceptance:** Six ready songs distinguished from total analysis count. **Required verification:** Mixed ready/analysed/lyric fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0178-04 - Show genuine new-musical-possibility events.** **Acceptance:** Reveals appear only with verified backend song/link data. **Required verification:** Event and no-result provenance tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0178-05 - Create first-seam earned-reward moment.** **Acceptance:** Only audible finished seam triggers nonblocking reveal. **Required verification:** Real first-play, Pause and dismissed-state tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0178-06 - Keep background analysis independent.** **Acceptance:** User can hear a first set while analysis continues safely. **Required verification:** Large-library slow-job tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0178-07 - Measure time to first understood value.** **Acceptance:** Users recognize difference from ordinary playlist without explanation. **Required verification:** Observed first-use task metrics and interviews. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

@@ -1,4 +1,4 @@
-# ADR-0171 — Lyrics, authentic wordplay handoffs and fullscreen Stage
+# ADR-0171 - Lyrics, authentic wordplay handoffs and fullscreen Stage
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained design when a richer animation does not measurably improve comprehension, creative control or delight. Illustrative graphics are not analysed waveforms, beats, timed lyrics, fake quality ratings or album artwork. Every animated interaction needs an accessible static/keyboard equivalent; audio and current/draft correctness outrank motion.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0171-01 — Specify lyrics confidence levels.** **Acceptance:** UI distinguishes timed word, line, plain and missing lyric with truthful fallback. **Required verification:** Actual synced/unsynced/instrumental fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0171-02 — Design shared-phrase visual choreography.** **Acceptance:** Phrase continuity shows real source text and does not imply false precision. **Required verification:** Verified wordplay clip review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0171-03 — Compose immersive Stage identity.** **Acceptance:** Readable title, lyrics and minimum transport from a distance. **Required verification:** 1440/2560px large-screen and physical distance testing. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0171-04 — Protect manual lyric scroll and focus.** **Acceptance:** Automatic following never wrestles manual browsing. **Required verification:** Keyboard, wheel, touch and assistive-tech tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0171-05 — Preserve fullscreen rejection and exit.** **Acceptance:** Escape, focus restoration and paused state function in both modes. **Required verification:** Browser fullscreen-denied and Back test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0171-06 — Specify reduced motion and contrast.** **Acceptance:** No flash, scrolling overload or foreground loss over reactive visuals. **Required verification:** Reduced-motion and photosensitivity review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0171-07 — Measure audiovisual lyric correspondence.** **Acceptance:** Screened handoff is not earlier or more precise than valid data. **Required verification:** Recorded frame-by-frame audio/video comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0171-01 - Specify lyrics confidence levels.** **Acceptance:** UI distinguishes timed word, line, plain and missing lyric with truthful fallback. **Required verification:** Actual synced/unsynced/instrumental fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0171-02 - Design shared-phrase visual choreography.** **Acceptance:** Phrase continuity shows real source text and does not imply false precision. **Required verification:** Verified wordplay clip review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0171-03 - Compose immersive Stage identity.** **Acceptance:** Readable title, lyrics and minimum transport from a distance. **Required verification:** 1440/2560px large-screen and physical distance testing. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0171-04 - Protect manual lyric scroll and focus.** **Acceptance:** Automatic following never wrestles manual browsing. **Required verification:** Keyboard, wheel, touch and assistive-tech tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0171-05 - Preserve fullscreen rejection and exit.** **Acceptance:** Escape, focus restoration and paused state function in both modes. **Required verification:** Browser fullscreen-denied and Back test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0171-06 - Specify reduced motion and contrast.** **Acceptance:** No flash, scrolling overload or foreground loss over reactive visuals. **Required verification:** Reduced-motion and photosensitivity review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0171-07 - Measure audiovisual lyric correspondence.** **Acceptance:** Screened handoff is not earlier or more precise than valid data. **Required verification:** Recorded frame-by-frame audio/video comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

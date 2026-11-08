@@ -1,11 +1,11 @@
 # ADR-0062: Scalable Library search, filters, rows and pagination
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 5 — Discovery and operations
+- **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0017, ADR-0034, ADR-0043
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0062-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Use a search-first Library with explicit filter scope, compact/comfortable densi
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0062-01 — Not started.** Create a Library header with search, filter controls, sort and real readiness summary.
-2. **S3-0062-02 — Not started.** Redesign row hierarchy and optional compact density without losing playback/analysis/set-aside actions.
-3. **S3-0062-03 — Not started.** Select default filter from measured task research; if changed, preserve existing saved query behavior.
-4. **S3-0062-04 — Not started.** Make all search/filter/sort/deep-link combinations deterministic and keyboard accessible.
-5. **S3-0062-05 — Not started.** Implement stale-request cancellation and a truthful refreshing/failure experience.
-6. **S3-0062-06 — Not started.** Preserve 100-item incremental loading or a tested equivalent with stable scroll and selection.
-7. **S3-0062-07 — Not started.** Profile 20k tracks under background analysis and implement targeted optimization only if needed.
-8. **S3-0062-08 — Not started.** Test long/unicode/RTL/duplicate/missing metadata and touch row actions.
+1. **S3-0062-01 - Not started.** Create a Library header with search, filter controls, sort and real readiness summary.
+2. **S3-0062-02 - Not started.** Redesign row hierarchy and optional compact density without losing playback/analysis/set-aside actions.
+3. **S3-0062-03 - Not started.** Select default filter from measured task research; if changed, preserve existing saved query behavior.
+4. **S3-0062-04 - Not started.** Make all search/filter/sort/deep-link combinations deterministic and keyboard accessible.
+5. **S3-0062-05 - Not started.** Implement stale-request cancellation and a truthful refreshing/failure experience.
+6. **S3-0062-06 - Not started.** Preserve 100-item incremental loading or a tested equivalent with stable scroll and selection.
+7. **S3-0062-07 - Not started.** Profile 20k tracks under background analysis and implement targeted optimization only if needed.
+8. **S3-0062-08 - Not started.** Test long/unicode/RTL/duplicate/missing metadata and touch row actions.
 
 ## Preservation and integration constraints
 
@@ -64,6 +64,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

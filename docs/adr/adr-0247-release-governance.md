@@ -1,4 +1,4 @@
-# ADR-0247 — Implementation-status integrity and independent GO/NO-GO governance
+# ADR-0247 - Implementation-status integrity and independent GO/NO-GO governance
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Every programme task independently tracks design acceptance, implemented code an
 
 No self-verified release, unsupported green CI equivalence, historical status rewrite or premature GO. Preserve a proven reliable interface when a proposed artistic treatment cannot demonstrate improved user outcomes. This docs-only decision does not implement remote services, SaaS, telemetry, accounts or changes to music files.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0247-01 — Define decision state transitions.** **Acceptance:** Proposed, Accepted, Rejected, Superseded documented with dates. **Required verification:** ADR governance audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0247-02 — Define implementation state transitions.** **Acceptance:** Not started/In progress/Implemented require source evidence. **Required verification:** Ledger check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0247-03 — Define independent verification.** **Acceptance:** Reviewer, environment, media and SHA traceable. **Required verification:** Evidence template audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0247-04 — Set P0/P1/P2 rules.** **Acceptance:** Audio/data/privacy/access failures block release. **Required verification:** Failure triage review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0247-05 — Require full parity checks.** **Acceptance:** Every core feature maps to source and tested journey. **Required verification:** Feature parity matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0247-06 — Define visual sign-off protocol.** **Acceptance:** Candidate images separate from approved baselines. **Required verification:** Reviewer approval record. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0247-07 — Prove safe rollback.** **Acceptance:** Old/current/new state preserved without migration loss. **Required verification:** Rollback E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0247-08 — Publish final release verdict.** **Acceptance:** No GO without signed exact-SHA gate and music evaluation. **Required verification:** Independent release report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0247-01 - Define decision state transitions.** **Acceptance:** Proposed, Accepted, Rejected, Superseded documented with dates. **Required verification:** ADR governance audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0247-02 - Define implementation state transitions.** **Acceptance:** Not started/In progress/Implemented require source evidence. **Required verification:** Ledger check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0247-03 - Define independent verification.** **Acceptance:** Reviewer, environment, media and SHA traceable. **Required verification:** Evidence template audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0247-04 - Set P0/P1/P2 rules.** **Acceptance:** Audio/data/privacy/access failures block release. **Required verification:** Failure triage review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0247-05 - Require full parity checks.** **Acceptance:** Every core feature maps to source and tested journey. **Required verification:** Feature parity matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0247-06 - Define visual sign-off protocol.** **Acceptance:** Candidate images separate from approved baselines. **Required verification:** Reviewer approval record. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0247-07 - Prove safe rollback.** **Acceptance:** Old/current/new state preserved without migration loss. **Required verification:** Rollback E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0247-08 - Publish final release verdict.** **Acceptance:** No GO without signed exact-SHA gate and music evaluation. **Required verification:** Independent release report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

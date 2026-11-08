@@ -10,6 +10,8 @@ import './styles/listening.css';
 import './styles/creation.css';
 import './styles/operations.css';
 import './styles/music-objects.css';
+import './styles/glossary.css';
+import './styles/palette.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

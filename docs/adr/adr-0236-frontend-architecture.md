@@ -1,4 +1,4 @@
-# ADR-0236 — Modular frontend visual architecture and safe migration seams
+# ADR-0236 - Modular frontend visual architecture and safe migration seams
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Refactor only where needed: isolate scene presentation, data provenance, player 
 
 No wholesale rewrite hiding regressions, no duplicated player state or source file beyond repository size limits. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0236-01 — Map ownership boundaries.** **Acceptance:** Transport, route, scene, library and editor each have one owner. **Required verification:** Module dependency graph. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0236-02 — Define component seams.** **Acceptance:** Shared tokens/primitives avoid cross-screen coupling. **Required verification:** Architecture review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0236-03 — Separate state and presentation.** **Acceptance:** Actual domain status remains source-of-truth. **Required verification:** Type/API tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0236-04 — Plan CSS consolidation.** **Acceptance:** Tokens and page modules replace brittle overrides incrementally. **Required verification:** Cascade audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0236-05 — Preserve route and API contracts.** **Acceptance:** Existing deep links and endpoint shapes remain compatible. **Required verification:** Contract E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0236-06 — Enforce source maintainability.** **Acceptance:** Code files under repo limit with coherent tests. **Required verification:** CI file-size and review checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0236-07 — Define reversible feature rollout.** **Acceptance:** New view can fall back without data migration. **Required verification:** Rollback test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0236-08 — Plan future-proof boundaries only.** **Acceptance:** Local data/storage interfaces do not add SaaS features. **Required verification:** Architecture acceptance review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0236-01 - Map ownership boundaries.** **Acceptance:** Transport, route, scene, library and editor each have one owner. **Required verification:** Module dependency graph. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0236-02 - Define component seams.** **Acceptance:** Shared tokens/primitives avoid cross-screen coupling. **Required verification:** Architecture review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0236-03 - Separate state and presentation.** **Acceptance:** Actual domain status remains source-of-truth. **Required verification:** Type/API tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0236-04 - Plan CSS consolidation.** **Acceptance:** Tokens and page modules replace brittle overrides incrementally. **Required verification:** Cascade audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0236-05 - Preserve route and API contracts.** **Acceptance:** Existing deep links and endpoint shapes remain compatible. **Required verification:** Contract E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0236-06 - Enforce source maintainability.** **Acceptance:** Code files under repo limit with coherent tests. **Required verification:** CI file-size and review checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0236-07 - Define reversible feature rollout.** **Acceptance:** New view can fall back without data migration. **Required verification:** Rollback test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0236-08 - Plan future-proof boundaries only.** **Acceptance:** Local data/storage interfaces do not add SaaS features. **Required verification:** Architecture acceptance review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

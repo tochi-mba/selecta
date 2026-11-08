@@ -1,4 +1,4 @@
-# ADR-0230 — Workspace for truthful analysis, source health, storage and diagnostics
+# ADR-0230 - Workspace for truthful analysis, source health, storage and diagnostics
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Keep operations calm and transparent. Show distinct job stages and privacy bound
 
 No invented progress percentage, dangerous delete wording, hidden filesystem effects or noisy modal interruption. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0230-01 — Define Workspace information hierarchy.** **Acceptance:** Health, source, analysis and storage are findable. **Required verification:** Operator findability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0230-02 — Design health summary.** **Acceptance:** Actionable issues above passive metrics. **Required verification:** Known-fault fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0230-03 — Clarify processing state.** **Acceptance:** Queued/running/blocked/failed counts use real backend values. **Required verification:** Job API test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0230-04 — Refine source management.** **Acceptance:** Paths, errors and safe removal consequences explicit. **Required verification:** Filesystem safety E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0230-05 — Design storage maintenance.** **Acceptance:** Preview, confirmation and accurate reclaim result. **Required verification:** Cancel/failure tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0230-06 — Make diagnostics usable.** **Acceptance:** Logs and identifiers locally safe with clear export actions. **Required verification:** Privacy review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0230-07 — Protect background calm.** **Acceptance:** Job updates never steal focus or auto-play. **Required verification:** Audio/attention E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0230-08 — Test operational recovery.** **Acceptance:** Users recover a stuck source without wrong action. **Required verification:** Scenario study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0230-01 - Define Workspace information hierarchy.** **Acceptance:** Health, source, analysis and storage are findable. **Required verification:** Operator findability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0230-02 - Design health summary.** **Acceptance:** Actionable issues above passive metrics. **Required verification:** Known-fault fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0230-03 - Clarify processing state.** **Acceptance:** Queued/running/blocked/failed counts use real backend values. **Required verification:** Job API test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0230-04 - Refine source management.** **Acceptance:** Paths, errors and safe removal consequences explicit. **Required verification:** Filesystem safety E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0230-05 - Design storage maintenance.** **Acceptance:** Preview, confirmation and accurate reclaim result. **Required verification:** Cancel/failure tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0230-06 - Make diagnostics usable.** **Acceptance:** Logs and identifiers locally safe with clear export actions. **Required verification:** Privacy review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0230-07 - Protect background calm.** **Acceptance:** Job updates never steal focus or auto-play. **Required verification:** Audio/attention E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0230-08 - Test operational recovery.** **Acceptance:** Users recover a stuck source without wrong action. **Required verification:** Scenario study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

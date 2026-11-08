@@ -1,11 +1,11 @@
 # ADR-0049: Responsive shell, persistent player and immersive Stage architecture
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 1 — Architecture
+- **Phase:** 1 - Architecture
 - **Extends existing decisions:** ADR-0002, ADR-0006, ADR-0009, ADR-0024, ADR-0039
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0049-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Use one coordinated shell layout with semantic regions for navigation, route con
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0049-01 — Not started.** Fix and regression-test mini-player/mobile-navigation stacking; remove contradictory bottom declarations rather than adding another override.
-2. **S3-0049-02 — Not started.** Specify desktop rail, optional compact rail, header, content and player responsive geometry and z-index stacking.
-3. **S3-0049-03 — Not started.** Implement centralized bottom-space, safe-area, zoom and keyboard-height handling for fixed chrome and toasts.
-4. **S3-0049-04 — Not started.** Separate persistent playback presentation from transport service and route components so route transitions cannot restart audio.
-5. **S3-0049-05 — Not started.** Define full-player/mini-player/Stage lifecycle and focus restoration when immersive mode opens or closes.
-6. **S3-0049-06 — Not started.** Create deterministic responsive layouts for 320 through 3840px without hidden scroll traps or unreachable actions.
-7. **S3-0049-07 — Not started.** Specify collapsed rail tooltips, ARIA names, selected states and persisted layout preference.
-8. **S3-0049-08 — Not started.** Audit screen readers, fullscreen failure, multi-tab ownership, PWA installed mode and browser UI resizing.
+1. **S3-0049-01 - Not started.** Fix and regression-test mini-player/mobile-navigation stacking; remove contradictory bottom declarations rather than adding another override.
+2. **S3-0049-02 - Not started.** Specify desktop rail, optional compact rail, header, content and player responsive geometry and z-index stacking.
+3. **S3-0049-03 - Not started.** Implement centralized bottom-space, safe-area, zoom and keyboard-height handling for fixed chrome and toasts.
+4. **S3-0049-04 - Not started.** Separate persistent playback presentation from transport service and route components so route transitions cannot restart audio.
+5. **S3-0049-05 - Not started.** Define full-player/mini-player/Stage lifecycle and focus restoration when immersive mode opens or closes.
+6. **S3-0049-06 - Not started.** Create deterministic responsive layouts for 320 through 3840px without hidden scroll traps or unreachable actions.
+7. **S3-0049-07 - Not started.** Specify collapsed rail tooltips, ARIA names, selected states and persisted layout preference.
+8. **S3-0049-08 - Not started.** Audit screen readers, fullscreen failure, multi-tab ownership, PWA installed mode and browser UI resizing.
 
 ## Preservation and integration constraints
 
@@ -64,6 +64,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

@@ -4,6 +4,7 @@ import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
 import { Action, announce, Problem } from '../ui/controls';
+import { TermHint } from '../ui/Glossary';
 import { Icon } from '../ui/Icon';
 import { SongMotif } from '../ui/MusicObjects';
 import { moveInGrid } from '../ui/primitives';
@@ -85,7 +86,7 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
             const lost = missing.includes(name);
             return (
               <fieldset key={name} disabled={lost || disabled}>
-                <legend>{LANE_WORDS[lane]}{lost ? ' — unavailable' : ''}</legend>
+                <legend>{LANE_WORDS[lane]}{lost ? ' - unavailable' : ''}</legend>
                 <button type="button" aria-pressed={soloed === name} onClick={() => onSolo(name)}>
                   {soloed === name ? 'Hear everything' : `Hear only ${LANE_WORDS[lane].toLowerCase()}`}
                 </button>
@@ -129,7 +130,7 @@ function StudioShapeEditor({ shape, titles, missing, disabled, onSetLane }: {
             const total = shape[side][lane].length;
             return (
               <fieldset key={name} disabled={lost || disabled}>
-                <legend>{LANE_WORDS[lane]}{lost ? ' — unavailable' : ''}</legend>
+                <legend>{LANE_WORDS[lane]}{lost ? ' - unavailable' : ''}</legend>
                 <p className="hint">{active === 0 ? 'Left out' : active === total ? 'Used throughout' : `Used in ${active} of ${total} sections`}</p>
                 <div className="row wrap">
                   <button type="button" aria-pressed={active === total} onClick={() => onSetLane(side, lane, 1)}>Use throughout</button>
@@ -509,10 +510,10 @@ export function Studio(props: {
             <div><dt>Rendered audio</dt><dd>{rendered.words}</dd></div>
           </dl>
           <p className="hint">
-            Two songs, four parts per song: voice, drums, bass and melody. Each square is {barsPerCell} bar{barsPerCell === 1 ? '' : 's'} in that song. The Grid and List change the same exact cells. Tap one to turn that part on or off; press a name to hear only that part during a preview.
+            Two songs, four parts per song: voice, drums, bass and melody.<TermHint term="studio-lane" /> Each square is {barsPerCell} bar{barsPerCell === 1 ? '' : 's'} in that song.<TermHint term="studio-cell" /> The Grid and List change the same exact cells. Tap one to turn that part on or off; press a name to hear only that part during a preview.<TermHint term="solo" />
           </p>
           <p className="hint">Previewing pauses the main mix. After stopping or closing Studio, use the main player to resume it.</p>
-          <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes — not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? '. Your work is kept on this browser when you close Studio.' : ''}</p>
+          <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes - not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? '. Your work is kept on this browser when you close Studio.' : ''}</p>
           {!retained && <p className="warn" role="alert">This browser could not keep a local copy. Apply your changes before closing Studio to keep them.</p>}
           {missing.length > 0 && (
             <p className="warn" role="alert">
@@ -527,6 +528,7 @@ export function Studio(props: {
               {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
             </button>
             {before && <button disabled={saving} onClick={putBack}>Put it back</button>}
+            <TermHint term="suggestion" />
           </div>
           {changes && (
             <ul className="studio-changes" role="status">
@@ -652,6 +654,7 @@ export function Studio(props: {
             <button className="primary" disabled={saving || !!asking} onClick={() => void use()}>
               {saving ? 'Applying…' : 'Apply to this transition'}
             </button>
+            <TermHint term="applied" />
             {session?.start_shape && (
               <button onClick={() => {
                 change((session.shape ?? session.start_shape) as Shape);

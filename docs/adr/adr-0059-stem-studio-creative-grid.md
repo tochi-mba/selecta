@@ -1,11 +1,11 @@
 # ADR-0059: Full Stem Studio workstation, grid interaction and commit safety
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 4 — Creation workspaces
+- **Phase:** 4 - Creation workspaces
 - **Extends existing decisions:** ADR-0016, ADR-0007, ADR-0041
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0059-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Make Studio a responsive focused workspace with permanent pair identity, aligned
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0059-01 — Not started.** Build dedicated Studio workspace with persistent pair header and responsive transport.
-2. **S3-0059-02 — Not started.** Redesign 64 cells, two songs, four stem lanes, selected/active/inactive/solo states and aligned bar labels.
-3. **S3-0059-03 — Not started.** Implement accessible grid keyboard model, focus restoration and horizontal-scroll behavior.
-4. **S3-0059-04 — Not started.** Keep stem preview, solo, preset shapes, auto-arrange, Fine tune mine and Restore previous operations.
-5. **S3-0059-05 — Not started.** Separate dirty local shape, recovered local draft, backend committed shape and rendered audio status.
-6. **S3-0059-06 — Not started.** Make Apply revision-checked and never attach a saved shape to an old or different pair.
-7. **S3-0059-07 — Not started.** Handle partial stem availability, loading/error, preview failure and close during processing.
-8. **S3-0059-08 — Not started.** Profile interaction responsiveness during background render and suppress excessive grid remounts.
-9. **S3-0059-09 — Not started.** Exercise all cell positions, solo combinations, and playback interruptions with real audio evidence.
+1. **S3-0059-01 - Not started.** Build dedicated Studio workspace with persistent pair header and responsive transport.
+2. **S3-0059-02 - Not started.** Redesign 64 cells, two songs, four stem lanes, selected/active/inactive/solo states and aligned bar labels.
+3. **S3-0059-03 - Not started.** Implement accessible grid keyboard model, focus restoration and horizontal-scroll behavior.
+4. **S3-0059-04 - Not started.** Keep stem preview, solo, preset shapes, auto-arrange, Fine tune mine and Restore previous operations.
+5. **S3-0059-05 - Not started.** Separate dirty local shape, recovered local draft, backend committed shape and rendered audio status.
+6. **S3-0059-06 - Not started.** Make Apply revision-checked and never attach a saved shape to an old or different pair.
+7. **S3-0059-07 - Not started.** Handle partial stem availability, loading/error, preview failure and close during processing.
+8. **S3-0059-08 - Not started.** Profile interaction responsiveness during background render and suppress excessive grid remounts.
+9. **S3-0059-09 - Not started.** Exercise all cell positions, solo combinations, and playback interruptions with real audio evidence.
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

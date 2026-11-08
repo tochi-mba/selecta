@@ -1,10 +1,10 @@
 # ADR-0083: Make drafts, timeline editing, transition intent and export unambiguous
 
-- **Decision status:** Proposed (owner review required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 3 — creator journeys
+- **Phase:** 3 - creator journeys
 - **Extends:** ADR-0056, ADR-0057, ADR-0058, ADR-0065. No inherited task is automatically complete.
 - **Dependencies:** ADRs 0078–0080; audio trust in ADR-0082.
 - **Checklist:** S31-0083-01 through S31-0083-12 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,18 +23,18 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0083-01 — Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next.
-2. **S31-0083-02 — Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity.
-3. **S31-0083-03 — Review creator timeline hierarchy at 2, 20 and 100 songs.** Acceptance: Track identity, seam status and contextual actions stay scannable under long metadata.
-4. **S31-0083-04 — Provide predictable non-drag reorder and insertion affordances.** Acceptance: Pointer/touch/keyboard alternatives clearly indicate destination and resulting order.
-5. **S31-0083-05 — Review draft versus current editor headers and action copy.** Acceptance: User knows what changes immediately affect playback and what remains a separate project.
-6. **S31-0083-06 — Audit Inspector Listen/Change/Studio/Details consistency.** Acceptance: Tab semantics, pair context, focus and requested-versus-rendered outcome stay stable.
-7. **S31-0083-07 — Review transition cue, style, bar count and fallback presentation.** Acceptance: User choice is not visually overwritten by a different actually rendered move.
-8. **S31-0083-08 — Verify preview/rating/render failure and stale-request recovery.** Acceptance: A late render cannot trump newer intent; audio preview preserves proper owner.
-9. **S31-0083-09 — Review export scope, prerequisites and exact snapshot identity.** Acceptance: Before confirm, user knows selected mix/revision and why export may be unavailable.
-10. **S31-0083-10 — Review persistent export stages, errors, retries and download recovery.** Acceptance: Closing panel or modifying mix does not lose job; final output corresponds to captured revision.
-11. **S31-0083-11 — Test cross-mix concurrent edits, requests and Undo.** Acceptance: Mutation/Undo only affects intended current/draft revision despite stale responses.
-12. **S31-0083-12 — Verify actual FLAC decoding and authored track order.** Acceptance: Downloaded file format, duration, transition identity and source scope match intended snapshot.
+1. **S31-0083-01 - Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next.
+2. **S31-0083-02 - Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity.
+3. **S31-0083-03 - Review creator timeline hierarchy at 2, 20 and 100 songs.** Acceptance: Track identity, seam status and contextual actions stay scannable under long metadata.
+4. **S31-0083-04 - Provide predictable non-drag reorder and insertion affordances.** Acceptance: Pointer/touch/keyboard alternatives clearly indicate destination and resulting order.
+5. **S31-0083-05 - Review draft versus current editor headers and action copy.** Acceptance: User knows what changes immediately affect playback and what remains a separate project.
+6. **S31-0083-06 - Audit Inspector Listen/Change/Studio/Details consistency.** Acceptance: Tab semantics, pair context, focus and requested-versus-rendered outcome stay stable.
+7. **S31-0083-07 - Review transition cue, style, bar count and fallback presentation.** Acceptance: User choice is not visually overwritten by a different actually rendered move.
+8. **S31-0083-08 - Verify preview/rating/render failure and stale-request recovery.** Acceptance: A late render cannot trump newer intent; audio preview preserves proper owner.
+9. **S31-0083-09 - Review export scope, prerequisites and exact snapshot identity.** Acceptance: Before confirm, user knows selected mix/revision and why export may be unavailable.
+10. **S31-0083-10 - Review persistent export stages, errors, retries and download recovery.** Acceptance: Closing panel or modifying mix does not lose job; final output corresponds to captured revision.
+11. **S31-0083-11 - Test cross-mix concurrent edits, requests and Undo.** Acceptance: Mutation/Undo only affects intended current/draft revision despite stale responses.
+12. **S31-0083-12 - Verify actual FLAC decoding and authored track order.** Acceptance: Downloaded file format, duration, transition identity and source scope match intended snapshot.
 
 ## Required adverse cases and evidence
 
@@ -50,7 +50,7 @@ More deliberate confirmation and scope language can add one interaction to risky
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Only the explicitly identified S31 tasks in the evidence ledger are **In progress**; all other tasks in this ADR remain Not started. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
+The owner accepted this decision on 2026-11-08. Only the explicitly identified S31 tasks in the evidence ledger are **In progress**; all other tasks in this ADR remain Not started. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
 
 ## Status history
 
@@ -58,6 +58,7 @@ The decision remains **Proposed** pending owner approval. Only the explicitly id
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Initial documentation-only finishing plan | 
 | 2026-11-07 | Proposed | In progress | Selected UI/Edge/test or visual-review infrastructure on draft PR #25; no human acceptance or task Verified |
+| 2026-11-08 | Accepted | In progress | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

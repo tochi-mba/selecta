@@ -68,7 +68,7 @@ describe('song requests joining the mix', () => {
     (playback.player.state as { phase: string }).phase = 'idle';
     const calls = fakeBackend({ 'GET /requests': { requests: [row()] } });
     render(<Requests playback={playback} />);
-    expect(await screen.findByText('Waiting to play')).toBeInTheDocument();
+    expect(await screen.findByText('Requested · waiting')).toBeInTheDocument();
     expect(calls.some((call) => call.path === '/requests/consider')).toBe(false);
   });
 });
@@ -86,13 +86,13 @@ describe('what each request is up to', () => {
   it('says where it will go and how long it will take', async () => {
     await shown({ stage: 'preparing', after: 'Song 2', seconds: 50 });
     expect(await screen.findByText('Getting ready')).toBeInTheDocument();
-    expect(screen.getByText('Joins after Song 2. Ready in about a minute.')).toBeInTheDocument();
+    expect(screen.getByText('Joins after Song 2. Estimated audio preparation: about a minute. This is not a scheduled play time.')).toBeInTheDocument();
   });
 
   it('says when it has to be analysed first', async () => {
     await shown({ stage: 'analysing', waiting_on: 'analysis', seconds: 40 });
     expect(await screen.findByText('Getting ready')).toBeInTheDocument();
-    expect(screen.getByText(/needs to listen to it first\. Ready in under a minute/)).toBeInTheDocument();
+    expect(screen.getByText(/needs to listen to it first\. Estimated audio preparation: under a minute/)).toBeInTheDocument();
   });
 
   it('is plain about a song it can’t place, rather than saying it’s still analysing', async () => {
@@ -630,7 +630,7 @@ describe('playing a stuck request anyway', () => {
       'POST /requests/7/add': done(),
     });
     render(<Requests playback={playback} notify={notify} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Play it anyway' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add to mix anyway' }));
     expect(screen.queryByText('Wanted')).toBeNull();
     await waitFor(() => expect(playback.onMix).toHaveBeenCalled());
     expect(calls.find((call) => call.path === '/requests/7/add')?.body).toMatchObject({ position: 0 });
@@ -641,7 +641,7 @@ describe('playing a stuck request anyway', () => {
   it('is offered when a song can’t be placed', async () => {
     fakeBackend({ 'GET /requests': { requests: [row({ no_cues: true })] } });
     render(<Requests />);
-    expect(await screen.findByRole('button', { name: 'Play it anyway' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Add to mix anyway' })).toBeInTheDocument();
   });
 
   it('isn’t offered while it still has a chance', async () => {
@@ -651,13 +651,13 @@ describe('playing a stuck request anyway', () => {
     });
     render(<Requests playback={playing(songs(undefined, undefined))} />);
     await screen.findByText('Getting ready');
-    expect(screen.queryByRole('button', { name: 'Play it anyway' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add to mix anyway' })).toBeNull();
   });
 
   it('puts the request back if it can’t be added', async () => {
     fakeBackend({ 'GET /requests': { requests: [row({ no_cues: true })] } });
     render(<Requests />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Play it anyway' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add to mix anyway' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(await screen.findByText('Wanted')).toBeInTheDocument();
   });

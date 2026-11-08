@@ -328,7 +328,52 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     notify(song.priority ? `${song.title} moved to background processing.` : `${song.title} moved to the priority list.`);
     await load();
   };
-  const shownDetails = rows?.find((song) => song.id === opened) ?? null;
+  // A recording link may refer to an ID outside the current filtered or paginated rows.
+  // Resolve that exact ID separately: never substitute a same-title recording.
+  const songAsked = useQueryParam('song');
+  const songWanted = songAsked && /^\d+$/.test(songAsked) && Number.isSafeInteger(Number(songAsked)) && Number(songAsked) > 0
+    ? Number(songAsked) : null;
+  const [linkedSong, setLinkedSong] = useState<LibrarySong | null>(null);
+  const [linkProblem, setLinkProblem] = useState<'missing' | 'unavailable' | null>(null);
+  const [linkRetry, setLinkRetry] = useState(0);
+  const openedFromAddress = useRef<number | null>(null);
+  useEffect(() => {
+    // Back/Forward must not leave the previously linked recording open.
+    const previous = openedFromAddress.current;
+    if (previous !== null && previous !== songWanted) {
+      setOpened((current) => current === previous ? null : current);
+    }
+    openedFromAddress.current = songWanted;
+    let live = true;
+    setLinkedSong(null);
+    setLinkProblem(null);
+    if (songWanted === null || committedRows === null) return;
+    if (committedRows.some((song) => song.id === songWanted)) {
+      setOpened(songWanted);
+      return;
+    }
+    // Numeric search ranks an exact recording ID ahead of titles or artists.
+    // The API's normal all-music view also bypasses a stale UI filter.
+    void get<LibraryPage>(`/library?q=${songWanted}&state=all&limit=1`)
+      .then((page) => {
+        if (!live) return;
+        const exact = page.songs.find((song) => song.id === songWanted);
+        if (exact) {
+          setLinkedSong(exact);
+          setOpened(songWanted);
+        } else setLinkProblem('missing');
+      })
+      .catch(() => { if (live) setLinkProblem('unavailable'); });
+    return () => { live = false; };
+    // A refreshed row list does not need to refetch the same deep link.
+  }, [songWanted, searchIdentity, resolvedIdentity, linkRetry]);
+  const shownDetails = rows?.find((song) => song.id === opened)
+    ?? (linkedSong?.id === opened ? linkedSong : null);
+  const closeDetails = () => {
+    setOpened(null);
+    setLinkedSong(null);
+    if (songAsked !== null) setAddressQuery({ song: null });
+  };
   // One pass rather than comparing every row against every other row: long
   // libraries can reach 20,000 songs, and identical titles must still select
   // the correct ID without a quadratic render or name collisions.
@@ -460,7 +505,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                     checked={selectedIds.includes(song.id)} disabled={searching || failed || selectedIds.length >= 200 && !selectedIds.includes(song.id)}
                     onChange={() => toggleBatch(song.id)} />
                 </label>}
-                <button className="link song-open" onClick={() => setOpened(song.id)} aria-label={`Details for ${name}`}>
+                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`}>
                   <SongMotif songId={song.id} /><b title={title}>{title}</b>
                 </button>
                 <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
@@ -502,16 +547,26 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         })}
       </ul>
       {next && <Action className="library-more" working="Loading…" run={more}>Show more songs</Action>}
-      {shownDetails && <SongDetails song={shownDetails} onClose={() => setOpened(null)} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} />}
+      {songAsked !== null && songWanted === null && (
+        <p role="status" className="hint">That recording link is invalid. <button type="button" onClick={closeDetails}>Dismiss</button></p>
+      )}
+      {songWanted !== null && linkProblem && (
+        <p role="status" className="hint">
+          {linkProblem === 'missing' ? 'That exact recording is no longer available in your Library.' : 'Couldn’t open that recording. Check your connection to Selecta.'}
+          {' '}<button type="button" onClick={() => setLinkRetry((attempt) => attempt + 1)}>Try again</button>
+          {' '}<button type="button" onClick={closeDetails}>Dismiss</button>
+        </p>
+      )}
+      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} />}
       {confirmBatch && <Dialog title="Apply batch Library action?" onClose={() => setConfirmBatch(null)}
         footer={<>
-          <button onClick={() => setConfirmBatch(null)}>Cancel — change nothing</button>
+          <button onClick={() => setConfirmBatch(null)}>Cancel - change nothing</button>
           <Action className="primary" working="Updating selected recordings…" run={applyBatch}>Confirm {confirmBatch.songs.length} recordings</Action>
         </>}>
         <p>You are about to <b>{confirmBatch.action === 'never' ? 'exclude from future mixes' : confirmBatch.action === 'allow' ? 'allow in future mixes' : confirmBatch.action === 'prioritize' ? 'prioritize for analysis' : 'remove analysis priority from'}</b> precisely {confirmBatch.songs.length} recording{confirmBatch.songs.length === 1 ? '' : 's'}.</p>
         <p className="hint">Only these exact song IDs will be changed. If any were changed in another tab or scan, the entire action is refused. Original audio and current mix are untouched.</p>
         <ul className="batch-preview">{confirmBatch.songs.slice(0, 15).map((song) =>
-          <li key={song.id}>{song.title} — {song.artist} (ID {song.id})</li>
+          <li key={song.id}>{song.title} - {song.artist} (ID {song.id})</li>
         )}</ul>
         {confirmBatch.songs.length > 15 && <p>…and {confirmBatch.songs.length - 15} more selected recordings.</p>}
       </Dialog>}

@@ -1,4 +1,4 @@
-# Selecta 4.0 — test, visual, accessibility, adverse-case and performance matrix
+# Selecta 4.0 - test, visual, accessibility, adverse-case and performance matrix
 
 - **Proposed:** 2026-11-07.
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (PR #25 and PR #26 already merged at review).

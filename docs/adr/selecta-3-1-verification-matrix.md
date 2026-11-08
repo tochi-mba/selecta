@@ -1,4 +1,4 @@
-# Selecta 3.1 — verification, research tasks and release matrix
+# Selecta 3.1 - verification, research tasks and release matrix
 
 - **Status:** Proposed verification design. PR #25 adds unit/Edge regressions and non-blocking synthetic visual candidate capture; full aggregate CI, approved screenshots and human acceptance remain unverified.
 - **Scope:** S31-0078 through S31-0088 (116 tasks). Existing 3.0 and historical T/P tests/feature parity retain ownership.

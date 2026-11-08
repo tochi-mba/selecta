@@ -1,4 +1,4 @@
-# ADR-0244 — Search-first navigation and expert command palette continuity
+# ADR-0244 - Search-first navigation and expert command palette continuity
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Preserve the command palette and fast library lookup as power-user complements t
 
 No keyboard shortcut stealing from text inputs, unconfirmed mix activation or search results pretending to be ready songs. Preserve a proven reliable interface when a proposed artistic treatment cannot demonstrate improved user outcomes. This docs-only decision does not implement remote services, SaaS, telemetry, accounts or changes to music files.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0244-01 — Audit existing commands.** **Acceptance:** Every command maps to real capability and permission. **Required verification:** Palette inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0244-02 — Redesign search hierarchy.** **Acceptance:** Songs, mixes, routes and actions clearly differentiated. **Required verification:** Results task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0244-03 — Protect focused inputs.** **Acceptance:** Shortcuts never interrupt text editing. **Required verification:** Keyboard regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0244-04 — Show contextual actions.** **Acceptance:** Commands indicate which mix and draft affected. **Required verification:** Scope fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0244-05 — Handle stale search results.** **Acceptance:** Old results cannot trigger wrong object action. **Required verification:** Race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0244-06 — Preserve focus restoration.** **Acceptance:** Opening/closing returns focus predictably. **Required verification:** NVDA/keyboard test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0244-07 — Scale large library lookup.** **Acceptance:** Results remain performant at 20k songs. **Required verification:** Stress profile. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0244-08 — Evaluate expert speed.** **Acceptance:** Frequent tasks measurably faster without novice confusion. **Required verification:** Comparative study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0244-01 - Audit existing commands.** **Acceptance:** Every command maps to real capability and permission. **Required verification:** Palette inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0244-02 - Redesign search hierarchy.** **Acceptance:** Songs, mixes, routes and actions clearly differentiated. **Required verification:** Results task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0244-03 - Protect focused inputs.** **Acceptance:** Shortcuts never interrupt text editing. **Required verification:** Keyboard regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0244-04 - Show contextual actions.** **Acceptance:** Commands indicate which mix and draft affected. **Required verification:** Scope fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0244-05 - Handle stale search results.** **Acceptance:** Old results cannot trigger wrong object action. **Required verification:** Race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0244-06 - Preserve focus restoration.** **Acceptance:** Opening/closing returns focus predictably. **Required verification:** NVDA/keyboard test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0244-07 - Scale large library lookup.** **Acceptance:** Results remain performant at 20k songs. **Required verification:** Stress profile. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0244-08 - Evaluate expert speed.** **Acceptance:** Frequent tasks measurably faster without novice confusion. **Required verification:** Comparative study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

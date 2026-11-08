@@ -1,10 +1,10 @@
 # ADR-0081: Reduce friction from first music folder to a confident first mix
 
-- **Decision status:** Proposed (owner review required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 2 — listener journeys
+- **Phase:** 2 - listener journeys
 - **Extends:** ADR-0053, ADR-0054, ADR-0064, ADR-0072. No inherited task is automatically complete.
 - **Dependencies:** ADRs 0078–0080 foundations.
 - **Checklist:** S31-0081-01 through S31-0081-10 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,16 +23,16 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0081-01 — Review new-user entry and folder path guidance.** Acceptance: User knows where to find a path, what stays local, what metadata can leave, and why a path can be rejected.
-2. **S31-0081-02 — Design distinct source-check, scan, analysis and mix-ready states.** Acceptance: Every stage has accurate progress or uncertainty, separate failures, and useful next action.
-3. **S31-0081-03 — Test invalid, absent, empty, permission-denied and unplugged folder outcomes.** Acceptance: Error does not imply music was lost; recovery is possible without a full restart.
-4. **S31-0081-04 — Establish a first-play call to action as soon as genuinely possible.** Acceptance: User can start a valid mix without waiting for unrelated full-library processing.
-5. **S31-0081-05 — Review featured mix hierarchy and mood card choice.** Acceptance: Recommendation, artist context and outcomes are understandable without DJ terminology or excessive competing actions.
-6. **S31-0081-06 — Clarify Play, Edit first, Save as draft and replacing the current mix.** Acceptance: Each action explains whether current audio changes and how to avoid replacing it.
-7. **S31-0081-07 — Review mix length, feel, stems, energy and destination customization.** Acceptance: Frequent options are simple; advanced options are discoverable and persisted truthfully.
-8. **S31-0081-08 — Review unavailable preset reasons and recovery paths.** Acceptance: Each unavailable card states the specific prerequisite and relevant analysis progress.
-9. **S31-0081-09 — Test long/unicode/missing metadata and small/zoomed devices.** Acceptance: Choices remain understandable and actionable without horizontal overflow or off-screen controls.
-10. **S31-0081-10 — Measure unassisted time-to-first-valid-play in representative tasks.** Acceptance: Record actual success, critical errors, hesitation and any misleading disclosure.
+1. **S31-0081-01 - Review new-user entry and folder path guidance.** Acceptance: User knows where to find a path, what stays local, what metadata can leave, and why a path can be rejected.
+2. **S31-0081-02 - Design distinct source-check, scan, analysis and mix-ready states.** Acceptance: Every stage has accurate progress or uncertainty, separate failures, and useful next action.
+3. **S31-0081-03 - Test invalid, absent, empty, permission-denied and unplugged folder outcomes.** Acceptance: Error does not imply music was lost; recovery is possible without a full restart.
+4. **S31-0081-04 - Establish a first-play call to action as soon as genuinely possible.** Acceptance: User can start a valid mix without waiting for unrelated full-library processing.
+5. **S31-0081-05 - Review featured mix hierarchy and mood card choice.** Acceptance: Recommendation, artist context and outcomes are understandable without DJ terminology or excessive competing actions.
+6. **S31-0081-06 - Clarify Play, Edit first, Save as draft and replacing the current mix.** Acceptance: Each action explains whether current audio changes and how to avoid replacing it.
+7. **S31-0081-07 - Review mix length, feel, stems, energy and destination customization.** Acceptance: Frequent options are simple; advanced options are discoverable and persisted truthfully.
+8. **S31-0081-08 - Review unavailable preset reasons and recovery paths.** Acceptance: Each unavailable card states the specific prerequisite and relevant analysis progress.
+9. **S31-0081-09 - Test long/unicode/missing metadata and small/zoomed devices.** Acceptance: Choices remain understandable and actionable without horizontal overflow or off-screen controls.
+10. **S31-0081-10 - Measure unassisted time-to-first-valid-play in representative tasks.** Acceptance: Record actual success, critical errors, hesitation and any misleading disclosure.
 
 ## Required adverse cases and evidence
 
@@ -48,13 +48,14 @@ A guided default path is simpler, but complete progress details and customized m
 
 ## Decision and implementation boundary
 
-The decision remains **Proposed** pending owner approval. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
+The owner accepted this decision on 2026-11-08. Every S31 task remains **Not started**. A later implementation PR must name the task ID, acceptance, real implementation commit, negative cases, linked old S3 task/parity row and evidence. **Implemented** requires merged code and required automated checks; **Verified** additionally requires the human evidence relevant to that task. The initial proposal was documentation-only. PR #25 now includes limited frontend and component-test changes on selected workstreams. None of the tasks is Implemented or Verified; follow the evidence ledger for exact In-progress IDs.
 
 ## Status history
 
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Original documentation-only finishing plan |\n| 2026-11-07 | Proposed | In progress | Selected UI/test code now on PR #25; complete verification still outstanding |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

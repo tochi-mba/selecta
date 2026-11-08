@@ -1,4 +1,4 @@
-# ADR-0183 — Responsive sensory design, keyboard parity and audio performance
+# ADR-0183 - Responsive sensory design, keyboard parity and audio performance
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, not-yet-implemented design and acceptance delta**, not proof th
 
 Preserve the existing restrained experience if an expressive version cannot prove comprehension, tactile confidence, accessibility and real playback performance. Diagrams do not claim unverified musical precision or quality. Never fabricate beat, lyric, wave, cover, render status, progress or success. Supply static/keyboard alternatives and respect intentional silence/Pause.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0183-01 — Define intensity choice and persistence.** **Acceptance:** User choice survives reload with no influence on music engine. **Required verification:** Pref and Stage tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0183-02 — Provide no-motion/no-color alternatives.** **Acceptance:** All key objects and actions understandable in forced colors. **Required verification:** NVDA/Edge and high contrast review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0183-03 — Adapt tactile features to narrow touch.** **Acceptance:** Timeline drag, grid paint and energy curve never trap page scroll. **Required verification:** 320/375/430px coarse pointer tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0183-04 — Validate high zoom and international text.** **Acceptance:** 400% zoom/RTL/emoji names retain controls and identity. **Required verification:** Responsive layout screenshots and keyboard. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0183-05 — Set audio graphics resource budget.** **Acceptance:** No new dropout during simultaneous audio analysis/render. **Required verification:** Actual hardware p95 frame and audio trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0183-06 — Validate keyboard inset and layered overlays.** **Acceptance:** Focus, bottom navigation and player never hide active field. **Required verification:** Phone keyboard and fullscreen tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0183-07 — Record independent accessibility acceptance.** **Acceptance:** Named screen reader/touch/low-vision tester signs exact SHA. **Required verification:** Human evidence protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0183-01 - Define intensity choice and persistence.** **Acceptance:** User choice survives reload with no influence on music engine. **Required verification:** Pref and Stage tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0183-02 - Provide no-motion/no-color alternatives.** **Acceptance:** All key objects and actions understandable in forced colors. **Required verification:** NVDA/Edge and high contrast review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0183-03 - Adapt tactile features to narrow touch.** **Acceptance:** Timeline drag, grid paint and energy curve never trap page scroll. **Required verification:** 320/375/430px coarse pointer tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0183-04 - Validate high zoom and international text.** **Acceptance:** 400% zoom/RTL/emoji names retain controls and identity. **Required verification:** Responsive layout screenshots and keyboard. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0183-05 - Set audio graphics resource budget.** **Acceptance:** No new dropout during simultaneous audio analysis/render. **Required verification:** Actual hardware p95 frame and audio trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0183-06 - Validate keyboard inset and layered overlays.** **Acceptance:** Focus, bottom navigation and player never hide active field. **Required verification:** Phone keyboard and fullscreen tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0183-07 - Record independent accessibility acceptance.** **Acceptance:** Named screen reader/touch/low-vision tester signs exact SHA. **Required verification:** Human evidence protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

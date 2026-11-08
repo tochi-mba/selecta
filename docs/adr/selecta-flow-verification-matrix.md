@@ -1,4 +1,4 @@
-# Selecta / Flow — independent verification matrix
+# Selecta / Flow - independent verification matrix
 
 **50 Accepted decisions, 400 SF tasks Not started, 0 Implemented, 0 independently Verified.** This is a *future proof plan*, not a completed test report. Separate source/test PR, named human reviewer and exact SHA are required for any Verified Yes.
 

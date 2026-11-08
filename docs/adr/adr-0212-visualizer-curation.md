@@ -1,4 +1,4 @@
-# ADR-0212 — Curation and visual refinement of fifteen existing spectrum styles
+# ADR-0212 - Curation and visual refinement of fifteen existing spectrum styles
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Preserve all fifteen currently source-present live-spectrum modes while curating
 
 Do not count visualizer feature implementation as a newly unimplemented task or falsely claim test approval. Reject spectacle when it costs accessibility, audio continuity or task comprehension. This ADR approves no new SaaS, login, account, cloud upload, telemetry, audio engine rewrite or code change by itself.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0212-01 — Audit existing modes.** **Acceptance:** Exact real-frequency mapping recorded. **Required verification:** Spectrum source review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0212-02 — Refine brand coherence.** **Acceptance:** All modes have intentional palette and composition. **Required verification:** Screen gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0212-03 — Curate selector groups.** **Acceptance:** Signature and specialist modes findable. **Required verification:** Preference study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0212-04 — Define honest silence.** **Acceptance:** Zero input remains quiet and static. **Required verification:** Silence fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0212-05 — Preserve transport on switch.** **Acceptance:** No pause, seek or restart by visual choice. **Required verification:** Audio-owner tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0212-06 — Budget visual performance.** **Acceptance:** Loop stops hidden and limits allocation. **Required verification:** CPU GPU profiles. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0212-07 — Audit accessibility.** **Acceptance:** Name, contrast and reduced motion across all styles. **Required verification:** NVDA and comfort review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0212-08 — Approve meaningful default.** **Acceptance:** Most useful signature mode justified. **Required verification:** Listener comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0212-01 - Audit existing modes.** **Acceptance:** Exact real-frequency mapping recorded. **Required verification:** Spectrum source review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0212-02 - Refine brand coherence.** **Acceptance:** All modes have intentional palette and composition. **Required verification:** Screen gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0212-03 - Curate selector groups.** **Acceptance:** Signature and specialist modes findable. **Required verification:** Preference study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0212-04 - Define honest silence.** **Acceptance:** Zero input remains quiet and static. **Required verification:** Silence fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0212-05 - Preserve transport on switch.** **Acceptance:** No pause, seek or restart by visual choice. **Required verification:** Audio-owner tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0212-06 - Budget visual performance.** **Acceptance:** Loop stops hidden and limits allocation. **Required verification:** CPU GPU profiles. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0212-07 - Audit accessibility.** **Acceptance:** Name, contrast and reduced motion across all styles. **Required verification:** NVDA and comfort review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0212-08 - Approve meaningful default.** **Acceptance:** Most useful signature mode justified. **Required verification:** Listener comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

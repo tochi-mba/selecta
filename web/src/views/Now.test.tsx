@@ -309,11 +309,11 @@ describe('creative Listen states grounded in audio and known timing', () => {
     await screen.findByText('Hello');
     fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: 'ribbon' } });
     expect(JSON.parse(localStorage.getItem('selecta.listen') ?? '{}').spectrumShape).toBe('ribbon');
-    expect(screen.getByRole('img', { name: 'Frequency ribbon — actual mixed-audio frequency levels' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Frequency ribbon - actual mixed-audio frequency levels' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Radial spectrum' })).toBeNull();
     expect(player.state.phase).toBe('idle');
     fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: 'bars' } });
-    expect(screen.getByRole('img', { name: 'Frequency bars — actual mixed-audio frequency levels' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Frequency bars - actual mixed-audio frequency levels' })).toBeInTheDocument();
   });
 
   it('converts previously saved radial visuals to the horizontal ribbon without changing playback', async () => {
@@ -360,7 +360,7 @@ describe('creative Listen states grounded in audio and known timing', () => {
     );
     await screen.findByText('Hello');
     fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: id } });
-    expect(screen.getByRole('img', { name: label + ' — actual mixed-audio frequency levels' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: label + ' - actual mixed-audio frequency levels' })).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem('selecta.listen') ?? '{}').spectrumShape).toBe(id);
     expect(play).not.toHaveBeenCalled();
     expect(player.state.phase).toBe('idle');

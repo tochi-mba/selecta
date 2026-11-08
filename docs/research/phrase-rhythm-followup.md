@@ -1,4 +1,4 @@
-# Phrase rhythm and arrangement follow-up — 6 November 2026
+# Phrase rhythm and arrangement follow-up - 6 November 2026
 
 ## Evidence read
 

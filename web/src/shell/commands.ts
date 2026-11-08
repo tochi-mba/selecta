@@ -1,5 +1,6 @@
 import type { DraftInfo } from '../api';
 import { navigate } from '../router';
+import { openGlossary } from '../state/glossaryRequests';
 import { setPrefs, Theme, Motion } from '../state/prefs';
 import { DESTINATIONS, EXPLORE_TABS, WORKSPACE_TABS } from './manifest';
 
@@ -11,7 +12,7 @@ import { DESTINATIONS, EXPLORE_TABS, WORKSPACE_TABS } from './manifest';
 export type Command = {
   id: string;
   label: string;
-  group: 'Go to' | 'Playback' | 'Do' | 'Your drafts';
+  group: 'Songs' | 'Go to' | 'Playback' | 'Do' | 'Your drafts';
   /** Other words someone might search for. */
   keywords?: string;
   /** Why it can't run right now. */
@@ -69,6 +70,7 @@ export function buildCommands(context: CommandContext): Command[] {
     { id: 'analyse', label: 'Analyse the rest of my library', group: 'Do', unavailable: context.analysing ? 'Analysis is already running.' : context.songsLeftToAnalyse ? undefined : 'Every song has been analysed.', run: context.startAnalysis },
     { id: 'activity', label: 'Activity and Undo', group: 'Do', keywords: 'history recent', run: context.openActivity },
     { id: 'help', label: 'Keyboard shortcuts', group: 'Do', keywords: 'keys help', run: context.openHelp },
+    { id: 'glossary', label: 'Music terms (glossary)', group: 'Do', keywords: 'help glossary words meaning definitions explain what is', run: () => openGlossary() },
     ...(['light', 'dark', 'system'] as Theme[]).map((theme): Command => ({
       id: `theme-${theme}`,
       label: theme === 'system' ? 'Theme: match this computer' : `Theme: ${theme}`,

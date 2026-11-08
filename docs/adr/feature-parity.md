@@ -1,6 +1,6 @@
-# Selecta 2.0 — feature-parity ledger
+# Selecta 2.0 - feature-parity ledger
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted
 - **Implementation status of redesigned features:** Implemented, not yet verified by people ([#22](https://github.com/tochi-mba/selecta/pull/22))
 - **Existing app:** behaviour and limitations are documented separately in [acceptance.md](../acceptance.md).
 

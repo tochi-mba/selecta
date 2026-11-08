@@ -1,4 +1,4 @@
-# Selecta — final-polish verification and acceptance matrix
+# Selecta - final-polish verification and acceptance matrix
 
 **FP documentation proposal as of 2026-11-08:** baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. 8 Proposed ADRs (0264–0271), 64 task acceptances Not started, 0 In progress, 0 Implemented, 0 independently Verified. All owner decisions pending; no source change or human verification is claimed.
 

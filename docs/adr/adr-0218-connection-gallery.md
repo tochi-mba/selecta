@@ -1,4 +1,4 @@
-# ADR-0218 — Wordplay and harmonic Connection Gallery grounded in actual evidence
+# ADR-0218 - Wordplay and harmonic Connection Gallery grounded in actual evidence
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Make validated song-pair connections discoverable as an editorial gallery or opt
 
 No invented lyric connection, false harmonic certainty, unavailable clip or pseudo-recommendation. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0218-01 — Map genuine discovery fields.** **Acceptance:** All link types map to actual API output. **Required verification:** Schema fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0218-02 — Design evidence-based cards.** **Acceptance:** Pair, technique, limitations and status legible. **Required verification:** Expert review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0218-03 — Build optional relationship view.** **Acceptance:** Only returned edges with stable IDs shown. **Required verification:** Sparse graph tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0218-04 — Prioritize real audition.** **Acceptance:** Audio preview available only with media readiness. **Required verification:** Audio focus E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0218-05 — Clarify search stages.** **Acceptance:** Candidate, ready and rated distinct. **Required verification:** Async fixture states. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0218-06 — Retain pair-specific feedback.** **Acceptance:** Ratings attach to correct pair and revision. **Required verification:** Identity regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0218-07 — Add accessible list alternative.** **Acceptance:** Map facts navigable by keyboard and screen reader. **Required verification:** NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0218-08 — Test discoverability.** **Acceptance:** Listeners find valuable links without false trust. **Required verification:** Uncoached study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0218-01 - Map genuine discovery fields.** **Acceptance:** All link types map to actual API output. **Required verification:** Schema fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0218-02 - Design evidence-based cards.** **Acceptance:** Pair, technique, limitations and status legible. **Required verification:** Expert review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0218-03 - Build optional relationship view.** **Acceptance:** Only returned edges with stable IDs shown. **Required verification:** Sparse graph tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0218-04 - Prioritize real audition.** **Acceptance:** Audio preview available only with media readiness. **Required verification:** Audio focus E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0218-05 - Clarify search stages.** **Acceptance:** Candidate, ready and rated distinct. **Required verification:** Async fixture states. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0218-06 - Retain pair-specific feedback.** **Acceptance:** Ratings attach to correct pair and revision. **Required verification:** Identity regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0218-07 - Add accessible list alternative.** **Acceptance:** Map facts navigable by keyboard and screen reader. **Required verification:** NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0218-08 - Test discoverability.** **Acceptance:** Listeners find valuable links without false trust. **Required verification:** Uncoached study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

@@ -1,6 +1,6 @@
 # ADR-0096: First-run folder import, analysis readiness and time to first valid play
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -20,7 +20,7 @@ This is a **proposal**. Source inspection and earlier planning documents establi
 
 ## Proposed decision
 
-Keep three conceptual stages—Add your music, Prepare library, Play first mix—with streamlined copy and clearly represented partial preparation. Preserve existing secure folder-path and metadata disclosure semantics.
+Keep three conceptual stages-Add your music, Prepare library, Play first mix-with streamlined copy and clearly represented partial preparation. Preserve existing secure folder-path and metadata disclosure semantics.
 
 ## Experience, frontend and interaction specification
 
@@ -29,18 +29,18 @@ Keep three conceptual stages—Add your music, Prepare library, Play first mix�
 - Show ready count versus six, analysing count, blockers, source name and first-play CTA without implying all processing is complete.
 - Retain original-file safety, local-first promise and specific LRCLIB metadata disclosure.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0096-01 — Redesign welcome hierarchy and path entry guidance.** Acceptance: New user can supply backend-usable path without guessing. Required verification: Unassisted Windows/Edge task and 320px screenshots. **Implementation: Not started; Verified: No.**
-2. **S4-0096-02 — Specify path parsing/quoting/normalization and validation copy.** Acceptance: Input preserved on missing/invalid/unreadable path. Required verification: Quote, space, UNC, Unicode, file-versus-folder tests. **Implementation: Not started; Verified: No.**
-3. **S4-0096-03 — Preserve existing source validation and safety.** Acceptance: No input path escapes backend permissions/origin policy. Required verification: Python/API security and filesystem fixture tests. **Implementation: Not started; Verified: No.**
-4. **S4-0096-04 — Design accurate scanning and partial-progress states.** Acceptance: Scan started only after backend acceptance; cancelled != lost. Required verification: Delayed/failed/cancel/reload scan E2E. **Implementation: Not started; Verified: No.**
-5. **S4-0096-05 — Represent readiness threshold precisely at 5/6/7 tracks.** Acceptance: First-play enabled at valid minimum, not full-library completion. Required verification: Fixture count and unsuitable-ready-song tests. **Implementation: Not started; Verified: No.**
-6. **S4-0096-06 — Surface specific blockers and recovery actions.** Acceptance: Disconnected drive and failed analysis lead to helpful next step. Required verification: Permission, drive disconnect, zero supported music tests. **Implementation: Not started; Verified: No.**
-7. **S4-0096-07 — Preserve lyric privacy and error-isolated lyric lookup.** Acceptance: Lyric outage does not falsely block all music. Required verification: Mock unavailable LRCLIB, disclosure review. **Implementation: Not started; Verified: No.**
-8. **S4-0096-08 — Handle server restarts and browser reload during preparation.** Acceptance: No duplicate scan and accurate recovered counts. Required verification: Restart/reload fault tests. **Implementation: Not started; Verified: No.**
-9. **S4-0096-09 — Design first mix with one primary gesture and optional customization.** Acceptance: First play is obvious but no automatic unexpected audio. Required verification: Real browser gesture and first-run usability. **Implementation: Not started; Verified: No.**
-10. **S4-0096-10 — Record time-to-first-valid-play baseline and follow-up.** Acceptance: Only observed sessions establish improvement. Required verification: Listener task log and evidence. **Implementation: Not started; Verified: No.**
+1. **S4-0096-01 - Redesign welcome hierarchy and path entry guidance.** Acceptance: New user can supply backend-usable path without guessing. Required verification: Unassisted Windows/Edge task and 320px screenshots. **Implementation: Not started; Verified: No.**
+2. **S4-0096-02 - Specify path parsing/quoting/normalization and validation copy.** Acceptance: Input preserved on missing/invalid/unreadable path. Required verification: Quote, space, UNC, Unicode, file-versus-folder tests. **Implementation: Not started; Verified: No.**
+3. **S4-0096-03 - Preserve existing source validation and safety.** Acceptance: No input path escapes backend permissions/origin policy. Required verification: Python/API security and filesystem fixture tests. **Implementation: Not started; Verified: No.**
+4. **S4-0096-04 - Design accurate scanning and partial-progress states.** Acceptance: Scan started only after backend acceptance; cancelled != lost. Required verification: Delayed/failed/cancel/reload scan E2E. **Implementation: Not started; Verified: No.**
+5. **S4-0096-05 - Represent readiness threshold precisely at 5/6/7 tracks.** Acceptance: First-play enabled at valid minimum, not full-library completion. Required verification: Fixture count and unsuitable-ready-song tests. **Implementation: Not started; Verified: No.**
+6. **S4-0096-06 - Surface specific blockers and recovery actions.** Acceptance: Disconnected drive and failed analysis lead to helpful next step. Required verification: Permission, drive disconnect, zero supported music tests. **Implementation: Not started; Verified: No.**
+7. **S4-0096-07 - Preserve lyric privacy and error-isolated lyric lookup.** Acceptance: Lyric outage does not falsely block all music. Required verification: Mock unavailable LRCLIB, disclosure review. **Implementation: Not started; Verified: No.**
+8. **S4-0096-08 - Handle server restarts and browser reload during preparation.** Acceptance: No duplicate scan and accurate recovered counts. Required verification: Restart/reload fault tests. **Implementation: Not started; Verified: No.**
+9. **S4-0096-09 - Design first mix with one primary gesture and optional customization.** Acceptance: First play is obvious but no automatic unexpected audio. Required verification: Real browser gesture and first-run usability. **Implementation: Not started; Verified: No.**
+10. **S4-0096-10 - Record time-to-first-valid-play baseline and follow-up.** Acceptance: Only observed sessions establish improvement. Required verification: Listener task log and evidence. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

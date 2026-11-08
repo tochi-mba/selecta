@@ -1,11 +1,11 @@
 # ADR-0051: Accessible primitives, overlays, feedback and durable undo
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 2 — Foundations
+- **Phase:** 2 - Foundations
 - **Extends existing decisions:** ADR-0004, ADR-0023, ADR-0035
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0051-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Build one typed, tested presentation component library. Distinguish transient me
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0051-01 — Not started.** Specify and implement Action/IconButton/Menu/Popover/Tooltip/Tabs/Dialog/Sheet/Drawer/Input/Slider/Search/Grid contracts.
-2. **S3-0051-02 — Not started.** Normalize aria-label, described-by, invalid, busy, live-region and focus-restoration behavior and document exceptions.
-3. **S3-0051-03 — Not started.** Create a durable activity/recovery area, retaining scoped Undo without unbounded toast growth.
-4. **S3-0051-04 — Not started.** Define notification suppression, stacking, dismissal and announcement policies for navigation and Stage.
-5. **S3-0051-05 — Not started.** Ensure overlay scrolling works under mobile keyboard, safe areas and large text with inert background.
-6. **S3-0051-06 — Not started.** Give all destructive actions explicit labels and appropriate confirmation or reliable restore routes.
-7. **S3-0051-07 — Not started.** Create component stories/fixtures across both themes, motion preferences, widths and error states.
-8. **S3-0051-08 — Not started.** Protect against stale async callbacks, double activation, repeated Escape, menu-inside-sheet and focus target removal.
+1. **S3-0051-01 - Not started.** Specify and implement Action/IconButton/Menu/Popover/Tooltip/Tabs/Dialog/Sheet/Drawer/Input/Slider/Search/Grid contracts.
+2. **S3-0051-02 - Not started.** Normalize aria-label, described-by, invalid, busy, live-region and focus-restoration behavior and document exceptions.
+3. **S3-0051-03 - Not started.** Create a durable activity/recovery area, retaining scoped Undo without unbounded toast growth.
+4. **S3-0051-04 - Not started.** Define notification suppression, stacking, dismissal and announcement policies for navigation and Stage.
+5. **S3-0051-05 - Not started.** Ensure overlay scrolling works under mobile keyboard, safe areas and large text with inert background.
+6. **S3-0051-06 - Not started.** Give all destructive actions explicit labels and appropriate confirmation or reliable restore routes.
+7. **S3-0051-07 - Not started.** Create component stories/fixtures across both themes, motion preferences, widths and error states.
+8. **S3-0051-08 - Not started.** Protect against stale async callbacks, double activation, repeated Escape, menu-inside-sheet and focus target removal.
 
 ## Preservation and integration constraints
 
@@ -64,6 +64,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

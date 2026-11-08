@@ -1,4 +1,4 @@
-# ADR-0246 — Complete listening-to-creation journey and musical delight milestones
+# ADR-0246 - Complete listening-to-creation journey and musical delight milestones
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Tie all scenes into a coherent experience: local setup, first DJ set, first real
 
 No staged progress masquerading as real data, compulsory tutorial, synthetic fake first handoff or forced interruption to celebrate milestones. Preserve a proven reliable interface when a proposed artistic treatment cannot demonstrate improved user outcomes. This docs-only decision does not implement remote services, SaaS, telemetry, accounts or changes to music files.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0246-01 — Storyboard first playable set.** **Acceptance:** From folder to six ready tracks to Listen recorded. **Required verification:** Journey protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0246-02 — Storyboard first handoff.** **Acceptance:** Actual audio event and truthful visual moment identified. **Required verification:** Real playback review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0246-03 — Storyboard first edit.** **Acceptance:** User navigates to correct song and seam. **Required verification:** Task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0246-04 — Storyboard Studio recovery.** **Acceptance:** Unapplied cells survive intentional route changes. **Required verification:** Recovery E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0246-05 — Storyboard request and consent.** **Acceptance:** Listener understands route and bridge decision. **Required verification:** Consent usability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0246-06 — Storyboard finish and export.** **Acceptance:** Frozen rendered artifact validated. **Required verification:** FLAC decode and review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0246-07 — Evaluate cross-scene memory.** **Acceptance:** Song, mix and intent recognizable after navigation. **Required verification:** Uncoached session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0246-08 — Record delight and correctness.** **Acceptance:** Music satisfaction separate from task accuracy. **Required verification:** Listener and DJ feedback. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0246-01 - Storyboard first playable set.** **Acceptance:** From folder to six ready tracks to Listen recorded. **Required verification:** Journey protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0246-02 - Storyboard first handoff.** **Acceptance:** Actual audio event and truthful visual moment identified. **Required verification:** Real playback review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0246-03 - Storyboard first edit.** **Acceptance:** User navigates to correct song and seam. **Required verification:** Task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0246-04 - Storyboard Studio recovery.** **Acceptance:** Unapplied cells survive intentional route changes. **Required verification:** Recovery E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0246-05 - Storyboard request and consent.** **Acceptance:** Listener understands route and bridge decision. **Required verification:** Consent usability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0246-06 - Storyboard finish and export.** **Acceptance:** Frozen rendered artifact validated. **Required verification:** FLAC decode and review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0246-07 - Evaluate cross-scene memory.** **Acceptance:** Song, mix and intent recognizable after navigation. **Required verification:** Uncoached session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0246-08 - Record delight and correctness.** **Acceptance:** Music satisfaction separate from task accuracy. **Required verification:** Listener and DJ feedback. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

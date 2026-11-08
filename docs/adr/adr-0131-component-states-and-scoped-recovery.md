@@ -1,6 +1,6 @@
-# ADR-0131 — Shared component contracts, honest async states and scoped recovery
+# ADR-0131 - Shared component contracts, honest async states and scoped recovery
 
-- **Decision:** Proposed; no owner acceptance is asserted.
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 new EX tasks).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
@@ -30,11 +30,11 @@ Undo cannot be described as durable after reload where underlying server guarant
 
 ## Implementation tasks (all Not started; Verified: No)
 
-1. **EX-0131-01 — Write interaction state matrix**. Acceptance: Every shared component state has visuals, copy and ARIA meaning. Required verification: Gallery plus automated/manual check. **Implementation: Not started; Verified: No.**
-2. **EX-0131-02 — Validate overlay and focus behavior**. Acceptance: Nested overlays trap and restore focus correctly. Required verification: WAI-ARIA APG, keyboard and NVDA. **Implementation: Not started; Verified: No.**
-3. **EX-0131-03 — Protect async consistency**. Acceptance: Old/failed responses never overwrite current revision. Required verification: Race, two-tab and slow-network E2E. **Implementation: Not started; Verified: No.**
-4. **EX-0131-04 — Improve loading/empty/error feedback**. Acceptance: No fake success, unreachable retry or loading-as-empty. Required verification: Deterministic visual fixtures. **Implementation: Not started; Verified: No.**
-5. **EX-0131-05 — Preserve scoped Undo and recovery**. Acceptance: Recovery action remains discoverable and exact. Required verification: Toast burst, stale mix and failure tests. **Implementation: Not started; Verified: No.**
+1. **EX-0131-01 - Write interaction state matrix**. Acceptance: Every shared component state has visuals, copy and ARIA meaning. Required verification: Gallery plus automated/manual check. **Implementation: Not started; Verified: No.**
+2. **EX-0131-02 - Validate overlay and focus behavior**. Acceptance: Nested overlays trap and restore focus correctly. Required verification: WAI-ARIA APG, keyboard and NVDA. **Implementation: Not started; Verified: No.**
+3. **EX-0131-03 - Protect async consistency**. Acceptance: Old/failed responses never overwrite current revision. Required verification: Race, two-tab and slow-network E2E. **Implementation: Not started; Verified: No.**
+4. **EX-0131-04 - Improve loading/empty/error feedback**. Acceptance: No fake success, unreachable retry or loading-as-empty. Required verification: Deterministic visual fixtures. **Implementation: Not started; Verified: No.**
+5. **EX-0131-05 - Preserve scoped Undo and recovery**. Acceptance: Recovery action remains discoverable and exact. Required verification: Toast burst, stale mix and failure tests. **Implementation: Not started; Verified: No.**
 
 ## Verification and sources
 

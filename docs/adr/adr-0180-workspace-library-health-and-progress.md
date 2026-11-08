@@ -1,4 +1,4 @@
-# ADR-0180 — Workspace: library health, truthful processing and operational calm
+# ADR-0180 - Workspace: library health, truthful processing and operational calm
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, not-yet-implemented design and acceptance delta**, not proof th
 
 Preserve the existing restrained experience if an expressive version cannot prove comprehension, tactile confidence, accessibility and real playback performance. Diagrams do not claim unverified musical precision or quality. Never fabricate beat, lyric, wave, cover, render status, progress or success. Supply static/keyboard alternatives and respect intentional silence/Pause.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0180-01 — Reframe overview around library health.** **Acceptance:** User sees usable/blocked state and one most relevant next action. **Required verification:** Glance review and actual counts audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0180-02 — Distinguish pipeline status ownership.** **Acceptance:** Scan, lyrics, analysis, seams and export cannot be confused. **Required verification:** Mixed job and readiness fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0180-03 — Explain resource priority and ETA.** **Acceptance:** Deferred analysis during mix render is not shown as stuck. **Required verification:** Priority queue and estimate scenarios. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0180-04 — Design storage safety hierarchy.** **Acceptance:** Cache and original music distinct in labels and graphics. **Required verification:** Storage limit, cleanup and source-file tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0180-05 — Improve source and diagnostic recovery.** **Acceptance:** Every major failure has context-specific safe action. **Required verification:** Missing drive, no permission and offline tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0180-06 — Enforce calm motion and focused alerts.** **Acceptance:** No background task interrupts current playback or active control. **Required verification:** Many-job/reduced-motion listening review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0180-07 — Validate stale and uncertain status.** **Acceptance:** Out-of-date values marked and refreshed without false success. **Required verification:** Server disconnect and retry tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0180-01 - Reframe overview around library health.** **Acceptance:** User sees usable/blocked state and one most relevant next action. **Required verification:** Glance review and actual counts audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0180-02 - Distinguish pipeline status ownership.** **Acceptance:** Scan, lyrics, analysis, seams and export cannot be confused. **Required verification:** Mixed job and readiness fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0180-03 - Explain resource priority and ETA.** **Acceptance:** Deferred analysis during mix render is not shown as stuck. **Required verification:** Priority queue and estimate scenarios. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0180-04 - Design storage safety hierarchy.** **Acceptance:** Cache and original music distinct in labels and graphics. **Required verification:** Storage limit, cleanup and source-file tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0180-05 - Improve source and diagnostic recovery.** **Acceptance:** Every major failure has context-specific safe action. **Required verification:** Missing drive, no permission and offline tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0180-06 - Enforce calm motion and focused alerts.** **Acceptance:** No background task interrupts current playback or active control. **Required verification:** Many-job/reduced-motion listening review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0180-07 - Validate stale and uncertain status.** **Acceptance:** Out-of-date values marked and refreshed without false success. **Required verification:** Server disconnect and retry tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

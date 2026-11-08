@@ -1,11 +1,11 @@
 # ADR-0072: Local-first privacy, file access, installed PWA and theme integration
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 6 — Cross-cutting quality
+- **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0025, ADR-0031, ADR-0018
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0072-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Maintain local-first access boundaries and explicit metadata disclosure. Avoid e
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0072-01 — Not started.** Audit existing loopback, Host/Origin, song-ID authorization and source-path handling during UI/API changes.
-2. **S3-0072-02 — Not started.** Specify accurate user disclosure for LRCLIB metadata lookup during folder scan and manual lyrics commands.
-3. **S3-0072-03 — Not started.** Assess safe directory selection and native IPC without exposing arbitrary filesystem access.
-4. **S3-0072-04 — Not started.** Test installed Chrome/Edge PWA launch, route reload, icon/theme-color, standalone close and server dependency.
-5. **S3-0072-05 — Not started.** Audit every new frontend dependency for network requests, content security, licensing and CSP impact.
-6. **S3-0072-06 — Not started.** Define diagnostic copy/export redaction and never include sensitive metadata in public fixtures.
-7. **S3-0072-07 — Not started.** Define no-server, disconnected-source and browser permission errors without false local privacy claims.
-8. **S3-0072-08 — Not started.** Validate no unintended remote requests during navigation, audio previews and first-run.
+1. **S3-0072-01 - Not started.** Audit existing loopback, Host/Origin, song-ID authorization and source-path handling during UI/API changes.
+2. **S3-0072-02 - Not started.** Specify accurate user disclosure for LRCLIB metadata lookup during folder scan and manual lyrics commands.
+3. **S3-0072-03 - Not started.** Assess safe directory selection and native IPC without exposing arbitrary filesystem access.
+4. **S3-0072-04 - Not started.** Test installed Chrome/Edge PWA launch, route reload, icon/theme-color, standalone close and server dependency.
+5. **S3-0072-05 - Not started.** Audit every new frontend dependency for network requests, content security, licensing and CSP impact.
+6. **S3-0072-06 - Not started.** Define diagnostic copy/export redaction and never include sensitive metadata in public fixtures.
+7. **S3-0072-07 - Not started.** Define no-server, disconnected-source and browser permission errors without false local privacy claims.
+8. **S3-0072-08 - Not started.** Validate no unintended remote requests during navigation, audio previews and first-run.
 
 ## Preservation and integration constraints
 
@@ -64,6 +64,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

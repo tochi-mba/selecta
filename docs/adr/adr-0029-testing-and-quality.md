@@ -1,12 +1,12 @@
 # ADR-0029: Regression strategy, real audio fixtures and release quality gates
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress ([#22](https://github.com/tochi-mba/selecta/pull/22))
 - **Proposed:** 2026-11-06
 - **Delivery phase:** 0–13
 - **Scope:** Implemented in [#22](https://github.com/tochi-mba/selecta/pull/22). See its status above and the evidence file for anything left.
 
-> Merging this proposal does not mean the decision is accepted or the implementation has started. Update both statuses with a PR link and verification evidence when work actually occurs.
+> The owner accepted this decision on 2026-11-08. Implementation and verification are tracked separately, task by task, in its checklist.
 
 ## Context
 
@@ -44,6 +44,7 @@ Implementation may move to **In progress** only when a linked implementation PR 
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Documentation-only plan |
 | 2026-11-06 | Proposed | In progress | [#22](https://github.com/tochi-mba/selecta/pull/22), with evidence in [implementation-evidence.md](implementation-evidence.md) |
+| 2026-11-08 | Accepted | In progress | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

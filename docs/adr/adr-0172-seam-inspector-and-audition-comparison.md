@@ -1,4 +1,4 @@
-# ADR-0172 — Transition Inspector: interpretive seam diagrams and honest A/B audition
+# ADR-0172 - Transition Inspector: interpretive seam diagrams and honest A/B audition
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained design when a richer animation does not measurably improve comprehension, creative control or delight. Illustrative graphics are not analysed waveforms, beats, timed lyrics, fake quality ratings or album artwork. Every animated interaction needs an accessible static/keyboard equivalent; audio and current/draft correctness outrank motion.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0172-01 — Define diagram variants by real technique.** **Acceptance:** Each actual move has accurately labeled distinct graphic. **Required verification:** Expert semantic review and rendered examples. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0172-02 — Preserve pair/revision identity.** **Acceptance:** Inspector never edits or auditions a newly unrelated seam after reorder. **Required verification:** Stale pair, repeated title and race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0172-03 — Separate intent, render and quality.** **Acceptance:** Requested move and actual fallback never conflated with human rating. **Required verification:** Passed-warning-fallback fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0172-04 — Expose disabled-move reasons.** **Acceptance:** Keyboard and pointer can understand unsupported choice. **Required verification:** Cue and tempo-compatibility test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0172-05 — Write optional immutable A/B contract.** **Acceptance:** UI only shows compare when two actual revisions and previews exist. **Required verification:** API feasibility review and provenance check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0172-06 — Integrate auditory focus and cancellation.** **Acceptance:** No overlapping main/preview audio or surprise resume. **Required verification:** Real-media and multi-tab tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0172-07 — Evaluate comprehension and creative control.** **Acceptance:** Novices can hear/change a seam and identify real resulting move. **Required verification:** Observed audition-edit-compare task. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0172-01 - Define diagram variants by real technique.** **Acceptance:** Each actual move has accurately labeled distinct graphic. **Required verification:** Expert semantic review and rendered examples. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0172-02 - Preserve pair/revision identity.** **Acceptance:** Inspector never edits or auditions a newly unrelated seam after reorder. **Required verification:** Stale pair, repeated title and race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0172-03 - Separate intent, render and quality.** **Acceptance:** Requested move and actual fallback never conflated with human rating. **Required verification:** Passed-warning-fallback fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0172-04 - Expose disabled-move reasons.** **Acceptance:** Keyboard and pointer can understand unsupported choice. **Required verification:** Cue and tempo-compatibility test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0172-05 - Write optional immutable A/B contract.** **Acceptance:** UI only shows compare when two actual revisions and previews exist. **Required verification:** API feasibility review and provenance check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0172-06 - Integrate auditory focus and cancellation.** **Acceptance:** No overlapping main/preview audio or surprise resume. **Required verification:** Real-media and multi-tab tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0172-07 - Evaluate comprehension and creative control.** **Acceptance:** Novices can hear/change a seam and identify real resulting move. **Required verification:** Observed audition-edit-compare task. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

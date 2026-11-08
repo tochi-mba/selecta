@@ -154,7 +154,7 @@ legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
 .song.over { border-color: var(--accent); }
 .song.playing { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--accent); }
 .grip { grid-area: grip; color: var(--soft); cursor: grab; user-select: none; }
-.count { grid-area: count; font: 0.85rem var(--mono); color: var(--soft); min-width: 1.4em; text-align: right; }
+.song .count { grid-area: count; font: 0.85rem var(--mono); color: var(--soft); min-width: 1.4em; text-align: right; }
 .song-name { grid-area: name; min-width: 0; display: grid; }
 .song-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .song-name span { color: var(--soft); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -404,7 +404,7 @@ kbd { font: 0.82rem var(--mono); background: var(--panel-2); border: 1px solid v
 .discovery-steps button[aria-current='step'] { border-color: var(--accent); color: var(--accent); }
 .chord-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 4px; width: 100%; }
 .chord-strip span { border: 1px solid var(--line); border-radius: 6px; padding: 8px 2px; text-align: center; font: 0.86rem var(--mono); color: var(--soft); }
-.chord-strip span.now { background: var(--accent); border-color: var(--accent); color: var(--bg, #111); font-weight: 700; }
+.chord-strip span.now { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
 .studio { border: 1px solid var(--accent); border-radius: var(--radius); padding: 14px; display: grid; gap: 12px; }
 .studio-head { justify-content: space-between; }
 .studio h3 { margin: 0; }

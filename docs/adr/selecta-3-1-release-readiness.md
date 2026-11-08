@@ -1,4 +1,4 @@
-# Selecta 3.1 — release readiness and known evidence gaps
+# Selecta 3.1 - release readiness and known evidence gaps
 
 **Disposition: NOT READY / NO-GO (as of 2026-11-07).** This is a candidate report template for unmerged [PR #25](https://github.com/tochi-mba/selecta/pull/25), **not** release approval or confirmation of a complete implementation.
 
@@ -38,7 +38,7 @@
 | Field | Value |
 |---|---|
 | Proposed version | Selecta 3.1 finishing |
-| Decision | **NO-GO — incomplete acceptance** |
+| Decision | **NO-GO - incomplete acceptance** |
 | Release/merge approver | **Not recorded** |
 | Approved risk exceptions | **None recorded** |
 | Last independent user / NVDA / real-audio assessment | **None recorded in this programme** |

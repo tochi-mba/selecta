@@ -1,4 +1,4 @@
-# ADR-0217 — Listening Compass and scoped, supported musical shaping
+# ADR-0217 - Listening Compass and scoped, supported musical shaping
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Create an optional expressive intent interface strictly mapped to supported plan
 
 No unsupported mood promises, implicit global preference change or uncommitted draft mutation. Reject spectacle when it costs accessibility, audio continuity or task comprehension. This ADR approves no new SaaS, login, account, cloud upload, telemetry, audio engine rewrite or code change by itself.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0217-01 — Audit planner capabilities.** **Acceptance:** Every choice has actual backend mapping. **Required verification:** Capability contract audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0217-02 — Prototype Compass vocabulary.** **Acceptance:** Non-experts comprehend musical direction. **Required verification:** Novice study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0217-03 — Keep exact energy inputs.** **Acceptance:** Five-stop values lossless and accessible. **Required verification:** Keyboard value tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0217-04 — Clarify scope.** **Acceptance:** Default and this-mix choices remain separate. **Required verification:** Refresh/draft E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0217-05 — Explain feasibility limits.** **Acceptance:** No-match and destination limits honest. **Required verification:** Fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0217-06 — Keep direct Play path.** **Acceptance:** Compass remains optional. **Required verification:** Findability task. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0217-07 — Preserve cancellation.** **Acceptance:** Unapplied choices cannot alter active mix. **Required verification:** Cancel/Undo tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0217-08 — Test creative agency.** **Acceptance:** Users can predict outcome and scope. **Required verification:** DJ/listener sessions. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0217-01 - Audit planner capabilities.** **Acceptance:** Every choice has actual backend mapping. **Required verification:** Capability contract audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0217-02 - Prototype Compass vocabulary.** **Acceptance:** Non-experts comprehend musical direction. **Required verification:** Novice study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0217-03 - Keep exact energy inputs.** **Acceptance:** Five-stop values lossless and accessible. **Required verification:** Keyboard value tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0217-04 - Clarify scope.** **Acceptance:** Default and this-mix choices remain separate. **Required verification:** Refresh/draft E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0217-05 - Explain feasibility limits.** **Acceptance:** No-match and destination limits honest. **Required verification:** Fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0217-06 - Keep direct Play path.** **Acceptance:** Compass remains optional. **Required verification:** Findability task. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0217-07 - Preserve cancellation.** **Acceptance:** Unapplied choices cannot alter active mix. **Required verification:** Cancel/Undo tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0217-08 - Test creative agency.** **Acceptance:** Users can predict outcome and scope. **Required verification:** DJ/listener sessions. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

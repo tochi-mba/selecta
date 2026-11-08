@@ -1,4 +1,4 @@
-# Selecta experience-first — independent release gates (NO-GO)
+# Selecta experience-first - independent release gates (NO-GO)
 
 **Decision:** NO-GO for release of proposed new experience. **21 Proposed decisions, 105 newly specified tasks Not started, 0 Implemented, 0 Verified.** This documents criteria only; no new runtime implementation or tests have run in this PR.
 

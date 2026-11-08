@@ -1,6 +1,6 @@
 # ADR-0091: Typography, spacing, density, icons, visual hierarchy and CSS ownership
 
-- **Decision status:** Proposed (owner acceptance required)
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/10 implemented)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
@@ -29,18 +29,18 @@ Adopt a constrained typographic and spatial system with explicit role ownership,
 - Four-pixel base spacing, documented control heights, restrained radius and three purposeful surface levels.
 - Keep CSS owner boundaries and avoid accidental DOM-structure selectors or blanket !important patches.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0091-01 — Define display, H1-H3, body and caption role scale with responsive limits.** Acceptance: Long metadata cannot force primary controls offscreen. Required verification: Long/mixed-direction fixture in all breakpoints. **Implementation: Not started; Verified: No.**
-2. **S4-0091-02 — Define tabular-numeral and bidi-isolation rules.** Acceptance: Times, BPM and keys remain aligned with RTL song metadata. Required verification: Numeric alignment, Arabic/Hebrew/CJK fixture tests. **Implementation: Not started; Verified: No.**
-3. **S4-0091-03 — Publish spacing, radius, border, depth and control-size tokens.** Acceptance: Related actions group consistently across pages. Required verification: Review component states at normal/compact density. **Implementation: Not started; Verified: No.**
-4. **S4-0091-04 — Audit CSS duplication, specificity and source ownership.** Acceptance: Proposed canonical owner for each shared/layout/page rule. Required verification: Selector-collision inventory and style regression review. **Implementation: Not started; Verified: No.**
-5. **S4-0091-05 — Standardize song identity, transition identity and status order.** Acceptance: User learns same title/artist/facts/status/action order in every view. Required verification: Cross-page snapshots and screen reader reading order. **Implementation: Not started; Verified: No.**
-6. **S4-0091-06 — Standardize SVG icon sizing and text/icon alignment.** Acceptance: No clipped glyph, uneven baseline or icon-only mystery action. Required verification: Browser/platform font fallback checks. **Implementation: Not started; Verified: No.**
-7. **S4-0091-07 — Define truncation and full-text retrieval conventions.** Acceptance: Critical names and errors can always be read fully. Required verification: 200/400% zoom, long/unbroken/emoji fixture. **Implementation: Not started; Verified: No.**
-8. **S4-0091-08 — Define readable disabled/secondary/tiny-caption constraints.** Acceptance: No important content disappears under compact mode. Required verification: Contrast, touch and text-enlargement tests. **Implementation: Not started; Verified: No.**
-9. **S4-0091-09 — Reconcile shared CSS breakpoints and page-local responsive rules.** Acceptance: Studio adjustments do not unexpectedly break Library. Required verification: CSS dependency tests and screenshot pairs. **Implementation: Not started; Verified: No.**
-10. **S4-0091-10 — Create development-only component/typography review surfaces.** Acceptance: Every variant can be inspected in dark/light and focused states. Required verification: Reviewed gallery and screenshot coverage. **Implementation: Not started; Verified: No.**
+1. **S4-0091-01 - Define display, H1-H3, body and caption role scale with responsive limits.** Acceptance: Long metadata cannot force primary controls offscreen. Required verification: Long/mixed-direction fixture in all breakpoints. **Implementation: Not started; Verified: No.**
+2. **S4-0091-02 - Define tabular-numeral and bidi-isolation rules.** Acceptance: Times, BPM and keys remain aligned with RTL song metadata. Required verification: Numeric alignment, Arabic/Hebrew/CJK fixture tests. **Implementation: Not started; Verified: No.**
+3. **S4-0091-03 - Publish spacing, radius, border, depth and control-size tokens.** Acceptance: Related actions group consistently across pages. Required verification: Review component states at normal/compact density. **Implementation: Not started; Verified: No.**
+4. **S4-0091-04 - Audit CSS duplication, specificity and source ownership.** Acceptance: Proposed canonical owner for each shared/layout/page rule. Required verification: Selector-collision inventory and style regression review. **Implementation: Not started; Verified: No.**
+5. **S4-0091-05 - Standardize song identity, transition identity and status order.** Acceptance: User learns same title/artist/facts/status/action order in every view. Required verification: Cross-page snapshots and screen reader reading order. **Implementation: Not started; Verified: No.**
+6. **S4-0091-06 - Standardize SVG icon sizing and text/icon alignment.** Acceptance: No clipped glyph, uneven baseline or icon-only mystery action. Required verification: Browser/platform font fallback checks. **Implementation: Not started; Verified: No.**
+7. **S4-0091-07 - Define truncation and full-text retrieval conventions.** Acceptance: Critical names and errors can always be read fully. Required verification: 200/400% zoom, long/unbroken/emoji fixture. **Implementation: Not started; Verified: No.**
+8. **S4-0091-08 - Define readable disabled/secondary/tiny-caption constraints.** Acceptance: No important content disappears under compact mode. Required verification: Contrast, touch and text-enlargement tests. **Implementation: Not started; Verified: No.**
+9. **S4-0091-09 - Reconcile shared CSS breakpoints and page-local responsive rules.** Acceptance: Studio adjustments do not unexpectedly break Library. Required verification: CSS dependency tests and screenshot pairs. **Implementation: Not started; Verified: No.**
+10. **S4-0091-10 - Create development-only component/typography review surfaces.** Acceptance: Every variant can be inspected in dark/light and focused states. Required verification: Reviewed gallery and screenshot coverage. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -68,6 +68,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | Date | Decision | Implementation | Verification | Evidence |
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
+| 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## Related documents
 

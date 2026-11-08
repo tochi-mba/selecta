@@ -1,4 +1,4 @@
-# ADR-0174 — Stem Studio: tactile layers, accurate playhead and human–Selecta differences
+# ADR-0174 - Stem Studio: tactile layers, accurate playhead and human–Selecta differences
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained design when a richer animation does not measurably improve comprehension, creative control or delight. Illustrative graphics are not analysed waveforms, beats, timed lyrics, fake quality ratings or album artwork. Every animated interaction needs an accessible static/keyboard equivalent; audio and current/draft correctness outrank motion.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0174-01 — Design eight-lane visual material system.** **Acceptance:** Four parts and both songs recognized through text/pattern, not only hue. **Required verification:** Color-blind, forced-colors and expert review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0174-02 — Specify Shape Grid List equivalence.** **Acceptance:** No mode switch loses or coarsens cell values or focus. **Required verification:** 8–64-cell roundtrip property tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0174-03 — Refine painting and solo feedback.** **Acceptance:** Pointer strokes toggle once per cell; solo never changes saved arrangement. **Required verification:** Pointer, keyboard and audio tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0174-04 — Drive true preview playhead.** **Acceptance:** Preview cursor follows deck and stops on Stop, error, hidden and close. **Required verification:** Real clock and audio owner tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0174-05 — Show exact AI suggestion diffs.** **Acceptance:** Only returned changes highlighted and old shape recoverable. **Required verification:** Stale-tune, canceled generation and Undo fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0174-06 — Clarify recovery versus applied audio.** **Acceptance:** Unsaved/recovered/applying/rendered all visibly distinct. **Required verification:** Storage-quota, restart and render failure tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0174-07 — Validate low-resource Studio precision.** **Acceptance:** Grid responsive and audible preview free of overlap during render load. **Required verification:** Named-device input/frame/audio measurements. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0174-01 - Design eight-lane visual material system.** **Acceptance:** Four parts and both songs recognized through text/pattern, not only hue. **Required verification:** Color-blind, forced-colors and expert review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0174-02 - Specify Shape Grid List equivalence.** **Acceptance:** No mode switch loses or coarsens cell values or focus. **Required verification:** 8–64-cell roundtrip property tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0174-03 - Refine painting and solo feedback.** **Acceptance:** Pointer strokes toggle once per cell; solo never changes saved arrangement. **Required verification:** Pointer, keyboard and audio tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0174-04 - Drive true preview playhead.** **Acceptance:** Preview cursor follows deck and stops on Stop, error, hidden and close. **Required verification:** Real clock and audio owner tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0174-05 - Show exact AI suggestion diffs.** **Acceptance:** Only returned changes highlighted and old shape recoverable. **Required verification:** Stale-tune, canceled generation and Undo fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0174-06 - Clarify recovery versus applied audio.** **Acceptance:** Unsaved/recovered/applying/rendered all visibly distinct. **Required verification:** Storage-quota, restart and render failure tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0174-07 - Validate low-resource Studio precision.** **Acceptance:** Grid responsive and audible preview free of overlap during render load. **Required verification:** Named-device input/frame/audio measurements. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

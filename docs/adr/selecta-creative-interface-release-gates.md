@@ -1,4 +1,4 @@
-# Selecta — creative-interface independent NO-GO release gates
+# Selecta - creative-interface independent NO-GO release gates
 
 **Current new-programme verdict: NO-GO / NOT IMPLEMENTED.** 20 Accepted decisions; 140 CI tasks Not started; 0 Implemented; 0 independently Verified. This is a future programme release status, **not** a finding that the current app is broken.
 

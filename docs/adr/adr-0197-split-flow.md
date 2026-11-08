@@ -1,8 +1,8 @@
-# ADR-0197 — Split Flow: landscape live-spectrum visualization
+# ADR-0197 - Split Flow: landscape live-spectrum visualization
 
 **Decision:** Accepted under the user's 2026-11-08 approval for PR #33. **Implementation:** Source present on the PR branch; final CI not yet verified. **Independent verification:** No.
 
-**Related:** [ADR-0170 — real-audio Listen](adr-0170-listen-audio-clock-and-handoffs.md), [ADR-0183 — accessibility and performance](adr-0183-responsive-accessibility-and-performance.md), and the other horizontal visualizer decisions, ADR-0185–0197.
+**Related:** [ADR-0170 - real-audio Listen](adr-0170-listen-audio-clock-and-handoffs.md), [ADR-0183 - accessibility and performance](adr-0183-responsive-accessibility-and-performance.md), and the other horizontal visualizer decisions, ADR-0185–0197.
 
 **Source of truth:** Only actual `SetPlayer.getSpectrum()` frequency bins from the single current player. This is a DISPLAY-ONLY choice; no audio, stems, source files, transport, route, bridge consent, library, Mix/Draft revision, lyrics or FLAC generation are changed. The drawing must never pretend to be a beat grid, waveform history, source-separated audio, quality rating or song cover art.
 

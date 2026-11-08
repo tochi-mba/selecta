@@ -1,11 +1,11 @@
 # ADR-0074: Full test architecture, invariants and concurrent edge-case matrix
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 7 — Verification
+- **Phase:** 7 - Verification
 - **Extends existing decisions:** ADR-0029, ADR-0046
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0074-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,16 +28,16 @@ Preserve the entire existing behavioral suite and add state-machine, contract, a
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0074-01 — Not started.** Snapshot all existing unit/Python/E2E tests and map to ADR/feature parity before changes.
-2. **S3-0074-02 — Not started.** Build reusable fixtures for empty, 6-ready, 20k songs, duplicate/RTL metadata, missing audio and invalid durations.
-3. **S3-0074-03 — Not started.** Add domain tests for optimistic reconciliation, statuses, revision guards and safe Undo.
-4. **S3-0074-04 — Not started.** Add component keyboard/focus tests for dialogs, menus, playlist reorder, Studio grid and palette.
-5. **S3-0074-05 — Not started.** Add E2E end-to-end tasks from folder scan through playback, editing, requests, stems and export.
-6. **S3-0074-06 — Not started.** Add audio fixtures for preview ownership, gapless seams, late/fallback render and Media Session.
-7. **S3-0074-07 — Not started.** Add concurrency tests for simultaneous requests, stale edits, network loss, export snapshots and rescan overrides.
-8. **S3-0074-08 — Not started.** Add visual/state accessibility regression gates and human verification scripts.
-9. **S3-0074-09 — Not started.** Report test changes by assertion intent and investigate flakiness rather than raising timeouts blindly.
-10. **S3-0074-10 — Not started.** Require passing full CI and separate human review before describing an entire ADR as Verified.
+1. **S3-0074-01 - Not started.** Snapshot all existing unit/Python/E2E tests and map to ADR/feature parity before changes.
+2. **S3-0074-02 - Not started.** Build reusable fixtures for empty, 6-ready, 20k songs, duplicate/RTL metadata, missing audio and invalid durations.
+3. **S3-0074-03 - Not started.** Add domain tests for optimistic reconciliation, statuses, revision guards and safe Undo.
+4. **S3-0074-04 - Not started.** Add component keyboard/focus tests for dialogs, menus, playlist reorder, Studio grid and palette.
+5. **S3-0074-05 - Not started.** Add E2E end-to-end tasks from folder scan through playback, editing, requests, stems and export.
+6. **S3-0074-06 - Not started.** Add audio fixtures for preview ownership, gapless seams, late/fallback render and Media Session.
+7. **S3-0074-07 - Not started.** Add concurrency tests for simultaneous requests, stale edits, network loss, export snapshots and rescan overrides.
+8. **S3-0074-08 - Not started.** Add visual/state accessibility regression gates and human verification scripts.
+9. **S3-0074-09 - Not started.** Report test changes by assertion intent and investigate flakiness rather than raising timeouts blindly.
+10. **S3-0074-10 - Not started.** Require passing full CI and separate human review before describing an entire ADR as Verified.
 
 ## Preservation and integration constraints
 
@@ -66,6 +66,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
+| 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

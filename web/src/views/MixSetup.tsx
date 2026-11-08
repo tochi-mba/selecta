@@ -173,7 +173,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
   };
   const chooseDestination = async (song: SongRow | null) => {
     const mine = ++destinationVersion.current;
-    const next = song ? { id: String(song.id), label: `${song.title ?? 'Untitled'} — ${song.artist ?? 'Unknown artist'}` } : null;
+    const next = song ? { id: String(song.id), label: `${song.title ?? 'Untitled'} - ${song.artist ?? 'Unknown artist'}` } : null;
     setDestination(next);
     try {
       await enqueueSteer('take_me_to', next?.id ?? '');
@@ -367,7 +367,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
               return (
                 <li key={song.id} id={`destination-option-${song.id}`} role="option" aria-selected={index === activeDestination}>
                   <Action run={() => chooseDestination(song)}>
-                    {song.title ?? 'Untitled'} — {song.artist ?? 'Unknown artist'}{duplicate ? ` (song ${song.id})` : ''}
+                    {song.title ?? 'Untitled'} - {song.artist ?? 'Unknown artist'}{duplicate ? ` (song ${song.id})` : ''}
                   </Action>
                 </li>
               );

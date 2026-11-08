@@ -88,9 +88,9 @@ export function ExportPanel(props: {
         <p className="hint">{mine ? 'The original order below cannot be changed by editing the mix now.' : 'This order will be captured when Save it succeeds. It is not a finished file yet.'}</p>
         <ol className="export-snapshot-songs">
           {mine ? mine.songs.map((song, index) => (
-            <li key={index}><b>{song.title || 'Untitled'}</b> — {song.artist || 'Unknown artist'} <small>(song {song.song_id})</small></li>
+            <li key={index}><b>{song.title || 'Untitled'}</b> - {song.artist || 'Unknown artist'} <small>(song {song.song_id})</small></li>
           )) : mix.map((song, index) => (
-            <li key={index}><b>{song.title}</b> — {song.artist} <small>(song {song.song_id})</small></li>
+            <li key={index}><b>{song.title}</b> - {song.artist} <small>(song {song.song_id})</small></li>
           ))}
         </ol>
         {mine && !!mine.seams.length && (
@@ -103,7 +103,7 @@ export function ExportPanel(props: {
       </details>
       <ol className="export-stages" aria-label="Export progress">
         <li aria-current={!stage || stage === 'preparing' ? 'step' : undefined}>
-          Prepare transitions{mine ? ` — ${mine.seams_ready} of ${mine.seams_total} ready` : ''}
+          Prepare transitions{mine ? ` - ${mine.seams_ready} of ${mine.seams_total} ready` : ''}
         </li>
         <li aria-current={stage === 'encoding' ? 'step' : undefined}>Create the FLAC file</li>
         <li aria-current={file ? 'step' : undefined}>Download your mix</li>

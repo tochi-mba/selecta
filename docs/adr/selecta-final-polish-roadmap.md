@@ -1,4 +1,4 @@
-# Selecta — final-polish incremental roadmap
+# Selecta - final-polish incremental roadmap
 
 **2026-11-08 docs-only planning baseline:** main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. **8 Proposed ADRs** (0264–0271), **64 task acceptances Not started**, 0 In progress, 0 Implemented, **0 independently Verified**. Owner decisions/implementing PRs are not supplied. Existing prior programme ledgers are not changed.
 
@@ -10,14 +10,14 @@ The repository already has accepted SF ADR-0198–0247 (400 new acceptance tasks
 
 | ADR | Proposed delta | Priority | Owner links | Decision | Implementation | Independent proof |
 |---|---|---|---|---|---|---|
-| [ADR-0264](adr-0264-light-interactive-boundaries.md) | Light interactive boundary roles | P0 | ADR-0201, ADR-0204, ADR-0234, ADR-0257 | Proposed | Not started 0/8 | No 0/8 |
-| [ADR-0265](adr-0265-browser-chrome-theme-sync.md) | Manual theme and PWA chrome precedence | P1 | ADR-0077, ADR-0201, ADR-0208, ADR-0238 | Proposed | Not started 0/8 | No 0/8 |
-| [ADR-0266](adr-0266-live-theme-music-graphics.md) | Live-theme musical mark parity | P0 | ADR-0201, ADR-0212, ADR-0214, ADR-0222, ADR-0223, ADR-0234 | Proposed | Not started 0/8 | No 0/8 |
-| [ADR-0267](adr-0267-contextual-library-batch-presentation.md) | Contextual Library selection rail | P0 | ADR-0226, ADR-0227, ADR-0232, ADR-0258 | Proposed | Not started 0/8 | No 0/8 |
-| [ADR-0268](adr-0268-explore-card-information-budget.md) | Explore card content and disclosure budget | P0 | ADR-0216, ADR-0217, ADR-0222, ADR-0259 | Proposed | Not started 0/8 | No 0/8 |
-| [ADR-0269](adr-0269-cross-route-action-tier-map.md) | Cross-route action-tier register | P1 | ADR-0204, ADR-0208, ADR-0216, ADR-0219, ADR-0249, ADR-0256, ADR-0259 | Proposed | Not started 0/8 | No 0/8 |
-| [ADR-0270](adr-0270-viewport-layer-occlusion.md) | Stacked-viewport focus and chrome arbitration | P0 | ADR-0208, ADR-0209, ADR-0204, ADR-0233, ADR-0234 | Proposed | Not started 0/8 | No 0/8 |
-| [ADR-0271](adr-0271-paired-theme-state-visual-evidence.md) | Paired same-state light/dark review | P0 | ADR-0201, ADR-0234, ADR-0239, ADR-0240, ADR-0247, ADR-0257 | Proposed | Not started 0/8 | No 0/8 |
+| [ADR-0264](adr-0264-light-interactive-boundaries.md) | Light interactive boundary roles | P0 | ADR-0201, ADR-0204, ADR-0234, ADR-0257 | Accepted | Not started 0/8 | No 0/8 |
+| [ADR-0265](adr-0265-browser-chrome-theme-sync.md) | Manual theme and PWA chrome precedence | P1 | ADR-0077, ADR-0201, ADR-0208, ADR-0238 | Accepted | Not started 0/8 | No 0/8 |
+| [ADR-0266](adr-0266-live-theme-music-graphics.md) | Live-theme musical mark parity | P0 | ADR-0201, ADR-0212, ADR-0214, ADR-0222, ADR-0223, ADR-0234 | Accepted | Not started 0/8 | No 0/8 |
+| [ADR-0267](adr-0267-contextual-library-batch-presentation.md) | Contextual Library selection rail | P0 | ADR-0226, ADR-0227, ADR-0232, ADR-0258 | Accepted | Not started 0/8 | No 0/8 |
+| [ADR-0268](adr-0268-explore-card-information-budget.md) | Explore card content and disclosure budget | P0 | ADR-0216, ADR-0217, ADR-0222, ADR-0259 | Accepted | Not started 0/8 | No 0/8 |
+| [ADR-0269](adr-0269-cross-route-action-tier-map.md) | Cross-route action-tier register | P1 | ADR-0204, ADR-0208, ADR-0216, ADR-0219, ADR-0249, ADR-0256, ADR-0259 | Accepted | Not started 0/8 | No 0/8 |
+| [ADR-0270](adr-0270-viewport-layer-occlusion.md) | Stacked-viewport focus and chrome arbitration | P0 | ADR-0208, ADR-0209, ADR-0204, ADR-0233, ADR-0234 | Accepted | Not started 0/8 | No 0/8 |
+| [ADR-0271](adr-0271-paired-theme-state-visual-evidence.md) | Paired same-state light/dark review | P0 | ADR-0201, ADR-0234, ADR-0239, ADR-0240, ADR-0247, ADR-0257 | Accepted | Not started 0/8 | No 0/8 |
 | **8 / 64** | | | | **8 Proposed** | **64 Not started** | **0 Verified** |
 
 ## Phase order and each exit gate

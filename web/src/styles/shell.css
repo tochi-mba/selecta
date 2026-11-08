@@ -55,7 +55,7 @@ a.button:hover { border-color: var(--text); }
 .nav-more-mobile { display: none; }
 .nav li a i { font-style: normal; width: 1.4em; text-align: center; flex: none; }
 .nav a[aria-current='true'] { color: var(--text); }
-.nav .count, .mini .count, .context-bar .count { color: var(--request); font-weight: 700; }
+.nav .count, .mini .count, .context-bar .count { color: var(--request); font: 700 0.85rem var(--mono); }
 
 /* One frame. Every bit of its shape is measured from the numbers in tokens.css, so there is exactly one
    answer to how much room the bars take, whichever bars are showing. */

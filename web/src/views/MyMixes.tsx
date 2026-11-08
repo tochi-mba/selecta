@@ -71,7 +71,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       <h1 className="display small">My Mixes</h1>
       {recent && <section className="panel stack" aria-label="Continue working">
         <h2>Continue working</h2>
-        <p>Return to <b>{recent.name}</b> at its last saved song order. This only opens the editor — no playback starts and no pending Studio edits are applied.</p>
+        <p>Return to <b>{recent.name}</b> at its last saved song order. This only opens the editor - no playback starts and no pending Studio edits are applied.</p>
         <div className="row wrap">
           <button className="primary" disabled={checking} onClick={() => void continueEditing()}>
             {checking ? 'Checking draft…' : 'Continue editing draft'}

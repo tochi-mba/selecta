@@ -1,4 +1,4 @@
-# Selecta — historical status reconciliation and MI-only progress
+# Selecta - historical status reconciliation and MI-only progress
 
 **Source baseline:** main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`, 2026-11-07, after merged PR #30. The MI programme adds ADR-0135–0164 and 240 tasks; [PR #31](https://github.com/tochi-mba/selecta/pull/31) now also changes product runtime code and targeted tests. All earlier programmes' historical statuses remain unchanged.
 

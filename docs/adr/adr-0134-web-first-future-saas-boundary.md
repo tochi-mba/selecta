@@ -1,6 +1,6 @@
-# ADR-0134 — Web-first product boundary for a possible future SaaS
+# ADR-0134 - Web-first product boundary for a possible future SaaS
 
-- **Decision:** Proposed; no owner acceptance is asserted.
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 new EX tasks).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
@@ -30,11 +30,11 @@ Do not claim offline current storage equals SaaS privacy or that server paths wi
 
 ## Implementation tasks (all Not started; Verified: No)
 
-1. **EX-0134-01 — Record current platform truth**. Acceptance: Current local server and later optional SaaS clearly differentiated. Required verification: README/API/privacy crosscheck. **Implementation: Not started; Verified: No.**
-2. **EX-0134-02 — Review proposed UX for desktop coupling**. Acceptance: No new desktop-only assumption added. Required verification: Design review. **Implementation: Not started; Verified: No.**
-3. **EX-0134-03 — Preserve folder setup until separate decision**. Acceptance: Current typed path, scan and recovery work. Required verification: Existing E2E. **Implementation: Not started; Verified: No.**
-4. **EX-0134-04 — Audit excluded implementation scope**. Acceptance: No packaging, picker bridge, accounts or cloud dependencies. Required verification: Changed-path and lockfile review. **Implementation: Not started; Verified: No.**
-5. **EX-0134-05 — Define future SaaS decision gate**. Acceptance: New separate platform/security plan required on owner request. Required verification: Owner sign-off only when future priority exists. **Implementation: Not started; Verified: No.**
+1. **EX-0134-01 - Record current platform truth**. Acceptance: Current local server and later optional SaaS clearly differentiated. Required verification: README/API/privacy crosscheck. **Implementation: Not started; Verified: No.**
+2. **EX-0134-02 - Review proposed UX for desktop coupling**. Acceptance: No new desktop-only assumption added. Required verification: Design review. **Implementation: Not started; Verified: No.**
+3. **EX-0134-03 - Preserve folder setup until separate decision**. Acceptance: Current typed path, scan and recovery work. Required verification: Existing E2E. **Implementation: Not started; Verified: No.**
+4. **EX-0134-04 - Audit excluded implementation scope**. Acceptance: No packaging, picker bridge, accounts or cloud dependencies. Required verification: Changed-path and lockfile review. **Implementation: Not started; Verified: No.**
+5. **EX-0134-05 - Define future SaaS decision gate**. Acceptance: New separate platform/security plan required on owner request. Required verification: Owner sign-off only when future priority exists. **Implementation: Not started; Verified: No.**
 
 ## Verification and sources
 

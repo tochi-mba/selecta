@@ -2,6 +2,7 @@ import { KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { get, post, Suggestion } from '../api';
 import { analysingWords, askedToAnalyse } from '../lib';
 import { Action, Problem, Skeleton } from '../ui/controls';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { useMixPath } from './mixScope';
 
 /** What could go at this place in the mix: the best fits first, and the same order when searching. A
@@ -34,12 +35,9 @@ export function Adder(props: {
     return () => { asked.current += 1; window.clearTimeout(wait); };
   }, [load]);
 
-  // A song being analysed joins the list by itself once it's ready.
-  useEffect(() => {
-    if (!line.length) return;
-    const timer = window.setInterval(load, 4000);
-    return () => window.clearInterval(timer);
-  }, [line.length, load]);
+  // A song being analysed joins the list by itself once it's ready. A hidden tab doesn't ask, and
+  // asks straight away when it's looked at again.
+  useVisiblePoll(load, 4000, line.length > 0);
 
   const analyse = async (song: Suggestion) => {
     const { ahead, seconds } = await post<{ ahead: number; seconds?: number }>(`/songs/${song.song_id}/analyse`);
