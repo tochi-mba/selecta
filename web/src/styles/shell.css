@@ -258,7 +258,8 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 /* notifications sit above whatever else is along the bottom */
 .toasts {
   position: fixed;
-  z-index: var(--layer-toast);
+  /* A consent dialog/drawer is the active task; notifications must stay behind it. */
+  z-index: var(--layer-sheet);
   right: var(--space-4);
   bottom: calc(var(--bottom-chrome) + var(--keyboard-inset) + var(--space-3));
   display: grid;
@@ -282,6 +283,11 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 .toast-row > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: 4px 12px; flex: none; }
 .toast-row .toast-close { border: 0; padding: 4px 8px; min-width: 34px; }
+/* Only visual chrome yields here: the audio owner and saved Undo activity do not change. */
+:root[data-keyboard='open'] .toasts, :root[data-stage='on'] .toasts {
+  visibility: hidden;
+  pointer-events: none;
+}
 
 /* whatever sits on top of the page */
 .overlay {
@@ -303,7 +309,8 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 .overlay-panel:focus { outline: none; }
 .overlay-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
 .overlay-head h2 { margin: 0; font-size: var(--text-lg); overflow-wrap: anywhere; }
-.overlay-body { padding: var(--space-4); overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+.overlay-body { padding: var(--space-4); overflow-y: auto; flex: 1 1 auto; min-height: 0; scroll-padding-block: var(--space-3); }
+.overlay-body :is(input, select, textarea, button) { scroll-margin-block: var(--space-3); }
 .overlay-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
 .overlay-close { padding: 4px 10px; flex: none; }
 
