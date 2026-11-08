@@ -17,6 +17,8 @@ describe('palette shortcut focus ownership', () => {
     }
     const editor = document.createElement('div');
     editor.contentEditable = 'true';
+    // jsdom does not implement HTMLElement.isContentEditable; model the real browser getter.
+    Object.defineProperty(editor, 'isContentEditable', { value: true });
     expect(ctrlK(editor)).toBeNull();
     const list = document.createElement('div');
     list.setAttribute('role', 'combobox');
