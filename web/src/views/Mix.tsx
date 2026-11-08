@@ -653,7 +653,7 @@ export function Mix(props: ViewProps) {
       {readiness.firstProblem !== null && <button onClick={jumpToProblem}><Icon name="warning" /> Jump to first problem</button>}
       {!inDraft && ready < seams && (
         <Action run={renderAll} disabled={!waiting}>
-          {waiting ? 'Render every transition' : rendering ? `Rendering ${ready} of ${seams}…` : 'Change failed transitions to continue'}
+          {waiting ? 'Render every transition' : rendering ? `Rendering ${ready} of ${seams}…` : readiness.blocked ? 'Fix transition timing to continue' : 'Change failed transitions to continue'}
         </Action>
       )}
       {mix.length > 1 && <button onClick={() => setExporting(true)}>Download audio</button>}

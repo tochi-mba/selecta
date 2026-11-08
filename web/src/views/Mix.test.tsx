@@ -57,6 +57,14 @@ describe('rendering every seam', () => {
   });
 });
 
+describe('blocked transition timing', () => {
+  it('does not offer to render a cut-off transition', () => {
+    render(<Harness start={songs({ ...seam('none', 'a'), too_soon: true })} />);
+    expect(screen.getByRole('button', { name: 'Fix transition timing to continue' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Render every transition' })).toBeNull();
+  });
+});
+
 describe('exact song identity under metadata stress', () => {
   it('keeps duplicate, RTL and CJK song names readable and occurrence-scoped', () => {
     const mix = songs(seam('ready', 'a'));

@@ -13,34 +13,46 @@ export type Loaded<T> =
   | { state: 'stale'; data: T; problem: ProblemKind; stale: true; message: string }
   | { state: 'failed'; data: null; problem: ProblemKind; stale: false; message: string };
 
+const INITIAL: Loaded<never> = { state: 'loading', data: null, problem: null, stale: false };
+
 export function useLoaded<T>(
   load: () => Promise<T>,
   key: string,
   options: { every?: number } = {},
 ): Loaded<T> & { retry: () => Promise<void> } {
-  const [value, setValue] = useState<Loaded<T>>({ state: 'loading', data: null, problem: null, stale: false });
+  // Keep data tied to the request that produced it. A changed URL/filter must
+  // never briefly render an earlier response while the new effect starts.
+  const [entry, setEntry] = useState<{ key: string; value: Loaded<T> }>({ key, value: INITIAL });
   const asked = useRef(0);
   const latest = useRef(load);
   latest.current = load;
 
   const run = useCallback(async () => {
     const mine = ++asked.current;
-    setValue((before) => (before.data === null ? before : { state: 'refreshing', data: before.data, problem: null, stale: false }));
+    setEntry((before) => {
+      const previous = before.key === key ? before.value : INITIAL;
+      return { key, value: previous.data === null ? previous : { state: 'refreshing', data: previous.data, problem: null, stale: false } };
+    });
     try {
       const data = await latest.current();
-      if (mine === asked.current) setValue({ state: 'ready', data, problem: null, stale: false });
+      if (mine === asked.current) setEntry({ key, value: { state: 'ready', data, problem: null, stale: false } });
     } catch (error) {
       if (mine !== asked.current) return;
       const message = (error as Error).message;
       const kind = problemKind(error);
-      setValue((before) => (before.data === null
-        ? { state: 'failed', data: null, problem: kind, stale: false, message }
-        : { state: 'stale', data: before.data, problem: kind, stale: true, message }));
+      setEntry((before) => {
+        const previous = before.key === key ? before.value : INITIAL;
+        return { key, value: previous.data === null
+          ? { state: 'failed', data: null, problem: kind, stale: false, message }
+          : { state: 'stale', data: previous.data, problem: kind, stale: true, message } };
+      });
     }
-  }, []);
+  }, [key]);
 
   useEffect(() => {
-    setValue({ state: 'loading', data: null, problem: null, stale: false });
+    // Invalidate all reads from the old key before issuing a replacement.
+    asked.current += 1;
+    setEntry({ key, value: INITIAL });
     void run();
     // Poll only while the UI is visible. An immediate read on return makes
     // stale status truthful without consuming resources in a hidden tab.
@@ -55,7 +67,7 @@ export function useLoaded<T>(
     };
   }, [key, options.every, run]);
 
-  return { ...value, retry: run };
+  return { ...(entry.key === key ? entry.value : INITIAL), retry: run };
 }
 
 /** True once something has taken longer than it should, so a wait can say so instead of spinning. */
