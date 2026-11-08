@@ -43,6 +43,17 @@ describe('library eligibility and render failures', () => {
 });
 
 describe('inconsistent render counts', () => {
+  it('does not trust impossible over-counted server readiness', () => {
+    const draft = {
+      id: 6, name: 'Overcount', songs: 3, seconds: 400, seams: 2,
+      ready: 3, failed: 0, waiting: 0, rendering: false, place: null,
+      eta: null, to_render: 0, missing: 0,
+    };
+    expect(draftReadiness(draft)).toMatchObject({
+      kind: 'unavailable', words: '3 of 2 ready; readiness still unconfirmed',
+    });
+  });
+
   it('never claims ready when the server reports fewer ready edges than required', () => {
     const draft = {
       id: 3, name: 'Snapshot', songs: 4, seconds: 800, seams: 3,
