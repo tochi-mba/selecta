@@ -11,8 +11,8 @@ import sqlite3
 from pathlib import Path
 
 from selecta import db
-from selecta.library.scan import library_folders, read_file
 from selecta.library.relevance import normalize_music
+from selecta.library.scan import library_folders, read_file
 
 MAX_RELINK_SONGS = 50000
 
@@ -58,7 +58,11 @@ def preview_relink(conn: sqlite3.Connection, old: str, new: str) -> dict:
         target = new_root / relative
         state = "verified"
         stat = None
-        if not target.is_file() or target.is_symlink() or not target.resolve().is_relative_to(new_root):
+        if (
+            not target.is_file()
+            or target.is_symlink()
+            or not target.resolve().is_relative_to(new_root)
+        ):
             state = "not_found_or_unsafe"
         elif used.get(str(target)) not in (None, row["id"]):
             state = "already_in_library"
@@ -69,8 +73,10 @@ def preview_relink(conn: sqlite3.Connection, old: str, new: str) -> dict:
                 if (
                     stat.st_size != row["size"] or tags is None
                     or abs(tags["duration"] - row["duration"]) > 1.5
-                    or normalize_music(tags.get("title") or "") != normalize_music(row["title"] or "")
-                    or normalize_music(tags.get("artist") or "") != normalize_music(row["artist"] or "")
+                    or normalize_music(tags.get("title") or "")
+                    != normalize_music(row["title"] or "")
+                    or normalize_music(tags.get("artist") or "")
+                    != normalize_music(row["artist"] or "")
                 ):
                     state = "identity_not_verified"
             except OSError:
@@ -127,7 +133,10 @@ def commit_relink(conn: sqlite3.Connection, old: str, new: str, token: str) -> d
         before = db.preference(conn, "library_folders", None)
         if before is None:
             before = [str(folder) for folder in library_folders(conn)]
-        after = [str(new_root) if Path(folder).resolve(strict=False) == old_root else folder for folder in before]
+        after = [
+            str(new_root) if Path(folder).resolve(strict=False) == old_root else folder
+            for folder in before
+        ]
         conn.execute(
             "INSERT INTO preferences(key,value) VALUES('library_folders',?) "
             "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
