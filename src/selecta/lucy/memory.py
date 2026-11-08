@@ -115,12 +115,19 @@ def _fact(row: sqlite3.Row) -> dict:
     }
 
 
-def facts(conn: sqlite3.Connection, conversation: str | None = None) -> list[dict]:
-    rows = conn.execute(
-        "SELECT * FROM lucy_memory WHERE forgotten=0 AND (kind!='session' OR conversation_id=?) "
-        "ORDER BY kind, updated_at DESC",
-        (conversation,),
-    ).fetchall()
+def facts(conn: sqlite3.Connection, conversation: str | None = None,
+          every_conversation: bool = False) -> list[dict]:
+    """What Lucy remembers. A model only ever sees one conversation's notes; the memory panel
+    shows the person all of them, so nothing is kept out of sight (LU-310-07)."""
+    if every_conversation:
+        rows = conn.execute("SELECT * FROM lucy_memory WHERE forgotten=0 "
+                            "ORDER BY kind, updated_at DESC").fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM lucy_memory WHERE forgotten=0 AND (kind!='session' OR "
+            "conversation_id=?) ORDER BY kind, updated_at DESC",
+            (conversation,),
+        ).fetchall()
     return [_fact(row) for row in rows]
 
 

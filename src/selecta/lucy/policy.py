@@ -126,5 +126,3 @@ class RateLimit:
             self._all.append(now)
             return True
 
-
-TURNS = RateLimit()

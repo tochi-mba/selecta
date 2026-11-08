@@ -113,8 +113,11 @@ async def respond(ctx: Any, say: Say, run_plan: RunPlan) -> None:
         result = await run_plan({"steps": [{"id": "keep", "op": "memory.remember",
                                             "input": {"subject": "Preference", "value": what}}]})
         if not await _say_step_failures(result, say):
-            await say(f"Got it, I’ll keep that in mind: “{what}”. You can see or forget it in "
-                      "Lucy’s memory.")
+            kept = _value(result, "keep") or {}
+            where = ("for this conversation only, because long-term memory is off in Lucy’s "
+                     "settings" if kept.get("kind") == "session" else "from now on")
+            await say(f"Got it, I’ll keep that in mind {where}: “{what}”. You can see or "
+                      "forget it in Lucy’s memory.")
         return
     if kind == "forget":
         await say("You can forget anything I remember from Lucy’s memory panel. I don’t delete "

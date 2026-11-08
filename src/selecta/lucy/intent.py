@@ -497,6 +497,7 @@ def critique_ops(text: str) -> list[dict]:
                 ops.append({"op": "grow", "by": _number(match.group(2) or "") or 1})
             elif kind == "fewer_songs":
                 ops.append({"op": "shrink", "by": 2})
-            elif kind == "longer":
+            elif kind == "longer" and not any(item["op"] == "grow" for item in ops):
+                # "add two more songs" already said how many; don't grow twice
                 ops.append({"op": "grow", "by": 2})
     return ops

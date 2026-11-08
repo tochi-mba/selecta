@@ -22,6 +22,7 @@ from selecta.lucy import (
     events,
     memory,
     permissions,
+    policy,
     proposal_ops,
     proposals,
     readiness,
@@ -121,6 +122,8 @@ class ListeningBody(BaseModel):
 
 def add_routes(app, ctx) -> None:
     connect_base = ctx.connect
+    # per app, so one data home's flood can't block another's (LU-331-08)
+    turn_limit = policy.RateLimit()
     home = ctx.settings.home
 
     def connect():
@@ -279,8 +282,6 @@ def add_routes(app, ctx) -> None:
 
     @app.post("/api/lucy/conversations/{conversation}/turns")
     def send_turn(conversation: str, body: TurnBody) -> dict:
-        from selecta.lucy import policy
-
         with connect() as conn:
             config = writable(conn)
             if not config["phases"]["chat"]:
@@ -294,7 +295,7 @@ def add_routes(app, ctx) -> None:
                 fail(400, str(problem), "invalid")
             run = None
             if new:
-                if not policy.TURNS.allow(conversation):
+                if not turn_limit.allow(conversation):
                     conversations.set_turn_status(conn, turn["id"], "failed")
                     fail(429, "That's a lot of messages at once. Wait a moment.", "rate_limited")
                 run = agent.RUNNER.start(ctx, conn, conversation, turn)
@@ -508,7 +509,7 @@ def add_routes(app, ctx) -> None:
             enabled = memory.history_enabled(conn)
             top = memory.most_played(conn) if enabled else {"top": [], "events": 0,
                                                              "period": None}
-            return {"facts": memory.facts(conn),
+            return {"facts": memory.facts(conn, every_conversation=True),
                     "history": {"enabled": enabled, **top},
                     "provider_receives": memory.provider_receives(conn)}
 
