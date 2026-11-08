@@ -445,6 +445,13 @@ export class SetPlayer {
    * the player asks for another further on rather than playing one late. */
   async seek(seconds: number) {
     mainPlayerTouched();
+    // A deliberate seek takes ownership from an audition. Otherwise a
+    // preview may continue while playFrom wakes the main AudioContext.
+    stopPreviewsOnly();
+    if (!Number.isFinite(seconds)) {
+      this.update({ notice: 'That seek position is not valid.' });
+      return;
+    }
     const current = this.current;
     if (!current) {
       if (this.state.phase === 'idle') this.update({ songTime: Math.max(seconds, 0) });
@@ -481,6 +488,7 @@ export class SetPlayer {
   /** Jump to just before the next seam. Past that point, or with no seam ready, go straight on. */
   async skip() {
     mainPlayerTouched();
+    stopPreviewsOnly();
     const mix = this.getMix();
     const current = this.current;
     if (!current) return;
