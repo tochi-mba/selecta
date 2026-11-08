@@ -128,7 +128,7 @@ function useKeyboardInset() {
       // The visual viewport also shrinks on pinch zoom. Only a focused editor
       // may invoke keyboard-yield, otherwise zoom can incorrectly hide navigation.
       const keyboardOpen = editing && covered > 120 && view.scale <= 1.1;
-      root.style.setProperty('--keyboard-inset', `${Math.round(covered)}px`);
+      root.style.setProperty('--keyboard-inset', `${Math.round(keyboardOpen ? covered : 0)}px`);
       if (keyboardOpen) root.dataset.keyboard = 'open';
       else delete root.dataset.keyboard;
       if (keyboardOpen && !keyboardWasOpen) {
