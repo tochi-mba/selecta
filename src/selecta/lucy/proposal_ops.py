@@ -129,6 +129,8 @@ def publish(conn, conversation: str, outcome: Outcome, kind: str, expected: str 
     proposal = proposals.ensure_proposal(conn, conversation)
     base = proposals.current(conn, proposal)
     first = outcome.snapshots[0]
+    if base is not None and kind in {"plan", "restore"}:
+        carry_identity(base["snapshot"], first)
     change = proposals.diff(base["snapshot"] if base else None, first)
     first["diff"] = change if base else None
     summary = proposals.summary_text(change) if base else f"{len(first['songs'])} songs"
@@ -145,6 +147,23 @@ def publish(conn, conversation: str, outcome: Outcome, kind: str, expected: str 
             parent=revision["id"], branch=f"variant-{revision['number']}-{index}", turn=turn,
             summary=f"Variant: {snap.get('variant', index)}"))
     return revision, variants
+
+
+def carry_identity(base: dict, snap: dict) -> None:
+    """A song that stays across a replan keeps its occurrence id, so a selection follows it and
+    the diff says kept or moved rather than replaced (LU-306-04, LU-325-01)."""
+    spare: dict[int, list[str]] = {}
+    for song in base.get("songs", []):
+        spare.setdefault(song["song_id"], []).append(song["occurrence"])
+    renamed: dict[str, str] = {}
+    for song in snap["songs"]:
+        reuse = spare.get(song["song_id"])
+        if reuse:
+            renamed[song["occurrence"]] = reuse.pop(0)
+            song["occurrence"] = renamed[song["occurrence"]]
+    for seam in snap["seams"]:
+        seam["a_occ"] = renamed.get(seam["a_occ"], seam["a_occ"])
+        seam["b_occ"] = renamed.get(seam["b_occ"], seam["b_occ"])
 
 
 def _guarded(run, make: Any, kind: str) -> dict:
