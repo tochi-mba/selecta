@@ -1,7 +1,7 @@
 # ADR-0152 — Stem Studio: physical grid feel, audible preview, precision and recovery
 
-- **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** 5/8 Implemented, 2/8 In progress, 1 Not started (source-level, PR #31).
+- **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
+- **Implementation:** 7/8 Implemented, 0/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Studio.
@@ -34,9 +34,9 @@ Prefer semantic, truthful feedback over cosmetic animation; static UI is better 
 
 ## Implementation tasks — 5 source-level Implemented, 0 independently Verified
 
-1. **MI-0152-01 — Define eight-lane cell feedback.** Acceptance: On/off/solo/muted/failed/loading/unsaved states separately marked. Required verification: 64-cell accessibility and visual fixture. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Studio.tsx`, `web/src/styles/creation.css`; partial behavior or baseline, task acceptance outstanding.**
+1. **MI-0152-01 — Define eight-lane cell feedback.** Acceptance: On/off/solo/muted/failed/loading/unsaved states separately marked. Required verification: 64-cell accessibility and visual fixture. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: named eight-lane cell states and audio-clock-owned preview mapped in the surface contract to Studio/studio/audio-focus fixtures; real-audio review remains open.**
 2. **MI-0152-02 — Specify grid painting and keyboard parity.** Acceptance: Each operation reproducible without drag and retains row/column identity. Required verification: Touch, keyboard and NVDA/Edge tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Studio.tsx`, `web/src/styles/creation.css`; `web/src/views/Studio.test.tsx`; independent checks pending.**
-3. **MI-0152-03 — Design preview and timeline cursor.** Acceptance: Cursor derived from actual rendered audio/clock and stops reliably. Required verification: Audio focus and timing tests. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Studio.tsx`, `web/src/styles/creation.css`; partial behavior or baseline, task acceptance outstanding.**
+3. **MI-0152-03 — Design preview and timeline cursor.** Acceptance: Cursor derived from actual rendered audio/clock and stops reliably. Required verification: Audio focus and timing tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: named eight-lane cell states and audio-clock-owned preview mapped in the surface contract to Studio/studio/audio-focus fixtures; real-audio review remains open.**
 4. **MI-0152-04 — Preserve mode-switch data.** Acceptance: Shape/Grid/List round trip does not modify unrepresented cells. Required verification: Property-based state roundtrip tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Studio.tsx`, `web/src/styles/creation.css`; `web/src/views/Studio.test.tsx`; independent checks pending.**
 5. **MI-0152-05 — Protect AI-assist intent.** Acceptance: Arrange and fine tune operate on exact snapshot and never discard later edits. Required verification: Stale generation/revision race. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Studio.tsx`, `web/src/styles/creation.css`; `web/src/views/Studio.test.tsx`; independent checks pending.**
 6. **MI-0152-06 — Clarify apply and browser recovery.** Acceptance: Unsaved, recovered, applied and rendered are distinct; rollback safe. Required verification: Local storage failure and retry fixtures. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Studio.tsx`, `web/src/styles/creation.css`; `web/src/views/Studio.test.tsx`; independent checks pending.**

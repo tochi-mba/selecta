@@ -7,15 +7,18 @@
   "groups": {
     "0135": {
       "implemented": [
-        "03",
-        "04"
-      ],
-      "in_progress": [
+        "01",
         "02",
+        "03",
+        "04",
         "05",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
+        "docs/adr/selecta-microinteraction-design-baselines.md",
         "web/src/views/Now.tsx",
         "web/src/ui/toasts.tsx"
       ],
@@ -26,15 +29,20 @@
     },
     "0136": {
       "implemented": [
-        "02"
-      ],
-      "in_progress": [
         "01",
+        "02",
         "03",
+        "04",
+        "05",
+        "06",
         "07",
         "08"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
+        "docs/adr/selecta-microinteraction-design-baselines.md",
         "web/src/views/Now.tsx",
         "web/src/shell/Shell.tsx",
         "web/src/styles/listening.css"
@@ -51,12 +59,15 @@
         "03",
         "04",
         "05",
-        "06"
-      ],
-      "in_progress": [
+        "06",
+        "07",
         "08"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
+        "docs/adr/selecta-microinteraction-design-baselines.md",
         "web/src/styles/tokens.css",
         "web/src/styles/polish.css",
         "web/src/views/Now.tsx"
@@ -68,17 +79,18 @@
     },
     "0138": {
       "implemented": [
-        "02",
-        "06"
-      ],
-      "in_progress": [
         "01",
+        "02",
         "03",
         "04",
         "05",
+        "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-interaction-contracts.md",
         "web/src/ui/controls.tsx",
         "web/src/ui/toasts.tsx",
         "web/src/styles/polish.css"
@@ -89,17 +101,20 @@
     },
     "0139": {
       "implemented": [
-        "03",
-        "05",
-        "06"
-      ],
-      "in_progress": [
+        "01",
         "02",
+        "03",
         "04",
+        "05",
+        "06",
         "07",
         "08"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-interaction-contracts.md",
+        "docs/adr/selecta-microinteraction-design-baselines.md",
         "web/src/shell/Shell.tsx",
         "web/src/views/Mix.tsx",
         "web/src/styles/polish.css"
@@ -111,17 +126,18 @@
     },
     "0140": {
       "implemented": [
-        "02",
-        "05"
-      ],
-      "in_progress": [
         "01",
+        "02",
         "03",
         "04",
+        "05",
         "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-interaction-contracts.md",
         "web/src/shell/Shell.tsx",
         "web/src/player.ts",
         "web/src/audio/focus.ts"
@@ -135,15 +151,16 @@
     "0141": {
       "implemented": [
         "01",
-        "04"
-      ],
-      "in_progress": [
         "02",
         "03",
+        "04",
         "05",
         "06"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-interaction-contracts.md",
         "web/src/views/Mixes.tsx",
         "web/src/views/WorkshopPanels.tsx",
         "web/src/views/Setup.tsx"
@@ -155,17 +172,18 @@
     },
     "0142": {
       "implemented": [
-        "06"
-      ],
-      "in_progress": [
         "01",
         "02",
         "03",
         "04",
         "05",
+        "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Mixes.tsx"
       ],
       "tests": [
@@ -178,13 +196,14 @@
         "02",
         "03",
         "04",
+        "05",
+        "06",
         "07"
       ],
       "in_progress": [
-        "05",
-        "06"
       ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/MixSetup.tsx",
         "web/src/styles/listening.css"
       ],
@@ -195,17 +214,18 @@
     },
     "0144": {
       "implemented": [
+        "01",
         "02",
         "03",
         "04",
         "05",
+        "06",
         "07"
       ],
       "in_progress": [
-        "01",
-        "06"
       ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Now.tsx",
         "web/src/styles/listening.css"
       ],
@@ -215,18 +235,19 @@
     },
     "0145": {
       "implemented": [
+        "01",
         "02",
         "03",
+        "04",
         "05",
         "06",
-        "07"
-      ],
-      "in_progress": [
-        "01",
-        "04",
+        "07",
         "08"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Now.tsx",
         "web/src/player.ts",
         "web/src/shell/Shell.tsx"
@@ -238,17 +259,18 @@
     },
     "0146": {
       "implemented": [
-        "02",
-        "05",
-        "06"
-      ],
-      "in_progress": [
         "01",
+        "02",
         "03",
         "04",
+        "05",
+        "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Now.tsx",
         "web/src/styles/listening.css"
       ],
@@ -258,17 +280,18 @@
     },
     "0147": {
       "implemented": [
-        "04"
-      ],
-      "in_progress": [
         "01",
         "02",
         "03",
+        "04",
         "05",
         "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Now.tsx",
         "web/src/player.ts"
       ],
@@ -279,17 +302,18 @@
     },
     "0148": {
       "implemented": [
+        "01",
         "02",
+        "03",
         "04",
+        "05",
+        "06",
         "07"
       ],
       "in_progress": [
-        "01",
-        "03",
-        "05",
-        "06"
       ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Requests.tsx"
       ],
       "tests": [
@@ -299,38 +323,44 @@
     },
     "0149": {
       "implemented": [
-        "07"
-      ],
-      "in_progress": [
         "01",
         "02",
         "03",
         "04",
         "05",
+        "06",
+        "07",
         "08"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/ui/toasts.tsx",
-        "web/src/views/Mix.tsx"
+        "web/src/views/Mix.tsx",
+        "web/src/views/Drafts.tsx",
+        "web/src/styles/creation.css"
       ],
       "tests": [
         "web/src/ui/controls.test.tsx",
-        "web/src/views/Mix.test.tsx"
+        "web/src/views/Mix.test.tsx",
+        "web/src/views/Drafts.test.tsx"
       ]
     },
     "0150": {
       "implemented": [
+        "01",
         "02",
+        "03",
         "04",
+        "05",
         "06",
         "07"
       ],
       "in_progress": [
-        "01",
-        "03",
-        "05"
       ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/EditorRows.tsx",
         "web/src/views/Mix.tsx",
         "web/src/styles/creation.css"
@@ -341,17 +371,18 @@
     },
     "0151": {
       "implemented": [
-        "04"
-      ],
-      "in_progress": [
         "01",
         "02",
         "03",
+        "04",
         "05",
         "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/audio/focus.ts",
         "web/src/views/SeamInspector.tsx"
       ],
@@ -362,17 +393,18 @@
     },
     "0152": {
       "implemented": [
+        "01",
         "02",
+        "03",
         "04",
         "05",
         "06",
         "07"
       ],
       "in_progress": [
-        "01",
-        "03"
       ],
       "source": [
+        "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Studio.tsx",
         "web/src/styles/creation.css"
       ],
@@ -382,17 +414,21 @@
     },
     "0153": {
       "implemented": [
-        "01"
-      ],
-      "in_progress": [
+        "01",
         "02",
         "03",
         "04",
         "05",
+        "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
-        "web/src/views/Library.tsx"
+        "docs/adr/selecta-microinteraction-final-contracts.md",
+        "web/src/views/Library.tsx",
+        "web/src/styles/operations.css",
+        "tests/scale_server.py"
       ],
       "tests": [
         "web/src/views/Library.test.tsx"
@@ -400,17 +436,18 @@
     },
     "0154": {
       "implemented": [
-        "03"
-      ],
-      "in_progress": [
         "01",
         "02",
+        "03",
         "04",
         "05",
         "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/views/SongDetails.tsx"
       ],
       "tests": [
@@ -419,17 +456,18 @@
     },
     "0155": {
       "implemented": [
-        "03",
-        "04"
-      ],
-      "in_progress": [
         "01",
         "02",
+        "03",
+        "04",
         "05",
         "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/views/Links.tsx"
       ],
       "tests": [
@@ -438,17 +476,18 @@
     },
     "0156": {
       "implemented": [
-        "05",
-        "06"
-      ],
-      "in_progress": [
         "01",
         "02",
         "03",
         "04",
+        "05",
+        "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/views/WorkshopPanels.tsx"
       ],
       "tests": [
@@ -458,16 +497,17 @@
     "0157": {
       "implemented": [
         "01",
-        "05"
-      ],
-      "in_progress": [
         "02",
         "03",
         "04",
+        "05",
         "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/views/ExportPanel.tsx",
         "web/src/views/ExportJobs.tsx"
       ],
@@ -477,17 +517,18 @@
     },
     "0158": {
       "implemented": [
-        "03"
-      ],
-      "in_progress": [
         "01",
         "02",
+        "03",
         "04",
         "05",
         "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/views/Listening.tsx"
       ],
       "tests": [
@@ -496,17 +537,18 @@
     },
     "0159": {
       "implemented": [
+        "01",
         "02",
         "03",
+        "04",
         "05",
         "06",
         "07"
       ],
       "in_progress": [
-        "01",
-        "04"
       ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/ui/toasts.tsx",
         "web/src/ui/controls.tsx",
         "web/src/state/activity.ts"
@@ -517,17 +559,18 @@
     },
     "0160": {
       "implemented": [
+        "01",
         "02",
         "03",
-        "05"
-      ],
-      "in_progress": [
-        "01",
         "04",
+        "05",
         "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/styles/tokens.css",
         "web/src/views/EditorRows.tsx",
         "web/src/shell/Shell.tsx"
@@ -539,17 +582,18 @@
     },
     "0161": {
       "implemented": [
+        "01",
         "02",
         "03",
+        "04",
         "05",
+        "06",
         "07"
       ],
       "in_progress": [
-        "01",
-        "04",
-        "06"
       ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/ui/useReducedMotion.ts",
         "web/src/styles/polish.css",
         "web/src/views/Now.tsx"
@@ -561,17 +605,18 @@
     },
     "0162": {
       "implemented": [
+        "01",
         "06",
         "07"
       ],
       "in_progress": [
-        "01",
         "02",
         "03",
         "04",
         "05"
       ],
       "source": [
+        "docs/adr/selecta-microinteraction-verification-protocols.md",
         "web/src/views/Now.tsx",
         "web/src/styles/tokens.css",
         "web/src/shell/Shell.tsx"
@@ -583,17 +628,19 @@
     },
     "0163": {
       "implemented": [
-        "04",
-        "05",
-        "06"
-      ],
-      "in_progress": [
         "01",
         "02",
         "03",
+        "04",
+        "05",
+        "06",
         "07"
       ],
+      "in_progress": [
+      ],
       "source": [
+        "docs/adr/selecta-microinteraction-final-contracts.md",
+        "docs/adr/selecta-microinteraction-verification-protocols.md",
         "web/src/views/Requests.tsx",
         "web/src/views/Mixes.tsx",
         "web/src/views/WorkshopPanels.tsx"
@@ -605,16 +652,16 @@
     },
     "0164": {
       "implemented": [
-        "01"
-      ],
-      "in_progress": [
+        "01",
         "02",
         "03",
         "04",
         "06",
         "07"
       ],
+      "in_progress": [],
       "source": [
+        "docs/adr/selecta-microinteraction-verification-protocols.md",
         "docs/adr/selecta-microinteraction-evidence.md",
         "docs/adr/selecta-microinteraction-implementation-checklist.md"
       ],

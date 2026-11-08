@@ -30,6 +30,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const operations = useRef(new Map<string, string>());
   const [problem, setProblem] = useState('');
   const [customizing, setCustomizing] = useState(false);
+  const [feelingGroup, setFeelingGroup] = useState('All');
   const [cardsAttempt, setCardsAttempt] = useState(0);
   const [cardsFailed, setCardsFailed] = useState(false);
   const [confirming, setConfirming] = useState<Asked | null>(null);
@@ -116,6 +117,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const hero = cards?.find((card) => card.key === 'pick');
   const ready = cards?.filter((card) => card.ready && card.key !== 'pick') ?? [];
   const waiting = cards?.filter((card) => !card.ready && card.key !== 'christmas') ?? [];
+  const visibleGroups = feelingGroup === 'All' ? GROUPS : GROUPS.filter((group) => group === feelingGroup);
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const readinessAvailable = Number.isFinite(counts.ready);
   const readyCount = counts.ready;
@@ -194,11 +196,33 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       {problem && <p className="warn" role="alert">{problem}</p>}
 
       <section>
-        <h2 className="section-title">Choose another feeling</h2>
-        <p className="hint">Every one is built from your own songs, fresh each time you press play.</p>
+        <div className="vibe-browser-head">
+          <div>
+            <p className="eyebrow">More ways into your library</p>
+            <h2 className="section-title">Choose another feeling</h2>
+            <p className="hint">
+              {ready.length
+                ? `${ready.length} compatible candidates, each rebuilt from its matching songs when you press play.`
+                : 'Every mix is rebuilt from your own songs when you press play.'}
+            </p>
+          </div>
+          {!!ready.length && (
+            <div className="chips vibe-filters" role="group" aria-label="Filter mix feelings">
+              {['All', ...GROUPS].map((group) => {
+                const count = group === 'All' ? ready.length : ready.filter((card) => card.group === group).length;
+                if (group !== 'All' && count === 0) return null;
+                return (
+                  <button key={group} aria-pressed={feelingGroup === group} onClick={() => setFeelingGroup(group)}>
+                    {group}<span aria-hidden="true"> · {count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
         {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when Selecta is available.</Problem>}
-        {!cards && !cardsFailed && <Skeleton variant="cards" lines={4} label="Finding what your library can do" />}
-        {GROUPS.map((group) => {
+        {!cards && !cardsFailed && <Skeleton variant="vibes" lines={6} label="Finding compatible mix candidates" />}
+        {visibleGroups.map((group) => {
           const inGroup = ready.filter((card) => card.group === group);
           if (!inGroup.length) return null;
           return (
@@ -206,19 +230,23 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
               <h3 className="eyebrow">{group}</h3>
               <div className="cards">
                 {inGroup.map((card) => (
-                  <article className="card" key={card.key} data-vibe={card.key}>
-                    <h3>{card.name}</h3>
+                  <article className="card vibe-card" key={card.key} data-vibe={card.key}>
+                    <div className="vibe-card-head">
+                      <h3>{card.name}</h3>
+                      {card.tempo && <span className="vibe-tempo">{card.tempo[0]}–{card.tempo[1]} BPM</span>}
+                    </div>
+                    {card.family && <p className="vibe-scope"><span aria-hidden="true">◎</span> Stays within {card.family}</p>}
                     <p>{card.blurb}</p>
-                    <p className="artists">{card.artists.join(', ')}</p>
-                    <p className="how">
-                      {card.tempo ? `${card.tempo[0]}–${card.tempo[1]} BPM · ` : ''}
-                      {card.moves}
-                    </p>
-                    <small className="soft">{card.songs} songs, up to {length(card.seconds)}</small>
+                    <p className="artists"><span>Draws from</span> {card.artists.join(', ') || 'your mix-ready songs'}</p>
+                    <p className="how">{card.moves}</p>
+                    <div className="vibe-card-facts" aria-label={`${card.songs} matching songs, up to ${length(card.seconds)}`}>
+                      <span>{card.songs} matching songs</span>
+                      <span>Up to {length(card.seconds)}</span>
+                    </div>
                     <div className="row card-actions">
                       <Action className="primary" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
-                      <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Edit first</Action>
-                      <Action className="quiet" disabled={!!building} working="Saving…" aria-label={`Save ${card.name} as a draft`} run={() => keepAsDraft(card.key)}>Save as draft</Action>
+                      <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>
+                      <Action className="quiet save-draft" disabled={!!building} working="Saving…" aria-label={`Save ${card.name} as a draft`} run={() => keepAsDraft(card.key)}>Save draft</Action>
                     </div>
                   </article>
                 ))}

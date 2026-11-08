@@ -1,6 +1,6 @@
 # Selecta — immersive microinteraction verification and negative-case matrix
 
-**Implementation snapshot: 79 source-level Implemented, 125 In progress, 36 Not started on PR #31; independently Verified: 0.** All independent verification and research status rows remain pending. Each future result needs exact implementation SHA, device/OS/browser, fixture type, reviewer and limitations; synthetic E2E or visual snapshots alone are not actual-audio or human-quality evidence.
+**Implementation snapshot: 208 source-level Implemented, 4 In progress, 28 Not started on PR #31; independently Verified: 0.** All independent verification and research status rows remain pending. Each future result needs exact implementation SHA, device/OS/browser, fixture type, reviewer and limitations; synthetic E2E or visual snapshots alone are not actual-audio or human-quality evidence.
 
 | Case | Setup and action | Required observable outcome | Evidence mode | Status |
 |---|---|---|---|---|

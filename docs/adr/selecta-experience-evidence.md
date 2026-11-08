@@ -1,7 +1,7 @@
 # Selecta — experience-first implementation and independent verification ledger
 
 - **Baseline:** `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29), 2026-11-07.
-- **New programme:** 21 Proposed ADRs, 105 tasks Not started, **0 Implemented**, **0 Verified**.
+- **Programme history:** PR #30 merged as `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`; this original 105-task ledger still requires item-level source reconciliation and records **0 independently Verified**.
 - **Evidence boundary:** Documentation only; all owners unassigned. Existing source/UI/merged tests can establish a baseline but not that a newly proposed design or user-outcome requirement was met.
 - **Old trackers:** S4 has 250 unchecked tasks from an older baseline; that is **not** a code-status assertion after PR #29. See [reconciliation](selecta-experience-status-reconciliation.md).
 

@@ -1,7 +1,7 @@
 # ADR-0137 — Motion grammar: timings, easing, causality and reduced-motion equivalence
 
-- **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** 6/8 Implemented, 1/8 In progress, 1 Not started (source-level, PR #31).
+- **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
+- **Implementation:** 8/8 Implemented, 0/8 In progress, 0 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Motion foundation.
@@ -40,8 +40,8 @@ Prefer semantic, truthful feedback over cosmetic animation; static UI is better 
 4. **MI-0137-04 — Design reduced-motion equivalence.** Acceptance: Every essential state remains identifiable with 0 ms travel and unchanged task completion. Required verification: Live OS preference toggling and manual check. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/styles/tokens.css`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
 5. **MI-0137-05 — Protect focus and target geometry.** Acceptance: No active animation changes pointer targets or keyboard focus unexpectedly. Required verification: Tap-while-moving and keyboard tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/styles/tokens.css`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
 6. **MI-0137-06 — Control visualizer resource use.** Acceptance: Hidden, offscreen, paused and reduced-motion visualizations stop expensive frames. Required verification: CPU and visibility measurement. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/styles/tokens.css`, `web/src/styles/polish.css`; `web/src/views/Now.test.tsx`, `web/src/ui/controls.test.tsx`; independent checks pending.**
-7. **MI-0137-07 — Create motion storyboard baselines.** Acceptance: Cover player, navigation, request, grid, card, job and export lifecycles. Required verification: Screen recordings at normal and 0.25x speed. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
-8. **MI-0137-08 — Set motion performance budgets.** Acceptance: No long main-thread animation or layout shift for core controls. Required verification: Performance traces with hardware and long task log. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/styles/tokens.css`, `web/src/styles/polish.css`; partial behavior or baseline, task acceptance outstanding.**
+7. **MI-0137-07 — Create motion storyboard baselines.** Acceptance: Cover player, navigation, request, grid, card, job and export lifecycles. Required verification: Screen recordings at normal and 0.25x speed. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: lifecycle and reduced-motion storyboard in `selecta-microinteraction-design-baselines.md`; normal/quarter-speed reviewer recordings remain open.**
+8. **MI-0137-08 — Set motion performance budgets.** Acceptance: No long main-thread animation or layout shift for core controls. Required verification: Performance traces with hardware and long task log. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: runtime/source contract and mapped implementation evidence in `docs/adr/selecta-microinteraction-final-contracts.md`; applicable independent human/device/audio review remains open.**
 
 ## Shared invariants and negative cases
 

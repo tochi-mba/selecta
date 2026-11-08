@@ -150,9 +150,21 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
     notify(`Made a copy: ${made.name}.`);
   });
   const remove = (draft: DraftInfo) => onDraft(draft, 'delete that', async () => {
+    const removedLink = document.getElementById(`draft-${draft.id}`);
+    const removedRow = removedLink?.closest('li');
+    const focusAfter = (removedRow?.nextElementSibling ?? removedRow?.previousElementSibling)
+      ?.querySelector<HTMLElement>('[id^="draft-"]') ?? heading.current;
+    const scrollBefore = window.scrollY;
     await write(() => del(`/drafts/${draft.id}`));
     setList((before) => before ? { ...before, drafts: before.drafts.filter((item) => item.id !== draft.id) } : before);
-    heading.current?.focus();
+    // Removing one card from a long, sorted or filtered list must not throw a
+    // keyboard user back to the top or move the viewport. Stable IDs let the
+    // nearest surviving card receive focus even when its visual position has
+    // changed since the request began.
+    window.requestAnimationFrame(() => {
+      (focusAfter?.isConnected ? focusAfter : heading.current)?.focus({ preventScroll: true });
+      if (window.scrollY !== scrollBefore) window.scrollTo({ top: scrollBefore });
+    });
     // by its id, so it's this draft that comes back, whatever else has been deleted since
     notify(`Deleted ${draft.name}.`, async () => {
       await post(`/drafts/restore?id=${draft.id}`);
@@ -230,7 +242,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
           </div>
         )}
         {shownDrafts.length > 0 && (
-          <ul className="draft-list density">
+          <ul className={shownDrafts.length > 20 ? 'draft-list density long' : 'draft-list density'}>
             {shownDrafts.map((draft) => {
               const facts = draftReadiness(draft);
               const failure = failures[draft.id];

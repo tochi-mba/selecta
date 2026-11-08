@@ -1,10 +1,10 @@
 # Selecta 3.0 — complete implementation task checklist
 
 - **Decision status:** Proposed.
-- **Implementation status:** In progress on PR #24; items below await evidence-based reconciliation.
+- **Implementation status:** PR #24 merged as `3b01dc1336aab0f1cb0a4d85be5eba359de81831`; items below still await evidence-based reconciliation.
 - **Date:** 2026-11-07.
 - **Scope:** 31 ADRs and 258 stable S3 task IDs (252 original plus 6 in ADR-0077).
-- **Merged/verified:** 0/258 while PR #24 is open. **In progress:** runtime work and ADR-0077; full item-by-item reconciliation pending.
+- **Merged programme PR:** 1. **Independently verified tasks:** 0/258 in this historical ledger; full item-by-item reconciliation remains pending.
 - **History:** This checklist began as a documentation-only proposal. PR #24 now also contains code; do not infer item completion from code presence or a passing CI badge.
 
 ## Instructions

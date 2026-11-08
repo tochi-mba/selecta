@@ -9,7 +9,7 @@ export function ControlGallery() {
   const [selected, setSelected] = useState(false);
   const [saved, setSaved] = useState(false);
   const kinds: StatusKind[] = ['planned', 'queued', 'working', 'ready', 'warning', 'failed', 'needs-action', 'unavailable'];
-  const skeletons: SkeletonVariant[] = ['text', 'cards', 'library', 'listen', 'timeline', 'inspector', 'pairs', 'metrics'];
+  const skeletons: SkeletonVariant[] = ['text', 'cards', 'vibes', 'library', 'listen', 'timeline', 'inspector', 'pairs', 'metrics'];
   const contents = <><p>Check keyboard focus, Escape, scrolling and restoration.</p><label>Example input<input placeholder="Enter a value" /></label><button onClick={() => setOverlay(null)}>Done</button></>;
   return (
     <details className="panel control-gallery">

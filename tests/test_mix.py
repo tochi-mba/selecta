@@ -534,6 +534,34 @@ def test_each_vibe_only_uses_songs_that_fit_it(tmp_path):
     assert {item.song.id for item in planned} <= {song.id for song in peak}
 
 
+def test_journey_candidates_are_split_by_musical_family(tmp_path):
+    from selecta.planner.vibes import candidate_vibes, eligible, resolve_vibe
+
+    songs, traits = _vibe_library(tmp_path)
+    candidates = {vibe.key: vibe for vibe in candidate_vibes(songs, traits)}
+
+    afro = candidates["slow_burn__afro"]
+    assert afro.name == "Afrobeats & amapiano · Slow burn"
+    assert {song.family for song in eligible(afro, songs, traits)} == {"afro"}
+    assert "slow_burn" not in candidates
+    resolved = resolve_vibe("slow_burn__afro")
+    assert resolved is not None and (resolved.key, resolved.family) == (afro.key, afro.family)
+
+
+def test_family_candidate_rejects_an_unrelated_start_or_destination(tmp_path):
+    from selecta.planner.vibes import build_vibe, resolve_vibe
+
+    songs, traits = _vibe_library(tmp_path)
+    vibe = resolve_vibe("slow_burn__afro")
+    assert vibe is not None
+    unrelated = next(song for song in songs if song.family != "afro")
+
+    with pytest.raises(ValueError, match="does not belong"):
+        build_vibe(vibe, songs, traits, {}, 6, start=unrelated.id)
+    with pytest.raises(ValueError, match="Afrobeats & amapiano song"):
+        build_vibe(vibe, songs, traits, {}, 6, end_id=unrelated.id)
+
+
 def test_listener_transition_feel_overrides_the_vibes_default(tmp_path, monkeypatch):
     from selecta.planner import vibes
 

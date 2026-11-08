@@ -1,7 +1,7 @@
 # ADR-0162 — Animation performance budgets, audio continuity and long-session stability
 
-- **Decision:** Proposed; no owner acceptance is asserted.
-- **Implementation:** 2/8 Implemented, 5/8 In progress, 1 Not started (source-level, PR #31).
+- **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
+- **Implementation:** 3/8 Implemented, 4/8 In progress, 1 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Performance.
@@ -34,7 +34,7 @@ Prefer semantic, truthful feedback over cosmetic animation; static UI is better 
 
 ## Implementation tasks — 2 source-level Implemented, 0 independently Verified
 
-1. **MI-0162-01 — Specify reference hardware matrix.** Acceptance: CPU/GPU/OS/browser/power mode recorded for every benchmark. Required verification: Benchmark protocol review. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**
+1. **MI-0162-01 — Specify reference hardware matrix.** Acceptance: CPU/GPU/OS/browser/power mode recorded for every benchmark. Required verification: Benchmark protocol review. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: reference hardware/environment schema in `docs/adr/selecta-microinteraction-verification-protocols.md`; measured rows remain open.**
 2. **MI-0162-02 — Profile main thread and frame costs.** Acceptance: Animation doesn't create long tasks or meaningful INP regression. Required verification: Performance recording with p95 frame timing. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**
 3. **MI-0162-03 — Profile audio scheduling under load.** Acceptance: Background renders and UI interaction do not produce unexpected gap/overlap. Required verification: Captured real audio and CPU load test. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**
 4. **MI-0162-04 — Stress large Library.** Acceptance: 20k songs, search/filter and scroll remain usable. Required verification: Synthetic and real dataset benchmarks. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/Now.tsx`, `web/src/styles/tokens.css`; partial behavior or baseline, task acceptance outstanding.**

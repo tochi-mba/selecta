@@ -1,6 +1,6 @@
 # Selecta UI/UX polish — implementation evidence
 
-- **Programme implementation status:** Not started
+- **Programme implementation status:** PR #23 merged (`84b8b5cbadf7204bf526e8932124b5c4890e2c44`); original per-task evidence remains unreconciled and independently unverified.
 - **Date:** 2026-11-06
 - **Tasks completed:** 0 / 143
 - **Runtime verification:** none claimed by this planning PR.

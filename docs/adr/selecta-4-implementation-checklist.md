@@ -1,6 +1,6 @@
 # Selecta 4.0 — 250-item UI/UX implementation checklist
 
-- **Status:** 25 Proposed decisions, 250 tasks **Not started**; **0 Implemented and 0 Verified**.
+- **Historical register status:** Created with 25 Proposed decisions and 250 Not started tasks. Runtime implementation PR #29 later merged as `6638ec2313ce53843adfaf363306f8e79c4c8c7e`; task-specific implementation/verification remains unreconciled in this ledger.
 - **Date:** 2026-11-07.
 - **Base:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (after PR #25 and #26 merge).
 - **Scope:** Documentation only, no application or test changes.

@@ -1,7 +1,7 @@
 # Selecta 4.0 — implementation and independent verification evidence ledger
 
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd`, 2026-11-07.
-- **Programme:** 25 new Proposed ADRs; 250 **Not started** tasks; 0 Implemented / 0 Verified.
+- **Programme:** Original 25-ADR/250-task planning ledger. PR #29 later merged as `6638ec2313ce53843adfaf363306f8e79c4c8c7e`; per-task source reconciliation and all independent verification remain open.
 - **Scope:** Documentation only. Neither source, tests, CI nor user interface have been changed.
 - **Historical note:** PRs #25 and #26 have merged. Older 3.1 status headings may be stale and do not authorize retroactive completion of S3/S31 tasks.
 

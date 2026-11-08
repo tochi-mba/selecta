@@ -18,6 +18,69 @@
 .card-actions { gap: var(--space-2); }
 .card-actions .quiet { background: none; border-color: var(--border); }
 .hero .row { row-gap: var(--space-3); }
+.vibe-browser-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  margin-top: var(--space-6);
+}
+.vibe-browser-head > div:first-child { flex: 1 1 360px; }
+.vibe-browser-head .section-title { margin-top: var(--space-1); }
+.vibe-browser-head .hint { max-width: 62ch; margin-bottom: 0; }
+.vibe-filters { flex: 1 1 460px; justify-content: flex-end; margin: 0; }
+.vibe-filters button { white-space: nowrap; }
+.vibe-group { margin-top: var(--space-6); }
+.vibe-group > .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.vibe-group > .eyebrow::after { content: ''; height: 1px; flex: 1; background: var(--border); }
+.vibe-group .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.vibe-card {
+  position: relative;
+  min-height: 320px;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  overflow: hidden;
+  border-color: var(--border);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--surface-raised) 94%, var(--selected)), var(--surface-raised) 42%);
+  transition: border-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
+}
+.vibe-card:hover, .vibe-card:focus-within { border-color: var(--border-strong); box-shadow: var(--shadow-raised); }
+.vibe-card-head { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: var(--space-2); }
+.vibe-card-head h3 { flex: 1 1 170px; font-size: var(--text-xl); overflow-wrap: anywhere; }
+.vibe-scope { align-items: center; color: var(--accent); display: flex; font: var(--type-label); gap: var(--space-2); margin: calc(var(--space-2) * -1) 0 0; }
+.vibe-tempo {
+  flex: none;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font: var(--type-counter);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.vibe-card .artists { margin-top: auto; padding-top: var(--space-3); color: var(--text); }
+.vibe-card .artists span { display: block; margin-bottom: 3px; color: var(--text-soft); font: var(--type-label); }
+.vibe-card .how { min-height: 2.4em; color: var(--text-soft); }
+.vibe-card-facts { display: flex; flex-wrap: wrap; gap: 4px var(--space-3); color: var(--text-soft); font-size: var(--text-sm); }
+.vibe-card-facts span + span::before { content: '·'; margin-right: var(--space-3); }
+.vibe-card .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-top: var(--space-1); }
+.vibe-card .card-actions > * { width: 100%; }
+.vibe-card .card-actions .save-draft { grid-column: 1 / -1; width: fit-content; padding-inline: 0; border-color: transparent; color: var(--text-soft); }
+.vibe-card .card-actions .save-draft:hover, .vibe-card .card-actions .save-draft:focus-visible { color: var(--text); text-decoration: underline; }
+@media (max-width: 1040px) {
+  .vibe-group .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vibe-filters { justify-content: flex-start; }
+}
+@media (max-width: 620px) {
+  .vibe-group .cards { grid-template-columns: 1fr; }
+  .vibe-card { min-height: 0; }
+}
 
 /* the mix that's yours right now */
 .carry-on { margin-bottom: var(--space-5); }

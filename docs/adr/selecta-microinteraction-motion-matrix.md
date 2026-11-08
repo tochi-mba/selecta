@@ -1,6 +1,6 @@
 # Selecta — microinteraction states, timing, causality and reduced-motion matrix
 
-**Decision:** all 30 ADRs remain Proposed. **Source-level implementation:** 79 Implemented, 125 In progress, 36 Not started on PR #31. **Independent verification:** 0. Suggested timing and performance budgets are not proven on representative hardware; code-level motion tokens and reduced-motion paths exist but require device and AT review.
+**Decision:** all 30 ADRs are Accepted. **Source-level implementation:** 208 Implemented, 4 In progress, 28 Not started on PR #31. **Independent verification:** 0. Suggested timing and performance budgets are not proven on representative hardware; code-level motion tokens and reduced-motion paths exist but require device and AT review.
 
 ## Shared motion language
 
@@ -29,7 +29,7 @@
 - When a seam becomes ready, one short local state change, not a page-level celebration; unready remains visibly unready.
 - Under reduced motion, retain the exact information sequence using instant state changes and labels.
 
-**Decision:** Proposed · **Implementation:** 2/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 6/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0136 — Visual materials, typography, hierarchy and authentic musical identity](adr-0136-visual-language-and-music-materials.md)
 
@@ -38,7 +38,7 @@
 - Album-art placeholders are static, legible and non-deceptive; no fake waveform or invented musical cover.
 - Light-mode lime remains a filled high-contrast action with dark text, never a thin unreadable lime line on cream.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 4/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 8/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0137 — Motion grammar: timings, easing, causality and reduced-motion equivalence](adr-0137-motion-tokens-timing-and-reduced-motion.md)
 
@@ -47,7 +47,7 @@
 - Song change: restrained opacity exchange 160–240 ms; display lyrics only when matching actual current song.
 - Reduced motion: instant opacity/state swap, no spatial travel, no persistent pulse, no auto-scroll that disorients focus.
 
-**Decision:** Proposed · **Implementation:** 6/8 Implemented, 1/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 8/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0138 — Tactile microinteractions for buttons, menus, fields, chips and feedback](adr-0138-tactile-controls-and-feedback-microstates.md)
 
@@ -56,7 +56,7 @@
 - Success is a brief 160 ms local confirmation, then returns to persistent final status without celebratory loops.
 - Failure is a stable high-contrast icon/text change, not a shake animation, alarm flash or auto-dismissing diagnosis.
 
-**Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0139 — Navigation choreography, breadcrumbs, page continuity and scene orientation](adr-0139-navigation-scene-transitions-and-orientation.md)
 
@@ -65,7 +65,7 @@
 - Drawer from desktop side or mobile bottom: 180–240 ms transform/opacity, with focus entered only after mount and restored on close.
 - Back/Forward restores recorded scroll without added scroll animation; page transitions never control playback.
 
-**Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 8/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0140 — Persistent mini-player, audio-focus handoff and frictionless microtransport](adr-0140-persistent-player-audio-focus-and-microtransport.md)
 
@@ -74,7 +74,7 @@
 - Pause/Play icon switches within 100 ms, with no spin or delay; scrub progress remains clock-derived.
 - Preview handoff changes ownership label immediately; on completion resume only when intent generation still permits.
 
-**Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0141 — First run, library readiness and the first audible reward](adr-0141-onboarding-progress-and-first-musical-reward.md)
 
@@ -83,7 +83,7 @@
 - At six mix-ready songs, an accessible ready cue appears once, with no auto-play or focus steal.
 - In reduced motion, progress labels and milestones update instantly with the same meaning.
 
-**Decision:** Proposed · **Implementation:** 2/8 Implemented, 4/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 6/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0142 — Mix-idea cards, meaningful recommendation reveals and selection confidence](adr-0142-mix-ideas-cards-and-discovery-delight.md)
 
@@ -92,7 +92,7 @@
 - Category filtering/selection uses ≤180 ms local reveal while preserving scroll and focus.
 - Selected mix preview control, when real, immediately marks ownership and switches to Stop without autoplay.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0143 — Mix-shaping controls, expressive energy arc and destination selection](adr-0143-mix-shaping-energy-arc-and-destination-gestures.md)
 
@@ -101,7 +101,7 @@
 - Selected tempo/feel chips switch emphasis in ≤120 ms and keep keyboard focus stable.
 - Destination selection confirms chosen song once; no celebratory motion that suggests a route is already possible.
 
-**Decision:** Proposed · **Implementation:** 5/8 Implemented, 2/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0144 — Listen as an immersive musical scene: song identity, ambient visuals and restraint](adr-0144-listen-hero-ambient-visuals-and-song-identity.md)
 
@@ -110,7 +110,7 @@
 - Dynamic background must not lower text contrast in dark/light/system or forced colors.
 - Opening DJ controls gently reveals options ≤180 ms without scrolling away from the transport.
 
-**Decision:** Proposed · **Implementation:** 5/8 Implemented, 2/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0145 — Transport precision: play, pause, seeking, jump and honest progress](adr-0145-transport-scrubbing-and-timing-feedback.md)
 
@@ -119,7 +119,7 @@
 - Seeking may show a local ≤160 ms confirmation; if rejected, marker returns to actual time without falsely changing song identity.
 - For bars remaining, number transitions are quiet and only derived from verified timing; no sweeping pulse synced to guessed beats.
 
-**Decision:** Proposed · **Implementation:** 5/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 8/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0146 — Lyric focus, Stage immersion and real audio-reactive visuals](adr-0146-lyrics-stage-and-musical-visualizer-choreography.md)
 
@@ -128,7 +128,7 @@
 - Stage entry/exit ≤240 ms crossfade; browser fullscreen result determines actual UI state, not an optimistic assumption.
 - Visualizer frame rate adapts to visibility and preferences; no strobe, large flash or rapid full-screen color inversion.
 
-**Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0147 — Up Next anticipation, transition readiness and audible handoff choreography](adr-0147-up-next-seam-countdown-and-musical-handoff.md)
 
@@ -137,7 +137,7 @@
 - Countdown is clock-derived and numerically stable with tabular digits; no beat pulse when precision unavailable.
 - Fallback switches status immediately with icon/text and remains readable until the user moves on.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0148 — Song requests, live queue uncertainty and bridge-route consent](adr-0148-requests-bridges-and-consent-microinteractions.md)
 
@@ -146,7 +146,7 @@
 - Approval button acknowledges press immediately, then shows preparing without visual implication of joining; joining animates only after atomic commit.
 - Queued route preview is static; reduced motion replaces route drawing with numbered song order and status text.
 
-**Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0149 — My Mixes: draft identities, render-line motion and safe activation](adr-0149-draft-cards-render-line-and-safe-activation.md)
 
@@ -155,7 +155,7 @@
 - Delete uses short ≤160 ms collapse only after confirmed deletion, with Undo remaining visible in Activity.
 - Readiness counters change on authoritative job updates, no indeterminate pulse for a blocked job.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 8/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0150 — Arrangement timeline: tactile song movement, insertions, locks and focus](adr-0150-arrangement-timeline-tactility-and-safe-reorder.md)
 
@@ -164,7 +164,7 @@
 - Invalid/rejected move returns to original position with explicit reason and no fake success.
 - Locked status icon changes within 120 ms; never pulses indefinitely or implies all neighboring seams are locked.
 
-**Decision:** Proposed · **Implementation:** 4/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0151 — Transition Inspector: audition-first detail, state truth and precision](adr-0151-transition-inspector-audition-and-truthful-state.md)
 
@@ -173,7 +173,7 @@
 - New seam render replaces old preview only after matching key, with short ≤160 ms textual state transition.
 - Preview progress follows actual audio; no waveform animation if no clip was successfully rendered.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0152 — Stem Studio: physical grid feel, audible preview, precision and recovery](adr-0152-stem-studio-granular-control-and-audition.md)
 
@@ -182,7 +182,7 @@
 - Selecting an AI arrangement shows an exact pending operation, not a made-up growing waveform; changed grid appears only from returned data.
 - When switching Shape/Grid/List, preserve logical cell focus or announce target mapping; no animated transformation that loses controls.
 
-**Decision:** Proposed · **Implementation:** 5/8 Implemented, 2/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0153 — Library browsing: instant search, contextual actions and large-collection calm](adr-0153-library-search-filter-and-collection-interactions.md)
 
@@ -191,7 +191,7 @@
 - Rows can use ≤100 ms hover/focus treatment; never animate in 20,000 items individually.
 - Scroll restoration is immediate to saved position, not a theatrical slide.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 5/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0154 — Song details: metadata confidence, corrections, validation and safe recovery](adr-0154-song-details-corrections-and-trustful-forms.md)
 
@@ -200,7 +200,7 @@
 - Reset confirmation uses visible non-color cue, no shake or celebration.
 - Re-render effect stays marked waiting until job reports ready; no premature green status.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0155 — Musical discovery: wordplay, harmonic auditions and earned delight](adr-0155-musical-discovery-audition-and-reveal.md)
 
@@ -209,7 +209,7 @@
 - Word phrase can receive ≤180 ms entrance emphasis when an authentic candidate loads; no auto-playing spoken lyrics.
 - Approved/rejected feedback changes local status immediately, but only confirms save when server acknowledges.
 
-**Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0156 — Workspace calm: background progress, storage capacity and action-first status](adr-0156-workspace-operational-calm-and-honest-progress.md)
 
@@ -218,7 +218,7 @@
 - Disclosure of job details uses ≤180 ms reveal and retains scroll/focus; low-priority work does not animate continuously.
 - Storage meter changes only from real values and has a text equivalent, including over-budget protected assets.
 
-**Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0157 — FLAC export: frozen revision, trustworthy progress and finished-artifact moment](adr-0157-flac-export-lifecycle-and-artifact-delight.md)
 
@@ -227,7 +227,7 @@
 - Ready file gets a single ≤220 ms emphasis of the download action; no confetti or sound.
 - Error/expired remains static with recovery action; reduced motion has identical stage labels.
 
-**Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0158 — Blind listening studies: neutral feedback, fair comparison and no visual bias](adr-0158-blind-a-b-study-neutral-comparison-design.md)
 
@@ -236,7 +236,7 @@
 - Submission acknowledges once with neutral 160 ms status change; advance only after exact answer confirmation.
 - Reduced motion uses the same neutral labels and equal spatial geometry.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 6/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0159 — Dialogs, drawers, toasts, Activity and recoverable mistakes](adr-0159-overlays-toasts-activity-and-recovery-choreography.md)
 
@@ -245,7 +245,7 @@
 - Undo confirms with a stable state marker and does not visually reverse before backend confirms scope.
 - In reduced motion overlays appear immediately, focus behavior unchanged.
 
-**Decision:** Proposed · **Implementation:** 5/8 Implemented, 2/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0160 — Responsive gestures: thumb reach, safe-area geometry, keyboard occlusion and zoom](adr-0160-responsive-touch-gestures-and-small-screen-music.md)
 
@@ -254,7 +254,7 @@
 - Keyboard insets change chrome immediately after viewport adjustment, no prolonged animation while typing.
 - Pinned transport/mini-player may fade on state change but not slide over an active focus target.
 
-**Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0161 — Accessible sensory choice, cognitive comfort and non-motion equivalents](adr-0161-accessible-sensory-choice-and-cognitive-comfort.md)
 
@@ -263,7 +263,7 @@
 - Announcements are event-based and throttled so lyric ticks, song-time ticks and progress counters do not flood assistive technology.
 - No ambient flash faster than accepted comfort threshold; prefer slow, bounded color/brightness changes tied to genuine audio.
 
-**Decision:** Proposed · **Implementation:** 4/8 Implemented, 3/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0162 — Animation performance budgets, audio continuity and long-session stability](adr-0162-motion-performance-and-audio-continuity-budgets.md)
 
@@ -272,7 +272,7 @@
 - Avoid layout animation in paginated/contained rows; no repeated full-page reflow from numeric progress updates.
 - All animation stops when page hidden unless required by actual playback state; audio scheduling remains independent.
 
-**Decision:** Proposed · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 2/8 Implemented, 5/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0163 — Musical microcopy, consent, explanations and the personality of a good DJ](adr-0163-musical-microcopy-trust-and-emotional-tone.md)
 
@@ -281,7 +281,7 @@
 - Error text stays still and specific; avoid shake effects or red flashes.
 - Long-form technical explanations open on user request, with no automatic expanding under active listening.
 
-**Decision:** Proposed · **Implementation:** 3/8 Implemented, 4/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 7/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ### [ADR-0164 — Visual and audible proof, interaction research, rollback and release governance](adr-0164-research-gates-visual-proof-and-release-governance.md)
 
@@ -290,7 +290,7 @@
 - No motion-related P0 failure accepted even if automation otherwise passes; reduced-motion parity is mandatory.
 - Performance traces must state actual machine, branch SHA and limitations; avoid fictional frame-rate passes.
 
-**Decision:** Proposed · **Implementation:** 1/8 Implemented, 5/8 In progress · **Verified:** 0/8.
+**Decision:** Accepted · **Implementation:** 6/8 Implemented, 0/8 In progress · **Verified:** 0/8.
 
 ## Complete interactive state contract
 

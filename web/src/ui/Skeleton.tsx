@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export type SkeletonVariant = 'text' | 'cards' | 'library' | 'listen' | 'timeline' | 'inspector' | 'pairs' | 'metrics';
+export type SkeletonVariant = 'text' | 'cards' | 'vibes' | 'library' | 'listen' | 'timeline' | 'inspector' | 'pairs' | 'metrics';
 
 /** Reserve real content geometry immediately, fading decorative placeholders in only if needed. */
 export function Skeleton({ lines = 3, label = 'Loading', variant = 'text' }: { lines?: number; label?: string; variant?: SkeletonVariant }) {
@@ -19,7 +19,7 @@ export function Skeleton({ lines = 3, label = 'Loading', variant = 'text' }: { l
             <i className="skeleton-title" />
             {variant !== 'text' && <><i className="skeleton-detail" /><i className="skeleton-meta" /></>}
             {['listen', 'timeline', 'inspector', 'pairs'].includes(variant) && <i className="skeleton-region" />}
-            {['cards', 'pairs', 'inspector'].includes(variant) && <i className="skeleton-action" />}
+            {['cards', 'vibes', 'pairs', 'inspector'].includes(variant) && <i className="skeleton-action" />}
           </div>
         ))}
       </div>

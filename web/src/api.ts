@@ -168,6 +168,7 @@ export type VibeCard = {
   needs: number;
   artists: string[];
   group: string;
+  family: string | null;
   tempo: [number, number] | null;
   moves: string;
   seconds: number;
