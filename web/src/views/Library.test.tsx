@@ -265,6 +265,41 @@ describe('a big library', () => {
     expect(window.location.search).toContain('sort=artist');
   });
 
+  it('resolves a linked song by exact ID outside the current filter and page', async () => {
+    window.history.pushState({}, '', '/library?show=ready&song=72');
+    const calls = fakeBackend({
+      'GET /library': (_body: unknown, url: string) => (new URLSearchParams(url.split('?')[1]).get('q') === '72'
+        ? page(row(72, 'Exact recording'))
+        : page(row(2, 'A different recording'))),
+    });
+    show();
+    const details = await screen.findByRole('dialog', { name: 'Exact recording' });
+    expect(calls.some((call) => call.path.includes('q=72'))).toBe(true);
+    await userEvent.click(within(details).getByText('Advanced'));
+    expect(within(details).getByText('72')).toBeInTheDocument();
+    act(() => {
+      window.history.replaceState({}, '', '/library?show=ready');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Exact recording' })).toBeNull());
+  });
+
+  it('never opens another song if a deep-link ID is missing, and can retry', async () => {
+    window.history.pushState({}, '', '/library?song=99');
+    let recovered = false;
+    const calls = fakeBackend({
+      'GET /library': (_body: unknown, url: string) => (new URLSearchParams(url.split('?')[1]).get('q') === '99' && recovered
+        ? page(row(99, 'Returned recording'))
+        : page(row(2, 'Another recording'))),
+    });
+    show();
+    expect(await screen.findByText(/That exact recording is no longer available/)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    recovered = true;
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('dialog', { name: 'Returned recording' })).toBeInTheDocument();
+    expect(calls.filter((call) => call.path.includes('q=99'))).toHaveLength(2);
+  });
   it('only the newest search counts, however the answers arrive', async () => {
     const answers: ((value: Response) => void)[] = [];
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { answers.push(resolve); })));
