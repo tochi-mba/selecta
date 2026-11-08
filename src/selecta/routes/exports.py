@@ -29,6 +29,7 @@ from fastapi import HTTPException
 from selecta import mix
 from selecta.config import SAMPLE_RATE
 from selecta.seams import request_from
+from selecta.export_validation import verify_export
 
 CHECK_EVERY_SECONDS = 1.0
 ACTIVE = {"preparing", "encoding"}
@@ -134,6 +135,12 @@ def add_routes(app, ctx) -> None:
         items = mix.read_mix(conn, store, draft)
         if len(items) < 2:
             raise HTTPException(400, "A mix needs at least two songs.")
+        if any(item["seam"].get("too_soon") for item in items[1:]):
+            raise HTTPException(
+                409,
+                "A transition cuts off the previous handoff. Adjust its timing in the editor "
+                "before saving this mix as an audio file.",
+            )
         snapshot = {
             "scope": "current" if draft is None else "draft",
             "draft": draft,
@@ -238,6 +245,16 @@ def add_routes(app, ctx) -> None:
                 )
             finally:
                 conn.close()
+            # Encoding finishing does not prove the frozen file is playable. Decode
+            # every frame from the final path before it is ever reported as ready.
+            try:
+                verify_export(exports / job["name"], made["seconds"])
+            except (OSError, ValueError):
+                (exports / job["name"]).unlink(missing_ok=True)
+                raise ValueError(
+                    "The saved audio could not be verified as a complete FLAC file. "
+                    "Check disk space and export again."
+                ) from None
             store.clock.record(
                 "export_per_song", (time.monotonic() - started) / max(len(job["songs"]), 1)
             )
