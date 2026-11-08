@@ -315,3 +315,107 @@
 - [ ] **SF-0221-06 — Gate A/B on real clips.** **Acceptance:** Comparison absent without verified alternatives. **Required verification:** Clip/revision contract tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0221-07 — Keep inspector context.** **Acceptance:** Sticky panel does not lose selection on reorder. **Required verification:** Large-mix E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0221-08 — Validate listen-first design.** **Acceptance:** Users judge transition without false status trust. **Required verification:** DJ and novice study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0222 — Intended versus achieved Energy Horizon composition](adr-0222-energy-composition.md)
+
+**Priority / phase:** P1 / Create. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0222-01 — Document energy provenance.** **Acceptance:** Intent, measured and absent data typed. **Required verification:** Schema audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0222-02 — Redesign five-stop gesture.** **Acceptance:** Pointer/touch updates precise repeatable stops. **Required verification:** Value tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0222-03 — Preserve exact keyboard controls.** **Acceptance:** Every stop reachable with known value. **Required verification:** AT and zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0222-04 — Create reversible presets.** **Acceptance:** Preset shape transparent and undoable. **Required verification:** Preset mapping test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0222-05 — Distinctly draw measured journey.** **Acceptance:** Measured data labeled with scale and uncertainty. **Required verification:** Data/graphic fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0222-06 — Guard settings scope.** **Acceptance:** Current edit, draft and default never conflated. **Required verification:** Persistence E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0222-07 — Profile editing performance.** **Acceptance:** Dragging does not hurt audio playback. **Required verification:** Frame trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0222-08 — Test musical comprehension.** **Acceptance:** Users interpret rise/drop and uncertainty correctly. **Required verification:** Novice/DJ study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0223 — Stem Studio as a truthful two-song musical canvas](adr-0223-studio-canvas.md)
+
+**Priority / phase:** P0 / Studio. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0223-01 — Define lane anatomy and identity.** **Acceptance:** Eight parts and both source songs always explicit. **Required verification:** Studio state fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0223-02 — Redesign grid presentation.** **Acceptance:** 8–64 cells and playhead intelligible. **Required verification:** Large-grid visual test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0223-03 — Refine direct cell painting.** **Acceptance:** Each intended cell toggled once per stroke. **Required verification:** Pointer E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0223-04 — Provide keyboard and list parity.** **Acceptance:** No drag-only editing behavior. **Required verification:** NVDA/keyboard tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0223-05 — Support Shape/Grid/List transitions.** **Acceptance:** Switching modes preserves exact arrangement. **Required verification:** Mode-state regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0223-06 — Represent actual stem readiness.** **Acceptance:** Missing/separating/applied/rendered distinct. **Required verification:** Backend fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0223-07 — Protect focus during preview.** **Acceptance:** One audio owner with clear return to Listen. **Required verification:** Audio ownership tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0223-08 — Validate creative legibility.** **Acceptance:** Beginners and producers can identify parts and edit. **Required verification:** User study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0224 — Explainable Studio arrangement proposals and safe local recovery](adr-0224-studio-ai-diff.md)
+
+**Priority / phase:** P0 / Studio. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0224-01 — Define source-backed diff model.** **Acceptance:** Only returned cell changes and provenance shown. **Required verification:** Proposal fixture test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0224-02 — Design side-by-side comparison.** **Acceptance:** Before/after and unchanged cells readable. **Required verification:** Visual task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0224-03 — Preserve human edit authority.** **Acceptance:** Stale proposal cannot overwrite newer strokes. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0224-04 — Make Apply explicit.** **Acceptance:** Working, applied and rendered have distinct stages. **Required verification:** Status matrix tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0224-05 — Refine Undo and restore.** **Acceptance:** Changes recoverable after interruption. **Required verification:** Local recovery tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0224-06 — Explain unavailable stems.** **Acceptance:** Missing data and failed preview honest. **Required verification:** Failure injection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0224-07 — Maintain preview focus contract.** **Acceptance:** Studio preview returns control without surprise resume. **Required verification:** Audio session test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0224-08 — Evaluate perceived control.** **Acceptance:** Users predict impact of AI suggestion and undo. **Required verification:** Producer study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0225 — Requests as visible musical intentions and consented bridge routes](adr-0225-requests-route.md)
+
+**Priority / phase:** P0 / Requests. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0225-01 — Design request lifecycle.** **Acceptance:** Asked, searching, waiting, ready, placed, rejected distinct. **Required verification:** Lifecycle fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0225-02 — Show real selected target.** **Acceptance:** Correct library identity and repeat handling. **Required verification:** Duplicate song tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0225-03 — Visualize candidate route.** **Acceptance:** Only actual returned extra songs represented. **Required verification:** Bridge fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0225-04 — Make consent unmistakable.** **Acceptance:** User sees precise proposed additional tracks. **Required verification:** Uncoached consent test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0225-05 — Preserve atomic insert.** **Acceptance:** All approved bridges apply or none. **Required verification:** Backend error E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0225-06 — Handle stale/cancel states.** **Acceptance:** No old response can alter newer request. **Required verification:** Race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0225-07 — Provide accessible route list.** **Acceptance:** Full route details reachable without graphic. **Required verification:** NVDA and zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0225-08 — Evaluate confidence.** **Acceptance:** Listeners predict whether/when request might play. **Required verification:** Real session observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0226 — Library as both personal record collection and fast professional index](adr-0226-library-experience.md)
+
+**Priority / phase:** P0 / Library. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0226-01 — Design collection view.** **Acceptance:** Artwork and identity support discovery without fake traits. **Required verification:** Real/empty media tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0226-02 — Refine professional table.** **Acceptance:** Sorting, columns and dense scanning remain clear. **Required verification:** Expert task review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0226-03 — Protect large-library paging.** **Acceptance:** Twenty thousand items navigable without long stalls. **Required verification:** Scale performance fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0226-04 — Improve search and filters.** **Acceptance:** Active filter state and cursor boundaries accurate. **Required verification:** Query E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0226-05 — Preserve focus and scroll.** **Acceptance:** Pagination never unpredictably moves keyboard focus. **Required verification:** Keyboard fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0226-06 — Expose readiness honestly.** **Acceptance:** Ready, analyzing, blocked and missing distinct. **Required verification:** Readiness tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0226-07 — Handle empty and errors.** **Acceptance:** No results versus offline versus missing source differentiated. **Required verification:** Failure fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0226-08 — Compare modes with users.** **Acceptance:** Both casual browsing and DJ retrieval efficient. **Required verification:** Timed task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0227 — Song Details: trusted analysis, metadata corrections and availability](adr-0227-song-identity.md)
+
+**Priority / phase:** P1 / Library. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0227-01 — Design rich song profile.** **Acceptance:** Core metadata and actions first, diagnostics progressive. **Required verification:** Detail screen critique. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0227-02 — Identify provenance and uncertainty.** **Acceptance:** Measured, missing and corrected values distinguishable. **Required verification:** API fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0227-03 — Clarify readiness by capability.** **Acceptance:** Play, mix, stems and lyrics may have different states. **Required verification:** Readiness component tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0227-04 — Refine correction workflow.** **Acceptance:** Editable metadata clear, reversible when supported. **Required verification:** Correction E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0227-05 — Protect original files.** **Acceptance:** Metadata edits never rewrite source without approved contract. **Required verification:** Filesystem safety test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0227-06 — Show analysis failures.** **Acceptance:** Reason and recovery are specific and truthful. **Required verification:** Backend failure fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0227-07 — Handle unusual metadata.** **Acceptance:** Long/RTL/null values fit at all widths. **Required verification:** Visual and AT review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0227-08 — Verify song identity continuity.** **Acceptance:** Duplicate titles link to correct recording ID. **Required verification:** Cross-route identity test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0228 — My Mixes: collectible sleeves, explicit current performance and render line](adr-0228-my-mixes.md)
+
+**Priority / phase:** P0 / My Mixes. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0228-01 — Design current mix hero.** **Acceptance:** Active mix and listening state obvious. **Required verification:** Current/draft comprehension. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0228-02 — Build draft sleeve gallery.** **Acceptance:** Draft and ready mix statuses correct. **Required verification:** Mixed-state fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0228-03 — Explain edit versus play.** **Acceptance:** Clear project actions by scope. **Required verification:** Novice task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0228-04 — Protect draft activation.** **Acceptance:** Explicit replacement or change consent if required. **Required verification:** Revision/audio E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0228-05 — Refine naming and deletion.** **Acceptance:** Undo/confirmation applied only where real. **Required verification:** Failure and conflict tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0228-06 — Separate render line visually.** **Acceptance:** Background job queue not confused with playback Up Next. **Required verification:** Comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0228-07 — Maintain deep links.** **Acceptance:** Draft IDs and current mix remain stable after navigation. **Required verification:** Route test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0228-08 — Verify collection lifecycle.** **Acceptance:** Create, save, edit, export and return coherent. **Required verification:** End-to-end journey. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0229 — First-run library awakening with honest local filesystem and first play](adr-0229-first-run.md)
+
+**Priority / phase:** P0 / Onboarding. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0229-01 — Design local setup explanation.** **Acceptance:** User understands browser/server folder relationship. **Required verification:** First-time comprehension test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0229-02 — Refine path validation.** **Acceptance:** Missing/invalid/disallowed folders show accurate reason. **Required verification:** Local path fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0229-03 — Explain lyrics metadata lookup.** **Acceptance:** Artist/title/album/duration exposure disclosed. **Required verification:** Privacy review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0229-04 — Design actual library awakening.** **Acceptance:** Discovered, analyzed and playable counts separate. **Required verification:** Live scan state tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0229-05 — Honor six-ready-song threshold.** **Acceptance:** First mix offered only when eligible. **Required verification:** Readiness E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0229-06 — Handle slow or interrupted scan.** **Acceptance:** Resume/retry never pretend completed work. **Required verification:** Offline/interrupt tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0229-07 — Make first play obvious.** **Acceptance:** One safe action and accessible audio expectations. **Required verification:** Novice task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0229-08 — Evaluate first handoff milestone.** **Acceptance:** Actual audio audition plus understanding measured. **Required verification:** Uncoached real-music session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
