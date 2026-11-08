@@ -190,6 +190,15 @@ export function draftWords(draft: {
     return `${draft.ready} of ${draft.seams} ready, ${draft.failed} couldn’t be made`;
   }
   const done = `${draft.ready} of ${draft.seams} ready`;
+  // A queued or in-progress draft may already contain a failed transition.
+  // Never promise "all ready" or hide that blocked edge behind an ETA.
+  if (draft.failed > 0) {
+    const error = `${draft.failed} couldn’t be made`;
+    const remaining = `${draft.waiting} still waiting`;
+    return draft.place === null
+      ? `${done}, ${error}; ${remaining}`
+      : `${draft.rendering ? 'Rendering other transitions. ' : 'Other transitions are in line. '}${done}, ${error}; ${remaining}`;
+  }
   if (draft.place === null) return done;
   const wait = etaRangeWords(draft.eta ?? undefined);
   return draft.rendering ? `Rendering now. ${done}, ${wait} left` : `${done}. All ready in ${wait}`;
