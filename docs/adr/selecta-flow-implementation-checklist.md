@@ -107,3 +107,107 @@
 - [ ] **SF-0205-06 — Handle interruptions.** **Acceptance:** Fast navigation/escape settle correctly. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0205-07 — Budget render and power cost.** **Acceptance:** Stop hidden loops, cap expensive effects. **Required verification:** Real hardware profiler. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0205-08 — Validate comfort and delight.** **Acceptance:** User benefits not outweighed by distraction. **Required verification:** Counterbalanced participant study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0206 — Honest cover art, song motifs and Mix Sleeves](adr-0206-music-artwork.md)
+
+**Priority / phase:** P1 / Visual identity. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0206-01 — Define artwork provenance.** **Acceptance:** Real, decorative and measured identities distinguishable. **Required verification:** Metadata contract audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0206-02 — Build deterministic song motifs.** **Acceptance:** Stable ID produces stable repeatable identity. **Required verification:** Duplicate-title and refresh test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0206-03 — Handle actual cover media.** **Acceptance:** Corrupt, missing and oversized images safe. **Required verification:** Media-fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0206-04 — Design Mix Sleeve component.** **Acceptance:** Mix object looks consistent across surfaces. **Required verification:** Cross-route snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0206-05 — Create a limited art-family system.** **Acceptance:** Options fit product aesthetic. **Required verification:** Theme gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0206-06 — Guard local-only media access.** **Acceptance:** No unrequested remote song/image upload. **Required verification:** Network inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0206-07 — Validate legibility over art.** **Acceptance:** Contrast, crop and 320px usability. **Required verification:** Responsive test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0206-08 — Preserve identity through revision.** **Acceptance:** Current and draft never show wrong sleeves. **Required verification:** Revision/source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0207 — The Thread: truthful music-object continuity grammar](adr-0207-the-thread.md)
+
+**Priority / phase:** P0 / Visual identity. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0207-01 — Define provenance categories.** **Acceptance:** Decorative/planned/measured/rendered/heard states typed. **Required verification:** Model mapping. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0207-02 — Design Thread marks.** **Acceptance:** Ready/planned/blocked identifiable without hue. **Required verification:** Grayscale review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0207-03 — Bind stable song and seam IDs.** **Acceptance:** Repeated songs remain unambiguous. **Required verification:** Duplicate ID tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0207-04 — Design static/AT descriptions.** **Acceptance:** Visual information recoverable without animation. **Required verification:** NVDA and motion tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0207-05 — Scale compact-to-expanded forms.** **Acceptance:** Player/card/editor use common grammar. **Required verification:** 320–2560 visual fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0207-06 — Distinguish energy intent/outcome.** **Acceptance:** Values and uncertainty labeled separately. **Required verification:** Data schema verification. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0207-07 — Roll out across surfaces.** **Acceptance:** Reuse one component contract without state coupling. **Required verification:** Cross-route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0207-08 — Validate first-glance truth.** **Acceptance:** People distinguish planned/playing/ready. **Required verification:** User comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0208 — Intent navigation and contextual scene continuity](adr-0208-navigation.md)
+
+**Priority / phase:** P0 / Shell. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0208-01 — Map old and proposed routes.** **Acceptance:** All destinations reachable and named. **Required verification:** Route parity tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0208-02 — Design desktop navigation.** **Acceptance:** Music intentions prioritised, Workspace quiet. **Required verification:** Findability study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0208-03 — Design mobile navigation.** **Acceptance:** No obstructed persistent player or controls. **Required verification:** Touch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0208-04 — Preserve deep links and history.** **Acceptance:** Back/Forward and refresh safe. **Required verification:** Router test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0208-05 — Maintain selected creative context.** **Acceptance:** Mix, seam, query and inspector persist. **Required verification:** State E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0208-06 — Define focus/scroll restoration.** **Acceptance:** Keyboard and AT context survives navigation. **Required verification:** NVDA test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0208-07 — Prototype optional scene transitions.** **Acceptance:** Unsupported API gets instant fallback. **Required verification:** Feature detection test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0208-08 — Validate no audio side effects.** **Acceptance:** Route changes never restart transport. **Required verification:** Audio owner regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0209 — Transport hierarchy, persistent audio focus and media session](adr-0209-persistent-player.md)
+
+**Priority / phase:** P0 / Shell. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0209-01 — Model all player states.** **Acceptance:** Idle/loading/playing/paused/seam/failure mapped. **Required verification:** State tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0209-02 — Redesign desktop transport.** **Acceptance:** Primary controls and identity coherent. **Required verification:** Wide/shallow visual review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0209-03 — Redesign mobile mini-player.** **Acceptance:** Safe area, nav and keyboard insets work. **Required verification:** 320–430 touch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0209-04 — Use authentic playback clock.** **Acceptance:** Progress and transition match actual sound. **Required verification:** Audio/video sync study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0209-05 — Guarantee single owner.** **Acceptance:** Preview/Studio/Listen cannot overlap unexpectedly. **Required verification:** Focus race test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0209-06 — Preserve intentional Pause.** **Acceptance:** Theme, navigation, failure never restart sound. **Required verification:** Pause/route E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0209-07 — Verify supported media keys.** **Acceptance:** OS controls reflect actual session. **Required verification:** Windows/Edge device test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0209-08 — Audit accessible transport.** **Acceptance:** Control names and state announcements work. **Required verification:** Keyboard and NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0210 — Listening Theatre: cinematic song-first listening](adr-0210-listening-theatre.md)
+
+**Priority / phase:** P0 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0210-01 — Compose song-first hero.** **Acceptance:** Song, artist, artwork and transport dominate. **Required verification:** Dark/light first-glance review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0210-02 — Design narrow screen.** **Acceptance:** 320–430px and landscape preserve transport. **Required verification:** Touch and zoom E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0210-03 — Map player scenes.** **Acceptance:** Idle, playing, waiting, handoff and error display truth. **Required verification:** Player fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0210-04 — Refine artwork fallback.** **Acceptance:** No-art rendering remains meaningful without metadata claims. **Required verification:** Absent-media test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0210-05 — Progressively disclose DJ controls.** **Acceptance:** Precision actions remain discoverable. **Required verification:** Novice/DJ tasks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0210-06 — Integrate lyrics and Up Next.** **Acceptance:** Panels never obstruct transport or text. **Required verification:** Real playback visual review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0210-07 — Harden Stage lifecycle.** **Acceptance:** Fullscreen cancel and Escape preserve player and focus. **Required verification:** Fullscreen tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0210-08 — Assess immersive comfort.** **Acceptance:** Listeners prefer new composition without task loss. **Required verification:** Comparative music study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0211 — Audio-clock Handoff Scene and truthful transition choreography](adr-0211-real-handoff.md)
+
+**Priority / phase:** P0 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0211-01 — Model real handoff phases.** **Acceptance:** Enter, overlap, takeover and done follow player events. **Required verification:** Audio-clock unit tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0211-02 — Design technique families.** **Acceptance:** Cut, blend, wordplay and stem treatments are truthful. **Required verification:** DJ audio review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0211-03 — Bind exact track identities.** **Acceptance:** Duplicate occurrence and pair revision safe. **Required verification:** Pair-key tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0211-04 — Synchronize visuals to sound.** **Acceptance:** Graphics follow actual handoff timing. **Required verification:** Audio-video correlation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0211-05 — Represent fallback state.** **Acceptance:** Changed move and failed render not hidden. **Required verification:** Failure fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0211-06 — Allow interrupted handoff.** **Acceptance:** Seek, skip and Pause settle safely. **Required verification:** Lifecycle E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0211-07 — Offer still and AT equivalents.** **Acceptance:** Essential details spoken or written without motion. **Required verification:** NVDA test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0211-08 — Assess artistic payoff.** **Acceptance:** Delight rises without distraction. **Required verification:** Counterbalanced listener study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0212 — Curation and visual refinement of fifteen existing spectrum styles](adr-0212-visualizer-curation.md)
+
+**Priority / phase:** P1 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0212-01 — Audit existing modes.** **Acceptance:** Exact real-frequency mapping recorded. **Required verification:** Spectrum source review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0212-02 — Refine brand coherence.** **Acceptance:** All modes have intentional palette and composition. **Required verification:** Screen gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0212-03 — Curate selector groups.** **Acceptance:** Signature and specialist modes findable. **Required verification:** Preference study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0212-04 — Define honest silence.** **Acceptance:** Zero input remains quiet and static. **Required verification:** Silence fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0212-05 — Preserve transport on switch.** **Acceptance:** No pause, seek or restart by visual choice. **Required verification:** Audio-owner tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0212-06 — Budget visual performance.** **Acceptance:** Loop stops hidden and limits allocation. **Required verification:** CPU GPU profiles. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0212-07 — Audit accessibility.** **Acceptance:** Name, contrast and reduced motion across all styles. **Required verification:** NVDA and comfort review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0212-08 — Approve meaningful default.** **Acceptance:** Most useful signature mode justified. **Required verification:** Listener comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0213 — Editorial lyrics, verified wordplay and fullscreen Stage](adr-0213-lyric-stage.md)
+
+**Priority / phase:** P1 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0213-01 — Define timing confidence.** **Acceptance:** Line, word and unknown are distinguishable. **Required verification:** Metadata fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0213-02 — Design Focus lyrics.** **Acceptance:** Live lyrics remain unobtrusive. **Required verification:** Listening test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0213-03 — Design Reading lyrics.** **Acceptance:** Manual scroll persists and long text fits. **Required verification:** Scroll E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0213-04 — Design Stage lyrics.** **Acceptance:** Fullscreen accessible with safe fallback. **Required verification:** Escape/refusal test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0213-05 — Reveal real wordplay.** **Acceptance:** Shared phrase only on proven handoff. **Required verification:** Wordplay fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0213-06 — Handle RTL and long lines.** **Acceptance:** No clipping or overlap at 400% zoom. **Required verification:** Unicode snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0213-07 — Limit announcements.** **Acceptance:** No continuous lyric tick chatter. **Required verification:** NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0213-08 — Assess reading comfort.** **Acceptance:** Reduced motion has equivalent meaning. **Required verification:** User reading study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
