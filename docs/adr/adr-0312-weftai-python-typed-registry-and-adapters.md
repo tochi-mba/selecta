@@ -1,6 +1,6 @@
 # ADR-0312 — WeftAI Python registry, typed music collections and provider adapters
 
-- **Decision:** Proposed (owner review pending; docs-only).
+- **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Selecta is Python 3.12/FastAPI; a separate TypeScript agent backend is not necessary. The Python WeftAI package supports typed collections, plans, ref fields, standard operations, registry filters and provider adapters, but Lucy-specific operations are new work. This new decision adds Lucy requirements; it does not assert existing capability absence or certify source implementation. Re-check source at implementation SHA.
+Selecta is Python 3.12/FastAPI; a separate TypeScript agent backend is not necessary. The Python WeftAI package supports typed collections, plans, ref fields, standard operations, registry filters and provider adapters, but Lucy-specific operations are new work. This accepted decision adds Lucy requirements; it does not assert existing capability absence or certify source implementation. Re-check source at implementation SHA.
 
 ## Proposed decision
 

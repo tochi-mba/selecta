@@ -1,6 +1,6 @@
 # ADR-0315 — Music feature, per-track diagnostics and analysis-request tool contract
 
-- **Decision:** Proposed (owner review pending; docs-only).
+- **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Selecta computes actual tempo, key, loudness, energy, section and cue data, with confidence/versions and readiness. A model cannot infer those musical measurements accurately from titles. This new decision adds Lucy requirements; it does not assert existing capability absence or certify source implementation. Re-check source at implementation SHA.
+Selecta computes actual tempo, key, loudness, energy, section and cue data, with confidence/versions and readiness. A model cannot infer those musical measurements accurately from titles. This accepted decision adds Lucy requirements; it does not assert existing capability absence or certify source implementation. Re-check source at implementation SHA.
 
 ## Proposed decision
 

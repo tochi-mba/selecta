@@ -1,6 +1,6 @@
 # ADR-0313 — WeftAI sessions, parallel plans, rerun, caching and progress hooks
 
-- **Decision:** Proposed (owner review pending; docs-only).
+- **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-WeftAI's default session is 'default'; in-memory results expire and plan histories are bounded. Cross-turn Lucy needs explicit per-conversation sessions, safe rehydration and event hooks without confusing plan reruns with saved proposal revisions. This new decision adds Lucy requirements; it does not assert existing capability absence or certify source implementation. Re-check source at implementation SHA.
+WeftAI's default session is 'default'; in-memory results expire and plan histories are bounded. Cross-turn Lucy needs explicit per-conversation sessions, safe rehydration and event hooks without confusing plan reruns with saved proposal revisions. This accepted decision adds Lucy requirements; it does not assert existing capability absence or certify source implementation. Re-check source at implementation SHA.
 
 ## Proposed decision
 
