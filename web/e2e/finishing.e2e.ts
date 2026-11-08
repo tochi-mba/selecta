@@ -319,7 +319,7 @@ test('the full Studio grid works at the smallest size: it scrolls by itself, and
   const first = squares.first();
   await first.focus();
   for (let move = 0; move < 7; move += 1) await page.keyboard.press('ArrowRight');
-  const last = page.getByRole('button', { name: 'Morning Light voice, square 8' });
+  const last = page.getByRole('button', { name: /^Morning Light voice, bars 15–16, (?:on|off)$/ });
   await expect(last).toBeFocused();
   await expect(last).toBeInViewport();
   // the part's own name stays in sight while the squares scroll past it
