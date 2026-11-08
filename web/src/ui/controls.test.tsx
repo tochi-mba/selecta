@@ -206,6 +206,9 @@ describe('things on top of the page', () => {
     render(<Nested />);
     const parent = screen.getByRole('dialog', { name: 'Parent' });
     const opener = screen.getByRole('button', { name: 'Open child' });
+    // fireEvent.click does not perform the browser's normal pointer focus step.
+    // Model it explicitly so nested-dialog restoration checks the real opener.
+    opener.focus();
     fireEvent.click(opener);
     expect(parent.closest('.overlay')).toHaveAttribute('inert');
     const child = screen.getByRole('dialog', { name: 'Child' });
