@@ -50,7 +50,7 @@ PROVIDERS = {
     "openai": "OpenAI-compatible",
 }
 
-DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "openai": "gpt-5"}
+DEFAULT_MODELS = {"anthropic": "claude-opus-5-5"}
 DEFAULT_URLS = {"anthropic": "https://api.anthropic.com", "openai": "https://api.openai.com/v1"}
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
@@ -197,6 +197,8 @@ def status(conn: sqlite3.Connection, home: Path) -> dict:
         mode, reason = "unavailable", "Add an API key for Anthropic."
     elif kind == "openai" and provider["remote"] and not key_set:
         mode, reason = "unavailable", "Add an API key for this provider."
+    elif kind == "openai" and not provider["model"]:
+        mode, reason = "unavailable", "Name the model to use on this host."
     else:
         mode = "full"
     shared = {
