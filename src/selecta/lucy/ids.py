@@ -20,6 +20,8 @@ PREFIXES = {
     "occurrence": "occ",
     "memory": "mem",
     "permission": "perm",
+    "rule": "rule",
+    "commit": "commit",
 }
 
 

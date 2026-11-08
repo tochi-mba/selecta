@@ -17,6 +17,7 @@ from typing import Any
 import soundfile as sf
 
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE
+from selecta.mix import LAST_EXIT, SHORTEST_STAY, SHORTEST_STAY_LATE_ON
 from selecta.planner.memory import RULES_VERSION
 from selecta.seam_kinds import STUDIO_SESSION, SeamRequest
 
@@ -150,12 +151,24 @@ def ready_inventory(store: Any, songs: dict[int, Any]) -> tuple[dict[int, list[R
     }
 
 
-def _compatible(previous: ReadyEdge | None, edge: ReadyEdge) -> bool:
-    """An incoming transition must finish before the next one leaves the same song."""
+def _compatible(previous: ReadyEdge | None, edge: ReadyEdge, songs: dict[int, Any]) -> bool:
+    """An incoming transition must finish before the next one leaves the same song.
+
+    This mirrors `mix.with_room` exactly: if the engine would push this seam later (and so change
+    its request key), the clip on disk is not the one that would play, and the path isn't ready.
+    """
     if previous is None:
         return True
-    # The normal mix engine protects at least an eight-second late stay.
-    return edge.a_source_start + 1e-6 >= previous.b_source_end + 8.0
+    wanted = previous.b_source_end + SHORTEST_STAY
+    duration = getattr(songs.get(edge.a), "duration", None)
+    if duration is not None and wanted > duration - LAST_EXIT:
+        wanted = previous.b_source_end + SHORTEST_STAY_LATE_ON
+        if wanted > duration - LAST_EXIT:
+            return True  # entered right at its end; the engine leaves such a seam alone
+    if (edge.settings.get("exit_bar") is not None or edge.settings.get("shape")
+            or (edge.settings.get("leave_after") or 0.0) >= wanted - 1.0):
+        return edge.a_source_start + 1e-6 >= previous.b_source_end
+    return edge.a_source_start + 1e-6 >= wanted
 
 
 def validate_path(
@@ -177,7 +190,7 @@ def validate_path(
         )
         if edge is None:
             raise ValueError("A previously ready transition is no longer playable.")
-        if not _compatible(chosen[-1] if chosen else None, edge):
+        if not _compatible(chosen[-1] if chosen else None, edge, songs):
             raise ValueError("The approved transition cues would skip part of a song.")
         chosen.append(edge)
     return chosen
@@ -231,7 +244,7 @@ def plan_ready_path(
             steps += 1
             if edge.b in used or (end is not None and edge.b == end and len(ids) != count - 1):
                 continue
-            if not _compatible(edges[-1] if edges else None, edge):
+            if not _compatible(edges[-1] if edges else None, edge, songs):
                 continue
             artist = (songs[edge.b].artist or "").strip().casefold()
             if artist and artist != "unknown artist" and artist in artists[-10:]:
