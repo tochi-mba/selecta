@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 from fastapi import HTTPException, Response
+from pydantic import BaseModel, Field
 
 from selecta import audio as audio_io
 from selecta import db
@@ -32,6 +33,17 @@ from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_line_left
 from selecta.library.relevance import match_label, relevance
 from selecta.library.scan import ScanStopped
+
+
+class BatchEntry(BaseModel):
+    id: int
+    # Snapshot visible when the action was offered; prevents stale edits.
+    expected: bool
+
+
+class BatchRequest(BaseModel):
+    action: str
+    entries: list[BatchEntry] = Field(min_length=1, max_length=200)
 
 
 def add_routes(app, ctx) -> None:
@@ -206,6 +218,62 @@ def add_routes(app, ctx) -> None:
             current.symmetric_difference_update({song_id})
             db.set_preference(conn, "never_play", sorted(current))
         return {"song_id": song_id, "never": song_id in current}
+
+    @app.post("/api/library/batch")
+    def batch_library_actions(body: BatchRequest) -> dict:
+        """Apply a deliberate change to precisely identified songs atomically.
+
+        All IDs and previously displayed values must still match. A concurrent
+        scan, another tab or stale filtered list aborts the entire batch.
+        """
+        if body.action not in {"prioritize", "deprioritize", "never", "allow"}:
+            raise HTTPException(400, "Unsupported batch action.")
+        ids = [entry.id for entry in body.entries]
+        if len(set(ids)) != len(ids) or any(song_id <= 0 for song_id in ids):
+            raise HTTPException(400, "Select distinct valid song IDs.")
+        is_priority = body.action in {"prioritize", "deprioritize"}
+        with connect() as conn:
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+                params = ",".join("?" for _ in ids)
+                selected = conn.execute(
+                    f"SELECT id,processing_priority FROM songs WHERE id IN ({params}) "
+                    "AND is_music=1 AND duplicate_of IS NULL",
+                    ids,
+                ).fetchall()
+                if len(selected) != len(ids):
+                    raise HTTPException(409, "The Library selection changed. Refresh and try again.")
+                by_id = {row["id"]: row for row in selected}
+                current_never = never_played(conn)
+                for entry in body.entries:
+                    existing = (
+                        by_id[entry.id]["processing_priority"] == 100
+                        if is_priority else entry.id in current_never
+                    )
+                    if existing != entry.expected:
+                        raise HTTPException(409, "A song changed since selection. Refresh and try again.")
+                if is_priority:
+                    wanted = 100 if body.action == "prioritize" else 0
+                    conn.executemany(
+                        "UPDATE songs SET processing_priority=? WHERE id=?",
+                        [(wanted, song_id) for song_id in ids],
+                    )
+                else:
+                    if body.action == "never":
+                        current_never.update(ids)
+                    else:
+                        current_never.difference_update(ids)
+                    conn.execute(
+                        "INSERT INTO preferences(key,value) VALUES('never_play',?) "
+                        "ON CONFLICT(key) DO UPDATE SET value=excluded.value,"
+                        "updated_at=CURRENT_TIMESTAMP",
+                        (json.dumps(sorted(current_never)),),
+                    )
+                conn.commit()
+                return {"updated": len(ids), "action": body.action, "ids": ids}
+            except Exception:
+                conn.rollback()
+                raise
 
     @app.get("/api/songs")
     def songs(q: str = "", state: str = "all", limit: int = 100) -> list[dict]:
