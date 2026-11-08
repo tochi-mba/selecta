@@ -163,7 +163,6 @@ FAMILY_NAMES = {
     "pop": "Pop",
     "rnb": "R&B & soul",
     "rock": "Rock & indie",
-    "other": "Alternative",
 }
 COHESIVE_JOURNEYS = {"slow_burn", "lift_off", "cool_down", "no_dips", "wordplay"}
 
@@ -358,7 +357,7 @@ VIBES: tuple[Vibe, ...] = (
         "rap_run",
         "Rap run",
         "Hip-hop mixed the way rap gets mixed, landing hard on the one.",
-        lambda s, t: s.family == "hiphop" or (t.wordy >= 0.9 and t.english),
+        lambda s, t: s.family == "hiphop",
         group=SOUND,
         belongs=lambda _, t: t.wordy + 0.5 * t.about("flex"),
         language="punchy",
@@ -396,7 +395,7 @@ VIBES: tuple[Vibe, ...] = (
         "guitars",
         "Guitars out",
         "Rock, indie and guitar-led songs with choruses given space to land.",
-        lambda s, _: s.family in {"rock", "other"},
+        lambda s, _: s.family == "rock",
         group=SOUND,
         belongs=lambda _, t: 0.65 * t.hook + 0.35 * t.energy,
         language="punchy",
@@ -535,7 +534,7 @@ def traits_of(songs: list[SongInfo], years: dict[int, Any]) -> dict[int, Traits]
     if not songs:
         return {}
     facts = [read_lyrics(song) for song in songs]
-    energy = np.argsort(np.argsort([song.energy for song in songs])) / max(len(songs) - 1, 1)
+    energy = _ranks([song.energy for song in songs])
     hook = _ranks([fact.hook for fact in facts])
     wordy = _ranks([fact.density for fact in facts])
     theme = {name: _ranks([fact.themes.get(name, 0.0) for fact in facts]) for name in THEMES}
@@ -644,8 +643,10 @@ def build_vibe(
                 raise ValueError(f"Choose a {family} song for this mix destination")
             if vibe.seasonal:
                 raise ValueError("choose a Christmas song for the Christmas mix destination")
-            found.append(destination)
+            raise ValueError(f"That destination song does not belong in {vibe.name}.")
     rng = np.random.default_rng(seed)
+    if not found:
+        raise ValueError(f"No matching mix-ready songs are available for {vibe.name}.")
     if start is not None and all(song.id != start for song in found):
         raise ValueError(f"That starting song does not belong in {vibe.name}.")
     first = start if start is not None else _opening_song(vibe, found, traits, rng, energy_arc).id
