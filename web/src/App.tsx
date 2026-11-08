@@ -11,6 +11,7 @@ import { PageLink, Shell } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
 import { orderOf } from './state/readiness';
+import { operationId } from './state/async';
 import { SHORTCUTS, shortcutFor } from './state/shortcuts';
 import { openGlossary } from './state/glossaryRequests';
 import { sayThisTabIsPlaying, whenAnotherTabPlays } from './state/tabs';
@@ -216,19 +217,31 @@ export function App() {
   }, [player]);
   const [confirmDraft, setConfirmDraft] = useState<{ id: number; from: number; order: string; replacing: string } | null>(null);
   const activatingDraft = useRef(false);
+  // Keep the original request identity after a lost acknowledgement.
+  const draftPlayOperations = useRef(new Map<number, { order: string; key: string }>());
   const activateDraft = useCallback(async (id: number, from: number, expectedOrder: string) => {
     if (activatingDraft.current) return;
     activatingDraft.current = true;
+    const pending = draftPlayOperations.current.get(id);
+    const request = pending ?? { order: expectedOrder, key: operationId('draft-play') };
+    draftPlayOperations.current.set(id, request);
     try {
-      // The server rejects a draft activation if the current mix changed in
-      // another tab since the listener chose which mix to replace.
-      const next = await post<MixData>(`/drafts/${id}/play`, undefined, { 'x-mix-order': expectedOrder });
+      // An uncertain retry sends the same operation and same original order.
+      const next = await post<MixData>(`/drafts/${id}/play`, undefined, {
+        'x-mix-order': request.order,
+        'x-operation-id': request.key,
+      });
+      draftPlayOperations.current.delete(id);
       setMixData(next);
       navigate('/listen');
       void player.playFrom(from);
       const order = orderOf(next.mix);
       showToast(`Now playing ${next.name}. What was playing is kept in your drafts.`, { scope: 'current', undo: () => undoIn(null, order) });
     } catch (error) {
+      // A definite 4xx rejection is not a lost reply. Other failures retain
+      // the original key until a server acknowledgement can reconcile it.
+      if (error instanceof ApiError && error.status >= 400
+        && error.status < 500 && error.status !== 408) draftPlayOperations.current.delete(id);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       throw error;
     } finally {
