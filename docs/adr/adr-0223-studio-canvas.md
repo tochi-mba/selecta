@@ -1,6 +1,6 @@
 # ADR-0223 — Stem Studio as a truthful two-song musical canvas
 
-- **Decision:** Proposed (owner decision pending).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
@@ -47,5 +47,5 @@ Preserve single audio owner, intentional Pause, original media and local privacy
 
 - **Depends on:** ADR-0152/0174/0122 and new foundation ADR-0198/0199, plus shared visual system.
 - **Next:** owner decision → prototype/critique → targeted implementation PR with tests → independent human/AT/real-audio/performance evidence → GO/NO-GO.
-- **Now:** Proposed, 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
+- **Now:** Accepted, 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).
