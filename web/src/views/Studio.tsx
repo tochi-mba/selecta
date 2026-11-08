@@ -5,6 +5,7 @@ import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
 import { Action, announce, Problem } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { SongMotif } from '../ui/MusicObjects';
 import { moveInGrid } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
 import { useMixPath } from './mixScope';
@@ -449,7 +450,7 @@ export function Studio(props: {
       <header className="studio-head">
         <div className="studio-pair">
           <h3>Shape transition {position}</h3>
-          <p><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <b>{item.title}</b></p>
+          <p><SongMotif songId={previous.song_id} /><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <SongMotif songId={item.song_id} /><b>{item.title}</b></p>
         </div>
         {shape && loaded && (
           <div className="studio-transport">

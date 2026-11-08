@@ -8,6 +8,7 @@ import { orderOf, trackReadiness } from '../state/readiness';
 import { operationId } from '../state/async';
 import { Action, Dialog, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { SongMotif } from '../ui/MusicObjects';
 import { SearchField } from '../ui/primitives';
 import { ViewProps } from './shared';
 import { SongDetails } from './SongDetails';
@@ -377,7 +378,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''}`}>
               <div className="song-name">
                 <button className="link song-open" onClick={() => setOpened(song.id)} aria-label={`Details for ${name}`}>
-                  <b title={title}>{title}</b>
+                  <SongMotif songId={song.id} /><b title={title}>{title}</b>
                 </button>
                 <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
               </div>

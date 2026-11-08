@@ -8,6 +8,7 @@ import { useShownTheme } from '../state/prefs';
 import { Icon } from '../ui/Icon';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
+import { SongMotif } from '../ui/MusicObjects';
 import { RequestsContext, RequestTag } from './Requests';
 import { ViewProps } from './shared';
 
@@ -652,7 +653,7 @@ export function Now(props: ViewProps) {
         <div className="listen-main">
           <header className="listen-identity">
             <p className="eyebrow">{eyebrow}</p>
-            <h1 className="display" dir="auto">{item?.title ?? 'Untitled'}</h1>
+            <h1 className="display" dir="auto">{item && <SongMotif songId={item.song_id} large />}{item?.title ?? 'Untitled'}</h1>
             {item && <RequestTag item={item} />}
             <p className="artist" dir="auto">{item?.artist ?? 'Unknown artist'}</p>
           </header>

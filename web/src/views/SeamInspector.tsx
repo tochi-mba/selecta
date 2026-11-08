@@ -6,6 +6,7 @@ import { Action, Problem, Skeleton, Status, Workspace } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { Tabs } from '../ui/primitives';
 import { seamFacts, seamLayers } from '../ui/seam';
+import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { MixScope, useMixPath } from './mixScope';
 import { Undo } from './shared';
 import { Studio } from './Studio';
@@ -325,13 +326,14 @@ export function SeamInspector(props: {
   return (
     <div className="inspector">
       <div className="inspector-identity">
-        <p className="inspector-pair"><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <b>{item.title}</b></p>
+        <p className="inspector-pair"><SongMotif songId={previous.song_id} /><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <SongMotif songId={item.song_id} /><b>{item.title}</b></p>
         <p className="inspector-scope">
           <span>{scope === null ? 'In the current mix' : 'In a draft'}</span>
           {layers.version && <span>Version {layers.version}</span>}
         </p>
         <p className="inspector-state"><Status kind={facts.kind}>{facts.words}</Status></p>
       </div>
+      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} />
       <Tabs label="This transition" tabs={TABS} current={tab} onChange={setTab}>
         {tab === 'listen' && (
           <>

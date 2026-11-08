@@ -9,6 +9,7 @@ import './styles/foundation.css';
 import './styles/listening.css';
 import './styles/creation.css';
 import './styles/operations.css';
+import './styles/music-objects.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

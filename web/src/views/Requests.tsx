@@ -1,4 +1,5 @@
 import { Icon } from '../ui/Icon';
+import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
 import { Problem, Skeleton } from '../ui/controls';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
 import { ApiError, SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
@@ -540,6 +541,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
               </span>
               <button aria-label={`Cancel request for ${title}`} title="Cancel this request" onClick={() => void cancel(request)}>Cancel</button>
             </div>
+            <RouteDiagram songs={songs} requestedId={request.song_id} state={stage === 'ready' ? 'ready' : 'preparing'} />
             <ol className="coming-rows">
               {seams[0] && <ComingSeam item={seams[0]} />}
               {songs.map((song, index) => {
@@ -550,7 +552,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
                       <span className="grip" aria-hidden="true" />
                       <span className="count" aria-hidden="true">·</span>
                       <div className="song-name">
-                        <b>{song.title}</b>
+                        <b><SongMotif songId={song.id} />{song.title}</b>
                         <span>{song.artist ?? (bridge ? 'Leads into your request' : 'Unknown artist')}</span>
                         <span className={`request-tag ${bridge ? 'bridge' : ''}`}>{bridge ? `Bridge to ${title}` : 'Requested'}</span>
                       </div>
@@ -622,13 +624,8 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
                     <b>{extras.map((song) => song.title).join(' and ')}</b>
                     <span>{extras.length > 1 ? `${EXTRA_WORDS[extras.length]} on the way` : extras[0]?.artist ?? 'Unknown artist'}</span>
                   </div>
-                  <p className="bridge-chain">
-                    <span>{option.after}</span>
-                    {option.songs.map((song) => (
-                      <span key={song.id} className={song.bridge ? 'bridge-step' : 'bridge-wanted'}> → {song.title}</span>
-                    ))}
-                    {option.before && <span> → {option.before}</span>}
-                  </p>
+                  <p className="hint">After {option.after}{option.before ? ', before ' + option.before : ''}. These songs have not joined.</p>
+                  <RouteDiagram songs={option.songs} requestedId={request.song_id} state="proposed" />
                   <p className="hint">{option.words}</p>
                   <div className="row wrap">
                     <button className="primary" onClick={() => use(option)}>Use this</button>
