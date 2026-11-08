@@ -107,6 +107,31 @@ describe('playing through a mix', () => {
     expect(player.state.notice).toContain('wouldn’t load');
   });
 
+  it('keeps the later occurrence when the same recording appears twice', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'), seam('none', 'b'), seam('none', 'c'));
+    mix[0].song_id = mix[2].song_id;
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(2);
+    tick(player);
+    expect(player.state.position).toBe(2);
+    await player.next();
+    expect(player.state.position).toBe(3);
+  });
+
+  it('previous and seek do not jump to the first copy of the same song', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'), seam('none', 'b'), seam('none', 'c'));
+    mix[0].song_id = mix[2].song_id;
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(2);
+    await player.seek(15);
+    expect(player.state.position).toBe(2);
+    FakeAudio.now.currentTime += 1;
+    await player.previous();
+    expect(player.state.position).toBe(1);
+  });
+
   it('asks for the next seam once, even if it’s already waiting in line', async () => {
     const calls = fakeBackend({ 'POST /mix/1/render': {} });
     const fetchFake = vi.mocked(fetch);
