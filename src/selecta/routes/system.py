@@ -9,6 +9,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request
+from pydantic import BaseModel
+
+from selecta.library.relink import RelinkError, commit_relink, preview_relink
 
 from selecta import db, jobs, mix
 from selecta.api_common import (
@@ -27,6 +30,12 @@ from selecta.eta import analysis_left, analysis_line_left
 from selecta.seams import MOVES
 from selecta.session import get_steering, queue, steer
 from selecta.stems import MIN_CACHE_BYTES, cache_bytes, largest_cache_bytes, prune_cache
+
+
+class RelinkRequest(BaseModel):
+    old: str
+    new: str
+    token: str | None = None
 
 
 def add_routes(app, ctx) -> None:
@@ -133,6 +142,31 @@ def add_routes(app, ctx) -> None:
                 ).fetchone()[0]
                 shown.append({"path": str(folder), "available": folder.is_dir(), "songs": count})
         return {"folders": shown, "scan": background.scan, "watch_every": WATCH_EVERY_SECONDS}
+
+    def _relink_from_local_browser(request: Request) -> None:
+        origin = request.headers.get("origin")
+        if request.headers.get("sec-fetch-site") in {"cross-site", "same-site"} or (
+            origin and urlsplit(origin).hostname not in LOCAL_HOSTS
+        ):
+            raise HTTPException(403, "Selecta is local only")
+
+    @app.post("/api/folders/relink/preview")
+    def preview_moved_folder(body: RelinkRequest, request: Request) -> dict:
+        _relink_from_local_browser(request)
+        try:
+            with connect() as conn:
+                return preview_relink(conn, body.old, body.new)
+        except RelinkError as problem:
+            raise HTTPException(400, str(problem)) from problem
+
+    @app.post("/api/folders/relink")
+    def relink_moved_folder(body: RelinkRequest, request: Request) -> dict:
+        _relink_from_local_browser(request)
+        try:
+            with connect() as conn:
+                return commit_relink(conn, body.old, body.new, body.token or "")
+        except RelinkError as problem:
+            raise HTTPException(409, str(problem)) from problem
 
     @app.get("/api/folders/check")
     def check_a_folder(request: Request, path: str = "") -> dict:
