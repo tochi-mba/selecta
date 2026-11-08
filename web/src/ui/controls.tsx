@@ -277,7 +277,10 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
         setOpen(false);
         next.focus();
       } else {
+        event.preventDefault();
+        event.stopPropagation();
         setOpen(false);
+        opener.current?.focus();
       }
       return;
     }

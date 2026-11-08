@@ -246,6 +246,15 @@ describe('things on top of the page', () => {
 });
 
 describe('menu Tab continuity', () => {
+  it('restores the trigger if there is no other reachable tab stop', () => {
+    render(<Menu label="More"><button>Only option</button></Menu>);
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    const item = screen.getByRole('button', { name: 'Only option' });
+    item.focus();
+    fireEvent.keyDown(item, { key: 'Tab' });
+    expect(screen.getByRole('button', { name: 'More' })).toHaveFocus();
+  });
+
   it('moves forward to the following control when the selected item disappears', () => {
     render(<><button>Before</button><Menu label="More"><button>One</button><button>Two</button></Menu><button>After</button></>);
     fireEvent.click(screen.getByRole('button', { name: 'More' }));
