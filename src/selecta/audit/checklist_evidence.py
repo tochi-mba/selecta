@@ -7,6 +7,7 @@ supported, without treating an implementation tick as independent verification.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -48,6 +49,13 @@ def inline_evidence(line: str) -> str | None:
     return AFTER_EVIDENCE.split(match.group(1), maxsplit=1)[0].strip().strip("*").strip()
 
 
+def microinteraction_groups(root: Path) -> dict:
+    path = root / "docs/adr/selecta-microinteraction-code-status.json"
+    if not path.is_file():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8")).get("groups", {})
+
+
 def validate(root: Path) -> list[str]:
     """Return human-readable errors; no write operations or network access."""
     checklists = sorted((root / "docs/adr").glob("*implementation-checklist.md"))
@@ -55,6 +63,7 @@ def validate(root: Path) -> list[str]:
         return ["No implementation checklists found in docs/adr"]
 
     historical = legacy_evidence(root)
+    mi_groups = microinteraction_groups(root)
     seen: dict[str, str] = {}
     errors: list[str] = []
     for path in checklists:
@@ -79,6 +88,23 @@ def validate(root: Path) -> list[str]:
                         "in docs/adr/implementation-evidence.md"
                     )
                 continue
+
+            if task_id.startswith("MI-"):
+                _, group_id, suffix = task_id.split("-")
+                group = mi_groups.get(group_id, {})
+                if suffix not in group.get("implemented", []):
+                    errors.append(
+                        f"{location}: {task_id} is not implemented in the MI code-status ledger"
+                    )
+                for field in ("source", "tests"):
+                    sources = group.get(field, [])
+                    if not sources:
+                        errors.append(f"{location}: {task_id} has no MI {field} references")
+                    for source in sources:
+                        if not (root / source).is_file():
+                            errors.append(
+                                f"{location}: {task_id} references missing {field} file {source}"
+                            )
 
             evidence = inline_evidence(line)
             if evidence is None or not meaningful_evidence(evidence):
