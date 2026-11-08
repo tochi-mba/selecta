@@ -314,7 +314,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </p>
       </header>
       <div className="library-find">
-        <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search by artist or title" />
+        <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search titles, artists, remixes, credits or recording ID" />
         <label className="library-sort">
           Sort by
           <select value={sort} onChange={(event) => setAddressQuery({ sort: event.target.value === 'title' ? null : event.target.value, pages: null }, { push: true })}>
@@ -357,7 +357,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
           <h2>{query ? `Nothing matches “${query}”.` : 'No songs in this view'}</h2>
-          <p>Try a different title or artist, or show all songs to check their progress.</p>
+          <p>Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.</p>
           <div className="row wrap">
             {query && <button onClick={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}>Clear search</button>}
             {filter !== 'all' && <button onClick={() => setAddressQuery({ show: null, pages: null }, { push: true })}>Show all songs</button>}
@@ -386,6 +386,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                   <SongMotif songId={song.id} /><b title={title}>{title}</b>
                 </button>
                 <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
+                {query && song.match && <small className="hint" aria-label={`Search match: ${song.match}`}>{song.match}</small>}
               </div>
               <small className="facts song-columns">
                 <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
