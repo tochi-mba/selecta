@@ -133,3 +133,44 @@
 @media (forced-colors: active) {
   .library-recording-id, .library-filters button[aria-pressed='true'] { border-color: Highlight; }
 }
+
+/* Native checkboxes must not inherit the global text-input 100% width,
+   42px minimum height or padding. The label provides the 44px target. */
+.library-rows .song-name:has(.library-batch-check) {
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 2px var(--space-2);
+  align-items: center;
+}
+.library-rows .song-name:has(.library-batch-check) > :not(.library-batch-check) { grid-column: 2; min-width: 0; }
+.library-rows .library-batch-check {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.library-rows .library-batch-check input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  max-width: 20px;
+  max-height: 20px;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+.library-rows .library-batch-check:focus-within { outline: 2px solid var(--edge-focus); outline-offset: -2px; }
+.library-rows .library-batch-check:has(input:disabled) { cursor: not-allowed; }
+.library-rows .song-open { justify-self: start; max-width: 100%; min-width: 0; text-align: start; }
+.library-rows .song-open b { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+@media (forced-colors: active) {
+  .library-rows .library-batch-check:focus-within { outline-color: Highlight; }
+}
