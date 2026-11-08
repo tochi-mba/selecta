@@ -77,7 +77,9 @@ def validate(root: Path) -> list[str]:
                 continue
             task_id = match.group(1)
             if task_id in seen:
-                errors.append(f"{location}: duplicate checked task {task_id} (also {seen[task_id]})")
+                errors.append(
+                    f"{location}: duplicate checked task {task_id} (also {seen[task_id]})"
+                )
             seen[task_id] = location
 
             if re.fullmatch(r"T\d{4}", task_id):
