@@ -1,4 +1,4 @@
-# ADR-208 — Intent navigation and contextual scene continuity
+# ADR-0208 — Intent navigation and contextual scene continuity
 
 - **Decision:** Proposed (owner acceptance pending).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -30,14 +30,14 @@ No implicit draft activation, navigation-triggered audio or lost selected seam. 
 
 ## Implementation checklist — 0/8 Implemented, 0/8 Verified
 
-1. **SF-208-01 — Map old and proposed routes.** **Acceptance:** All destinations reachable and named. **Required verification:** Route parity tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-208-02 — Design desktop navigation.** **Acceptance:** Music intentions prioritised, Workspace quiet. **Required verification:** Findability study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-208-03 — Design mobile navigation.** **Acceptance:** No obstructed persistent player or controls. **Required verification:** Touch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-208-04 — Preserve deep links and history.** **Acceptance:** Back/Forward and refresh safe. **Required verification:** Router test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-208-05 — Maintain selected creative context.** **Acceptance:** Mix, seam, query and inspector persist. **Required verification:** State E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-208-06 — Define focus/scroll restoration.** **Acceptance:** Keyboard and AT context survives navigation. **Required verification:** NVDA test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-208-07 — Prototype optional scene transitions.** **Acceptance:** Unsupported API gets instant fallback. **Required verification:** Feature detection test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-208-08 — Validate no audio side effects.** **Acceptance:** Route changes never restart transport. **Required verification:** Audio owner regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0208-01 — Map old and proposed routes.** **Acceptance:** All destinations reachable and named. **Required verification:** Route parity tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0208-02 — Design desktop navigation.** **Acceptance:** Music intentions prioritised, Workspace quiet. **Required verification:** Findability study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0208-03 — Design mobile navigation.** **Acceptance:** No obstructed persistent player or controls. **Required verification:** Touch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0208-04 — Preserve deep links and history.** **Acceptance:** Back/Forward and refresh safe. **Required verification:** Router test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0208-05 — Maintain selected creative context.** **Acceptance:** Mix, seam, query and inspector persist. **Required verification:** State E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0208-06 — Define focus/scroll restoration.** **Acceptance:** Keyboard and AT context survives navigation. **Required verification:** NVDA test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0208-07 — Prototype optional scene transitions.** **Acceptance:** Unsupported API gets instant fallback. **Required verification:** Feature detection test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0208-08 — Validate no audio side effects.** **Acceptance:** Route changes never restart transport. **Required verification:** Audio owner regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 
 ## Invariants and required negative cases
 

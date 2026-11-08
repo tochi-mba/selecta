@@ -1,4 +1,4 @@
-# ADR-207 — The Thread: truthful music-object continuity grammar
+# ADR-0207 — The Thread: truthful music-object continuity grammar
 
 - **Decision:** Proposed (owner acceptance pending).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -30,14 +30,14 @@ Never disguise a plan as rendered audio, or decorative line as waveform/beat evi
 
 ## Implementation checklist — 0/8 Implemented, 0/8 Verified
 
-1. **SF-207-01 — Define provenance categories.** **Acceptance:** Decorative/planned/measured/rendered/heard states typed. **Required verification:** Model mapping. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-207-02 — Design Thread marks.** **Acceptance:** Ready/planned/blocked identifiable without hue. **Required verification:** Grayscale review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-207-03 — Bind stable song and seam IDs.** **Acceptance:** Repeated songs remain unambiguous. **Required verification:** Duplicate ID tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-207-04 — Design static/AT descriptions.** **Acceptance:** Visual information recoverable without animation. **Required verification:** NVDA and motion tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-207-05 — Scale compact-to-expanded forms.** **Acceptance:** Player/card/editor use common grammar. **Required verification:** 320–2560 visual fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-207-06 — Distinguish energy intent/outcome.** **Acceptance:** Values and uncertainty labeled separately. **Required verification:** Data schema verification. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-207-07 — Roll out across surfaces.** **Acceptance:** Reuse one component contract without state coupling. **Required verification:** Cross-route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-207-08 — Validate first-glance truth.** **Acceptance:** People distinguish planned/playing/ready. **Required verification:** User comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0207-01 — Define provenance categories.** **Acceptance:** Decorative/planned/measured/rendered/heard states typed. **Required verification:** Model mapping. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0207-02 — Design Thread marks.** **Acceptance:** Ready/planned/blocked identifiable without hue. **Required verification:** Grayscale review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0207-03 — Bind stable song and seam IDs.** **Acceptance:** Repeated songs remain unambiguous. **Required verification:** Duplicate ID tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0207-04 — Design static/AT descriptions.** **Acceptance:** Visual information recoverable without animation. **Required verification:** NVDA and motion tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0207-05 — Scale compact-to-expanded forms.** **Acceptance:** Player/card/editor use common grammar. **Required verification:** 320–2560 visual fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0207-06 — Distinguish energy intent/outcome.** **Acceptance:** Values and uncertainty labeled separately. **Required verification:** Data schema verification. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0207-07 — Roll out across surfaces.** **Acceptance:** Reuse one component contract without state coupling. **Required verification:** Cross-route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0207-08 — Validate first-glance truth.** **Acceptance:** People distinguish planned/playing/ready. **Required verification:** User comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 
 ## Invariants and required negative cases
 
