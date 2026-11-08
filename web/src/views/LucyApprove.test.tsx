@@ -23,6 +23,29 @@ const props = {
 afterEach(() => { vi.restoreAllMocks(); window.sessionStorage.clear(); });
 
 describe('Lucy approval revision identity', () => {
+  it('keeps the most recent approval choice when two preflights finish out of order', async () => {
+    const first = deferred<Approval>();
+    const second = deferred<Approval>();
+    vi.spyOn(lucy, 'approve').mockImplementation(({ action }) =>
+      action === 'draft' ? first.promise : second.promise);
+    render(<Approve {...props} revision={revision('rev')} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Save as draft' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save and play' }));
+    await act(async () => second.resolve(approval('draft_and_play')));
+    expect(within(screen.getByRole('dialog')).getByText(/replaces what.s playing/i)).toBeInTheDocument();
+    await act(async () => first.resolve(approval('draft')));
+    expect(within(screen.getByRole('dialog')).getByText(/replaces what.s playing/i)).toBeInTheDocument();
+  });
+
+  it('disables an open confirmation when that revision is no longer current', async () => {
+    vi.spyOn(lucy, 'approve').mockResolvedValue(approval());
+    const { rerender } = render(<Approve {...props} revision={revision('rev')} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Save as draft' }));
+    expect(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Save as draft' })).toBeEnabled();
+    rerender(<Approve {...props} isCurrent={false} revision={revision('rev')} />);
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save as draft' })).toBeDisabled();
+  });
+
   it('discards a preflight response for the previous revision', async () => {
     const old = deferred<Approval>();
     const ask = vi.spyOn(lucy, 'approve').mockImplementation(({ revision: id }) =>

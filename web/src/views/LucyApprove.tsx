@@ -67,12 +67,14 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   const revisionNow = useRef(revision.id);
   revisionNow.current = revision.id;
   const [approvalFor, setApprovalFor] = useState('');
+  const approvalRequest = useRef(0);
   const activeApproval = approvalFor === revision.id ? approval : null;
   const [understood, setUnderstood] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [lapsed, setLapsed] = useState(false);
   // An approval token describes one exact immutable proposal revision.
   useEffect(() => {
+    approvalRequest.current += 1;
     setApproval(null);
     setApprovalFor('');
     setUnderstood(false);
@@ -139,11 +141,13 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
 
   async function reconcile(asked: PendingCommit) {
     if (!alive.current) return;
-    setOutcome((was) => (was?.state === 'saving' ? was : { state: 'checking' }));
+    if (asked.revision === revisionNow.current) {
+      setOutcome((was) => (was?.state === 'saving' ? was : { state: 'checking' }));
+    }
     try {
       await settle(asked, await lucy.commitResult(asked.key));
     } catch (error) {
-      if (!alive.current) return;
+      if (!alive.current || asked.revision !== revisionNow.current) return;
       if (error instanceof ApiError && error.status === 404) setOutcome({ state: 'not-received' });
       else setOutcome({ state: 'unknown', message: problemKind(error) === 'offline' ? 'Selecta can’t be reached right now.' : (error as Error).message });
     }
@@ -178,17 +182,19 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   }, [seen]);
 
   const ask = async (action: ApproveAction) => {
+    if (pending.current) return;
     const requestedRevision = revision.id;
+    const mine = ++approvalRequest.current;
     setOutcome(null);
     setLapsed(false);
     try {
       const answer = await lucy.approve({ revision: requestedRevision, hash: revision.hash, action });
-      if (revisionNow.current !== requestedRevision) return;
+      if (revisionNow.current !== requestedRevision || approvalRequest.current !== mine) return;
       setUnderstood(false);
       setApprovalFor(requestedRevision);
       setApproval(answer);
     } catch (error) {
-      if (revisionNow.current !== requestedRevision) return;
+      if (revisionNow.current !== requestedRevision || approvalRequest.current !== mine) return;
       if (error instanceof ApiError && error.status === 409) onStale();
       throw error;
     }
@@ -212,12 +218,13 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   };
 
   const busy = outcome?.state === 'saving' || outcome?.state === 'checking';
-  const disabled = !isCurrent || !!blocked || busy;
+  const disabled = !isCurrent || !!blocked || busy || !!pending.current || outcome?.state === 'saved';
   const preflight = activeApproval?.preflight;
   const problems = preflight?.problems ?? [];
   const playing = activeApproval?.action === 'draft_and_play';
   const missingStrictEdges = !!preflight?.ready_only && preflight.ready < preflight.needed;
-  const canConfirm = !!preflight && preflight.ok !== false && !problems.length && !missingStrictEdges && (!playing || understood) && !lapsed;
+  const canConfirm = !!preflight && !disabled && preflight.ok !== false
+    && !problems.length && !missingStrictEdges && (!playing || understood) && !lapsed;
 
   return (
     <div className="lucy-approve">
@@ -226,6 +233,12 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
         <Action disabled={disabled} working="Checking…" run={() => ask('draft_and_play')}>Save and play</Action>
       </div>
       {!isCurrent && <p className="hint">Make this the current revision to approve it</p>}
+      {pending.current && pending.current.revision !== revision.id && (
+        <div className="problem" role="status">
+          <p>An earlier revision has a save whose result is still being checked. Resolve it before saving another revision; nothing will be sent twice.</p>
+          <Action working="Checking…" run={() => pending.current && reconcile(pending.current)}>Check earlier save</Action>
+        </div>
+      )}
       {isCurrent && blocked && <p className="hint">{blocked}</p>}
       {isCurrent && !blocked && !outcome && <p className="hint">Saving makes a draft from exactly these songs. Save and play also replaces what’s playing, after you confirm.</p>}
 
