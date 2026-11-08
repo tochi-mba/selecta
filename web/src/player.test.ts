@@ -127,7 +127,7 @@ describe('playing through a mix', () => {
     await player.playFrom(2);
     await player.seek(15);
     expect(player.state.position).toBe(2);
-    FakeAudio.now.currentTime += 1;
+    await player.playFrom(2);
     await player.previous();
     expect(player.state.position).toBe(1);
   });
