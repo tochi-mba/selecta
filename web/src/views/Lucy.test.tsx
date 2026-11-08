@@ -45,7 +45,7 @@ const status = {
   privacy: { share_lyrics: false, share_history: false, data_classes: [] }, event_schema: 1, api_version: 1,
 };
 
-function backend(approvalReady = 2) {
+function backend(approvalReady = 2, currentRevision = revision) {
   return fakeBackend({
     'GET /lucy/status': status,
     'GET /lucy/conversations': { conversations: [conversation] },
@@ -55,13 +55,13 @@ function backend(approvalReady = 2) {
         { id: 'm1', seq: 1, role: 'user', turn: 'turn_1', run: null, content: 'make a mix', status: 'complete', revision: null, meta: {}, created_at: '' },
         { id: 'm2', seq: 2, role: 'assistant', turn: 'turn_1', run: 'run_1', content: 'Here is a **proposal**.', status: 'complete', revision: 'rev_1', meta: {}, created_at: '' },
       ],
-      proposal: { id: 'prop_1', current: revision, history: [{ ...revision, snapshot: undefined, songs: 3, title: 'Sunday mix', ready_only: true, current: true }] },
+      proposal: { id: 'prop_1', current: currentRevision, history: [{ ...currentRevision, snapshot: undefined, songs: 3, title: 'Sunday mix', ready_only: true, current: true }] },
       run: { id: 'run_1', turn: 'turn_1', state: 'completed', cycles: 0, steps: 1, limits: {}, usage: {}, error: null },
       permissions: [], cards: [], cursor: 10, event_schema: 1,
     },
     'GET /lucy/conversations/cv_1/events.json': { events: [], gap: false, cursor: 10 },
-    'GET /lucy/revisions/rev_1': revision,
-    'GET /lucy/revisions/rev_1/readiness': revision.ledger,
+    'GET /lucy/revisions/rev_1': currentRevision,
+    'GET /lucy/revisions/rev_1/readiness': currentRevision.ledger,
     'POST /lucy/conversations/cv_1/turns': { turn: { id: 'turn_2', seq: 3, status: 'queued' }, new: true, run: 'run_2' },
     'POST /lucy/approvals': (body: unknown) => ({
       token: 'tok', expires_at: Math.floor(Date.now() / 1000) + 600, action: (body as { action: string }).action,
@@ -147,4 +147,24 @@ describe('Lucy creation handoff and approval safety', () => {
     expect(within(dialog).getByRole('button', { name: 'Save as draft' })).toBeDisabled();
     expect(calls.some((call) => call.path === '/lucy/commits')).toBe(false);
   });
+  it('never counts verified transitions for a different directed occurrence pair', async () => {
+    const stale = {
+      ...revision,
+      ledger: {
+        ...revision.ledger,
+        ready: 2,
+        playable_now: false,
+        seams: [
+          { ...revision.ledger.seams[0], a_occ: 'occ_3', b_occ: 'occ_1', verified: true },
+          { ...revision.ledger.seams[1], verified: false },
+        ],
+      },
+    };
+    backend(2, stale);
+    render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /your mix/i }));
+    expect(await screen.findByText(/0 of 2 transitions ready/)).toBeInTheDocument();
+    expect(screen.getByText(/This strict plan cannot be saved as ready-only yet/)).toBeInTheDocument();
+  });
+
 });
