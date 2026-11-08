@@ -240,10 +240,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                       {card.tempo && <span className="vibe-tempo">{card.tempo[0]}–{card.tempo[1]} BPM</span>}
                     </div>
                     {card.family && <p className="vibe-scope"><span aria-hidden="true">◎</span> Stays within {card.family}</p>}
-                    <p>{card.blurb}</p>
-                     <p className="hint">Planning preference, not a promised song order or transition quality. The generated result depends on the recordings and cues available.</p>
-                    <p className="artists"><span>Draws from</span> {card.artists.join(', ') || 'your mix-ready songs'}</p>
-                    <p className="how">{card.moves}</p>
+                    <p className="vibe-card-summary">{card.blurb}</p>
                     <div className="vibe-card-facts" aria-label={`${card.songs} matching songs, about ${length(card.seconds)} of matching source audio`}>
                       <span>{card.songs} matching songs</span>
                       <span>About {length(card.seconds)} of matching source songs</span>
@@ -253,6 +250,13 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                       <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>
                       <Action className="quiet save-draft" disabled={!!building} working="Saving…" aria-label={`Save ${card.name} as a draft`} run={() => keepAsDraft(card.key)}>Save draft</Action>
                     </div>
+                    <details className="vibe-card-detail">
+                      <summary>Why {card.name}? More details</summary>
+                      <p>{card.blurb}</p>
+                      <p className="artists"><span>Draws from</span> {card.artists.join(', ') || 'your mix-ready songs'}</p>
+                      <p className="how">{card.moves}</p>
+                      <p className="hint">Planning preference, not a promised song order or transition quality. Play replaces the current mix after confirmation; Shape first opens the new mix for editing; Save draft leaves playback unchanged. The generated result depends on available recordings and cues.</p>
+                    </details>
                   </article>
                 ))}
               </div>
