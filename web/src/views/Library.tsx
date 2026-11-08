@@ -52,6 +52,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // background analysis, and deduplicating rows changes their index.
   const pageBySong = useRef(new Map<number, number>());
   const listRef = useRef<HTMLUListElement>(null);
+  const selectionEntryRef = useRef<HTMLButtonElement>(null);
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
   const [searching, setSearching] = useState(true);
@@ -393,19 +394,29 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </div>
       )}
       {committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
-        <section className="library-batch" aria-label="Batch actions for selected songs">
-          <p className="hint">{visibleSelected.length} selected from the loaded results only. Changing search or filters clears the selection. Batch changes never move or delete audio.</p>
+        <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
-            <button disabled={searching || failed} onClick={() => setBatchSelection({
+            <button ref={selectionEntryRef} disabled={searching || failed} onClick={() => setBatchSelection({
               identity: searchIdentity,
               ids: committedRows.slice(0, 200).map((song) => song.id),
             })}>Select up to 200 loaded songs</button>
-            <button disabled={!visibleSelected.length} onClick={() => setBatchSelection({ identity: searchIdentity, ids: [] })}>Clear selection</button>
-            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('prioritize')}>Prioritize selected</button>
-            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
-            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('never')}>Never play selected</button>
-            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('allow')}>Allow selected</button>
+            {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually.</span>}
           </div>
+          {visibleSelected.length > 0 && (
+            <div className="library-batch-actions" aria-label="Actions for selected loaded recordings">
+              <p className="hint" role="status">{visibleSelected.length} of {committedRows.length} loaded recordings selected (limit 200). Search, filter or sort changes clear selection; batch changes never move or delete audio.</p>
+              <div className="row wrap">
+                <button onClick={() => {
+                  setBatchSelection({ identity: searchIdentity, ids: [] });
+                  selectionEntryRef.current?.focus();
+                }}>Clear selection</button>
+                <button disabled={searching || failed} onClick={() => askBatch('prioritize')}>Prioritize selected</button>
+                <button disabled={searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
+                <button disabled={searching || failed} onClick={() => askBatch('never')}>Never play selected</button>
+                <button disabled={searching || failed} onClick={() => askBatch('allow')}>Allow selected</button>
+              </div>
+            </div>
+          )}
         </section>
       )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
