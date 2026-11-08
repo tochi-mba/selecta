@@ -56,7 +56,15 @@ function open(answer: unknown = ready, more: Record<string, unknown> = {}) {
   return { calls, onClose, onUsed, notify, onListen };
 }
 
-const square = (name: string) => screen.findByRole('button', { name });
+// Bar-range names replace the old square numbers; keep checking the exact
+// corresponding button rather than weakening any interaction assertions.
+const square = async (name: string) => {
+  const [part, position] = name.split(', square ');
+  const matches = await screen.findAllByRole('button', {
+    name: new RegExp('^' + part + ', bars? [0-9]', 'i'),
+  });
+  return matches[Number(position) - 1];
+};
 
 describe('the seam studio', () => {
   beforeEach(() => {
@@ -283,7 +291,7 @@ describe('the seam studio', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apply to this transition' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Song 2 voice, square 1' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await square('Song 2 voice, square 1')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('explains a failure in the words it was given', async () => {
