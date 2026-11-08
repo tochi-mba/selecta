@@ -463,7 +463,7 @@ describe('Quick Play and optional Lucy creation', () => {
     show();
     const quick = screen.getByRole('region', { name: 'Listen now, shape later' });
     const lucy = screen.getByRole('region', { name: 'Create with Lucy' });
-    expect(within(quick).getByRole('button', { name: 'Play' })).toBeEnabled();
+    await waitFor(() => expect(within(quick).getByRole('button', { name: 'Play' })).toBeEnabled());
     expect(within(lucy).getByRole('link', { name: 'Plan a mix with Lucy' })).toHaveAttribute('href', '/mixes/lucy');
     await screen.findByText('Selecta’s pick');
     expect(calls.every((call) => call.method === 'GET')).toBe(true);
