@@ -537,7 +537,8 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
 /* a title in Hebrew or Arabic reads the right way round, whatever is next to it */
 .display, .artist, .song-name b, .song-name span, button.song-open, .mini-song, .request-list b {
   unicode-bidi: plaintext;
-  text-align: left;
+  /* Honor the resolved text direction for mixed-script track identities. */
+  text-align: start;
 }
 
 .seam-visual-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
