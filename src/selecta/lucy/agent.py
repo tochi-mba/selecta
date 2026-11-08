@@ -133,10 +133,19 @@ def recover(conn) -> int:
     return len(stuck)
 
 
+class RunStopped(Exception):
+    """Stop or a newer turn arrived: unwinding closes the provider's stream at once."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 class Writer:
     """Real deltas, batched a little so the browser isn't asked to redraw per token."""
 
-    def __init__(self, ctx: tools.LucyCtx, message: str) -> None:
+    def __init__(self, ctx: tools.LucyCtx, message: str, should_stop=None) -> None:
+        self.should_stop = should_stop or (lambda: None)
         self.ctx = ctx
         self.message = message
         self.content = ""
@@ -145,6 +154,9 @@ class Writer:
         self.persisted_at = time.monotonic()
 
     async def write(self, text: str) -> None:
+        reason = self.should_stop()
+        if reason:
+            raise RunStopped(reason)
         if not text:
             return
         self.buffer += text
@@ -232,7 +244,6 @@ async def _run(app: Any, active: Active) -> None:
                                         status="streaming", turn=active.turn, run=active.run)
     ctx.emit("message.started", {"message": message["id"], "role": "assistant",
                                  "seq": message["seq"]})
-    writer = Writer(ctx, message["id"])
     conversations.set_turn_status(conn, active.turn, "running")
     cycles = 0
     final_state, error = "completed", None
@@ -242,11 +253,14 @@ async def _run(app: Any, active: Active) -> None:
     include = _include(config)
 
     def stopped() -> str | None:
+        if active.cancel.is_set():
+            superseded = conversations.is_superseded(conn, active.turn)
+            return "superseded" if superseded else "cancelled"
         if conversations.is_superseded(conn, active.turn):
             return "superseded"
-        if active.cancel.is_set():
-            return "cancelled"
         return None
+
+    writer = Writer(ctx, message["id"], stopped)
 
     async def run_plan(plan_input: Any) -> dict:
         parsed = PlanSchema.safe_parse(plan_input)
@@ -376,6 +390,8 @@ async def _run(app: Any, active: Active) -> None:
         reason = stopped()
         if reason and final_state == "completed":
             final_state = reason
+    except RunStopped as stop:
+        final_state = stop.reason
     except ProviderError as problem:
         final_state = "failed"
         error = str(problem)

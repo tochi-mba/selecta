@@ -563,3 +563,4 @@ def add_routes(app, ctx) -> None:
             return {"recorded": recorded}
 
     ctx.lucy_snapshot = snapshot
+    app.state.lucy = ctx
