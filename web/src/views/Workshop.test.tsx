@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SetPlayer } from '../player';
+import { setPrefs } from '../state/prefs';
 import type { WorkshopTab } from '../router';
 import { fakeBackend, status } from '../test/backend';
 import { Workshop } from './Workshop';
@@ -149,5 +150,24 @@ describe('the sections', () => {
     fireEvent.change(await screen.findByRole('slider'), { target: { value: '9' } });
     expect(screen.getByText('9.0 GB')).toBeInTheDocument();
     expect(await screen.findByText('4.0 GB', {}, { timeout: 2000 })).toBeInTheDocument();
+  });
+});
+
+describe('motion preference', () => {
+  it('offers Still, Subtle and Expressive, saving the chosen intensity locally', () => {
+    fakeBackend({});
+    show({}, 'overview');
+    const still = screen.getByRole('radio', { name: 'Still' });
+    const subtle = screen.getByRole('radio', { name: 'Subtle' });
+    const expressive = screen.getByRole('radio', { name: 'Expressive' });
+    expect(subtle).toBeChecked();
+    fireEvent.click(still);
+    expect(still).toBeChecked();
+    expect(document.documentElement.dataset.motion).toBe('still');
+    expect(JSON.parse(localStorage.getItem('selecta.prefs') ?? '{}').motion).toBe('still');
+    fireEvent.click(expressive);
+    expect(expressive).toBeChecked();
+    expect(document.documentElement.dataset.motion).toBe('expressive');
+    setPrefs({ motion: 'subtle' });
   });
 });

@@ -5,10 +5,13 @@ import { useSyncExternalStore } from 'react';
  * back to the defaults next time. */
 
 export type Theme = 'system' | 'light' | 'dark';
+export type Motion = 'still' | 'subtle' | 'expressive';
 
 export type Prefs = {
   /** Light, dark, or whatever this computer is set to. */
   theme: Theme;
+  /** Browser-only visual motion; reduced-motion OS setting always wins. */
+  motion: Motion;
   railCollapsed: boolean;
   density: 'comfortable' | 'compact';
   /** Library presentation only. Both views have exactly the same available song actions. */
@@ -21,7 +24,7 @@ export type Prefs = {
   classicNav: boolean;
 };
 
-export const DEFAULT_PREFS: Prefs = { theme: 'system', railCollapsed: false, density: 'comfortable', libraryLayout: 'list', palette: true, singleKeys: true, classicNav: false };
+export const DEFAULT_PREFS: Prefs = { theme: 'system', motion: 'subtle', railCollapsed: false, density: 'comfortable', libraryLayout: 'list', palette: true, singleKeys: true, classicNav: false };
 
 /** What the browser's own title bar should be, matching each theme's background in tokens.css. */
 const BAR_COLOUR = { dark: '#100f0c', light: '#f5f2e9' };
@@ -34,6 +37,7 @@ function read(): Prefs {
     const saved = JSON.parse(window.localStorage.getItem(KEY) ?? '{}') as Partial<Prefs>;
     return {
       theme: saved.theme === 'light' || saved.theme === 'dark' ? saved.theme : 'system',
+      motion: saved.motion === 'still' || saved.motion === 'expressive' ? saved.motion : 'subtle',
       railCollapsed: saved.railCollapsed === true,
       density: saved.density === 'compact' ? 'compact' : 'comfortable',
       libraryLayout: saved.libraryLayout === 'cards' ? 'cards' : 'list',
@@ -57,6 +61,7 @@ function apply(next: Prefs) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   root.dataset.density = next.density;
+  root.dataset.motion = next.motion;
   if (next.theme === 'system') delete root.dataset.theme;
   else root.dataset.theme = next.theme;
   for (const bar of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {

@@ -23,6 +23,18 @@ function InterfaceChoices() {
       <h2>Interface</h2>
       <p className="hint">These are kept in this browser. None of them change your music or your mixes.</p>
       <ThemeChoices />
+      <fieldset className="theme-choices">
+        <legend>Motion</legend>
+        <div className="chips" role="radiogroup" aria-label="Motion">
+          {(['still', 'subtle', 'expressive'] as const).map((motion) => (
+            <label className="choice" key={motion}>
+              <input type="radio" name="selecta-motion" checked={preferences.motion === motion} onChange={() => setPrefs({ motion })} />
+              {motion === 'still' ? 'Still' : motion === 'subtle' ? 'Subtle' : 'Expressive'}
+            </label>
+          ))}
+        </div>
+        <p className="hint">Still stops decorative movement. Your computer’s reduced-motion setting always takes priority.</p>
+      </fieldset>
       <label className="choice">
         <input type="checkbox" checked={preferences.density === 'compact'} onChange={(event) => setPrefs({ density: event.target.checked ? 'compact' : 'comfortable' })} />
         Compact rows in the Library, the timeline and drafts
