@@ -113,7 +113,7 @@ export function SeamDiagram({ seam, from, into, names = {}, compact = false }: {
   const fallback = made && (state.fell_back || (seam.settings.move && seam.settings.move !== 'auto' && state.style && state.style !== seam.settings.move));
   const meaning = [status, displayName, 'from ' + from + ' into ' + into, fallback ? 'Different from the requested move' : ''].filter(Boolean).join('. ');
   return (
-    <div className={'music-seam-diagram ' + family + (compact ? ' compact' : '') + (made ? ' is-made' : ' is-plan')} data-family={family} role="img" aria-label={meaning}>
+    <div className={'music-seam-diagram ' + family + (compact ? ' compact' : '') + (made ? ' is-made' : ' is-plan')} data-family={family} data-state={state.status} role="img" aria-label={meaning}>
       <div className="music-seam-lines" aria-hidden="true">
         <i className="outgoing" /><i className="incoming" />
         {family === 'words' && <i className="word-tie" />}
