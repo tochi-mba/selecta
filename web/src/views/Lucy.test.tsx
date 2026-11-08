@@ -45,7 +45,7 @@ const status = {
   privacy: { share_lyrics: false, share_history: false, data_classes: [] }, event_schema: 1, api_version: 1,
 };
 
-function backend() {
+function backend(approvalReady = 2) {
   return fakeBackend({
     'GET /lucy/status': status,
     'GET /lucy/conversations': { conversations: [conversation] },
@@ -65,7 +65,7 @@ function backend() {
     'POST /lucy/conversations/cv_1/turns': { turn: { id: 'turn_2', seq: 3, status: 'queued' }, new: true, run: 'run_2' },
     'POST /lucy/approvals': (body: unknown) => ({
       token: 'tok', expires_at: Math.floor(Date.now() / 1000) + 600, action: (body as { action: string }).action,
-      preflight: { ok: true, problems: [], songs: 3, ready: 2, needed: 2, ready_only: true, title: 'Sunday mix', playable_now: true },
+      preflight: { ok: true, problems: [], songs: 3, ready: approvalReady, needed: 2, ready_only: true, title: 'Sunday mix', playable_now: approvalReady === 2 },
     }),
   });
 }
@@ -75,6 +75,7 @@ const player = { play: vi.fn(), pause: vi.fn() } as never;
 afterEach(() => {
   vi.unstubAllGlobals();
   window.localStorage.clear();
+  window.history.replaceState({}, '', '/');
 });
 
 describe('Lucy', () => {
@@ -114,5 +115,36 @@ describe('Lucy', () => {
     expect(approval).toMatchObject({ revision: 'rev_1', hash: 'h'.repeat(64), action: 'draft_and_play' });
     expect(calls.some((call) => call.path === '/lucy/commits')).toBe(false);
     expect((player as unknown as { play: ReturnType<typeof vi.fn> }).play).not.toHaveBeenCalled();
+  });
+});
+
+describe('Lucy creation handoff and approval safety', () => {
+  it('prefills a feeling suggestion for editing, without sending it', async () => {
+    const calls = backend();
+    window.history.replaceState({}, '', '/mixes/lucy?prompt=Slow%20and%20warm');
+    render(<Lucy conversation={null} setMixData={vi.fn()} player={player} />);
+    const box = await screen.findByRole('textbox', { name: /message|describe|lucy/i });
+    await waitFor(() => expect(box).toHaveValue('Slow and warm'));
+    expect(calls.some((call) => call.method === 'POST' && call.path.includes('/turns'))).toBe(false);
+  });
+
+  it('never overwrites an existing unsent draft with a suggestion', async () => {
+    backend();
+    window.localStorage.setItem('selecta.lucy.unsent.new', 'My unfinished idea');
+    window.history.replaceState({}, '', '/mixes/lucy?prompt=Another%20idea');
+    render(<Lucy conversation={null} setMixData={vi.fn()} player={player} />);
+    const box = await screen.findByRole('textbox', { name: /message|describe|lucy/i });
+    expect(box).toHaveValue('My unfinished idea');
+  });
+
+  it('does not confirm strict ready-only approval when current preflight lacks verified transitions', async () => {
+    const calls = backend(0);
+    render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /your mix/i }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Save as draft' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/missing 2 verified transitions/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Save as draft' })).toBeDisabled();
+    expect(calls.some((call) => call.path === '/lucy/commits')).toBe(false);
   });
 });
