@@ -30,7 +30,11 @@ export function Tabs<T extends string>({ label, tabs, current, onChange, childre
   const base = useId();
   const keys = (event: KeyboardEvent, index: number) => {
     const last = tabs.length - 1;
-    const target = event.key === 'Home' ? 0 : event.key === 'End' ? last : event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + last) % tabs.length : null;
+    // Arrow keys follow the visual order in RTL as well as LTR tab lists.
+    const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
+    const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const target = event.key === 'Home' ? 0 : event.key === 'End' ? last : event.key === forward ? (index + 1) % tabs.length : event.key === backward ? (index + last) % tabs.length : null;
     if (target === null) return;
     event.preventDefault();
     event.stopPropagation();
