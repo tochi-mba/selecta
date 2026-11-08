@@ -16,6 +16,8 @@ export type Command = {
   keywords?: string;
   /** Why it can't run right now. */
   unavailable?: string;
+  /** Scope of a mutation, so a draft cannot look like the current mix. */
+  detail?: string;
   run: () => void;
 };
 
@@ -25,6 +27,8 @@ export type CommandContext = {
   active: boolean;
   hasNext: boolean;
   canUndo: boolean;
+  undoScope: string;
+  undoUnavailable?: string;
   readySongs: number;
   songsLeftToAnalyse: number;
   analysing: boolean;
@@ -60,7 +64,7 @@ export function buildCommands(context: CommandContext): Command[] {
   const actions: Command[] = [
     { id: 'request', label: 'Request a song', group: 'Do', run: context.openRequests },
     { id: 'new-mix', label: 'Start a new mix', group: 'Do', keywords: 'preset vibe', unavailable: context.readySongs >= 6 ? undefined : `Selecta needs 6 mix-ready songs, and has ${context.readySongs}.`, run: () => navigate('/mixes') },
-    { id: 'undo', label: 'Undo the last change', group: 'Do', unavailable: context.canUndo ? undefined : 'There’s nothing to undo.', run: context.undo },
+    { id: 'undo', label: 'Undo the last change', group: 'Do', detail: context.undoScope, unavailable: context.undoUnavailable ?? (context.canUndo ? undefined : 'There’s nothing to undo.'), run: context.undo },
     { id: 'analyse', label: 'Analyse the rest of my library', group: 'Do', unavailable: context.analysing ? 'Analysis is already running.' : context.songsLeftToAnalyse ? undefined : 'Every song has been analysed.', run: context.startAnalysis },
     { id: 'activity', label: 'Activity and Undo', group: 'Do', keywords: 'history recent', run: context.openActivity },
     { id: 'help', label: 'Keyboard shortcuts', group: 'Do', keywords: 'keys help', run: context.openHelp },

@@ -20,6 +20,8 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
     return [...matches, { id: 'search-library', label: `Search your library for “${text}”`, group: 'Go to', run: () => navigate(`/library?q=${encodeURIComponent(text)}&show=all`) }];
   }, [commands, text]);
 
+  const activeIndex = Math.min(highlight, Math.max(0, shown.length - 1));
+
   useEffect(() => {
     setHighlight(0);
     setRefused('');
@@ -27,7 +29,7 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
 
   useEffect(() => {
     list.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' });
-  }, [highlight]);
+  }, [activeIndex, shown.length]);
 
   const run = (command: Command | undefined) => {
     if (!command) return;
@@ -50,7 +52,7 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
       setHighlight(event.key === 'Home' ? 0 : Math.max(last, 0));
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      run(shown[highlight]);
+      run(shown[activeIndex]);
     }
   };
 
@@ -64,7 +66,7 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
           aria-expanded={shown.length > 0}
           aria-controls={`${base}-list`}
           aria-autocomplete="list"
-          aria-activedescendant={shown.length ? optionId(highlight) : undefined}
+          aria-activedescendant={shown.length ? optionId(activeIndex) : undefined}
           aria-label="Search for a page or a command"
           placeholder="Where to, or what to do?"
           autoComplete="off"
@@ -80,14 +82,14 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
               key={command.id}
               id={optionId(index)}
               role="option"
-              aria-selected={index === highlight}
+              aria-selected={index === activeIndex}
               aria-disabled={command.unavailable ? true : undefined}
-              className={`palette-item ${index === highlight ? 'on' : ''} ${command.unavailable ? 'off' : ''}`}
+              className={`palette-item ${index === activeIndex ? 'on' : ''} ${command.unavailable ? 'off' : ''}`}
               onMouseEnter={() => setHighlight(index)}
               onClick={() => run(command)}
             >
               <span>{command.label}</span>
-              <small>{command.unavailable ?? command.group}</small>
+              <small>{command.unavailable ?? (command.detail ? `${command.group} · ${command.detail}` : command.group)}</small>
             </li>
           ))}
         </ul>

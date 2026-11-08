@@ -555,12 +555,16 @@ export function App() {
   const nothingToHear = route.page === 'listen' && !mix.length;
   const waitingRequests = requests.requests?.filter((request) => request.id > 0).length ?? 0;
   const counts = status.counts;
+  const editingDraft = draftId !== null;
+  const draftLoaded = editingDraft && draftData?.draft?.id === draftId;
   const commands = commanding ? buildCommands({
     hasMix: mix.length > 0,
     playing: now.phase === 'playing',
     active,
     hasNext: !!mix[now.position + 1],
-    canUndo: draftId === null ? data.can_undo : !!draftData?.can_undo,
+    canUndo: editingDraft ? !!draftLoaded && !!draftData?.can_undo : data.can_undo,
+    undoScope: editingDraft ? (draftLoaded ? `Draft: ${draftData.name}` : `Draft #${draftId}`) : `Current mix: ${data.name}`,
+    undoUnavailable: editingDraft && !draftLoaded ? 'Wait for this draft to load.' : undefined,
     readySongs: counts.ready ?? 0,
     songsLeftToAnalyse: Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0),
     analysing: status.analysis_running,
@@ -573,7 +577,15 @@ export function App() {
     openRequests: () => setRequesting(true),
     openActivity: () => setActivityOpen(true),
     openHelp: () => setHelping(true),
-    undo: () => { void undoNewest(draftId).catch((error: Error) => showProblem(error.message)); },
+    undo: () => {
+      const current = routeRef.current;
+      const scope = current.page === 'edit' ? current.draft : null;
+      if (scope !== draftId || (editingDraft && (!draftLoaded || draftRef.current !== draftId))) {
+        showProblem('The open mix changed. Open commands again before undoing.');
+        return;
+      }
+      void undoNewest(draftId).catch((error: Error) => showProblem(error.message));
+    },
     startAnalysis: () => {
       void post('/analysis/start').then(() => {
         void refreshStatus();
