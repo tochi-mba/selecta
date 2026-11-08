@@ -523,3 +523,107 @@
 - [ ] **SF-0237-06 — Design AT descriptions.** **Acceptance:** Readiness accessible without colors or diagrams. **Required verification:** NVDA inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0237-07 — Test errors and fallback semantics.** **Acceptance:** Failed render and technique fallback visible. **Required verification:** Error fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0237-08 — Validate user comprehension.** **Acceptance:** Novices distinguish prepared versus playing versus requested. **Required verification:** Uncoached status study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0238 — Local-first privacy and future SaaS-ready boundaries without SaaS](adr-0238-privacy-future.md)
+
+**Priority / phase:** P0 / Architecture. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0238-01 — Audit current network and local paths.** **Acceptance:** All data egress and file permissions documented. **Required verification:** Network and server security inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0238-02 — Document LRCLIB disclosure.** **Acceptance:** Exactly what metadata is sent and when made explicit. **Required verification:** Privacy copy and packet review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0238-03 — Protect original media.** **Acceptance:** UI actions never imply destructive source overwrite. **Required verification:** File safety tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0238-04 — Set preference data boundaries.** **Acceptance:** Theme and motion preferences remain local. **Required verification:** Offline persistence tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0238-05 — Plan abstract storage seams.** **Acceptance:** Optional future interfaces do not change local code now. **Required verification:** Architecture design review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0238-06 — Specify future identity boundary.** **Acceptance:** No current login, billing or remote media scope. **Required verification:** Product scope check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0238-07 — Review new visual assets privacy.** **Acceptance:** Artwork and fonts work locally with authorized provenance. **Required verification:** Offline and resource inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0238-08 — Validate offline core paths.** **Acceptance:** Playback, library and editing do not require cloud. **Required verification:** Disconnected E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0239 — Automated regression strategy and visual-evidence governance](adr-0239-test-architecture.md)
+
+**Priority / phase:** P0 / Verification. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0239-01 — Map existing tests to new tasks.** **Acceptance:** Every task has relevant automated and independent evidence gap. **Required verification:** Test crosswalk. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0239-02 — Build stable visual fixtures.** **Acceptance:** Light/dark, no-data, errors, loading and sizes captured. **Required verification:** Deterministic screenshot runs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0239-03 — Protect audio ownership E2E.** **Acceptance:** Theme, scene, preview and route changes never duplicate player. **Required verification:** Real-browser counter tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0239-04 — Test revision and request contracts.** **Acceptance:** Optimistic edits, conflicts and bridge consent resilient. **Required verification:** API stubs and integration tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0239-05 — Specify a11y automation.** **Acceptance:** Contrast, labels, focus and reduced motion checked where possible. **Required verification:** Automated audit plus manual gap. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0239-06 — Define exact screenshot approval.** **Acceptance:** Candidates not considered golden until signed review. **Required verification:** Evidence manifest checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0239-07 — Build low-power stress suites.** **Acceptance:** Live playback during analysis and render measured. **Required verification:** Hardware logs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0239-08 — Require per-PR evidence record.** **Acceptance:** SHA, fixture, reviewer and unresolved findings attached. **Required verification:** CI and independent sign-off checklist. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0240 — Independent listening research and artistic quality acceptance](adr-0240-human-research.md)
+
+**Priority / phase:** P0 / Verification. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0240-01 — Define listener journey scripts.** **Acceptance:** First run, first play, first handoff covered. **Required verification:** Uncoached research protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0240-02 — Define creator journey scripts.** **Acceptance:** Shape, reorder, audition, Studio and export covered. **Required verification:** Task outcome forms. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0240-03 — Define DJ expert review.** **Acceptance:** Real technique, cue and handoff precision assessed. **Required verification:** Recorded expert feedback. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0240-04 — Define accessibility participant testing.** **Acceptance:** AT and motion preferences included. **Required verification:** Named environment and protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0240-05 — Protect blind comparison neutrality.** **Acceptance:** No visual/source labels leak treatment condition. **Required verification:** Neutral A/B review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0240-06 — Separate joy from correctness.** **Acceptance:** Ratings and measured task errors reported separately. **Required verification:** Analysis plan. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0240-07 — Record reproducible findings.** **Acceptance:** Denominator, hardware, SHA and fixtures accompany claims. **Required verification:** Review dossier. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0240-08 — Specify approval and rejection criteria.** **Acceptance:** P0 blocks and P1 thresholds explicit before testing. **Required verification:** Owner and independent reviewer decision. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0241 — Incremental scene migration, compatibility and reversible release slices](adr-0241-migration-rollback.md)
+
+**Priority / phase:** P0 / Delivery. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0241-01 — Specify migration sequence.** **Acceptance:** Visual foundation then shell then music scenes and operations. **Required verification:** Dependency plan. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0241-02 — Define compatibility boundaries.** **Acceptance:** Old URLs and backend APIs remain intact. **Required verification:** Router and API tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0241-03 — Plan reversible UI switches.** **Acceptance:** Rollback does not change stored media or mix formats. **Required verification:** Feature switch test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0241-04 — Preserve preferences and state.** **Acceptance:** Old to new to old retains selected mix and motion/theme prefs. **Required verification:** Persistence E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0241-05 — Avoid duplicated ownership.** **Acceptance:** Single player and edit model during phased rollout. **Required verification:** Architecture review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0241-06 — Require narrow PR boundaries.** **Acceptance:** Each release slice has explicit contracts and tests. **Required verification:** PR review checklist. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0241-07 — Exercise failure rollback.** **Acceptance:** Forced revert after edit/request/export is safe. **Required verification:** Scenario E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0241-08 — Record release candidate SHA.** **Acceptance:** Gate decision pinned to exact source and evidence. **Required verification:** Release record. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0242 — Music-native microcopy, state language and non-patronizing feedback](adr-0242-musical-microcopy.md)
+
+**Priority / phase:** P1 / Content. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0242-01 — Define voice and terminology.** **Acceptance:** Action nouns and music terms consistent across routes. **Required verification:** Content inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0242-02 — Separate request and result labels.** **Acceptance:** Requested move never labeled rendered. **Required verification:** Status copy fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0242-03 — Write truthful preparation states.** **Acceptance:** Scan/analyze/render/export text specific. **Required verification:** Async state review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0242-04 — Clarify action consequence.** **Acceptance:** Save, Play, Replace and Undo scopes explicit. **Required verification:** User prediction test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0242-05 — Develop precise error messages.** **Acceptance:** Cause and safe next action available. **Required verification:** Fault injection review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0242-06 — Support compact labels.** **Acceptance:** Narrow screens retain meaning and accessible names. **Required verification:** 320px/AT checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0242-07 — Audit multilingual and RTL support.** **Acceptance:** Strings wrap without relying on English word lengths. **Required verification:** Localization stress fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0242-08 — Measure comprehension.** **Acceptance:** Users understand what changed and what happens next. **Required verification:** Uncoached task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0243 — Tactile gestures, pointer feedback and equal keyboard control](adr-0243-creative-gestures.md)
+
+**Priority / phase:** P1 / Interaction. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0243-01 — Inventory gesture affordances.** **Acceptance:** Every pointer action has explicit drag handle or visual clue. **Required verification:** Interaction review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0243-02 — Define provisional visuals.** **Acceptance:** Hover/drag preview distinct from committed result. **Required verification:** Slow server tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0243-03 — Implement cancel paths.** **Acceptance:** Escape, pointer cancel and navigation restore state. **Required verification:** Pointer E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0243-04 — Make keyboard equivalents.** **Acceptance:** Reorder, paint and arc shape operable without drag. **Required verification:** Keyboard/NVDA tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0243-05 — Design touch scrolling boundaries.** **Acceptance:** Grid and arc avoid unwanted gesture conflicts. **Required verification:** Mobile gesture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0243-06 — Prevent double-application.** **Acceptance:** Each intended stem cell changes at most once per stroke. **Required verification:** Pointer path fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0243-07 — Support stylus and coarse pointers.** **Acceptance:** Hit zones remain precise and accessible. **Required verification:** Device test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0243-08 — Measure editing accuracy.** **Acceptance:** Users can edit quickly with low unintended changes. **Required verification:** Creator study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0244 — Search-first navigation and expert command palette continuity](adr-0244-command-palette.md)
+
+**Priority / phase:** P1 / Shell. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0244-01 — Audit existing commands.** **Acceptance:** Every command maps to real capability and permission. **Required verification:** Palette inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0244-02 — Redesign search hierarchy.** **Acceptance:** Songs, mixes, routes and actions clearly differentiated. **Required verification:** Results task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0244-03 — Protect focused inputs.** **Acceptance:** Shortcuts never interrupt text editing. **Required verification:** Keyboard regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0244-04 — Show contextual actions.** **Acceptance:** Commands indicate which mix and draft affected. **Required verification:** Scope fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0244-05 — Handle stale search results.** **Acceptance:** Old results cannot trigger wrong object action. **Required verification:** Race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0244-06 — Preserve focus restoration.** **Acceptance:** Opening/closing returns focus predictably. **Required verification:** NVDA/keyboard test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0244-07 — Scale large library lookup.** **Acceptance:** Results remain performant at 20k songs. **Required verification:** Stress profile. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0244-08 — Evaluate expert speed.** **Acceptance:** Frequent tasks measurably faster without novice confusion. **Required verification:** Comparative study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## [ADR-0245 — Final visual-detail audit and art-direction coherence](adr-0245-final-pixel-polish.md)
+
+**Priority / phase:** P1 / Polish. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+
+- [ ] **SF-0245-01 — Audit alignment and spacing.** **Acceptance:** Controls align across scene, card and dialog components. **Required verification:** Pixel-diff review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0245-02 — Audit type and icon optics.** **Acceptance:** Titles, timestamps and icons align optically. **Required verification:** Visual specimen audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0245-03 — Audit borders and depth.** **Acceptance:** Nested panels, elevation and selected states intentional. **Required verification:** Light/dark gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0245-04 — Review state-specific artwork.** **Acceptance:** Empty/failed/loading/pending visuals do not claim data. **Required verification:** Fixture snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0245-05 — Review all hover/focus/active states.** **Acceptance:** Every shared primitive consistent. **Required verification:** Interactive screenshot grid. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0245-06 — Audit content edge cases.** **Acceptance:** Long strings, tiny counts, nulls and overflow handled. **Required verification:** RTL/zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0245-07 — Audit motion finishing.** **Acceptance:** Transitions cancel without jitter or ghost surfaces. **Required verification:** Slow-motion capture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+- [ ] **SF-0245-08 — Sign off across devices.** **Acceptance:** Independent reviewer approves exact candidate SHA. **Required verification:** Signed visual QA dossier. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
