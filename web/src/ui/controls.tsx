@@ -106,7 +106,7 @@ export class Section extends Component<{ name: string; children: ReactNode }, { 
   }
 }
 
-const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary,[tabindex]:not([tabindex="-1"])';
 let openOverlays = 0;
 let previousOverflow = '';
 const overlayStack: HTMLElement[] = [];
@@ -122,6 +122,19 @@ function syncInert() {
     if (item === top) item.removeAttribute('inert');
     else item.setAttribute('inert', '');
   }
+}
+
+/** The tab loop must use what the browser can actually focus, not hidden disclosure content,
+ * CSS-hidden actions or fields belonging to an inert subpanel. */
+function canFocusInOverlay(node: HTMLElement, panel: HTMLElement | null): boolean {
+  if (node.matches('input[type="hidden"]') || node.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+  const collapsed = node.closest('details:not([open])');
+  if (collapsed && !collapsed.querySelector('summary')?.contains(node)) return false;
+  for (let part: HTMLElement | null = node; part && part !== panel; part = part.parentElement) {
+    const style = getComputedStyle(part);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+  }
+  return true;
 }
 
 /** Anything that sits on top of the page: focus goes in, stays in, and returns where it was, or to the
@@ -151,7 +164,8 @@ function Overlay({
     const mine = holder.current;
     if (mine) overlayStack.push(mine);
     syncInert();
-    const first = panel.current?.querySelector<HTMLElement>('[data-autofocus]') ?? panel.current;
+    const first = [...(panel.current?.querySelectorAll<HTMLElement>('[data-autofocus]') ?? [])]
+      .find((node) => canFocusInOverlay(node, panel.current)) ?? panel.current;
     first?.focus();
     return () => {
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
@@ -171,11 +185,7 @@ function Overlay({
       return;
     }
     if (event.key !== 'Tab' || !panel.current) return;
-    const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((node) => {
-      if (node.closest('[hidden], [inert]') || node.matches('input[type="hidden"]')) return false;
-      const collapsed = node.closest('details:not([open])');
-      return !collapsed || collapsed.querySelector('summary')?.contains(node);
-    });
+    const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((node) => canFocusInOverlay(node, panel.current));
     if (!items.length) {
       event.preventDefault();
       return;
