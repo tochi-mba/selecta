@@ -216,3 +216,28 @@ test('Library selection boxes stay compact and aligned with song identity at eve
     await expect(checkbox).toBeChecked();
   }
 });
+
+test('Listen display toggles never grow to the height of their neighbouring help text', async ({ page, request }) => {
+  await resetMix(request);
+  for (const width of [320, 375, 760, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/listen');
+    const disclosure = page.locator('details.view-options');
+    await expect(disclosure).toBeVisible();
+    await disclosure.locator('summary').click();
+    const panels = disclosure.locator('.listen-display-toggles');
+    const countdown = panels.getByRole('button', { name: 'Beat countdown' });
+    await expect(countdown).toBeVisible();
+    const box = await countdown.boundingBox();
+    expect(box, 'Beat countdown must have measurable geometry').not.toBeNull();
+    expect(box!.height, 'oversized countdown toggle at ' + width + 'px').toBeLessThanOrEqual(70);
+    expect(box!.width).toBeGreaterThanOrEqual(100);
+    const intensity = disclosure.getByRole('group', { name: 'Visual intensity' });
+    await expect(intensity.getByRole('button', { name: 'Standard visuals' })).toHaveAttribute('aria-pressed', 'true');
+    const choices = await intensity.locator('button').evaluateAll((buttons) =>
+      buttons.map((button) => button.getBoundingClientRect().height));
+    expect(choices).toHaveLength(3);
+    expect(choices.every((height) => height >= 44 && height <= 70)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+  }
+});
