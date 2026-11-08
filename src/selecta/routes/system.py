@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, Response
 from pydantic import BaseModel
 
 from selecta.library.relink import RelinkError, commit_relink, preview_relink
 
 from selecta import db, jobs, mix
+from selecta.backup import BackupError, MAX_ARCHIVE, PENDING, ROLLBACK, export_backup, stage_restore, validate_backup
 from selecta.api_common import (
     API_FEATURES,
     API_VERSION,
@@ -128,6 +130,63 @@ def add_routes(app, ctx) -> None:
         settings.set_storage_budget(min(wanted, largest_cache_bytes(settings)))
         prune_cache(settings)
         return storage()
+
+    @app.get("/api/backup")
+    def download_local_backup() -> Response:
+        try:
+            with connect() as conn:
+                data = export_backup(conn)
+        except BackupError as problem:
+            raise HTTPException(400, str(problem)) from problem
+        return Response(
+            data,
+            media_type="application/zip",
+            headers={"Content-Disposition": 'attachment; filename="selecta-local-backup.zip"',
+                     "Cache-Control": "no-store"},
+        )
+
+    async def _read_backup(request: Request) -> bytes:
+        if request.headers.get("content-type", "").split(";")[0] != "application/zip":
+            raise HTTPException(415, "Choose a Selecta ZIP backup.")
+        pieces = []
+        total = 0
+        async for part in request.stream():
+            total += len(part)
+            if total > MAX_ARCHIVE:
+                raise HTTPException(413, "The backup is too large.")
+            pieces.append(part)
+        return b"".join(pieces)
+
+    @app.post("/api/backup/preview")
+    async def preview_local_backup(request: Request) -> dict:
+        data = await _read_backup(request)
+        try:
+            manifest, _, counts = validate_backup(data)
+        except BackupError as problem:
+            raise HTTPException(400, str(problem)) from problem
+        return {
+            "token": hashlib.sha256(data).hexdigest(),
+            "created_utc": manifest["created_utc"],
+            "counts": counts,
+            "replaces": "Local song database, drafts, ratings and preferences at next restart",
+            "skips": "Original audio, caches, models, exports and current storage budget",
+        }
+
+    @app.post("/api/backup/stage")
+    async def stage_local_backup(request: Request) -> dict:
+        data = await _read_backup(request)
+        try:
+            return stage_restore(settings, data, request.headers.get("x-backup-token", ""))
+        except BackupError as problem:
+            raise HTTPException(409, str(problem)) from problem
+
+    @app.get("/api/backup/status")
+    def backup_restore_status() -> dict:
+        return {
+            "pending_restart": (settings.home / PENDING).is_file(),
+            "rollback_available": (settings.home / ROLLBACK).is_file(),
+            "problem": getattr(ctx, "restore_problem", None),
+        }
 
     @app.get("/api/folders")
     def folders() -> dict:
