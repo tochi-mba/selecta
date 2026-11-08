@@ -1,15 +1,15 @@
 # Selecta — MP per-task implementation and independent evidence
 
-**Status:** 28 Proposed ADRs (0272–0299); 224 acceptance tasks Not started; 0 In progress; 0 Implemented; 0 Independently Verified. Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Docs only.
+**Status:** 28 Proposed ADRs (0272–0299); 213 acceptance tasks Not started; 7 In progress; 4 Implemented; 0 Independently Verified. Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Implementation candidate; independently unverified.
 
-All source and independent proof fields start empty. A docs PR does not implement UI.
+Source-backed items and active candidates are tracked below. Machine tests are written but not yet executed; all independent proof fields remain empty.
 
 | Task | Decision | Implementation | Independently Verified | Owner | Implementing PR/SHA | Automated/visual evidence | Reviewer/date/environment |
 |---|---|---|---|---|---|---|---|
 | MP-0272-01 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0272-02 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0272-03 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0272-04 | Proposed | Not started | No | Unassigned | — | — | — |
+| MP-0272-02 | Proposed | In progress | No | Unassigned | #38 / `db11a2822241` | web/e2e/micro-polish-geometry.e2e.ts records geometry candidates; test run and broader states pending | — |
+| MP-0272-03 | Proposed | In progress | No | Unassigned | #38 / `2588f96a3fb4` | Playing mini-player, keyboard yield and overlay candidate added; Stage, Studio, bridge, export and failure still needed | — |
+| MP-0272-04 | Proposed | In progress | No | Unassigned | #38 / `2588f96a3fb4` | 11 viewport geometry cases added; test execution and human audit pending | — |
 | MP-0272-05 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0272-06 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0272-07 | Proposed | Not started | No | Unassigned | — | — | — |
@@ -18,7 +18,7 @@ All source and independent proof fields start empty. A docs PR does not implemen
 | MP-0273-02 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0273-03 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0273-04 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0273-05 | Proposed | Not started | No | Unassigned | — | — | — |
+| MP-0273-05 | Proposed | Implemented | No | Unassigned | #38 / `6a55b1643b0b` | web/src/style.css and web/src/styles/polish.css now own 24px card/panel padding without duplicate override; web/e2e/micro-polish-geometry.e2e.ts asserts computed padding (unrun) | — |
 | MP-0273-06 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0273-07 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0273-08 | Proposed | Not started | No | Unassigned | — | — | — |
@@ -28,10 +28,10 @@ All source and independent proof fields start empty. A docs PR does not implemen
 | MP-0274-04 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0274-05 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0274-06 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0274-07 | Proposed | Not started | No | Unassigned | — | — | — |
+| MP-0274-07 | Proposed | In progress | No | Unassigned | #38 / `6a55b1643b0b` | web/src/style.css sets scrollbar-gutter: stable; scroll-state measurement pending | — |
 | MP-0274-08 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0275-01 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0275-02 | Proposed | Not started | No | Unassigned | — | — | — |
+| MP-0275-02 | Proposed | Implemented | No | Unassigned | #38 / `6a55b1643b0b` | web/src/style.css owns .display and .display.small metrics; duplicate rules removed from polish.css; computed type E2E added (unrun) | — |
 | MP-0275-03 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0275-04 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0275-05 | Proposed | Not started | No | Unassigned | — | — | — |
@@ -56,7 +56,7 @@ All source and independent proof fields start empty. A docs PR does not implemen
 | MP-0277-08 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0278-01 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0278-02 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0278-03 | Proposed | Not started | No | Unassigned | — | — | — |
+| MP-0278-03 | Proposed | Implemented | No | Unassigned | #38 / `6a55b1643b0b` | Duplicate .panel, .card, .row and .display overrides consolidated in web/src/style.css and polish.css; computed cascade test added (unrun) | — |
 | MP-0278-04 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0278-05 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0278-06 | Proposed | Not started | No | Unassigned | — | — | — |
@@ -79,8 +79,8 @@ All source and independent proof fields start empty. A docs PR does not implemen
 | MP-0280-07 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0280-08 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0281-01 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0281-02 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0281-03 | Proposed | Not started | No | Unassigned | — | — | — |
+| MP-0281-02 | Proposed | In progress | No | Unassigned | #38 / `4b13e68dcda9` | web/src/styles/shell.css enforces 44px primary and Next targets; narrow geometry E2E added (unrun) | — |
+| MP-0281-03 | Proposed | In progress | No | Unassigned | #38 / `6a55b1643b0b` | web/src/shell/Shell.tsx guards progress/title and reserves count width; dynamic stress not independently measured | — |
 | MP-0281-04 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0281-05 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0281-06 | Proposed | Not started | No | Unassigned | — | — | — |
@@ -194,13 +194,13 @@ All source and independent proof fields start empty. A docs PR does not implemen
 | MP-0295-02 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0295-03 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0295-04 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0295-05 | Proposed | Not started | No | Unassigned | — | — | — |
+| MP-0295-05 | Proposed | Implemented | No | Unassigned | #38 / `11aa13ec25af` | web/src/ui/controls.tsx focusable summary and hidden-control filter; web/src/ui/controls.test.tsx tests nested Escape/inert/focus return and Tab loop (unrun) | — |
 | MP-0295-06 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0295-07 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0295-08 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0296-01 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0296-02 | Proposed | Not started | No | Unassigned | — | — | — |
-| MP-0296-03 | Proposed | Not started | No | Unassigned | — | — | — |
+| MP-0296-03 | Proposed | In progress | No | Unassigned | #38 / `6a55b1643b0b` | web/src/style.css and polish.css remove active transform; pointer-down box measurement pending | — |
 | MP-0296-04 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0296-05 | Proposed | Not started | No | Unassigned | — | — | — |
 | MP-0296-06 | Proposed | Not started | No | Unassigned | — | — | — |
