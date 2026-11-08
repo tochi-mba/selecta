@@ -499,7 +499,11 @@ test('long, right-to-left and duplicate names stay readable and whole at the sma
     await page.waitForTimeout(250);
     found.push(...await stickingOut(page, address));
     const cut = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('h1, h2, .song-name b, .next-song b, .draft-name b')]
-      .filter((element) => getComputedStyle(element).textOverflow !== 'ellipsis' && element.scrollWidth > element.clientWidth + 1)
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        // A screen-reader-only heading is intentionally clipped to 1px, not truncated text.
+        return style.clipPath === 'none' && style.textOverflow !== 'ellipsis' && element.scrollWidth > element.clientWidth + 1;
+      })
       .map((element) => (element.textContent ?? '').slice(0, 40)));
     found.push(...cut.map((name) => `${address}: "${name}" is cut off`));
   }
