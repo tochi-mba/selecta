@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, DraftList, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
+import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
 import { loadResume } from './lib';
 import { NowState, SetPlayer } from './player';
 import { navigate, useRoute } from './router';
@@ -371,29 +372,24 @@ export function App() {
     if (setUp) rememberSetUp();
   }, [setUp]);
 
-  // Media keys, headsets and the system's now-playing panel: each does what it says it does.
+  // Register media keys just once. Handlers read live state so they cannot act on a stale song.
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
-    const session = navigator.mediaSession;
-    session.metadata = active && playing && typeof MediaMetadata !== 'undefined'
-      ? new MediaMetadata({ title: playing.title, artist: playing.artist, album: data.name })
-      : null;
-    session.playbackState = now.phase === 'playing' ? 'playing' : now.phase === 'paused' ? 'paused' : 'none';
-    const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
-      ['play', () => { if (now.phase !== 'playing') void player.togglePause(); }],
-      ['pause', () => { if (now.phase === 'playing') void player.togglePause(); }],
-      ['nexttrack', () => void player.next()],
-      ['previoustrack', () => void player.previous()],
-      ['seekto', (details) => { if (details.seekTime !== undefined) void player.seek(details.seekTime); }],
-    ];
-    for (const [action, handler] of handlers) {
-      try {
-        session.setActionHandler(action, handler);
-      } catch {
-        // this browser doesn't have that one, which is fine
-      }
-    }
-  }, [active, playing?.title, now.phase, data.name, player]);
+    return bindMediaSession(navigator.mediaSession, player, () => mixRef.current);
+  }, [player]);
+
+  // The OS advances at playbackRate 1 between these authoritative one-second updates.
+  // Preview ownership never turns the paused mix into a second apparent player.
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    const update = () => {
+      const state = player.state;
+      syncMediaSession(navigator.mediaSession, state, mixRef.current[state.position], data.name, !!audioOwner());
+    };
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [player, now.phase, now.position, playing?.song_id, playing?.title, playing?.artist, data.name]);
 
   // Going on stage hides everything that had focus, so coming back puts focus back where it was.
   const beforeStage = useRef<{ element: HTMLElement | null; name: string } | null>(null);
@@ -488,7 +484,23 @@ export function App() {
           break;
         case 'undo': {
           const place = routeRef.current;
-          void undoNewest(place.page === 'edit' ? place.draft : null);
+          const scope = place.page === 'edit' ? place.draft : null;
+          if (scope !== null) {
+            // A draft link can be open before its response arrives, or after a different
+            // draft's response. In neither case may the shortcut mutate a guessed scope.
+            if (draftRef.current !== scope || draftData?.draft?.id !== scope) {
+              announce('Wait for this draft to load before undoing.');
+              break;
+            }
+            if (!draftData.can_undo) {
+              announce('Nothing to undo in this draft.');
+              break;
+            }
+          } else if (!data.can_undo) {
+            announce('Nothing to undo in the current mix.');
+            break;
+          }
+          void undoNewest(scope).catch((error: Error) => showProblem(error.message));
           break;
         }
         case 'stage':
@@ -504,7 +516,7 @@ export function App() {
     };
     window.addEventListener('keydown', keys);
     return () => window.removeEventListener('keydown', keys);
-  }, [player, undoNewest, toggleStage]);
+  }, [player, undoNewest, toggleStage, draftData, data.can_undo]);
 
   // the drafts it can jump to are only ever as old as this opening of it
   useEffect(() => {
@@ -555,17 +567,22 @@ export function App() {
   const nothingToHear = route.page === 'listen' && !mix.length;
   const waitingRequests = requests.requests?.filter((request) => request.id > 0).length ?? 0;
   const counts = status.counts;
+  const editingDraft = draftId !== null;
+  const draftLoaded = editingDraft && draftData?.draft?.id === draftId;
   const commands = commanding ? buildCommands({
     hasMix: mix.length > 0,
     playing: now.phase === 'playing',
     active,
     hasNext: !!mix[now.position + 1],
-    canUndo: draftId === null ? data.can_undo : !!draftData?.can_undo,
+    canUndo: editingDraft ? !!draftLoaded && !!draftData?.can_undo : data.can_undo,
+    undoScope: editingDraft ? (draftLoaded ? `Draft: ${draftData.name}` : `Draft #${draftId}`) : `Current mix: ${data.name}`,
+    undoUnavailable: editingDraft && !draftLoaded ? 'Wait for this draft to load.' : undefined,
     readySongs: counts.ready ?? 0,
     songsLeftToAnalyse: Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0),
     analysing: status.analysis_running,
     drafts: commandDrafts,
     theme: preferences.theme,
+    motion: preferences.motion,
     togglePause: () => void player.togglePause(),
     next: () => void player.next(),
     jump: () => void player.skip(),
@@ -573,7 +590,15 @@ export function App() {
     openRequests: () => setRequesting(true),
     openActivity: () => setActivityOpen(true),
     openHelp: () => setHelping(true),
-    undo: () => { void undoNewest(draftId).catch((error: Error) => showProblem(error.message)); },
+    undo: () => {
+      const current = routeRef.current;
+      const scope = current.page === 'edit' ? current.draft : null;
+      if (scope !== draftId || (editingDraft && (!draftLoaded || draftRef.current !== draftId))) {
+        showProblem('The open mix changed. Open commands again before undoing.');
+        return;
+      }
+      void undoNewest(draftId).catch((error: Error) => showProblem(error.message));
+    },
     startAnalysis: () => {
       void post('/analysis/start').then(() => {
         void refreshStatus();

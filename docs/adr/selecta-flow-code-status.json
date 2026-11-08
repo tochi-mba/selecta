@@ -1,0 +1,963 @@
+{
+  "schema_version": 1,
+  "scope": "SF-0198-01 through SF-0247-08",
+  "programme": "Selecta / Flow artistic UI/UX",
+  "baseline_main_sha": "c3715b14a70a0a9005e9fbc08d44576f3eac3c15",
+  "as_of": "2026-11-08",
+  "decision": "50 Accepted (owner approval 2026-11-08); approval is not implementation",
+  "implementation_status": "400 Not started; 0 In progress; 0 Implemented",
+  "independent_verification": "0 Verified; no independent visual/real-audio/AT/performance acceptance claimed",
+  "status_scope_note": "New artistic acceptance delta only; not a judgment that existing source features are absent. Historical programmes unchanged.",
+  "groups": {
+    "0198": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0199": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0200": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0201": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0202": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0203": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0204": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0205": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0206": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0207": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0208": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0209": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0210": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0211": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0212": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0213": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0214": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0215": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0216": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0217": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0218": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0219": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0220": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0221": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0222": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0223": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0224": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0225": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0226": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0227": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0228": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0229": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0230": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0231": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0232": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0233": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0234": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0235": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0236": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0237": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0238": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0239": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0240": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0241": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0242": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0243": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0244": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0245": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0246": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    },
+    "0247": {
+      "decision": "Accepted",
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null
+    }
+  }
+}

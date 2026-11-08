@@ -175,6 +175,31 @@ describe('an Undo', () => {
 });
 
 describe('the keyboard', () => {
+  it('Z will not mutate a draft until its exact identity and Undo state have loaded', async () => {
+    window.history.pushState({}, '', '/mixes/drafts/7/edit');
+    const friday = { mix: songs(seam('ready', 'b')), name: 'Friday', can_undo: true, draft: { id: 7, place: null } };
+    const calls = backend({
+      'GET /mix': (_body: unknown, url: string) => url.includes('draft=7') ? friday : data(),
+      'POST /mix/undo': { ...friday, undone: 'a draft change' },
+    });
+    render(<App />);
+    // The first press is before the requested draft has been returned.
+    fireEvent.keyDown(window, { key: 'z' });
+    expect(calls.some((call) => call.path.startsWith('/mix/undo'))).toBe(false);
+
+    await screen.findByRole('button', { name: 'Move Song 2 up' });
+    fireEvent.keyDown(window, { key: 'z' });
+    await waitFor(() => expect(calls.some((call) => call.path === '/mix/undo?draft=7')).toBe(true));
+    expect(calls.some((call) => call.path === '/mix/undo')).toBe(false);
+  });
+
+  it('Z does not post an Undo request when the current mix has no reversible edit', async () => {
+    const calls = backend({ 'GET /mix': { ...data(), can_undo: false } });
+    render(<App />);
+    await nav();
+    fireEvent.keyDown(window, { key: 'z' });
+    expect(calls.filter((call) => call.path.startsWith('/mix/undo'))).toHaveLength(0);
+  });
   it('leaves typing alone', async () => {
     backend();
     const skip = vi.spyOn(SetPlayer.prototype, 'skip').mockImplementation(async () => {});

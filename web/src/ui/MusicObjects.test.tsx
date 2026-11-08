@@ -88,6 +88,20 @@ describe('honest shared musical objects', () => {
     expect(screen.getByText(/No complete measured energy available/)).toBeInTheDocument();
   });
 
+  it('keeps queued, rendering, failed and rendered Thread states distinct without inventing sound', () => {
+    const seam: NonNullable<MixItem['seam']> = {
+      settings: { move: 'auto' }, state: { status: 'queued', key: 'q' },
+    };
+    const { rerender } = render(<SeamDiagram seam={seam} from="Before" into="After" />);
+    expect(screen.getByRole('img', { name: /Queued to render/ })).toHaveAttribute('data-state', 'queued');
+    rerender(<SeamDiagram seam={{ ...seam, state: { status: 'rendering', key: 'q' } }} from="Before" into="After" />);
+    expect(screen.getByRole('img', { name: /Rendering/ })).toHaveAttribute('data-state', 'rendering');
+    rerender(<SeamDiagram seam={{ ...seam, state: { status: 'failed', key: 'q' } }} from="Before" into="After" />);
+    expect(screen.getByRole('img', { name: /Render failed/ })).toHaveAttribute('data-state', 'failed');
+    rerender(<SeamDiagram seam={{ ...seam, state: { status: 'ready', key: 'q', style: 'cut_on_one' } }} from="Before" into="After" />);
+    expect(screen.getByRole('img', { name: /Rendered transition/ })).toHaveAttribute('data-state', 'ready');
+  });
+
   it('keeps unknown song energy as an unknown gap and selects only the actual row', () => {
     const onSelect = vi.fn();
     const make = (song_id: number, energy?: number): MixItem => ({

@@ -34,6 +34,10 @@
 .music-seam-diagram.compact { margin-block: var(--space-1); }
 .music-seam-diagram.is-plan { border-style: dashed; }
 .music-seam-diagram.is-made { border-inline-start: 3px solid var(--status-ready); }
+.music-seam-diagram[data-state='queued'] { border-inline-start: 3px dashed var(--status-planned); }
+.music-seam-diagram[data-state='rendering'] { border-inline-start: 3px dotted var(--status-working); }
+.music-seam-diagram[data-state='failed'] { border-inline-start: 3px solid var(--status-failed); }
+.music-seam-diagram[data-state='failed'] .music-seam-lines { opacity: .45; }
 .music-seam-label { color: var(--text-soft); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .music-seam-lines {
   position: relative;
@@ -77,6 +81,7 @@
 /* Returned route only. A bridge is an extra step, never a playable ghost song. */
 .music-route { min-width: 0; margin-block: var(--space-2); padding: var(--space-2); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); }
 .music-route-state { margin: 0 0 var(--space-2); color: var(--text-soft); font-size: var(--text-sm); font-weight: 600; }
+.music-route.preparing { border-style: dotted; }
 .music-route.ready { border-style: solid; }
 .music-route ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .music-route li { display: flex; align-items: center; gap: 4px; flex: 1 1 155px; min-width: 0; max-width: 100%; padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
@@ -94,6 +99,8 @@
 @media (forced-colors: active) {
   .song-motif { color: LinkText; }
   .music-seam-diagram.is-made { border-inline-start-color: Highlight; }
+  .music-seam-diagram[data-state='failed'] { border-inline-start-color: Mark; }
+  .music-seam-diagram[data-state='queued'], .music-seam-diagram[data-state='rendering'] { border-inline-start-color: CanvasText; }
   .music-seam-lines .outgoing { background: Highlight; }
   .music-seam-lines .incoming { background: LinkText; }
   .music-seam-diagram.overlap .outgoing,

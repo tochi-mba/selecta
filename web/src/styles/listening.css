@@ -99,6 +99,33 @@
 .listen-side .next-up { border-top: 0; margin-top: 0; padding-top: 0; }
 .now:not(.stage) .listen-side .handoff { margin-top: 0; grid-template-columns: minmax(0, 1fr); }
 .listen-identity .artist { margin-bottom: var(--space-4); }
+/* A quiet editorial sleeve, not album art or a representation of measured audio.
+   During a real handoff the trim changes state without adding fake movement. */
+.now:not(.stage) .listen-identity {
+  position: relative;
+  min-width: 0;
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  background:
+    radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--selected) 10%, transparent), transparent 62%),
+    linear-gradient(140deg, var(--surface-raised), var(--surface));
+  overflow-wrap: anywhere;
+}
+.now:not(.stage) .listen-identity::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0;
+  width: 4px;
+  background: var(--status-planned);
+  border-radius: inherit;
+}
+.now.in-seam:not(.stage) .listen-identity::before { background: var(--playing); }
+@media (forced-colors: active) {
+  .now:not(.stage) .listen-identity { background: Canvas; border-color: CanvasText; }
+  .now:not(.stage) .listen-identity::before { background: Highlight; }
+}
 .listen-identity .request-tag { margin-bottom: var(--space-2); }
 .now .transport { margin-block: var(--space-2); }
 .now .transport .primary.big { min-width: 160px; }

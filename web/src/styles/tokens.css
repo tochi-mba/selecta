@@ -211,6 +211,46 @@ html {
   }
 }
 
+:root[data-motion='subtle'] {
+  --motion-feedback: 60ms;
+  --motion-fast: 90ms;
+  --motion-reveal: 120ms;
+  --motion-handoff: 150ms;
+  --motion-overlay: 160ms;
+  --motion-slow: 180ms;
+}
+:root[data-motion='still'] {
+  --motion-feedback: 0ms;
+  --motion-fast: 0ms;
+  --motion-reveal: 0ms;
+  --motion-handoff: 0ms;
+  --motion-overlay: 0ms;
+  --motion-slow: 0ms;
+}
+/* CSS animations not based on motion tokens also respect Still and the OS setting. */
+:root[data-motion='still'] *,
+:root[data-motion='still'] *::before,
+:root[data-motion='still'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root, :root[data-motion] {
+    --motion-feedback: 0ms;
+    --motion-fast: 0ms;
+    --motion-reveal: 0ms;
+    --motion-handoff: 0ms;
+    --motion-overlay: 0ms;
+    --motion-slow: 0ms;
+  }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Compact mode condenses rows for pointer-precise desktop work; a touch
    user still needs reliable 44px targets when the density preference carries
    over to a tablet or convertible. */

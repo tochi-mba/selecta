@@ -47,8 +47,11 @@ export function anOverlayIsOpen(): boolean {
 /** Which shortcut this key press means here, if any. */
 export function shortcutFor(event: Pick<KeyboardEvent, 'key' | 'code' | 'target' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>): ShortcutId | null {
   const key = event.key.toLowerCase();
-  // the one shortcut that works from a text box, because nothing being typed uses it
-  if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === 'k') return anOverlayIsOpen() ? null : 'palette';
+  // Ctrl/Cmd K is global only when nobody is editing or using a widget.
+  // Text editors own their chords too; never interrupt a draft or search input.
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === 'k') {
+    return focusOwnsKeys(event.target) || anOverlayIsOpen() ? null : 'palette';
+  }
   if (focusOwnsKeys(event.target) || event.ctrlKey || event.metaKey || event.altKey) return null;
   if (event.code === 'Space') {
     return event.target instanceof HTMLElement && !!event.target.closest(ACTIVATES_WITH_SPACE) ? null : 'playPause';

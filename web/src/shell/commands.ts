@@ -1,6 +1,6 @@
 import type { DraftInfo } from '../api';
 import { navigate } from '../router';
-import { setPrefs, Theme } from '../state/prefs';
+import { setPrefs, Theme, Motion } from '../state/prefs';
 import { DESTINATIONS, EXPLORE_TABS, WORKSPACE_TABS } from './manifest';
 
 /** What the command palette can do. It's a shortcut to things that already have an ordinary way to do
@@ -16,6 +16,8 @@ export type Command = {
   keywords?: string;
   /** Why it can't run right now. */
   unavailable?: string;
+  /** Scope of a mutation, so a draft cannot look like the current mix. */
+  detail?: string;
   run: () => void;
 };
 
@@ -25,11 +27,14 @@ export type CommandContext = {
   active: boolean;
   hasNext: boolean;
   canUndo: boolean;
+  undoScope: string;
+  undoUnavailable?: string;
   readySongs: number;
   songsLeftToAnalyse: number;
   analysing: boolean;
   drafts: Pick<DraftInfo, 'id' | 'name'>[];
   theme: Theme;
+  motion: Motion;
   togglePause: () => void;
   next: () => void;
   jump: () => void;
@@ -60,7 +65,7 @@ export function buildCommands(context: CommandContext): Command[] {
   const actions: Command[] = [
     { id: 'request', label: 'Request a song', group: 'Do', run: context.openRequests },
     { id: 'new-mix', label: 'Start a new mix', group: 'Do', keywords: 'preset vibe', unavailable: context.readySongs >= 6 ? undefined : `Selecta needs 6 mix-ready songs, and has ${context.readySongs}.`, run: () => navigate('/mixes') },
-    { id: 'undo', label: 'Undo the last change', group: 'Do', unavailable: context.canUndo ? undefined : 'There’s nothing to undo.', run: context.undo },
+    { id: 'undo', label: 'Undo the last change', group: 'Do', detail: context.undoScope, unavailable: context.undoUnavailable ?? (context.canUndo ? undefined : 'There’s nothing to undo.'), run: context.undo },
     { id: 'analyse', label: 'Analyse the rest of my library', group: 'Do', unavailable: context.analysing ? 'Analysis is already running.' : context.songsLeftToAnalyse ? undefined : 'Every song has been analysed.', run: context.startAnalysis },
     { id: 'activity', label: 'Activity and Undo', group: 'Do', keywords: 'history recent', run: context.openActivity },
     { id: 'help', label: 'Keyboard shortcuts', group: 'Do', keywords: 'keys help', run: context.openHelp },
@@ -71,6 +76,15 @@ export function buildCommands(context: CommandContext): Command[] {
       keywords: 'appearance colour color mode',
       unavailable: context.theme === theme ? 'It’s already using that.' : undefined,
       run: () => setPrefs({ theme }),
+    })),
+    ...(['still', 'subtle', 'expressive'] as Motion[]).map((motion): Command => ({
+      id: `motion-${motion}`,
+      label: `Motion: ${motion}`,
+      group: 'Do',
+      keywords: 'animation movement accessibility visual intensity',
+      detail: 'Local visual preference; reduced-motion setting takes priority',
+      unavailable: context.motion === motion ? 'It’s already using that.' : undefined,
+      run: () => setPrefs({ motion }),
     })),
   ];
   const drafts = context.drafts.map((draft): Command => ({
