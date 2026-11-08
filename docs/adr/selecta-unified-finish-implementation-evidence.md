@@ -1,6 +1,6 @@
 # Selecta — UF per-task implementation and independent evidence ledger
 
-**Status:** 24 Accepted ADRs (0366–0389); 171 UF tasks Not started; 21 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08; implementing PR #41 includes source changes and regression tests; external reviewers/device evidence outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
+**Status:** 24 Accepted ADRs (0366–0389); 170 UF tasks Not started; 22 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08; implementing PR #41 includes source changes and regression tests; external reviewers/device evidence outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
 
 All future evidence fields are deliberately blank. The creation of a proposed ADR, checklist, code-status record or screenshot capture instruction is **not source implementation or independent verification**. A synthetic muted browser run does not prove music quality.
 
@@ -55,7 +55,7 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0371-07 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0371-08 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0372-01 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0372-02 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-02 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | In progress | No | Unassigned | #41 / `fbaddff530bac8061ff36fe364f5770b7f5a17c2` | router.ts/router.test.tsx reject overflow, zero and noncanonical draft IDs; cross-route history/refresh acceptance pending | Independent review pending |
 | UF-0372-03 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0372-04 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0372-05 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |

@@ -1,7 +1,7 @@
 # ADR-0372 — Navigation, first-run readiness and returning-work continuity
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Implementation:** 7/8 Not started; 1/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
 - **Priority / phase:** P0 / 03 Navigation. **Owner:** Unassigned. **Implementing PR/SHA:** —.
@@ -25,7 +25,7 @@ Users complete the named journey with clear action consequences, predictable con
 ## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
 
 1. **UF-0372-01 — Validate five destination intents.** **Acceptance:** Listen, Make a Mix, My Mixes, Library and Workspace remain understandable. **Required verification:** Uncoached route selection. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0372-02 — Preserve URL meaning.** **Acceptance:** Back, forward, aliases and refresh retain exact draft/conversation/tab target. **Required verification:** Router regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+2. **UF-0372-02 — Preserve URL meaning.** **Acceptance:** Back, forward, aliases and refresh retain exact draft/conversation/tab target. **Required verification:** Router regression. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `fbaddff530bac8061ff36fe364f5770b7f5a17c2`; **Evidence/reviewer:** router.ts/router.test.tsx reject overflow, zero and noncanonical draft IDs; cross-route history/refresh acceptance pending; independent review pending.
 3. **UF-0372-03 — Explain music-folder entry.** **Acceptance:** Local path, access errors and scan consequences are clear without promising unsupported folder pickers. **Required verification:** Setup walkthrough. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 4. **UF-0372-04 — Separate readiness stages.** **Acceptance:** Imported, analysed and mix-ready are distinct and actionable. **Required verification:** No-ready/partial-ready fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 5. **UF-0372-05 — Protect first playback.** **Acceptance:** Only genuinely eligible sets can be offered as ready; no unrequested autoplay. **Required verification:** Cold-library player test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.

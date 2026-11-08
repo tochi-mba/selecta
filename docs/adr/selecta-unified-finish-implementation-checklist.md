@@ -1,6 +1,6 @@
 # Selecta — UF implementation checklist (192 individually tracked acceptance items)
 
-**Status:** 24 Accepted ADRs (0366–0389); 171 UF tasks Not started; 21 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08; implementing PR #41 includes source changes and regression tests; external reviewers/device evidence outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
+**Status:** 24 Accepted ADRs (0366–0389); 170 UF tasks Not started; 22 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08; implementing PR #41 includes source changes and regression tests; external reviewers/device evidence outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
 
 **Semantics:** `[ ]` = not independently accepted. These are future design/integration/evidence requirements. A source-present capability may satisfy one after exact-SHA reconciliation; docs-only creation does not change implementation status.
 
@@ -87,7 +87,7 @@
 **Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0372-01 — Validate five destination intents.** **Acceptance:** Listen, Make a Mix, My Mixes, Library and Workspace remain understandable. **Verification:** Uncoached route selection. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **UF-0372-02 — Preserve URL meaning.** **Acceptance:** Back, forward, aliases and refresh retain exact draft/conversation/tab target. **Verification:** Router regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **UF-0372-02 — Preserve URL meaning.** **Acceptance:** Back, forward, aliases and refresh retain exact draft/conversation/tab target. **Verification:** Router regression. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `fbaddff530bac8061ff36fe364f5770b7f5a17c2`; **Evidence/reviewer:** router.ts/router.test.tsx reject overflow, zero and noncanonical draft IDs; cross-route history/refresh acceptance pending; independent review pending.
 - [ ] **UF-0372-03 — Explain music-folder entry.** **Acceptance:** Local path, access errors and scan consequences are clear without promising unsupported folder pickers. **Verification:** Setup walkthrough. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0372-04 — Separate readiness stages.** **Acceptance:** Imported, analysed and mix-ready are distinct and actionable. **Verification:** No-ready/partial-ready fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0372-05 — Protect first playback.** **Acceptance:** Only genuinely eligible sets can be offered as ready; no unrequested autoplay. **Verification:** Cold-library player test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
