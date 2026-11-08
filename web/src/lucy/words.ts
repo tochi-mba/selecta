@@ -48,7 +48,7 @@ export function seamWords(status: string, verified = false): { words: string; ki
     case 'lost':
       return { words: 'Was ready before — gone now', kind: 'warning' };
     default:
-      return { words: verified ? 'Ready to play' : 'Unknown', kind: verified ? 'ready' : 'unavailable' };
+      return { words: 'Unknown', kind: 'unavailable' };
   }
 }
 
