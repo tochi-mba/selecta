@@ -1,6 +1,6 @@
 # ADR-0207 — The Thread: truthful music-object continuity grammar
 
-- **Decision:** Proposed (owner acceptance pending).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
@@ -47,5 +47,5 @@ Preserve one player and manual Pause, original local music, explicit LRCLIB meta
 
 - **Depends on:** ADR-0166/0173/0175 and new foundation ADR-0198/0199.
 - **Sequence:** owner decision → designed specimens → narrow code/test PR → independently reviewed audio/visual/AT results → release gate.
-- **Now:** Decision Proposed; Implementation Not started; Independently Verified No; no implementation PR/SHA.
+- **Now:** Decision Accepted; Implementation Not started; Independently Verified No; no implementation PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [400-task checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Feature parity](selecta-flow-feature-parity.md) · [Interaction matrix](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [NO-GO gates](selecta-flow-release-gates.md).
