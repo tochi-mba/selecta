@@ -1,10 +1,10 @@
 # Selecta — Unified Experience Finish ADR roadmap (0366–0389)
 
-**Status:** 24 Proposed ADRs (0366–0389); 192 UF tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Owners unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); documentation only.
+**Status:** 24 Accepted ADRs (0366–0389); 186 UF tasks Not started; 6 In progress; 0 Implemented; 0 independently Verified. Acceptance approved by requester on 2026-11-08; implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app source and regression tests.
 
 ## Why a unified programme
 
-Selecta's existing UI, Flow, micro-polish, Lucy and Library plans have overlapping decisions and different historical implementation baselines. This **new docs-only programme sequences design, integration and independent proof** rather than re-implementing already source-present features. Prior historical statuses remain intact. **LX-0340–0352 owns Library design and LU-0300–0339/LX-0355–0363 own Lucy**; UF-0376–0378 coordinate cross-screen acceptance, not a second feature implementation.
+Selecta's existing UI, Flow, micro-polish, Lucy and Library plans have overlapping decisions and different historical implementation baselines. This **accepted programme sequences design, integration and independent proof** rather than re-implementing already source-present features. Prior historical statuses remain intact. **LX-0340–0352 owns Library design and LU-0300–0339/LX-0355–0363 own Lucy**; UF-0376–0378 coordinate cross-screen acceptance, not a second feature implementation.
 
 The product direction is three mutually consistent experiences: cinematic and calm **Listen**, inviting **Discover**, and exact tactile **Create**; practical Library and Workspace. Use real playback/audio data, meaningful artwork, semantic colours and a clear current/proposed/rendered/playing vocabulary.
 
@@ -12,30 +12,30 @@ The product direction is three mutually consistent experiences: cinematic and ca
 
 | New ADR | Phase | Priority | Decision | New implementation | Independent verification |
 |---|---|---|---|---|---|
-| [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) — Unified finish charter, current-source baseline and ADR parity | 01 Baseline | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0367](adr-0367-task-research-and-measurement.md) — Uncoached UX research, comprehension baselines and outcome metrics | 01 Baseline | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) — Semantic design tokens, theme contrast and CSS ownership | 02 Foundation | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0369](adr-0369-typography-music-artwork-and-density.md) — Typography, honest artwork, spatial rhythm and density | 02 Foundation | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) — Shared controls, overlays, action hierarchy and feedback | 02 Foundation | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) — Long-job progress, asynchronous truth and local recovery | 02 Foundation | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) — Navigation, first-run readiness and returning-work continuity | 03 Navigation | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) — Persistent player, system media controls and audio focus | 03 Navigation | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) — Listen hierarchy, lyrics integrity, seek and transitions | 04 Listen | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) — Existing fifteen visualisers, Stage and sensory-safe motion | 04 Listen | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) — Make a Mix quick paths, moods, shaping and Lucy handoff | 05 Creation entry | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0377](adr-0377-library-experience-integration-and-proof.md) — Library integration, LX ownership and exact-recording safety | 05 Creation entry | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) — Lucy integration, proposal lifecycle, consent and safe approval | 05 Creation entry | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) — My Mixes, current/draft identity and render-line hierarchy | 05 Creation | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) — Editor sequence, Story/Arrange parity and exact seam identity | 06 Advanced creation | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) — Seam Inspector audition, technique truth and accessible editing | 06 Advanced creation | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0382](adr-0382-stem-studio-musical-canvas.md) — Eight-lane Stem Studio, shape/grid/list consistency and apply safety | 06 Advanced creation | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0383](adr-0383-requests-bridges-and-consent.md) — Song requests, bridge routes and explicit atomic consent | 07 Supporting | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) — Word/harmonic connections, candidate truth and audition-first discovery | 07 Supporting | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) — Workspace hierarchy, diagnostics, sources, storage and local backups | 07 Supporting | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) — Export progression, exact frozen revisions and blind-study integrity | 07 Supporting | P1 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) — Responsive geometry, zoom, mobile keyboard and input parity | 08 Verification | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) — WCAG accessibility, plain-language status and sensory safety | 08 Verification | P0 | Proposed | 0/8 Not started | 0/8 No |
-| [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) — Independent visual, human, performance, real-audio and release GO/NO-GO | 08 Verification | P0 | Proposed | 0/8 Not started | 0/8 No |
+| [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) — Unified finish charter, current-source baseline and ADR parity | 01 Baseline | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0367](adr-0367-task-research-and-measurement.md) — Uncoached UX research, comprehension baselines and outcome metrics | 01 Baseline | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) — Semantic design tokens, theme contrast and CSS ownership | 02 Foundation | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0369](adr-0369-typography-music-artwork-and-density.md) — Typography, honest artwork, spatial rhythm and density | 02 Foundation | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) — Shared controls, overlays, action hierarchy and feedback | 02 Foundation | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) — Long-job progress, asynchronous truth and local recovery | 02 Foundation | P0 | Accepted | 0/8 Implemented (3 In progress) | 0/8 No |
+| [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) — Navigation, first-run readiness and returning-work continuity | 03 Navigation | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) — Persistent player, system media controls and audio focus | 03 Navigation | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) — Listen hierarchy, lyrics integrity, seek and transitions | 04 Listen | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) — Existing fifteen visualisers, Stage and sensory-safe motion | 04 Listen | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) — Make a Mix quick paths, moods, shaping and Lucy handoff | 05 Creation entry | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0377](adr-0377-library-experience-integration-and-proof.md) — Library integration, LX ownership and exact-recording safety | 05 Creation entry | P0 | Accepted | 0/8 Implemented (1 In progress) | 0/8 No |
+| [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) — Lucy integration, proposal lifecycle, consent and safe approval | 05 Creation entry | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) — My Mixes, current/draft identity and render-line hierarchy | 05 Creation | P1 | Accepted | 0/8 Implemented (1 In progress) | 0/8 No |
+| [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) — Editor sequence, Story/Arrange parity and exact seam identity | 06 Advanced creation | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) — Seam Inspector audition, technique truth and accessible editing | 06 Advanced creation | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0382](adr-0382-stem-studio-musical-canvas.md) — Eight-lane Stem Studio, shape/grid/list consistency and apply safety | 06 Advanced creation | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0383](adr-0383-requests-bridges-and-consent.md) — Song requests, bridge routes and explicit atomic consent | 07 Supporting | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) — Word/harmonic connections, candidate truth and audition-first discovery | 07 Supporting | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) — Workspace hierarchy, diagnostics, sources, storage and local backups | 07 Supporting | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) — Export progression, exact frozen revisions and blind-study integrity | 07 Supporting | P1 | Accepted | 0/8 Implemented (1 In progress) | 0/8 No |
+| [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) — Responsive geometry, zoom, mobile keyboard and input parity | 08 Verification | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) — WCAG accessibility, plain-language status and sensory safety | 08 Verification | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) — Independent visual, human, performance, real-audio and release GO/NO-GO | 08 Verification | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
 
 ## Ordered delivery and phase gates
 
