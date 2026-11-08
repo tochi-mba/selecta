@@ -804,6 +804,7 @@ export function Now(props: ViewProps) {
                   <button type="button" aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
                   <button type="button" aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
                 </div>
+                {view.lyrics && <p className="hint listen-display-note" role="status">Lyrics focus temporarily hides the spectrum and countdown. Your choices are remembered.</p>}
                 <div className="listen-spectrum-settings">
                   <label className="spectrum-choice">
                     <span>Audio visualizer style</span>
