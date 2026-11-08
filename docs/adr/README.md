@@ -1,3 +1,13 @@
+# Selecta — creative-interface synthesis ADR programme (2026-11-08)
+
+**New documentation-only proposal:** [20 ADRs, ADR-0165–0184](selecta-creative-interface-roadmap.md) · [140-task implementation checklist](selecta-creative-interface-implementation-checklist.md) · [per-task implementation and verification evidence](selecta-creative-interface-implementation-evidence.md) · [feature-parity inventory](selecta-creative-interface-feature-parity.md) · [interaction and motion matrix](selecta-creative-interface-interaction-matrix.md) · [verification matrix](selecta-creative-interface-verification-matrix.md) · [historical status reconciliation](selecta-creative-interface-status-reconciliation.md) · [NO-GO release gates](selecta-creative-interface-release-gates.md).
+
+**New CI status:** 20 **Proposed** decisions, 0 Accepted; **140 Not started**, 0 In progress, 0 Implemented; **0 independently Verified**. Baseline: main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd (2026-11-08). This PR changes **only ADR and planning documents**, not application source, test files, audio or assets.
+
+**Keep earlier MI statuses separate:** ADR-0135–0164 previously recorded 208 source-level Implemented, 4 In progress, 28 Not started and 0 independently Verified in their own published ledger. The new creative-interface proposals concern cross-screen musical object identity, expressive yet honest interaction, meaningful visual handoffs and independent user acceptance; no existing MI implementation is automatically marked a new CI task complete.
+
+---
+
 # Selecta — immersive experience and microinteraction ADR programme (2026-11-07)
 
 **Immersive programme (documentation + implementation on PR #31):** [30 new ADRs, ADR-0135–0164](selecta-microinteraction-roadmap.md); [240 individually tracked tasks](selecta-microinteraction-implementation-checklist.md); [per-task implementation/verification evidence](selecta-microinteraction-evidence.md); [full interaction/motion specification](selecta-microinteraction-motion-matrix.md); [feature preservation map](selecta-microinteraction-feature-parity.md); [verification matrix](selecta-microinteraction-verification-matrix.md); [historical status reconciliation](selecta-microinteraction-status-reconciliation.md); [NO-GO release gates](selecta-microinteraction-release-gates.md).
