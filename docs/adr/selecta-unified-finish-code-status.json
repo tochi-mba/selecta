@@ -12,8 +12,8 @@
     "Superseded": 0
   },
   "implementation_summary": {
-    "Not_started": 186,
-    "In_progress": 6,
+    "Not_started": 184,
+    "In_progress": 8,
     "Implemented": 0
   },
   "independent_verification_summary": {
@@ -1860,12 +1860,12 @@
           "title": "Protect idempotent approval",
           "acceptance": "Save draft and Save and play are separate confirmed commands with lost-reply reconciliation.",
           "required_verification": "Duplicate/stale revision E2E.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "c1274bda6919e3dcf3466cf72ee4f2b583c07500",
+          "evidence": "web/src/views/LucyApprove.tsx and LucyApprove.test.tsx: revision-scoped preflight and commit response; broader audio/commit verification outstanding",
           "reviewer": null,
           "review_date": null,
           "platform": null
@@ -1890,12 +1890,12 @@
           "title": "Keep approval audio deliberate",
           "acceptance": "Save draft never starts playback; confirmed Save and play respects single audio owner.",
           "required_verification": "Real player/audio-focus test.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "c1274bda6919e3dcf3466cf72ee4f2b583c07500",
+          "evidence": "web/src/views/LucyApprove.tsx and LucyApprove.test.tsx: revision-scoped preflight and commit response; broader audio/commit verification outstanding",
           "reviewer": null,
           "review_date": null,
           "platform": null
