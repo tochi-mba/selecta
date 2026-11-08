@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Action, Dialog, Menu, Problem, Section, Status, Tooltip } from './controls';
@@ -194,6 +195,27 @@ describe('things on top of the page', () => {
     expect(opener).toHaveFocus();
     opener.remove();
   });
+  it('makes the parent inert during a nested dialog and restores the nested opener', () => {
+    function Nested() {
+      const [inner, setInner] = useState(false);
+      return <Dialog title="Parent" onClose={() => {}}>
+        <button onClick={() => setInner(true)}>Open child</button>
+        {inner && <Dialog title="Child" onClose={() => setInner(false)}><button>Child action</button></Dialog>}
+      </Dialog>;
+    }
+    render(<Nested />);
+    const parent = screen.getByRole('dialog', { name: 'Parent' });
+    const opener = screen.getByRole('button', { name: 'Open child' });
+    fireEvent.click(opener);
+    expect(parent.closest('.overlay')).toHaveAttribute('inert');
+    const child = screen.getByRole('dialog', { name: 'Child' });
+    expect(child.closest('.overlay')).not.toHaveAttribute('inert');
+    fireEvent.keyDown(child, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Child' })).toBeNull();
+    expect(parent.closest('.overlay')).not.toHaveAttribute('inert');
+    expect(opener).toHaveFocus();
+  });
+
   it('treats a disclosure summary as the last Tab stop and skips collapsed contents', () => {
     render(<Dialog title="Options" onClose={() => {}}>
       <button>Visible action</button>
