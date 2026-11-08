@@ -14,13 +14,13 @@ import { ViewProps } from './shared';
 
 const VIEW_KEY = 'selecta.listen';
 
-type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean; intensity: 'quiet' | 'standard' | 'focused' };
+type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean; intensity: 'quiet' | 'standard' | 'focused'; spectrumShape: 'bars' | 'radial' };
 
 function savedView(): ListenView {
-  const defaults: ListenView = { lyrics: false, spectrum: true, timing: true, intensity: 'standard' };
+  const defaults: ListenView = { lyrics: false, spectrum: true, timing: true, intensity: 'standard', spectrumShape: 'bars' };
   try {
     const saved = JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') as Partial<ListenView>;
-    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard' };
+    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard', spectrumShape: saved.spectrumShape === 'radial' ? 'radial' : 'bars' };
   } catch {
     return defaults;
   }
@@ -247,6 +247,7 @@ function TransitionCountdown({
   time,
   seamAt,
   nextTitle,
+  currentTitle,
   ready,
   inSeam,
   switchAt,
@@ -255,6 +256,7 @@ function TransitionCountdown({
   time: number;
   seamAt: number | null;
   nextTitle?: string;
+  currentTitle?: string;
   ready: boolean;
   inSeam: boolean;
   switchAt?: number;
@@ -266,18 +268,23 @@ function TransitionCountdown({
   if (!ready || seamAt === null) {
     return <section className="handoff pending"><span className="eyebrow">Next transition</span><b>Preparing the hand-off</b><span>{nextTitle}</span><i className="pending-line" /></section>;
   }
-  if (!detail.bar_times?.length || !detail.beat_times?.length) {
-    return <section className="handoff pending"><span className="eyebrow">Next transition</span><b>Beat grid unavailable</b><span>{nextTitle}</span></section>;
-  }
   if (inSeam) {
     const progress = Math.max(0, Math.min(1, (time - seamAt) / Math.max(switchAt ?? 0, 0.01)));
     return (
       <section className="handoff active" aria-label={`Transition into ${nextTitle} is playing`}>
         <div className="handoff-title"><span className="eyebrow">Transition in progress</span><b>{nextTitle}</b></div>
-        <div className="handoff-progress"><i style={{ width: `${progress * 100}%` }} /></div>
+        {currentTitle && <p className="handoff-pair" dir="auto"><span>From <b>{currentTitle}</b></span><span>Into <b>{nextTitle}</b></span></p>}
+        {switchAt !== undefined && switchAt > 0 && <div className="handoff-progress"><i style={{ width: `${progress * 100}%` }} /></div>}
         <span className="handoff-caption">The next song is entering</span>
       </section>
     );
+  }
+  if (!detail.bar_times?.length || !detail.beat_times?.length) {
+    return <section className="handoff pending" aria-label="Time to the next transition">
+      <span className="eyebrow">Next transition</span>
+      <b>{clock(Math.max(0, seamAt - time))} until the hand-off</b>
+      <span>{nextTitle} · Beat grid unavailable, so time is shown in minutes and seconds.</span>
+    </section>;
   }
   const countdown = transitionCount(detail, time, seamAt);
   if (!countdown) return null;
@@ -315,7 +322,7 @@ function TransitionCountdown({
   );
 }
 
-function MusicVisualizer({ player, active, stage, intensity }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity'] }) {
+function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape'] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
   // its colours come from the page, so a change of theme has to draw it again
@@ -376,15 +383,31 @@ function MusicVisualizer({ player, active, stage, intensity }: { player: ViewPro
       const gap = 2 * ratio;
       const barWidth = Math.max(1, (width - gap * (bars - 1)) / bars);
       context.fillStyle = gradient;
+      if (spectrumShape === 'radial') {
+        context.strokeStyle = gradient;
+        context.lineWidth = Math.max(1, 2 * ratio);
+        context.lineCap = 'round';
+      }
       for (let index = 0; index < bars; index += 1) {
         const low = Math.floor((index / bars) ** 2 * spectrum.length);
         const high = Math.max(low + 1, Math.floor(((index + 1) / bars) ** 2 * spectrum.length));
         let value = 0;
         for (let bin = low; bin < Math.min(high, spectrum.length); bin += 1) value = Math.max(value, spectrum[bin] / 255);
-        const amplitude = Math.max(0.035, value ** 0.8);
-        const barHeight = Math.max(2 * ratio, amplitude * height * 0.92);
-        const x = index * (barWidth + gap);
-        context.fillRect(x, (height - barHeight) / 2, barWidth, barHeight);
+        if (value <= 0) continue; // Silence is not a visual beat or a fabricated signal.
+        const amplitude = value ** 0.8;
+        if (spectrumShape === 'radial') {
+          const angle = -Math.PI / 2 + (index / bars) * Math.PI * 2;
+          const outer = Math.max(0, Math.min(width, height) * (0.24 + amplitude * 0.22));
+          const inner = Math.min(width, height) * 0.22;
+          context.beginPath();
+          context.moveTo(width / 2 + Math.cos(angle) * inner, height / 2 + Math.sin(angle) * inner);
+          context.lineTo(width / 2 + Math.cos(angle) * outer, height / 2 + Math.sin(angle) * outer);
+          context.stroke();
+        } else {
+          const barHeight = Math.max(1 * ratio, amplitude * height * 0.92);
+          const x = index * (barWidth + gap);
+          context.fillRect(x, (height - barHeight) / 2, barWidth, barHeight);
+        }
       }
       if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
     };
@@ -413,8 +436,8 @@ function MusicVisualizer({ player, active, stage, intensity }: { player: ViewPro
       intersection?.disconnect();
       window.cancelAnimationFrame(frame);
     };
-  }, [player, active, stage, reduceMotion, theme]);
-  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? 'Live audio frequency levels' : 'Audio frequency visualizer paused'} />;
+  }, [player, active, stage, reduceMotion, theme, spectrumShape]);
+  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${spectrumShape === 'radial' ? 'Radial' : 'Bar'} real audio frequency levels` : 'Audio frequency visualizer paused'} />;
 }
 
 /** Why there's nothing to follow along with. A song's timing is never made up to fill the gap. */
@@ -446,8 +469,14 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
   const current = index >= 0 ? lines[index] : null;
   const wordIndex = current?.words?.findIndex((word) => word.start <= time && time < word.end) ?? -1;
   const around = focus ? 3 : 1;
+  const timingWords = detail.lyric_status === 'plain'
+    ? 'Untimed lyrics — word timing unavailable.'
+    : lines.some((line) => !!line.words?.length)
+      ? 'Word highlights follow stored lyric alignment; timing may be approximate.'
+      : 'Line-timed lyrics; individual word timing unavailable.';
   return (
     <div className={`lyrics ${focus ? 'focus' : ''} ${reading ? 'reading' : ''}`} aria-live="off">
+      <p className="lyric-confidence">{timingWords}</p>
       {canBrowse && (
         <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReading(!reading)}>
           {reading ? 'Resume lyric follow' : 'Read all lyrics'}
@@ -691,10 +720,10 @@ export function Now(props: ViewProps) {
             </>
           )}
 
-          {(view.intensity !== 'quiet' && (stage || (view.spectrum && !view.lyrics))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} />}
+          {(view.intensity !== 'quiet' && (stage || (view.spectrum && !view.lyrics))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>Couldn’t load lyrics and song details. Playback controls are still available.</Problem>}
-          {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} canBrowse={!stage} /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
+          {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
         </div>
 
         <aside className="listen-side" aria-label="Coming up">
@@ -704,6 +733,7 @@ export function Now(props: ViewProps) {
               time={now.songTime}
               seamAt={now.seamAt}
               nextTitle={next?.title}
+              currentTitle={item?.title}
               ready={now.nextReady}
               inSeam={now.inSeam}
               switchAt={seam?.switch_at}
@@ -741,6 +771,10 @@ export function Now(props: ViewProps) {
               <fieldset className="listen-view" aria-label="What to show"><legend>Display options</legend>
                 <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
                 <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
+                <div className="listen-intensity" role="group" aria-label="Real spectrum presentation">
+                  <button aria-pressed={view.spectrumShape === 'bars'} onClick={() => choose({ spectrumShape: 'bars' })}>Frequency bars</button>
+                  <button aria-pressed={view.spectrumShape === 'radial'} onClick={() => choose({ spectrumShape: 'radial' })}>Radial spectrum</button>
+                </div>
                 <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
                 <div className="listen-intensity" role="group" aria-label="Visual intensity">
                   {(['quiet', 'standard', 'focused'] as const).map((intensity) => (

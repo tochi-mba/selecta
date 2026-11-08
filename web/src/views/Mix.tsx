@@ -4,6 +4,7 @@ import { etaRangeWords, runningTime } from '../lib';
 import { mixReadiness, occurrenceKeys, orderOf } from '../state/readiness';
 import { Action, announce, Dialog, Sheet } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { EnergyOverview } from '../ui/MusicObjects';
 import { Adder } from './Adder';
 import { RenameDraft } from './Drafts';
 import { AddGap, MoveHow, RowActions, SeamUnlessReplaced, SongInspector, SongLine } from './EditorRows';
@@ -571,6 +572,12 @@ export function Mix(props: ViewProps) {
       {problem && <p className="warn" role="alert">{problem}</p>}
       {gone && <p className="notice" role="status">{gone}</p>}
       {exporting && <ExportPanel mix={mix} mixName={mixName} inDraft={inDraft} guard={guard} setMixData={setMixData} names={status.moves} onClose={() => setExporting(false)} />}
+
+      {mix.length > 1 && <EnergyOverview items={mix} selectedIndex={selectedSongIndex} onSelect={(index) => {
+        setGone('');
+        setHearNow(false);
+        setSelected({ kind: 'song', key: keys[index], title: mix[index].title });
+      }} />}
 
       <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`} style={inspecting && !narrow ? { '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties : undefined}>
         <ol className={`timeline density ${mix.length > LONG_MIX ? 'long' : ''}`} onDragOver={scrollWhileDragging}>

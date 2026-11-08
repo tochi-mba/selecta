@@ -111,3 +111,45 @@ export function EnergyHorizon({ values, source, onPointerDown, onPointerMove, on
     </svg>
   );
 }
+
+/** A per-song snapshot, not a generated energy shape or a promised result. Gaps stay unknown.
+ * The parent owns the exact mix scope and selection; clicking here cannot edit or play anything. */
+export function EnergyOverview({ items, selectedIndex, onSelect }: {
+  items: MixItem[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const measured = items.map((item) => item.energy).filter((energy): energy is number => typeof energy === 'number' && Number.isFinite(energy));
+  if (measured.length < 2) {
+    return <p className="hint energy-overview-empty">Not enough measured song energy to show a journey yet.</p>;
+  }
+  const low = Math.min(...measured);
+  const high = Math.max(...measured);
+  const span = high - low;
+  return (
+    <section className="energy-overview" aria-label="Measured energy overview">
+      <div className="energy-overview-head">
+        <strong>Energy through this mix</strong>
+        <small>Relative measured song energy only — not your requested shape or a quality score</small>
+      </div>
+      <ol>
+        {items.map((item, index) => {
+          const known = typeof item.energy === 'number' && Number.isFinite(item.energy);
+          const height = known ? (span === 0 ? 50 : 10 + (item.energy! - low) / span * 90) : 0;
+          const level = !known ? 'not measured' : span === 0 ? 'even' : height < 38 ? 'lower' : height > 71 ? 'higher' : 'middle';
+          return (
+            <li key={item.song_id + '-' + index}>
+              <button type="button" aria-current={selectedIndex === index ? 'true' : undefined}
+                aria-label={'Select ' + item.title + ', song ' + (index + 1) + ', energy ' + level}
+                onClick={() => onSelect(index)}>
+                {known
+                  ? <span className="energy-overview-bar" style={{ height: height + '%' }} aria-hidden="true" />
+                  : <span className="energy-overview-unknown" aria-hidden="true">?</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
