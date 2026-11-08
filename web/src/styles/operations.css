@@ -24,7 +24,7 @@
 .library-density button { min-height: var(--control-height); padding-inline: var(--space-3); font-size: var(--text-sm); }
 .library-column-head {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px);
   gap: var(--space-3);
   padding: var(--space-2) 2px;
   border-bottom: 1px solid var(--border-strong);
@@ -35,7 +35,7 @@
 .library-column-head span:last-child { text-align: end; min-width: 200px; }
 .library-rows { gap: var(--row-gap); }
 .library-rows .song-row {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px);
   grid-template-areas: 'name facts readiness actions';
   gap: var(--space-1) var(--space-3);
   padding: var(--row-pad) 2px;

@@ -14,8 +14,10 @@ import { PageLink } from './PageLink';
 
 export { PageLink };
 
-function clock(seconds: number): string {
-  const whole = Math.max(Math.floor(seconds), 0);
+export function clock(seconds: number): string {
+  // A seek, loading transition or missing duration must never render NaN/Infinity
+  // into the fixed mini-player or alter the transport's layout.
+  const whole = Number.isFinite(seconds) ? Math.max(Math.floor(seconds), 0) : 0;
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }
 
@@ -47,20 +49,20 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
  * player. The player itself lives above every page, so nothing here can start or stop the music by
  * appearing or going away. */
 function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { player: SetPlayer; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number }) {
-  const progress = now.duration ? Math.min(now.songTime / now.duration, 1) : 0;
+  const progress = now.duration > 0 && Number.isFinite(now.songTime) ? Math.min(Math.max(now.songTime / now.duration, 0), 1) : 0;
   return (
     <aside className="mini" aria-label={now.inSeam ? 'Playing transition' : now.phase === 'paused' ? 'Paused playback' : now.phase === 'loading' ? 'Loading playback' : 'Now playing'}>
       <i className="mini-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
       <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : now.phase === 'loading' ? 'Loading song' : now.phase === 'paused' ? 'Resume' : 'Play'}>
         <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
       </button>
-      <PageLink to="/listen" className="mini-song" title={`${song.title} - ${song.artist}`}>
+      <PageLink to="/listen" className="mini-song" title={`${song.title || 'Untitled'} — ${song.artist || 'Unknown artist'}`}>
         <b title={song.title} dir="auto">{song.title || 'Untitled'}</b>
         <span title={song.artist} dir="auto">{song.artist || 'Unknown artist'} · {clock(now.songTime)} / {clock(now.duration)}{now.inSeam ? ' · Transition playing' : ''}</span>
       </PageLink>
       <button className="mini-next" disabled={now.phase === 'loading' || !hasNext} onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
       <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
-        Request{waiting ? <span className="count"> {waiting}</span> : ''}
+        Request<span className="count" aria-hidden={!waiting}>{waiting || '\u00a0'}</span>
       </button>
       <div className="mini-volume"><VolumeControl player={player} now={now} /></div>
     </aside>
@@ -121,8 +123,12 @@ function useKeyboardInset() {
     let focusFrame = 0;
     const measure = () => {
       const covered = Math.max(window.innerHeight - view.height - view.offsetTop, 0);
-      const keyboardOpen = covered > 120;
-      root.style.setProperty('--keyboard-inset', `${Math.round(covered)}px`);
+      const focused = document.activeElement as HTMLElement | null;
+      const editing = !!focused?.matches('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable="true"]');
+      // The visual viewport also shrinks on pinch zoom. Only a focused editor
+      // may invoke keyboard-yield, otherwise zoom can incorrectly hide navigation.
+      const keyboardOpen = editing && covered > 120 && view.scale <= 1.1;
+      root.style.setProperty('--keyboard-inset', `${Math.round(keyboardOpen ? covered : 0)}px`);
       if (keyboardOpen) root.dataset.keyboard = 'open';
       else delete root.dataset.keyboard;
       if (keyboardOpen && !keyboardWasOpen) {

@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
+import { clock } from './Shell';
 import { SetPlayer } from '../player';
 import { fakeBackend, seam, songs, status } from '../test/backend';
 import { clearToasts } from '../ui/toasts';
@@ -21,6 +22,49 @@ beforeEach(() => {
   window.localStorage.clear();
   window.history.pushState({}, '', '/mixes');
   vi.spyOn(SetPlayer.prototype, 'playFrom').mockImplementation(async () => {});
+});
+
+describe('stable player and keyboard geometry', () => {
+  it('formats missing or non-finite timing without NaN or Infinity', () => {
+    expect(clock(Number.NaN)).toBe('0:00');
+    expect(clock(Number.POSITIVE_INFINITY)).toBe('0:00');
+    expect(clock(Number.NEGATIVE_INFINITY)).toBe('0:00');
+    expect(clock(-5)).toBe('0:00');
+    expect(clock(61.9)).toBe('1:01');
+  });
+
+  it('only yields chrome to a real editor keyboard, not pinch zoom or a blurred input', async () => {
+    backend();
+    const viewport = Object.assign(new EventTarget(), {
+      height: window.innerHeight - 260,
+      offsetTop: 0,
+      scale: 2,
+    });
+    vi.stubGlobal('visualViewport', viewport);
+    const input = document.createElement('input');
+    document.body.append(input);
+    try {
+      render(<App />);
+      await nav();
+      input.focus();
+      act(() => viewport.dispatchEvent(new Event('resize')));
+      expect(document.documentElement.dataset.keyboard).toBeUndefined();
+      expect(document.documentElement.style.getPropertyValue('--keyboard-inset')).toBe('0px');
+
+      viewport.scale = 1;
+      act(() => viewport.dispatchEvent(new Event('resize')));
+      expect(document.documentElement.dataset.keyboard).toBe('open');
+      expect(document.documentElement.style.getPropertyValue('--keyboard-inset')).toBe('260px');
+
+      input.blur();
+      act(() => viewport.dispatchEvent(new Event('resize')));
+      expect(document.documentElement.dataset.keyboard).toBeUndefined();
+      expect(document.documentElement.style.getPropertyValue('--keyboard-inset')).toBe('0px');
+    } finally {
+      input.remove();
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe('getting around', () => {

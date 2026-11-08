@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Action, Dialog, Menu, Problem, Section, Status, Tooltip } from './controls';
@@ -194,6 +195,54 @@ describe('things on top of the page', () => {
     expect(opener).toHaveFocus();
     opener.remove();
   });
+  it('makes the parent inert during a nested dialog and restores the nested opener', () => {
+    function Nested() {
+      const [inner, setInner] = useState(false);
+      return <Dialog title="Parent" onClose={() => {}}>
+        <button onClick={() => setInner(true)}>Open child</button>
+        {inner && <Dialog title="Child" onClose={() => setInner(false)}><button>Child action</button></Dialog>}
+      </Dialog>;
+    }
+    render(<Nested />);
+    const parent = screen.getByRole('dialog', { name: 'Parent' });
+    const opener = screen.getByRole('button', { name: 'Open child' });
+    // fireEvent.click does not perform the browser's normal pointer focus step.
+    // Model it explicitly so nested-dialog restoration checks the real opener.
+    opener.focus();
+    fireEvent.click(opener);
+    expect(parent.closest('.overlay')).toHaveAttribute('inert');
+    const child = screen.getByRole('dialog', { name: 'Child' });
+    expect(child.closest('.overlay')).not.toHaveAttribute('inert');
+    fireEvent.keyDown(child, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Child' })).toBeNull();
+    expect(parent.closest('.overlay')).not.toHaveAttribute('inert');
+    expect(opener).toHaveFocus();
+  });
+
+  it('treats a disclosure summary as the last Tab stop and skips collapsed contents', () => {
+    render(<Dialog title="Options" onClose={() => {}}>
+      <button>Visible action</button>
+      <button style={{ display: 'none' }}>CSS hidden action</button>
+      <details><summary>Advanced options</summary><button>Collapsed action</button></details>
+    </Dialog>);
+    const close = screen.getByRole('button', { name: 'Close Options' });
+    const summary = screen.getByText('Advanced options');
+    summary.focus();
+    fireEvent.keyDown(summary, { key: 'Tab' });
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
+    expect(summary).toHaveFocus();
+  });
+
+  it('does not autofocus a CSS-hidden or hidden control', () => {
+    render(<Dialog title="Focus choice" onClose={() => {}}>
+      <button data-autofocus style={{ display: 'none' }}>CSS hidden</button>
+      <button data-autofocus hidden>Hidden</button>
+      <button data-autofocus>Ready</button>
+    </Dialog>);
+    expect(screen.getByRole('button', { name: 'Ready' })).toHaveFocus();
+  });
+
 });
 
 describe('a menu', () => {

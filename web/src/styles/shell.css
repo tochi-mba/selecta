@@ -123,8 +123,17 @@ a.button:hover { border-color: var(--text); }
     border-top: 1px solid var(--border);
   }
   .nav .brand, .nav-foot { display: none; }
-  .nav ul { flex: 1 1 auto; min-width: 0; }
-  .nav li { flex: 1 1 0; min-width: 0; }
+  /* At 320px and especially at 200–400% zoom, keep each destination
+     reachable instead of shrinking its icon and label below a usable width.
+     Only the navigation list scrolls, never the document horizontally. */
+  .nav ul {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: var(--space-2);
+  }
+  .nav li { flex: 1 0 64px; min-width: 64px; }
   .nav li a {
     height: 100%;
     display: flex;
@@ -188,7 +197,9 @@ a.button:hover { border-color: var(--text); }
 }
 .crumbs { min-width: 0; font-size: var(--text-sm); color: var(--text-soft); }
 .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px var(--space-2); }
+.crumbs li { min-width: 0; overflow-wrap: anywhere; }
 .crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
+.crumbs [aria-current='page'] { unicode-bidi: plaintext; }
 .crumbs a { color: var(--text-soft); }
 .crumbs [aria-current='page'] { color: var(--text); font-weight: 600; }
 .context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; min-width: 0; }
@@ -235,7 +246,10 @@ a.mini-song { flex: 1 1 auto; min-width: 0; display: grid; color: var(--text); t
 .mini-song b, .mini-song span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .mini-song span { color: var(--text-soft); font-size: var(--text-sm); }
 .mini button { flex: none; }
-.mini-next { padding: 8px 10px; }
+.mini .round { width: 44px; height: 44px; }
+.mini-next { padding: 8px 10px; min-width: 44px; }
+/* Reserve digits even at zero so arriving requests never shove transport or track identity. */
+.mini-requests .count { display: inline-block; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 420px) {
   .mini-requests { padding: 8px; font-size: var(--text-sm); }
 }
@@ -523,7 +537,8 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
 /* a title in Hebrew or Arabic reads the right way round, whatever is next to it */
 .display, .artist, .song-name b, .song-name span, button.song-open, .mini-song, .request-list b {
   unicode-bidi: plaintext;
-  text-align: left;
+  /* Honor the resolved text direction for mixed-script track identities. */
+  text-align: start;
 }
 
 .seam-visual-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }

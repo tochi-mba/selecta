@@ -57,6 +57,30 @@ describe('rendering every seam', () => {
   });
 });
 
+describe('exact song identity under metadata stress', () => {
+  it('keeps duplicate, RTL and CJK song names readable and occurrence-scoped', () => {
+    const mix = songs(seam('ready', 'a'));
+    const title = 'رحلة ليلية — ' + 'Very long title '.repeat(8);
+    mix[0].title = title;
+    mix[1].title = title;
+    mix[0].artist = '東京の音楽';
+    mix[1].artist = '東京の音楽';
+    render(<Harness start={mix} />);
+
+    const rows = [...document.querySelectorAll<HTMLElement>('.timeline .song')];
+    expect(rows).toHaveLength(2);
+    rows.forEach((row, index) => {
+      const selection = row.querySelector<HTMLButtonElement>('.song-select');
+      const reorder = row.querySelector<HTMLElement>('.grip');
+      expect(selection).toHaveAttribute('aria-description', `Song occurrence ${index + 1} of 2`);
+      expect(reorder).toHaveAttribute('aria-description', `Song occurrence ${index + 1} of 2`);
+      expect(selection?.querySelector('b')).toHaveAttribute('dir', 'auto');
+      expect(selection?.querySelector('b')).toHaveAttribute('title', title);
+      expect(row.querySelector('.song-name > span')).toHaveAttribute('dir', 'auto');
+    });
+  });
+});
+
 describe('a seam’s row', () => {
   it('offers no render button while the seam is under way, only its badge', () => {
     render(<Harness start={songs(seam('rendering', 'a'))} />);
