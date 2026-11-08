@@ -193,7 +193,12 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
           {saved && <span className="hint" role="status">{saved}</span>}
         </div>
       </form>
-      {status.enabled && status.phases.memory && <LucyMemory />}
+      {status.enabled && (
+        <LucyMemory onStatus={(next) => {
+          setPhases((was) => ({ ...was, memory: next.phases.memory }));
+          onSaved(next);
+        }} />
+      )}
     </div>
   );
 }

@@ -309,7 +309,8 @@ function applyEvent(view: LucyView, event: LucyEvent, payload: Record<string, un
       for (const step of planned) {
         const key = cardKey(event.plan, step.id);
         if (!steps.includes(key)) steps.push(key);
-        cards[key] ??= { plan: event.plan, step: step.id, run: event.run ?? '', turn: event.turn ?? '', op: step.op, family: step.family, title: step.title, status: 'queued', attempt: 1, notices: [], note: step.note, visual: {} };
+        // attempt 0 means none yet, so the first real event counts whether the server counts from 0 or 1
+        cards[key] ??= { plan: event.plan, step: step.id, run: event.run ?? '', turn: event.turn ?? '', op: step.op, family: step.family, title: step.title, status: 'queued', attempt: 0, notices: [], note: step.note, visual: {} };
       }
       const group: PlanGroup = { plan: event.plan, run: event.run ?? existing?.run ?? '', turn: event.turn ?? existing?.turn ?? '', steps, planned, done: false, ok: null, duration_ms: null };
       return { ...view, cards, plans: { ...view.plans, [event.plan]: group }, planOrder: existing ? view.planOrder : [...view.planOrder, event.plan] };
@@ -324,7 +325,8 @@ function applyEvent(view: LucyView, event: LucyEvent, payload: Record<string, un
       if (!summary.id) return view;
       const base: ProposalState = view.proposal ?? { id: text(payload.proposal), currentId: null, history: [] };
       const known = base.history.find((item) => item.id === summary.id);
-      const history = [...base.history.filter((item) => item.id !== summary.id), { ...known, ...summary, title: summary.title || known?.title || '' }].sort((a, b) => a.number - b.number);
+      const merged: RevisionSummary = { ...known, ...summary, parent: known?.parent ?? null, created_at: known?.created_at || event.at, title: summary.title || known?.title || '' };
+      const history = [...base.history.filter((item) => item.id !== summary.id), merged].sort((a, b) => a.number - b.number);
       let proposal: ProposalState = { ...base, history };
       if (summary.current) proposal = withCurrent(proposal, summary.id);
       return { ...view, proposal, revisionTick: summary.current ? view.revisionTick + 1 : view.revisionTick };

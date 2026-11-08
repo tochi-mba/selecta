@@ -126,7 +126,8 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   }
   entries.sort((a, b) => a.key - b.key || a.order - b.order);
   const waiting = view.permissions.filter((permission) => permission.status === 'pending');
-  const showPending = pending && pending.state !== 'sent';
+  // the stand-in stays until the server's own copy of the message is on screen, never both at once
+  const showPending = !!pending && !(pending.turn && view.messages.some((message) => message.turn === pending.turn));
   return (
     <section className="lucy-transcript" aria-label="Conversation with Lucy">
       {!entries.length && !showPending && empty}
@@ -136,7 +137,7 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
           {showPending && (
             <li className={`lucy-msg is-user is-${pending.state}`}>
               <article aria-label="Your message">
-                <h3 className="lucy-msg-who">You<span className="lucy-msg-state"> · {pending.state === 'sending' ? 'Sending…' : 'Not sent'}</span></h3>
+                <h3 className="lucy-msg-who">You<span className="lucy-msg-state"> · {pending.state === 'sending' ? 'Sending…' : pending.state === 'sent' ? 'Sent' : 'Not sent'}</span></h3>
                 <RichText text={pending.text} />
                 {pending.state === 'failed' && <p className="warn">{pending.message ?? 'Couldn’t send this.'} Your words are back in the box below.</p>}
               </article>

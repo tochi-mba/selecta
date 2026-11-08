@@ -653,7 +653,7 @@ export function App() {
           {route.page === 'listening' && <Workshop {...shared} tab="learning" />}
           {route.page === 'lucy' && (
             <Suspense fallback={<main className="page" aria-busy="true"><Skeleton label="Opening Lucy" /></main>}>
-              <Lucy {...shared} conversation={route.conversation} />
+              <Lucy conversation={route.conversation} setMixData={setMixData} player={player} />
             </Suspense>
           )}
           {route.page === 'missing' && (

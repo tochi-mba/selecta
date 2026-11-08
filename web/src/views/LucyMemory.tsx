@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useId, useState } from 'react';
 import { problemKind } from '../api';
 import { lucy } from '../lucy/client';
-import type { Memory, MemoryFact, MemoryKind } from '../lucy/types';
+import type { LucyStatus, Memory, MemoryFact, MemoryKind } from '../lucy/types';
 import { humanize, plural, valueWords, whenWords } from '../lucy/words';
 import { Action, Problem, Skeleton } from '../ui/controls';
 
@@ -61,7 +61,7 @@ function FactRow({ fact, onChanged }: { fact: MemoryFact; onChanged: () => Promi
   );
 }
 
-export function LucyMemory() {
+export function LucyMemory({ onStatus }: { onStatus: (status: LucyStatus) => void }) {
   const ids = useId();
   const [memory, setMemory] = useState<Memory | null>(null);
   const [problem, setProblem] = useState('');
@@ -127,10 +127,14 @@ export function LucyMemory() {
             <h4>Listening history</h4>
             <label className="choice">
               <input type="checkbox" checked={memory.history.enabled} onChange={(event) => {
-                void lucy.saveSettings({ privacy: { collect_history: event.target.checked } }).then(load).catch((error: Error) => setProblem(error.message));
+                // collecting listening history is Lucy's Memory and history switch on the server
+                void lucy.saveSettings({ phases: { memory: event.target.checked } })
+                  .then((next) => { onStatus(next); return load(); })
+                  .catch((error: Error) => setProblem(error.message));
               }} />
               Keep a record of what I play and skip
             </label>
+            <p className="hint">This is the same switch as Memory and history above.</p>
             <p className="hint">
               {plural(memory.history.events, 'listening record')}{memory.history.period ? ` over ${memory.history.period}` : ''}. Only the main player is recorded, never previews.
             </p>

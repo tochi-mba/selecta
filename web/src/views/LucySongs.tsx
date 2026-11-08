@@ -104,7 +104,8 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
       // the row has moved or gone, so focus goes back to the same control on the same song, or the next one
       window.requestAnimationFrame(() => {
         if (!focus) return;
-        const row = list.current?.querySelector<HTMLElement>(`[data-occ="${CSS.escape(focus.occurrence)}"]`);
+        const occurrence = typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(focus.occurrence) : focus.occurrence.replace(/["\\]/g, '');
+        const row = list.current?.querySelector<HTMLElement>(`[data-occ="${occurrence}"]`);
         const control = row?.querySelector<HTMLButtonElement>(`[data-act="${focus.act}"]`);
         (control && !control.disabled ? control : row?.querySelector<HTMLElement>('[data-act="ask"]'))?.focus({ preventScroll: true });
       });

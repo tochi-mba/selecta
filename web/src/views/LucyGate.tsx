@@ -18,7 +18,7 @@ export function gateOf(status: LucyStatus | null, missing: boolean): Gate {
 
 /** Why nothing can be sent, or an empty string when it can. */
 export function blockedWords(gate: Gate, status: LucyStatus | null, offline: boolean): string {
-  if (!status) return offline ? 'Can’t reach Selecta right now. Anything you type is kept.' : 'Checking Lucy…';
+  if (!status) return offline ? 'Can’t reach Selecta right now. Anything you type is kept.' : 'Couldn’t check whether Lucy is on. Try again in a moment.';
   if (gate === 'consent') return `Lucy needs your OK before it sends anything to ${status.provider.label}.`;
   if (gate === 'unavailable') return `${status.provider.label} isn’t available right now.`;
   if (!status.phases.chat) return 'Chat is turned off in Lucy’s settings.';

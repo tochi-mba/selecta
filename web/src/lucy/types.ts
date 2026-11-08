@@ -43,8 +43,7 @@ export type SettingsChange = {
   phases?: Partial<Phases>;
   provider?: { kind?: ProviderKind; model?: string; base_url?: string; api_key?: string; consent?: boolean };
   budgets?: Partial<Budgets>;
-  /** `collect_history` is not in the written contract yet; an older server ignores it. */
-  privacy?: Partial<{ share_lyrics: boolean; share_history: boolean; collect_history: boolean }>;
+  privacy?: Partial<{ share_lyrics: boolean; share_history: boolean }>;
 };
 
 export type ScopeKind = 'current' | 'draft';

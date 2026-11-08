@@ -66,7 +66,7 @@ export function ActivityCard({ card, still }: { card: Card; still: boolean }) {
           <dl className="lucy-facts">
             {card.note && <div><dt>Note</dt><dd dir="auto">{card.note}</dd></div>}
             {card.op && <div><dt>Step</dt><dd>{humanize(card.op)}</dd></div>}
-            <div><dt>Attempt</dt><dd>{card.attempt || 1}</dd></div>
+            {card.attempt > 0 && <div><dt>Attempt</dt><dd>{card.attempt}</dd></div>}
             {typeof card.duration_ms === 'number' && <div><dt>Took</dt><dd>{durationWords(card.duration_ms)}</dd></div>}
             {card.skipped_because && <div><dt>Skipped because</dt><dd>{card.skipped_because}</dd></div>}
             {card.error && <div><dt>What went wrong</dt><dd>{card.error}</dd></div>}

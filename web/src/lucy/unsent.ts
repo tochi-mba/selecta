@@ -22,6 +22,12 @@ function write(key: string, text: string) {
   }
 }
 
+/** Put words back for a conversation that may not be the one on screen any more. */
+export function keepUnsent(conversation: string | null, text: string) {
+  const key = unsentKey(conversation);
+  if (!read(key).trim()) write(key, text);
+}
+
 /** Forget what was stored, but only if it's still exactly what was sent. */
 export function forgetSent(conversation: string | null, sent: string) {
   const key = unsentKey(conversation);
@@ -40,5 +46,5 @@ export function useUnsent(conversation: string | null) {
   }, [key]);
   /** Empty the box while a message is on its way, keeping the stored copy until it's accepted. */
   const hold = useCallback(() => setHeld({ key, text: '' }), [key]);
-  return { text: current.text, change, hold };
+  return { key, text: current.text, change, hold };
 }

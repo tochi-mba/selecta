@@ -67,6 +67,8 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   const [lapsed, setLapsed] = useState(false);
   const pending = useRef<PendingCommit | null>(readPending());
   const confirmedHere = useRef(new Set<string>());
+  // the live log and the reply itself can both report the same commit; it's only settled once
+  const settled = useRef(new Set<string>());
   const poll = useRef<{ timer?: number; count: number }>({ count: 0 });
   const alive = useRef(true);
   useEffect(() => {
@@ -98,6 +100,8 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
     }
     poll.current.count = 0;
     finish(asked.key);
+    if (settled.current.has(asked.key)) return;
+    settled.current.add(asked.key);
     if (commit.status === 'failed') {
       setOutcome({ state: 'failed', message: 'Nothing was saved.', problems: commit.problems ?? [] });
       return;
