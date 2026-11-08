@@ -10,6 +10,7 @@ import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
 import { buildSummary, MixSetup } from './MixSetup';
 import { VibeMotif } from '../ui/MusicObjects';
+import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
 import { ViewProps } from './shared';
 
@@ -239,7 +240,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                       <h3>{card.name}</h3>
                       {card.tempo && <span className="vibe-tempo">{card.tempo[0]}–{card.tempo[1]} BPM</span>}
                     </div>
-                    {card.family && <p className="vibe-scope"><span aria-hidden="true">◎</span> Stays within {card.family}</p>}
+                    {card.family && <p className="vibe-scope"><Icon name="circle" /> Stays within {card.family}</p>}
                     <p className="vibe-card-summary">{card.blurb}</p>
                     <div className="vibe-card-facts" aria-label={`${card.songs} matching songs, about ${length(card.seconds)} of matching source audio`}>
                       <span>{card.songs} matching songs</span>
