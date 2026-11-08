@@ -1,3 +1,13 @@
+# Selecta — final-polish incremental UI/UX ADRs (2026-11-08)
+
+**Documentation-only proposal:** [Roadmap](selecta-final-polish-roadmap.md) · [Checklist](selecta-final-polish-implementation-checklist.md) · [Evidence](selecta-final-polish-implementation-evidence.md) · [JSON](selecta-final-polish-code-status.json) · [Parity](selecta-final-polish-overlap-and-parity.md) · [Verification](selecta-final-polish-verification-matrix.md) · [Reconciliation](selecta-final-polish-status-reconciliation.md) · [Release](selecta-final-polish-release-gates.md)
+
+**Status:** 8 ADRs (0264–0271) Proposed / owner review pending; 64 FP tasks Not started, 0 In progress, 0 Implemented and 0 independently Verified. Baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. No app source, tests, previous programme ledger, media or other functionality is modified by this proposal.
+
+**Scope:** additive acceptance for light-mode functional boundaries, manual theme/browser chrome, live music-graphics theme parity, contextual Library selection controls, Explore information density, route-state action tiering, stacked viewport/overlay occlusion and matched Light/Dark visual evidence. Already-source-present capabilities are **not** missing features; reconcile each FP item against SF and GP requirements before any implementation.
+
+---
+
 # Selecta — new proposed gap-focused UI/UX polish ADRs (2026-11-08)
 
 **Docs-only proposal:** [16 ADR roadmap](selecta-gap-polish-roadmap.md) · [128 implementation tasks](selecta-gap-polish-implementation-checklist.md) · [per-task evidence ledger](selecta-gap-polish-implementation-evidence.md) · [machine-readable status](selecta-gap-polish-code-status.json) · [whole-product overlap/parity](selecta-gap-polish-overlap-and-parity.md) · [independent verification](selecta-gap-polish-verification-matrix.md) · [historic status reconciliation](selecta-gap-polish-status-reconciliation.md) · [NO-GO gates](selecta-gap-polish-release-gates.md).
