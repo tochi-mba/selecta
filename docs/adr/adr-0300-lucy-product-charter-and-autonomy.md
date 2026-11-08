@@ -1,6 +1,6 @@
 # ADR-0300 — Lucy product charter, boundaries and graduated autonomy
 
-- **Decision:** Proposed (owner review pending; no implementation authorised by this document).
+- **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
@@ -10,7 +10,7 @@
 
 ## Context and evidence boundary
 
-Make a Mix already provides one-tap recommendations, optional shaping and save-as-draft. Lucy is an optional agentic creation route, not a replacement for existing Play, Edit, Library or the local audio engine. This is a proposed **new Lucy feature contract**, not evidence that Lucy exists, that the current UI is defective, or that any new task is implemented. Source observations require revalidation at the implementation SHA.
+Make a Mix already provides one-tap recommendations, optional shaping and save-as-draft. Lucy is an optional agentic creation route, not a replacement for existing Play, Edit, Library or the local audio engine. This is an accepted **new Lucy feature contract** (not yet implemented), not evidence that Lucy exists, that the current UI is defective, or that any new task is implemented. Source observations require revalidation at the implementation SHA.
 
 ## Proposed decision
 
@@ -43,4 +43,4 @@ Original local music unchanged; one player/audio-focus owner and intentional Pau
 
 ## Status governance and cross-links
 
-Decision **Proposed** until dated owner accept/reject/supersede. Implementation only advances with a source/test PR and specific acceptance proof; independent verification requires different named evidence and reviewer. No legacy task gets reclassified by this docs PR. [Lucy roadmap](selecta-lucy-roadmap.md) · [320-task checklist](selecta-lucy-implementation-checklist.md) · [evidence](selecta-lucy-implementation-evidence.md) · [verification](selecta-lucy-verification-matrix.md) · [release gates](selecta-lucy-release-gates.md).
+Decision **Accepted** (owner direction recorded 2026-11-08); future revision/supersession requires a dated decision. Implementation only advances with a source/test PR and specific acceptance proof; independent verification requires different named evidence and reviewer. No legacy task gets reclassified by this docs PR. [Lucy roadmap](selecta-lucy-roadmap.md) · [320-task checklist](selecta-lucy-implementation-checklist.md) · [evidence](selecta-lucy-implementation-evidence.md) · [verification](selecta-lucy-verification-matrix.md) · [release gates](selecta-lucy-release-gates.md).
