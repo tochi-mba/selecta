@@ -401,13 +401,13 @@ describe('the current mix and drafts', () => {
 
     render(<ScopeHarness />);
     await userEvent.click(screen.getAllByRole('button', { name: 'Song 1' })[0]);
-    expect(screen.getByRole('complementary', { name: 'Selected song' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'This song' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Switch scope' }));
-    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Selected song' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'This song' })).toBeNull());
 
     await userEvent.click(screen.getByRole('button', { name: 'Switch scope' }));
-    expect(await screen.findByRole('complementary', { name: 'Selected song' })).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'This song' })).toBeInTheDocument();
   });
 
   it('keeps a copy as a draft, leaving the mix as it is', async () => {
