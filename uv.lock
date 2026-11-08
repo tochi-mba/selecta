@@ -1087,6 +1087,8 @@ dependencies = [
     { name = "torchaudio", version = "2.11.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'x86_64' or sys_platform != 'darwin'" },
     { name = "typer" },
     { name = "uvicorn" },
+    { name = "weftai" },
+    { name = "weftai-providers" },
 ]
 
 [package.dev-dependencies]
@@ -1116,6 +1118,8 @@ requires-dist = [
     { name = "torchaudio", specifier = ">=2.7", index = "https://download.pytorch.org/whl/cpu" },
     { name = "typer", specifier = ">=0.12" },
     { name = "uvicorn", specifier = ">=0.30" },
+    { name = "weftai", specifier = "==0.7.0" },
+    { name = "weftai-providers", specifier = "==0.7.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1400,4 +1404,29 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/da/34/30e9280707135d2cfc589dfff3cb796bd07a3aeb1a3e415ba09dd89d7bb4/uvicorn-0.54.0.tar.gz", hash = "sha256:a2e33cbfaa0306f8e6b0c13e0cb89d7d7a2da3e62b90c66e18c33d9807b28620", size = 112283, upload-time = "2026-09-25T06:52:37.601Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/38/0c/b54a4fdd7f90a3af8b02ebc9ce6712c2c208b7926a2f7bad95c33ebbe943/uvicorn-0.54.0-py3-none-any.whl", hash = "sha256:505bdb0f318731d45f1f712071fc781a8981f6847a31c902c9f5e652d4f67faf", size = 87427, upload-time = "2026-09-25T06:52:35.829Z" },
+]
+
+[[package]]
+name = "weftai"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/46/fe/9e379827c22c6de372caa418980c0f4f7198e8efb820137b9a8a5d4a4575/weftai-0.7.0.tar.gz", hash = "sha256:cb640904402179caa306f343fe0834bf43fbc36cd17d845064a4bd446d882f73", size = 64037, upload-time = "2026-10-28T13:02:44.164Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f4/1f/b61c906029e9c70b52c1fc061294e8615c07c829d7783c46856b54129ad5/weftai-0.7.0-py3-none-any.whl", hash = "sha256:2b1e1ef80d4eeb367c8cf6b3aa7bff28f079fc0f9adba4082a8b09c481434e81", size = 87559, upload-time = "2026-10-28T13:02:38.004Z" },
+]
+
+[[package]]
+name = "weftai-providers"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "weftai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f7/50/596611d6f0bf5e8284c0c3e4e4b2b1c7d959f757bb1f3dcb4896a7a4459e/weftai_providers-0.7.0.tar.gz", hash = "sha256:fd086ce47e9cc3334c0eeeb39003ddd091e6e4981a3c829e0a518ff6427f6a37", size = 28864, upload-time = "2026-10-28T13:02:46.839Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/e7/713ce532a5763b752e686c6b8eb34fe22e1f66cf3c7418a944be32286fe2/weftai_providers-0.7.0-py3-none-any.whl", hash = "sha256:3871aa9f6be50b0da98d575875fa4cc0795dcbdc2f7aee301e27b2ef92353b57", size = 30050, upload-time = "2026-10-28T13:02:42.786Z" },
 ]
