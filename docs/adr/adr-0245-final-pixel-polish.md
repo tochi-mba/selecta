@@ -1,6 +1,6 @@
 # ADR-0245 — Final visual-detail audit and art-direction coherence
 
-- **Decision:** Proposed (owner approval pending).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
@@ -47,5 +47,5 @@ Preserve one player and intentional Pause, unchanged local audio and LRCLIB meta
 
 - **Depends on:** ADR-0091/0130/0183; new ADR-0198/0199 and corresponding programme checklist.
 - **Next:** owner acceptance → design review → focused implementing PR with tests → independent audio, accessibility, visual and hardware acceptance → release decision.
-- **Now:** Proposed; 0/8 Implemented, 0/8 independently Verified; no implementing PR/SHA.
+- **Now:** Accepted; 0/8 Implemented, 0/8 independently Verified; no implementing PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).
