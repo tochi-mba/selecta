@@ -193,7 +193,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         {waiting.length > 0 && <span className="hint">{waiting.length} to hear</span>}
       </div>
       <p className="hint">
-        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.
+        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.<TermHint term="harmonic-match" />
       </p>
       {error && <p role="alert" className="warn">{error}</p>}
       {unsaved && <button disabled={saving} onClick={() => void review(unsaved.target, unsaved.verdict)}>Try saving that again</button>}
