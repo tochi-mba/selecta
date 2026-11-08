@@ -281,7 +281,7 @@
   cursor: pointer;
 }
 .view-switch-option input { width: auto; min-height: 0; margin: 0; accent-color: var(--text); }
-.view-switch-option input:focus-visible { outline: none; }
+.view-switch-option input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .view-switch-option:has(input:checked) { background: var(--surface-selected); border-color: var(--selected); font-weight: 700; }
 .view-switch-option:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .view-switch-about { clear: both; margin: var(--space-1) 0 0; }
