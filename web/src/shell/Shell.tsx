@@ -117,11 +117,24 @@ function useKeyboardInset() {
     const view = window.visualViewport;
     if (!view) return;
     const root = document.documentElement;
+    let keyboardWasOpen = false;
+    let focusFrame = 0;
     const measure = () => {
       const covered = Math.max(window.innerHeight - view.height - view.offsetTop, 0);
+      const keyboardOpen = covered > 120;
       root.style.setProperty('--keyboard-inset', `${Math.round(covered)}px`);
-      if (covered > 120) root.dataset.keyboard = 'open';
+      if (keyboardOpen) root.dataset.keyboard = 'open';
       else delete root.dataset.keyboard;
+      if (keyboardOpen && !keyboardWasOpen) {
+        // Let the new viewport/insets settle before revealing the active form control.
+        const focused = document.activeElement as HTMLElement | null;
+        if (focused?.matches('input, textarea, select, [contenteditable="true"]')) {
+          focusFrame = window.requestAnimationFrame(() => {
+            if (focused.isConnected) focused.scrollIntoView({ block: 'nearest' });
+          });
+        }
+      }
+      keyboardWasOpen = keyboardOpen;
     };
     measure();
     view.addEventListener('resize', measure);
@@ -129,6 +142,7 @@ function useKeyboardInset() {
     return () => {
       view.removeEventListener('resize', measure);
       view.removeEventListener('scroll', measure);
+      window.cancelAnimationFrame(focusFrame);
       root.style.removeProperty('--keyboard-inset');
       delete root.dataset.keyboard;
     };

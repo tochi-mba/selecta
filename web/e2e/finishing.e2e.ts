@@ -142,12 +142,21 @@ test('changing the theme while playing starts nothing again, and the title bar f
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
 });
 
-test('a chosen theme is there from the first paint, before any of the app has run', async ({ page }) => {
+test('a manual theme and browser chrome agree before app JavaScript, even when the OS disagrees', async ({ page }) => {
   await page.goto('/mixes');
-  await page.evaluate(() => localStorage.setItem('selecta.prefs', JSON.stringify({ theme: 'dark' })));
   await page.route('**/assets/*.js', (route) => route.abort());
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
+  for (const { selected, os, expected } of [
+    { selected: 'light', os: 'dark', expected: '#f5f2e9' },
+    { selected: 'dark', os: 'light', expected: '#100f0c' },
+  ] as const) {
+    await page.emulateMedia({ colorScheme: os });
+    await page.evaluate((theme) => localStorage.setItem('selecta.prefs', JSON.stringify({ theme })), selected);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', selected);
+    await expect.poll(() => page.locator('meta[name="theme-color"]').evaluateAll((tags) =>
+      tags.map((tag) => (tag as HTMLMetaElement).content),
+    )).toEqual([expected, expected]);
+  }
   await page.unroute('**/assets/*.js');
   await page.evaluate(() => localStorage.removeItem('selecta.prefs'));
 });

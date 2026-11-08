@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "programme": "Selecta final-polish incremental acceptance (FP)",
+  "baseline_main_sha": "5347e7309c5ff8b2e2965c2194bf2089b6ad2721",
+  "as_of": "2026-11-08",
+  "scope": "FP-0264-01 through FP-0271-08",
+  "decision_summary": "8 Proposed; owner decisions pending",
+  "implementation_status": "64 Not started; 0 In progress; 0 Implemented",
+  "independent_verification": "0 Verified",
+  "scope_note": "New acceptance deltas only; old SF/GP tasks and working source features are not missing claims.",
+  "groups": {
+    "0264": {
+      "decision": "Proposed",
+      "priority": "P0",
+      "owner": null,
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "evidence": null
+    },
+    "0265": {
+      "decision": "Proposed",
+      "priority": "P1",
+      "owner": null,
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "evidence": null
+    },
+    "0266": {
+      "decision": "Proposed",
+      "priority": "P0",
+      "owner": null,
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "evidence": null
+    },
+    "0267": {
+      "decision": "Proposed",
+      "priority": "P0",
+      "owner": null,
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "evidence": null
+    },
+    "0268": {
+      "decision": "Proposed",
+      "priority": "P0",
+      "owner": null,
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "evidence": null
+    },
+    "0269": {
+      "decision": "Proposed",
+      "priority": "P1",
+      "owner": null,
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "evidence": null
+    },
+    "0270": {
+      "decision": "Proposed",
+      "priority": "P0",
+      "owner": null,
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "evidence": null
+    },
+    "0271": {
+      "decision": "Proposed",
+      "priority": "P0",
+      "owner": null,
+      "implemented": [],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "evidence": null
+    }
+  }
+}

@@ -1,0 +1,53 @@
+# ADR-0268 — Explore card information and disclosure budget
+
+- **Decision:** Proposed (owner acceptance pending).
+- **Implementation:** 0/8 Implemented; 0/8 In progress; 8/8 Not started.
+- **Independent verification:** No (0/8).
+- **Programme/date/baseline:** Selecta final polish (FP), 2026-11-08; main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`.
+- **Priority/phase:** P0 / Explore / mix choice.
+- **Owner:** Unassigned.
+- **Related owners:** ADR-0216, ADR-0217, ADR-0222, ADR-0259; their historical statuses remain unchanged.
+- **Existing source touchpoints:** `web/src/views/Mixes.tsx`; `web/src/views/MixSetup.tsx`; `web/src/styles/creation.css`.
+
+## Context and source-evidence boundary
+
+Explore already provides rich music ideas, eligibility, descriptions and distinct Play/Shape/Save outcomes. Dense descriptive paragraphs can make cards compete for attention and obscure rapid comparison. Existing GP-0259 owns truthful expectations, not an explicit measured *default card information budget*.
+
+A planning or source observation is not proof of a user problem. Cross-check exact existing SF/GP tasks and implementation first; no missing-feature inference.
+
+## New delta versus earlier ADRs
+
+Specify a compact-comparison / full-disclosure boundary for existing music idea cards, while retaining supported musical facts, accessibility, eligibility and honest estimates.
+
+## Proposed decision and alternatives
+
+At rest, each eligible mix card foregrounds its idea, short differentiator and one obvious primary action. Detailed caveats, deeper explanations and optional steering remain reachable by labeled disclosure. Compression cannot remove action-relevant information or imply that proposed traits are measured outcomes.
+
+**Alternative:** Keep existing layout if direct research disproves the problem; do not reimplement existing navigation, accessibility primitives or current features.
+
+## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+
+1. **FP-0268-01 — Inventory actual card copy.** **Acceptance:** Identify title, explanation, artist cues, metrics, eligibility, qualifiers and actions; classify decision-critical versus detailed. **Required verification:** Real and sparse-library card inventory, source references **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+2. **FP-0268-02 — Specify concise default content.** **Acceptance:** The default scan surface has a recognizable idea, brief supported distinguishing fact and clearly ranked action; essential warnings are never hidden. **Required verification:** Copy specimen, five-second glance and visual density comparison **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+3. **FP-0268-03 — Standardize comparison facts.** **Acceptance:** Different cards use a comparable set of real locally supported facts; no approximate or unknown musical claim appears as verified. **Required verification:** Planner/data fixture truth table and missing-data cases **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+4. **FP-0268-04 — Consolidate repetition without hiding caveats.** **Acceptance:** Repeated planned-versus-rendered and generic qualification text is consolidated while relevant uncertainty remains visible before committing. **Required verification:** Comprehension test and copy diff on pending/ready states **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+5. **FP-0268-05 — Reveal complete explanations by intent.** **Acceptance:** Full why/eligibility/preview information is available by named disclosure, pointer, touch and keyboard rather than hover alone. **Required verification:** AT/keyboard/touch disclosure checks **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+6. **FP-0268-06 — Preserve Play/Shape/Save consequences.** **Acceptance:** The separate effects and protections around playback, current mix, draft and further shaping remain obvious and unchanged. **Required verification:** Mix/transport E2E including failed creation and draft state **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+7. **FP-0268-07 — Handle long and missing metadata.** **Acceptance:** Card actions stay visible and reachable with real long/RTL strings, absent artist metadata and both themes. **Required verification:** 320px, 1440px and 400% matched screenshots **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+8. **FP-0268-08 — Validate faster, accurate comparisons.** **Acceptance:** Time to choose, success at identifying eligible option and accuracy of promised outcomes improve or stay stable; no increase in false beliefs. **Required verification:** Pre/post uncoached listener and DJ study, exact SHA/reviewer **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+
+## Safety, negatives and evidence requirements
+
+**Area-specific negatives:** all choices ineligible; one eligible; partly analysed library; unavailable candidate facts; generated vs ungenerated; missing artist; Unicode/RTL/very long titles; mobile 320px; 400% zoom; disclosure keyboard focus.
+
+**Common cases:** Light/Dark/System, 320–2560px and 400% zoom, short landscape, forced-colours, reduced motion, duplicate/long/RTL/Unicode metadata, loading/stale/offline/failed/cancel, keyboard/touch/NVDA and real audio where relevant.
+
+**Preservation:** Original audio unchanged; one player and intentional Pause; exact song and seam occurrence, current/draft revisions and scoped Undo; consented atomic bridges; eight-lane 8–64-cell Studio; true Library readiness and LRCLIB disclosure; unbiased studies; frozen-revision decodable FLAC. No SaaS or telemetry.
+
+**Proof:** Novice and experienced listener card-choice tasks, screenshot pairs, fixture/data-truth and accessible disclosure tests. Record independent reviewer name/date, exact implementing source/test SHA, platform, task counts, observed failures and rollback. CI screenshots alone never confer Verified.
+
+## Status governance
+
+**Decision** Proposed → Accepted/Rejected/Superseded only with dated owner approval and reason. **Implementation** Not started → In progress → Implemented requires linked source PR/SHA. **Verified** No → Yes requires separate named human/audio/AT/visual evidence. This docs-only PR does not count as an implementing PR, and does not update any previous programme ledger.
+
+[Roadmap](selecta-final-polish-roadmap.md) · [Checklist](selecta-final-polish-implementation-checklist.md) · [Evidence](selecta-final-polish-implementation-evidence.md) · [Verification](selecta-final-polish-verification-matrix.md).

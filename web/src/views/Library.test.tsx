@@ -386,3 +386,52 @@ describe('correcting a song', () => {
     await waitFor(() => expect(sent()).toEqual({ is_music: false }));
   });
 });
+
+
+describe('contextual selection controls', () => {
+  it('shows bulk actions only for a real selection and returns focus to the compact entry when cleared', async () => {
+    fakeBackend({ 'GET /library': page(row(1, 'First'), row(2, 'Second')) });
+    show();
+    await screen.findByText('First');
+    const entry = screen.getByRole('button', { name: 'Select up to 200 loaded songs' });
+    expect(screen.queryByRole('button', { name: 'Prioritize selected' })).toBeNull();
+    const checkbox = screen.getByRole('checkbox', { name: /Select recording First/ });
+    await userEvent.click(checkbox);
+    expect(checkbox.closest('li')).toHaveClass('selected');
+    expect(screen.getByRole('button', { name: 'Prioritize selected' })).toBeVisible();
+    expect(screen.getByText(/1 of 2 loaded recordings selected/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+    expect(screen.queryByRole('button', { name: 'Prioritize selected' })).toBeNull();
+    expect(checkbox).not.toBeChecked();
+    expect(entry).toHaveFocus();
+  });
+
+  it('selects at most 200 loaded IDs, not the whole filtered library', async () => {
+    const many = Array.from({ length: 201 }, (_, index) => row(index + 1, `Song ${index + 1}`));
+    fakeBackend({ 'GET /library': { songs: many, total: 20000, next: 'after-201' } });
+    show();
+    await screen.findByText('Song 201');
+    await userEvent.click(screen.getByRole('button', { name: 'Select up to 200 loaded songs' }));
+    expect(document.querySelectorAll('.library-batch-check input:checked')).toHaveLength(200);
+    expect(screen.getByText(/200 of 201 loaded recordings selected/)).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Select recording Song 201/ })).toBeDisabled();
+  });
+
+  it('refuses a confirmed batch action if a different filter takes over while the dialog is open', async () => {
+    const calls = fakeBackend({
+      'GET /library': page(row(1, 'First')),
+      'POST /library/batch': { updated: 1 },
+    });
+    show();
+    await screen.findByText('First');
+    await userEvent.click(screen.getByRole('checkbox', { name: /Select recording First/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Prioritize selected' }));
+    expect(screen.getByRole('dialog', { name: 'Apply batch Library action?' })).toBeVisible();
+    act(() => {
+      window.history.pushState({}, '', '/library?show=ready');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm 1 recordings' }));
+    expect(calls.filter((call) => call.path === '/library/batch')).toHaveLength(0);
+  });
+});

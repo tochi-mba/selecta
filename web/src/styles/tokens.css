@@ -30,6 +30,12 @@
   --surface-selected: color-mix(in srgb, var(--accent) 12%, var(--panel));
   --border: var(--line);
   --border-strong: var(--soft);
+  /* Decorative dividers may be quiet; controls and state markers must read against real surfaces. */
+  --edge-decorative: var(--border);
+  --edge-interactive: color-mix(in srgb, var(--border-strong) 60%, var(--border));
+  --edge-selected: var(--selected);
+  --edge-error: var(--danger);
+  --edge-focus: var(--focus);
   --text: var(--ink);
   --text-soft: var(--soft);
   --focus: var(--accent);
@@ -151,6 +157,7 @@
     --line: #d5cfbd;
     --ink: #16140e;
     --soft: #6a6555;
+    --edge-interactive: var(--soft);
     --accent: #2b2a14;
     --accent-ink: #f5f2e9;
     --warn: #b93d10;
@@ -174,6 +181,7 @@
   --line: #d5cfbd;
   --ink: #16140e;
   --soft: #6a6555;
+  --edge-interactive: var(--soft);
   --accent: #2b2a14;
   --accent-ink: #f5f2e9;
   --warn: #b93d10;

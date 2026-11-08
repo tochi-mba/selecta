@@ -1,0 +1,51 @@
+# ADR-0270 — Dynamic viewport and stacked overlay occlusion arbitration
+
+- **Decision:** Proposed (owner approval pending).
+- **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented.
+- **Independent verification:** 0/8 Verified.
+- **Programme/date/baseline:** Selecta final polish (FP), 2026-11-08; main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`.
+- **Priority/phase:** P0 / Responsive / input safety.
+- **Owner:** Unassigned.
+- **Previous primary owners:** ADR-0208, ADR-0209, ADR-0204, ADR-0233, ADR-0234. Previous decision/implementation states are unchanged.
+- **Source touchpoints:** `web/src/styles/tokens.css`; `web/src/styles/shell.css`; `web/src/shell/Shell.tsx`; `web/src/ui/toasts.tsx`; `web/src/ui/controls.tsx`; `web/src/views/Studio.tsx`.
+
+## Context and evidence boundary
+
+The responsive shell already reserves height for navigation and persistent player and uses visualViewport to detect the software keyboard. Earlier responsive ADRs require important actions to remain visible, but no named automated stacked-layer collision matrix defines what should yield when the keyboard, mini-player, toasts, drawer and modal coexist.
+
+Source inspection is a gap hypothesis, not independent visual, usability, audio or accessibility proof. Existing features must be credited accurately after exact task acceptance comparison.
+
+## Novel delta and proposed decision
+
+**Delta:** Specify explicit *layer precedence under constrained viewport heights* and objective bounding-box occlusion verification for simultaneous sticky/overlay states, rather than replacing the established navigation architecture.
+
+**Decision:** Critical actions and focused form controls must remain visible, operable and scrollable under supported viewport/zoom configurations. When layers compete, secondary chrome yields before the active task. Stage/dialog overrides are explicit; audio state must not change when the mini-player is visually hidden.
+
+**Alternatives and limits:** Reject this delta when measured research disproves its need; do not introduce an unrelated architecture rewrite, new cloud service or automated claim of sign-off.
+
+## Implementation checklist — 0/8 Implemented, 0/8 Independently Verified
+
+1. **FP-0270-01 — Enumerate fixed and sticky layers.** **Acceptance:** Identify shell rail, header, mobile bar, player, sticky actions, toast stack, drawer, dialog and Stage with their current layout and stacking tokens. **Required verification:** DOM/source and z-index inventory with representative dimensions **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+2. **FP-0270-02 — Define a precedence table.** **Acceptance:** Document which chrome hides, reflows or scrolls under each simultaneous overlay/keyboard state, without removing critical actions. **Required verification:** Keyboard+player+sheet, Stage+notification and dialog+toast decision matrix **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+3. **FP-0270-03 — Test actionable-element exposure.** **Acceptance:** For named viewport/state fixtures, measure interactive rectangles relative to occluding chrome and clip ancestors; critical controls remain reachable. **Required verification:** Deterministic E2E geometry test and failure screenshots **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+4. **FP-0270-04 — Keep focused inputs visible while typing.** **Acceptance:** Virtual keyboard appearance, insets and validation messages do not cover the focused input or required submit/cancel. **Required verification:** iOS/Android hardware checks and emulation **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+5. **FP-0270-05 — Protect transport state while chrome yields.** **Acceptance:** Visual concealment of mini-player for keyboard/Stage does not pause, auto-resume, seek or change audio owner. **Required verification:** Real seam/playback and state assertions **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+6. **FP-0270-06 — Compose drawers, dialogs and notices.** **Acceptance:** Focus traps and Escape/dismiss return remain predictable; lower-priority toast never obscures explicit destructive consent. **Required verification:** Overlay stack and keyboard screen-reader E2E **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+7. **FP-0270-07 — Respect safe areas and short landscape.** **Acceptance:** Notches, bottom navigation and small-height landscape allow save, close, cancel and selection actions. **Required verification:** Safe-area and orientation screenshots in both themes **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+8. **FP-0270-08 — Accept zero critical occlusion defects.** **Acceptance:** Each required combination has named device/browser, reviewer, source SHA and no unresolved P0 blocked action. **Required verification:** Signed collision matrix and mitigation/rollback report **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+
+## Negative tests, safeguards and independent proof
+
+**Area-specific:** 320x568, 375x667, 1280x600, 400% zoom, virtual keyboard, tall toasts, dialogs, drawer, stage, resize/orientation, iOS visualViewport, long labels, focus back navigation.
+
+**Common:** light/dark/system, forced colours, 320–2560px, short landscape, 400% zoom, Still/reduced motion, stale/offline/loading/failure, long/RTL/Unicode/duplicate metadata, keyboard/touch/NVDA, real audio and hardware where relevant.
+
+**Non-negotiable:** Original local media unchanged; one audio owner/intentional Pause; stable song and seam identities, scoped draft/current revisions and Undo; consented atomic request bridge; eight Studio lanes and 8–64 cells; truthful readiness/LRCLIB disclosure; unbiased listening studies; frozen-revision decodable FLAC. No SaaS/telemetry/cloud audio/new platform.
+
+**Verification:** Automated geometric collision assertions, actual mobile screenshots and playback/keyboard trials. No Verified claim without named reviewer/date/platform, exact implementing source SHA, concrete outcomes and independently reviewed evidence. Muted synthetic tests/screenshots are *not* audio proof.
+
+## Decision and implementation status governance
+
+Proposed → Accepted/Rejected/Superseded requires explicit owner/date/rationale. Not started → In progress → Implemented requires linked source/test implementing PR/SHA. Verification No → Yes requires independent human/AT/audio/device proof. A docs-only PR does **not** satisfy implementation; no old programme status is changed.
+
+[Roadmap](selecta-final-polish-roadmap.md) · [Checklist](selecta-final-polish-implementation-checklist.md) · [Evidence](selecta-final-polish-implementation-evidence.md) · [Release](selecta-final-polish-release-gates.md).

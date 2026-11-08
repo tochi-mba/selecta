@@ -19,6 +19,18 @@ a.button:active { box-shadow: inset 0 0 0 2px currentColor; }
 }
 .vibe-card:focus-within .vibe-tempo { border-color: var(--border-strong); color: var(--text); }
 .vibe-tempo { transition: color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease); }
+
+/* Card scanning shows only comparable facts; full explanation is an intentional keyboard/touch disclosure. */
+.vibe-card-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.vibe-card-detail { min-width: 0; border-top: 1px solid var(--border); padding-top: var(--space-2); }
+.vibe-card-detail > summary { min-height: var(--control-height); display: list-item; cursor: pointer; color: var(--text); padding: var(--space-2); border-radius: var(--radius-sm); }
+.vibe-card-detail[open] { display: grid; gap: var(--space-2); }
+.vibe-card-detail p { overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.vibe-card-detail .artists { margin-top: 0; }
+.library-batch { margin-block: var(--space-3); }
+.library-batch-actions { display: grid; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-raised); }
+.library-batch-actions .hint { margin: 0; }
+
 /* Stop decorative loading pulses after a few cycles; the status remains visible. */
 .skeleton i { animation-iteration-count: 3; }
 @media (prefers-reduced-motion: reduce) {

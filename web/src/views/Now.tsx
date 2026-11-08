@@ -365,8 +365,15 @@ function TransitionCountdown({
 function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape'] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
-  // its colours come from the page, so a change of theme has to draw it again
+  // Its colours come from the page; theme and forced-colour changes repaint real analyser data.
   const theme = useShownTheme();
+  const [paletteRevision, setPaletteRevision] = useState(0);
+  useEffect(() => {
+    const contrast = window.matchMedia?.('(forced-colors: active)');
+    const changed = () => setPaletteRevision((revision) => revision + 1);
+    contrast?.addEventListener?.('change', changed);
+    return () => contrast?.removeEventListener?.('change', changed);
+  }, []);
   useEffect(() => {
     if (typeof CanvasRenderingContext2D === 'undefined') return;
     const node = canvas.current;
@@ -379,8 +386,9 @@ function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { 
     // the theme's rendered tokens instead; system high-contrast foreground
     // colour is the safe fallback when a token is missing.
     const fallback = style.color;
-    const accent = style.getPropertyValue('--accent').trim() || fallback;
-    const soft = style.getPropertyValue('--ok').trim() || fallback;
+    const forced = window.matchMedia?.('(forced-colors: active)').matches ?? false;
+    const accent = forced ? fallback : style.getPropertyValue('--accent').trim() || fallback;
+    const soft = forced ? 'Highlight' : style.getPropertyValue('--ok').trim() || fallback;
     let gradient: CanvasGradient | null = null;
     let gradientHeight = 0;
     const history: number[][] = [];
@@ -454,7 +462,7 @@ function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { 
       window.cancelAnimationFrame(frame);
       history.length = 0;
     };
-  }, [player, active, stage, reduceMotion, theme, spectrumShape]);
+  }, [player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape]);
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${SPECTRUM_MODES.find((mode) => mode.id === spectrumShape)?.label ?? 'Frequency'} — actual mixed-audio frequency levels` : 'Audio frequency visualizer paused'} />;
 }
 

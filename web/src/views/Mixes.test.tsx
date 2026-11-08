@@ -435,3 +435,24 @@ describe('safe activation from Explore', () => {
     }));
   });
 });
+
+
+describe('compact Explore comparison and optional detail', () => {
+  it('keeps real comparison facts and all three consequences visible while disclosing the longer explanation by intent', async () => {
+    fakeBackend({ 'GET /vibes': [card('peak', 'Peak time', 'The moment')] });
+    show();
+    const heading = await screen.findByRole('heading', { name: 'Peak time' });
+    const article = within(heading.closest('article')!);
+    expect(article.getByText('40 matching songs')).toBeVisible();
+    expect(article.getByRole('button', { name: 'Play' })).toBeVisible();
+    expect(article.getByRole('button', { name: 'Shape first' })).toBeVisible();
+    expect(article.getByRole('button', { name: 'Save Peak time as a draft' })).toBeVisible();
+    const disclosure = article.getByText('Why Peak time? More details').closest('details');
+    expect(disclosure).not.toHaveAttribute('open');
+    fireEvent.click(article.getByText('Why Peak time? More details'));
+    expect(disclosure).toHaveAttribute('open');
+    expect(article.getByText(/Planning preference, not a promised song order/)).toBeVisible();
+    expect(article.getByText('Someone, Someone Else')).toBeVisible();
+    expect(article.getByText('Vocal rides and long blends')).toBeVisible();
+  });
+});

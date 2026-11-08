@@ -10,7 +10,7 @@ body {
 button, input, select { font: inherit; color: inherit; }
 button {
   background: var(--panel-2);
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge-interactive);
   border-radius: 8px;
   padding: 8px 14px;
   min-height: 40px;
@@ -27,7 +27,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 button[aria-pressed='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 input, select {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge-interactive);
   border-radius: 8px;
   padding: 9px 12px;
   min-height: 42px;

@@ -52,6 +52,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // background analysis, and deduplicating rows changes their index.
   const pageBySong = useRef(new Map<number, number>());
   const listRef = useRef<HTMLUListElement>(null);
+  const selectionEntryRef = useRef<HTMLButtonElement>(null);
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
   const [searching, setSearching] = useState(true);
@@ -67,12 +68,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // Keep old search pages out of the committed result list while a newer URL
   // query/filter/sort is loading. This is distinct from refreshing the same list.
   const searchIdentity = JSON.stringify([query, filter, sort]);
+  // Selection is scoped to the exact loaded result depth as well as search/sort.
+  const selectionIdentity = JSON.stringify([query, filter, sort, pagesAsked]);
   const [resolvedIdentity, setResolvedIdentity] = useState<string | null>(null);
   const committedRows = searchIdentity === resolvedIdentity ? rows : null;
   // A selection belongs to an exact search/filter/sort result. Changing any
   // dimension invalidates it rather than selecting a different filtered row.
   const [batchSelection, setBatchSelection] = useState<{ identity: string; ids: number[] }>({ identity: '', ids: [] });
-  const selectedIds = batchSelection.identity === searchIdentity ? batchSelection.ids : [];
+  const selectedIds = batchSelection.identity === selectionIdentity ? batchSelection.ids : [];
   type BatchAction = 'prioritize' | 'deprioritize' | 'never' | 'allow';
   const [confirmBatch, setConfirmBatch] = useState<{
     action: BatchAction; identity: string;
@@ -80,13 +83,13 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   } | null>(null);
   const visibleSelected = (committedRows ?? []).filter((song) => selectedIds.includes(song.id));
   const toggleBatch = (id: number) => setBatchSelection((before) => {
-    const ids = before.identity === searchIdentity ? before.ids : [];
-    return { identity: searchIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : [...ids, id] };
+    const ids = before.identity === selectionIdentity ? before.ids : [];
+    return { identity: selectionIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : ids.length >= 200 ? ids : [...ids, id] };
   });
   const askBatch = (action: BatchAction) => {
     if (!visibleSelected.length || searching || failed) return;
     setConfirmBatch({
-      action, identity: searchIdentity,
+      action, identity: selectionIdentity,
       songs: visibleSelected.map((song) => ({
         id: song.id, title: song.title ?? 'Untitled', artist: song.artist ?? 'Unknown artist',
         priority: song.priority, never: song.never,
@@ -95,7 +98,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   };
   const applyBatch = async () => {
     const wanted = confirmBatch;
-    if (!wanted || wanted.identity !== searchIdentity || searching || failed) {
+    if (!wanted || wanted.identity !== selectionIdentity || searching || failed) {
       setConfirmBatch(null);
       return;
     }
@@ -107,7 +110,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       })),
     });
     setConfirmBatch(null);
-    setBatchSelection({ identity: searchIdentity, ids: [] });
+    setBatchSelection({ identity: selectionIdentity, ids: [] });
+    window.requestAnimationFrame(() => selectionEntryRef.current?.focus());
     notify(`Updated ${wanted.songs.length} precisely selected recordings.`);
     await load();
   };
@@ -393,19 +397,29 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </div>
       )}
       {committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
-        <section className="library-batch" aria-label="Batch actions for selected songs">
-          <p className="hint">{visibleSelected.length} selected from the loaded results only. Changing search or filters clears the selection. Batch changes never move or delete audio.</p>
+        <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
-            <button disabled={searching || failed} onClick={() => setBatchSelection({
-              identity: searchIdentity,
+            <button ref={selectionEntryRef} disabled={searching || failed} onClick={() => setBatchSelection({
+              identity: selectionIdentity,
               ids: committedRows.slice(0, 200).map((song) => song.id),
             })}>Select up to 200 loaded songs</button>
-            <button disabled={!visibleSelected.length} onClick={() => setBatchSelection({ identity: searchIdentity, ids: [] })}>Clear selection</button>
-            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('prioritize')}>Prioritize selected</button>
-            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
-            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('never')}>Never play selected</button>
-            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('allow')}>Allow selected</button>
+            {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually.</span>}
           </div>
+          {visibleSelected.length > 0 && (
+            <div className="library-batch-actions" aria-label="Actions for selected loaded recordings">
+              <p className="hint" role="status">{visibleSelected.length} of {committedRows.length} loaded recordings selected (limit 200). Search, filter or sort changes clear selection; batch changes never move or delete audio.</p>
+              <div className="row wrap">
+                <button onClick={() => {
+                  setBatchSelection({ identity: selectionIdentity, ids: [] });
+                  selectionEntryRef.current?.focus();
+                }}>Clear selection</button>
+                <button disabled={searching || failed} onClick={() => askBatch('prioritize')}>Prioritize selected</button>
+                <button disabled={searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
+                <button disabled={searching || failed} onClick={() => askBatch('never')}>Never play selected</button>
+                <button disabled={searching || failed} onClick={() => askBatch('allow')}>Allow selected</button>
+              </div>
+            </div>
+          )}
         </section>
       )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
@@ -439,7 +453,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           const duplicate = duplicateIds.has(song.id);
           const name = duplicate ? `${title} (song ${song.id})` : title;
           return (
-            <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''}`}>
+            <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''} ${selectedIds.includes(song.id) ? 'selected' : ''}`}>
               <div className="song-name">
                 {filter !== 'set_aside' && <label className="library-batch-check">
                   <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
