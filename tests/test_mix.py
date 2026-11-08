@@ -520,6 +520,24 @@ def test_energy_is_measured_against_your_own_library(tmp_path):
     assert traits[songs[-1].id].energy == 1.0
 
 
+def test_sound_candidates_do_not_invent_genre_from_missing_tags_or_word_density():
+    from types import SimpleNamespace
+
+    from selecta.planner.vibes import BY_KEY, Traits, _ranks, build_vibe, resolve_vibe
+
+    traits = Traits(energy=0.8, felt=120, year=2020, wordy=1.0, english=True)
+    unknown = SimpleNamespace(id=1, family="other")
+    pop = SimpleNamespace(id=2, family="pop")
+    assert not BY_KEY["guitars"].fits(unknown, traits)
+    assert not BY_KEY["rap_run"].fits(pop, traits)
+    assert resolve_vibe("slow_burn__other") is None
+    assert list(_ranks([0.4, 0.4, 0.8])) == [0.0, 0.0, 1.0]
+    with pytest.raises(ValueError, match="does not belong"):
+        build_vibe(BY_KEY["afro_heat"], [pop], {2: traits}, {}, end_id=2)
+    with pytest.raises(ValueError, match="No matching"):
+        build_vibe(BY_KEY["afro_heat"], [], {}, {})
+
+
 def test_each_vibe_only_uses_songs_that_fit_it(tmp_path):
     from selecta.planner.vibes import BY_KEY, build_vibe, eligible
 
