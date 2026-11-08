@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import sqlite3
 import subprocess
@@ -405,10 +406,26 @@ def add_routes(app, ctx) -> None:
             page_params = list(params)
             page_where = where
             if after:
+                # Cursor values are made by this endpoint: [sort value, stable song ID].
+                # Reject malformed or wrong-sort markers instead of allowing a 500, a
+                # database binding error, or the wrong section of the library to show.
                 try:
-                    value, last = json.loads(after)
+                    marker = json.loads(after) if len(after) <= 1024 else None
                 except ValueError as problem:
                     raise HTTPException(400, "That page marker isn't valid.") from problem
+                if not isinstance(marker, list) or len(marker) != 2:
+                    raise HTTPException(400, "That page marker isn't valid.")
+                value, last = marker
+                numeric = sort in {"tempo", "recent"} or (bool(q) and sort == "title")
+                if (
+                    isinstance(last, bool)
+                    or not isinstance(last, int)
+                    or last <= 0
+                    or (numeric and (isinstance(value, bool) or not isinstance(value, (int, float))))
+                    or (not numeric and not isinstance(value, str))
+                    or (isinstance(value, float) and not math.isfinite(value))
+                ):
+                    raise HTTPException(400, "That page marker isn't valid.")
                 page_where += f" AND ({order}, s.id) > (?, ?)"
                 page_params += [value, last]
             rows = conn.execute(
