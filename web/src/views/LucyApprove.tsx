@@ -62,15 +62,15 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   startPlaying: () => Promise<void>;
 }) {
   const [approval, setApproval] = useState<Approval | null>(null);
+  const [understood, setUnderstood] = useState(false);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [lapsed, setLapsed] = useState(false);
   // An approval token describes one exact immutable proposal revision.
   useEffect(() => {
     setApproval(null);
     setUnderstood(false);
     setLapsed(false);
   }, [revision.id]);
-  const [understood, setUnderstood] = useState(false);
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const [lapsed, setLapsed] = useState(false);
   const pending = useRef<PendingCommit | null>(readPending());
   const confirmedHere = useRef(new Set<string>());
   // the live log and the reply itself can both report the same commit; it's only settled once
