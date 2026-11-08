@@ -167,6 +167,11 @@ test('songs that can’t be mixed say why', async ({ page }) => {
 });
 
 test('requests: asking, then seeing it find a place, and cancelling for good', async ({ page, request }) => {
+  // A failed first attempt must not leave this request blocking Playwright's retry.
+  const previous = (await (await request.get('/api/requests')).json()).requests as { id: number; title: string }[];
+  for (const row of previous.filter((item) => item.title === 'Last Call')) {
+    await request.delete(`/api/requests/${row.id}`);
+  }
   await page.goto('/listen');
   await page.keyboard.press('r');
   const drawer = page.getByRole('dialog', { name: 'Requests' });
@@ -174,7 +179,10 @@ test('requests: asking, then seeing it find a place, and cancelling for good', a
   await drawer.getByRole('button', { name: /Last Call/ }).first().click();
   const yours = drawer.getByRole('list', { name: 'Your requests' });
   await expect(yours.getByText('Last Call')).toBeVisible();
-  await expect(drawer.getByText(/Waiting to play|Finding a place|Getting ready|Needs your choice|Coming up|Needs attention/).first()).toBeVisible();
+  // A saved request is waiting, not yet scheduled to play; inspect its own status.
+  await expect(yours.locator('.request-row').filter({ hasText: 'Last Call' }).locator('.pill')).toContainText(
+    /Requested · waiting|Waiting for a mix|Finding a place|Getting ready|Needs your choice|Ready for an opening|Needs attention/,
+  );
 
   const asked = await (await request.get('/api/requests')).json();
   expect((asked.requests as { title: string }[]).filter((row) => row.title === 'Last Call')).toHaveLength(1);
