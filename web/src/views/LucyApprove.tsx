@@ -191,7 +191,8 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   const preflight = approval?.preflight;
   const problems = preflight?.problems ?? [];
   const playing = approval?.action === 'draft_and_play';
-  const canConfirm = !!preflight && preflight.ok !== false && !problems.length && (!playing || understood) && !lapsed;
+  const missingStrictEdges = !!preflight?.ready_only && preflight.ready < preflight.needed;
+  const canConfirm = !!preflight && preflight.ok !== false && !problems.length && !missingStrictEdges && (!playing || understood) && !lapsed;
 
   return (
     <div className="lucy-approve">
@@ -259,6 +260,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
             <div><dt>Transitions ready</dt><dd>{preflight.ready} of {preflight.needed}</dd></div>
             <div><dt>Only transitions that are already ready</dt><dd>{preflight.ready_only ? 'Yes, this rule is on' : 'No'}</dd></div>
           </dl>
+          {missingStrictEdges && <p className="warn" role="alert">This ready-only mix is missing {preflight.needed - preflight.ready} verified transition{preflight.needed - preflight.ready === 1 ? '' : 's'}. Nothing will be saved; change the plan and check again.</p>}
           {problems.length > 0 && (
             <div className="problem" role="alert">
               <p><b>This can’t be saved yet:</b></p>
