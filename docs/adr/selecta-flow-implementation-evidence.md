@@ -1,6 +1,6 @@
 # Selecta / Flow — per-task implementation and independent verification evidence ledger
 
-**50 Proposed ADRs, 400 new SF tasks Not started, 0 In progress, 0 Implemented, 0 independently Verified.** All owner, implementing PR/SHA and independent evidence fields are unassigned. Baseline: main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` (2026-11-08). The planning PR is not an implementing PR.
+**50 Accepted ADRs, 400 new SF tasks Not started, 0 In progress, 0 Implemented, 0 independently Verified.** All owner, implementing PR/SHA and independent evidence fields are unassigned. Baseline: main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` (2026-11-08). The planning PR is not an implementing PR.
 
 | SF task | ADR | Implementation | Independently Verified | Owner | Implementing PR / SHA | Evidence / reviewer |
 |---|---|---|---|---|---|---|

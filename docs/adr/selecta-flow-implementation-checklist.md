@@ -1,12 +1,12 @@
 # Selecta / Flow — complete artistic UI/UX implementation checklist: 400 SF tasks
 
-**Documentation-only programme (2026-11-08).** **Decision:** 50 Proposed ADRs (owner decision pending). **Implementation:** 400 Not started, 0 In progress, 0 Implemented. **Independent verification:** 0 Verified. **Baseline:** main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`. No product source, assets, tests, or existing implementation ledgers are changed by this new ADR programme.
+**Documentation-only programme (2026-11-08).** **Decision:** 50 Accepted ADRs (owner approval recorded 2026-11-08). **Implementation:** 400 Not started, 0 In progress, 0 Implemented. **Independent verification:** 0 Verified. **Baseline:** main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`. No product source, assets, tests, or existing implementation ledgers are changed by this new ADR programme.
 
 **Status rule:** A checked task eventually requires matching source implementation and a recorded implementing PR/SHA. It does not independently establish usability, visual sign-off, real-audio acceptance or assistive-technology verification. Every task has a separate [evidence row](selecta-flow-implementation-evidence.md). Existing EX/MI/CI work must be reconciled rather than automatically counted. Proposed design and existing source code are not proof of new implementation.
 
 ## [ADR-0198 — Artistic product charter and music-first experience](adr-0198-artistic-product-charter.md)
 
-**Priority / phase:** P0 / Foundation. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Foundation. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0198-01 — Inventory all user journeys.** **Acceptance:** Every current action and state accounted for. **Required verification:** Source review and browser walkthrough. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0198-02 — Define three expressive scene modes.** **Acceptance:** Each has clear focal object and primary action. **Required verification:** Light/dark design critique and five-second study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -19,7 +19,7 @@
 
 ## [ADR-0199 — Head baseline and historical ADR implementation reconciliation](adr-0199-historical-status-reconciliation.md)
 
-**Priority / phase:** P0 / Foundation. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Foundation. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0199-01 — Pin baseline commit and tree.** **Acceptance:** All new tasks reference exact parent SHA. **Required verification:** GitHub tree comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0199-02 — Inventory visual and interactive states.** **Acceptance:** Every core scene including errors captured. **Required verification:** Screenshot and state matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -32,7 +32,7 @@
 
 ## [ADR-0200 — Distinctive editorial and cinematic art direction](adr-0200-art-direction.md)
 
-**Priority / phase:** P0 / Visual system. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Visual system. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0200-01 — Generate three design directions.** **Acceptance:** Each covers Listen/Explore/Create/Library. **Required verification:** Side-by-side responsive boards. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0200-02 — Define visual signature.** **Acceptance:** Recognisable distinct brand traits and exclusions. **Required verification:** Blind brand-comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -45,7 +45,7 @@
 
 ## [ADR-0201 — Semantic palette, dark/light themes and contrast](adr-0201-semantic-colour-themes.md)
 
-**Priority / phase:** P0 / Visual system. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Visual system. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0201-01 — Create semantic token hierarchy.** **Acceptance:** Surface/text/status/focus distinct from raw hues. **Required verification:** Token inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0201-02 — Design dark theme depth.** **Acceptance:** Surfaces and typography remain readable in dim settings. **Required verification:** Dark specimen reviews. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -58,7 +58,7 @@
 
 ## [ADR-0202 — Editorial display type and precision numeric typography](adr-0202-typography.md)
 
-**Priority / phase:** P0 / Visual system. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Visual system. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0202-01 — Choose display/editorial/interface/technical roles.** **Acceptance:** Type functions and sizes explicit. **Required verification:** Specimen review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0202-02 — Define responsive scale.** **Acceptance:** Titles legible across widths and zoom. **Required verification:** 320–2560 and 400% screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -71,7 +71,7 @@
 
 ## [ADR-0203 — Spacing, surfaces, density and flexible compositions](adr-0203-spatial-composition.md)
 
-**Priority / phase:** P0 / Visual system. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Visual system. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0203-01 — Audit CSS ownership and conflicting overrides.** **Acceptance:** Known selectors mapped to owners. **Required verification:** CSS inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0203-02 — Define spacing/width tokens.** **Acceptance:** Rhythm consistent between screens. **Required verification:** Computed specimen review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -84,7 +84,7 @@
 
 ## [ADR-0204 — Polished controls, icons, inputs and feedback primitives](adr-0204-primitives.md)
 
-**Priority / phase:** P0 / Components. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Components. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0204-01 — Specify full control states.** **Acceptance:** Focus/pressed/pending/error/success all defined. **Required verification:** Component gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0204-02 — Standardise button hierarchy.** **Acceptance:** Primary action unique and reachable. **Required verification:** Usability and keyboard test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -97,7 +97,7 @@
 
 ## [ADR-0205 — Causal motion and Still/Subtle/Expressive intensity](adr-0205-sensory-motion.md)
 
-**Priority / phase:** P0 / Motion. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Motion. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0205-01 — Inventory animations and owners.** **Acceptance:** Triggers and data authority recorded. **Required verification:** Source and video audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0205-02 — Define timing/easing grammar.** **Acceptance:** Short feedback and scene transitions coherent. **Required verification:** Motion gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -110,7 +110,7 @@
 
 ## [ADR-0206 — Honest cover art, song motifs and Mix Sleeves](adr-0206-music-artwork.md)
 
-**Priority / phase:** P1 / Visual identity. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Visual identity. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0206-01 — Define artwork provenance.** **Acceptance:** Real, decorative and measured identities distinguishable. **Required verification:** Metadata contract audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0206-02 — Build deterministic song motifs.** **Acceptance:** Stable ID produces stable repeatable identity. **Required verification:** Duplicate-title and refresh test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -123,7 +123,7 @@
 
 ## [ADR-0207 — The Thread: truthful music-object continuity grammar](adr-0207-the-thread.md)
 
-**Priority / phase:** P0 / Visual identity. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Visual identity. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0207-01 — Define provenance categories.** **Acceptance:** Decorative/planned/measured/rendered/heard states typed. **Required verification:** Model mapping. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0207-02 — Design Thread marks.** **Acceptance:** Ready/planned/blocked identifiable without hue. **Required verification:** Grayscale review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -136,7 +136,7 @@
 
 ## [ADR-0208 — Intent navigation and contextual scene continuity](adr-0208-navigation.md)
 
-**Priority / phase:** P0 / Shell. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Shell. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0208-01 — Map old and proposed routes.** **Acceptance:** All destinations reachable and named. **Required verification:** Route parity tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0208-02 — Design desktop navigation.** **Acceptance:** Music intentions prioritised, Workspace quiet. **Required verification:** Findability study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -149,7 +149,7 @@
 
 ## [ADR-0209 — Transport hierarchy, persistent audio focus and media session](adr-0209-persistent-player.md)
 
-**Priority / phase:** P0 / Shell. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Shell. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0209-01 — Model all player states.** **Acceptance:** Idle/loading/playing/paused/seam/failure mapped. **Required verification:** State tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0209-02 — Redesign desktop transport.** **Acceptance:** Primary controls and identity coherent. **Required verification:** Wide/shallow visual review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -162,7 +162,7 @@
 
 ## [ADR-0210 — Listening Theatre: cinematic song-first listening](adr-0210-listening-theatre.md)
 
-**Priority / phase:** P0 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Listen. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0210-01 — Compose song-first hero.** **Acceptance:** Song, artist, artwork and transport dominate. **Required verification:** Dark/light first-glance review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0210-02 — Design narrow screen.** **Acceptance:** 320–430px and landscape preserve transport. **Required verification:** Touch and zoom E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -175,7 +175,7 @@
 
 ## [ADR-0211 — Audio-clock Handoff Scene and truthful transition choreography](adr-0211-real-handoff.md)
 
-**Priority / phase:** P0 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Listen. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0211-01 — Model real handoff phases.** **Acceptance:** Enter, overlap, takeover and done follow player events. **Required verification:** Audio-clock unit tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0211-02 — Design technique families.** **Acceptance:** Cut, blend, wordplay and stem treatments are truthful. **Required verification:** DJ audio review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -188,7 +188,7 @@
 
 ## [ADR-0212 — Curation and visual refinement of fifteen existing spectrum styles](adr-0212-visualizer-curation.md)
 
-**Priority / phase:** P1 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Listen. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0212-01 — Audit existing modes.** **Acceptance:** Exact real-frequency mapping recorded. **Required verification:** Spectrum source review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0212-02 — Refine brand coherence.** **Acceptance:** All modes have intentional palette and composition. **Required verification:** Screen gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -201,7 +201,7 @@
 
 ## [ADR-0213 — Editorial lyrics, verified wordplay and fullscreen Stage](adr-0213-lyric-stage.md)
 
-**Priority / phase:** P1 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Listen. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0213-01 — Define timing confidence.** **Acceptance:** Line, word and unknown are distinguishable. **Required verification:** Metadata fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0213-02 — Design Focus lyrics.** **Acceptance:** Live lyrics remain unobtrusive. **Required verification:** Listening test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -214,7 +214,7 @@
 
 ## [ADR-0214 — Truthful playback time, waveform and seek interactions](adr-0214-time-seek.md)
 
-**Priority / phase:** P0 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Listen. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0214-01 — Define clock semantics.** **Acceptance:** Time, unknown and remaining from real player. **Required verification:** Clock tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0214-02 — Redesign seek surface.** **Acceptance:** Touch and keyboard targets robust. **Required verification:** Touch/AT E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -227,7 +227,7 @@
 
 ## [ADR-0215 — Up Next as musical anticipation with safe steering](adr-0215-up-next.md)
 
-**Priority / phase:** P1 / Listen. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Listen. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0215-01 — Design next-song hierarchy.** **Acceptance:** Future identity understood immediately. **Required verification:** First-glance task. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0215-02 — Show seam readiness.** **Acceptance:** Planned, ready and failed distinct. **Required verification:** Readiness tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -240,7 +240,7 @@
 
 ## [ADR-0216 — Editorial Explore gallery and genuine mix reveal](adr-0216-explore-gallery.md)
 
-**Priority / phase:** P0 / Explore. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Explore. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0216-01 — Design featured mix idea.** **Acceptance:** Clear intention and primary action. **Required verification:** Five-second glance. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0216-02 — Curate categories.** **Acceptance:** Counts and family filters match data. **Required verification:** Fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -253,7 +253,7 @@
 
 ## [ADR-0217 — Listening Compass and scoped, supported musical shaping](adr-0217-listening-compass.md)
 
-**Priority / phase:** P1 / Explore. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Explore. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0217-01 — Audit planner capabilities.** **Acceptance:** Every choice has actual backend mapping. **Required verification:** Capability contract audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0217-02 — Prototype Compass vocabulary.** **Acceptance:** Non-experts comprehend musical direction. **Required verification:** Novice study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -266,7 +266,7 @@
 
 ## [ADR-0218 — Wordplay and harmonic Connection Gallery grounded in actual evidence](adr-0218-connection-gallery.md)
 
-**Priority / phase:** P1 / Explore. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Explore. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0218-01 — Map genuine discovery fields.** **Acceptance:** All link types map to actual API output. **Required verification:** Schema fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0218-02 — Design evidence-based cards.** **Acceptance:** Pair, technique, limitations and status legible. **Required verification:** Expert review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -279,7 +279,7 @@
 
 ## [ADR-0219 — Create workspace in Story, Arrangement and Detail modes](adr-0219-create-workspace.md)
 
-**Priority / phase:** P0 / Create. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Create. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0219-01 — Define shared edit model.** **Acceptance:** All modes use exact song occurrence and seam keys. **Required verification:** Model unit tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0219-02 — Prototype Story mode.** **Acceptance:** Musical journey understandable without technical controls. **Required verification:** Novice design test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -292,7 +292,7 @@
 
 ## [ADR-0220 — Tactile song reorder and selectable seam objects with revision safety](adr-0220-arrangement-gestures.md)
 
-**Priority / phase:** P0 / Create. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Create. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0220-01 — Redesign song rows.** **Acceptance:** Title, sequence, lock and metadata readable. **Required verification:** Long-mix screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0220-02 — Make seam edge an object.** **Acceptance:** From/to identities and state selectable. **Required verification:** Pair identity test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -305,7 +305,7 @@
 
 ## [ADR-0221 — Hear-first Transition Inspector with technique truth and conditional A/B](adr-0221-transition-inspector.md)
 
-**Priority / phase:** P0 / Create. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Create. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0221-01 — Design inspector hierarchy.** **Acceptance:** Hear, technique and exact pair understandable. **Required verification:** First-glance test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0221-02 — Refine preview transport.** **Acceptance:** Real clip loading, playing and stop states accurate. **Required verification:** Real-audio focus tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -318,7 +318,7 @@
 
 ## [ADR-0222 — Intended versus achieved Energy Horizon composition](adr-0222-energy-composition.md)
 
-**Priority / phase:** P1 / Create. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Create. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0222-01 — Document energy provenance.** **Acceptance:** Intent, measured and absent data typed. **Required verification:** Schema audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0222-02 — Redesign five-stop gesture.** **Acceptance:** Pointer/touch updates precise repeatable stops. **Required verification:** Value tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -331,7 +331,7 @@
 
 ## [ADR-0223 — Stem Studio as a truthful two-song musical canvas](adr-0223-studio-canvas.md)
 
-**Priority / phase:** P0 / Studio. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Studio. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0223-01 — Define lane anatomy and identity.** **Acceptance:** Eight parts and both source songs always explicit. **Required verification:** Studio state fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0223-02 — Redesign grid presentation.** **Acceptance:** 8–64 cells and playhead intelligible. **Required verification:** Large-grid visual test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -344,7 +344,7 @@
 
 ## [ADR-0224 — Explainable Studio arrangement proposals and safe local recovery](adr-0224-studio-ai-diff.md)
 
-**Priority / phase:** P0 / Studio. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Studio. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0224-01 — Define source-backed diff model.** **Acceptance:** Only returned cell changes and provenance shown. **Required verification:** Proposal fixture test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0224-02 — Design side-by-side comparison.** **Acceptance:** Before/after and unchanged cells readable. **Required verification:** Visual task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -357,7 +357,7 @@
 
 ## [ADR-0225 — Requests as visible musical intentions and consented bridge routes](adr-0225-requests-route.md)
 
-**Priority / phase:** P0 / Requests. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Requests. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0225-01 — Design request lifecycle.** **Acceptance:** Asked, searching, waiting, ready, placed, rejected distinct. **Required verification:** Lifecycle fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0225-02 — Show real selected target.** **Acceptance:** Correct library identity and repeat handling. **Required verification:** Duplicate song tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -370,7 +370,7 @@
 
 ## [ADR-0226 — Library as both personal record collection and fast professional index](adr-0226-library-experience.md)
 
-**Priority / phase:** P0 / Library. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Library. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0226-01 — Design collection view.** **Acceptance:** Artwork and identity support discovery without fake traits. **Required verification:** Real/empty media tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0226-02 — Refine professional table.** **Acceptance:** Sorting, columns and dense scanning remain clear. **Required verification:** Expert task review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -383,7 +383,7 @@
 
 ## [ADR-0227 — Song Details: trusted analysis, metadata corrections and availability](adr-0227-song-identity.md)
 
-**Priority / phase:** P1 / Library. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Library. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0227-01 — Design rich song profile.** **Acceptance:** Core metadata and actions first, diagnostics progressive. **Required verification:** Detail screen critique. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0227-02 — Identify provenance and uncertainty.** **Acceptance:** Measured, missing and corrected values distinguishable. **Required verification:** API fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -396,7 +396,7 @@
 
 ## [ADR-0228 — My Mixes: collectible sleeves, explicit current performance and render line](adr-0228-my-mixes.md)
 
-**Priority / phase:** P0 / My Mixes. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / My Mixes. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0228-01 — Design current mix hero.** **Acceptance:** Active mix and listening state obvious. **Required verification:** Current/draft comprehension. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0228-02 — Build draft sleeve gallery.** **Acceptance:** Draft and ready mix statuses correct. **Required verification:** Mixed-state fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -409,7 +409,7 @@
 
 ## [ADR-0229 — First-run library awakening with honest local filesystem and first play](adr-0229-first-run.md)
 
-**Priority / phase:** P0 / Onboarding. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Onboarding. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0229-01 — Design local setup explanation.** **Acceptance:** User understands browser/server folder relationship. **Required verification:** First-time comprehension test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0229-02 — Refine path validation.** **Acceptance:** Missing/invalid/disallowed folders show accurate reason. **Required verification:** Local path fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -422,7 +422,7 @@
 
 ## [ADR-0230 — Workspace for truthful analysis, source health, storage and diagnostics](adr-0230-workspace.md)
 
-**Priority / phase:** P1 / Workspace. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Workspace. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0230-01 — Define Workspace information hierarchy.** **Acceptance:** Health, source, analysis and storage are findable. **Required verification:** Operator findability test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0230-02 — Design health summary.** **Acceptance:** Actionable issues above passive metrics. **Required verification:** Known-fault fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -435,7 +435,7 @@
 
 ## [ADR-0231 — Export Studio: frozen revision, honest render progress and finished artifact](adr-0231-export-experience.md)
 
-**Priority / phase:** P0 / Export. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Export. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0231-01 — Show frozen revision before export.** **Acceptance:** Selected mix ID and revision explicitly confirmed. **Required verification:** Snapshot fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0231-02 — Design job phase visualization.** **Acceptance:** Queued, rendering, finalizing, done and failed accurate. **Required verification:** Backend job tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -448,7 +448,7 @@
 
 ## [ADR-0232 — System-wide feedback, Undo, intentional interruptions and resilient recovery](adr-0232-feedback-recovery.md)
 
-**Priority / phase:** P0 / Cross-cutting. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Cross-cutting. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0232-01 — Define feedback taxonomy.** **Acceptance:** Success, pending, blocked, failed and conflict distinct. **Required verification:** State inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0232-02 — Specify Undo availability.** **Acceptance:** Only actually reversible actions offer Undo. **Required verification:** Source semantics audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -461,7 +461,7 @@
 
 ## [ADR-0233 — Responsive cinematic-to-precision layouts from 320px to wide screens](adr-0233-responsive-scenes.md)
 
-**Priority / phase:** P0 / Cross-cutting. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Cross-cutting. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0233-01 — Specify breakpoint behavior.** **Acceptance:** Every major scene has explicit spatial transformations. **Required verification:** Layout matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0233-02 — Design mobile player and navigation.** **Acceptance:** Safe area and keyboard inset correct. **Required verification:** 320–430 touch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -474,7 +474,7 @@
 
 ## [ADR-0234 — Accessibility as an artistic constraint, WCAG 2.2 AA and semantic parity](adr-0234-accessible-art.md)
 
-**Priority / phase:** P0 / Quality. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Quality. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0234-01 — Map focus and reading order.** **Acceptance:** Each scene has correct semantic structure. **Required verification:** Keyboard and DOM audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0234-02 — Validate all core journeys by AT.** **Acceptance:** Listen, Explore, Create, Studio, Requests and Export operable. **Required verification:** NVDA/Edge session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -487,7 +487,7 @@
 
 ## [ADR-0235 — Audio-first performance and power-aware artistic rendering](adr-0235-performance.md)
 
-**Priority / phase:** P0 / Quality. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Quality. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0235-01 — Baseline real devices.** **Acceptance:** Record OS, browser, cores, memory and real media. **Required verification:** Reproducible trace register. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0235-02 — Define input and layout budgets.** **Acceptance:** Target p75 INP at most 200ms and low CLS where applicable. **Required verification:** Web vitals capture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -500,7 +500,7 @@
 
 ## [ADR-0236 — Modular frontend visual architecture and safe migration seams](adr-0236-frontend-architecture.md)
 
-**Priority / phase:** P0 / Architecture. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Architecture. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0236-01 — Map ownership boundaries.** **Acceptance:** Transport, route, scene, library and editor each have one owner. **Required verification:** Module dependency graph. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0236-02 — Define component seams.** **Acceptance:** Shared tokens/primitives avoid cross-screen coupling. **Required verification:** Architecture review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -513,7 +513,7 @@
 
 ## [ADR-0237 — Shared data provenance and authoritative music-state truth](adr-0237-truth-provenance.md)
 
-**Priority / phase:** P0 / Architecture. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Architecture. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0237-01 — Enumerate provenance types.** **Acceptance:** All musical objects have declared authority and uncertainty. **Required verification:** Domain schema audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0237-02 — Map current readiness states.** **Acceptance:** Song, seam, stem and job conditions use canonical values. **Required verification:** API and fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -526,7 +526,7 @@
 
 ## [ADR-0238 — Local-first privacy and future SaaS-ready boundaries without SaaS](adr-0238-privacy-future.md)
 
-**Priority / phase:** P0 / Architecture. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Architecture. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0238-01 — Audit current network and local paths.** **Acceptance:** All data egress and file permissions documented. **Required verification:** Network and server security inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0238-02 — Document LRCLIB disclosure.** **Acceptance:** Exactly what metadata is sent and when made explicit. **Required verification:** Privacy copy and packet review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -539,7 +539,7 @@
 
 ## [ADR-0239 — Automated regression strategy and visual-evidence governance](adr-0239-test-architecture.md)
 
-**Priority / phase:** P0 / Verification. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Verification. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0239-01 — Map existing tests to new tasks.** **Acceptance:** Every task has relevant automated and independent evidence gap. **Required verification:** Test crosswalk. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0239-02 — Build stable visual fixtures.** **Acceptance:** Light/dark, no-data, errors, loading and sizes captured. **Required verification:** Deterministic screenshot runs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -552,7 +552,7 @@
 
 ## [ADR-0240 — Independent listening research and artistic quality acceptance](adr-0240-human-research.md)
 
-**Priority / phase:** P0 / Verification. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Verification. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0240-01 — Define listener journey scripts.** **Acceptance:** First run, first play, first handoff covered. **Required verification:** Uncoached research protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0240-02 — Define creator journey scripts.** **Acceptance:** Shape, reorder, audition, Studio and export covered. **Required verification:** Task outcome forms. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -565,7 +565,7 @@
 
 ## [ADR-0241 — Incremental scene migration, compatibility and reversible release slices](adr-0241-migration-rollback.md)
 
-**Priority / phase:** P0 / Delivery. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Delivery. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0241-01 — Specify migration sequence.** **Acceptance:** Visual foundation then shell then music scenes and operations. **Required verification:** Dependency plan. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0241-02 — Define compatibility boundaries.** **Acceptance:** Old URLs and backend APIs remain intact. **Required verification:** Router and API tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -578,7 +578,7 @@
 
 ## [ADR-0242 — Music-native microcopy, state language and non-patronizing feedback](adr-0242-musical-microcopy.md)
 
-**Priority / phase:** P1 / Content. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Content. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0242-01 — Define voice and terminology.** **Acceptance:** Action nouns and music terms consistent across routes. **Required verification:** Content inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0242-02 — Separate request and result labels.** **Acceptance:** Requested move never labeled rendered. **Required verification:** Status copy fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -591,7 +591,7 @@
 
 ## [ADR-0243 — Tactile gestures, pointer feedback and equal keyboard control](adr-0243-creative-gestures.md)
 
-**Priority / phase:** P1 / Interaction. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Interaction. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0243-01 — Inventory gesture affordances.** **Acceptance:** Every pointer action has explicit drag handle or visual clue. **Required verification:** Interaction review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0243-02 — Define provisional visuals.** **Acceptance:** Hover/drag preview distinct from committed result. **Required verification:** Slow server tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -604,7 +604,7 @@
 
 ## [ADR-0244 — Search-first navigation and expert command palette continuity](adr-0244-command-palette.md)
 
-**Priority / phase:** P1 / Shell. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Shell. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0244-01 — Audit existing commands.** **Acceptance:** Every command maps to real capability and permission. **Required verification:** Palette inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0244-02 — Redesign search hierarchy.** **Acceptance:** Songs, mixes, routes and actions clearly differentiated. **Required verification:** Results task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -617,7 +617,7 @@
 
 ## [ADR-0245 — Final visual-detail audit and art-direction coherence](adr-0245-final-pixel-polish.md)
 
-**Priority / phase:** P1 / Polish. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P1 / Polish. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0245-01 — Audit alignment and spacing.** **Acceptance:** Controls align across scene, card and dialog components. **Required verification:** Pixel-diff review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0245-02 — Audit type and icon optics.** **Acceptance:** Titles, timestamps and icons align optically. **Required verification:** Visual specimen audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -630,7 +630,7 @@
 
 ## [ADR-0246 — Complete listening-to-creation journey and musical delight milestones](adr-0246-end-to-end-journey.md)
 
-**Priority / phase:** P0 / Experience. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Experience. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0246-01 — Storyboard first playable set.** **Acceptance:** From folder to six ready tracks to Listen recorded. **Required verification:** Journey protocol. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0246-02 — Storyboard first handoff.** **Acceptance:** Actual audio event and truthful visual moment identified. **Required verification:** Real playback review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -643,7 +643,7 @@
 
 ## [ADR-0247 — Implementation-status integrity and independent GO/NO-GO governance](adr-0247-release-governance.md)
 
-**Priority / phase:** P0 / Delivery. **Decision:** Proposed; **Implementation:** 0/8; **Verified:** 0/8.
+**Priority / phase:** P0 / Delivery. **Decision:** Accepted; **Implementation:** 0/8; **Verified:** 0/8.
 
 - [ ] **SF-0247-01 — Define decision state transitions.** **Acceptance:** Proposed, Accepted, Rejected, Superseded documented with dates. **Required verification:** ADR governance audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **SF-0247-02 — Define implementation state transitions.** **Acceptance:** Not started/In progress/Implemented require source evidence. **Required verification:** Ledger check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
