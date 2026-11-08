@@ -1,6 +1,6 @@
 # ADR-0378 — Lucy integration, proposal lifecycle, consent and safe approval
 
-- **Decision:** Proposed (owner review pending; no approval recorded).
+- **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
