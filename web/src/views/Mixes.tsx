@@ -164,14 +164,15 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           Your library now has enough ready songs to make a first mix. Nothing starts playing until you choose Play.
         </p>
       )}
+      <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={EXPLORE_TABS} current={EXPLORE_TABS.some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
 
-      <div className="mix-paths" aria-label="Ways to make a mix">
+      <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
         <p className="eyebrow">Quick Play · {firstMix ? 'Your library is ready' : 'Tap and play'}</p>
         <h2 id="mix-quick-title" className="mix-path-label">Listen now, shape later</h2>
-        <h1 className="display">{hero?.name ?? 'Selecta’s pick'}</h1>
+        <h3 className="display">{hero?.name ?? 'Selecta’s pick'}</h3>
         <p className="lede">{hero?.blurb ?? 'The strongest run it can find through your library.'}</p>
         <div className="row wrap">
           <Action
