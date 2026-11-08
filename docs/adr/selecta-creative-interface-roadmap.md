@@ -1,4 +1,4 @@
-# Selecta — creative-interface synthesis roadmap: 20 original + 9 additional visualizer ADRs
+# Selecta — creative-interface synthesis roadmap: 20 original + 13 horizontal visualizer ADRs
 
 **Documentation-only proposal (2026-11-08).** Baseline: main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd, after merged PR #32. **20 Accepted decisions (owner approved 2026-11-08); 140 Not started tasks, 0 In progress, 0 Implemented; 0 independently Verified.** No source code, tests or assets changed in the original submission.
 
@@ -58,6 +58,19 @@ These five new decisions supplement the original 20 creative-interface decisions
 | [ADR-0193](adr-0193-afterglow-trails.md) | Afterglow Trails (`trails`) | Accepted | WIP on PR #33 | No |
 
 All five reuse only actual analyser samples, the existing mix's audio owner and visible drawing budget. No new audio source or backend capability is required. Each ADR has its own tested data mapping and explicit unreleased acceptance gates.
+
+## Four further accepted full-width visualizer ADRs (ADR-0194–0197)
+
+Following the owner's request for **15 total horizontal visualizer choices**, these four decisions extend the preceding 11. There are now **33 accepted ADR decisions** including the original twenty. Source-level code is pushed to PR #33; verification remains open unless demonstrated by passing CI, device, real-audio and independent review.
+
+| ADR | Choice | Data-driven layout | Code status | Independently Verified |
+|---|---|---|---|---|
+| [ADR-0194](adr-0194-spectral-dunes.md) | Spectral Dunes | Four broad, full-width landscapes instead of tightly packed spectrum columns. | WIP on PR #33 | No |
+| [ADR-0195](adr-0195-signal-ranges.md) | Signal Ranges | A spacious horizontal procession of delicate min–max signal wicks with bold mean markers. | WIP on PR #33 | No |
+| [ADR-0196](adr-0196-frequency-mesh.md) | Frequency Mesh | A fine panoramic lattice of crossed lines, formed entirely from measured spectral magnitudes. | WIP on PR #33 | No |
+| [ADR-0197](adr-0197-split-flow.md) | Split Flow | Two independent horizontal river-like bands, lower frequencies above and upper frequencies below. | WIP on PR #33 | No |
+
+The original 140 CI tasks remain a distinct implementation/verification matrix. Decision acceptance is not completion of those tasks.
 
 ## Dependency-ordered delivery plan
 
