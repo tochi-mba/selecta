@@ -72,6 +72,8 @@ export function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [problem, setProblem] = useState('');
   const [data, setData] = useState<MixData>({ mix: [], name: 'Your mix', can_undo: false });
+  const currentCanUndo = useRef(data.can_undo);
+  currentCanUndo.current = data.can_undo;
   const [helping, setHelping] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [commanding, setCommanding] = useState(false);
@@ -125,6 +127,10 @@ export function App() {
   // Which draft is open comes from the address, so it can't be confused with the current mix.
   const draftId = route.page === 'edit' ? route.draft : null;
   const [draftData, setDraftData] = useState<MixData | null>(null);
+  // The global keyboard handler must read the latest loaded identity synchronously,
+  // including between a render and its effect re-subscription.
+  const draftDataRef = useRef(draftData);
+  draftDataRef.current = draftData;
   const [draftGone, setDraftGone] = useState(false);
   const draftRef = useRef(draftId);
   draftRef.current = draftId;
@@ -466,15 +472,16 @@ export function App() {
           if (scope !== null) {
             // A draft link can be open before its response arrives, or after a different
             // draft's response. In neither case may the shortcut mutate a guessed scope.
-            if (draftRef.current !== scope || draftData?.draft?.id !== scope) {
+            const loaded = draftDataRef.current;
+            if (draftRef.current !== scope || loaded?.draft?.id !== scope) {
               announce('Wait for this draft to load before undoing.');
               break;
             }
-            if (!draftData.can_undo) {
+            if (!loaded.can_undo) {
               announce('Nothing to undo in this draft.');
               break;
             }
-          } else if (!data.can_undo) {
+          } else if (!currentCanUndo.current) {
             announce('Nothing to undo in the current mix.');
             break;
           }
@@ -494,7 +501,7 @@ export function App() {
     };
     window.addEventListener('keydown', keys);
     return () => window.removeEventListener('keydown', keys);
-  }, [player, undoNewest, toggleStage, draftData, data.can_undo]);
+  }, [player, undoNewest, toggleStage]);
 
   // the drafts it can jump to are only ever as old as this opening of it
   useEffect(() => {
