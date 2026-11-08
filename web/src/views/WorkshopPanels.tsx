@@ -265,6 +265,16 @@ async function checkFolder(folder: string): Promise<FolderCheck | null> {
   }
 }
 
+type RelinkPreview = {
+  from: string;
+  to: string;
+  total: number;
+  verified: number;
+  blocked: number;
+  token: string | null;
+  candidates: { id: number; title: string | null; artist: string | null; status: string }[];
+};
+
 export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status' | 'refreshStatus' | 'notify'>) {
   const [folder, setFolder] = useState('');
   const [problem, setProblem] = useState('');
@@ -272,6 +282,39 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   const [loadFailed, setLoadFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmUnwatch, setConfirmUnwatch] = useState<string | null>(null);
+  const [relocate, setRelocate] = useState<{ old: string; target: string } | null>(null);
+  const [relocation, setRelocation] = useState<RelinkPreview | null>(null);
+  const [relinkProblem, setRelinkProblem] = useState('');
+  const [checkingRelink, setCheckingRelink] = useState(false);
+  const previewRelink = async () => {
+    if (!relocate?.target.trim()) return;
+    setCheckingRelink(true);
+    setRelinkProblem('');
+    setRelocation(null);
+    try {
+      setRelocation(await post<RelinkPreview>('/folders/relink/preview', {
+        old: relocate.old, new: relocate.target.trim(),
+      }));
+    } catch (error) {
+      setRelinkProblem((error as Error).message);
+    } finally {
+      setCheckingRelink(false);
+    }
+  };
+  const confirmRelink = async () => {
+    if (!relocate || !relocation?.token) return;
+    try {
+      await post('/folders/relink', { old: relocate.old, new: relocate.target.trim(), token: relocation.token });
+      setRelocate(null);
+      setRelocation(null);
+      void refresh();
+      refreshStatus();
+      notify('Verified folder re-linked. Your recordings and song IDs have not been changed.');
+    } catch (error) {
+      setRelocation(null);
+      setRelinkProblem((error as Error).message);
+    }
+  };
   const scanPending = useRef(false);
   const scanning = status.scan.status === 'running';
   const reading = scanning || submitting;
@@ -329,6 +372,11 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
                 <small className="hint"> {item.songs} song{item.songs === 1 ? '' : 's'}</small>
               </div>
               {item.available ? <Status kind="ready">Watching</Status> : <Status kind="warning">Can’t find it right now. Its songs are kept until it’s back.</Status>}
+              {!item.available && <button onClick={() => {
+                setRelocate({ old: item.path, target: '' });
+                setRelocation(null);
+                setRelinkProblem('');
+              }}>Find moved folder</button>}
               <button onClick={() => setConfirmUnwatch(item.path)}>Stop watching</button>
             </li>
           ))}
@@ -343,6 +391,31 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
         )}>
           <p>Stop automatically checking <b>{confirmUnwatch}</b> for new music?</p>
           <p className="hint">This never deletes, moves or changes files. Songs already in your Library stay there. You can add this folder again later.</p>
+        </Dialog>
+      )}
+      {relocate && (
+        <Dialog title="Re-link a moved music folder" onClose={() => { setRelocate(null); setRelocation(null); }}
+          footer={<>
+            <button onClick={() => { setRelocate(null); setRelocation(null); }}>Cancel — keep original paths</button>
+            {relocation?.token && <Action className="primary" working="Re-linking…" run={confirmRelink}>Confirm {relocation.verified} verified songs</Action>}
+          </>}>
+          <p>This only changes the recorded locations of songs from <b>{relocate.old}</b>. It never moves or modifies audio files. All recordings must match their original relative path, size, duration, title and artist.</p>
+          <Field label="New local folder address" error={relinkProblem}>
+            {(field) => <input {...field} value={relocate.target} onChange={(event) => {
+              setRelocate({ ...relocate, target: event.target.value });
+              setRelocation(null);
+              setRelinkProblem('');
+            }} placeholder="Absolute path of the moved folder" />}
+          </Field>
+          <Action working="Checking recordings…" disabled={checkingRelink || !relocate.target.trim()} run={previewRelink}>Preview without changing anything</Action>
+          {relocation && <>
+            <p role="status">{relocation.verified} of {relocation.total} songs verified; {relocation.blocked} blocked.</p>
+            {!!relocation.blocked && <p className="warn">No paths will change. Every song must pass verification. Check that the correct folder is selected.</p>}
+            {!!relocation.blocked && <ul>{relocation.candidates.filter((item) => item.status !== 'verified').slice(0, 12).map((item) =>
+              <li key={item.id}>{item.title ?? 'Untitled'} (ID {item.id}): {item.status.replaceAll('_', ' ')}</li>
+            )}</ul>}
+            {relocation.token && <p className="hint">Confirm only if this is the same recording collection. Exact song identities, ratings, drafts and analysis will be retained.</p>}
+          </>}
         </Dialog>
       )}
       <div className="row wrap">
