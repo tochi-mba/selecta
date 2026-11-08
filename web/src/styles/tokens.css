@@ -236,6 +236,14 @@ html {
   scroll-behavior: auto !important;
 }
 @media (prefers-reduced-motion: reduce) {
+  :root, :root[data-motion] {
+    --motion-feedback: 0ms;
+    --motion-fast: 0ms;
+    --motion-reveal: 0ms;
+    --motion-handoff: 0ms;
+    --motion-overlay: 0ms;
+    --motion-slow: 0ms;
+  }
   *, *::before, *::after {
     animation: none !important;
     transition: none !important;
