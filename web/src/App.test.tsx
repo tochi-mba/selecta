@@ -216,7 +216,10 @@ describe('an open draft', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/listen'));
     expect(calls.filter((call) => call.path === '/drafts/7/play')).toHaveLength(1);
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/drafts/7/play', expect.objectContaining({
-      headers: expect.objectContaining({ 'x-mix-order': '1,2' }),
+      headers: expect.objectContaining({
+        'x-mix-order': '1,2',
+        'x-operation-id': expect.stringMatching(/^draft-play-/),
+      }),
     }));
     expect(await screen.findByText(/What was playing is kept in your drafts/)).toBeInTheDocument();
   });
