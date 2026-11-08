@@ -265,7 +265,7 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
       // next stop from a removed node, focus can fall to the document body.
       // Choose the next real stop relative to the trigger, outside this menu.
       const buttons = [...document.querySelectorAll<HTMLElement>(FOCUSABLE)]
-        .filter((node) => !holder.current?.contains(node)
+        .filter((node) => (node === opener.current || !holder.current?.contains(node))
           && !node.closest('[hidden], [inert], [aria-hidden="true"]')
           && getComputedStyle(node).display !== 'none'
           && getComputedStyle(node).visibility !== 'hidden');
