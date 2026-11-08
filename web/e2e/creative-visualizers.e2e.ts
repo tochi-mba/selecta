@@ -18,7 +18,7 @@ test('measured energy bars use real varied heights rather than collapsing to ide
   await expect(selected).toHaveAttribute('aria-current', 'true');
 });
 
-test('all nine additional horizontal visualizers are selectable without restarting real audio', async ({ page }) => {
+test('all thirteen additional horizontal visualizers are selectable without restarting real audio', async ({ page }) => {
   await spyOnAudio(page);
   await page.goto('/listen');
   await page.getByRole('button', { name: /^(Play|Resume from)/ }).click();
@@ -39,6 +39,10 @@ test('all nine additional horizontal visualizers are selectable without restarti
     ['pins', 'Signal pins'],
     ['matrix', 'Spectrum mosaic'],
     ['trails', 'Afterglow trails'],
+    ['dunes', 'Spectral dunes'],
+    ['candles', 'Signal ranges'],
+    ['mesh', 'Frequency mesh'],
+    ['split', 'Split flow'],
   ]) {
     await choose.selectOption(value);
     await expect(page.getByRole('img', { name: label + ' — actual mixed-audio frequency levels' })).toBeVisible();

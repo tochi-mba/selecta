@@ -15,13 +15,14 @@ const colours = { accent: '#d5f36b', soft: '#ffffff', gradient: '#d5f36b' };
 const get = (context: CanvasRenderingContext2D, name: 'fill' | 'stroke' | 'fillRect' | 'arc') =>
   vi.mocked(context[name]).mock.calls.length;
 
-describe('eleven width-first real-audio visualizations', () => {
+describe('fifteen width-first real-audio visualizations', () => {
   it('declares all nine new alternatives with unique names and a single public menu', () => {
     expect(SPECTRUM_MODES.map((mode) => mode.id)).toEqual([
       'bars', 'ribbon', 'aurora', 'lanes', 'constellation', 'waterfall',
       'skyline', 'threads', 'pins', 'matrix', 'trails',
+      'dunes', 'candles', 'mesh', 'split',
     ]);
-    expect(new Set(SPECTRUM_MODES.map((mode) => mode.label)).size).toBe(11);
+    expect(new Set(SPECTRUM_MODES.map((mode) => mode.label)).size).toBe(15);
     expect(SPECTRUM_MODES.every((mode) => mode.description.length > 12)).toBe(true);
   });
 
@@ -134,7 +135,7 @@ describe('eleven width-first real-audio visualizations', () => {
   });
 
   it('draws identical measured geometry for repeated frames without random variation', () => {
-    for (const mode of ['skyline', 'threads', 'pins', 'matrix'] as SpectrumShape[]) {
+    for (const mode of ['skyline', 'threads', 'pins', 'matrix', 'dunes', 'candles', 'mesh', 'split'] as SpectrumShape[]) {
       const a = fakeContext();
       const b = fakeContext();
       const levels = [0.1, 0.3, 0.8, 0, 0.4];
@@ -145,6 +146,66 @@ describe('eleven width-first real-audio visualizations', () => {
       }
     }
   });
+
+  it('draws four full-width dunes from four disjoint frequency partitions', () => {
+    const context = fakeContext();
+    const history: number[][] = [];
+    expect(paintFrequencyFrame(context, 1024, 160,
+      [0.1, 0.2, 0.4, 0.7, 0.3, 0.6, 0.9, 0.8],
+      'dunes', colours, history)).toBe(true);
+    expect(get(context, 'fill')).toBe(4);
+    expect(get(context, 'stroke')).toBe(4);
+    expect(vi.mocked(context.lineTo).mock.calls.filter(([x]) => x === 1024).length).toBeGreaterThanOrEqual(4);
+    expect(context.globalAlpha).toBe(1);
+    expect(history).toEqual([]);
+  });
+
+  it('draws frequency range wicks and mean markers from actual contiguous groups', () => {
+    const context = fakeContext();
+    // Four three-bin groups; the second group contains measured silence only.
+    const signal = [0.1, 0.5, 1, 0, 0, 0, 0.2, 0.4, 0.6, 0.8, 0.8, 0.8];
+    expect(paintFrequencyFrame(context, 900, 140, signal, 'candles', colours, [])).toBe(true);
+    expect(get(context, 'stroke')).toBe(3);
+    expect(get(context, 'fillRect')).toBe(3);
+    expect(vi.mocked(context.moveTo).mock.calls[0]).toEqual([112.5, 140 * 0.93 - 0.1 * 140 * 0.82]);
+    expect(context.globalAlpha).toBe(1);
+  });
+
+  it('connects adjacent nonzero frequency mesh points but never jumps a silent gap', () => {
+    const context = fakeContext();
+    expect(paintFrequencyFrame(context, 900, 140, [0.2, 0, 0.7, 0.9], 'mesh', colours, [])).toBe(true);
+    expect(get(context, 'stroke')).toBe(1);
+    // Three active rungs (two line segments each) plus two diagonals for the
+    // contiguous last two points; no diagonal may originate at x=0.
+    const strokes = vi.mocked(context.moveTo).mock.calls;
+    expect(strokes.filter(([x]) => x === 0)).toHaveLength(1);
+    expect(strokes.filter(([x]) => x === 600)).toHaveLength(3);
+    expect(strokes.some(([x]) => x === 300)).toBe(false);
+    expect(context.globalAlpha).toBe(1);
+  });
+
+  it('keeps lower and upper frequency flow independent, never mirrors one half', () => {
+    const lower = fakeContext();
+    const higher = fakeContext();
+    const both = fakeContext();
+    paintFrequencyFrame(lower, 1000, 160, [0.2, 0.7, 0.9, 0, 0, 0], 'split', colours, []);
+    paintFrequencyFrame(higher, 1000, 160, [0, 0, 0, 0.2, 0.7, 0.9], 'split', colours, []);
+    paintFrequencyFrame(both, 1000, 160, [0.2, 0.7, 0.9, 0.9, 0.7, 0.2], 'split', colours, []);
+    expect(get(lower, 'fill')).toBe(1);
+    expect(get(higher, 'fill')).toBe(1);
+    expect(get(both, 'fill')).toBe(2);
+    expect(get(both, 'stroke')).toBe(2);
+    expect(lower.globalAlpha).toBe(1);
+    expect(higher.globalAlpha).toBe(1);
+  });
+
+  it.each(['dunes', 'candles', 'mesh', 'split'] as SpectrumShape[])(
+    '%s never changes a preexisting measured history', (mode) => {
+      const history = [[0.2, 0.4, 0.3]];
+      paintFrequencyFrame(fakeContext(), 900, 140, [0.6, 0.4, 0.8], mode, colours, history);
+      expect(history).toEqual([[0.2, 0.4, 0.3]]);
+    },
+  );
 
   it('bounds history, uses only real frames, and does not share it with other modes', () => {
     const context = fakeContext();

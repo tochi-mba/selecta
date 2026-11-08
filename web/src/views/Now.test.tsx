@@ -343,6 +343,10 @@ describe('creative Listen states grounded in audio and known timing', () => {
     ['pins', 'Signal pins'],
     ['matrix', 'Spectrum mosaic'],
     ['trails', 'Afterglow trails'],
+    ['dunes', 'Spectral dunes'],
+    ['candles', 'Signal ranges'],
+    ['mesh', 'Frequency mesh'],
+    ['split', 'Split flow'],
   ])('chooses and remembers %s without creating or starting audio', async (id, label) => {
     window.localStorage.removeItem('selecta.listen');
     fakeBackend({ 'GET /songs/1': detail });
