@@ -194,6 +194,30 @@ describe('things on top of the page', () => {
     expect(opener).toHaveFocus();
     opener.remove();
   });
+  it('treats a disclosure summary as the last Tab stop and skips collapsed contents', () => {
+    render(<Dialog title="Options" onClose={() => {}}>
+      <button>Visible action</button>
+      <button style={{ display: 'none' }}>CSS hidden action</button>
+      <details><summary>Advanced options</summary><button>Collapsed action</button></details>
+    </Dialog>);
+    const close = screen.getByRole('button', { name: 'Close Options' });
+    const summary = screen.getByText('Advanced options');
+    summary.focus();
+    fireEvent.keyDown(summary, { key: 'Tab' });
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
+    expect(summary).toHaveFocus();
+  });
+
+  it('does not autofocus a CSS-hidden or hidden control', () => {
+    render(<Dialog title="Focus choice" onClose={() => {}}>
+      <button data-autofocus style={{ display: 'none' }}>CSS hidden</button>
+      <button data-autofocus hidden>Hidden</button>
+      <button data-autofocus>Ready</button>
+    </Dialog>);
+    expect(screen.getByRole('button', { name: 'Ready' })).toHaveFocus();
+  });
+
 });
 
 describe('a menu', () => {
