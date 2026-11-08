@@ -74,7 +74,7 @@ export function ProviderNote({ status, onSettings }: { status: LucyStatus; onSet
       {builtin
         ? 'Using the built-in planner on this computer. No data leaves it.'
         : `Using ${status.provider.label}${status.provider.model ? ` (${status.provider.model})` : ''}.`}
-      {status.provider.mode === 'constrained' && ` Working in a simpler mode${status.provider.reason ? `: ${status.provider.reason}` : ''}.`}
+      {status.provider.mode === 'constrained' && ` Working in a simpler mode${status.provider.reason ? `: ${status.provider.reason.replace(/[.\s]+$/, '')}` : ''}.`}
       {' '}<button type="button" className="lucy-link" onClick={onSettings}>{builtin ? 'Choose an AI service' : 'Change'}</button>
     </p>
   );

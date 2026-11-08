@@ -216,7 +216,9 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
           </p>
           {!!outcome.commit.problems?.length && <ul className="lucy-warnings">{outcome.commit.problems.map((problem) => <li key={problem}>{problem}</li>)}</ul>}
           <div className="row wrap">
-            {outcome.commit.draft_id !== null && <PageLink className="button" to={`/mixes/drafts/${outcome.commit.draft_id}/edit`}>Open in editor</PageLink>}
+            {outcome.commit.played
+              ? <PageLink className="button" to="/mix/current/edit">Open in editor</PageLink>
+              : outcome.commit.draft_id !== null && <PageLink className="button" to={`/mixes/drafts/${outcome.commit.draft_id}/edit`}>Open in editor</PageLink>}
             <PageLink className="button" to="/mixes/mine">My Mixes</PageLink>
           </div>
         </div>

@@ -302,7 +302,8 @@ def accept_turn(
             ),
         )
         title = _row(conn, conversation)["title"]
-        if title == "New conversation":
+        retitled = title == "New conversation"
+        if retitled:
             conn.execute(
                 "UPDATE lucy_conversations SET title=? WHERE id=?",
                 (_clean_title(clean), conversation),
@@ -312,6 +313,8 @@ def accept_turn(
     except BaseException:
         conn.rollback()
         raise
+    if retitled:
+        events.append(conn, conversation, "conversation.updated", {"title": _clean_title(clean)})
     for row in older:
         events.append(conn, conversation, "turn.superseded", {"by": turn}, turn=row["id"])
     found = conn.execute("SELECT * FROM lucy_turns WHERE id=?", (turn,)).fetchone()
