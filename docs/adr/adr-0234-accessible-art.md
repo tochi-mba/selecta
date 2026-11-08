@@ -1,0 +1,51 @@
+# ADR-0234 — Accessibility as an artistic constraint, WCAG 2.2 AA and semantic parity
+
+- **Decision:** Proposed; explicit owner acceptance is pending.
+- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Independent verification:** No (0/8).
+- **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
+- **Priority / phase:** P0 / Quality.
+- **Owner:** Unassigned.
+- **Related earlier ADRs:** ADR-0161/0183/0023; previous task/status evidence remains unchanged.
+- **Existing source touchpoints:** web/src/ui/controls.tsx; web/src/views/Studio.tsx; web/src/styles/tokens.css.
+
+## Context and evidence boundary
+
+The expressive redesign must retain keyboard-only access and complete screen-reader semantics, non-color state, generous targets, readable text and low-sensory alternatives. No artsy view may make its information exclusively graphical. Source-level capabilities, this planning decision, code tests and independent acceptance are separate. Historical evidence remains at its original snapshot until separately reconciled against a future implementation SHA.
+
+## Proposed decision
+
+The expressive redesign must retain keyboard-only access and complete screen-reader semantics, non-color state, generous targets, readable text and low-sensory alternatives. No artsy view may make its information exclusively graphical. Keep one coherent audio-state truth and intentional user control. Require explicit source provenance and measurable acceptance for every interactive, accessibility and visual change.
+
+## Visual, animation and microinteraction contract
+
+- Every critical action remains discoverable, keyboard/touch operable and reversible where the backend permits.
+- Planned versus prepared versus committed versus playing or failed states remain distinct with static and assistive-tech equivalents.
+- All motion is causal, optional and non-blocking; the player and exact edit revisions win over display rendering.
+- Design for both themes, high zoom, forced colors, reduced motion, long/RTL names, offline and slow/failed requests.
+
+## Alternatives and trade-offs
+
+No focus trap, unlabeled transport, auto-playing animated lyric chatter or essential information inside canvas only. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
+
+## Implementation checklist — 0/8 Implemented, 0/8 Verified
+
+1. **SF-0234-01 — Map focus and reading order.** **Acceptance:** Each scene has correct semantic structure. **Required verification:** Keyboard and DOM audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+2. **SF-0234-02 — Validate all core journeys by AT.** **Acceptance:** Listen, Explore, Create, Studio, Requests and Export operable. **Required verification:** NVDA/Edge session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+3. **SF-0234-03 — Enforce 2.2 AA contrast and target sizing.** **Acceptance:** Text and essential indicators pass applicable criteria. **Required verification:** Measured contrast and touch-target report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+4. **SF-0234-04 — Protect focus under overlays.** **Acceptance:** Nav, toasts, modals and dialogs restore focus correctly. **Required verification:** Dialog Escape/Return E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+5. **SF-0234-05 — Define live announcement budget.** **Acceptance:** Lyric ticks and meters do not chatter. **Required verification:** Screen reader listening study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+6. **SF-0234-06 — Ensure full motion parity.** **Acceptance:** Still and reduced-motion show all data. **Required verification:** Motion emulator review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+7. **SF-0234-07 — Validate 320px and 400% zoom.** **Acceptance:** No hidden or clipped critical action. **Required verification:** Reflow matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+8. **SF-0234-08 — Record independent access sign-off.** **Acceptance:** Named reviewer and SHA with blockers resolved. **Required verification:** AT evidence report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+
+## Invariants and negative cases
+
+Single player and intentional Pause; unchanged local music and explicit LRCLIB metadata disclosure; exact current/draft revisions and scoped Undo; stable song and seam IDs; consented atomic bridges; all eight stem lanes and 8–64 cells with recovery; truthful Library readiness; neutral blind research; and exact frozen-revision decodable FLAC remain protected. Verify slow/stale/offline/failure cases, multi-tab, touch, 320–2560px, 400% zoom, forced colors, reduced motion, NVDA/Edge and real-audio operation as relevant.
+
+## Dependencies, evidence and status
+
+- **Depends on:** ADR-0161/0183/0023; new ADR-0198/0199 and previous programme acceptance records.
+- **Next:** dated owner decision → design specimens → small code/test PR → separate independent human/AT/audio/performance report → explicit release gate.
+- **Now:** Proposed; 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
+- [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).
