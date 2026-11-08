@@ -1,6 +1,6 @@
 # Selecta / Flow — cross-programme status and source evidence reconciliation
 
-**This new documentation-only design programme:** 50 **Proposed** ADRs, 400 new SF tasks **Not started**, 0 In progress, 0 Implemented, **0 independently Verified**. Source baseline: main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` (2026-11-08). Do not interpret the 400 tasks as 400 missing existing capabilities. Many current code features are already present and may satisfy portions of new acceptance requirements; they are not automatically credited until examined at the *new task's exact acceptance level*.
+**This new documentation-only design programme:** 50 **Accepted** ADRs, 400 new SF tasks **Not started**, 0 In progress, 0 Implemented, **0 independently Verified**. Source baseline: main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` (2026-11-08). Do not interpret the 400 tasks as 400 missing existing capabilities. Many current code features are already present and may satisfy portions of new acceptance requirements; they are not automatically credited until examined at the *new task's exact acceptance level*.
 
 | Programme | Historical record | Scope inherited | Status changed by this PR? |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | Immersive MI / ADR-0135–0164 | [MI reconciliation](selecta-microinteraction-status-reconciliation.md) | Motion, source-level Listen, Studio, recovery and tooling | None; previously published MI snapshot: 208 Implemented, 4 In progress, 28 Not started and 0 independently Verified; not re-audited here |
 | Creative CI / ADR-0165–0184 | [CI checklist](selecta-creative-interface-implementation-checklist.md) | Musical objects, exploratory creativity and rigorous evidence | None; earlier ledger describes 140 tasks Not started at its baseline |
 | Additional live spectrum / ADR-0185–0197 | [Individual visualizer ADRs](adr-0185-aurora-contours.md) | Thirteen extra spectrum styles now present in source in addition to the two originals | None; code presence is not independent audio or visual acceptance |
-| **New Flow SF / ADR-0198–0247** | [New 400-task checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [JSON status](selecta-flow-code-status.json) | New art direction, cross-screen integrity, screens and independent outcomes | **50 Proposed / 400 Not started / 0 independently Verified** |
+| **New Flow SF / ADR-0198–0247** | [New 400-task checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [JSON status](selecta-flow-code-status.json) | New art direction, cross-screen integrity, screens and independent outcomes | **50 Accepted / 400 Not started / 0 independently Verified** |
 
 ## Current-head source findings that must not be erased
 
