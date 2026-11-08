@@ -17,6 +17,7 @@ from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 
 from selecta import mix
+from selecta.backup import BackupError, activate_pending_restore
 from selecta.api_common import (
     LOCAL_HOSTS,
     OPERATIONS_KEPT,
@@ -45,6 +46,15 @@ def create_app(
     settings = settings or load_settings()
 
     settings.home.mkdir(parents=True, exist_ok=True)
+    restore_problem = None
+    try:
+        # Apply a validated restore only before database connections or
+        # render/analysis workers start; never replace an active SQLite file.
+        activate_pending_restore(settings)
+    except (BackupError, OSError) as problem:
+        restore_problem = str(problem)
+        if not settings.db_path.exists():
+            raise
 
     app = FastAPI(title="Selecta", docs_url="/api/docs")
 
@@ -66,6 +76,7 @@ def create_app(
         store=store,
         background=background,
         recent_operations=recent_operations,
+        restore_problem=restore_problem,
     )
     helpers_routes(app, ctx)
     library_routes(app, ctx)

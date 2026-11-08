@@ -44,9 +44,12 @@ _SPOKEN_PATH = re.compile(
 )
 _SPOKEN_NAME = re.compile(r"\bchapter\b|\bchap\.?\s*\d|\bprologue\b|\bepilogue\b", re.IGNORECASE)
 
+# Identity must retain edition and mix qualifiers. A radio edit, live take,
+# clean master or named remix is not safely interchangeable with the original.
+# Remove only non-recording promotional labels and separately handled features.
 _TITLE_NOISE = re.compile(
-    r"[\(\[][^\)\]]*(feat|ft\.|with |remaster|radio|explicit|clean|version|edit|bonus|single|"
-    r"from |mono|stereo|deluxe|original|official|audio|video|mix\b)[^\)\]]*[\)\]]",
+    r"[\(\[][^\)\]]*(feat(?:uring)?\b|ft\.|with |official\s+(?:audio|video)|"
+    r"lyric\s+video)[^\)\]]*[\)\]]",
     re.IGNORECASE,
 )
 _FEAT_TAIL = re.compile(r"\s+(feat\.?|ft\.?|featuring)\s+.*$", re.IGNORECASE)

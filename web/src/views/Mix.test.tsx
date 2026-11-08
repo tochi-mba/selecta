@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExportJob, MixData, MixItem, Status } from '../api';
 import { SetPlayer } from '../player';
@@ -368,6 +368,48 @@ describe('a draft on the Edit page', () => {
 });
 
 describe('the current mix and drafts', () => {
+  it('keeps each mix scope’s exact selection separate when the mounted editor switches scope', async () => {
+    const start = songs(seam('ready', 'a'));
+    function ScopeHarness() {
+      const [scope, setScope] = useState<number | null>(null);
+      const player = useRef(new SetPlayer(() => start, () => {})).current;
+      return (
+        <>
+          <button onClick={() => setScope((value) => value === null ? 7 : null)}>Switch scope</button>
+          <MixScope.Provider value={scope}>
+            <Mix
+              status={status()}
+              mix={start}
+              mixName={scope === null ? 'Current' : 'Draft'}
+              canUndo={false}
+              refreshMix={() => {}}
+              setMixData={() => {}}
+              refreshStatus={() => {}}
+              player={player}
+              now={player.state}
+              setView={() => {}}
+              notify={() => {}}
+              stage={false}
+              toggleStage={() => {}}
+              draftPlace={null}
+              playDraft={async () => {}}
+            />
+          </MixScope.Provider>
+        </>
+      );
+    }
+
+    render(<ScopeHarness />);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Song 1' })[0]);
+    expect(screen.getByRole('complementary', { name: 'This song' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Switch scope' }));
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'This song' })).toBeNull());
+
+    await userEvent.click(screen.getByRole('button', { name: 'Switch scope' }));
+    expect(await screen.findByRole('complementary', { name: 'This song' })).toBeInTheDocument();
+  });
+
   it('keeps a copy as a draft, leaving the mix as it is', async () => {
     const calls = fakeBackend({ 'POST /drafts': { id: 3, name: 'Test mix' } });
     const notify = vi.fn();

@@ -66,7 +66,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       setMixData(data);
       rememberStartedAMix();
       if (hereNow.current) {
-        notify(`${name}: ${data.mix.length} songs.`, true);
+        const actual = data.mix.length;
+        const duration = data.mix.reduce((seconds, item) => seconds + item.duration, 0);
+        notify(`${name}: generated ${actual} of ${songs} requested songs, about ${length(duration)} of source audio before transitions. Review the actual order in Edit.`, true);
         if (open) {
           setView('Edit');
         } else {
@@ -99,7 +101,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         { 'x-operation-id': operation },
       );
       operations.current.delete(signature);
-      if (hereNow.current) notify(`Saved ${made.name} as a draft, with ${made.count} songs. Nothing changed in what’s playing.`);
+      if (hereNow.current) notify(`Saved ${made.name} as a draft: ${made.count} of ${songs} requested songs. Your current playback was not changed.`);
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
       if (hereNow.current) setProblem((error as Error).message);
@@ -203,7 +205,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             <h2 className="section-title">Choose another feeling</h2>
             <p className="hint">
               {ready.length
-                ? `${ready.length} compatible candidates, each rebuilt from its matching songs when you press play.`
+                ? `${ready.length} available ideas. These are planning preferences, not previews; Selecta builds a new actual mix after you choose.`
                 : 'Every mix is rebuilt from your own songs when you press play.'}
             </p>
           </div>
@@ -239,11 +241,12 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                     </div>
                     {card.family && <p className="vibe-scope"><span aria-hidden="true">◎</span> Stays within {card.family}</p>}
                     <p>{card.blurb}</p>
+                     <p className="hint">Planning preference, not a promised song order or transition quality. The generated result depends on the recordings and cues available.</p>
                     <p className="artists"><span>Draws from</span> {card.artists.join(', ') || 'your mix-ready songs'}</p>
                     <p className="how">{card.moves}</p>
-                    <div className="vibe-card-facts" aria-label={`${card.songs} matching songs, up to ${length(card.seconds)}`}>
+                    <div className="vibe-card-facts" aria-label={`${card.songs} matching songs, about ${length(card.seconds)} of matching source audio`}>
                       <span>{card.songs} matching songs</span>
-                      <span>Up to {length(card.seconds)}</span>
+                      <span>About {length(card.seconds)} of matching source songs</span>
                     </div>
                     <div className="row card-actions">
                       <Action className="primary" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
@@ -261,7 +264,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       {waiting.length > 0 && (
         <section className="waiting">
           <h2 className="section-title">Needs more mix-ready songs</h2>
-          <p className="hint">These need songs that have been analysed and have timed lyrics or are instrumental.</p>
+          <p className="hint">These ideas do not have enough eligible recordings yet. You can try another available idea, or analyse more local songs. No new mix will be made from an unavailable idea.</p>
           <ul>
             {waiting.map((card) => (
               <li key={card.key}>

@@ -1,3 +1,13 @@
+# Selecta — new proposed gap-focused UI/UX polish ADRs (2026-11-08)
+
+**Docs-only proposal:** [16 ADR roadmap](selecta-gap-polish-roadmap.md) · [128 implementation tasks](selecta-gap-polish-implementation-checklist.md) · [per-task evidence ledger](selecta-gap-polish-implementation-evidence.md) · [machine-readable status](selecta-gap-polish-code-status.json) · [whole-product overlap/parity](selecta-gap-polish-overlap-and-parity.md) · [independent verification](selecta-gap-polish-verification-matrix.md) · [historic status reconciliation](selecta-gap-polish-status-reconciliation.md) · [NO-GO gates](selecta-gap-polish-release-gates.md).
+
+**Statuses:** 16 Proposed decisions (owner review pending); 128 tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Baseline `2956bc47fd735339e7216e03d27817fb3a31e92b`. No source implementation, old programme ledger, audio file or production test is modified.
+
+The additions concern adaptive titles, Listen and Editor visual priority, music-aware search, re-linking, local backups, audio output interruptions, returning work, help, long-session fatigue, safe batch operations, mix-choice predictions, Discovery handoff, Studio comprehension, request uncertainty and Workspace troubleshooting. Existing SF ADR owners retain first-run, all fifteen visualizers, frozen-revision FLAC, baseline WCAG and audio/player safety.
+
+---
+
 # Selecta / Flow — owner-accepted artistic UI/UX programme (2026-11-08)
 
 **Owner-accepted design programme (2026-11-08):** **50 Accepted decisions, ADR-0198–0247; 400 SF implementation tasks Not started; 0 In progress, 0 Implemented and 0 independently Verified.** The new programme builds on the source as of main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` and does **not** mark existing source capabilities missing, revise old implementation histories or change any application code.

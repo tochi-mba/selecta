@@ -24,6 +24,10 @@ const UNDO_MS = 15000;
 let next = 1;
 let toasts: Toast[] = [];
 let quiet = false;
+// Repeating non-actionable updates belong in Activity once, not in the foreground
+// every time a poll finishes. Errors and anything with Undo are never suppressed.
+const recentRoutine = new Map<string, { at: number; id: number }>();
+const ROUTINE_WINDOW_MS = 30000;
 const listeners = new Set<() => void>();
 
 function changed() {
@@ -48,11 +52,21 @@ export function setToastsQuiet(on: boolean) {
 
 export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone; scope?: string | null } = {}): number {
   const clean = message.replace(/\.\.$/, '.');
-  // the same words again just means the same thing is still true
-  const same = toasts.find((toast) => toast.message === clean && !toast.undo && !options.undo);
-  if (same) return same.id;
   const tone = options.tone ?? 'info';
+  const key = `${options.scope ?? ''}\u0000${clean}`;
+  if (tone === 'info' && !options.undo) {
+    const recent = recentRoutine.get(key);
+    if (recent && Date.now() - recent.at < ROUTINE_WINDOW_MS) return recent.id;
+  }
+  // A still-visible repeat is the same message, but an actionable failure
+  // must remain visible if it happens again after being dismissed.
+  const same = toasts.find((toast) => toast.message === clean && toast.tone === tone && !toast.undo && !options.undo);
+  if (same) return same.id;
   const activity = recordActivity(clean, { tone, scope: options.scope, undo: options.undo });
+  if (tone === 'info' && !options.undo) {
+    if (recentRoutine.size >= 64) recentRoutine.delete(recentRoutine.keys().next().value!);
+    recentRoutine.set(key, { at: Date.now(), id: -activity });
+  }
   if (quiet && tone !== 'problem') return -activity;
   const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity };
   const all = [...toasts, toast];
@@ -62,6 +76,7 @@ export function showToast(message: string, options: { undo?: Toast['undo']; tone
     all.splice(spare < 0 ? 0 : spare, 1);
   }
   toasts = all;
+  if (tone === 'info' && !options.undo) recentRoutine.set(key, { at: Date.now(), id: toast.id });
   changed();
   return toast.id;
 }
@@ -73,6 +88,7 @@ export function showProblem(message: string): number {
 export function clearToasts() {
   toasts = [];
   quiet = false;
+  recentRoutine.clear();
   clearActivity();
   changed();
 }

@@ -30,6 +30,7 @@ const selectionByPlayer = new WeakMap<ViewProps['player'], Map<string, Selection
 /** Above this, rows skip being drawn until they're scrolled near. Everything stays in the page, so
  * focus, find-in-page and screen readers all carry on working, which virtualizing the list would break. */
 const LONG_MIX = 40;
+const RECENT_DRAFT_KEY = 'selecta.recentDraft';
 const INSPECTOR_WIDTH_KEY = 'selecta.inspectorWidth';
 const MIN_INSPECTOR_WIDTH = 320;
 const MAX_INSPECTOR_WIDTH = 520;
@@ -73,12 +74,30 @@ export function Mix(props: ViewProps) {
   const keys = useMemo(() => occurrenceKeys(mix), [order]);
   const guard = useMemo(() => ({ 'x-mix-order': order }), [order]);
 
+  // Only the stable draft ID and exact saved order are remembered in this browser.
+  // Reopening is opt-in and the My Mixes shortcut validates both against the server.
+  useEffect(() => {
+    if (draftId === null) return;
+    try {
+      window.localStorage.setItem(RECENT_DRAFT_KEY, JSON.stringify({ id: draftId, order }));
+    } catch { /* private browsing can disable storage */ }
+  }, [draftId, order]);
+
   const [selected, setSelected] = useState<Selection | null>(() => selectionByPlayer.get(player)?.get(selectionScope) ?? null);
+  const selectedScope = useRef(selectionScope);
   useEffect(() => {
     let byScope = selectionByPlayer.get(player);
     if (!byScope) {
       byScope = new Map();
       selectionByPlayer.set(player, byScope);
+    }
+    // A draft switch can reuse this mounted editor. Restore that scope's own
+    // object before persisting anything, rather than briefly assigning the
+    // previous draft's occurrence or pair to the newly opened mix.
+    if (selectedScope.current !== selectionScope) {
+      selectedScope.current = selectionScope;
+      setSelected(byScope.get(selectionScope) ?? null);
+      return;
     }
     byScope.set(selectionScope, selected);
   }, [player, selectionScope, selected]);

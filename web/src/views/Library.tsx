@@ -69,6 +69,49 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const searchIdentity = JSON.stringify([query, filter, sort]);
   const [resolvedIdentity, setResolvedIdentity] = useState<string | null>(null);
   const committedRows = searchIdentity === resolvedIdentity ? rows : null;
+  // A selection belongs to an exact search/filter/sort result. Changing any
+  // dimension invalidates it rather than selecting a different filtered row.
+  const [batchSelection, setBatchSelection] = useState<{ identity: string; ids: number[] }>({ identity: '', ids: [] });
+  const selectedIds = batchSelection.identity === searchIdentity ? batchSelection.ids : [];
+  type BatchAction = 'prioritize' | 'deprioritize' | 'never' | 'allow';
+  const [confirmBatch, setConfirmBatch] = useState<{
+    action: BatchAction; identity: string;
+    songs: { id: number; title: string; artist: string; priority: boolean; never: boolean }[];
+  } | null>(null);
+  const visibleSelected = (committedRows ?? []).filter((song) => selectedIds.includes(song.id));
+  const toggleBatch = (id: number) => setBatchSelection((before) => {
+    const ids = before.identity === searchIdentity ? before.ids : [];
+    return { identity: searchIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : [...ids, id] };
+  });
+  const askBatch = (action: BatchAction) => {
+    if (!visibleSelected.length || searching || failed) return;
+    setConfirmBatch({
+      action, identity: searchIdentity,
+      songs: visibleSelected.map((song) => ({
+        id: song.id, title: song.title ?? 'Untitled', artist: song.artist ?? 'Unknown artist',
+        priority: song.priority, never: song.never,
+      })),
+    });
+  };
+  const applyBatch = async () => {
+    const wanted = confirmBatch;
+    if (!wanted || wanted.identity !== searchIdentity || searching || failed) {
+      setConfirmBatch(null);
+      return;
+    }
+    await post('/library/batch', {
+      action: wanted.action,
+      entries: wanted.songs.map((song) => ({
+        id: song.id,
+        expected: wanted.action === 'prioritize' || wanted.action === 'deprioritize' ? song.priority : song.never,
+      })),
+    });
+    setConfirmBatch(null);
+    setBatchSelection({ identity: searchIdentity, ids: [] });
+    notify(`Updated ${wanted.songs.length} precisely selected recordings.`);
+    await load();
+  };
+
 
   const url = useCallback((after?: string | null, limit = PAGE_SIZE) => {
     const params = new URLSearchParams({ q: query, state: filter, sort, limit: String(limit) });
@@ -314,7 +357,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </p>
       </header>
       <div className="library-find">
-        <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search by artist or title" />
+        <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search titles, artists, remixes, credits or recording ID" />
         <label className="library-sort">
           Sort by
           <select value={sort} onChange={(event) => setAddressQuery({ sort: event.target.value === 'title' ? null : event.target.value, pages: null }, { push: true })}>
@@ -349,6 +392,22 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           )}
         </div>
       )}
+      {committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
+        <section className="library-batch" aria-label="Batch actions for selected songs">
+          <p className="hint">{visibleSelected.length} selected from the loaded results only. Changing search or filters clears the selection. Batch changes never move or delete audio.</p>
+          <div className="row wrap">
+            <button disabled={searching || failed} onClick={() => setBatchSelection({
+              identity: searchIdentity,
+              ids: committedRows.slice(0, 200).map((song) => song.id),
+            })}>Select up to 200 loaded songs</button>
+            <button disabled={!visibleSelected.length} onClick={() => setBatchSelection({ identity: searchIdentity, ids: [] })}>Clear selection</button>
+            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('prioritize')}>Prioritize selected</button>
+            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
+            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('never')}>Never play selected</button>
+            <button disabled={!visibleSelected.length || searching || failed} onClick={() => askBatch('allow')}>Allow selected</button>
+          </div>
+        </section>
+      )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
       {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
       {failed && committedRows !== null && <p className="warn" role="status">Can’t check on your library right now, so what’s shown may be out of date.</p>}
@@ -357,7 +416,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
           <h2>{query ? `Nothing matches “${query}”.` : 'No songs in this view'}</h2>
-          <p>Try a different title or artist, or show all songs to check their progress.</p>
+          <p>Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.</p>
           <div className="row wrap">
             {query && <button onClick={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}>Clear search</button>}
             {filter !== 'all' && <button onClick={() => setAddressQuery({ show: null, pages: null }, { push: true })}>Show all songs</button>}
@@ -382,10 +441,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           return (
             <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''}`}>
               <div className="song-name">
+                {filter !== 'set_aside' && <label className="library-batch-check">
+                  <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
+                    checked={selectedIds.includes(song.id)} disabled={searching || failed || selectedIds.length >= 200 && !selectedIds.includes(song.id)}
+                    onChange={() => toggleBatch(song.id)} />
+                </label>}
                 <button className="link song-open" onClick={() => setOpened(song.id)} aria-label={`Details for ${name}`}>
                   <SongMotif songId={song.id} /><b title={title}>{title}</b>
                 </button>
                 <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
+                {query && song.match && <small className="hint" aria-label={`Search match: ${song.match}`}>{song.match}</small>}
               </div>
               <small className="facts song-columns">
                 <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
@@ -424,6 +489,18 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       </ul>
       {next && <Action className="library-more" working="Loading…" run={more}>Show more songs</Action>}
       {shownDetails && <SongDetails song={shownDetails} onClose={() => setOpened(null)} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} />}
+      {confirmBatch && <Dialog title="Apply batch Library action?" onClose={() => setConfirmBatch(null)}
+        footer={<>
+          <button onClick={() => setConfirmBatch(null)}>Cancel — change nothing</button>
+          <Action className="primary" working="Updating selected recordings…" run={applyBatch}>Confirm {confirmBatch.songs.length} recordings</Action>
+        </>}>
+        <p>You are about to <b>{confirmBatch.action === 'never' ? 'exclude from future mixes' : confirmBatch.action === 'allow' ? 'allow in future mixes' : confirmBatch.action === 'prioritize' ? 'prioritize for analysis' : 'remove analysis priority from'}</b> precisely {confirmBatch.songs.length} recording{confirmBatch.songs.length === 1 ? '' : 's'}.</p>
+        <p className="hint">Only these exact song IDs will be changed. If any were changed in another tab or scan, the entire action is refused. Original audio and current mix are untouched.</p>
+        <ul className="batch-preview">{confirmBatch.songs.slice(0, 15).map((song) =>
+          <li key={song.id}>{song.title} — {song.artist} (ID {song.id})</li>
+        )}</ul>
+        {confirmBatch.songs.length > 15 && <p>…and {confirmBatch.songs.length - 15} more selected recordings.</p>}
+      </Dialog>}
       {confirmStart && (
         <Dialog
           title="Replace your current mix?"

@@ -106,6 +106,23 @@ export class SetPlayer {
   constructor(getMix: () => MixItem[], refreshMix: () => void) {
     this.getMix = getMix;
     this.refreshMix = refreshMix;
+    // Physical outputs can vanish independently of the Web Audio graph. Never
+    // auto-resume a stopped context (especially after intentional Pause).
+    // Tell the listener that the output changed without claiming we can detect
+    // whether their headphones are actually making sound.
+    navigator.mediaDevices?.addEventListener?.('devicechange', () => {
+      if (this.state.phase !== 'playing') return;
+      if (this.context?.state !== 'running') {
+        this.update({ phase: 'paused', notice: 'Audio output changed. Press play to reconnect the sound.' });
+      } else {
+        this.update({ notice: 'Audio output changed. Check your speakers or headphones if you cannot hear the music.' });
+      }
+    });
+    window.addEventListener('pageshow', () => {
+      if (this.state.phase === 'playing' && this.context && this.context.state !== 'running') {
+        this.update({ phase: 'paused', notice: 'The sound stopped while this page was away. Press play to continue.' });
+      }
+    });
   }
 
   private audio(): AudioContext {

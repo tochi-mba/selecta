@@ -1,4 +1,4 @@
-import { KeyboardEvent, PointerEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, get, MixData, post, SongDetail } from '../api';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
@@ -12,6 +12,44 @@ import { SongMotif } from '../ui/MusicObjects';
 import { RequestsContext, RequestTag } from './Requests';
 import { frequencyLevels, paintFrequencyFrame, SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape } from './spectrumVisuals';
 import { ViewProps } from './shared';
+
+/** Fit the complete music title to its actual column, not the viewport.
+ * Keep it in the accessibility tree and allow more lines at extreme zoom. */
+function TrackTitle({ title, songId, stage }: { title: string; songId?: number; stage: boolean }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useLayoutEffect(() => {
+    const node = heading.current;
+    const container = node?.parentElement;
+    if (!node || !container) return;
+    const fit = () => {
+      const width = node.clientWidth;
+      if (!width) return;
+      const maximum = Math.min(stage ? 40 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095)));
+      const minimum = 22;
+      let low = minimum;
+      let high = maximum;
+      // A two-line budget prevents a long featured credit from burying
+      // playback controls. Extremely long titles remain fully visible.
+      for (let index = 0; index < 9; index += 1) {
+        const size = (low + high) / 2;
+        node.style.fontSize = `${size}px`;
+        const height = node.getBoundingClientRect().height;
+        if (height <= size * 2.28 || !height) low = size;
+        else high = size;
+      }
+      node.style.fontSize = `${low}px`;
+    };
+    fit();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
+    observer?.observe(container);
+    window.addEventListener('resize', fit);
+    document.fonts?.ready.then(fit).catch(() => {});
+    return () => { observer?.disconnect(); window.removeEventListener('resize', fit); };
+  }, [title, stage]);
+  return <h1 ref={heading} className="display track-title" dir="auto">
+    {songId !== undefined && <SongMotif songId={songId} large />}{title}
+  </h1>;
+}
 
 const VIEW_KEY = 'selecta.listen';
 
@@ -662,7 +700,7 @@ export function Now(props: ViewProps) {
         <div className="listen-main">
           <header className="listen-identity">
             <p className="eyebrow">{eyebrow}</p>
-            <h1 className="display" dir="auto">{item && <SongMotif songId={item.song_id} large />}{item?.title ?? 'Untitled'}</h1>
+            <TrackTitle title={item?.title ?? 'Untitled'} songId={item?.song_id} stage={stage} />
             {item && <RequestTag item={item} />}
             <p className="artist" dir="auto">{item?.artist ?? 'Unknown artist'}</p>
           </header>
@@ -700,8 +738,8 @@ export function Now(props: ViewProps) {
             </>
           )}
 
-          {(view.intensity !== 'quiet' && (stage || (view.spectrum && !view.lyrics))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
+          {(view.intensity !== 'quiet' && (stage || (view.spectrum && !view.lyrics))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>Couldn’t load lyrics and song details. Playback controls are still available.</Problem>}
           {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
         </div>

@@ -98,7 +98,42 @@
 .listen-side { min-width: 0; position: sticky; top: calc(var(--header-height) + var(--space-4)); }
 .listen-side .next-up { border-top: 0; margin-top: 0; padding-top: 0; }
 .now:not(.stage) .listen-side .handoff { margin-top: 0; grid-template-columns: minmax(0, 1fr); }
+/* The ordinary listening scene gives the countdown a compact supporting role.
+   Fullscreen Stage retains the large focus countdown. */
+.now:not(.stage) .handoff.countdown {
+  gap: var(--space-2);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.now:not(.stage) .countdown-number {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--space-2);
+}
+.now:not(.stage) .countdown-number strong { font-size: clamp(1.5rem, 4cqi, 2.1rem); }
+.now:not(.stage) .countdown-track { height: 12px; }
+.now:not(.stage) .handoff-next { padding-top: var(--space-2); }
+
 .listen-identity .artist { margin-bottom: var(--space-4); }
+/* Track titles have their own measured role, distinct from mix headers and
+   Stage. The JS size fit is a progressive enhancement; never clip metadata. */
+.listen-identity .track-title {
+  font-size: clamp(1.4rem, 5cqi, 3.25rem);
+  line-height: 1.08;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  max-width: 100%;
+  margin-bottom: var(--space-2);
+}
+.listen-identity .artist {
+  font-size: clamp(1rem, 1.6cqi, 1.25rem);
+  line-height: 1.4;
+  max-width: 100%;
+}
+.listen-identity { container-type: inline-size; }
+.stage .listen-identity .track-title { font-size: clamp(1.35rem, 3cqi, 2.5rem); }
+
 /* A quiet editorial sleeve, not album art or a representation of measured audio.
    During a real handoff the trim changes state without adding fake movement. */
 .now:not(.stage) .listen-identity {
@@ -153,8 +188,8 @@
   /* The disclosure owns the mobile flex order, not its nested fieldset. */
   .now .view-options { order: 2; margin-block: 0; }
   .now .listen-view { margin-block: 0; }
-  .music-visualizer { order: 3; }
-  .strip { order: 4; }
+  .strip { order: 3; }
+  .music-visualizer { order: 4; }
   .seek-note { order: 5; }
   .lyrics, .now .problem, .now .skeleton { order: 6; }
   .now .notice { order: 7; }
