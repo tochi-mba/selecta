@@ -191,3 +191,28 @@ test('editor keeps full bidirectional identity and exact song occurrence', async
   const artist = first.locator('.song-name > span').first();
   await expect(artist).toHaveAttribute('dir', 'auto');
 });
+
+test('Library selection boxes stay compact and aligned with song identity at every layout width', async ({ page, request }) => {
+  await resetMix(request);
+  for (const width of [320, 375, 760, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/library');
+    const row = page.locator('.library-rows .song-row').first();
+    await expect(row).toBeVisible();
+    const checkbox = row.locator('.library-batch-check input[type="checkbox"]');
+    const label = row.locator('.library-batch-check');
+    const title = row.locator('.song-open');
+    const boxes = await Promise.all([checkbox.boundingBox(), label.boundingBox(), title.boundingBox()]);
+    expect(boxes.every(Boolean)).toBe(true);
+    const [tick, target, name] = boxes as { x: number; y: number; width: number; height: number }[];
+    expect(tick.width).toBeLessThanOrEqual(24);
+    expect(tick.height).toBeLessThanOrEqual(24);
+    expect(target.width).toBeGreaterThanOrEqual(44);
+    expect(target.height).toBeGreaterThanOrEqual(44);
+    expect(name.x, 'track name must be beside, not below, selection on ' + width).toBeGreaterThanOrEqual(target.x + target.width - 2);
+    expect(Math.abs((name.y + name.height / 2) - (target.y + target.height / 2))).toBeLessThan(30);
+    await checkbox.check();
+    await expect(row).toHaveClass(/selected/);
+    await expect(checkbox).toBeChecked();
+  }
+});
