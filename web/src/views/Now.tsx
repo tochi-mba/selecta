@@ -14,13 +14,13 @@ import { ViewProps } from './shared';
 
 const VIEW_KEY = 'selecta.listen';
 
-type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean; intensity: 'quiet' | 'standard' | 'focused'; spectrumShape: 'bars' | 'radial' };
+type ListenView = { lyrics: boolean; spectrum: boolean; timing: boolean; intensity: 'quiet' | 'standard' | 'focused'; spectrumShape: 'bars' | 'ribbon' };
 
 function savedView(): ListenView {
   const defaults: ListenView = { lyrics: false, spectrum: true, timing: true, intensity: 'standard', spectrumShape: 'bars' };
   try {
     const saved = JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') as Partial<ListenView>;
-    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard', spectrumShape: saved.spectrumShape === 'radial' ? 'radial' : 'bars' };
+    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard', spectrumShape: saved.spectrumShape === 'ribbon' || (saved.spectrumShape as string) === 'radial' ? 'ribbon' : 'bars' };
   } catch {
     return defaults;
   }
@@ -380,31 +380,54 @@ function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { 
         if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
         return;
       }
-      const bars = Math.min(72, Math.max(24, Math.floor(width / (ratio * 7))));
+      // Real frequency bands run across the full width; vertical thickness comes
+      // only from analyzer samples, never a fabricated beat or waveform.
+      const bars = spectrumShape === 'ribbon'
+        ? Math.min(128, Math.max(32, Math.floor(width / (ratio * 8))))
+        : Math.min(72, Math.max(24, Math.floor(width / (ratio * 7))));
       const gap = 2 * ratio;
       const barWidth = Math.max(1, (width - gap * (bars - 1)) / bars);
-      context.fillStyle = gradient;
-      if (spectrumShape === 'radial') {
-        context.strokeStyle = gradient;
-        context.lineWidth = Math.max(1, 2 * ratio);
-        context.lineCap = 'round';
-      }
+      const levels: number[] = [];
       for (let index = 0; index < bars; index += 1) {
         const low = Math.floor((index / bars) ** 2 * spectrum.length);
         const high = Math.max(low + 1, Math.floor(((index + 1) / bars) ** 2 * spectrum.length));
         let value = 0;
         for (let bin = low; bin < Math.min(high, spectrum.length); bin += 1) value = Math.max(value, spectrum[bin] / 255);
-        if (value <= 0) continue; // Silence is not a visual beat or a fabricated signal.
-        const amplitude = value ** 0.8;
-        if (spectrumShape === 'radial') {
-          const angle = -Math.PI / 2 + (index / bars) * Math.PI * 2;
-          const outer = Math.max(0, Math.min(width, height) * (0.24 + amplitude * 0.22));
-          const inner = Math.min(width, height) * 0.22;
-          context.beginPath();
-          context.moveTo(width / 2 + Math.cos(angle) * inner, height / 2 + Math.sin(angle) * inner);
-          context.lineTo(width / 2 + Math.cos(angle) * outer, height / 2 + Math.sin(angle) * outer);
-          context.stroke();
-        } else {
+        levels.push(value ** 0.8);
+      }
+      if (spectrumShape === 'ribbon') {
+        // Smoothing only averages neighbouring measured frequency bands, so
+        // silence still draws nothing. The shape scales to the canvas width.
+        const heights = levels.map((value, index) => (
+          (value * 2 + (levels[index - 1] ?? value) + (levels[index + 1] ?? value)) / 4
+        ) * height * 0.44);
+        const centre = height / 2;
+        const step = width / Math.max(bars - 1, 1);
+        context.beginPath();
+        context.moveTo(0, centre - heights[0]);
+        for (let index = 1; index < bars; index += 1) {
+          const previousX = (index - 1) * step;
+          const x = index * step;
+          context.quadraticCurveTo(previousX, centre - heights[index - 1],
+            (previousX + x) / 2, centre - (heights[index - 1] + heights[index]) / 2);
+        }
+        context.lineTo(width, centre - heights[bars - 1]);
+        context.lineTo(width, centre + heights[bars - 1]);
+        for (let index = bars - 2; index >= 0; index -= 1) {
+          const nextX = (index + 1) * step;
+          const x = index * step;
+          context.quadraticCurveTo(nextX, centre + heights[index + 1],
+            (nextX + x) / 2, centre + (heights[index + 1] + heights[index]) / 2);
+        }
+        context.lineTo(0, centre + heights[0]);
+        context.closePath();
+        context.fillStyle = gradient;
+        context.fill();
+      } else {
+        context.fillStyle = gradient;
+        for (let index = 0; index < bars; index += 1) {
+          const amplitude = levels[index];
+          if (amplitude <= 0) continue;
           const barHeight = Math.max(1 * ratio, amplitude * height * 0.92);
           const x = index * (barWidth + gap);
           context.fillRect(x, (height - barHeight) / 2, barWidth, barHeight);
@@ -438,7 +461,7 @@ function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { 
       window.cancelAnimationFrame(frame);
     };
   }, [player, active, stage, reduceMotion, theme, spectrumShape]);
-  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${spectrumShape === 'radial' ? 'Radial' : 'Bar'} real audio frequency levels` : 'Audio frequency visualizer paused'} />;
+  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${spectrumShape === 'ribbon' ? 'Horizontal ribbon of' : 'Bar'} real audio frequency levels` : 'Audio frequency visualizer paused'} />;
 }
 
 /** Why there's nothing to follow along with. A song's timing is never made up to fill the gap. */
@@ -774,7 +797,7 @@ export function Now(props: ViewProps) {
                 <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
                 <div className="listen-intensity" role="group" aria-label="Real spectrum presentation">
                   <button aria-pressed={view.spectrumShape === 'bars'} onClick={() => choose({ spectrumShape: 'bars' })}>Frequency bars</button>
-                  <button aria-pressed={view.spectrumShape === 'radial'} onClick={() => choose({ spectrumShape: 'radial' })}>Radial spectrum</button>
+                  <button aria-pressed={view.spectrumShape === 'ribbon'} onClick={() => choose({ spectrumShape: 'ribbon' })}>Frequency ribbon</button>
                 </div>
                 <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
                 <div className="listen-intensity" role="group" aria-label="Visual intensity">

@@ -248,3 +248,8 @@
 @media (max-width: 520px) {
   .energy-arc-stops label { grid-template-columns: 65px minmax(0, 1fr) 72px; }
 }
+
+/* Frequency ribbon uses the entire available horizontal song area, including
+   Stage. These dimensions don't affect audio or cause layout changes per frame. */
+.music-visualizer { display: block; width: 100%; max-width: 100%; min-width: 0; height: clamp(96px, 11vw, 140px); }
+.stage .music-visualizer { height: min(20svh, 180px); }

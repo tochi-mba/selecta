@@ -134,3 +134,48 @@
 .music-route.compact .music-route-icons > span.wanted { outline: 1px solid var(--selected); outline-offset: 1px; }
 .music-route.compact .music-route-arrow { font-weight: 700; color: var(--text-soft); }
 .music-route.compact .song-motif { width: 22px; height: 22px; margin: 0; }
+
+/* Library cards are a reversible presentation of the same list and actions;
+   all search, cursor pagination and keyboard order stay unchanged. */
+.library-layout button { min-height: var(--control-height); padding-inline: var(--space-3); font-size: var(--text-sm); }
+.library-layout button[aria-pressed='true'] { border-color: var(--selected); background: var(--surface-selected); }
+.library-rows.library-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  align-items: stretch;
+  gap: var(--space-3);
+}
+.library-rows.library-cards .song-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'name' 'facts' 'readiness' 'actions';
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  contain-intrinsic-size: auto 240px;
+}
+.library-rows.library-cards .song-row:focus-within { content-visibility: visible; border-color: var(--selected); }
+.library-rows.library-cards .song-name { min-width: 0; }
+.library-rows.library-cards .song-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: var(--space-1); }
+.library-rows.library-cards .song-why { display: block; }
+:root[data-density='compact'] .library-rows .song-why { display: block; }
+.library-rows.library-cards .song-columns { white-space: normal; }
+.vibe-card .vibe-motif { width: 100%; max-width: 210px; height: 74px; margin-bottom: var(--space-2); color: var(--selected); }
+.vibe-motif.sound { color: var(--status-request); }
+.vibe-motif.mood { color: var(--status-ready); }
+.vibe-motif.journey { color: var(--text-soft); }
+@media (forced-colors: active) {
+  .library-layout button[aria-pressed='true'], .library-rows.library-cards .song-row:focus-within { border-color: Highlight; }
+  .vibe-motif { color: CanvasText !important; }
+}
+
+/* Musical identity changes with the exact returned track sequence, including
+   reorder. It intentionally does not pretend to be a measured waveform. */
+.mix-identity { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
+.mix-signature { display: block; width: clamp(130px, 25vw, 240px); max-width: 100%; height: 48px; color: var(--selected); }
+.mix-identity small { font-size: var(--text-xs); }
+@media (forced-colors: active) { .mix-signature { color: CanvasText; } }

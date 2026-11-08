@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { MixItem } from '../api';
-import { EnergyHorizon, EnergyOverview, RouteDiagram, SeamDiagram, seamFamily, SongMotif } from './MusicObjects';
+import { EnergyHorizon, EnergyOverview, RouteDiagram, SeamDiagram, seamFamily, SongMotif, VibeMotif, MixSignature } from './MusicObjects';
 
 describe('honest shared musical objects', () => {
   it('gives one library ID the same decorative motif without depending on titles or artwork', () => {
@@ -12,6 +12,31 @@ describe('honest shared musical objects', () => {
     expect(container.querySelector('svg')?.innerHTML).toBe(original);
     rerender(<SongMotif songId={34} />);
     expect(container.querySelector('svg')?.innerHTML).not.toBe(original);
+  });
+
+  it('gives idea groups distinct, stable abstract motifs without pretending to show album art', () => {
+    const { container, rerender } = render(<VibeMotif idea="night-drive" group="The moment" />);
+    const first = container.querySelector('svg')?.innerHTML;
+    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    rerender(<VibeMotif idea="night-drive" group="The moment" />);
+    expect(container.querySelector('svg')?.innerHTML).toBe(first);
+    rerender(<VibeMotif idea="night-drive" group="The mood" />);
+    expect(container.querySelector('svg')).toHaveClass('mood');
+    expect(container.querySelector('svg')?.innerHTML).not.toBe(first);
+    rerender(<VibeMotif idea="night-drive" group="The journey" />);
+    expect(container.querySelector('svg')).toHaveClass('journey');
+  });
+
+  it('keeps a mix unique to its returned song order without claiming a waveform', () => {
+    const { container, rerender } = render(<MixSignature items={[{ song_id: 3 }, { song_id: 7 }, { song_id: 11 }]} />);
+    const first = container.querySelector('svg')?.innerHTML;
+    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    rerender(<MixSignature items={[{ song_id: 3 }, { song_id: 7 }, { song_id: 11 }]} />);
+    expect(container.querySelector('svg')?.innerHTML).toBe(first);
+    rerender(<MixSignature items={[{ song_id: 7 }, { song_id: 3 }, { song_id: 11 }]} />);
+    expect(container.querySelector('svg')?.innerHTML).not.toBe(first);
+    rerender(<MixSignature items={[]} />);
+    expect(container.querySelector('svg')).toBeNull();
   });
 
   it('uses the rendered move rather than disguising a fallback as the selected technique', () => {

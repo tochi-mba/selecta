@@ -300,6 +300,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   }, [rows]);
   const { counts } = status;
   const compact = preferences.density === 'compact';
+  const cardLayout = preferences.libraryLayout === 'cards';
 
   return (
     <main className="page library density" id="main">
@@ -323,6 +324,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         <div className="row library-density" role="group" aria-label="Row size">
           <button aria-pressed={!compact} onClick={() => setPrefs({ density: 'comfortable' })}>Comfortable</button>
           <button aria-pressed={compact} onClick={() => setPrefs({ density: 'compact' })}>Compact</button>
+        </div>
+        <div className="row library-layout" role="group" aria-label="Library layout">
+          <button type="button" aria-pressed={!cardLayout} onClick={() => setPrefs({ libraryLayout: 'list' })}>List view</button>
+          <button type="button" aria-pressed={cardLayout} onClick={() => setPrefs({ libraryLayout: 'cards' })}>Card view</button>
         </div>
       </div>
       <div className="chips" role="group" aria-label="Show">
@@ -359,7 +364,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           </div>
         </section>
       )}
-      {!!committedRows?.length && (
+      {!!committedRows?.length && !cardLayout && (
         <div className="library-column-head" aria-hidden="true">
           <span>Song and artist</span>
           <span>Tempo · Key · Length</span>
@@ -367,7 +372,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           <span>Actions</span>
         </div>
       )}
-      <ul ref={listRef} className="rows library-rows" aria-busy={searching}>
+      <ul ref={listRef} className={`rows library-rows ${cardLayout ? 'library-cards' : ''}`} aria-busy={searching}>
         {committedRows?.map((song) => {
           const facts = trackReadiness(song);
           const already = inMix.has(song.id);

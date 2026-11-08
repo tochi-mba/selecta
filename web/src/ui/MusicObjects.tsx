@@ -17,6 +17,71 @@ export function SongMotif({ songId, large = false }: { songId: number; large?: b
   );
 }
 
+/** Abstract, deterministic card material for an idea, not cover art, analysis or a
+ * prediction of which songs Selecta will select. The group is a visual category only. */
+export function VibeMotif({ idea, group }: { idea: string; group: string }) {
+  const hash = Array.from(idea).reduce((value, letter) => ((value * 33) ^ letter.charCodeAt(0)) >>> 0, 5381);
+  const offset = 4 + (hash % 13);
+  // Distinguish ideas within one group too: different keys should not all look
+  // like the same preset. These marks encode only the key, never musical facts.
+  const marks = Array.from({ length: 5 }, (_, index) => ({
+    x: 15 + index * 22,
+    y: 9 + ((hash >>> (index * 5)) % 47),
+    r: 2 + ((hash >>> (index * 3)) % 4),
+  }));
+  const family = group === 'The moment' ? 'moment' : group === 'The mood' ? 'mood'
+    : group === 'The sound' ? 'sound' : 'journey';
+  return (
+    <svg className={'vibe-motif ' + family} viewBox="0 0 120 66" preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true" focusable="false">
+      <rect x="1" y="1" width="118" height="64" rx="11" fill="none" stroke="currentColor" opacity=".3" />
+      {marks.map((mark, index) => (
+        <circle key={index} cx={mark.x} cy={mark.y} r={mark.r}
+          fill={index % 2 === 0 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2" opacity=".45" />
+      ))}
+      {family === 'moment' && <>
+        <circle cx={30 + offset} cy="33" r="15" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path d={`M${60 + offset} 12 V54 M${80 + offset} 20 V46`} stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      </>}
+      {family === 'mood' && [8, 17, 26].map((radius) => (
+        <circle key={radius} cx={59 + offset / 4} cy="33" r={radius} fill="none" stroke="currentColor" strokeWidth="2" />
+      ))}
+      {family === 'sound' && <>
+        {[18, 47, 76].map((x, index) => (
+          <rect key={x} x={x + offset / 3} y={13 + index * 5} width="20" height="36" rx="9"
+            stroke="currentColor" fill="none" strokeWidth="2" />
+        ))}
+      </>}
+      {family === 'journey' && <>
+        <path d={`M14 44 Q${30 + offset} 8 57 29 T105 19`} stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <circle cx="14" cy="44" r="5" fill="currentColor" /><circle cx="105" cy="19" r="5" fill="currentColor" />
+      </>}
+    </svg>
+  );
+}
+
+/** Stable mix-specific identity from the returned song order, not a predicted
+ * energy curve or waveform. An edit changes the motif only after the actual
+ * mix items change; the same mix always draws the same mark. */
+export function MixSignature({ items }: { items: Pick<MixItem, 'song_id'>[] }) {
+  if (!items.length) return null;
+  const seed = items.reduce((state, item, index) => Math.imul(state ^ (item.song_id + index * 101), 16777619) >>> 0, 2166136261);
+  const strokes = Array.from({ length: 3 }, (_, row) => {
+    let value = (seed ^ Math.imul(row + 1, 2246822519)) >>> 0;
+    const y = Array.from({ length: 12 }, () => {
+      value = Math.imul(value ^ (value >>> 13), 3266489917) >>> 0;
+      return 10 + row * 14 + (value % 13) - 6;
+    });
+    return y.map((level, index) => (index === 0 ? 'M' : 'L') + (index * (120 / (y.length - 1))).toFixed(1) + ',' + level.toFixed(1)).join(' ');
+  });
+  return (
+    <svg className="mix-signature" viewBox="0 0 120 55" preserveAspectRatio="none"
+      aria-hidden="true" focusable="false">
+      {strokes.map((path, index) => <path key={index} d={path} fill="none" stroke="currentColor" strokeWidth={2 - index * 0.3} opacity={0.95 - index * 0.22} />)}
+    </svg>
+  );
+}
+
 export type SeamFamily = 'cut' | 'overlap' | 'effect' | 'words' | 'stems' | 'unknown';
 
 /** The type of a *known* musical move, never inferred from its title or from arbitrary analysis. */

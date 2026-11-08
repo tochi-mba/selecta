@@ -1,4 +1,5 @@
 import { length, runningTime } from '../lib';
+import { MixSignature } from '../ui/MusicObjects';
 import { PageLink } from '../shell/PageLink';
 import { mixReadiness } from '../state/readiness';
 import { Action, Status } from '../ui/controls';
@@ -13,6 +14,10 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent }: Pi
       <div className="carry-on-words">
         <p className="eyebrow">{now.phase === 'idle' ? 'Current mix' : now.phase === 'paused' ? 'Paused' : 'Playing now'}</p>
         <h2>{mixName}</h2>
+        <div className="mix-identity">
+          <MixSignature items={mix} />
+          {prominent && <small className="soft">Song-order identity · decorative, not an audio waveform</small>}
+        </div>
         <p className="soft">{mix.length} {mix.length === 1 ? 'song' : 'songs'}{prominent && mix.length ? `, about ${length(runningTime(mix))}` : ''}</p>
         {prominent && facts.seams > 0 && (
           <p>

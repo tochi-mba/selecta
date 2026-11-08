@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SetPlayer } from '../player';
+import { setPrefs } from '../state/prefs';
 import { fakeBackend, songs, status } from '../test/backend';
 import { Library } from './Library';
 
@@ -306,6 +307,33 @@ describe('whether a song can go in a mix', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Details for First' }));
     const details = await screen.findByRole('dialog', { name: 'First' });
     expect(within(details).getByText('No timed lyrics.')).toBeInTheDocument();
+  });
+});
+
+describe('library card presentation', () => {
+  it('preserves the same song actions, readiness reason and list while switching layouts', async () => {
+    setPrefs({ libraryLayout: 'list', density: 'compact' });
+    try {
+      fakeBackend({ 'GET /library': page({
+        ...row(1, 'First'),
+        readiness: { status: 'needs_attention', reason: 'Audio file is missing.' },
+      }, { ...row(2, 'Second'), bpm: 120, readiness: { status: 'mix_ready', reason: '' } }) });
+      show();
+      await screen.findByText('First');
+      expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByText('Audio file is missing.')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Card view' }));
+      expect(document.querySelector('ul.library-rows')).toHaveClass('library-cards');
+      expect(screen.getByRole('button', { name: 'Details for First' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Start a mix' })).toBeInTheDocument();
+      expect(screen.getByText('Audio file is missing.')).toBeVisible();
+      expect(JSON.parse(localStorage.getItem('selecta.prefs') ?? '{}').libraryLayout).toBe('cards');
+      fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+      expect(document.querySelector('ul.library-rows')).not.toHaveClass('library-cards');
+      expect(screen.getByRole('button', { name: 'Details for First' })).toBeInTheDocument();
+    } finally {
+      setPrefs({ libraryLayout: 'list', density: 'comfortable' });
+    }
   });
 });
 
