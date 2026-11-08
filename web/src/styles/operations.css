@@ -114,3 +114,22 @@
 }
 .library-rows .song-columns { font-variant-numeric: tabular-nums; }
 .library-rows .song-columns > span { white-space: nowrap; }
+
+/* Scoped Library hierarchy: source-backed counts and exact recording identity. */
+.library-readiness-help { flex-basis: 100%; max-width: 75ch; margin: 0; font-size: var(--text-sm); color: var(--text-soft); line-height: 1.5; }
+.library-recording-id { display: inline-flex; width: fit-content; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 1px var(--space-2); color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.library-rows .song-row .song-actions { justify-content: flex-end; }
+.library-rows.library-cards .song-row .song-actions { justify-content: flex-start; }
+.library-rows .song-columns > span { font-variant-numeric: tabular-nums; }
+.library-filters { margin-bottom: var(--space-3); }
+.library-filters button[aria-pressed='true'] { border-color: var(--edge-selected); }
+.song-details-identity { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.song-details-identity .song-motif { flex: none; }
+.song-details-identity .song-detail-artist { margin: 0; }
+.song-details-id { margin: 0; font-size: var(--text-sm); color: var(--text-soft); font-variant-numeric: tabular-nums; }
+@media (max-width: 1024px) {
+  .library-rows .song-row .song-actions { justify-content: flex-start; }
+}
+@media (forced-colors: active) {
+  .library-recording-id, .library-filters button[aria-pressed='true'] { border-color: Highlight; }
+}
