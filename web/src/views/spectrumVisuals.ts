@@ -1,6 +1,7 @@
 /** Display-only renderers for the actual analyser output. No audio, clock or
- * server writes happen here. All four optional modes are horizontal by design. */
-export type SpectrumShape = 'bars' | 'ribbon' | 'aurora' | 'lanes' | 'constellation' | 'waterfall';
+ * server writes happen here. All optional modes are horizontal by design. */
+export type SpectrumShape = 'bars' | 'ribbon' | 'aurora' | 'lanes' | 'constellation' | 'waterfall'
+  | 'skyline' | 'threads' | 'pins' | 'matrix' | 'trails';
 
 export const SPECTRUM_MODES: { id: SpectrumShape; label: string; description: string }[] = [
   { id: 'bars', label: 'Frequency bars', description: 'Measured frequencies, centred bars' },
@@ -9,6 +10,11 @@ export const SPECTRUM_MODES: { id: SpectrumShape; label: string; description: st
   { id: 'lanes', label: 'Spectral lanes', description: 'Bass, low mids, high mids and treble on separate rails' },
   { id: 'constellation', label: 'Frequency constellation', description: 'Measured points connected across the width' },
   { id: 'waterfall', label: 'Recent spectrum', description: 'A short history of real frequency measurements' },
+  { id: 'skyline', label: 'Spectrum skyline', description: 'An angular frequency silhouette spanning the full width' },
+  { id: 'threads', label: 'Glass threads', description: 'Five fine, parallel measured-frequency contours' },
+  { id: 'pins', label: 'Signal pins', description: 'Thin mirrored frequency needles with measured tips' },
+  { id: 'matrix', label: 'Spectrum mosaic', description: 'A wide grid of magnitude-coded frequency tiles' },
+  { id: 'trails', label: 'Afterglow trails', description: 'Fading outlines of recent real spectrum samples' },
 ];
 
 /** A stable low-to-high frequency axis, using peak magnitude in each actual
@@ -34,6 +40,7 @@ export function spectrumLevelCount(width: number, ratio: number, mode: SpectrumS
 type Brush = { accent: string; soft: string; gradient: CanvasGradient | string };
 export type SpectrumHistory = number[][];
 export const MAX_SPECTRUM_HISTORY = 24;
+export const MAX_TRAIL_HISTORY = 7;
 
 function contour(context: CanvasRenderingContext2D, levels: number[], width: number, base: number, scale: number, downward = false) {
   const n = levels.length;
@@ -177,7 +184,7 @@ export function paintFrequencyFrame(
       context.arc(x, y, radius, 0, Math.PI * 2);
       context.fill();
     });
-  } else {
+  } else if (mode === 'waterfall') {
     // History is *actual* sampled analyser output only. The newest band is
     // below the older bands, with no scrolling CSS or invented pre-roll.
     history.push([...levels]);
@@ -192,6 +199,98 @@ export function paintFrequencyFrame(
         context.fillStyle = historyIndex % 2 ? brush.accent : brush.soft;
         context.fillRect(index * col, y, Math.max(1, col - 0.5), row * 0.85);
       });
+    });
+  } else if (mode === 'skyline') {
+    // One angular, data-derived skyline. A step occupies the actual horizontal
+    // frequency interval, so there are no interpolated or decorative peaks.
+    const baseline = height * 0.93;
+    const step = width / levels.length;
+    context.beginPath();
+    context.moveTo(0, baseline);
+    levels.forEach((level, index) => {
+      const y = baseline - level * height * 0.83;
+      context.lineTo(index * step, y);
+      context.lineTo((index + 1) * step, y);
+    });
+    context.lineTo(width, baseline);
+    context.closePath();
+    context.fillStyle = brush.gradient;
+    context.globalAlpha = 0.76;
+    context.fill();
+    context.globalAlpha = 0.94;
+    context.strokeStyle = brush.soft;
+    context.lineWidth = Math.max(1, height * 0.011);
+    context.stroke();
+  } else if (mode === 'threads') {
+    // Five horizontal melodic-looking threads, each showing a different
+    // contiguous measured frequency window. They are NOT musical stems.
+    for (let lane = 0; lane < 5; lane += 1) {
+      const start = Math.floor(lane * levels.length / 5);
+      const end = Math.max(start + 1, Math.floor((lane + 1) * levels.length / 5));
+      const samples = levels.slice(start, end);
+      const base = height * (0.18 + lane * 0.16);
+      context.beginPath();
+      contour(context, samples, width, base, height * 0.14);
+      context.strokeStyle = lane % 2 === 0 ? brush.accent : brush.soft;
+      context.lineWidth = Math.max(1, height * (lane === 2 ? 0.023 : 0.012));
+      context.globalAlpha = 0.55 + lane * 0.09;
+      context.stroke();
+    }
+  } else if (mode === 'pins') {
+    // One mirrored pin per measured frequency sample, not a beat counter.
+    const stride = Math.max(1, Math.ceil(levels.length / 80));
+    context.strokeStyle = brush.accent;
+    context.fillStyle = brush.soft;
+    context.lineWidth = Math.max(1, width / levels.length * 0.19);
+    for (let index = 0; index < levels.length; index += stride) {
+      const level = levels[index];
+      if (!level) continue;
+      const x = width * (index + 0.5) / levels.length;
+      const extent = level * height * 0.43;
+      context.globalAlpha = 0.38 + level * 0.59;
+      context.beginPath();
+      context.moveTo(x, height / 2 - extent);
+      context.lineTo(x, height / 2 + extent);
+      context.stroke();
+      context.beginPath();
+      context.arc(x, height / 2 - extent, Math.max(1, height * 0.018), 0, Math.PI * 2);
+      context.arc(x, height / 2 + extent, Math.max(1, height * 0.018), 0, Math.PI * 2);
+      context.fill();
+    }
+  } else if (mode === 'matrix') {
+    // Six value thresholds at each *current measured frequency*. This
+    // resembles a wide mosaic but is not history or a synthesized spectrogram.
+    const rows = 6;
+    const cellWidth = width / levels.length;
+    const rowHeight = height / rows;
+    for (let index = 0; index < levels.length; index += 1) {
+      const magnitude = levels[index];
+      const lit = Math.min(rows, Math.ceil(magnitude * rows));
+      for (let row = 0; row < lit; row += 1) {
+        context.globalAlpha = 0.30 + magnitude * 0.65;
+        context.fillStyle = (index + row) % 3 === 0 ? brush.soft : brush.accent;
+        context.fillRect(
+          index * cellWidth + 0.75,
+          height - (row + 1) * rowHeight + 0.75,
+          Math.max(0.6, cellWidth - 1.5),
+          Math.max(0.6, rowHeight - 1.5),
+        );
+      }
+    }
+  } else if (mode === 'trails') {
+    // A short bounded sample history, never filled or synthesized at startup.
+    // Older measured frames fade behind the newest measured contour. Canvas
+    // is cleared by the parent on every frame and stopped with playback.
+    history.push([...levels]);
+    if (history.length > MAX_TRAIL_HISTORY) history.shift();
+    history.forEach((sample, index) => {
+      if (!sample.some((level) => level > 0)) return;
+      context.beginPath();
+      contour(context, sample, width, height * (0.9 - index * 0.012), height * 0.72);
+      context.strokeStyle = index === history.length - 1 ? brush.soft : brush.accent;
+      context.lineWidth = index === history.length - 1 ? 2.5 : 1.2;
+      context.globalAlpha = (index + 1) / history.length * 0.82;
+      context.stroke();
     });
   }
   context.globalAlpha = 1;
