@@ -286,6 +286,7 @@ export type LibrarySong = {
   lyric_status: string | null;
   never: boolean;
   priority: boolean;
+  match?: string | null;
   readiness: { status: string; reason: string };
 };
 
