@@ -135,7 +135,7 @@ def add_routes(app, ctx) -> None:
     def download_local_backup() -> Response:
         try:
             with connect() as conn:
-                data = export_backup(conn)
+                data = export_backup(conn, settings)
         except BackupError as problem:
             raise HTTPException(400, str(problem)) from problem
         return Response(
