@@ -1,7 +1,7 @@
 # ADR-0378 — Lucy integration, proposal lifecycle, consent and safe approval
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Implementation:** 6/8 Not started; 2/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
 - **Priority / phase:** P0 / 05 Creation entry. **Owner:** Unassigned. **Implementing PR/SHA:** —.
@@ -29,9 +29,9 @@ Users understand what is actually available, which exact music object they are a
 3. **UF-0378-03 — Keep lifecycle visible.** **Acceptance:** A proposed mix never looks like a saved draft or playing set. **Required verification:** Uncoached action-prediction study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 4. **UF-0378-04 — Prove ready-only semantics.** **Acceptance:** K songs require K−1 valid directed cached seams, revalidated at approval. **Required verification:** Cache eviction and race fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 5. **UF-0378-05 — Preserve remote provider consent.** **Acceptance:** Remote prompts need explicit informed consent and an available safe alternative. **Required verification:** Provider-gate/privacy test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0378-06 — Protect idempotent approval.** **Acceptance:** Save draft and Save and play are separate confirmed commands with lost-reply reconciliation. **Required verification:** Duplicate/stale revision E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+6. **UF-0378-06 — Protect idempotent approval.** **Acceptance:** Save draft and Save and play are separate confirmed commands with lost-reply reconciliation. **Required verification:** Duplicate/stale revision E2E. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `c1274bda6919e3dcf3466cf72ee4f2b583c07500`; **Evidence/reviewer:** `web/src/views/LucyApprove.tsx`, `web/src/views/LucyApprove.test.tsx`; remaining approval/audio checks and independent review pending.
 7. **UF-0378-07 — Retain conversation continuity.** **Acceptance:** History, partial prompts and streaming activity recover across rerender and offline. **Required verification:** Network interruption/restart test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0378-08 — Keep approval audio deliberate.** **Acceptance:** Save draft never starts playback; confirmed Save and play respects single audio owner. **Required verification:** Real player/audio-focus test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+8. **UF-0378-08 — Keep approval audio deliberate.** **Acceptance:** Save draft never starts playback; confirmed Save and play respects single audio owner. **Required verification:** Real player/audio-focus test. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `c1274bda6919e3dcf3466cf72ee4f2b583c07500`; **Evidence/reviewer:** `web/src/views/LucyApprove.tsx`, `web/src/views/LucyApprove.test.tsx`; remaining approval/audio checks and independent review pending.
 
 ## Verification and release boundaries
 

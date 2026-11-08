@@ -1,6 +1,6 @@
 # Selecta — UF per-task implementation and independent evidence ledger
 
-**Status:** 24 Accepted ADRs (0366–0389); 186 UF tasks Not started; 6 In progress; 0 Implemented; 0 independently Verified. Decision acceptance recorded at requester instruction 2026-11-08; implementation owners and independent reviewers unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app code and regression tests.
+**Status:** 24 Accepted ADRs (0366–0389); 184 UF tasks Not started; 8 In progress; 0 Implemented; 0 independently Verified. Decision acceptance recorded at requester instruction 2026-11-08; implementation owners and independent reviewers unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app code and regression tests.
 
 All future evidence fields are deliberately blank. The creation of a proposed ADR, checklist, code-status record or screenshot capture instruction is **not source implementation or independent verification**. A synthetic muted browser run does not prove music quality.
 
@@ -107,9 +107,9 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0378-03 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0378-04 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0378-05 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0378-06 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-06 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | In progress | No | Unassigned | #41 / `c1274bda6919e3dcf3466cf72ee4f2b583c07500` | Lucy revision-scoped preflight and commit tests; further verification pending | Independent review pending |
 | UF-0378-07 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0378-08 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-08 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | In progress | No | Unassigned | #41 / `c1274bda6919e3dcf3466cf72ee4f2b583c07500` | Lucy revision-scoped preflight and commit tests; further verification pending | Independent review pending |
 | UF-0379-01 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0379-02 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0379-03 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
