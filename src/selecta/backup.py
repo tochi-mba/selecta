@@ -24,6 +24,7 @@ FORMAT = "selecta.local-data"
 VERSION = 1
 MAX_ARCHIVE = 128 * 1024 * 1024
 MAX_DATABASE = 256 * 1024 * 1024
+MAX_UNCOMPRESSED = 384 * 1024 * 1024
 PENDING = ".restore-pending"
 ROLLBACK = ".restore-rollback.sqlite"
 PENDING_HISTORY = ".restore-pending-seam-history"
@@ -88,6 +89,8 @@ def export_backup(conn: sqlite3.Connection, settings: Settings) -> bytes:
                 raise BackupError("Too many transition records for a single backup.")
             if file.stat().st_size > MAX_HISTORY_ENTRY:
                 raise BackupError("A transition record is too large to back up safely.")
+            if sum(len(contents) for contents in payload.values()) + file.stat().st_size > MAX_UNCOMPRESSED:
+                raise BackupError("Local records exceed the safe uncompressed backup limit.")
             raw = file.read_bytes()
             try:
                 state = json.loads(raw)
@@ -122,6 +125,8 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
             names = bundle.namelist()
             if len(names) != len(set(names)) or len(names) > MAX_HISTORY_FILES + 2:
                 raise BackupError("Backup contains duplicate or excessive records.")
+            if sum(item.file_size for item in bundle.infolist()) > MAX_UNCOMPRESSED:
+                raise BackupError("Backup expands beyond the safe local-data limit.")
             if "manifest.json" not in names or "selecta.sqlite" not in names:
                 raise BackupError("Backup database or manifest is missing.")
             if any(name not in ("manifest.json", "selecta.sqlite")
