@@ -188,7 +188,9 @@ a.button:hover { border-color: var(--text); }
 }
 .crumbs { min-width: 0; font-size: var(--text-sm); color: var(--text-soft); }
 .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px var(--space-2); }
+.crumbs li { min-width: 0; overflow-wrap: anywhere; }
 .crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
+.crumbs [aria-current='page'] { unicode-bidi: plaintext; }
 .crumbs a { color: var(--text-soft); }
 .crumbs [aria-current='page'] { color: var(--text); font-weight: 600; }
 .context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; min-width: 0; }
@@ -236,6 +238,8 @@ a.mini-song { flex: 1 1 auto; min-width: 0; display: grid; color: var(--text); t
 .mini-song span { color: var(--text-soft); font-size: var(--text-sm); }
 .mini button { flex: none; }
 .mini-next { padding: 8px 10px; }
+/* Reserve digits even at zero so arriving requests never shove transport or track identity. */
+.mini-requests .count { display: inline-block; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 420px) {
   .mini-requests { padding: 8px; font-size: var(--text-sm); }
 }
