@@ -99,7 +99,7 @@ function stageOf(row: RequestRow, playback?: Playback): Stage {
 
 /** What a request is up to, in the words someone waiting for their song would want. */
 export function requestWords(row: RequestRow, stage: Stage): { label: string; tone: string; detail: string } {
-  const wait = row.seconds ? ` Ready in ${etaWords(row.seconds)}.` : '';
+  const wait = row.seconds && row.seconds > 0 ? ` Estimated audio preparation: ${etaWords(row.seconds)}. This is not a scheduled play time.` : '';
   const route = row.route ?? [];
   const extras = route.filter((song) => song.id !== row.song_id);
   const extraNames = extras.map((song) => song.title).join(' and ');
@@ -125,7 +125,7 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
     case 'no_mix':
       return { label: 'Waiting for a mix', tone: 'quiet', detail: 'Start a mix and Selecta will find a spot.' };
     case 'waiting':
-      return { label: 'Waiting to play', tone: 'quiet', detail: 'Selecta finds a spot for it while your mix is playing.' };
+      return { label: 'Requested · waiting', tone: 'quiet', detail: 'This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.' };
     case 'searching':
       return {
         label: 'Finding a place',
@@ -147,7 +147,7 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
     case 'preparing':
       return { label: 'Getting ready', tone: 'active', detail: `${place}${together}${wait}` };
     case 'ready':
-      return { label: 'Coming up', tone: 'active', detail: place };
+      return { label: 'Ready for an opening', tone: 'active', detail: `${place} Its transitions are ready, but a play time is not guaranteed.` };
   }
 }
 
@@ -523,7 +523,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
         const seams = request.transitions ?? [];
         const done = seams.filter((seam) => seam.status === 'ready').length;
         const title = request.title ?? 'Your request';
-        const wait = request.seconds ? ` · ${etaWords(request.seconds)}` : '';
+        const wait = request.seconds && request.seconds > 0 ? ` · audio preparation estimate ${etaWords(request.seconds)}` : '';
         const when = seams.length === 1 ? 'this transition is' : seams.length === 2 ? 'both transitions are' : `all ${seams.length} transitions are`;
         return (
           <li className="coming-group" key={request.id}>
@@ -846,7 +846,8 @@ export function RequestsPanel() {
       {requests?.length === 0 && !text && (
         <p className="hint">Ask for a song any time. Selecta finds a spot where it fits, without interrupting the mix.</p>
       )}
-      {!!requests?.length && (
+      {!!requests?.length && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.</p>}
+       {!!requests?.length && (
         <ul className="request-list" aria-label="Your requests">
           {orderedRequests.map((request, index) => {
             const stage = stageOf(request, playback);
@@ -915,10 +916,10 @@ export function RequestsPanel() {
                     )}
                     {CAN_FORCE.has(stage) && (
                       <button onClick={() => void addAnyway(request)}>
-                        Play it anyway
+                        Add to mix anyway
                       </button>
                     )}
-                    {CAN_FORCE.has(stage) && <small className="hint">Play it anyway puts it in soon, and the transition may be rough.</small>}
+                    {CAN_FORCE.has(stage) && <small className="hint">Adding it directly may make a rough transition. This changes the mix; it does not promise immediate playback.</small>}
                   </div>
                 )}
                 {finding === request.id && CAN_BRIDGE.has(stage) && (
