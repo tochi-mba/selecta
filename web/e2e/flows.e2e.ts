@@ -146,6 +146,9 @@ test('the Library: search, song details, a correction that can be put back', asy
   await sheet.getByRole('button', { name: 'Save correction' }).click();
   await expect(sheet.getByText(/238/).first()).toBeVisible();
   await sheet.getByRole('button', { name: 'Use what was measured' }).click();
+  // The measured number is visible even before this mutation finishes. Wait for
+  // the server-confirmed undo before testing Escape and focus restoration.
+  await expect(page.getByText(/Back to what Selecta measured/)).toBeVisible();
   await expect(sheet.getByText(/119/).first()).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(sheet).toHaveCount(0);
