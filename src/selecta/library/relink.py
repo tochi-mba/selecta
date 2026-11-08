@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import sqlite3
 from pathlib import Path
 
@@ -116,7 +115,7 @@ def commit_relink(conn: sqlite3.Connection, old: str, new: str, token: str) -> d
         refreshed = preview_relink(conn, old, new)
         if refreshed["token"] != token:
             raise RelinkError("The library changed. Preview it again.")
-        for row in conn.execute("SELECT id,path FROM songs"):
+        for row in conn.execute("SELECT id,path FROM songs").fetchall():
             source = Path(row["path"])
             if not source.is_relative_to(old_root):
                 continue
@@ -125,7 +124,9 @@ def commit_relink(conn: sqlite3.Connection, old: str, new: str, token: str) -> d
                 "UPDATE songs SET path=? WHERE id=? AND path=?",
                 (str(new_path), row["id"], row["path"]),
             )
-        before = db.preference(conn, "library_folders", [])
+        before = db.preference(conn, "library_folders", None)
+        if before is None:
+            before = [str(folder) for folder in library_folders(conn)]
         after = [str(new_root) if Path(folder).resolve(strict=False) == old_root else folder for folder in before]
         conn.execute(
             "INSERT INTO preferences(key,value) VALUES('library_folders',?) "
