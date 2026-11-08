@@ -17,13 +17,13 @@ from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 
 from selecta import mix
-from selecta.backup import BackupError, activate_pending_restore
 from selecta.api_common import (
     LOCAL_HOSTS,
     OPERATIONS_KEPT,
     FreshFiles,
     _Background,
 )
+from selecta.backup import BackupError, activate_pending_restore
 from selecta.config import Settings, load_settings
 from selecta.routes.discover import add_routes as discover_routes
 from selecta.routes.edit import add_routes as edit_routes
