@@ -81,10 +81,19 @@ export function paintFrequencyFrame(
   brush: Brush,
   history: SpectrumHistory,
 ): boolean {
-  if (!levels.length || !levels.some((level) => level > 0)) {
-    if (mode === 'waterfall' && levels.length) {
-      history.push([...levels]); // measured silence, not invented activity
-      if (history.length > MAX_SPECTRUM_HISTORY) history.shift();
+  if (!levels.length) {
+    // The analyser no longer has samples. No previous song's history survives
+    // the loss, even if the caller later sees valid audio again.
+    history.length = 0;
+    return false;
+  }
+  if (!levels.some((level) => level > 0)) {
+    // A real silence frame still advances history for history-based modes;
+    // otherwise an old sound could reappear as a ghost on the next note.
+    if (mode === 'waterfall' || mode === 'trails') {
+      history.push([...levels]);
+      const limit = mode === 'waterfall' ? MAX_SPECTRUM_HISTORY : MAX_TRAIL_HISTORY;
+      if (history.length > limit) history.shift();
     }
     return false;
   }

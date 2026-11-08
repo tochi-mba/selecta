@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  frequencyLevels, MAX_SPECTRUM_HISTORY, paintFrequencyFrame,
+  frequencyLevels, MAX_SPECTRUM_HISTORY, MAX_TRAIL_HISTORY, paintFrequencyFrame,
   SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape,
 } from './spectrumVisuals';
 
@@ -15,11 +15,14 @@ const colours = { accent: '#d5f36b', soft: '#ffffff', gradient: '#d5f36b' };
 const get = (context: CanvasRenderingContext2D, name: 'fill' | 'stroke' | 'fillRect' | 'arc') =>
   vi.mocked(context[name]).mock.calls.length;
 
-describe('six width-first audio visualizations', () => {
-  it('declares four additional modes, each with a non-audio description', () => {
-    expect(SPECTRUM_MODES.map((mode) => mode.id))
-      .toEqual(['bars', 'ribbon', 'aurora', 'lanes', 'constellation', 'waterfall']);
-    expect(new Set(SPECTRUM_MODES.map((mode) => mode.label)).size).toBe(6);
+describe('eleven width-first real-audio visualizations', () => {
+  it('declares all nine new alternatives with unique names and a single public menu', () => {
+    expect(SPECTRUM_MODES.map((mode) => mode.id)).toEqual([
+      'bars', 'ribbon', 'aurora', 'lanes', 'constellation', 'waterfall',
+      'skyline', 'threads', 'pins', 'matrix', 'trails',
+    ]);
+    expect(new Set(SPECTRUM_MODES.map((mode) => mode.label)).size).toBe(11);
+    expect(SPECTRUM_MODES.every((mode) => mode.description.length > 12)).toBe(true);
   });
 
   it('groups only actual nonzero bins, keeps silence at zero and refuses absent signal', () => {
@@ -31,7 +34,7 @@ describe('six width-first audio visualizations', () => {
     expect(spectrumLevelCount(100000, 1, 'aurora')).toBe(128);
   });
 
-  it.each(['bars', 'ribbon', 'aurora', 'lanes', 'constellation', 'waterfall'] as SpectrumShape[])(
+  it.each(SPECTRUM_MODES.map((mode) => mode.id))(
     '%s never draws from missing or silent samples', (mode) => {
       const context = fakeContext();
       const history: number[][] = [];
@@ -63,6 +66,84 @@ describe('six width-first audio visualizations', () => {
     expect(get(context, 'arc')).toBe(3);
     expect(get(context, 'stroke')).toBe(1);
     expect(vi.mocked(context.arc).mock.calls[0][0]).toBeCloseTo(800 / 3);
+  });
+
+
+  it('makes an angular skyline extending to the right edge only from signal bins', () => {
+    const ctx = fakeContext();
+    const history: number[][] = [];
+    expect(paintFrequencyFrame(ctx, 900, 120, [0.2, 0.9, 0.4, 0.6], 'skyline', colours, history)).toBe(true);
+    expect(get(ctx, 'fill')).toBe(1);
+    expect(get(ctx, 'stroke')).toBe(1);
+    expect(vi.mocked(ctx.lineTo).mock.calls.some(([x]) => x === 900)).toBe(true);
+    expect(history).toEqual([]);
+    expect(ctx.globalAlpha).toBe(1);
+  });
+
+  it('creates five separate full-width glass threads using individual frequency windows', () => {
+    const ctx = fakeContext();
+    const values = Array.from({ length: 50 }, (_, index) => index / 50);
+    expect(paintFrequencyFrame(ctx, 1100, 140, values, 'threads', colours, [])).toBe(true);
+    expect(get(ctx, 'stroke')).toBe(5);
+    expect(get(ctx, 'fill')).toBe(0);
+    expect(vi.mocked(ctx.lineTo).mock.calls.filter(([x]) => x === 1100)).toHaveLength(5);
+    expect(ctx.globalAlpha).toBe(1);
+  });
+
+  it('renders only non-silent signal pins with mirrored measured tips', () => {
+    const ctx = fakeContext();
+    expect(paintFrequencyFrame(ctx, 960, 120, [0.2, 0, 0.7, 1], 'pins', colours, [])).toBe(true);
+    expect(get(ctx, 'stroke')).toBe(3);
+    expect(get(ctx, 'arc')).toBe(6);
+    expect(vi.mocked(ctx.arc).mock.calls[0][0]).toBeCloseTo(120);
+    expect(vi.mocked(ctx.arc).mock.calls[0][1]).toBeCloseTo(60 - 0.2 * 120 * 0.43);
+    expect(ctx.globalAlpha).toBe(1);
+  });
+
+  it('quantizes only current-frame magnitudes into a wide six-row mosaic', () => {
+    const ctx = fakeContext();
+    expect(paintFrequencyFrame(ctx, 900, 120, [0.15, 0.5, 1], 'matrix', colours, [])).toBe(true);
+    // One occupied threshold at 0.15, three at 0.5 and six at 1.
+    expect(get(ctx, 'fillRect')).toBe(10);
+    expect(get(ctx, 'stroke')).toBe(0);
+    expect(vi.mocked(ctx.fillRect).mock.calls.every(([x, y, w, h]) =>
+      x >= 0 && y >= 0 && w > 0 && h > 0 && x + w <= 901 && y + h <= 121)).toBe(true);
+    expect(ctx.globalAlpha).toBe(1);
+  });
+
+  it('caps afterglow to seven real sampled frames, records silence, never invents history', () => {
+    const ctx = fakeContext();
+    const history: number[][] = [];
+    for (let index = 0; index < 30; index += 1) {
+      paintFrequencyFrame(ctx, 990, 140, [index / 30, 0.6, 0], 'trails', colours, history);
+    }
+    expect(history).toHaveLength(MAX_TRAIL_HISTORY);
+    expect(history[0][0]).toBeCloseTo(23 / 30);
+    expect(get(ctx, 'stroke')).toBeGreaterThan(0);
+    const prev = history.map((frame) => [...frame]);
+    paintFrequencyFrame(ctx, 990, 140, [0.2, 0.4, 0.6], 'skyline', colours, history);
+    expect(history).toEqual(prev);
+    for (let index = 0; index < MAX_TRAIL_HISTORY; index += 1) {
+      const silentCtx = fakeContext();
+      expect(paintFrequencyFrame(silentCtx, 990, 140, [0, 0, 0], 'trails', colours, history)).toBe(false);
+      expect(get(silentCtx, 'stroke')).toBe(0);
+    }
+    expect(history).toEqual(Array.from({ length: MAX_TRAIL_HISTORY }, () => [0, 0, 0]));
+    expect(paintFrequencyFrame(fakeContext(), 990, 140, [], 'trails', colours, history)).toBe(false);
+    expect(history).toEqual([]);
+  });
+
+  it('draws identical measured geometry for repeated frames without random variation', () => {
+    for (const mode of ['skyline', 'threads', 'pins', 'matrix'] as SpectrumShape[]) {
+      const a = fakeContext();
+      const b = fakeContext();
+      const levels = [0.1, 0.3, 0.8, 0, 0.4];
+      paintFrequencyFrame(a, 840, 130, levels, mode, colours, []);
+      paintFrequencyFrame(b, 840, 130, levels, mode, colours, []);
+      for (const name of ['lineTo', 'arc', 'fillRect', 'moveTo'] as const) {
+        expect(vi.mocked(a[name]).mock.calls).toEqual(vi.mocked(b[name]).mock.calls);
+      }
+    }
   });
 
   it('bounds history, uses only real frames, and does not share it with other modes', () => {

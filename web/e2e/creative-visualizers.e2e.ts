@@ -13,12 +13,12 @@ test('measured energy bars use real varied heights rather than collapsing to ide
     Math.round(element.getBoundingClientRect().height)));
   expect(heights.every((height) => height > 3)).toBe(true);
   expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(25);
-  const selected = page.getByRole('button', { name: /Select Song 3, song 3, energy/ });
+  const selected = page.getByRole('button', { name: /song 3, energy/ });
   await selected.click();
   await expect(selected).toHaveAttribute('aria-current', 'true');
 });
 
-test('four new horizontal visualizers are selectable without restarting the real audio', async ({ page }) => {
+test('all nine additional horizontal visualizers are selectable without restarting real audio', async ({ page }) => {
   await spyOnAudio(page);
   await page.goto('/listen');
   await page.getByRole('button', { name: /^(Play|Resume from)/ }).click();
@@ -34,6 +34,11 @@ test('four new horizontal visualizers are selectable without restarting the real
     ['lanes', 'Spectral lanes'],
     ['constellation', 'Frequency constellation'],
     ['waterfall', 'Recent spectrum'],
+    ['skyline', 'Spectrum skyline'],
+    ['threads', 'Glass threads'],
+    ['pins', 'Signal pins'],
+    ['matrix', 'Spectrum mosaic'],
+    ['trails', 'Afterglow trails'],
   ]) {
     await choose.selectOption(value);
     await expect(page.getByRole('img', { name: label + ' — actual mixed-audio frequency levels' })).toBeVisible();
