@@ -11,6 +11,7 @@ import { Action, Status } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { ExportJobs } from './ExportJobs';
 import { Listening } from './Listening';
+import { LocalBackup } from './LocalBackup';
 import { ViewProps } from './shared';
 import { Diagnostics, FoldersPanel, JobsPanel, MemoryPanel, NeedsYou, StoragePanel } from './WorkshopPanels';
 
@@ -138,7 +139,7 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
         </section>
       )}
 
-      {tab === 'storage' && <StoragePanel />}
+      {tab === 'storage' && <><StoragePanel /><LocalBackup /></>}
       {tab === 'sources' && <FoldersPanel status={status} refreshStatus={refreshStatus} notify={notify} />}
       {tab === 'learning' && (
         <>
