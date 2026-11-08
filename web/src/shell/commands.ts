@@ -1,6 +1,6 @@
 import type { DraftInfo } from '../api';
 import { navigate } from '../router';
-import { setPrefs, Theme } from '../state/prefs';
+import { setPrefs, Theme, Motion } from '../state/prefs';
 import { DESTINATIONS, EXPLORE_TABS, WORKSPACE_TABS } from './manifest';
 
 /** What the command palette can do. It's a shortcut to things that already have an ordinary way to do
@@ -34,6 +34,7 @@ export type CommandContext = {
   analysing: boolean;
   drafts: Pick<DraftInfo, 'id' | 'name'>[];
   theme: Theme;
+  motion: Motion;
   togglePause: () => void;
   next: () => void;
   jump: () => void;
@@ -75,6 +76,15 @@ export function buildCommands(context: CommandContext): Command[] {
       keywords: 'appearance colour color mode',
       unavailable: context.theme === theme ? 'It’s already using that.' : undefined,
       run: () => setPrefs({ theme }),
+    })),
+    ...(['still', 'subtle', 'expressive'] as Motion[]).map((motion): Command => ({
+      id: `motion-${motion}`,
+      label: `Motion: ${motion}`,
+      group: 'Do',
+      keywords: 'animation movement accessibility visual intensity',
+      detail: 'Local visual preference; reduced-motion setting takes priority',
+      unavailable: context.motion === motion ? 'It’s already using that.' : undefined,
+      run: () => setPrefs({ motion }),
     })),
   ];
   const drafts = context.drafts.map((draft): Command => ({

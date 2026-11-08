@@ -570,6 +570,7 @@ export function App() {
     analysing: status.analysis_running,
     drafts: commandDrafts,
     theme: preferences.theme,
+    motion: preferences.motion,
     togglePause: () => void player.togglePause(),
     next: () => void player.next(),
     jump: () => void player.skip(),
