@@ -1,12 +1,12 @@
 # Selecta — UF implementation checklist (192 individually tracked acceptance items)
 
-**Status:** 24 Proposed ADRs (0366–0389); 192 UF tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Owners unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); documentation only.
+**Status:** 24 Accepted ADRs (0366–0389); 186 UF tasks Not started; 6 In progress; 0 Implemented; 0 independently Verified. Decision acceptance recorded at requester instruction 2026-11-08; implementation owners and independent reviewers unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app code and regression tests.
 
 **Semantics:** `[ ]` = not independently accepted. These are future design/integration/evidence requirements. A source-present capability may satisfy one after exact-SHA reconciliation; docs-only creation does not change implementation status.
 
 ## [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) — Unified finish charter, current-source baseline and ADR parity (P0; 01 Baseline)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0366-01 — Pin a real source baseline.** **Acceptance:** Record main SHA, route inventory and exact UI state for the starting candidate. **Verification:** Compare source, build and capture manifest. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0366-02 — Map old programme owners.** **Acceptance:** Crosswalk foundational, Flow, gap/final/micro-polish, Lucy and Library decisions. **Verification:** Independent ADR link and owner audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -19,7 +19,7 @@
 
 ## [ADR-0367](adr-0367-task-research-and-measurement.md) — Uncoached UX research, comprehension baselines and outcome metrics (P0; 01 Baseline)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0367-01 — Recruit explicit user groups.** **Acceptance:** Separate new listeners, experienced editors and assistive-technology users; preserve sample details. **Verification:** Research protocol review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0367-02 — Define uncoached scenarios.** **Acceptance:** First ready mix, exact song, Lucy proposal, seam edit, bridge and export. **Verification:** Dry-run neutral task scripts. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -32,7 +32,7 @@
 
 ## [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) — Semantic design tokens, theme contrast and CSS ownership (P0; 02 Foundation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0368-01 — Inventory CSS imports.** **Acceptance:** Record import order, selector ownership and high-specificity exceptions. **Verification:** Computed-style inventory. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0368-02 — Assign semantic token ownership.** **Acceptance:** One source for text, surface, focus, selection, statuses, borders and spacing. **Verification:** Static token and reference audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -45,7 +45,7 @@
 
 ## [ADR-0369](adr-0369-typography-music-artwork-and-density.md) — Typography, honest artwork, spatial rhythm and density (P1; 02 Foundation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0369-01 — Define type roles.** **Acceptance:** Specify display, headings, body, metadata, lyrics and numeric values. **Verification:** Full-screen typographic review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0369-02 — Handle difficult song metadata.** **Acceptance:** Long, CJK, RTL, repeated titles and unknown artists remain identifiable. **Verification:** Text fixture and AT reading. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -58,7 +58,7 @@
 
 ## [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) — Shared controls, overlays, action hierarchy and feedback (P0; 02 Foundation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0370-01 — Inventory primitive variants.** **Acceptance:** Catalogue buttons, inputs, tabs, menus, tooltips, dialogs, drawers and sheets. **Verification:** Component gallery audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0370-02 — Define primary/secondary action order.** **Acceptance:** One dominant action per decision with discoverable expert alternatives. **Verification:** Screen task/hierarchy critique. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -71,20 +71,20 @@
 
 ## [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) — Long-job progress, asynchronous truth and local recovery (P0; 02 Foundation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
-- [ ] **UF-0371-01 — Define async state vocabulary.** **Acceptance:** Distinguish initial, stale, queued, running, paused, blocked, cancelled, failed and ready. **Verification:** Cross-route state matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **UF-0371-01 — Define async state vocabulary.** **Acceptance:** Distinguish initial, stale, queued, running, paused, blocked, cancelled, failed and ready. **Verification:** Cross-route state matrix. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `527b6c9741a635f758da22609849383c3072f16c`; **Evidence/reviewer:** `web/src/state/async.ts`, async unit tests; broader state matrix pending; independent review pending.
 - [ ] **UF-0371-02 — Reserve skeletons for unknown content.** **Acceptance:** Known long work uses job status or uncertainty; no fake perpetual shimmer. **Verification:** Delayed-load browser test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0371-03 — Explain estimated time honestly.** **Acceptance:** Only locally grounded ranges with clear uncertainty appear. **Verification:** Variable-workload fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **UF-0371-04 — Protect offline context.** **Acceptance:** Stale useful content is labelled and has reconnect/retry route. **Verification:** Server restart test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **UF-0371-04 — Protect offline context.** **Acceptance:** Stale useful content is labelled and has reconnect/retry route. **Verification:** Server restart test. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `527b6c9741a635f758da22609849383c3072f16c`; **Evidence/reviewer:** `web/src/state/async.ts`, stale/retry unit tests; route checks pending; independent review pending.
 - [ ] **UF-0371-05 — Reconcile lost mutation replies.** **Acceptance:** Preserve idempotency key for retries and report actual result. **Verification:** Lost-ack duplicate guard test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **UF-0371-06 — Handle cancellations correctly.** **Acceptance:** Cancelled, superseded and failed work cannot be shown as successful. **Verification:** Cancel/revision-change test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **UF-0371-06 — Handle cancellations correctly.** **Acceptance:** Cancelled, superseded and failed work cannot be shown as successful. **Verification:** Cancel/revision-change test. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `527b6c9741a635f758da22609849383c3072f16c`; **Evidence/reviewer:** `web/src/state/async.ts`, superseded-request unit tests; job lifecycle pending; independent review pending.
 - [ ] **UF-0371-07 — Keep live feedback calm.** **Acceptance:** Foreground errors take precedence over background completion noise. **Verification:** Long-running observation. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0371-08 — Preserve layout and focus.** **Acceptance:** Changing asynchronous content does not jump controls or navigation unexpectedly. **Verification:** Geometry/CLS/focus measurement. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 
 ## [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) — Navigation, first-run readiness and returning-work continuity (P0; 03 Navigation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0372-01 — Validate five destination intents.** **Acceptance:** Listen, Make a Mix, My Mixes, Library and Workspace remain understandable. **Verification:** Uncoached route selection. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0372-02 — Preserve URL meaning.** **Acceptance:** Back, forward, aliases and refresh retain exact draft/conversation/tab target. **Verification:** Router regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -97,7 +97,7 @@
 
 ## [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) — Persistent player, system media controls and audio focus (P0; 03 Navigation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0373-01 — Keep one authoritative audio owner.** **Acceptance:** Full/mini transport and all previews never overlap improperly. **Verification:** Real player and multitab test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0373-02 — Align mini/full transport state.** **Acceptance:** Song, phase, time and loading/seam labels are identical across screens. **Verification:** Same-state cross-route fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -110,7 +110,7 @@
 
 ## [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) — Listen hierarchy, lyrics integrity, seek and transitions (P1; 04 Listen)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0374-01 — Prioritise now-playing.** **Acceptance:** Identity, transport, progress and coming handoff appear before optional configuration. **Verification:** Five-second recall task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0374-02 — Label timed lyrics honestly.** **Acceptance:** Approximate word timing is not presented as sung-word ground truth. **Verification:** Real music + no-lyrics fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -123,7 +123,7 @@
 
 ## [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) — Existing fifteen visualisers, Stage and sensory-safe motion (P1; 04 Listen)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0375-01 — Preserve all fifteen options.** **Acceptance:** No visualiser is accidentally removed; choices remain stable. **Verification:** Style list regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0375-02 — Use live audio bins only.** **Acceptance:** Pause/silence produce truthful visual stillness. **Verification:** Known frequency/silence fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -136,7 +136,7 @@
 
 ## [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) — Make a Mix quick paths, moods, shaping and Lucy handoff (P0; 05 Creation entry)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0376-01 — Delegate detailed design to LX.** **Acceptance:** Use existing LX-0353/0354 contracts and classify only integration gaps. **Verification:** LX parity review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0376-02 — Make Quick Play predictable.** **Acceptance:** Communicate actual readiness and next step without requiring DJ knowledge. **Verification:** Uncoached first use. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -149,12 +149,12 @@
 
 ## [ADR-0377](adr-0377-library-experience-integration-and-proof.md) — Library integration, LX ownership and exact-recording safety (P0; 05 Creation entry)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0377-01 — Crosswalk LX Library work.** **Acceptance:** Avoid restating LX-0340–0352 as unimplemented functionality. **Verification:** Owner/parity decision audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0377-02 — Protect recording ID navigation.** **Acceptance:** Playback and mix actions use stable exact ID, not row position or title. **Verification:** Duplicate-title fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0377-03 — Preserve search URL and Back.** **Acceptance:** Filter, sort and selected detail survive history/reload as intended. **Verification:** Route-state test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **UF-0377-04 — Reconcile readiness counts.** **Acceptance:** Library, Make a Mix and Workspace use canonical source status. **Verification:** Cross-route fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **UF-0377-04 — Reconcile readiness counts.** **Acceptance:** Library, Make a Mix and Workspace use canonical source status. **Verification:** Cross-route fixture. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `471bcdfb50e96188f2f3a7c252b0bedc33cbff06`; **Evidence/reviewer:** `web/src/state/readiness.ts` and readiness unit tests; cross-route audit pending; independent review pending.
 - [ ] **UF-0377-05 — Protect loaded batch selection.** **Acceptance:** Large filtered libraries never mutate outside confirmed selected IDs. **Verification:** 200-loaded/20k test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0377-06 — Measure collection scale.** **Acceptance:** Search, scrolling and batch interaction budgets tested on 20k fixture. **Verification:** Named-device benchmark. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0377-07 — Ensure inspector and player parity.** **Acceptance:** Details overlay does not lose focus or obscure player at zoom. **Verification:** Mobile/keyboard test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -162,7 +162,7 @@
 
 ## [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) — Lucy integration, proposal lifecycle, consent and safe approval (P0; 05 Creation entry)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0378-01 — Crosswalk Lucy owners.** **Acceptance:** Identify precise non-duplicated UI integration gaps against LU and LX. **Verification:** LU/LX source parity sign-off. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0378-02 — Preserve entered music intent.** **Acceptance:** Song/mood/draft deep links retain exact ID and constraints without auto-send. **Verification:** Scoped prompt and route test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -175,12 +175,12 @@
 
 ## [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) — My Mixes, current/draft identity and render-line hierarchy (P1; 05 Creation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0379-01 — Differentiate current and saved drafts.** **Acceptance:** Prominent exact current/draft/revision status and action context. **Verification:** Same-name draft comprehension test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0379-02 — Clarify draft commands.** **Acceptance:** Edit/copy/prioritize/play/delete appear in safe hierarchy and exact scope. **Verification:** Action order task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0379-03 — Make queue causality visible.** **Acceptance:** Prioritized drafts and current rendering show actual order, not misleading parallel promise. **Verification:** Job queue fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **UF-0379-04 — Show genuine render progression.** **Acceptance:** Queued, failed, blocked by storage and ready are separate recoverable states. **Verification:** Interrupted job E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **UF-0379-04 — Show genuine render progression.** **Acceptance:** Queued, failed, blocked by storage and ready are separate recoverable states. **Verification:** Interrupted job E2E. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `f2afe007c37f22005e34e57ce71fb99e5b86d8c2`; **Evidence/reviewer:** `web/src/lib.ts`, readiness and words unit tests; storage/queue checks pending; independent review pending.
 - [ ] **UF-0379-05 — Restore recent work context.** **Acceptance:** Returning to a draft preserves scope without switching audio. **Verification:** Reload/back/forward fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0379-06 — Protect swap and Undo.** **Acceptance:** Playback of draft communicates current/draft exchange and recovery. **Verification:** Revision and Undo integration. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0379-07 — Keep large draft collections usable.** **Acceptance:** Duplicate titles, long names and many drafts scan without losing actions. **Verification:** Scale and AT review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -188,7 +188,7 @@
 
 ## [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) — Editor sequence, Story/Arrange parity and exact seam identity (P1; 06 Advanced creation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0380-01 — Keep mode semantics identical.** **Acceptance:** Story and Arrange show same ordered occurrences and seam state. **Verification:** Mode-toggle equality E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0380-02 — Distinguish song from seam focus.** **Acceptance:** Selection labels and visuals identify exact object even when a song repeats. **Verification:** Repeated-song and AT fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -201,7 +201,7 @@
 
 ## [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) — Seam Inspector audition, technique truth and accessible editing (P1; 06 Advanced creation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0381-01 — Name directed transition exactly.** **Acceptance:** Show previous and incoming occurrence plus current revision in all tabs. **Verification:** Duplicate-song fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0381-02 — Lead with actual audition.** **Acceptance:** Play/stop and availability correspond to real preview media, not a fake instant result. **Verification:** Real preview test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -214,7 +214,7 @@
 
 ## [ADR-0382](adr-0382-stem-studio-musical-canvas.md) — Eight-lane Stem Studio, shape/grid/list consistency and apply safety (P1; 06 Advanced creation)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0382-01 — Preserve cross-mode eight-lane semantics.** **Acceptance:** Both songs' vocal, drum, bass, melody lanes stay identical in Shape/Grid/List. **Verification:** Mode equivalence test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0382-02 — Make time boundaries explicit.** **Acceptance:** Two-bar cells, positions and beat context remain consistent across grid lengths. **Verification:** Timing fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -227,7 +227,7 @@
 
 ## [ADR-0383](adr-0383-requests-bridges-and-consent.md) — Song requests, bridge routes and explicit atomic consent (P1; 07 Supporting)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0383-01 — Make request stages readable.** **Acceptance:** Searching, waiting, needs approval, preparing and ready have distinct exact meanings. **Verification:** Stage matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0383-02 — Preview full bridge consequences.** **Acceptance:** Show each added song and landing position before approval. **Verification:** Bridge comprehension test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -240,7 +240,7 @@
 
 ## [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) — Word/harmonic connections, candidate truth and audition-first discovery (P1; 07 Supporting)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0384-01 — Label evidential strength.** **Acceptance:** Candidate, heard and approved states stay distinct. **Verification:** Discovery state test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0384-02 — Explain why songs connect.** **Acceptance:** Word or harmonic relationship displayed with real provenance. **Verification:** Novice/expert explanation walkthrough. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -253,7 +253,7 @@
 
 ## [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) — Workspace hierarchy, diagnostics, sources, storage and local backups (P1; 07 Supporting)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0385-01 — Prioritise actionable issues.** **Acceptance:** Overview separates problems requiring action from healthy job counts. **Verification:** Task triage review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0385-02 — Explain analysis lifecycle.** **Acceptance:** Queued, running, paused and resumed state reflects true server jobs. **Verification:** Interrupt/resume test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -266,10 +266,10 @@
 
 ## [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) — Export progression, exact frozen revisions and blind-study integrity (P1; 07 Supporting)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0386-01 — Expose frozen export identity.** **Acceptance:** Exact draft/current revision and song scope known before export. **Verification:** Edit-during-export test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-- [ ] **UF-0386-02 — Explain missing render prerequisites.** **Acceptance:** Unready directed seams block export with a repair action. **Verification:** Missing seam fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+- [ ] **UF-0386-02 — Explain missing render prerequisites.** **Acceptance:** Unready directed seams block export with a repair action. **Verification:** Missing seam fixture. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `471bcdfb50e96188f2f3a7c252b0bedc33cbff06`; **Evidence/reviewer:** `web/src/views/ExportPanel.tsx`, editor tests; export preconditions pending; independent review pending.
 - [ ] **UF-0386-03 — Show real job stages.** **Acceptance:** Queue, render, encode, verify and complete map to actual jobs. **Verification:** Slow/failed export test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0386-04 — Confirm output decodes.** **Acceptance:** No completed success until exact frozen file exists and decodes. **Verification:** FLAC inspection. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0386-05 — Protect snapshot from later edits.** **Acceptance:** Ongoing export cannot silently incorporate new mix revision. **Verification:** Concurrent mutation regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -279,7 +279,7 @@
 
 ## [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) — Responsive geometry, zoom, mobile keyboard and input parity (P0; 08 Verification)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0387-01 — Run viewport matrix.** **Acceptance:** 320,375,620,760,768,1024,1280,1440,1920,3840px and short landscape. **Verification:** Computed geometry and screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0387-02 — Validate 200/400% reflow.** **Acceptance:** Content and actionable controls remain accessible without unintended page horizontal scroll. **Verification:** WCAG reflow check. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -292,7 +292,7 @@
 
 ## [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) — WCAG accessibility, plain-language status and sensory safety (P0; 08 Verification)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0388-01 — Audit landmarks and accessible names.** **Acceptance:** All routes contain correct headings, labels and keyboard order. **Verification:** Accessibility tree and human review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0388-02 — Validate component keyboard patterns.** **Acceptance:** Menus, dialogs, tabs, comboboxes and grid follow relevant APG patterns. **Verification:** Physical keyboard/NVDA/VoiceOver. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
@@ -305,7 +305,7 @@
 
 ## [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) — Independent visual, human, performance, real-audio and release GO/NO-GO (P0; 08 Verification)
 
-**Decision:** Proposed; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
+**Decision:** Accepted; **Owner:** Unassigned; **Implementation:** 0/8; **Independently Verified:** 0/8.
 
 - [ ] **UF-0389-01 — Approve paired visual baselines.** **Acceptance:** Same fixture/route/state/player/revision/size in Light and Dark, human reviewed. **Verification:** Signed screenshot manifest. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 - [ ] **UF-0389-02 — Run responsive and AT acceptance.** **Acceptance:** Mobile, 400%, forced colours, physical keyboard and screen readers cover core routes. **Verification:** Independent platform report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
