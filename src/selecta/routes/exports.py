@@ -191,6 +191,8 @@ def add_routes(app, ctx) -> None:
         return (
             job["scope"] == snapshot["scope"]
             and job["draft"] == snapshot["draft"]
+            and [song["song_id"] for song in job["songs"]]
+            == [song["song_id"] for song in snapshot["songs"]]
             and [seam["key"] for seam in job["seams"]]
             == [seam["key"] for seam in snapshot["seams"]]
         )
