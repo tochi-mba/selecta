@@ -4,6 +4,7 @@ import { clock } from '../lib';
 import { trackReadiness } from '../state/readiness';
 import { Action, Sheet, Status } from '../ui/controls';
 import { Field } from '../ui/primitives';
+import { SongMotif } from '../ui/MusicObjects';
 import { ViewProps } from './shared';
 
 const LOWEST_TEMPO = 40;
@@ -94,7 +95,13 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
   };
   return (
     <Sheet title={song.title ?? 'Untitled'} onClose={onClose}>
-      <p className="song-detail-artist">{song.artist ?? 'Unknown artist'}</p>
+      <div className="song-details-identity">
+        <SongMotif songId={song.id} />
+        <div>
+          <p className="song-detail-artist" dir="auto">{song.artist ?? 'Unknown artist'}</p>
+          <p className="song-details-id">Recording ID {song.id}</p>
+        </div>
+      </div>
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       {facts.reason && <p className="hint">{facts.reason}</p>}
       <dl className="song-facts">
