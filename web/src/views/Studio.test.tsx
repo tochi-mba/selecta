@@ -416,12 +416,13 @@ describe('Studio pointer painting', () => {
     await square('Song 1 voice, square 1');
     fireEvent.click(screen.getByRole('button', { name: 'Play preview' }));
     await screen.findByRole('button', { name: 'Stop preview' });
-    act(() => { deck.made[0].onCell(3); });
+    // Earlier tests also instantiate mocked decks; use this Studio's deck.
+    act(() => { deck.made.at(-1)!.onCell(3); });
     expect(screen.getByText(/Preview at bar/)).toBeInTheDocument();
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
     try {
       fireEvent(document, new Event('visibilitychange'));
-      expect(deck.made[0].stop).toHaveBeenCalled();
+      expect(deck.made.at(-1)!.stop).toHaveBeenCalled();
       expect(screen.queryByText(/Preview at bar/)).toBeNull();
     } finally {
       hidden.mockRestore();

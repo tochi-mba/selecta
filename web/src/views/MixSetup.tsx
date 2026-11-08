@@ -259,7 +259,9 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           values={arcPreview}
           source="intention"
           onPointerDown={(event) => {
-            if (!event.isPrimary || event.button !== 0 || drawing.current) return;
+            // Ignore explicitly secondary pointers; legacy/synthetic pointer events
+            // may omit isPrimary or button, but still provide usable coordinates.
+            if (event.isPrimary === false || event.button > 0 || drawing.current) return;
             drawing.current = { id: event.pointerId, previous: energyArc ? [...energyArc] : null };
             event.currentTarget.setPointerCapture?.(event.pointerId);
             drawArcAt(event);
