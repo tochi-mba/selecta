@@ -399,11 +399,12 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       <header className="library-head">
         <h1 className="display small">Library</h1>
         <p className="library-summary">
-          {Number.isFinite(counts.ready) && <span><b>{counts.ready}</b> ready for mixes</span>}
-          <span><b>{counts.analysed}</b> analysed</span>
-          <span><b>{counts.music}</b> songs</span>
-          {!!counts.set_aside && <span><b>{counts.set_aside}</b> set aside</span>}
+          {Number.isFinite(counts.ready) && <span><b>{counts.ready.toLocaleString()}</b> ready for mixes</span>}
+          <span><b>{counts.analysed.toLocaleString()}</b> analysed</span>
+          <span><b>{counts.music.toLocaleString()}</b> songs</span>
+          {!!counts.set_aside && <span><b>{counts.set_aside.toLocaleString()}</b> set aside</span>}
         </p>
+        <p className="library-readiness-help">Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.</p>
       </header>
       <div className="library-find">
         <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search titles, artists, remixes, credits or recording ID" />
@@ -422,12 +423,13 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           <button type="button" aria-pressed={cardLayout} onClick={() => setPrefs({ libraryLayout: 'cards' })}>Card view</button>
         </div>
       </div>
-      <div className="chips" role="group" aria-label="Show">
+      <div className="chips library-filters" role="group" aria-label="Filter Library recordings">
         {FILTERS.map((option) => (
           <button key={option.name} aria-pressed={filter === option.name} onClick={() => setAddressQuery({ show: option.name === 'all' ? null : option.name, pages: null }, { push: true })}>
             {option.label}
           </button>
         ))}
+        {(filter !== 'all' || query) && <button type="button" className="quiet" onClick={() => { setTyped(''); setAddressQuery({ q: null, show: null, pages: null }, { push: true }); }}>Clear all filters</button>}
       </div>
       {filter === 'not_yet' && left > 0 && (
         <div className="row wrap analyse-all">
@@ -474,9 +476,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
-          <h2>{query ? `Nothing matches “${query}”.` : 'No songs in this view'}</h2>
-          <p>Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.</p>
+          <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : 'No songs in this view'}</h2>
+          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while Selecta scans and analyses it.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
           <div className="row wrap">
+            {counts.music === 0 && !query && filter === 'all' && <button onClick={() => setView('Workshop')}>Add music</button>}
             {query && <button onClick={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}>Clear search</button>}
             {filter !== 'all' && <button onClick={() => setAddressQuery({ show: null, pages: null }, { push: true })}>Show all songs</button>}
           </div>
@@ -509,6 +512,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                   <SongMotif songId={song.id} /><b title={title}>{title}</b>
                 </button>
                 <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
+                {duplicate && <small className="library-recording-id">Recording {song.id}</small>}
                 {query && song.match && <small className="hint" aria-label={`Search match: ${song.match}`}>{song.match}</small>}
               </div>
               <small className="facts song-columns">
@@ -523,22 +527,22 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               </div>
               <div className="song-actions">
                 {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => requestStart(song)}>Start a mix</Action>}
-                {facts.canAdd && <Action className="song-add" working="Adding…" disabled={already || searching} run={() => add(song)}>{already ? 'In the mix' : 'Add'}</Action>}
-                {facts.canAdd && now.phase !== 'idle' && <Action working="Adding…" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next</Action>}
                 {facts.canAnalyse && (
                   <Action disabled={line.includes(song.id)} run={() => analyse(song)}>
                     {analysingWords(line, song.id)}
                     {status.eta?.line[song.id] !== undefined && `, ${etaWords(status.eta.line[song.id])}`}
                   </Action>
                 )}
-                {!facts.setAside && (
+                {(!facts.setAside || facts.canAdd) && (
                   <Menu label={<><Icon name="more" /><span className="visually-hidden">More actions for {name}</span></>}>
-                    <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
+                    {facts.canAdd && <Action role="menuitem" disabled={already || searching} run={() => add(song)}>{already ? 'Already in current mix' : 'Add to current mix'}</Action>}
+                    {facts.canAdd && now.phase !== 'idle' && <Action role="menuitem" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next in current mix</Action>}
+                    {!facts.setAside && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
                       {song.priority ? 'Priority: on' : 'Prioritize'}
-                    </Action>
-                    <Action role="menuitemcheckbox" aria-checked={song.never} run={() => never(song)} title="Selecta won’t pick this when it builds a mix">
+                    </Action>}
+                    {!facts.setAside && <Action role="menuitemcheckbox" aria-checked={song.never} run={() => never(song)} title="Selecta won’t pick this when it builds a mix">
                       {song.never ? 'Never: on' : 'Never play'}
-                    </Action>
+                    </Action>}
                   </Menu>
                 )}
               </div>
