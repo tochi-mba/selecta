@@ -29,18 +29,18 @@ Keep the existing core brand palette (#100f0c, #f4f0e4, #e8ff3a, request blue #6
 - Semantic roles cover canvas, surface, raised surface, text tiers, border, hover, selected, focus, success, request, warning, error, offline and disabled.
 - Root theme must apply before first paint, update browser theme-color, and redraw canvas visualization without restarting playback.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0090-01 — Audit every current token consumer and hard-coded colour.** Acceptance: Semantic role registry covers all page/overlay/chart surfaces. Required verification: Static scan plus visual spot checks in both themes. **Implementation: Not started; Verified: No.**
-2. **S4-0090-02 — Approve theme palettes, contrast pairings and lime usage.** Acceptance: Text, control boundaries and focus meet WCAG 2.2 AA targets. Required verification: Contrast report for rendered foreground/background pairs. **Implementation: Not started; Verified: No.**
-3. **S4-0090-03 — Implement semantic background, text, border and action roles.** Acceptance: No view independently overrides core brand meanings. Required verification: Component-gallery light/dark snapshots. **Implementation: Not started; Verified: No.**
-4. **S4-0090-04 — Define states for selection, hover, pressed, focus and disabled.** Acceptance: No state relies on colour alone and focus is distinct from selection. Required verification: Keyboard and forced-colours screenshots. **Implementation: Not started; Verified: No.**
-5. **S4-0090-05 — Calibrate request blue, warning orange, error and success per theme.** Acceptance: Status remains readable and semantically distinct on both themes. Required verification: Contrast and status-interpretation checks. **Implementation: Not started; Verified: No.**
-6. **S4-0090-06 — Preserve explicit system/light/dark preference and first-paint behaviour.** Acceptance: Reload and system preference changes do not flash or override saved choice. Required verification: Theme migration and reload E2E. **Implementation: Not started; Verified: No.**
-7. **S4-0090-07 — Ensure spectrum/waveform/lyrics charts use semantic colours.** Acceptance: Visualizations adapt live without audio interruption. Required verification: Theme switch while playing with screenshot and audio checks. **Implementation: Not started; Verified: No.**
-8. **S4-0090-08 — Review dialogs, menus, mini-player, editor and grid in each theme.** Acceptance: Depth and hierarchy are visible even with subtle borders. Required verification: Golden screenshot paired review. **Implementation: Not started; Verified: No.**
-9. **S4-0090-09 — Support forced-colours/high-contrast and disabled styling.** Acceptance: Critical borders, toggles and statuses survive system overrides. Required verification: Windows forced-colours and keyboard run. **Implementation: Not started; Verified: No.**
-10. **S4-0090-10 — Record approved contrast exceptions and owner review.** Acceptance: No unmeasured light-mode fallback or invisible control. Required verification: Documented pair table in evidence ledger. **Implementation: Not started; Verified: No.**
+1. **S4-0090-01 - Audit every current token consumer and hard-coded colour.** Acceptance: Semantic role registry covers all page/overlay/chart surfaces. Required verification: Static scan plus visual spot checks in both themes. **Implementation: Not started; Verified: No.**
+2. **S4-0090-02 - Approve theme palettes, contrast pairings and lime usage.** Acceptance: Text, control boundaries and focus meet WCAG 2.2 AA targets. Required verification: Contrast report for rendered foreground/background pairs. **Implementation: Not started; Verified: No.**
+3. **S4-0090-03 - Implement semantic background, text, border and action roles.** Acceptance: No view independently overrides core brand meanings. Required verification: Component-gallery light/dark snapshots. **Implementation: Not started; Verified: No.**
+4. **S4-0090-04 - Define states for selection, hover, pressed, focus and disabled.** Acceptance: No state relies on colour alone and focus is distinct from selection. Required verification: Keyboard and forced-colours screenshots. **Implementation: Not started; Verified: No.**
+5. **S4-0090-05 - Calibrate request blue, warning orange, error and success per theme.** Acceptance: Status remains readable and semantically distinct on both themes. Required verification: Contrast and status-interpretation checks. **Implementation: Not started; Verified: No.**
+6. **S4-0090-06 - Preserve explicit system/light/dark preference and first-paint behaviour.** Acceptance: Reload and system preference changes do not flash or override saved choice. Required verification: Theme migration and reload E2E. **Implementation: Not started; Verified: No.**
+7. **S4-0090-07 - Ensure spectrum/waveform/lyrics charts use semantic colours.** Acceptance: Visualizations adapt live without audio interruption. Required verification: Theme switch while playing with screenshot and audio checks. **Implementation: Not started; Verified: No.**
+8. **S4-0090-08 - Review dialogs, menus, mini-player, editor and grid in each theme.** Acceptance: Depth and hierarchy are visible even with subtle borders. Required verification: Golden screenshot paired review. **Implementation: Not started; Verified: No.**
+9. **S4-0090-09 - Support forced-colours/high-contrast and disabled styling.** Acceptance: Critical borders, toggles and statuses survive system overrides. Required verification: Windows forced-colours and keyboard run. **Implementation: Not started; Verified: No.**
+10. **S4-0090-10 - Record approved contrast exceptions and owner review.** Acceptance: No unmeasured light-mode fallback or invisible control. Required verification: Documented pair table in evidence ledger. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

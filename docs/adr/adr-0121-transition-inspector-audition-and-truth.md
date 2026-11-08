@@ -1,4 +1,4 @@
-# ADR-0121 — Transition Inspector: intent, rendered reality and audition
+# ADR-0121 - Transition Inspector: intent, rendered reality and audition
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/5 new tasks).
@@ -30,11 +30,11 @@ No new render-generation endpoint is authorized; audio previews must use one own
 
 ## New implementation tasks and evidence
 
-1. **EX-0121-01 — Design human-first status summary**. Acceptance: Requested vs actual rendered vs heard never conflated. Required verification: Real audio and loading-state comprehension. **Implementation: Not started; Verified: No.**
-2. **EX-0121-02 — Map all detailed controls**. Acceptance: No seam choice or explanation silently removed. Required verification: Options/cues parity and keyboard audit. **Implementation: Not started; Verified: No.**
-3. **EX-0121-03 — Specify failure and fallback behaviors**. Acceptance: Unrendered/failed transitions never appear as playable. Required verification: Fault-injection E2E. **Implementation: Not started; Verified: No.**
-4. **EX-0121-04 — Feasibility-check previous/new audition**. Acceptance: Decision names matching render identity or explicitly declines feature. Required verification: Engine review and focus collision tests. **Implementation: Not started; Verified: No.**
-5. **EX-0121-05 — Guard ratings and mutation scope**. Acceptance: Feedback and edit actions never attach to later seam. Required verification: Late response, reorder and preview races. **Implementation: Not started; Verified: No.**
+1. **EX-0121-01 - Design human-first status summary**. Acceptance: Requested vs actual rendered vs heard never conflated. Required verification: Real audio and loading-state comprehension. **Implementation: Not started; Verified: No.**
+2. **EX-0121-02 - Map all detailed controls**. Acceptance: No seam choice or explanation silently removed. Required verification: Options/cues parity and keyboard audit. **Implementation: Not started; Verified: No.**
+3. **EX-0121-03 - Specify failure and fallback behaviors**. Acceptance: Unrendered/failed transitions never appear as playable. Required verification: Fault-injection E2E. **Implementation: Not started; Verified: No.**
+4. **EX-0121-04 - Feasibility-check previous/new audition**. Acceptance: Decision names matching render identity or explicitly declines feature. Required verification: Engine review and focus collision tests. **Implementation: Not started; Verified: No.**
+5. **EX-0121-05 - Guard ratings and mutation scope**. Acceptance: Feedback and edit actions never attach to later seam. Required verification: Late response, reorder and preview races. **Implementation: Not started; Verified: No.**
 
 ## Adversarial cases and research
 

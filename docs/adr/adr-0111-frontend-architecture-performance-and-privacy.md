@@ -29,18 +29,18 @@ Refactor UI around shell, feature composition, domain controllers and reusable p
 - Lazy load specialist routes only after measuring bundle tradeoffs; avoid network dependencies for visual polish.
 - Version UI preferences and test migration; retain old routes and backend feature detection rather than assumed fields.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0111-01 — Document component/domain ownership and import boundaries.** Acceptance: App.tsx complexity reduced incrementally without duplicated stores. Required verification: Dependency diagram and tests. **Implementation: Not started; Verified: No.**
-2. **S4-0111-02 — Separate persistent player state from route composition.** Acceptance: Theme/route/overlay re-render cannot stop playback. Required verification: Transport continuity E2E. **Implementation: Not started; Verified: No.**
-3. **S4-0111-03 — Inventory API responses and version compatibility.** Acceptance: Missing fields produce honest unsupported states, not fake success. Required verification: Old-server feature detection and contract tests. **Implementation: Not started; Verified: No.**
-4. **S4-0111-04 — Audit CSS layering and component specificity regressions.** Acceptance: No expensive blanket override cascade or unrelated changes. Required verification: Stylelint/static check and visual diffs. **Implementation: Not started; Verified: No.**
-5. **S4-0111-05 — Profile 20k Library search/filter/deep refresh.** Acceptance: Input responsiveness and memory meet measured budget. Required verification: Hardware/version controlled performance traces. **Implementation: Not started; Verified: No.**
-6. **S4-0111-06 — Profile 100-song Editor reorder/selection/scroll.** Acceptance: No long main-thread stall or focus loss. Required verification: Performance and keyboard task under workload. **Implementation: Not started; Verified: No.**
-7. **S4-0111-07 — Profile full 64-cell Studio and simultaneous analysis/render.** Acceptance: Cell toggle and preview respond smoothly without audio dropout. Required verification: Real-machine memory/frame/audio trace. **Implementation: Not started; Verified: No.**
-8. **S4-0111-08 — Control fast lyric/visualizer updates and hidden work.** Acceptance: No global per-frame React rerender, reduced motion supported. Required verification: Profiler, offscreen and animation testing. **Implementation: Not started; Verified: No.**
-9. **S4-0111-09 — Preserve browser preference and local recovery migration.** Acceptance: Invalid/blocked storage cannot crash or erase durable backend data. Required verification: Malformed values, quota, rollback test. **Implementation: Not started; Verified: No.**
-10. **S4-0111-10 — Audit local-first privacy, diagnostics and added asset requests.** Acceptance: No new remote tracking/artwork or original-file write without separate review. Required verification: Network activity/redaction/Host-Origin security tests. **Implementation: Not started; Verified: No.**
+1. **S4-0111-01 - Document component/domain ownership and import boundaries.** Acceptance: App.tsx complexity reduced incrementally without duplicated stores. Required verification: Dependency diagram and tests. **Implementation: Not started; Verified: No.**
+2. **S4-0111-02 - Separate persistent player state from route composition.** Acceptance: Theme/route/overlay re-render cannot stop playback. Required verification: Transport continuity E2E. **Implementation: Not started; Verified: No.**
+3. **S4-0111-03 - Inventory API responses and version compatibility.** Acceptance: Missing fields produce honest unsupported states, not fake success. Required verification: Old-server feature detection and contract tests. **Implementation: Not started; Verified: No.**
+4. **S4-0111-04 - Audit CSS layering and component specificity regressions.** Acceptance: No expensive blanket override cascade or unrelated changes. Required verification: Stylelint/static check and visual diffs. **Implementation: Not started; Verified: No.**
+5. **S4-0111-05 - Profile 20k Library search/filter/deep refresh.** Acceptance: Input responsiveness and memory meet measured budget. Required verification: Hardware/version controlled performance traces. **Implementation: Not started; Verified: No.**
+6. **S4-0111-06 - Profile 100-song Editor reorder/selection/scroll.** Acceptance: No long main-thread stall or focus loss. Required verification: Performance and keyboard task under workload. **Implementation: Not started; Verified: No.**
+7. **S4-0111-07 - Profile full 64-cell Studio and simultaneous analysis/render.** Acceptance: Cell toggle and preview respond smoothly without audio dropout. Required verification: Real-machine memory/frame/audio trace. **Implementation: Not started; Verified: No.**
+8. **S4-0111-08 - Control fast lyric/visualizer updates and hidden work.** Acceptance: No global per-frame React rerender, reduced motion supported. Required verification: Profiler, offscreen and animation testing. **Implementation: Not started; Verified: No.**
+9. **S4-0111-09 - Preserve browser preference and local recovery migration.** Acceptance: Invalid/blocked storage cannot crash or erase durable backend data. Required verification: Malformed values, quota, rollback test. **Implementation: Not started; Verified: No.**
+10. **S4-0111-10 - Audit local-first privacy, diagnostics and added asset requests.** Acceptance: No new remote tracking/artwork or original-file write without separate review. Required verification: Network activity/redaction/Host-Origin security tests. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

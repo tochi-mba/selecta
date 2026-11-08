@@ -19,12 +19,12 @@ renders each state in both themes.
 | `Popover` | disclosure button + region | Enter/Space, Escape | open, closed | not hover-only |
 | `Tooltip` | adds to the control's description | shows on focus; first Escape hides only the tooltip | shown, hidden | keeps an existing description |
 | `Dialog` / `Drawer` / `Sheet` / `Workspace` | `dialog`, `aria-modal`, labelled by title, inert background | focus enters, Tab is trapped, Escape closes the top one only, focus returns | open, closing | dialogs sit above toasts |
-| `Status` | text + mark (never colour alone) | — | ready, working, planned, warning, blocked, failed, recovering, request, unavailable | words always present |
+| `Status` | text + mark (never colour alone) | - | ready, working, planned, warning, blocked, failed, recovering, request, unavailable | words always present |
 | `Problem` | `alert` region with optional Retry | Retry is a button | shown | says what failed and what is safe |
-| `Skeleton` | `aria-busy` region, decorative bars `aria-hidden` | — | loading | announced once; 3 pulses then still |
+| `Skeleton` | `aria-busy` region, decorative bars `aria-hidden` | - | loading | announced once; 3 pulses then still |
 | `Toaster` / `showToast` | `status` (or `alert` for problems) | Undo and dismiss are buttons | info, success, problem, with Undo | ≤ 3 visible, duplicates merge, Undo stays longer, history in Activity |
-| `LiveRegion` / `announce` | one polite live region | — | — | one announcement per outcome |
-| `SongMotif`, `VibeMotif`, `MixSignature` | decorative, `aria-hidden` | — | — | from IDs only; no artwork or genre claims |
+| `LiveRegion` / `announce` | one polite live region | - | - | one announcement per outcome |
+| `SongMotif`, `VibeMotif`, `MixSignature` | decorative, `aria-hidden` | - | - | from IDs only; no artwork or genre claims |
 | `SeamDiagram`, `RouteDiagram`, `EnergyHorizon`, `EnergyOverview`, `EnergyThumb` | `img` with a text label, or a labelled list | overview segments are buttons | known / unknown / planned / rendered / failed | see `MusicObjects.test.tsx` |
 | `TermHint`, `GlossaryDialog` | disclosure button "What is <term>?"; dialog with search | Enter/Space, Escape | open, closed, hidden by preference | never hides warnings |
 | `AudioPreview` | play/stop button through the audio owner | Enter/Space | idle, loading, playing, failed | returns the sound when done |
@@ -40,9 +40,9 @@ or `unicode-bidi: plaintext` so punctuation stays with its own text.
 
 | State | Visual | Copy | ARIA |
 |---|---|---|---|
-| Hover | edge darkens to `--ink` | — | — |
-| Focus | 2 px `--edge-focus` outline, offset | — | — |
-| Pressed / on | inverted fill (`aria-pressed=true`) or selected edge | — | `aria-pressed` / `aria-selected` / `aria-current` |
+| Hover | edge darkens to `--ink` | - | - |
+| Focus | 2 px `--edge-focus` outline, offset | - | - |
+| Pressed / on | inverted fill (`aria-pressed=true`) or selected edge | - | `aria-pressed` / `aria-selected` / `aria-current` |
 | Busy | dot animation (static when reduced) | "Saving…" etc. | `aria-busy` |
 | Disabled | 42 % opacity, not-allowed cursor | reason nearby or in the palette | `disabled` |
 | Error | `--edge-error` + text | what failed, what is safe, Retry | `aria-invalid` / `alert` |

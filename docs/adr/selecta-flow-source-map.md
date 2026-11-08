@@ -1,4 +1,4 @@
-# Selecta / Flow — source and verification touchpoint map
+# Selecta / Flow - source and verification touchpoint map
 
 **Scope:** 50 Accepted decisions and 400 Not started SF acceptance tasks. Source mapping is planning evidence only, not proof tasks are Implemented or independently Verified. Baseline: `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 

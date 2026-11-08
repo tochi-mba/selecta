@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 1 — Architecture
+- **Phase:** 1 - Architecture
 - **Extends existing decisions:** ADR-0005, ADR-0026, ADR-0030
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0071-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Keep backend contracts authoritative and migrate frontends through adapters/sele
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0071-01 — Not started.** Inventory all frontend API calls and payload variants, including nullable/missing legacy fields.
-2. **S3-0071-02 — Not started.** Define canonical typed adapters and compare them against existing Python contract tests.
-3. **S3-0071-03 — Not started.** Specify idempotency, revision guards and conflict response for each high-risk mutation.
-4. **S3-0071-04 — Not started.** Design any additional export/folder/search API contract as an isolated ADR amendment and server review.
-5. **S3-0071-05 — Not started.** Maintain backward compatibility with old persisted mix/draft identifiers and existing routes.
-6. **S3-0071-06 — Not started.** Build migration fixtures and test old/new server combinations where realistically supported.
-7. **S3-0071-07 — Not started.** Add route/history/query compatibility and unknown server-response tests.
-8. **S3-0071-08 — Not started.** Document staged frontend feature flags and rollback that preserves user records.
+1. **S3-0071-01 - Not started.** Inventory all frontend API calls and payload variants, including nullable/missing legacy fields.
+2. **S3-0071-02 - Not started.** Define canonical typed adapters and compare them against existing Python contract tests.
+3. **S3-0071-03 - Not started.** Specify idempotency, revision guards and conflict response for each high-risk mutation.
+4. **S3-0071-04 - Not started.** Design any additional export/folder/search API contract as an isolated ADR amendment and server review.
+5. **S3-0071-05 - Not started.** Maintain backward compatibility with old persisted mix/draft identifiers and existing routes.
+6. **S3-0071-06 - Not started.** Build migration fixtures and test old/new server combinations where realistically supported.
+7. **S3-0071-07 - Not started.** Add route/history/query compatibility and unknown server-response tests.
+8. **S3-0071-08 - Not started.** Document staged frontend feature flags and rollback that preserves user records.
 
 ## Preservation and integration constraints
 

@@ -1,4 +1,4 @@
-# ADR-0115 — Intent-led navigation, route continuity and entry context
+# ADR-0115 - Intent-led navigation, route continuity and entry context
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/5 new tasks implemented).
@@ -30,11 +30,11 @@ Naming change is an unverified hypothesis; the implementation must keep old addr
 
 ## Implementation tasks (all Not started / Not verified)
 
-1. **EX-0115-01 — Evaluate navigation terminology.** Acceptance: Uncoached users find Play, create, edit, library and operations. Verification: First-time label and destination task test. **Implementation: Not started; Verified: No.**
-2. **EX-0115-02 — Map every route and alias.** Acceptance: Old URLs, search params and deep links retain their meaning. Verification: Browser history/refresh/404 E2E. **Implementation: Not started; Verified: No.**
-3. **EX-0115-03 — Specify contextual entry states.** Acceptance: Active, paused, idle and deep-linked entry never redirect incorrectly. Verification: State matrix and real-player tests. **Implementation: Not started; Verified: No.**
-4. **EX-0115-04 — Design narrow and keyboard navigation.** Acceptance: Primary and secondary areas reachable at 320px and zoom. Verification: Keyboard/NVDA/400% test. **Implementation: Not started; Verified: No.**
-5. **EX-0115-05 — Verify shared audio across navigation.** Acceptance: No remount, double playback or surprise resume. Verification: Real Windows/Edge audio plus overlay races. **Implementation: Not started; Verified: No.**
+1. **EX-0115-01 - Evaluate navigation terminology.** Acceptance: Uncoached users find Play, create, edit, library and operations. Verification: First-time label and destination task test. **Implementation: Not started; Verified: No.**
+2. **EX-0115-02 - Map every route and alias.** Acceptance: Old URLs, search params and deep links retain their meaning. Verification: Browser history/refresh/404 E2E. **Implementation: Not started; Verified: No.**
+3. **EX-0115-03 - Specify contextual entry states.** Acceptance: Active, paused, idle and deep-linked entry never redirect incorrectly. Verification: State matrix and real-player tests. **Implementation: Not started; Verified: No.**
+4. **EX-0115-04 - Design narrow and keyboard navigation.** Acceptance: Primary and secondary areas reachable at 320px and zoom. Verification: Keyboard/NVDA/400% test. **Implementation: Not started; Verified: No.**
+5. **EX-0115-05 - Verify shared audio across navigation.** Acceptance: No remount, double playback or surprise resume. Verification: Real Windows/Edge audio plus overlay races. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and references
 

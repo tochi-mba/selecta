@@ -12,7 +12,7 @@ can go wrong, how it recovers, and the automated test that walks it.
 | 2 | Wait for six mix-ready songs | analysis slow or failing; lyrics lookup down | stage-by-stage progress; instrumental counts as ready | `finishing.e2e.ts` "the first run says which stage it’s at" |
 | 3 | Press Play on the featured idea | build fails; double press | one build at a time, Problem with retry | `flows.e2e.ts` "a slow answer still gets an instant reaction on Start" |
 | 4 | Listen; skip; steer Bigger/Calmer | seam not rendered in time; song file missing | next song comes in over the end; missing song skipped with a notice | `listen.e2e.ts` |
-| 5 | Leave Listen | — | mini-player keeps playing | `listen.e2e.ts` "moving around the app leaves the music alone" |
+| 5 | Leave Listen | - | mini-player keeps playing | `listen.e2e.ts` "moving around the app leaves the music alone" |
 
 ## Live requester
 
@@ -27,7 +27,7 @@ can go wrong, how it recovers, and the automated test that walks it.
 
 | Step | Action | Can go wrong | Recovery | Walked by |
 |---|---|---|---|---|
-| 1 | Save an idea as a draft | — | current mix untouched | `flows.e2e.ts` "drafts: make one, name it, fill it" |
+| 1 | Save an idea as a draft | - | current mix untouched | `flows.e2e.ts` "drafts: make one, name it, fill it" |
 | 2 | Add, move, lock, remove songs | the mix moved on in another tab | change refused with a message, nothing touched | `flows.e2e.ts` "a change to a mix that’s moved on stops" |
 | 3 | Put the draft in the render line | out of disk space | render line says it stopped and where to fix it | `Drafts.test.tsx` "says when rendering has stopped for lack of room" |
 | 4 | Play the draft | replacing an active mix | asks first; Cancel leaves playback alone | `App.test.tsx` "asks before replacing an active mix with a draft" |

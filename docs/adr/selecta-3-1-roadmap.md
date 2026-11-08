@@ -1,4 +1,4 @@
-# Selecta 3.1 — verification-led UI/UX finishing plan
+# Selecta 3.1 - verification-led UI/UX finishing plan
 
 - **Date:** 2026-11-07
 - **Baseline:** `main` 3.0 merge `3b01dc1336aab0f1cb0a4d85be5eba359de81831` (PR #24 merged).
@@ -11,7 +11,7 @@
 
 Selecta 3.0 already introduced intent-based navigation, a responsive shell, a persistent mini-player, tokens and theme choice, accessible primitives, Activity/Undo, audio focus protection, revision-pinned exports, revised pages and substantial tests. This programme is **not another redesign**. It reconciles what shipped, removes visual and workflow inconsistency, and validates real human use before further runtime changes. Distinguish code observations, design hypotheses, actual browser measurements and human judgments.
 
-One product with three depths: **listener—effortless**, **creator—confident**, **expert—precise**. Keep Play obvious, advanced tools discoverable, precise music state trustworthy, and failure recovery dependable.
+One product with three depths: **listener-effortless**, **creator-confident**, **expert-precise**. Keep Play obvious, advanced tools discoverable, precise music state trustworthy, and failure recovery dependable.
 
 ## Preservation contract
 
@@ -36,21 +36,21 @@ The [Selecta 3.0 INV-01–INV-20 requirements](selecta-3-roadmap.md) remain bind
 
 ## Dependencies and proposed delivery order
 
-1. **Phase 0 (indicative week 1) — baseline**: ADR-0078. Pin the actual code/feature/state baseline, reconcile inherited S3 tasks, record issue severity, screenshots and unassisted task observations. **Gate:** owner approves evidence boundaries and priority list.
-2. **Phase 1 (week 2) — foundations**: ADR-0079 and ADR-0080. Standardize design tokens/CSS rule ownership and reliable loading/action/overlay/Undo behaviour. **Gate:** shared component states are demonstrably consistent in both themes.
-3. **Phase 2 (weeks 3–4) — listener journeys**: ADR-0081 and ADR-0082. Onboarding, Explore, Listen, Stage, mini-player and request entry. **Gate:** a new user can reach a valid first mix and maintain safe playback and control.
-4. **Phase 3 (weeks 4–5) — creator journeys**: ADR-0083 and ADR-0084. My Mixes, editor, Inspector, Studio and export. **Gate:** drafts, exact mix scope and revision-pinned audio/export survive realistic negative and concurrent cases.
-5. **Phase 4 (week 6) — discovery and operations**: ADR-0085 and ADR-0086. Requests/bridges, Word/Harmonic discovery, Library, Workspace and studies. **Gate:** no misleading readiness, unconsented bridge, lost override or unsafe operation.
-6. **Phase 5 (throughout, integrated week 7) — quality**: ADR-0087. Keyboard and actual assistive technology, all viewport classes, 20k Library, 100-song editor, Studio and real audio/performance measurements. **Gate:** no inaccessible essential flow or P0 regression.
-7. **Phase 6 (week 8 indicative) — acceptance and release**: ADR-0088. Visual snapshots, unassisted participant sessions, auditory and FLAC review, rollback, evidence and go/no-go. **Gate:** owner signs off observed results and any remaining limitation.
+1. **Phase 0 (indicative week 1) - baseline**: ADR-0078. Pin the actual code/feature/state baseline, reconcile inherited S3 tasks, record issue severity, screenshots and unassisted task observations. **Gate:** owner approves evidence boundaries and priority list.
+2. **Phase 1 (week 2) - foundations**: ADR-0079 and ADR-0080. Standardize design tokens/CSS rule ownership and reliable loading/action/overlay/Undo behaviour. **Gate:** shared component states are demonstrably consistent in both themes.
+3. **Phase 2 (weeks 3–4) - listener journeys**: ADR-0081 and ADR-0082. Onboarding, Explore, Listen, Stage, mini-player and request entry. **Gate:** a new user can reach a valid first mix and maintain safe playback and control.
+4. **Phase 3 (weeks 4–5) - creator journeys**: ADR-0083 and ADR-0084. My Mixes, editor, Inspector, Studio and export. **Gate:** drafts, exact mix scope and revision-pinned audio/export survive realistic negative and concurrent cases.
+5. **Phase 4 (week 6) - discovery and operations**: ADR-0085 and ADR-0086. Requests/bridges, Word/Harmonic discovery, Library, Workspace and studies. **Gate:** no misleading readiness, unconsented bridge, lost override or unsafe operation.
+6. **Phase 5 (throughout, integrated week 7) - quality**: ADR-0087. Keyboard and actual assistive technology, all viewport classes, 20k Library, 100-song editor, Studio and real audio/performance measurements. **Gate:** no inaccessible essential flow or P0 regression.
+7. **Phase 6 (week 8 indicative) - acceptance and release**: ADR-0088. Visual snapshots, unassisted participant sessions, auditory and FLAC review, rollback, evidence and go/no-go. **Gate:** owner signs off observed results and any remaining limitation.
 
 Weeks are **planning estimates, not promises or evidence of work done**. Accessibility, correctness and data protection are reviewed continuously, not deferred to the end.
 
 ## Severity and order of attack
 
-- **P0 — stop:** source/user data loss, wrong draft/current revision, playback overlap/unintended silence/resume, partial/unconsented bridge, wrong/invalid FLAC, unsafe path/privacy transfer, invented readiness or inaccessible essential task.
-- **P1 — block absent documented owner acceptance:** core task dead end, missing recovery path, unusable first-run, persistent player obstruction, misleading active state.
-- **P2 — planned polish:** spacing, typography, visual state, copy, motion and alignment inconsistencies whose functionality is intact.
+- **P0 - stop:** source/user data loss, wrong draft/current revision, playback overlap/unintended silence/resume, partial/unconsented bridge, wrong/invalid FLAC, unsafe path/privacy transfer, invented readiness or inaccessible essential task.
+- **P1 - block absent documented owner acceptance:** core task dead end, missing recovery path, unusable first-run, persistent player obstruction, misleading active state.
+- **P2 - planned polish:** spacing, typography, visual state, copy, motion and alignment inconsistencies whose functionality is intact.
 
 Prioritize P0 before P1 and high-frequency listener/creator work before rare detail. Individual issues must have reproducible steps, location, expected outcome and a clear proof test.
 

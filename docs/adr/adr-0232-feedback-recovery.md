@@ -1,4 +1,4 @@
-# ADR-0232 — System-wide feedback, Undo, intentional interruptions and resilient recovery
+# ADR-0232 - System-wide feedback, Undo, intentional interruptions and resilient recovery
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Unify confirmation, optimistic gestures, processing, warnings and errors with st
 
 No success toast before success, fake Undo, focus-stealing background status or duplicate destructive action. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0232-01 — Define feedback taxonomy.** **Acceptance:** Success, pending, blocked, failed and conflict distinct. **Required verification:** State inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0232-02 — Specify Undo availability.** **Acceptance:** Only actually reversible actions offer Undo. **Required verification:** Source semantics audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0232-03 — Standardize progress copy.** **Acceptance:** Indeterminate and determinate jobs honest. **Required verification:** No-percentage fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0232-04 — Build error recovery patterns.** **Acceptance:** Retry and fallback actions tied to actual failure. **Required verification:** Injected network errors. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0232-05 — Clarify destructive confirmations.** **Acceptance:** Consequence and scope stated before commit. **Required verification:** Cancel safety tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0232-06 — Protect focus and announcements.** **Acceptance:** No unexpected modal or speech spam. **Required verification:** Keyboard/NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0232-07 — Handle stale async responses.** **Acceptance:** Old success cannot overwrite current failure or revision. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0232-08 — Measure recovery success.** **Acceptance:** People restore a failed edit or job correctly. **Required verification:** Fault-injection user study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0232-01 - Define feedback taxonomy.** **Acceptance:** Success, pending, blocked, failed and conflict distinct. **Required verification:** State inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0232-02 - Specify Undo availability.** **Acceptance:** Only actually reversible actions offer Undo. **Required verification:** Source semantics audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0232-03 - Standardize progress copy.** **Acceptance:** Indeterminate and determinate jobs honest. **Required verification:** No-percentage fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0232-04 - Build error recovery patterns.** **Acceptance:** Retry and fallback actions tied to actual failure. **Required verification:** Injected network errors. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0232-05 - Clarify destructive confirmations.** **Acceptance:** Consequence and scope stated before commit. **Required verification:** Cancel safety tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0232-06 - Protect focus and announcements.** **Acceptance:** No unexpected modal or speech spam. **Required verification:** Keyboard/NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0232-07 - Handle stale async responses.** **Acceptance:** Old success cannot overwrite current failure or revision. **Required verification:** Race E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0232-08 - Measure recovery success.** **Acceptance:** People restore a failed edit or job correctly. **Required verification:** Fault-injection user study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

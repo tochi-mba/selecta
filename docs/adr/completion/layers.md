@@ -31,7 +31,7 @@ as `--bottom-chrome` (navigation + player) plus `--keyboard-inset` and `--safe-b
 | Stage (`data-stage='on'`) | lyrics, Stage controls, Escape | rail, header, bottom bar, mini-player, toasts | audio owner unchanged; leaving Stage restores focus |
 | Dialog or drawer open | the dialog (focus trapped, background inert) | toasts sit below dialogs (`--layer-sheet` < `--layer-dialog`) | a notice can never cover a consent or destructive confirmation |
 | Dialog + keyboard | dialog body scrolls (`scroll-padding-block`), footer actions reachable | everything else | `web/e2e/overlay-arbitration.e2e.ts` |
-| Menu inside a sheet | menu over the sheet | — | Escape closes the menu first, then the sheet (`web/src/ui/controls.test.tsx` "does not swallow a dialog Escape when its menu is closed") |
+| Menu inside a sheet | menu over the sheet | - | Escape closes the menu first, then the sheet (`web/src/ui/controls.test.tsx` "does not swallow a dialog Escape when its menu is closed") |
 | Mini-player + bottom bar + last list row | all three | page gets `--bottom-chrome` bottom padding | `web/e2e/finishing.e2e.ts` "the mini-player and bottom bar never overlap, and the last row can always be reached" |
 | Toast burst | newest notices, any Undo | routine repeats coalesce | Undo is never pushed out (`web/src/ui/controls.test.tsx`) |
 

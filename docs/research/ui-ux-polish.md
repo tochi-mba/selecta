@@ -1,4 +1,4 @@
-# Selecta UI/UX polish — research and inspection notes
+# Selecta UI/UX polish - research and inspection notes
 
 - **Reviewed:** 2026-11-06
 - **Purpose:** support [ADR-0033–0046](../adr/polish-roadmap.md), not claim implementation or usability validation.
@@ -12,14 +12,14 @@ The earlier [UI/UX research](ui-ux.md) contains useful precedents and explicitly
 
 ## Primary and specialist sources
 
-1. **IBM Carbon — Loading** (page showed an August 11, 2026 update). Distinguishes content skeletons, loading indicators and progressive loading; skeletons represent structured content rather than every action or overlay. Apply to shaped initial-load placeholders, local action feedback and separate long-job status. [Source](https://www.carbondesignsystem.com/building-blocks/core/patterns/loading)
-2. **W3C — WCAG 2.2.** Accessibility conformance target for contrast, keyboard access, focus, reflow and related criteria. Apply as a measured acceptance standard, not a claim that existing automated tests establish conformance. [Source](https://www.w3.org/TR/WCAG22/)
-3. **W3C — Understanding Target Size (Minimum).** The AA target is 24 by 24 CSS pixels with specified exceptions, including spacing. Prefer larger touch controls where practical; do not confuse the proposed 44px design target with the AA minimum. [Source](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
-4. **W3C — ARIA Authoring Practices: Tabs.** Defines tab focus, arrow navigation and selected-panel semantics. Apply to inspector tab widgets; ordinary navigation links remain links. [Source](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)
-5. **Nielsen Norman Group — Progressive Disclosure.** Specialist usability guidance for exposing frequent controls first and advanced controls on request. Apply to dense Library actions, Listen view options and mix customization; validate discoverability rather than hiding essential actions. [Source](https://www.nngroup.com/articles/progressive-disclosure/)
-6. **Microsoft Research — Guidelines for Human-AI Interaction, CHI 2019.** The publication describes 18 guidelines evaluated through multiple rounds, including 49 practitioners assessing 20 products. Use as a framework for expectations, correction and explanation; it is not direct experimental evidence about Selecta or music-transition quality. [Source](https://www.microsoft.com/en-us/research/publication/guidelines-for-human-ai-interaction/)
-7. **Mixxx 2.5 manual — User Interface.** Documents full/compact/mini deck views and separable interface sections. Use as a product precedent for optional depth and music context, not a requirement to imitate a live-DJ deck. [Source](https://manual.mixxx.org/2.5/en/chapters/user_interface.html)
-8. **web.dev — Web Vitals.** Gives reference good thresholds of LCP <=2.5s, INP <=200ms and CLS <=0.1 at the 75th percentile, with mobile/desktop segmentation. Use recorded local measurements honestly; no field-percentile or compliance claim without matching evidence. [Source](https://web.dev/articles/vitals)
+1. **IBM Carbon - Loading** (page showed an August 11, 2026 update). Distinguishes content skeletons, loading indicators and progressive loading; skeletons represent structured content rather than every action or overlay. Apply to shaped initial-load placeholders, local action feedback and separate long-job status. [Source](https://www.carbondesignsystem.com/building-blocks/core/patterns/loading)
+2. **W3C - WCAG 2.2.** Accessibility conformance target for contrast, keyboard access, focus, reflow and related criteria. Apply as a measured acceptance standard, not a claim that existing automated tests establish conformance. [Source](https://www.w3.org/TR/WCAG22/)
+3. **W3C - Understanding Target Size (Minimum).** The AA target is 24 by 24 CSS pixels with specified exceptions, including spacing. Prefer larger touch controls where practical; do not confuse the proposed 44px design target with the AA minimum. [Source](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
+4. **W3C - ARIA Authoring Practices: Tabs.** Defines tab focus, arrow navigation and selected-panel semantics. Apply to inspector tab widgets; ordinary navigation links remain links. [Source](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)
+5. **Nielsen Norman Group - Progressive Disclosure.** Specialist usability guidance for exposing frequent controls first and advanced controls on request. Apply to dense Library actions, Listen view options and mix customization; validate discoverability rather than hiding essential actions. [Source](https://www.nngroup.com/articles/progressive-disclosure/)
+6. **Microsoft Research - Guidelines for Human-AI Interaction, CHI 2019.** The publication describes 18 guidelines evaluated through multiple rounds, including 49 practitioners assessing 20 products. Use as a framework for expectations, correction and explanation; it is not direct experimental evidence about Selecta or music-transition quality. [Source](https://www.microsoft.com/en-us/research/publication/guidelines-for-human-ai-interaction/)
+7. **Mixxx 2.5 manual - User Interface.** Documents full/compact/mini deck views and separable interface sections. Use as a product precedent for optional depth and music context, not a requirement to imitate a live-DJ deck. [Source](https://manual.mixxx.org/2.5/en/chapters/user_interface.html)
+8. **web.dev - Web Vitals.** Gives reference good thresholds of LCP <=2.5s, INP <=200ms and CLS <=0.1 at the 75th percentile, with mobile/desktop segmentation. Use recorded local measurements honestly; no field-percentile or compliance claim without matching evidence. [Source](https://web.dev/articles/vitals)
 
 ## Concrete inspection findings and planned response
 

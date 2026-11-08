@@ -735,13 +735,13 @@ describe('saving as a file', () => {
       <MixScope.Provider value={null}><ExportPanel {...props} inDraft={false} /></MixScope.Provider>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Save it' }));
-    expect(await screen.findByText(/Prepare transitions — 0 of 1 ready/)).toBeInTheDocument();
+    expect(await screen.findByText(/Prepare transitions - 0 of 1 ready/)).toBeInTheDocument();
     expect(screen.getByText(/Frozen revision/)).toHaveTextContent('a1b2c3d4e5f6');
     rendered.rerender(
       <MixScope.Provider value={9}><ExportPanel {...props} inDraft /></MixScope.Provider>,
     );
     expect(screen.getByRole('button', { name: 'Save it' })).toBeEnabled();
-    expect(screen.queryByText(/Prepare transitions — 0 of 1 ready/)).toBeNull();
+    expect(screen.queryByText(/Prepare transitions - 0 of 1 ready/)).toBeNull();
   });
 
   it('never confuses two different drafts with identical songs and transition keys', async () => {
@@ -789,7 +789,7 @@ describe('saving as a file', () => {
     await open();
     expect(screen.queryByRole('link', { name: /download/ })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Save it' }));
-    expect(await screen.findByText(/Prepare transitions — 0 of 1 ready/)).toBeInTheDocument();
+    expect(await screen.findByText(/Prepare transitions - 0 of 1 ready/)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /download/ })).toBeNull();
     jobs = [exportJob({ state: 'encoding', seams_ready: 1, can_cancel: false })];
     expect(await screen.findByRole('button', { name: 'Saving the file…' }, { timeout: 3000 })).toBeDisabled();

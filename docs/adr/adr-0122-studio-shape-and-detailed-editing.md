@@ -1,4 +1,4 @@
-# ADR-0122 — Stem Studio: approachable Shape controls and lossless Detailed mode
+# ADR-0122 - Stem Studio: approachable Shape controls and lossless Detailed mode
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/5 new tasks).
@@ -30,11 +30,11 @@ Some intuitive macros may not map exactly to existing cell representations. Reje
 
 ## New implementation tasks and evidence
 
-1. **EX-0122-01 — Prove Shape-to-grid mapping**. Acceptance: Lossless reversible mapping or safe subset documented. Required verification: Grid round-trip tests. **Implementation: Not started; Verified: No.**
-2. **EX-0122-02 — Prototype guided arrangement controls**. Acceptance: Beginners understand vocals/drums/bass/melody choices. Required verification: Uncoached creative task. **Implementation: Not started; Verified: No.**
-3. **EX-0122-03 — Preserve Detailed function set**. Acceptance: All lanes/cells/solo/presets/assist/recovery work. Required verification: 8/32/64-cell parity suite. **Implementation: Not started; Verified: No.**
-4. **EX-0122-04 — Specify unsaved and revision behavior**. Acceptance: Mode switches never destroy work or apply to another seam. Required verification: Reopen, stale server and Undo tests. **Implementation: Not started; Verified: No.**
-5. **EX-0122-05 — Verify keyboard, AT and audible outcome**. Acceptance: Non-mouse editing and preview have correct music effect. Required verification: NVDA, touch and real audio tests. **Implementation: Not started; Verified: No.**
+1. **EX-0122-01 - Prove Shape-to-grid mapping**. Acceptance: Lossless reversible mapping or safe subset documented. Required verification: Grid round-trip tests. **Implementation: Not started; Verified: No.**
+2. **EX-0122-02 - Prototype guided arrangement controls**. Acceptance: Beginners understand vocals/drums/bass/melody choices. Required verification: Uncoached creative task. **Implementation: Not started; Verified: No.**
+3. **EX-0122-03 - Preserve Detailed function set**. Acceptance: All lanes/cells/solo/presets/assist/recovery work. Required verification: 8/32/64-cell parity suite. **Implementation: Not started; Verified: No.**
+4. **EX-0122-04 - Specify unsaved and revision behavior**. Acceptance: Mode switches never destroy work or apply to another seam. Required verification: Reopen, stale server and Undo tests. **Implementation: Not started; Verified: No.**
+5. **EX-0122-05 - Verify keyboard, AT and audible outcome**. Acceptance: Non-mouse editing and preview have correct music effect. Required verification: NVDA, touch and real audio tests. **Implementation: Not started; Verified: No.**
 
 ## Adversarial cases and research
 

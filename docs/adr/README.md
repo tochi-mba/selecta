@@ -1,4 +1,4 @@
-# Selecta — final-polish incremental UI/UX ADRs (2026-11-08)
+# Selecta - final-polish incremental UI/UX ADRs (2026-11-08)
 
 **Documentation-only proposal:** [Roadmap](selecta-final-polish-roadmap.md) · [Checklist](selecta-final-polish-implementation-checklist.md) · [Evidence](selecta-final-polish-implementation-evidence.md) · [JSON](selecta-final-polish-code-status.json) · [Parity](selecta-final-polish-overlap-and-parity.md) · [Verification](selecta-final-polish-verification-matrix.md) · [Reconciliation](selecta-final-polish-status-reconciliation.md) · [Release](selecta-final-polish-release-gates.md)
 
@@ -8,7 +8,7 @@
 
 ---
 
-# Selecta — new proposed gap-focused UI/UX polish ADRs (2026-11-08)
+# Selecta - new proposed gap-focused UI/UX polish ADRs (2026-11-08)
 
 **Docs-only proposal:** [16 ADR roadmap](selecta-gap-polish-roadmap.md) · [128 implementation tasks](selecta-gap-polish-implementation-checklist.md) · [per-task evidence ledger](selecta-gap-polish-implementation-evidence.md) · [machine-readable status](selecta-gap-polish-code-status.json) · [whole-product overlap/parity](selecta-gap-polish-overlap-and-parity.md) · [independent verification](selecta-gap-polish-verification-matrix.md) · [historic status reconciliation](selecta-gap-polish-status-reconciliation.md) · [NO-GO gates](selecta-gap-polish-release-gates.md).
 
@@ -18,7 +18,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 ---
 
-# Selecta / Flow — owner-accepted artistic UI/UX programme (2026-11-08)
+# Selecta / Flow - owner-accepted artistic UI/UX programme (2026-11-08)
 
 **Owner-accepted design programme (2026-11-08):** **50 Accepted decisions, ADR-0198–0247; 400 SF implementation tasks Not started; 0 In progress, 0 Implemented and 0 independently Verified.** The new programme builds on the source as of main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` and does **not** mark existing source capabilities missing, revise old implementation histories or change any application code.
 
@@ -30,7 +30,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 ---
 
-# Selecta — creative-interface synthesis ADR programme (2026-11-08): 33 accepted decisions
+# Selecta - creative-interface synthesis ADR programme (2026-11-08): 33 accepted decisions
 
 **Owner-accepted creative-interface programme (all 20 decisions accepted 2026-11-08; originally submitted as documentation only):** [20 ADRs, ADR-0165–0184](selecta-creative-interface-roadmap.md) · [140-task implementation checklist](selecta-creative-interface-implementation-checklist.md) · [per-task implementation and verification evidence](selecta-creative-interface-implementation-evidence.md) · [feature-parity inventory](selecta-creative-interface-feature-parity.md) · [interaction and motion matrix](selecta-creative-interface-interaction-matrix.md) · [verification matrix](selecta-creative-interface-verification-matrix.md) · [historical status reconciliation](selecta-creative-interface-status-reconciliation.md) · [NO-GO release gates](selecta-creative-interface-release-gates.md).
 
@@ -46,7 +46,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 ---
 
-# Selecta — immersive experience and microinteraction ADR programme (2026-11-07)
+# Selecta - immersive experience and microinteraction ADR programme (2026-11-07)
 
 **Immersive programme (documentation + implementation on PR #31):** [30 new ADRs, ADR-0135–0164](selecta-microinteraction-roadmap.md); [240 individually tracked tasks](selecta-microinteraction-implementation-checklist.md); [per-task implementation/verification evidence](selecta-microinteraction-evidence.md); [full interaction/motion specification](selecta-microinteraction-motion-matrix.md); [feature preservation map](selecta-microinteraction-feature-parity.md); [verification matrix](selecta-microinteraction-verification-matrix.md); [historical status reconciliation](selecta-microinteraction-status-reconciliation.md); [NO-GO release gates](selecta-microinteraction-release-gates.md).
 
@@ -60,7 +60,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 ---
 
-# Selecta — experience-first UI/UX ADR proposal (2026-11-07)
+# Selecta - experience-first UI/UX ADR proposal (2026-11-07)
 
 **New documentation-only proposal:** [21 independent new design decisions, ADR-0114–0134](selecta-experience-roadmap.md); [105-item implementation checklist](selecta-experience-implementation-checklist.md); [per-task implementation/verification ledger](selecta-experience-evidence.md); [feature-parity map](selecta-experience-feature-parity.md); [historical status reconciliation](selecta-experience-status-reconciliation.md); [NO-GO release gates](selecta-experience-release-gates.md).
 
@@ -74,7 +74,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 ---
 
-# Selecta 4.0 — complete UI/UX overhaul ADR programme (2026-11-07)
+# Selecta 4.0 - complete UI/UX overhaul ADR programme (2026-11-07)
 
 **This is a documentation-only proposal: ADR-0089–0113, 25 Proposed decisions, 250 new S4 tasks Not started, 0 Implemented, 0 Verified.** Baseline: `main` `9b663f9f10212619f27ce67ce82f602347065cbd` after PR #25 and #26 merged. Keep the warm charcoal/cream/electric lime scheme, improve dark and light themes, and preserve all existing functionality, original audio, local-first security, requests, Studio, drafts and FLAC.
 
@@ -84,17 +84,17 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 ---
 
-# Selecta 3.1 — verification-led UI/UX finishing proposal (2026-11-07)
+# Selecta 3.1 - verification-led UI/UX finishing proposal (2026-11-07)
 
-**Proposed decisions: ADR-0078–0088. Selected tasks now In progress on PR #25; 116 tasks: 0 Implemented / 0 Verified. Checkboxes remain open.** This programme follows merged PR #24 and focuses on evidence, visual consistency, listener/creator workflow polish and human acceptance—not another feature rewrite. PR #25 began as documentation-only and now includes multiple scoped frontend/test changes and review-only visual CI artifacts, without human verification.
+**Proposed decisions: ADR-0078–0088. Selected tasks now In progress on PR #25; 116 tasks: 0 Implemented / 0 Verified. Checkboxes remain open.** This programme follows merged PR #24 and focuses on evidence, visual consistency, listener/creator workflow polish and human acceptance-not another feature rewrite. PR #25 began as documentation-only and now includes multiple scoped frontend/test changes and review-only visual CI artifacts, without human verification.
 
 Start with the [3.1 roadmap and ADR index](selecta-3-1-roadmap.md), [116-item checklist](selecta-3-1-implementation-checklist.md), [verification matrix](selecta-3-1-verification-matrix.md), [evidence ledger](selecta-3-1-evidence.md), [unapproved visual-review candidates](selecta-3-1-visual-review.md), [source surface inventory](selecta-3-1-surface-inventory.md), [NO-GO release readiness](selecta-3-1-release-readiness.md) and [research notes](../research/selecta-3-1-polish.md). Prior ADR-0001–0077 and T/P/S3 trackers are preserved. **Historical 3.0 "PR #24 open" statements in older files are stale after the merge and must be reconciled against code/CI before any status is advanced.**
 
 ---
 
-# Selecta 2.0 — UI/UX architecture decision records
+# Selecta 2.0 - UI/UX architecture decision records
 
-## Selecta 3.0 — full experience overhaul proposal (2026-11-07)
+## Selecta 3.0 - full experience overhaul proposal (2026-11-07)
 
 **Decision status: Proposed. Implementation status: In progress on PR #24; not Verified.** See the [new roadmap and ADR index](selecta-3-roadmap.md), ADR-0047–0077, [258 individually tracked work items](selecta-3-implementation-checklist.md), [feature preservation map](selecta-3-parity-matrix.md), [verification plan](selecta-3-verification-matrix.md), [evidence ledger](selecta-3-evidence.md) and [research notes](../research/selecta-3-overhaul.md).
 
@@ -132,45 +132,45 @@ Selecta remains an offline/local-first DJ for the user's own music. Listening is
 
 | ADR and decision | Decision status | Implementation status | Phase |
 |---|---|---|---|
-| [ADR-0001 — Product contract, scope and no-regression guarantees](adr-0001-product-contract-and-parity.md) | Accepted | In progress | 0 |
-| [ADR-0002 — Contextual navigation, routing and persistent player shell](adr-0002-routing-and-shell.md) | Accepted | Implemented | 2 |
-| [ADR-0003 — Semantic design system retaining Selecta's colours](adr-0003-design-tokens-and-brand.md) | Accepted | In progress | 1 |
-| [ADR-0004 — Reusable controls, overlays, status and undo](adr-0004-interaction-primitives-and-notifications.md) | Accepted | In progress | 1 |
-| [ADR-0005 — Typed API state, revisions and optimistic mutation consistency](adr-0005-domain-state-mutations.md) | Accepted | In progress | 3 |
-| [ADR-0006 — Web Audio transport, seeking and Media Session semantics](adr-0006-audio-transport-and-media.md) | Accepted | In progress | 4 |
-| [ADR-0007 — Coordinating main player and all audition audio](adr-0007-audio-focus-ownership.md) | Accepted | In progress | 4 |
-| [ADR-0008 — Listen composition, waveform and next-transition clarity](adr-0008-listen-screen.md) | Accepted | In progress | 4 |
-| [ADR-0009 — Synchronized lyrics, lyric focus and fullscreen Stage](adr-0009-lyrics-and-stage.md) | Accepted | In progress | 4 |
-| [ADR-0010 — Vibe discovery, featured choice and build preparation](adr-0010-mix-discovery.md) | Accepted | In progress | 5 |
-| [ADR-0011 — Energy curve, duration, transition feel and destination scope](adr-0011-steering-and-energy.md) | Accepted | In progress | 5 |
-| [ADR-0012 — My Mixes projects, draft operations and render queue](adr-0012-drafts-and-queue.md) | Accepted | Implemented | 6 |
-| [ADR-0013 — Song/seam arrangement timeline and stable edit scope](adr-0013-edit-timeline.md) | Accepted | In progress | 6 |
-| [ADR-0014 — Seam inspector, cues, previews, fallbacks and auditing](adr-0014-seam-inspector.md) | Accepted | In progress | 6 |
-| [ADR-0015 — Live Requests, route consent and atomic bridge joining](adr-0015-requests-and-bridges.md) | Accepted | In progress | 7 |
-| [ADR-0016 — Stem Studio 64-cell creative workstation](adr-0016-stem-studio.md) | Accepted | In progress | 8 |
-| [ADR-0017 — Library scale, filters and canonical mix readiness](adr-0017-library-scale-and-readiness.md) | Accepted | Implemented | 9 |
-| [ADR-0018 — Analysis overrides and secure library-source management](adr-0018-library-corrections-and-folders.md) | Accepted | In progress | 9 |
-| [ADR-0019 — Word-link discovery and harmonic staged auditions](adr-0019-discover-words-and-harmony.md) | Accepted | In progress | 9 |
-| [ADR-0020 — Workshop, background processing, queue and cache transparency](adr-0020-workshop-and-storage.md) | Accepted | In progress | 10 |
-| [ADR-0021 — Blind A/B evaluation protocols and reliable submission](adr-0021-blind-listening.md) | Accepted | In progress | 10 |
-| [ADR-0022 — Rendered FLAC export and artifact lifecycle](adr-0022-flac-export.md) | Accepted | In progress | 6 |
-| [ADR-0023 — WCAG 2.2 AA, screen readers and keyboard conventions](adr-0023-accessibility.md) | Accepted | In progress | 1–12 |
-| [ADR-0024 — Mobile, tablet, wide-screen and high-zoom workspace design](adr-0024-responsive-workspaces.md) | Accepted | In progress | 2–12 |
-| [ADR-0025 — Local-only security, privacy and filesystem boundaries](adr-0025-local-privacy.md) | Accepted | Implemented | 3–13 |
-| [ADR-0026 — Additive backend contracts, stable identifiers and feature detection](adr-0026-api-compatibility.md) | Accepted | In progress | 3–10 |
-| [ADR-0027 — Truthful AI explanations and musical feedback](adr-0027-explanations-and-feedback.md) | Accepted | In progress | 4–10 |
-| [ADR-0028 — Backend-offline recovery, conflicts and multiple tabs](adr-0028-recovery-and-multitab.md) | Accepted | In progress | 3–12 |
-| [ADR-0029 — Regression strategy, real audio fixtures and release quality gates](adr-0029-testing-and-quality.md) | Accepted | In progress | 0–13 |
-| [ADR-0030 — Incremental migration, rollback and ADR status governance](adr-0030-migration-and-release.md) | Accepted | Implemented | 0–13 |
-| [ADR-0031 — Installed PWA, browser features and platform integrations](adr-0031-pwa-and-browsers.md) | Accepted | In progress | 2–13 |
-| [ADR-0032 — Privacy-safe diagnostics and truthful background-job feedback](adr-0032-diagnostics-and-operations.md) | Accepted | In progress | 10–13 |
+| [ADR-0001 - Product contract, scope and no-regression guarantees](adr-0001-product-contract-and-parity.md) | Accepted | In progress | 0 |
+| [ADR-0002 - Contextual navigation, routing and persistent player shell](adr-0002-routing-and-shell.md) | Accepted | Implemented | 2 |
+| [ADR-0003 - Semantic design system retaining Selecta's colours](adr-0003-design-tokens-and-brand.md) | Accepted | In progress | 1 |
+| [ADR-0004 - Reusable controls, overlays, status and undo](adr-0004-interaction-primitives-and-notifications.md) | Accepted | In progress | 1 |
+| [ADR-0005 - Typed API state, revisions and optimistic mutation consistency](adr-0005-domain-state-mutations.md) | Accepted | In progress | 3 |
+| [ADR-0006 - Web Audio transport, seeking and Media Session semantics](adr-0006-audio-transport-and-media.md) | Accepted | In progress | 4 |
+| [ADR-0007 - Coordinating main player and all audition audio](adr-0007-audio-focus-ownership.md) | Accepted | In progress | 4 |
+| [ADR-0008 - Listen composition, waveform and next-transition clarity](adr-0008-listen-screen.md) | Accepted | In progress | 4 |
+| [ADR-0009 - Synchronized lyrics, lyric focus and fullscreen Stage](adr-0009-lyrics-and-stage.md) | Accepted | In progress | 4 |
+| [ADR-0010 - Vibe discovery, featured choice and build preparation](adr-0010-mix-discovery.md) | Accepted | In progress | 5 |
+| [ADR-0011 - Energy curve, duration, transition feel and destination scope](adr-0011-steering-and-energy.md) | Accepted | In progress | 5 |
+| [ADR-0012 - My Mixes projects, draft operations and render queue](adr-0012-drafts-and-queue.md) | Accepted | Implemented | 6 |
+| [ADR-0013 - Song/seam arrangement timeline and stable edit scope](adr-0013-edit-timeline.md) | Accepted | In progress | 6 |
+| [ADR-0014 - Seam inspector, cues, previews, fallbacks and auditing](adr-0014-seam-inspector.md) | Accepted | In progress | 6 |
+| [ADR-0015 - Live Requests, route consent and atomic bridge joining](adr-0015-requests-and-bridges.md) | Accepted | In progress | 7 |
+| [ADR-0016 - Stem Studio 64-cell creative workstation](adr-0016-stem-studio.md) | Accepted | In progress | 8 |
+| [ADR-0017 - Library scale, filters and canonical mix readiness](adr-0017-library-scale-and-readiness.md) | Accepted | Implemented | 9 |
+| [ADR-0018 - Analysis overrides and secure library-source management](adr-0018-library-corrections-and-folders.md) | Accepted | In progress | 9 |
+| [ADR-0019 - Word-link discovery and harmonic staged auditions](adr-0019-discover-words-and-harmony.md) | Accepted | In progress | 9 |
+| [ADR-0020 - Workshop, background processing, queue and cache transparency](adr-0020-workshop-and-storage.md) | Accepted | In progress | 10 |
+| [ADR-0021 - Blind A/B evaluation protocols and reliable submission](adr-0021-blind-listening.md) | Accepted | In progress | 10 |
+| [ADR-0022 - Rendered FLAC export and artifact lifecycle](adr-0022-flac-export.md) | Accepted | In progress | 6 |
+| [ADR-0023 - WCAG 2.2 AA, screen readers and keyboard conventions](adr-0023-accessibility.md) | Accepted | In progress | 1–12 |
+| [ADR-0024 - Mobile, tablet, wide-screen and high-zoom workspace design](adr-0024-responsive-workspaces.md) | Accepted | In progress | 2–12 |
+| [ADR-0025 - Local-only security, privacy and filesystem boundaries](adr-0025-local-privacy.md) | Accepted | Implemented | 3–13 |
+| [ADR-0026 - Additive backend contracts, stable identifiers and feature detection](adr-0026-api-compatibility.md) | Accepted | In progress | 3–10 |
+| [ADR-0027 - Truthful AI explanations and musical feedback](adr-0027-explanations-and-feedback.md) | Accepted | In progress | 4–10 |
+| [ADR-0028 - Backend-offline recovery, conflicts and multiple tabs](adr-0028-recovery-and-multitab.md) | Accepted | In progress | 3–12 |
+| [ADR-0029 - Regression strategy, real audio fixtures and release quality gates](adr-0029-testing-and-quality.md) | Accepted | In progress | 0–13 |
+| [ADR-0030 - Incremental migration, rollback and ADR status governance](adr-0030-migration-and-release.md) | Accepted | Implemented | 0–13 |
+| [ADR-0031 - Installed PWA, browser features and platform integrations](adr-0031-pwa-and-browsers.md) | Accepted | In progress | 2–13 |
+| [ADR-0032 - Privacy-safe diagnostics and truthful background-job feedback](adr-0032-diagnostics-and-operations.md) | Accepted | In progress | 10–13 |
 
 ## Planning and verification artifacts
 
-- [What's done, task by task](implementation-evidence.md) — all 279 tracker tasks.
-- [Implementation roadmap and release gates](implementation-roadmap.md) — phase by phase.
-- [Feature preservation and no-regression matrix](feature-parity.md) — every feature and where it now lives.
-- [Existing/new test and edge-case matrix](test-coverage-matrix.md) — which suite covers what.
+- [What's done, task by task](implementation-evidence.md) - all 279 tracker tasks.
+- [Implementation roadmap and release gates](implementation-roadmap.md) - phase by phase.
+- [Feature preservation and no-regression matrix](feature-parity.md) - every feature and where it now lives.
+- [Existing/new test and edge-case matrix](test-coverage-matrix.md) - which suite covers what.
 - [Current acceptance ledger](../acceptance.md) records existing, measured behaviour and limits; do not overwrite it with speculative future success.
 - [UI/UX research notes](../research/ui-ux.md) give precedent and documented uncertainty.
 

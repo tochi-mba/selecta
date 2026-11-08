@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 5 — Discovery and operations
+- **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0020, ADR-0032, ADR-0043
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0064-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Rename the visible destination Workspace while preserving /workshop/* URLs and a
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0064-01 — Not started.** Build Workspace overview with canonical ready/working/blocked summaries and next actions.
-2. **S3-0064-02 — Not started.** Reorganize Analysis with start/pause/resume, queue/job prioritization and recoverable failures.
-3. **S3-0064-03 — Not started.** Redesign Sources around watched-folder identity, availability, add/remove/watch state and explicit privacy.
-4. **S3-0064-04 — Not started.** Design Storage around actual cache usage, budget, free-space warnings and protected output data.
-5. **S3-0064-05 — Not started.** Implement debounced, confirmed storage slider writes with rollback and clear background cleanup implications.
-6. **S3-0064-06 — Not started.** Preserve Learning and blind-study entry points; distinguish system scores from verified subjective quality.
-7. **S3-0064-07 — Not started.** Expose Diagnostics securely with privacy-safe copy/export and advanced explanation.
-8. **S3-0064-08 — Not started.** Test offline/reconnect, worker failure, cache pressure, drive removal and queued job status.
+1. **S3-0064-01 - Not started.** Build Workspace overview with canonical ready/working/blocked summaries and next actions.
+2. **S3-0064-02 - Not started.** Reorganize Analysis with start/pause/resume, queue/job prioritization and recoverable failures.
+3. **S3-0064-03 - Not started.** Redesign Sources around watched-folder identity, availability, add/remove/watch state and explicit privacy.
+4. **S3-0064-04 - Not started.** Design Storage around actual cache usage, budget, free-space warnings and protected output data.
+5. **S3-0064-05 - Not started.** Implement debounced, confirmed storage slider writes with rollback and clear background cleanup implications.
+6. **S3-0064-06 - Not started.** Preserve Learning and blind-study entry points; distinguish system scores from verified subjective quality.
+7. **S3-0064-07 - Not started.** Expose Diagnostics securely with privacy-safe copy/export and advanced explanation.
+8. **S3-0064-08 - Not started.** Test offline/reconnect, worker failure, cache pressure, drive removal and queued job status.
 
 ## Preservation and integration constraints
 

@@ -1,4 +1,4 @@
-# Selecta — independent NO-GO release gates for proposed GP work
+# Selecta - independent NO-GO release gates for proposed GP work
 
 **Current verdict: Proposed GP enhancements NOT ACCEPTED OR IMPLEMENTED; NO-GO for this new enhancement programme. This is not a verdict that the existing application is unsafe.**
 

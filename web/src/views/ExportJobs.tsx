@@ -57,11 +57,11 @@ function Row({ job }: { job: ExportJob }) {
           {' '}Approximate source duration {length(job.seconds_estimate)}.
         </p>
         <ol className="export-snapshot-songs">
-          {job.songs.map((song, index) => <li key={index}><b>{song.title || 'Untitled'}</b> — {song.artist || 'Unknown artist'} <small>(song {song.song_id})</small></li>)}
+          {job.songs.map((song, index) => <li key={index}><b>{song.title || 'Untitled'}</b> - {song.artist || 'Unknown artist'} <small>(song {song.song_id})</small></li>)}
         </ol>
         {!!job.seams.length && (
           <ul className="export-snapshot-seams">
-            {job.seams.map((seam, index) => <li key={index}>{seam.from} into {seam.to} — transition <code>{seam.key}</code></li>)}
+            {job.seams.map((seam, index) => <li key={index}>{seam.from} into {seam.to} - transition <code>{seam.key}</code></li>)}
           </ul>
         )}
       </details>

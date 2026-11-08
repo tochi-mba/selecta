@@ -1,4 +1,4 @@
-# ADR-0211 — Audio-clock Handoff Scene and truthful transition choreography
+# ADR-0211 - Audio-clock Handoff Scene and truthful transition choreography
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Celebrate confirmed outgoing-to-incoming handoffs with technique-specific visual
 
 Never infer overlap, shared lyrics or rendered move from an unconfirmed plan. Reject spectacle when it costs accessibility, audio continuity or task comprehension. This ADR approves no new SaaS, login, account, cloud upload, telemetry, audio engine rewrite or code change by itself.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0211-01 — Model real handoff phases.** **Acceptance:** Enter, overlap, takeover and done follow player events. **Required verification:** Audio-clock unit tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0211-02 — Design technique families.** **Acceptance:** Cut, blend, wordplay and stem treatments are truthful. **Required verification:** DJ audio review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0211-03 — Bind exact track identities.** **Acceptance:** Duplicate occurrence and pair revision safe. **Required verification:** Pair-key tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0211-04 — Synchronize visuals to sound.** **Acceptance:** Graphics follow actual handoff timing. **Required verification:** Audio-video correlation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0211-05 — Represent fallback state.** **Acceptance:** Changed move and failed render not hidden. **Required verification:** Failure fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0211-06 — Allow interrupted handoff.** **Acceptance:** Seek, skip and Pause settle safely. **Required verification:** Lifecycle E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0211-07 — Offer still and AT equivalents.** **Acceptance:** Essential details spoken or written without motion. **Required verification:** NVDA test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0211-08 — Assess artistic payoff.** **Acceptance:** Delight rises without distraction. **Required verification:** Counterbalanced listener study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0211-01 - Model real handoff phases.** **Acceptance:** Enter, overlap, takeover and done follow player events. **Required verification:** Audio-clock unit tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0211-02 - Design technique families.** **Acceptance:** Cut, blend, wordplay and stem treatments are truthful. **Required verification:** DJ audio review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0211-03 - Bind exact track identities.** **Acceptance:** Duplicate occurrence and pair revision safe. **Required verification:** Pair-key tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0211-04 - Synchronize visuals to sound.** **Acceptance:** Graphics follow actual handoff timing. **Required verification:** Audio-video correlation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0211-05 - Represent fallback state.** **Acceptance:** Changed move and failed render not hidden. **Required verification:** Failure fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0211-06 - Allow interrupted handoff.** **Acceptance:** Seek, skip and Pause settle safely. **Required verification:** Lifecycle E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0211-07 - Offer still and AT equivalents.** **Acceptance:** Essential details spoken or written without motion. **Required verification:** NVDA test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0211-08 - Assess artistic payoff.** **Acceptance:** Delight rises without distraction. **Required verification:** Counterbalanced listener study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

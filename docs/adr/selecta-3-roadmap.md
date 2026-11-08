@@ -1,4 +1,4 @@
-# Selecta 3.0 — full UI/UX overhaul ADR roadmap and decision index
+# Selecta 3.0 - full UI/UX overhaul ADR roadmap and decision index
 
 - **Programme decision status:** Proposed.
 - **Programme implementation status:** In progress on PR #24; no S3 work item is Verified.
@@ -16,42 +16,42 @@ Listening must be effortless and accurate; steering should be understandable; dr
 
 The historical polish ADRs describe more modest finishing work. This programme proposes broader information architecture and creation-workspace changes. Previous summary text about PR #23's status can be stale: PR #23 was merged into main on 2026-11-06, but its completion evidence and manual verification must be inspected independently. The new S3 tasks **do not inherit completion** from the old P/T trackers.
 
-## New ADR index — all Proposed / Not started
+## New ADR index - all Proposed / Not started
 
 | Decision record | Decision | Implementation | Phase | Open tasks |
 |---|---|---|---|---|
-| [ADR-0047 — Selecta 3.0 charter, feature preservation and decision governance](adr-0047-overhaul-charter-and-governance.md) | Accepted | Not started | 0 Baseline | 8 |
-| [ADR-0048 — Intent-based information architecture, routes and discoverability](adr-0048-intent-based-navigation-and-deep-links.md) | Accepted | Not started | 1 Architecture | 8 |
-| [ADR-0049 — Responsive shell, persistent player and immersive Stage architecture](adr-0049-responsive-shell-player-and-stage.md) | Accepted | Not started | 1 Architecture | 8 |
-| [ADR-0050 — Preserved palette with a rebuilt visual system, typography and density](adr-0050-brand-tokens-type-and-density.md) | Accepted | Not started | 2 Foundations | 8 |
-| [ADR-0051 — Accessible primitives, overlays, feedback and durable undo](adr-0051-accessible-components-overlays-and-undo.md) | Accepted | Not started | 2 Foundations | 8 |
-| [ADR-0052 — Truthful asynchronous state, optimistic mutations and recovery](adr-0052-truthful-async-and-state-contracts.md) | Accepted | Not started | 2 Foundations | 8 |
-| [ADR-0053 — Guided onboarding, secure folder selection and time to first mix](adr-0053-first-run-sources-and-readiness.md) | Accepted | Not started | 3 Core journeys | 8 |
-| [ADR-0054 — Explore mixes, presets, creation defaults and energy journeys](adr-0054-explore-mix-discovery-and-steering.md) | Accepted | Not started | 3 Core journeys | 9 |
-| [ADR-0055 — Calm Listen experience, accurate waveform, lyrics and Stage](adr-0055-listen-lyrics-waveform-and-stage.md) | Accepted | Not started | 3 Core journeys | 9 |
-| [ADR-0056 — My Mixes workspace, safe drafts, restoration and render priority](adr-0056-my-mixes-drafts-and-render-line.md) | Accepted | Not started | 3 Core journeys | 8 |
-| [ADR-0057 — Safe timeline editor, insertion, reorder and stable identity](adr-0057-editor-song-seam-timeline.md) | Accepted | Not started | 4 Creation | 9 |
-| [ADR-0058 — Context-preserving seam inspector, exact cues and honest rendered outcome](adr-0058-transition-inspector-cues-and-previews.md) | Accepted | Not started | 4 Creation | 9 |
-| [ADR-0059 — Full Stem Studio workstation, grid interaction and commit safety](adr-0059-stem-studio-creative-grid.md) | Accepted | Not started | 4 Creation | 9 |
-| [ADR-0060 — Requests, bridge approval and atomic live insertion](adr-0060-request-scheduling-bridge-consent.md) | Accepted | Not started | 3 Core journeys | 9 |
-| [ADR-0061 — Word connections and four-stage harmonic discovery](adr-0061-discovery-word-and-harmonic-workflows.md) | Accepted | Not started | 5 Operations | 8 |
-| [ADR-0062 — Scalable Library search, filters, rows and pagination](adr-0062-scalable-library-browse-search-filters.md) | Accepted | Not started | 5 Operations | 8 |
-| [ADR-0063 — Library detail inspector, canonical readiness and protected corrections](adr-0063-library-track-details-corrections.md) | Accepted | Not started | 5 Operations | 8 |
-| [ADR-0064 — Workspace status, analysis, watched folders, storage and diagnostics](adr-0064-workspace-operations-sources-storage.md) | Accepted | Not started | 5 Operations | 8 |
-| [ADR-0065 — Persistent FLAC export jobs, exact revisions and download recovery](adr-0065-export-jobs-and-revision-identity.md) | Accepted | Not started | 5 Operations | 8 |
-| [ADR-0066 — Blind study interface and evaluation integrity](adr-0066-blind-listening-study-integrity.md) | Accepted | Not started | 5 Operations | 8 |
-| [ADR-0067 — WCAG 2.2 AA, responsive reflow and complete keyboard access](adr-0067-wcag-responsive-and-human-access.md) | Accepted | Not started | 6 Quality | 9 |
-| [ADR-0068 — Optional command palette, shortcut registry and expert navigation](adr-0068-keyboard-command-palette-and-power-flows.md) | Accepted | Not started | 6 Quality | 8 |
-| [ADR-0069 — Single audio ownership, transport continuity and preview lifecycle](adr-0069-single-audio-owner-and-playback-lifecycle.md) | Accepted | Not started | 6 Quality | 9 |
-| [ADR-0070 — System vocabulary, understandable explanations and restrained motion](adr-0070-content-explanations-feedback-and-motion.md) | Accepted | Not started | 2 Foundations | 8 |
-| [ADR-0071 — Frontend domain boundaries, additive APIs and route compatibility](adr-0071-api-route-schema-compatibility.md) | Accepted | Not started | 1 Architecture | 8 |
-| [ADR-0072 — Local-first privacy, file access, installed PWA and theme integration](adr-0072-local-privacy-pwa-security.md) | Accepted | Not started | 6 Quality | 8 |
-| [ADR-0073 — Rendering performance, 20k-track scale, 100-song edits and animation budgets](adr-0073-performance-profiling-and-visual-budget.md) | Accepted | Not started | 6 Quality | 8 |
-| [ADR-0074 — Full test architecture, invariants and concurrent edge-case matrix](adr-0074-testing-matrix-contract-and-races.md) | Accepted | Not started | 7 Verification | 10 |
-| [ADR-0075 — Visual regression, usability research and observable release acceptance](adr-0075-visual-research-evidence-and-release-gates.md) | Accepted | Not started | 7 Verification | 9 |
-| [ADR-0076 — Incremental migration, rollout controls, rollback and delivery order](adr-0076-incremental-migration-rollback-and-go-no-go.md) | Accepted | Not started | 7 Verification | 9 |
+| [ADR-0047 - Selecta 3.0 charter, feature preservation and decision governance](adr-0047-overhaul-charter-and-governance.md) | Accepted | Not started | 0 Baseline | 8 |
+| [ADR-0048 - Intent-based information architecture, routes and discoverability](adr-0048-intent-based-navigation-and-deep-links.md) | Accepted | Not started | 1 Architecture | 8 |
+| [ADR-0049 - Responsive shell, persistent player and immersive Stage architecture](adr-0049-responsive-shell-player-and-stage.md) | Accepted | Not started | 1 Architecture | 8 |
+| [ADR-0050 - Preserved palette with a rebuilt visual system, typography and density](adr-0050-brand-tokens-type-and-density.md) | Accepted | Not started | 2 Foundations | 8 |
+| [ADR-0051 - Accessible primitives, overlays, feedback and durable undo](adr-0051-accessible-components-overlays-and-undo.md) | Accepted | Not started | 2 Foundations | 8 |
+| [ADR-0052 - Truthful asynchronous state, optimistic mutations and recovery](adr-0052-truthful-async-and-state-contracts.md) | Accepted | Not started | 2 Foundations | 8 |
+| [ADR-0053 - Guided onboarding, secure folder selection and time to first mix](adr-0053-first-run-sources-and-readiness.md) | Accepted | Not started | 3 Core journeys | 8 |
+| [ADR-0054 - Explore mixes, presets, creation defaults and energy journeys](adr-0054-explore-mix-discovery-and-steering.md) | Accepted | Not started | 3 Core journeys | 9 |
+| [ADR-0055 - Calm Listen experience, accurate waveform, lyrics and Stage](adr-0055-listen-lyrics-waveform-and-stage.md) | Accepted | Not started | 3 Core journeys | 9 |
+| [ADR-0056 - My Mixes workspace, safe drafts, restoration and render priority](adr-0056-my-mixes-drafts-and-render-line.md) | Accepted | Not started | 3 Core journeys | 8 |
+| [ADR-0057 - Safe timeline editor, insertion, reorder and stable identity](adr-0057-editor-song-seam-timeline.md) | Accepted | Not started | 4 Creation | 9 |
+| [ADR-0058 - Context-preserving seam inspector, exact cues and honest rendered outcome](adr-0058-transition-inspector-cues-and-previews.md) | Accepted | Not started | 4 Creation | 9 |
+| [ADR-0059 - Full Stem Studio workstation, grid interaction and commit safety](adr-0059-stem-studio-creative-grid.md) | Accepted | Not started | 4 Creation | 9 |
+| [ADR-0060 - Requests, bridge approval and atomic live insertion](adr-0060-request-scheduling-bridge-consent.md) | Accepted | Not started | 3 Core journeys | 9 |
+| [ADR-0061 - Word connections and four-stage harmonic discovery](adr-0061-discovery-word-and-harmonic-workflows.md) | Accepted | Not started | 5 Operations | 8 |
+| [ADR-0062 - Scalable Library search, filters, rows and pagination](adr-0062-scalable-library-browse-search-filters.md) | Accepted | Not started | 5 Operations | 8 |
+| [ADR-0063 - Library detail inspector, canonical readiness and protected corrections](adr-0063-library-track-details-corrections.md) | Accepted | Not started | 5 Operations | 8 |
+| [ADR-0064 - Workspace status, analysis, watched folders, storage and diagnostics](adr-0064-workspace-operations-sources-storage.md) | Accepted | Not started | 5 Operations | 8 |
+| [ADR-0065 - Persistent FLAC export jobs, exact revisions and download recovery](adr-0065-export-jobs-and-revision-identity.md) | Accepted | Not started | 5 Operations | 8 |
+| [ADR-0066 - Blind study interface and evaluation integrity](adr-0066-blind-listening-study-integrity.md) | Accepted | Not started | 5 Operations | 8 |
+| [ADR-0067 - WCAG 2.2 AA, responsive reflow and complete keyboard access](adr-0067-wcag-responsive-and-human-access.md) | Accepted | Not started | 6 Quality | 9 |
+| [ADR-0068 - Optional command palette, shortcut registry and expert navigation](adr-0068-keyboard-command-palette-and-power-flows.md) | Accepted | Not started | 6 Quality | 8 |
+| [ADR-0069 - Single audio ownership, transport continuity and preview lifecycle](adr-0069-single-audio-owner-and-playback-lifecycle.md) | Accepted | Not started | 6 Quality | 9 |
+| [ADR-0070 - System vocabulary, understandable explanations and restrained motion](adr-0070-content-explanations-feedback-and-motion.md) | Accepted | Not started | 2 Foundations | 8 |
+| [ADR-0071 - Frontend domain boundaries, additive APIs and route compatibility](adr-0071-api-route-schema-compatibility.md) | Accepted | Not started | 1 Architecture | 8 |
+| [ADR-0072 - Local-first privacy, file access, installed PWA and theme integration](adr-0072-local-privacy-pwa-security.md) | Accepted | Not started | 6 Quality | 8 |
+| [ADR-0073 - Rendering performance, 20k-track scale, 100-song edits and animation budgets](adr-0073-performance-profiling-and-visual-budget.md) | Accepted | Not started | 6 Quality | 8 |
+| [ADR-0074 - Full test architecture, invariants and concurrent edge-case matrix](adr-0074-testing-matrix-contract-and-races.md) | Accepted | Not started | 7 Verification | 10 |
+| [ADR-0075 - Visual regression, usability research and observable release acceptance](adr-0075-visual-research-evidence-and-release-gates.md) | Accepted | Not started | 7 Verification | 9 |
+| [ADR-0076 - Incremental migration, rollout controls, rollback and delivery order](adr-0076-incremental-migration-rollback-and-go-no-go.md) | Accepted | Not started | 7 Verification | 9 |
 
-| [ADR-0077 — Choosing light or dark](adr-0077-light-and-dark-theme-choice.md) | Accepted | In progress on PR #24 | 2 Foundations | 6 |
+| [ADR-0077 - Choosing light or dark](adr-0077-light-and-dark-theme-choice.md) | Accepted | In progress on PR #24 | 2 Foundations | 6 |
 
 ## Status policy and evidence rule
 
@@ -66,35 +66,35 @@ The historical polish ADRs describe more modest finishing work. This programme p
 
 ## Dependency gates and staged delivery
 
-### Phase 0 — Baseline and governance
+### Phase 0 - Baseline and governance
 
 Pin the true implementation starting commit, capture real screenshots and state inventory, map all old T/P tasks, record listener/creator/expert tasks and establish severity. Exit with evidence and explicit decision approval; not with a promise of perfection.
 
-### Phase 1 — Architecture and contracts
+### Phase 1 - Architecture and contracts
 
 Approve the five-destination information architecture, old/new route compatibility, stable app shell/player ownership, typed state and additive APIs. Prototype responsive rail/dock before redesigning every page. If API additions are needed for durable export or native folder selection, approve separate backward-compatible contracts.
 
-### Phase 2 — Foundations
+### Phase 2 - Foundations
 
 Agree semantic colors/typography/density and accessible primitives, focus/menu/overlay behavior, truthful async models and vocabulary. Demonstrate a full component gallery, both themes and multiple widths.
 
-### Phase 3 — Primary tasks
+### Phase 3 - Primary tasks
 
 Onboarding → Explore → Listen → My Mixes → Requests, each as a focused PR with uninterrupted audio and data parity evidence. Do not delay screen-level keyboard and offline testing.
 
-### Phase 4 — Creation workspaces
+### Phase 4 - Creation workspaces
 
 Redesign Editor, seam inspector and Stem Studio. All edits use stable resource/pair identity, guarded revisions and existing audio-focus rules. Verify 100-song and 64-cell operation.
 
-### Phase 5 — Discovery and operations
+### Phase 5 - Discovery and operations
 
 Redesign Words/Harmonic discoveries, Library, track corrections, Workspace, export and studies with complete failure/recovery coverage. Preserve readiness and original study protocols.
 
-### Phase 6 — Cross-cutting quality
+### Phase 6 - Cross-cutting quality
 
 Apply WCAG 2.2 AA, responsive reflow, command accessibility, single audio ownership, local privacy, PWA and performance constraints during all earlier phases; this phase provides integrated proof rather than deferred first implementation.
 
-### Phase 7 — Integrated release verification
+### Phase 7 - Integrated release verification
 
 Review old/new feature parity, Python/frontend/E2E contracts, screenshots, real audio, listening/usability, screen readers, scale/security and rollback. Publish explicit go/no-go with accepted limitations. No automatic merge of unverified runtime work.
 
@@ -133,7 +133,7 @@ No release with lost/corrupt data; wrong mix/draft write; inaccessible essential
 
 ## Supporting documents
 
-- [Individual work-item checklist — 258 tasks](selecta-3-implementation-checklist.md)
+- [Individual work-item checklist - 258 tasks](selecta-3-implementation-checklist.md)
 - [Old-to-new feature parity ownership](selecta-3-parity-matrix.md)
 - [Adversarial test and release verification matrix](selecta-3-verification-matrix.md)
 - [Status and evidence ledger](selecta-3-evidence.md)

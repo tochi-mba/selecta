@@ -1,4 +1,4 @@
-# Selecta 2.0 — tests, fixtures and edge-case matrix
+# Selecta 2.0 - tests, fixtures and edge-case matrix
 
 - **Decision status:** Accepted
 - **Implementation status of new tests:** In progress ([#22](https://github.com/tochi-mba/selecta/pull/22))

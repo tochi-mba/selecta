@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 4 — Creation workspaces
+- **Phase:** 4 - Creation workspaces
 - **Extends existing decisions:** ADR-0014, ADR-0016, ADR-0027, ADR-0040
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0058-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Keep the four feature families but redesign around permanent outgoing/incoming s
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0058-01 — Not started.** Design an always-visible pair identity header with exact scope, selection and renderer revision.
-2. **S3-0058-02 — Not started.** Implement Listen tab with revision-matched preview and single audio-owner behavior.
-3. **S3-0058-03 — Not started.** Group Change controls by style, length and exact cue with accessible form validation.
-4. **S3-0058-04 — Not started.** Preserve all existing seam styles, phrase alignment, bar lengths, out/in positions, warnings and fallback options.
-5. **S3-0058-05 — Not started.** Expose requested/manual versus actual rendered/fallback state without conflating readiness.
-6. **S3-0058-06 — Not started.** Keep Details audit hierarchy: actual move, selected move, music data, failed alternatives, quality checks.
-7. **S3-0058-07 — Not started.** Make transition ratings identify the precise seam and survive route switching.
-8. **S3-0058-08 — Not started.** Rebuild mobile inspector as a focus-safe sheet/workspace without losing timeline context.
-9. **S3-0058-09 — Not started.** Add stale-render, exact-pair, cue-invalid and preview-cancellation tests.
+1. **S3-0058-01 - Not started.** Design an always-visible pair identity header with exact scope, selection and renderer revision.
+2. **S3-0058-02 - Not started.** Implement Listen tab with revision-matched preview and single audio-owner behavior.
+3. **S3-0058-03 - Not started.** Group Change controls by style, length and exact cue with accessible form validation.
+4. **S3-0058-04 - Not started.** Preserve all existing seam styles, phrase alignment, bar lengths, out/in positions, warnings and fallback options.
+5. **S3-0058-05 - Not started.** Expose requested/manual versus actual rendered/fallback state without conflating readiness.
+6. **S3-0058-06 - Not started.** Keep Details audit hierarchy: actual move, selected move, music data, failed alternatives, quality checks.
+7. **S3-0058-07 - Not started.** Make transition ratings identify the precise seam and survive route switching.
+8. **S3-0058-08 - Not started.** Rebuild mobile inspector as a focus-safe sheet/workspace without losing timeline context.
+9. **S3-0058-09 - Not started.** Add stale-render, exact-pair, cue-invalid and preview-cancellation tests.
 
 ## Preservation and integration constraints
 

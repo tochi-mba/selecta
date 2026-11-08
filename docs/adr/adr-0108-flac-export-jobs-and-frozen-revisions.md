@@ -29,18 +29,18 @@ Use Export audio consistently for producing files, Save for editable projects, a
 - Closing modal or changing draft never reassigns/cancels authoritative job.
 - Only FLAC offered until verified backend encoding support exists for other formats.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0108-01 — Standardize Save/Export/Download terminology across routes.** Acceptance: User cannot confuse editable project and completed file. Required verification: Copy audit plus unassisted task comprehension. **Implementation: Not started; Verified: No.**
-2. **S4-0108-02 — Redesign pre-export scope/snapshot confirmation.** Acceptance: Exact source and revision visible before submission. Required verification: Current/draft same-name and edited-after-start cases. **Implementation: Not started; Verified: No.**
-3. **S4-0108-03 — Preserve revision-pinned export backend job.** Acceptance: Mix edits after submission do not affect FLAC bytes. Required verification: Frozen snapshot and server contract tests. **Implementation: Not started; Verified: No.**
-4. **S4-0108-04 — Design queued/rendering/encoding/ready/failed/cancelled/expired stages.** Acceptance: No invented readiness or percent on incomplete backend data. Required verification: Job state fixture screenshots. **Implementation: Not started; Verified: No.**
-5. **S4-0108-05 — Preserve export while dialog closes, route changes or browser reloads.** Acceptance: Authoritative job remains retrievable independent of UI. Required verification: Reload/draft switch/Stage navigation tests. **Implementation: Not started; Verified: No.**
-6. **S4-0108-06 — Harden cancel/retry/duplicate export and idempotency.** Acceptance: Interrupted mutation does not create duplicate job unnoticed. Required verification: Server timeout, twice-submit and cancel race tests. **Implementation: Not started; Verified: No.**
-7. **S4-0108-07 — Make correct download discoverable and failure recoverable.** Acceptance: No missing/expired file shown as downloadable. Required verification: Expired URL, storage full and unauthorized route tests. **Implementation: Not started; Verified: No.**
-8. **S4-0108-08 — Verify actual FLAC file identity and decode correctness.** Acceptance: Decodable output matches song order, duration and frozen transitions. Required verification: Decode file, compare sample format/timing/revision. **Implementation: Not started; Verified: No.**
-9. **S4-0108-09 — Clarify transitions prepared or falling back at export start.** Acceptance: Export status accurately reports technical readiness. Required verification: Missing seam, fallback and rerender fixture tests. **Implementation: Not started; Verified: No.**
-10. **S4-0108-10 — Record real listening acceptance separately from encoder success.** Acceptance: Successful encode not evidence of musically good handoff. Required verification: Audible review with representative transition set. **Implementation: Not started; Verified: No.**
+1. **S4-0108-01 - Standardize Save/Export/Download terminology across routes.** Acceptance: User cannot confuse editable project and completed file. Required verification: Copy audit plus unassisted task comprehension. **Implementation: Not started; Verified: No.**
+2. **S4-0108-02 - Redesign pre-export scope/snapshot confirmation.** Acceptance: Exact source and revision visible before submission. Required verification: Current/draft same-name and edited-after-start cases. **Implementation: Not started; Verified: No.**
+3. **S4-0108-03 - Preserve revision-pinned export backend job.** Acceptance: Mix edits after submission do not affect FLAC bytes. Required verification: Frozen snapshot and server contract tests. **Implementation: Not started; Verified: No.**
+4. **S4-0108-04 - Design queued/rendering/encoding/ready/failed/cancelled/expired stages.** Acceptance: No invented readiness or percent on incomplete backend data. Required verification: Job state fixture screenshots. **Implementation: Not started; Verified: No.**
+5. **S4-0108-05 - Preserve export while dialog closes, route changes or browser reloads.** Acceptance: Authoritative job remains retrievable independent of UI. Required verification: Reload/draft switch/Stage navigation tests. **Implementation: Not started; Verified: No.**
+6. **S4-0108-06 - Harden cancel/retry/duplicate export and idempotency.** Acceptance: Interrupted mutation does not create duplicate job unnoticed. Required verification: Server timeout, twice-submit and cancel race tests. **Implementation: Not started; Verified: No.**
+7. **S4-0108-07 - Make correct download discoverable and failure recoverable.** Acceptance: No missing/expired file shown as downloadable. Required verification: Expired URL, storage full and unauthorized route tests. **Implementation: Not started; Verified: No.**
+8. **S4-0108-08 - Verify actual FLAC file identity and decode correctness.** Acceptance: Decodable output matches song order, duration and frozen transitions. Required verification: Decode file, compare sample format/timing/revision. **Implementation: Not started; Verified: No.**
+9. **S4-0108-09 - Clarify transitions prepared or falling back at export start.** Acceptance: Export status accurately reports technical readiness. Required verification: Missing seam, fallback and rerender fixture tests. **Implementation: Not started; Verified: No.**
+10. **S4-0108-10 - Record real listening acceptance separately from encoder success.** Acceptance: Successful encode not evidence of musically good handoff. Required verification: Audible review with representative transition set. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

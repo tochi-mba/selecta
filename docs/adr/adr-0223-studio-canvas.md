@@ -1,4 +1,4 @@
-# ADR-0223 — Stem Studio as a truthful two-song musical canvas
+# ADR-0223 - Stem Studio as a truthful two-song musical canvas
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Keep eight independent song-part lanes (voices, drums, bass, melody for each son
 
 No fake stems, missing lanes, hidden recovery, accidental repeated cell toggle or preview that overlaps Listen. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0223-01 — Define lane anatomy and identity.** **Acceptance:** Eight parts and both source songs always explicit. **Required verification:** Studio state fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0223-02 — Redesign grid presentation.** **Acceptance:** 8–64 cells and playhead intelligible. **Required verification:** Large-grid visual test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0223-03 — Refine direct cell painting.** **Acceptance:** Each intended cell toggled once per stroke. **Required verification:** Pointer E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0223-04 — Provide keyboard and list parity.** **Acceptance:** No drag-only editing behavior. **Required verification:** NVDA/keyboard tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0223-05 — Support Shape/Grid/List transitions.** **Acceptance:** Switching modes preserves exact arrangement. **Required verification:** Mode-state regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0223-06 — Represent actual stem readiness.** **Acceptance:** Missing/separating/applied/rendered distinct. **Required verification:** Backend fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0223-07 — Protect focus during preview.** **Acceptance:** One audio owner with clear return to Listen. **Required verification:** Audio ownership tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0223-08 — Validate creative legibility.** **Acceptance:** Beginners and producers can identify parts and edit. **Required verification:** User study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0223-01 - Define lane anatomy and identity.** **Acceptance:** Eight parts and both source songs always explicit. **Required verification:** Studio state fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0223-02 - Redesign grid presentation.** **Acceptance:** 8–64 cells and playhead intelligible. **Required verification:** Large-grid visual test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0223-03 - Refine direct cell painting.** **Acceptance:** Each intended cell toggled once per stroke. **Required verification:** Pointer E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0223-04 - Provide keyboard and list parity.** **Acceptance:** No drag-only editing behavior. **Required verification:** NVDA/keyboard tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0223-05 - Support Shape/Grid/List transitions.** **Acceptance:** Switching modes preserves exact arrangement. **Required verification:** Mode-state regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0223-06 - Represent actual stem readiness.** **Acceptance:** Missing/separating/applied/rendered distinct. **Required verification:** Backend fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0223-07 - Protect focus during preview.** **Acceptance:** One audio owner with clear return to Listen. **Required verification:** Audio ownership tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0223-08 - Validate creative legibility.** **Acceptance:** Beginners and producers can identify parts and edit. **Required verification:** User study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

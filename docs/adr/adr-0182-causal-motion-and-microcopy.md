@@ -1,4 +1,4 @@
-# ADR-0182 — Unified microinteraction vocabulary, semantic feedback and musical copy
+# ADR-0182 - Unified microinteraction vocabulary, semantic feedback and musical copy
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, not-yet-implemented design and acceptance delta**, not proof th
 
 Preserve the existing restrained experience if an expressive version cannot prove comprehension, tactile confidence, accessibility and real playback performance. Diagrams do not claim unverified musical precision or quality. Never fabricate beat, lyric, wave, cover, render status, progress or success. Supply static/keyboard alternatives and respect intentional silence/Pause.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0182-01 — Inventory triggers and cancellation contract.** **Acceptance:** Every animation has data owner, states and interruption rules. **Required verification:** Per-component microstate matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0182-02 — Specify shared easing and motion tokens.** **Acceptance:** No ad-hoc global animation and every use has semantic reason. **Required verification:** CSS token/style audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0182-03 — Differentiate pending versus committed state.** **Acceptance:** Busy and proposed never visually equal completed. **Required verification:** Slow network and failure fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0182-04 — Define consistent revert and Undo response.** **Acceptance:** Reversal changes correct object and status, not just toast. **Required verification:** Undo conflict and Activity tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0182-05 — Refine musical microcopy glossary.** **Acceptance:** Users understand plan/render/play versus human quality feedback. **Required verification:** Writing and comprehension review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0182-06 — Apply sensory fallback contract.** **Acceptance:** Same information/action without motion or color. **Required verification:** Reduced-motion and forced-colors regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0182-07 — Measure cost and comfort of motion.** **Acceptance:** No measurable playback impairment or cognitive distraction. **Required verification:** Named-hardware trace and participant evaluation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0182-01 - Inventory triggers and cancellation contract.** **Acceptance:** Every animation has data owner, states and interruption rules. **Required verification:** Per-component microstate matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0182-02 - Specify shared easing and motion tokens.** **Acceptance:** No ad-hoc global animation and every use has semantic reason. **Required verification:** CSS token/style audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0182-03 - Differentiate pending versus committed state.** **Acceptance:** Busy and proposed never visually equal completed. **Required verification:** Slow network and failure fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0182-04 - Define consistent revert and Undo response.** **Acceptance:** Reversal changes correct object and status, not just toast. **Required verification:** Undo conflict and Activity tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0182-05 - Refine musical microcopy glossary.** **Acceptance:** Users understand plan/render/play versus human quality feedback. **Required verification:** Writing and comprehension review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0182-06 - Apply sensory fallback contract.** **Acceptance:** Same information/action without motion or color. **Required verification:** Reduced-motion and forced-colors regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0182-07 - Measure cost and comfort of motion.** **Acceptance:** No measurable playback impairment or cognitive distraction. **Required verification:** Named-hardware trace and participant evaluation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

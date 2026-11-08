@@ -1,4 +1,4 @@
-# Selecta — experience-first UI/UX ADR roadmap
+# Selecta - experience-first UI/UX ADR roadmap
 
 **Planning baseline:** main `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged [PR #29](https://github.com/tochi-mba/selecta/pull/29), 2026-11-07. **Documentation-only:** 21 newly Proposed ADRs; **105 new EX tasks Not started, 0 Implemented, 0 Verified**. These do not automatically supersede earlier 4.0 decisions or assert that previous code has not been written.
 

@@ -73,7 +73,7 @@ def add_routes(app, ctx) -> None:
                 else None
             )
             steering["target_label"] = (
-                f"{target_song['artist'] or 'Unknown artist'} — "
+                f"{target_song['artist'] or 'Unknown artist'} - "
                 f"{target_song['title'] or 'Untitled'}"
                 if target_song
                 else None

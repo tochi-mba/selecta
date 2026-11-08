@@ -1,4 +1,4 @@
-# ADR-0173 — Arrangement timeline: tactile songs, seam edges and energy overview
+# ADR-0173 - Arrangement timeline: tactile songs, seam edges and energy overview
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained design when a richer animation does not measurably improve comprehension, creative control or delight. Illustrative graphics are not analysed waveforms, beats, timed lyrics, fake quality ratings or album artwork. Every animated interaction needs an accessible static/keyboard equivalent; audio and current/draft correctness outrank motion.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0173-01 — Define song block/seam link material.** **Acceptance:** Song and connection distinguishable without extra reading. **Required verification:** Full density and 320px specimens. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0173-02 — Prototype affected-seam drag preview.** **Acceptance:** Users see valid insertion and relevant changed neighbours. **Required verification:** Pointer and repeated-ID move fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0173-03 — Preserve keyboard and touch reorder.** **Acceptance:** Handle never traps vertical scroll; non-drag path has same result. **Required verification:** Coarse pointer, focus and keyboard tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0173-04 — Implement optional honest energy mini-map.** **Acceptance:** Real relative energy shown with unknown fallback and stable current position. **Required verification:** 40+ track and metadata-missing sample. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0173-05 — Clarify lock, draft scope and revision.** **Acceptance:** Cannot accidentally edit current while drafting or unlock by drag. **Required verification:** Revision and current/draft tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0173-06 — Animate confirmed add/remove/undo only.** **Acceptance:** Displayed row order equals actual returned authoritative state. **Required verification:** Conflict, failed write and Undo fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0173-07 — Measure long-editor response.** **Acceptance:** Inspector, open menus and 40+ songs stay interactive. **Required verification:** Performance trace and screen reader review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0173-01 - Define song block/seam link material.** **Acceptance:** Song and connection distinguishable without extra reading. **Required verification:** Full density and 320px specimens. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0173-02 - Prototype affected-seam drag preview.** **Acceptance:** Users see valid insertion and relevant changed neighbours. **Required verification:** Pointer and repeated-ID move fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0173-03 - Preserve keyboard and touch reorder.** **Acceptance:** Handle never traps vertical scroll; non-drag path has same result. **Required verification:** Coarse pointer, focus and keyboard tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0173-04 - Implement optional honest energy mini-map.** **Acceptance:** Real relative energy shown with unknown fallback and stable current position. **Required verification:** 40+ track and metadata-missing sample. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0173-05 - Clarify lock, draft scope and revision.** **Acceptance:** Cannot accidentally edit current while drafting or unlock by drag. **Required verification:** Revision and current/draft tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0173-06 - Animate confirmed add/remove/undo only.** **Acceptance:** Displayed row order equals actual returned authoritative state. **Required verification:** Conflict, failed write and Undo fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0173-07 - Measure long-editor response.** **Acceptance:** Inspector, open menus and 40+ songs stay interactive. **Required verification:** Performance trace and screen reader review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

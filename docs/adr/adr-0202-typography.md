@@ -1,4 +1,4 @@
-# ADR-0202 — Editorial display type and precision numeric typography
+# ADR-0202 - Editorial display type and precision numeric typography
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Introduce distinct typography for artist/song identity, UI explanations and tech
 
 No font that causes unacceptable layout shift, clipped titles or obscure cue controls. Prefer a calm and reliable existing control when a novel expression does not improve musical comprehension or agency. No new cloud, subscription, telemetry, audio asset, or backend contract is approved by this documentation alone.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0202-01 — Choose display/editorial/interface/technical roles.** **Acceptance:** Type functions and sizes explicit. **Required verification:** Specimen review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0202-02 — Define responsive scale.** **Acceptance:** Titles legible across widths and zoom. **Required verification:** 320–2560 and 400% screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0202-03 — Specify tabular numeric rules.** **Acceptance:** Times/BPM/bars align and show units. **Required verification:** Numeric regression fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0202-04 — Stress long and RTL metadata.** **Acceptance:** Controls never occluded by names. **Required verification:** Unicode content tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0202-05 — Document truncation behavior.** **Acceptance:** Full identity available by keyboard and touch. **Required verification:** AT and interaction checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0202-06 — Minimise font-loading cost.** **Acceptance:** Offline fallbacks stable. **Required verification:** Cold-load trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0202-07 — Refine line height and rhythm.** **Acceptance:** Dialog and information copy comfortable. **Required verification:** Reading study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0202-08 — Approve both-theme type consistency.** **Acceptance:** Typography remains expressive and accessible. **Required verification:** Design sign-off. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0202-01 - Choose display/editorial/interface/technical roles.** **Acceptance:** Type functions and sizes explicit. **Required verification:** Specimen review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0202-02 - Define responsive scale.** **Acceptance:** Titles legible across widths and zoom. **Required verification:** 320–2560 and 400% screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0202-03 - Specify tabular numeric rules.** **Acceptance:** Times/BPM/bars align and show units. **Required verification:** Numeric regression fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0202-04 - Stress long and RTL metadata.** **Acceptance:** Controls never occluded by names. **Required verification:** Unicode content tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0202-05 - Document truncation behavior.** **Acceptance:** Full identity available by keyboard and touch. **Required verification:** AT and interaction checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0202-06 - Minimise font-loading cost.** **Acceptance:** Offline fallbacks stable. **Required verification:** Cold-load trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0202-07 - Refine line height and rhythm.** **Acceptance:** Dialog and information copy comfortable. **Required verification:** Reading study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0202-08 - Approve both-theme type consistency.** **Acceptance:** Typography remains expressive and accessible. **Required verification:** Design sign-off. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

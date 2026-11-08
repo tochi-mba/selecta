@@ -1,4 +1,4 @@
-# ADR-0237 — Shared data provenance and authoritative music-state truth
+# ADR-0237 - Shared data provenance and authoritative music-state truth
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Every visible musical graphic must identify whether it is decorative, requested,
 
 No guessed beat, cover, harmonic fit, exact lyric word, render percentage, track availability or successful mutation. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0237-01 — Enumerate provenance types.** **Acceptance:** All musical objects have declared authority and uncertainty. **Required verification:** Domain schema audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0237-02 — Map current readiness states.** **Acceptance:** Song, seam, stem and job conditions use canonical values. **Required verification:** API and fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0237-03 — Define visual-state contracts.** **Acceptance:** Cards, lines and badges never mix plan with real status. **Required verification:** Design state matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0237-04 — Handle unknown explicitly.** **Acceptance:** Missing values display unknown instead of fake estimates. **Required verification:** Null fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0237-05 — Bind exact object identity.** **Acceptance:** Occurrence, seam and revision stable through async work. **Required verification:** Race and duplicate ID tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0237-06 — Design AT descriptions.** **Acceptance:** Readiness accessible without colors or diagrams. **Required verification:** NVDA inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0237-07 — Test errors and fallback semantics.** **Acceptance:** Failed render and technique fallback visible. **Required verification:** Error fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0237-08 — Validate user comprehension.** **Acceptance:** Novices distinguish prepared versus playing versus requested. **Required verification:** Uncoached status study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0237-01 - Enumerate provenance types.** **Acceptance:** All musical objects have declared authority and uncertainty. **Required verification:** Domain schema audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0237-02 - Map current readiness states.** **Acceptance:** Song, seam, stem and job conditions use canonical values. **Required verification:** API and fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0237-03 - Define visual-state contracts.** **Acceptance:** Cards, lines and badges never mix plan with real status. **Required verification:** Design state matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0237-04 - Handle unknown explicitly.** **Acceptance:** Missing values display unknown instead of fake estimates. **Required verification:** Null fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0237-05 - Bind exact object identity.** **Acceptance:** Occurrence, seam and revision stable through async work. **Required verification:** Race and duplicate ID tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0237-06 - Design AT descriptions.** **Acceptance:** Readiness accessible without colors or diagrams. **Required verification:** NVDA inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0237-07 - Test errors and fallback semantics.** **Acceptance:** Failed render and technique fallback visible. **Required verification:** Error fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0237-08 - Validate user comprehension.** **Acceptance:** Novices distinguish prepared versus playing versus requested. **Required verification:** Uncoached status study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

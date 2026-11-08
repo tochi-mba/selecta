@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 3 — Core journeys
+- **Phase:** 3 - Core journeys
 - **Extends existing decisions:** ADR-0012, ADR-0038
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0056-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Establish My Mixes as the permanent home for a distinguished current set, saved 
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0056-01 — Not started.** Design prominent current-mix summary separate from all draft project cards.
-2. **S3-0056-02 — Not started.** Move secondary draft actions into accessible menus with labels and non-hover entry.
-3. **S3-0056-03 — Not started.** Define draft saved, saving, failed-save, render pending, ready and missing-track states.
-4. **S3-0056-04 — Not started.** Preserve create, copy, rename, delete, undo restore, play swap, render priority/order and draft-first editing.
-5. **S3-0056-05 — Not started.** Improve queue position explanation and distinguish processing order from music order.
-6. **S3-0056-06 — Not started.** Provide scoped Undo after navigation, including multi-operation draft changes.
-7. **S3-0056-07 — Not started.** Add task-oriented empty states and long/duplicate-name handling.
-8. **S3-0056-08 — Not started.** Validate reload, browser history, concurrent requests and draft deletion during open edit.
+1. **S3-0056-01 - Not started.** Design prominent current-mix summary separate from all draft project cards.
+2. **S3-0056-02 - Not started.** Move secondary draft actions into accessible menus with labels and non-hover entry.
+3. **S3-0056-03 - Not started.** Define draft saved, saving, failed-save, render pending, ready and missing-track states.
+4. **S3-0056-04 - Not started.** Preserve create, copy, rename, delete, undo restore, play swap, render priority/order and draft-first editing.
+5. **S3-0056-05 - Not started.** Improve queue position explanation and distinguish processing order from music order.
+6. **S3-0056-06 - Not started.** Provide scoped Undo after navigation, including multi-operation draft changes.
+7. **S3-0056-07 - Not started.** Add task-oriented empty states and long/duplicate-name handling.
+8. **S3-0056-08 - Not started.** Validate reload, browser history, concurrent requests and draft deletion during open edit.
 
 ## Preservation and integration constraints
 

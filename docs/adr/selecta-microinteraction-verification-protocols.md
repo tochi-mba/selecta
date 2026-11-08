@@ -2,7 +2,7 @@
 
 These protocols implement the repeatable source-level deliverables for MI-0162 and MI-0164. They do not record results that have not happened. Every result must name the exact commit, reviewer, environment, fixture and limitation in the evidence ledger.
 
-## Reference hardware matrix — MI-0162-01
+## Reference hardware matrix - MI-0162-01
 
 Record all fields; a row with an unknown field is not a benchmark result.
 
@@ -14,7 +14,7 @@ Record all fields; a row with an unknown field is not a benchmark result.
 
 Also record cold/warm cache, library/mix/draft sizes, analysis/render activity, network state, theme, motion preference and whether DevTools recording overhead was present.
 
-## Performance thresholds — MI-0164-06
+## Performance thresholds - MI-0164-06
 
 These are release thresholds, not current measurements:
 
@@ -28,7 +28,7 @@ These are release thresholds, not current measurements:
 
 Publish raw trace filenames, captured time range and calculation method; do not report estimates as measurements.
 
-## Visual candidate matrix — MI-0164-02
+## Visual candidate matrix - MI-0164-02
 
 Capture each meaningful ready/loading/empty/partial/failure/recovery state, not only the ideal page.
 
@@ -46,7 +46,7 @@ Capture each meaningful ready/loading/empty/partial/failure/recovery state, not 
 
 Each image filename includes SHA, route, fixture, state, theme, viewport, scale and motion mode. Candidate images are review inputs, never automatic approval.
 
-## Auditory continuity protocol — MI-0164-03
+## Auditory continuity protocol - MI-0164-03
 
 1. Use real local audio with at least short/long tracks, silence at boundaries, different sample rates and difficult tempo/key pairings.
 2. Capture the output device loopback while exercising normal handoff, late seam readiness, seam failure, skip, seek, Previous/Next, preview start/stop, Stage, Studio, discovery, request bridge and export preview.
@@ -54,7 +54,7 @@ Each image filename includes SHA, route, fixture, state, theme, viewport, scale 
 4. Decode exported FLAC and compare song order, duration and frozen revision identity with the accepted job.
 5. Record audible defects and raw files. A clean synthetic/unit test is not a listening pass.
 
-## Uncoached task study — MI-0164-04
+## Uncoached task study - MI-0164-04
 
 Use consented participants who did not build the feature. Record denominator, completion, wrong turns, hesitation, recovery, assistance and participant wording for:
 
@@ -68,7 +68,7 @@ Use consented participants who did not build the feature. Record denominator, co
 
 Separate observed outcomes from preference and design interpretation. Never claim superiority without a defined comparison and raw counts.
 
-## Rollback and preservation rehearsal — MI-0164-07
+## Rollback and preservation rehearsal - MI-0164-07
 
 Use an isolated copied data directory; never the participant's only library.
 
@@ -80,7 +80,7 @@ Use an isolated copied data directory; never the participant's only library.
 
 `tests/rollback_check.py` is the automated baseline; an old→new→old rehearsal on the recorded candidate remains independent evidence.
 
-## Controlled language — MI-0163-01 through MI-0163-03
+## Controlled language - MI-0163-01 through MI-0163-03
 
 - **Song:** a library recording. **Current mix:** the one playback owns. **Draft:** saved editable work that cannot affect playback until explicitly played.
 - **Transition / seam:** the handoff between adjacent songs. Use “transition” in user-facing copy; “seam” may remain an internal/API term.

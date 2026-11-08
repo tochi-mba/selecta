@@ -4,7 +4,7 @@
 - **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
-- **Delivery phase:** 4 — Editing and Stem Studio
+- **Delivery phase:** 4 - Editing and Stem Studio
 - **Extends:** [ADR-0005](adr-0005-domain-state-mutations.md), [ADR-0013](adr-0013-edit-timeline.md), [ADR-0014](adr-0014-seam-inspector.md), [ADR-0022](adr-0022-flac-export.md); does not silently supersede their behavioural contracts.
 - **Dependencies:** ADR-0034 and ADR-0044 foundations, ADR-0035 shared controls and ADR-0036 asynchronous states. Apply ADR-0045 accessibility requirements during implementation.
 - **Checklist:** P0070–P0079 in [polish implementation checklist](polish-implementation-checklist.md).

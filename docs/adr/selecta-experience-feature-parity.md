@@ -1,4 +1,4 @@
-# Selecta — experience-first feature-preservation map
+# Selecta - experience-first feature-preservation map
 
 **Design proposal only; feature parity not yet independently verified at baseline `6638ec2313ce53843adfaf363306f8e79c4c8c7e`.** Keep the existing [Selecta 4.0 feature-parity map](selecta-4-feature-parity.md) as a complementary source-backed checklist.
 

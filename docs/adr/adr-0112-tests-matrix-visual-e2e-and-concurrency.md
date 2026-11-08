@@ -29,18 +29,18 @@ Build a feature-to-test traceability matrix with a layered suite: static/API/uni
 - Model-based/property invariants: one audio owner, wrong-scope writes impossible, atomic bridge, exact export snapshot, latest intent.
 - Exact CI head SHA, runner version and manual evidence recorded separately.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0112-01 — Inventory all prior Python, Web, audio and Edge tests and contracts.** Acceptance: No behavioural assertion silently dropped due to selector change. Required verification: File-by-file old-to-new test mapping. **Implementation: Not started; Verified: No.**
-2. **S4-0112-02 — Create deterministic fixtures for small/large/error/race states.** Acceptance: Fixtures independent and avoid private user music. Required verification: Isolated server/data setup and seeded media checks. **Implementation: Not started; Verified: No.**
-3. **S4-0112-03 — Establish component interaction/state suite for shared controls.** Acceptance: Every default/focused/pressed/busy/error variant covered. Required verification: Unit, component, keyboard tests. **Implementation: Not started; Verified: No.**
-4. **S4-0112-04 — Expand transport/audio-focus and player lifecycle regression.** Acceptance: No unintended overlap/stop/resume across every preview owner. Required verification: Pairwise player-owner matrix and real-media checks. **Implementation: Not started; Verified: No.**
-5. **S4-0112-05 — Expand current/draft/editor/request/export concurrency suite.** Acceptance: No wrong pair, duplicate join, partial bridge or wrong FLAC. Required verification: Sequences A–J in verification matrix. **Implementation: Not started; Verified: No.**
-6. **S4-0112-06 — Promote screenshot captures to reviewed golden comparisons.** Acceptance: Each intended diff approved and stored with fixture metadata. Required verification: Playwright toHaveScreenshot pinned browser. **Implementation: Not started; Verified: No.**
-7. **S4-0112-07 — Run automated WCAG checks plus manual AT acceptance.** Acceptance: Axe pass not misreported as manual conformance. Required verification: Per-route axe + NVDA/Edge session logs. **Implementation: Not started; Verified: No.**
-8. **S4-0112-08 — Measure large-data performance and export audio bytes.** Acceptance: 20k/100-song/64 cell and decodable snapshot-accurate FLAC. Required verification: Performance traces and audio decode assertions. **Implementation: Not started; Verified: No.**
-9. **S4-0112-09 — Require negative/offline/recovery/old server fixtures.** Acceptance: Failed, stale, interrupted and recovered visibly distinct. Required verification: Fault injection including timeout/duplicate response. **Implementation: Not started; Verified: No.**
-10. **S4-0112-10 — Publish CI matrix, flakes, quarantine policy and evidence links.** Acceptance: No broad test skip/update of failing snapshot to force green. Required verification: Exact-head checks, flake owner and PR review. **Implementation: Not started; Verified: No.**
+1. **S4-0112-01 - Inventory all prior Python, Web, audio and Edge tests and contracts.** Acceptance: No behavioural assertion silently dropped due to selector change. Required verification: File-by-file old-to-new test mapping. **Implementation: Not started; Verified: No.**
+2. **S4-0112-02 - Create deterministic fixtures for small/large/error/race states.** Acceptance: Fixtures independent and avoid private user music. Required verification: Isolated server/data setup and seeded media checks. **Implementation: Not started; Verified: No.**
+3. **S4-0112-03 - Establish component interaction/state suite for shared controls.** Acceptance: Every default/focused/pressed/busy/error variant covered. Required verification: Unit, component, keyboard tests. **Implementation: Not started; Verified: No.**
+4. **S4-0112-04 - Expand transport/audio-focus and player lifecycle regression.** Acceptance: No unintended overlap/stop/resume across every preview owner. Required verification: Pairwise player-owner matrix and real-media checks. **Implementation: Not started; Verified: No.**
+5. **S4-0112-05 - Expand current/draft/editor/request/export concurrency suite.** Acceptance: No wrong pair, duplicate join, partial bridge or wrong FLAC. Required verification: Sequences A–J in verification matrix. **Implementation: Not started; Verified: No.**
+6. **S4-0112-06 - Promote screenshot captures to reviewed golden comparisons.** Acceptance: Each intended diff approved and stored with fixture metadata. Required verification: Playwright toHaveScreenshot pinned browser. **Implementation: Not started; Verified: No.**
+7. **S4-0112-07 - Run automated WCAG checks plus manual AT acceptance.** Acceptance: Axe pass not misreported as manual conformance. Required verification: Per-route axe + NVDA/Edge session logs. **Implementation: Not started; Verified: No.**
+8. **S4-0112-08 - Measure large-data performance and export audio bytes.** Acceptance: 20k/100-song/64 cell and decodable snapshot-accurate FLAC. Required verification: Performance traces and audio decode assertions. **Implementation: Not started; Verified: No.**
+9. **S4-0112-09 - Require negative/offline/recovery/old server fixtures.** Acceptance: Failed, stale, interrupted and recovered visibly distinct. Required verification: Fault injection including timeout/duplicate response. **Implementation: Not started; Verified: No.**
+10. **S4-0112-10 - Publish CI matrix, flakes, quarantine policy and evidence links.** Acceptance: No broad test skip/update of failing snapshot to force green. Required verification: Exact-head checks, flake owner and PR review. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

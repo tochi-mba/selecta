@@ -1,4 +1,4 @@
-# ADR-0159 — Dialogs, drawers, toasts, Activity and recoverable mistakes
+# ADR-0159 - Dialogs, drawers, toasts, Activity and recoverable mistakes
 
 - **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
 - **Implementation:** 7/8 Implemented, 0/8 In progress, 1 Not started (source-level, PR #31).
@@ -19,7 +19,7 @@ A user can open deep overlays during music playback. Animation must never concea
 - Toasts confirm exact outcomes briefly while Activity preserves in-session context and scoped Undo after a toast disappears.
 - Prioritize errors/required consent over routine background notifications; Stage suppresses ordinary toasts.
 - Undo must refer to the newest relevant action within its exact mix scope and refuse stale inverse operations.
-- Use constructive error copy stating what happened, what remained safe and the next action—without false promises.
+- Use constructive error copy stating what happened, what remained safe and the next action-without false promises.
 
 ## Interaction choreography and visual behavior
 
@@ -32,16 +32,16 @@ A user can open deep overlays during music playback. Animation must never concea
 
 Prefer semantic, truthful feedback over cosmetic animation; static UI is better than invented musical evidence, gratuitous movement or a delayed critical control. Where visual polish conflicts with accurate playback, scope/revision identity, accessibility or control, behavior and safety win. Do not add runtime dependencies, processing APIs, telemetry or new audio assets under this documentation decision.
 
-## Implementation tasks — 5 source-level Implemented, 0 independently Verified
+## Implementation tasks - 5 source-level Implemented, 0 independently Verified
 
-1. **MI-0159-01 — Specify overlay stacking and focus.** Acceptance: Nested modal/inert/escape behavior correct without focus loss. Required verification: Keyboard, NVDA and portal tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: modal focus entry/trap/restore, Escape and inert overlay behavior in `ui/controls.tsx` with control tests; NVDA review remains open.**
-2. **MI-0159-02 — Design toast duration policy.** Acceptance: Errors/Undo durable in Activity and not obscured by bottom chrome. Required verification: Burst, timer and mobile tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
-3. **MI-0159-03 — Guard scope-aware Undo.** Acceptance: Older undo cannot revert newer unrelated action. Required verification: Current/draft concurrency tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
-4. **MI-0159-04 — Define recovery copy grammar.** Acceptance: Failure, surviving state, retry and affected object named. Required verification: Copy audit of major API failures. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: runtime/source contract and mapped implementation evidence in `docs/adr/selecta-microinteraction-final-contracts.md`; applicable independent human/device/audio review remains open.**
-5. **MI-0159-05 — Choreograph async confirmation.** Acceptance: Pending vs successful mutation never visually indistinguishable. Required verification: Delayed action fixtures. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
-6. **MI-0159-06 — Protect Stage from noise.** Acceptance: No ordinary toasts disturb lyrics while critical failures remain reachable. Required verification: Stage and activity integration. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
-7. **MI-0159-07 — Handle disappearing invokers.** Acceptance: Focus falls back to meaningful page start when item deleted. Required verification: Deleted draft/seam overlay tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
-8. **MI-0159-08 — Measure error recovery.** Acceptance: User can recover from failed create/move/export/request without coaching. Required verification: Injected fault study and raw counts. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: —; evidence: —.**
+1. **MI-0159-01 - Specify overlay stacking and focus.** Acceptance: Nested modal/inert/escape behavior correct without focus loss. Required verification: Keyboard, NVDA and portal tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: modal focus entry/trap/restore, Escape and inert overlay behavior in `ui/controls.tsx` with control tests; NVDA review remains open.**
+2. **MI-0159-02 - Design toast duration policy.** Acceptance: Errors/Undo durable in Activity and not obscured by bottom chrome. Required verification: Burst, timer and mobile tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
+3. **MI-0159-03 - Guard scope-aware Undo.** Acceptance: Older undo cannot revert newer unrelated action. Required verification: Current/draft concurrency tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
+4. **MI-0159-04 - Define recovery copy grammar.** Acceptance: Failure, surviving state, retry and affected object named. Required verification: Copy audit of major API failures. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: runtime/source contract and mapped implementation evidence in `docs/adr/selecta-microinteraction-final-contracts.md`; applicable independent human/device/audio review remains open.**
+5. **MI-0159-05 - Choreograph async confirmation.** Acceptance: Pending vs successful mutation never visually indistinguishable. Required verification: Delayed action fixtures. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
+6. **MI-0159-06 - Protect Stage from noise.** Acceptance: No ordinary toasts disturb lyrics while critical failures remain reachable. Required verification: Stage and activity integration. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
+7. **MI-0159-07 - Handle disappearing invokers.** Acceptance: Focus falls back to meaningful page start when item deleted. Required verification: Deleted draft/seam overlay tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
+8. **MI-0159-08 - Measure error recovery.** Acceptance: User can recover from failed create/move/export/request without coaching. Required verification: Injected fault study and raw counts. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: -; evidence: -.**
 
 ## Shared invariants and negative cases
 

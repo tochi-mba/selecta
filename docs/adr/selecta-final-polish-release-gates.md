@@ -1,4 +1,4 @@
-# Selecta — independent GO/NO-GO gates for new FP polish requirements
+# Selecta - independent GO/NO-GO gates for new FP polish requirements
 
 **Current proposed-programme verdict: NO-GO for the *new FP enhancement set*.** The eight FP decisions are Proposed and none of their sixty-four new task acceptances has been documented as Implemented or independently Verified. This is **not** a finding that the current Selecta application is unsafe or unfit for use.
 

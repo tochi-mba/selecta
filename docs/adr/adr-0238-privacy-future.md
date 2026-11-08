@@ -1,4 +1,4 @@
-# ADR-0238 — Local-first privacy and future SaaS-ready boundaries without SaaS
+# ADR-0238 - Local-first privacy and future SaaS-ready boundaries without SaaS
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Continue local-only operation, safe server file paths and limited LRCLIB lookup.
 
 No account screens, cloud registration, remote music upload, analytics beacon or cross-origin privilege change. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0238-01 — Audit current network and local paths.** **Acceptance:** All data egress and file permissions documented. **Required verification:** Network and server security inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0238-02 — Document LRCLIB disclosure.** **Acceptance:** Exactly what metadata is sent and when made explicit. **Required verification:** Privacy copy and packet review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0238-03 — Protect original media.** **Acceptance:** UI actions never imply destructive source overwrite. **Required verification:** File safety tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0238-04 — Set preference data boundaries.** **Acceptance:** Theme and motion preferences remain local. **Required verification:** Offline persistence tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0238-05 — Plan abstract storage seams.** **Acceptance:** Optional future interfaces do not change local code now. **Required verification:** Architecture design review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0238-06 — Specify future identity boundary.** **Acceptance:** No current login, billing or remote media scope. **Required verification:** Product scope check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0238-07 — Review new visual assets privacy.** **Acceptance:** Artwork and fonts work locally with authorized provenance. **Required verification:** Offline and resource inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0238-08 — Validate offline core paths.** **Acceptance:** Playback, library and editing do not require cloud. **Required verification:** Disconnected E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0238-01 - Audit current network and local paths.** **Acceptance:** All data egress and file permissions documented. **Required verification:** Network and server security inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0238-02 - Document LRCLIB disclosure.** **Acceptance:** Exactly what metadata is sent and when made explicit. **Required verification:** Privacy copy and packet review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0238-03 - Protect original media.** **Acceptance:** UI actions never imply destructive source overwrite. **Required verification:** File safety tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0238-04 - Set preference data boundaries.** **Acceptance:** Theme and motion preferences remain local. **Required verification:** Offline persistence tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0238-05 - Plan abstract storage seams.** **Acceptance:** Optional future interfaces do not change local code now. **Required verification:** Architecture design review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0238-06 - Specify future identity boundary.** **Acceptance:** No current login, billing or remote media scope. **Required verification:** Product scope check. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0238-07 - Review new visual assets privacy.** **Acceptance:** Artwork and fonts work locally with authorized provenance. **Required verification:** Offline and resource inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0238-08 - Validate offline core paths.** **Acceptance:** Playback, library and editing do not require cloud. **Required verification:** Disconnected E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

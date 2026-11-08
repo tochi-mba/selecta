@@ -1,4 +1,4 @@
-# ADR-0169 — Energy Horizon, tactile shaping and destination scope
+# ADR-0169 - Energy Horizon, tactile shaping and destination scope
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained layout when a richer animation does not measurably improve comprehension, creative control or delight. A preview or graphic is illustrative until connected to actual source data. No fake waveform, beat, word timing, quality score, cover art, render status, autoplay sound or processing percentage. Every animated or direct-manipulation state requires an accessible static/keyboard equivalent.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0169-01 — Design reusable five-stop horizon.** **Acceptance:** Same semantic start/finish form works in builder/draft/editor. **Required verification:** Responsive and state specimens. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0169-02 — Specify finger/stylus drawing precision.** **Acceptance:** Pointer capture, scroll behaviour and cancellation are deterministic. **Required verification:** Touch and stylus trace tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0169-03 — Preserve numeric and keyboard equivalence.** **Acceptance:** Every point editable at 400% zoom without SVG interaction. **Required verification:** NVDA and keyboard tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0169-04 — Separate intended and measured arc scales.** **Acceptance:** No misleading comparison or invented song energy. **Required verification:** Data and copy validation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0169-05 — Create overlap-style mini diagrams.** **Acceptance:** Smooth/punchy/adaptive visually meaningful but no audio claim. **Required verification:** Expert comprehension and static fallback. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0169-06 — Clarify destination and settings scope.** **Acceptance:** User understands future defaults, fallback and cancellation. **Required verification:** Reload/error/global-setting scenario tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0169-07 — Measure perceived creative control.** **Acceptance:** User can describe and achieve different journeys. **Required verification:** Uncoached task and actual musical-result review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0169-01 - Design reusable five-stop horizon.** **Acceptance:** Same semantic start/finish form works in builder/draft/editor. **Required verification:** Responsive and state specimens. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0169-02 - Specify finger/stylus drawing precision.** **Acceptance:** Pointer capture, scroll behaviour and cancellation are deterministic. **Required verification:** Touch and stylus trace tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0169-03 - Preserve numeric and keyboard equivalence.** **Acceptance:** Every point editable at 400% zoom without SVG interaction. **Required verification:** NVDA and keyboard tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0169-04 - Separate intended and measured arc scales.** **Acceptance:** No misleading comparison or invented song energy. **Required verification:** Data and copy validation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0169-05 - Create overlap-style mini diagrams.** **Acceptance:** Smooth/punchy/adaptive visually meaningful but no audio claim. **Required verification:** Expert comprehension and static fallback. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0169-06 - Clarify destination and settings scope.** **Acceptance:** User understands future defaults, fallback and cancellation. **Required verification:** Reload/error/global-setting scenario tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0169-07 - Measure perceived creative control.** **Acceptance:** User can describe and achieve different journeys. **Required verification:** Uncoached task and actual musical-result review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

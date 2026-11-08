@@ -4,7 +4,7 @@
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 3 — creator journeys
+- **Phase:** 3 - creator journeys
 - **Extends:** ADR-0056, ADR-0057, ADR-0058, ADR-0065. No inherited task is automatically complete.
 - **Dependencies:** ADRs 0078–0080; audio trust in ADR-0082.
 - **Checklist:** S31-0083-01 through S31-0083-12 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,18 +23,18 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0083-01 — Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next.
-2. **S31-0083-02 — Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity.
-3. **S31-0083-03 — Review creator timeline hierarchy at 2, 20 and 100 songs.** Acceptance: Track identity, seam status and contextual actions stay scannable under long metadata.
-4. **S31-0083-04 — Provide predictable non-drag reorder and insertion affordances.** Acceptance: Pointer/touch/keyboard alternatives clearly indicate destination and resulting order.
-5. **S31-0083-05 — Review draft versus current editor headers and action copy.** Acceptance: User knows what changes immediately affect playback and what remains a separate project.
-6. **S31-0083-06 — Audit Inspector Listen/Change/Studio/Details consistency.** Acceptance: Tab semantics, pair context, focus and requested-versus-rendered outcome stay stable.
-7. **S31-0083-07 — Review transition cue, style, bar count and fallback presentation.** Acceptance: User choice is not visually overwritten by a different actually rendered move.
-8. **S31-0083-08 — Verify preview/rating/render failure and stale-request recovery.** Acceptance: A late render cannot trump newer intent; audio preview preserves proper owner.
-9. **S31-0083-09 — Review export scope, prerequisites and exact snapshot identity.** Acceptance: Before confirm, user knows selected mix/revision and why export may be unavailable.
-10. **S31-0083-10 — Review persistent export stages, errors, retries and download recovery.** Acceptance: Closing panel or modifying mix does not lose job; final output corresponds to captured revision.
-11. **S31-0083-11 — Test cross-mix concurrent edits, requests and Undo.** Acceptance: Mutation/Undo only affects intended current/draft revision despite stale responses.
-12. **S31-0083-12 — Verify actual FLAC decoding and authored track order.** Acceptance: Downloaded file format, duration, transition identity and source scope match intended snapshot.
+1. **S31-0083-01 - Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next.
+2. **S31-0083-02 - Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity.
+3. **S31-0083-03 - Review creator timeline hierarchy at 2, 20 and 100 songs.** Acceptance: Track identity, seam status and contextual actions stay scannable under long metadata.
+4. **S31-0083-04 - Provide predictable non-drag reorder and insertion affordances.** Acceptance: Pointer/touch/keyboard alternatives clearly indicate destination and resulting order.
+5. **S31-0083-05 - Review draft versus current editor headers and action copy.** Acceptance: User knows what changes immediately affect playback and what remains a separate project.
+6. **S31-0083-06 - Audit Inspector Listen/Change/Studio/Details consistency.** Acceptance: Tab semantics, pair context, focus and requested-versus-rendered outcome stay stable.
+7. **S31-0083-07 - Review transition cue, style, bar count and fallback presentation.** Acceptance: User choice is not visually overwritten by a different actually rendered move.
+8. **S31-0083-08 - Verify preview/rating/render failure and stale-request recovery.** Acceptance: A late render cannot trump newer intent; audio preview preserves proper owner.
+9. **S31-0083-09 - Review export scope, prerequisites and exact snapshot identity.** Acceptance: Before confirm, user knows selected mix/revision and why export may be unavailable.
+10. **S31-0083-10 - Review persistent export stages, errors, retries and download recovery.** Acceptance: Closing panel or modifying mix does not lose job; final output corresponds to captured revision.
+11. **S31-0083-11 - Test cross-mix concurrent edits, requests and Undo.** Acceptance: Mutation/Undo only affects intended current/draft revision despite stale responses.
+12. **S31-0083-12 - Verify actual FLAC decoding and authored track order.** Acceptance: Downloaded file format, duration, transition identity and source scope match intended snapshot.
 
 ## Required adverse cases and evidence
 

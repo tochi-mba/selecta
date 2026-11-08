@@ -4,7 +4,7 @@
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 5 — cross-cutting quality
+- **Phase:** 5 - cross-cutting quality
 - **Extends:** ADR-0067, ADR-0068, ADR-0069, ADR-0073, ADR-0074. No inherited task is automatically complete.
 - **Dependencies:** Applies throughout Phases 1–4, with integrated acceptance at the end.
 - **Checklist:** S31-0087-01 through S31-0087-11 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -15,7 +15,7 @@ Relevant current repository surfaces: `web/e2e/{pages,flows,listen,integration}.
 
 ## Proposed decision
 
-Treat accessible task completion, reflow, accurate audio and measured performance as release conditions—not as incidental finishing decoration. Distinguish automated checks from human assistive-technology and real audio evidence.
+Treat accessible task completion, reflow, accurate audio and measured performance as release conditions-not as incidental finishing decoration. Distinguish automated checks from human assistive-technology and real audio evidence.
 
 ## Non-negotiable preservation
 
@@ -23,17 +23,17 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0087-01 — Approve platform, width, zoom, orientation and keyboard matrix.** Acceptance: Matrix covers 320/375/390/430/768/1024/1280/1440/1920/3840 CSS px where meaningful.
-2. **S31-0087-02 — Run full keyboard-only tasks across core journeys.** Acceptance: Skip link, menus, forms, tabs, waveform, timeline, Studio grid, requests and export have no traps.
-3. **S31-0087-03 — Run manual supported screen-reader tasks with actual versions logged.** Acceptance: At minimum NVDA/Edge and available VoiceOver/TalkBack; unsupported/unavailable runs remain pending.
-4. **S31-0087-04 — Verify WCAG 2.2 AA reflow, focus, contrast and target size.** Acceptance: Record objective measurements/exceptions; 24px AA minimum is not falsely described as a universal 44px requirement.
-5. **S31-0087-05 — Check reduced motion, colour-independent statuses and live announcements.** Acceptance: No flashing/chattering, no essential meaning relies only on colour or animated visuals.
-6. **S31-0087-06 — Verify mobile player/nav/keyboard/safe-area geometry under short viewports.** Acceptance: Focused controls and final list rows remain visible without overlap.
-7. **S31-0087-07 — Measure user interactions during background render on real hardware.** Acceptance: Record hardware, production build, input latency, long tasks and any audio timing disturbances.
-8. **S31-0087-08 — Profile 20k Library, 100-song Edit and full Studio grid.** Acceptance: Realistic search, reorder, scroll, repaint, memory and loading budgets defined from baseline.
-9. **S31-0087-09 — Verify media continuity across page, theme, Stage, audition and tabs.** Acceptance: Real audible evidence shows correct owner, seek/transition timing and no surprise resume.
-10. **S31-0087-10 — Review PWA installed-mode startup and backend-unavailable recovery.** Acceptance: No claim of offline playback without running local server; direct routes and recovery remain truthful.
-11. **S31-0087-11 — Define evidence-backed performance and accessibility budgets.** Acceptance: Use reference 200ms INP/0.1 CLS properly as context, not unsupported field compliance claim.
+1. **S31-0087-01 - Approve platform, width, zoom, orientation and keyboard matrix.** Acceptance: Matrix covers 320/375/390/430/768/1024/1280/1440/1920/3840 CSS px where meaningful.
+2. **S31-0087-02 - Run full keyboard-only tasks across core journeys.** Acceptance: Skip link, menus, forms, tabs, waveform, timeline, Studio grid, requests and export have no traps.
+3. **S31-0087-03 - Run manual supported screen-reader tasks with actual versions logged.** Acceptance: At minimum NVDA/Edge and available VoiceOver/TalkBack; unsupported/unavailable runs remain pending.
+4. **S31-0087-04 - Verify WCAG 2.2 AA reflow, focus, contrast and target size.** Acceptance: Record objective measurements/exceptions; 24px AA minimum is not falsely described as a universal 44px requirement.
+5. **S31-0087-05 - Check reduced motion, colour-independent statuses and live announcements.** Acceptance: No flashing/chattering, no essential meaning relies only on colour or animated visuals.
+6. **S31-0087-06 - Verify mobile player/nav/keyboard/safe-area geometry under short viewports.** Acceptance: Focused controls and final list rows remain visible without overlap.
+7. **S31-0087-07 - Measure user interactions during background render on real hardware.** Acceptance: Record hardware, production build, input latency, long tasks and any audio timing disturbances.
+8. **S31-0087-08 - Profile 20k Library, 100-song Edit and full Studio grid.** Acceptance: Realistic search, reorder, scroll, repaint, memory and loading budgets defined from baseline.
+9. **S31-0087-09 - Verify media continuity across page, theme, Stage, audition and tabs.** Acceptance: Real audible evidence shows correct owner, seek/transition timing and no surprise resume.
+10. **S31-0087-10 - Review PWA installed-mode startup and backend-unavailable recovery.** Acceptance: No claim of offline playback without running local server; direct routes and recovery remain truthful.
+11. **S31-0087-11 - Define evidence-backed performance and accessibility budgets.** Acceptance: Use reference 200ms INP/0.1 CLS properly as context, not unsupported field compliance claim.
 
 ## Required adverse cases and evidence
 

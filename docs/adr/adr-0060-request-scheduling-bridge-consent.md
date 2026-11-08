@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 3 — Core journeys
+- **Phase:** 3 - Core journeys
 - **Extends existing decisions:** ADR-0015, ADR-0028, ADR-0042
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0060-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Organize Requests around song intent and next action, with a concise state vocab
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0060-01 — Not started.** Redesign Request search, results, active list and responsive entry point from Listen/player.
-2. **S3-0060-02 — Not started.** Define canonical user-facing labels for waiting, finding place, needs approval, preparing, coming up, failure.
-3. **S3-0060-03 — Not started.** Preserve optimistic create/confirm/rollback and duplicate prevention with idempotent retry.
-4. **S3-0060-04 — Not started.** Create explicit bridge-route consent surface with audio previews and accessible order/relationship.
-5. **S3-0060-05 — Not started.** Retain route alternatives, refusal, cancellation and Play it anyway with clear rough-transition warning.
-6. **S3-0060-06 — Not started.** Render planned bridge ghost rows in editor without claiming readiness or allowing partial play.
-7. **S3-0060-07 — Not started.** Protect cancellation/approval/placement against lost responses, stale poll and concurrent requests.
-8. **S3-0060-08 — Not started.** Verify one audio owner across request previews and persistent playback.
-9. **S3-0060-09 — Not started.** Add backend contract and E2E race tests for complete atomicity.
+1. **S3-0060-01 - Not started.** Redesign Request search, results, active list and responsive entry point from Listen/player.
+2. **S3-0060-02 - Not started.** Define canonical user-facing labels for waiting, finding place, needs approval, preparing, coming up, failure.
+3. **S3-0060-03 - Not started.** Preserve optimistic create/confirm/rollback and duplicate prevention with idempotent retry.
+4. **S3-0060-04 - Not started.** Create explicit bridge-route consent surface with audio previews and accessible order/relationship.
+5. **S3-0060-05 - Not started.** Retain route alternatives, refusal, cancellation and Play it anyway with clear rough-transition warning.
+6. **S3-0060-06 - Not started.** Render planned bridge ghost rows in editor without claiming readiness or allowing partial play.
+7. **S3-0060-07 - Not started.** Protect cancellation/approval/placement against lost responses, stale poll and concurrent requests.
+8. **S3-0060-08 - Not started.** Verify one audio owner across request previews and persistent playback.
+9. **S3-0060-09 - Not started.** Add backend contract and E2E race tests for complete atomicity.
 
 ## Preservation and integration constraints
 

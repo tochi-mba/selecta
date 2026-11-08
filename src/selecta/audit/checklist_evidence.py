@@ -20,7 +20,7 @@ AFTER_EVIDENCE = re.compile(
     r";\s*(?:independent\b|owner\s*:|verified\s*:|implementation\s*:)",
     re.IGNORECASE,
 )
-NO_EVIDENCE = {"", "-", "—", "none", "n/a", "not started", "pending", "tbd", "todo"}
+NO_EVIDENCE = {"", "-", "-", "none", "n/a", "not started", "pending", "tbd", "todo"}
 
 
 def meaningful_evidence(value: str) -> bool:

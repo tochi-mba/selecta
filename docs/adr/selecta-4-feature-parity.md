@@ -1,4 +1,4 @@
-# Selecta 4.0 — feature preservation and no-regression mapping
+# Selecta 4.0 - feature preservation and no-regression mapping
 
 - **Proposed:** 2026-11-07.
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (PR #25 and PR #26 already merged at review).
@@ -46,5 +46,5 @@ Keep `/listen`, `/mixes`, `/mixes/mine`, `/mix/current/edit`, `/mixes/drafts/:id
 - A feature is preserved only if the user can still find and operate it, not merely if its backend endpoint exists.
 - Every mutation retains stable target identity, scope, audio consequence, revision and error recovery.
 - No original song files are altered through Library correction, excluding or source-unwatch actions.
-- New aspirational features—extra advanced metadata filters, remote/local artwork fetching, additional export formats, native folder chooser or true A/B version preservation—are optional separately scoped proposals unless validated by current APIs.
+- New aspirational features-extra advanced metadata filters, remote/local artwork fetching, additional export formats, native folder chooser or true A/B version preservation-are optional separately scoped proposals unless validated by current APIs.
 - Existing tests map to each capability; changed selectors should use roles/accessible names without dropping behaviour assertions.

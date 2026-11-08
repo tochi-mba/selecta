@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 3 — Core journeys
+- **Phase:** 3 - Core journeys
 - **Extends existing decisions:** ADR-0018, ADR-0025, ADR-0037
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0053-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Replace first run with three task-oriented stages: Connect music, Prepare librar
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0053-01 — Not started.** Prototype novice setup with a clear privacy explanation and a short, readable staged interface.
-2. **S3-0053-02 — Not started.** Evaluate installed-app/native folder selection and implement only if server path acquisition is secure; retain paste-path validation.
-3. **S3-0053-03 — Not started.** Specify source-path failure states: non-existent, inaccessible, duplicate, symlink, disconnected drive and unsupported file.
-4. **S3-0053-04 — Not started.** Provide real scan and readiness progress with stage-specific explanation of analysis, lyrics and optional stems.
-5. **S3-0053-05 — Not started.** Enable correct first playable mix as soon as backend readiness permits; do not pretend unready tracks are ready.
-6. **S3-0053-06 — Not started.** Support canceled/retried/interrupted scan, server restart, background watcher and adding further folders later.
-7. **S3-0053-07 — Not started.** Separate new-user onboarding from offline/partial state of an existing user.
-8. **S3-0053-08 — Not started.** Conduct unguided first-run tasks and record actual completion and confusion evidence.
+1. **S3-0053-01 - Not started.** Prototype novice setup with a clear privacy explanation and a short, readable staged interface.
+2. **S3-0053-02 - Not started.** Evaluate installed-app/native folder selection and implement only if server path acquisition is secure; retain paste-path validation.
+3. **S3-0053-03 - Not started.** Specify source-path failure states: non-existent, inaccessible, duplicate, symlink, disconnected drive and unsupported file.
+4. **S3-0053-04 - Not started.** Provide real scan and readiness progress with stage-specific explanation of analysis, lyrics and optional stems.
+5. **S3-0053-05 - Not started.** Enable correct first playable mix as soon as backend readiness permits; do not pretend unready tracks are ready.
+6. **S3-0053-06 - Not started.** Support canceled/retried/interrupted scan, server restart, background watcher and adding further folders later.
+7. **S3-0053-07 - Not started.** Separate new-user onboarding from offline/partial state of an existing user.
+8. **S3-0053-08 - Not started.** Conduct unguided first-run tasks and record actual completion and confusion evidence.
 
 ## Preservation and integration constraints
 

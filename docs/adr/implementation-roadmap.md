@@ -1,4 +1,4 @@
-# Selecta 2.0 — implementation roadmap
+# Selecta 2.0 - implementation roadmap
 
 - **Decision status:** Accepted
 - **Implementation status for every phase:** see the table ([#22](https://github.com/tochi-mba/selecta/pull/22))

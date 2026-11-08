@@ -69,7 +69,7 @@ describe('honest shared musical objects', () => {
       requestedId={9}
       state="proposed"
     />);
-    const route = screen.getByRole('list', { name: /Proposed route — nothing added/ });
+    const route = screen.getByRole('list', { name: /Proposed route - nothing added/ });
     expect(route).toHaveTextContent('Bridge');
     expect(route).toHaveTextContent('Requested');
     expect(route).toHaveTextContent('Extra bridge song');

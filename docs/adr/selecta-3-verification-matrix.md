@@ -1,4 +1,4 @@
-# Selecta 3.0 — verification, adversarial edge cases and release gates
+# Selecta 3.0 - verification, adversarial edge cases and release gates
 
 - **Decision status:** Accepted.
 - **Implementation status:** Not started.

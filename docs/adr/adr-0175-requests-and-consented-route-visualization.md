@@ -1,4 +1,4 @@
-# ADR-0175 — Requests: visible musical routes, ghost placement and bridge consent
+# ADR-0175 - Requests: visible musical routes, ghost placement and bridge consent
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This ADR proposes a **new cross-surface design and acceptance delta**, not a cla
 
 Prefer the existing restrained and proven UI when added visuals distract or reduce correctness. No artificial music, artwork, beat, lyric accuracy, quality score or fake render status. All sensory interactions require a usable static, keyboard, high-contrast and reduced-motion alternative. Source truth and explicit human consent outrank polish.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0175-01 — Specify intent/position/ready visual states.** **Acceptance:** User can distinguish requested, proposed and audible states. **Required verification:** State-machine and screen-reader fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0175-02 — Design direct versus bridge route graphic.** **Acceptance:** Only returned ordered songs and valid edges shown. **Required verification:** Bridge search and unavailable-route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0175-03 — Add provisional timeline representation.** **Acceptance:** Ghost position cannot be confused with a ready playable transition. **Required verification:** Editor and request integration fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0175-04 — Preserve approval and atomic insert.** **Acceptance:** No extra bridge track inserted before consent or only partially. **Required verification:** Server race, approve/decline and multi-tab tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0175-05 — Clarify force and cancel operations.** **Acceptance:** Rough transition consequences and cancel focus are obvious. **Required verification:** Play anyway, cancel error and recoverability audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0175-06 — Prevent stale/duplicate request feedback.** **Acceptance:** Late/failed search cannot visually add wrong track twice. **Required verification:** Idempotency and offline replay tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0175-07 — Measure listener trust in bridge plan.** **Acceptance:** Users understand why extra songs appear and when desired song will play. **Required verification:** Uncoached real-audio request study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0175-01 - Specify intent/position/ready visual states.** **Acceptance:** User can distinguish requested, proposed and audible states. **Required verification:** State-machine and screen-reader fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0175-02 - Design direct versus bridge route graphic.** **Acceptance:** Only returned ordered songs and valid edges shown. **Required verification:** Bridge search and unavailable-route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0175-03 - Add provisional timeline representation.** **Acceptance:** Ghost position cannot be confused with a ready playable transition. **Required verification:** Editor and request integration fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0175-04 - Preserve approval and atomic insert.** **Acceptance:** No extra bridge track inserted before consent or only partially. **Required verification:** Server race, approve/decline and multi-tab tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0175-05 - Clarify force and cancel operations.** **Acceptance:** Rough transition consequences and cancel focus are obvious. **Required verification:** Play anyway, cancel error and recoverability audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0175-06 - Prevent stale/duplicate request feedback.** **Acceptance:** Late/failed search cannot visually add wrong track twice. **Required verification:** Idempotency and offline replay tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0175-07 - Measure listener trust in bridge plan.** **Acceptance:** Users understand why extra songs appear and when desired song will play. **Required verification:** Uncoached real-audio request study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

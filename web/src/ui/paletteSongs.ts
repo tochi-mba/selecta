@@ -50,7 +50,7 @@ export function usePaletteSongs(text: string): { commands: Command[]; failed: bo
       const shared = (titles.get(title.toLocaleLowerCase()) ?? 0) > 1;
       return {
         id: `song-${song.id}`,
-        label: `${title} — ${song.artist ?? 'Unknown artist'}${shared ? ` (song ${song.id})` : ''}`,
+        label: `${title} - ${song.artist ?? 'Unknown artist'}${shared ? ` (song ${song.id})` : ''}`,
         group: 'Songs',
         // what the Library says about it, so a found song is never taken for one that's ready
         detail: `${trackReadiness(song).words}, opens its details`,

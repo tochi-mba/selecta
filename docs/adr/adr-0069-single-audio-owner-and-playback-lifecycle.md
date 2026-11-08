@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 6 — Cross-cutting quality
+- **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0006, ADR-0007, ADR-0028
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0069-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Retain one audio-focus authority and make all new preview controls comply with i
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0069-01 — Not started.** Document transport and preview focus state machine including idle, playing, paused, previewing and user-interrupted.
-2. **S3-0069-02 — Not started.** Audit every audio call site in Listen, editor, Requests, Discovery, Studio, Study and Export UI.
-3. **S3-0069-03 — Not started.** Use stable owner IDs and cleanup to prevent stale onended/onerror events releasing new playback.
-4. **S3-0069-04 — Not started.** Test play/pause/skip/seek by user while preview is active, then preview end/route unmount.
-5. **S3-0069-05 — Not started.** Retain Media Session metadata/actions and multi-tab takeover safeguards.
-6. **S3-0069-06 — Not started.** Verify no audio element duplication during React StrictMode and responsive view swaps.
-7. **S3-0069-07 — Not started.** Measure actual seam scheduling continuity separately from UI animation.
-8. **S3-0069-08 — Not started.** Define audio-failure recovery for rejected play(), decode failure, suspended context and missing sources.
-9. **S3-0069-09 — Not started.** Keep visual playback status synchronized with actual transport rather than optimistic guesses.
+1. **S3-0069-01 - Not started.** Document transport and preview focus state machine including idle, playing, paused, previewing and user-interrupted.
+2. **S3-0069-02 - Not started.** Audit every audio call site in Listen, editor, Requests, Discovery, Studio, Study and Export UI.
+3. **S3-0069-03 - Not started.** Use stable owner IDs and cleanup to prevent stale onended/onerror events releasing new playback.
+4. **S3-0069-04 - Not started.** Test play/pause/skip/seek by user while preview is active, then preview end/route unmount.
+5. **S3-0069-05 - Not started.** Retain Media Session metadata/actions and multi-tab takeover safeguards.
+6. **S3-0069-06 - Not started.** Verify no audio element duplication during React StrictMode and responsive view swaps.
+7. **S3-0069-07 - Not started.** Measure actual seam scheduling continuity separately from UI animation.
+8. **S3-0069-08 - Not started.** Define audio-failure recovery for rejected play(), decode failure, suspended context and missing sources.
+9. **S3-0069-09 - Not started.** Keep visual playback status synchronized with actual transport rather than optimistic guesses.
 
 ## Preservation and integration constraints
 

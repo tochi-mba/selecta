@@ -325,7 +325,7 @@ VIBES: tuple[Vibe, ...] = (
     Vibe(
         "confidence",
         "Main character",
-        "Hooks, swagger and lift — songs that make the room feel like yours.",
+        "Hooks, swagger and lift - songs that make the room feel like yours.",
         lambda _, t: t.energy >= 0.42 and (t.about("flex") >= 0.55 or t.hook >= 0.62),
         group=MOOD,
         belongs=lambda _, t: t.about("flex") + 0.55 * t.hook + 0.25 * t.energy,

@@ -260,9 +260,9 @@ describe('Pick a feeling', () => {
     show();
     fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
     fireEvent.change(await screen.findByLabelText('Take me to'), { target: { value: 'midnight' } });
-    fireEvent.click(await screen.findByRole('button', { name: 'Midnight — Example Artist' }));
-    expect(await screen.findByText('Midnight — Example Artist')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'No Cues — Unready Artist' })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'Midnight - Example Artist' }));
+    expect(await screen.findByText('Midnight - Example Artist')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'No Cues - Unready Artist' })).toBeNull();
     expect(calls.some((call) => call.method === 'POST' && call.path === '/steer' && (call.body as { action?: string; value?: string }).action === 'take_me_to' && (call.body as { value?: string }).value === '7')).toBe(true);
   });
 

@@ -1,4 +1,4 @@
-# ADR-0228 — My Mixes: collectible sleeves, explicit current performance and render line
+# ADR-0228 - My Mixes: collectible sleeves, explicit current performance and render line
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Turn saved mixes into tangible creative artifacts while keeping current playback
 
 No treating the render queue as the song queue, invisible draft activation or data loss on rename/delete. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0228-01 — Design current mix hero.** **Acceptance:** Active mix and listening state obvious. **Required verification:** Current/draft comprehension. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0228-02 — Build draft sleeve gallery.** **Acceptance:** Draft and ready mix statuses correct. **Required verification:** Mixed-state fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0228-03 — Explain edit versus play.** **Acceptance:** Clear project actions by scope. **Required verification:** Novice task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0228-04 — Protect draft activation.** **Acceptance:** Explicit replacement or change consent if required. **Required verification:** Revision/audio E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0228-05 — Refine naming and deletion.** **Acceptance:** Undo/confirmation applied only where real. **Required verification:** Failure and conflict tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0228-06 — Separate render line visually.** **Acceptance:** Background job queue not confused with playback Up Next. **Required verification:** Comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0228-07 — Maintain deep links.** **Acceptance:** Draft IDs and current mix remain stable after navigation. **Required verification:** Route test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0228-08 — Verify collection lifecycle.** **Acceptance:** Create, save, edit, export and return coherent. **Required verification:** End-to-end journey. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0228-01 - Design current mix hero.** **Acceptance:** Active mix and listening state obvious. **Required verification:** Current/draft comprehension. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0228-02 - Build draft sleeve gallery.** **Acceptance:** Draft and ready mix statuses correct. **Required verification:** Mixed-state fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0228-03 - Explain edit versus play.** **Acceptance:** Clear project actions by scope. **Required verification:** Novice task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0228-04 - Protect draft activation.** **Acceptance:** Explicit replacement or change consent if required. **Required verification:** Revision/audio E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0228-05 - Refine naming and deletion.** **Acceptance:** Undo/confirmation applied only where real. **Required verification:** Failure and conflict tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0228-06 - Separate render line visually.** **Acceptance:** Background job queue not confused with playback Up Next. **Required verification:** Comprehension study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0228-07 - Maintain deep links.** **Acceptance:** Draft IDs and current mix remain stable after navigation. **Required verification:** Route test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0228-08 - Verify collection lifecycle.** **Acceptance:** Create, save, edit, export and return coherent. **Required verification:** End-to-end journey. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

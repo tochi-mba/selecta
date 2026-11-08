@@ -1,4 +1,4 @@
-# ADR-0181 — Export: frozen mix revision, real preparation and finished artifact
+# ADR-0181 - Export: frozen mix revision, real preparation and finished artifact
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, not-yet-implemented design and acceptance delta**, not proof th
 
 Preserve the existing restrained experience if an expressive version cannot prove comprehension, tactile confidence, accessibility and real playback performance. Diagrams do not claim unverified musical precision or quality. Never fabricate beat, lyric, wave, cover, render status, progress or success. Supply static/keyboard alternatives and respect intentional silence/Pause.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0181-01 — Design frozen revision visual object.** **Acceptance:** Export identity remains distinct from current mutable mix. **Required verification:** Concurrent edit and export fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0181-02 — Show prerequisite transition states.** **Acceptance:** Progress derived from real seam readiness and job stages only. **Required verification:** Queued/ready/failed render tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0181-03 — Specify full export failure taxonomy.** **Acceptance:** Canceled, expired and unavailable file distinguished. **Required verification:** Server error and missing file fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0181-04 — Confirm actual completed FLAC presentation.** **Acceptance:** Filename/duration/download appear only after true completion. **Required verification:** Decoding and revision/track-order comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0181-05 — Preserve job discovery and reload.** **Acceptance:** Closing UI never erases or restarts existing job. **Required verification:** Activity/Workspace and navigation tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0181-06 — Design accessible completion feedback.** **Acceptance:** No flashing or fake quality claims; immediate keyboard download. **Required verification:** Reduced-motion/AT review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0181-07 — Verify original media and exact output.** **Acceptance:** No original file mutation and artifact matches frozen revision. **Required verification:** Real audio gap/overlap and disk-integrity audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0181-01 - Design frozen revision visual object.** **Acceptance:** Export identity remains distinct from current mutable mix. **Required verification:** Concurrent edit and export fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0181-02 - Show prerequisite transition states.** **Acceptance:** Progress derived from real seam readiness and job stages only. **Required verification:** Queued/ready/failed render tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0181-03 - Specify full export failure taxonomy.** **Acceptance:** Canceled, expired and unavailable file distinguished. **Required verification:** Server error and missing file fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0181-04 - Confirm actual completed FLAC presentation.** **Acceptance:** Filename/duration/download appear only after true completion. **Required verification:** Decoding and revision/track-order comparison. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0181-05 - Preserve job discovery and reload.** **Acceptance:** Closing UI never erases or restarts existing job. **Required verification:** Activity/Workspace and navigation tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0181-06 - Design accessible completion feedback.** **Acceptance:** No flashing or fake quality claims; immediate keyboard download. **Required verification:** Reduced-motion/AT review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0181-07 - Verify original media and exact output.** **Acceptance:** No original file mutation and artifact matches frozen revision. **Required verification:** Real audio gap/overlap and disk-integrity audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

@@ -4,7 +4,7 @@
 - **Implementation status:** In progress on PR 24; not merged or verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 2 — Foundations
+- **Phase:** 2 - Foundations
 - **Extends existing decisions:** ADR-0003, ADR-0050, ADR-0070, ADR-0072
 - **Asked for by:** the owner, while PR 24 was being built
 
@@ -32,12 +32,12 @@ Bring lime back to the light theme where it can work: only as a filled shape wit
 
 ## Detailed implementation work
 
-1. **S3-0077-01 — In progress.** Add the `theme` preference, defaulting to following the computer, with unrecognised saved values ignored.
-2. **S3-0077-02 — In progress.** Apply it before first paint and keep it applied through `data-theme`, including the title bar colour.
-3. **S3-0077-03 — In progress.** Header menu with radio semantics, Workspace radio group and palette commands, all showing the current choice.
-4. **S3-0077-04 — In progress.** Semantic tokens for the main action and the current lyric word, so lime returns to the light theme without failing contrast.
-5. **S3-0077-05 — In progress.** Redraw the spectrum when the shown theme changes.
-6. **S3-0077-06 — In progress.** Run the automated contrast checks with the theme chosen explicitly, as well as following the system.
+1. **S3-0077-01 - In progress.** Add the `theme` preference, defaulting to following the computer, with unrecognised saved values ignored.
+2. **S3-0077-02 - In progress.** Apply it before first paint and keep it applied through `data-theme`, including the title bar colour.
+3. **S3-0077-03 - In progress.** Header menu with radio semantics, Workspace radio group and palette commands, all showing the current choice.
+4. **S3-0077-04 - In progress.** Semantic tokens for the main action and the current lyric word, so lime returns to the light theme without failing contrast.
+5. **S3-0077-05 - In progress.** Redraw the spectrum when the shown theme changes.
+6. **S3-0077-06 - In progress.** Run the automated contrast checks with the theme chosen explicitly, as well as following the system.
 
 ## Preservation and integration constraints
 

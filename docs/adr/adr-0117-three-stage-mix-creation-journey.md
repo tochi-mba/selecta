@@ -1,4 +1,4 @@
-# ADR-0117 — Three-stage mix creation: choose, shape and commit
+# ADR-0117 - Three-stage mix creation: choose, shape and commit
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/5 new tasks implemented).
@@ -30,11 +30,11 @@ Visual shapes are intent, not proof of the finished track curve or a guaranteed 
 
 ## Implementation tasks (all Not started / Not verified)
 
-1. **EX-0117-01 — Prototype fast Play vs optional shape.** Acceptance: First valid mix can start without configuration. Verification: First-user uncoached completion test. **Implementation: Not started; Verified: No.**
-2. **EX-0117-02 — Map all existing configuration.** Acceptance: Duration, feel, stems, energy and destination remain persistent. Verification: State/data contract parity and edit tests. **Implementation: Not started; Verified: No.**
-3. **EX-0117-03 — Specify accurate curve display.** Acceptance: Five values/presets equal server intent and stay keyboard editable. Verification: Rapid change/stale save tests. **Implementation: Not started; Verified: No.**
-4. **EX-0117-04 — Unify Play/Edit/Save consequences.** Acceptance: Users know whether music is replaced or a draft created. Verification: Playing/paused/idle E2E. **Implementation: Not started; Verified: No.**
-5. **EX-0117-05 — Harden pending/failed generation.** Acceptance: Double submits and late requests cannot mutate wrong scope. Verification: Async race and failure injection. **Implementation: Not started; Verified: No.**
+1. **EX-0117-01 - Prototype fast Play vs optional shape.** Acceptance: First valid mix can start without configuration. Verification: First-user uncoached completion test. **Implementation: Not started; Verified: No.**
+2. **EX-0117-02 - Map all existing configuration.** Acceptance: Duration, feel, stems, energy and destination remain persistent. Verification: State/data contract parity and edit tests. **Implementation: Not started; Verified: No.**
+3. **EX-0117-03 - Specify accurate curve display.** Acceptance: Five values/presets equal server intent and stay keyboard editable. Verification: Rapid change/stale save tests. **Implementation: Not started; Verified: No.**
+4. **EX-0117-04 - Unify Play/Edit/Save consequences.** Acceptance: Users know whether music is replaced or a draft created. Verification: Playing/paused/idle E2E. **Implementation: Not started; Verified: No.**
+5. **EX-0117-05 - Harden pending/failed generation.** Acceptance: Double submits and late requests cannot mutate wrong scope. Verification: Async race and failure injection. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and references
 

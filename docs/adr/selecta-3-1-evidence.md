@@ -1,4 +1,4 @@
-# Selecta 3.1 — finishing implementation and independent verification ledger
+# Selecta 3.1 - finishing implementation and independent verification ledger
 
 - **Date:** 2026-11-07.
 - **Programme decisions:** 11 Proposed (ADR-0078–0088); none accepted as part of this proposal.
@@ -24,7 +24,7 @@
 | [ADR-0088](adr-0088-research-visual-regression-and-release.md) | Accepted | In progress (partial) | 0/12 | Require observable user, visual and product acceptance before release |
 | **Total** | 11 proposed | 0 implemented | **0/116** | |
 
-## Implementation on PR #25 — 29 partial tasks, none Verified
+## Implementation on PR #25 - 29 partial tasks, none Verified
 
 | Task | Status | Source or automated evidence | Still required before Verified |
 |---|---|---|---|

@@ -29,18 +29,18 @@ Compose a three-region editor (scope/actions, song-transition timeline, optional
 - Insertion gaps remain accessible without repeated large Add buttons after each row.
 - Inspector selection is keyed by stable song/seam identity rather than array index.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0100-01 — Implement persistent current/draft scope header and clear actions.** Acceptance: Editing a draft never silently mutates what plays. Required verification: Play A/edit B live scenario. **Implementation: Not started; Verified: No.**
-2. **S4-0100-02 — Redesign song and seam rows with clear hierarchy.** Acceptance: Long, duplicate, RTL song names remain identifiable. Required verification: 2, 20 and 100-song screenshots. **Implementation: Not started; Verified: No.**
-3. **S4-0100-03 — Preserve pointer/touch/keyboard reorder and move controls.** Acceptance: Every method yields identical order with visible focus. Required verification: First/middle/last/locked and touch-scroll tests. **Implementation: Not started; Verified: No.**
-4. **S4-0100-04 — Preserve exact-position insertion, removal, locking and Undo.** Acceptance: No impossible or inaccessible insertion gap. Required verification: Empty/one-song/edge-gap scenarios. **Implementation: Not started; Verified: No.**
-5. **S4-0100-05 — Keep selection attached to stable object through mutation.** Acceptance: After reorder focus stays with same track; invalid pair explained. Required verification: Concurrent request insertion/delete pair tests. **Implementation: Not started; Verified: No.**
-6. **S4-0100-06 — Create compact status/problem navigation.** Acceptance: Jumps to actual failed/missing/unrendered seam and restores focus. Required verification: 100-song fixture and keyboard problem jump. **Implementation: Not started; Verified: No.**
-7. **S4-0100-07 — Define consistent whole-mix action grouping.** Acceptance: Save copy, export, new, clear and preview remain discoverable. Required verification: Action parity and keyboard menu audit. **Implementation: Not started; Verified: No.**
-8. **S4-0100-08 — Handle stale revision and conflicting operations truthfully.** Acceptance: No wrong-scope edit or old response overriding newest mix. Required verification: Two tabs, delayed reorder, request join race tests. **Implementation: Not started; Verified: No.**
-9. **S4-0100-09 — Preserve scroll/context and responsiveness with long lists.** Acceptance: Input remains responsive without inappropriate virtualized focus loss. Required verification: 100-song, zoom and measured perf tests. **Implementation: Not started; Verified: No.**
-10. **S4-0100-10 — Standardize empty/one-song/missing-audio/failure/undo states.** Acceptance: No fake transitions or misleading success state. Required verification: Error and recovery E2E. **Implementation: Not started; Verified: No.**
+1. **S4-0100-01 - Implement persistent current/draft scope header and clear actions.** Acceptance: Editing a draft never silently mutates what plays. Required verification: Play A/edit B live scenario. **Implementation: Not started; Verified: No.**
+2. **S4-0100-02 - Redesign song and seam rows with clear hierarchy.** Acceptance: Long, duplicate, RTL song names remain identifiable. Required verification: 2, 20 and 100-song screenshots. **Implementation: Not started; Verified: No.**
+3. **S4-0100-03 - Preserve pointer/touch/keyboard reorder and move controls.** Acceptance: Every method yields identical order with visible focus. Required verification: First/middle/last/locked and touch-scroll tests. **Implementation: Not started; Verified: No.**
+4. **S4-0100-04 - Preserve exact-position insertion, removal, locking and Undo.** Acceptance: No impossible or inaccessible insertion gap. Required verification: Empty/one-song/edge-gap scenarios. **Implementation: Not started; Verified: No.**
+5. **S4-0100-05 - Keep selection attached to stable object through mutation.** Acceptance: After reorder focus stays with same track; invalid pair explained. Required verification: Concurrent request insertion/delete pair tests. **Implementation: Not started; Verified: No.**
+6. **S4-0100-06 - Create compact status/problem navigation.** Acceptance: Jumps to actual failed/missing/unrendered seam and restores focus. Required verification: 100-song fixture and keyboard problem jump. **Implementation: Not started; Verified: No.**
+7. **S4-0100-07 - Define consistent whole-mix action grouping.** Acceptance: Save copy, export, new, clear and preview remain discoverable. Required verification: Action parity and keyboard menu audit. **Implementation: Not started; Verified: No.**
+8. **S4-0100-08 - Handle stale revision and conflicting operations truthfully.** Acceptance: No wrong-scope edit or old response overriding newest mix. Required verification: Two tabs, delayed reorder, request join race tests. **Implementation: Not started; Verified: No.**
+9. **S4-0100-09 - Preserve scroll/context and responsiveness with long lists.** Acceptance: Input remains responsive without inappropriate virtualized focus loss. Required verification: 100-song, zoom and measured perf tests. **Implementation: Not started; Verified: No.**
+10. **S4-0100-10 - Standardize empty/one-song/missing-audio/failure/undo states.** Acceptance: No fake transitions or misleading success state. Required verification: Error and recovery E2E. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

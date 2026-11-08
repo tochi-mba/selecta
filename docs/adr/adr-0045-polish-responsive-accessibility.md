@@ -4,7 +4,7 @@
 - **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
-- **Delivery phase:** 6 — Responsive and accessibility verification
+- **Delivery phase:** 6 - Responsive and accessibility verification
 - **Extends:** [ADR-0023](adr-0023-accessibility.md), [ADR-0024](adr-0024-responsive-workspaces.md), [ADR-0031](adr-0031-pwa-and-browsers.md); does not silently supersede their behavioural contracts.
 - **Dependencies:** All migrated surfaces from phases 1–5; accessibility requirements apply from phase 1, not only at this gate.
 - **Checklist:** P0121–P0131 in [polish implementation checklist](polish-implementation-checklist.md).

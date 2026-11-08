@@ -1,4 +1,4 @@
-# ADR-0225 — Requests as visible musical intentions and consented bridge routes
+# ADR-0225 - Requests as visible musical intentions and consented bridge routes
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Represent requested track, actual candidate route and preparation status without
 
 No duplicate request IDs, phantom bridge route, partial insertion or consent via visual suggestion alone. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0225-01 — Design request lifecycle.** **Acceptance:** Asked, searching, waiting, ready, placed, rejected distinct. **Required verification:** Lifecycle fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0225-02 — Show real selected target.** **Acceptance:** Correct library identity and repeat handling. **Required verification:** Duplicate song tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0225-03 — Visualize candidate route.** **Acceptance:** Only actual returned extra songs represented. **Required verification:** Bridge fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0225-04 — Make consent unmistakable.** **Acceptance:** User sees precise proposed additional tracks. **Required verification:** Uncoached consent test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0225-05 — Preserve atomic insert.** **Acceptance:** All approved bridges apply or none. **Required verification:** Backend error E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0225-06 — Handle stale/cancel states.** **Acceptance:** No old response can alter newer request. **Required verification:** Race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0225-07 — Provide accessible route list.** **Acceptance:** Full route details reachable without graphic. **Required verification:** NVDA and zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0225-08 — Evaluate confidence.** **Acceptance:** Listeners predict whether/when request might play. **Required verification:** Real session observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0225-01 - Design request lifecycle.** **Acceptance:** Asked, searching, waiting, ready, placed, rejected distinct. **Required verification:** Lifecycle fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0225-02 - Show real selected target.** **Acceptance:** Correct library identity and repeat handling. **Required verification:** Duplicate song tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0225-03 - Visualize candidate route.** **Acceptance:** Only actual returned extra songs represented. **Required verification:** Bridge fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0225-04 - Make consent unmistakable.** **Acceptance:** User sees precise proposed additional tracks. **Required verification:** Uncoached consent test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0225-05 - Preserve atomic insert.** **Acceptance:** All approved bridges apply or none. **Required verification:** Backend error E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0225-06 - Handle stale/cancel states.** **Acceptance:** No old response can alter newer request. **Required verification:** Race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0225-07 - Provide accessible route list.** **Acceptance:** Full route details reachable without graphic. **Required verification:** NVDA and zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0225-08 - Evaluate confidence.** **Acceptance:** Listeners predict whether/when request might play. **Required verification:** Real session observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

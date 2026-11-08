@@ -48,7 +48,7 @@ test('all thirteen additional horizontal visualizers are selectable without rest
     ['split', 'Split flow'],
   ]) {
     await choose.selectOption(value);
-    await expect(page.getByRole('img', { name: label + ' — actual mixed-audio frequency levels' })).toBeVisible();
+    await expect(page.getByRole('img', { name: label + ' - actual mixed-audio frequency levels' })).toBeVisible();
     await expect(choose).toHaveValue(value);
   }
   expect(await soundsStarted(page)).toBe(started);

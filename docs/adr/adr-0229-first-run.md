@@ -1,4 +1,4 @@
-# ADR-0229 — First-run library awakening with honest local filesystem and first play
+# ADR-0229 - First-run library awakening with honest local filesystem and first play
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ A new listener should reach six genuinely ready local songs and a first convinci
 
 No invented progress, silent LRCLIB metadata disclosure omission, upload implication or autoplay before explicit intent. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0229-01 — Design local setup explanation.** **Acceptance:** User understands browser/server folder relationship. **Required verification:** First-time comprehension test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0229-02 — Refine path validation.** **Acceptance:** Missing/invalid/disallowed folders show accurate reason. **Required verification:** Local path fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0229-03 — Explain lyrics metadata lookup.** **Acceptance:** Artist/title/album/duration exposure disclosed. **Required verification:** Privacy review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0229-04 — Design actual library awakening.** **Acceptance:** Discovered, analyzed and playable counts separate. **Required verification:** Live scan state tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0229-05 — Honor six-ready-song threshold.** **Acceptance:** First mix offered only when eligible. **Required verification:** Readiness E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0229-06 — Handle slow or interrupted scan.** **Acceptance:** Resume/retry never pretend completed work. **Required verification:** Offline/interrupt tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0229-07 — Make first play obvious.** **Acceptance:** One safe action and accessible audio expectations. **Required verification:** Novice task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0229-08 — Evaluate first handoff milestone.** **Acceptance:** Actual audio audition plus understanding measured. **Required verification:** Uncoached real-music session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0229-01 - Design local setup explanation.** **Acceptance:** User understands browser/server folder relationship. **Required verification:** First-time comprehension test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0229-02 - Refine path validation.** **Acceptance:** Missing/invalid/disallowed folders show accurate reason. **Required verification:** Local path fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0229-03 - Explain lyrics metadata lookup.** **Acceptance:** Artist/title/album/duration exposure disclosed. **Required verification:** Privacy review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0229-04 - Design actual library awakening.** **Acceptance:** Discovered, analyzed and playable counts separate. **Required verification:** Live scan state tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0229-05 - Honor six-ready-song threshold.** **Acceptance:** First mix offered only when eligible. **Required verification:** Readiness E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0229-06 - Handle slow or interrupted scan.** **Acceptance:** Resume/retry never pretend completed work. **Required verification:** Offline/interrupt tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0229-07 - Make first play obvious.** **Acceptance:** One safe action and accessible audio expectations. **Required verification:** Novice task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0229-08 - Evaluate first handoff milestone.** **Acceptance:** Actual audio audition plus understanding measured. **Required verification:** Uncoached real-music session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

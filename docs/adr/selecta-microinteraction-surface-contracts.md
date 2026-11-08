@@ -2,7 +2,7 @@
 
 This document records the source-level contracts implemented by the current Mix ideas, shaping, Listen, requests, drafts, editor, inspector and Studio surfaces. It maps behavior to runtime sources; it does not replace independent visual, audio, assistive-technology, device or participant verification.
 
-## Mix ideas — ADR-0142
+## Mix ideas - ADR-0142
 
 - **Hierarchy (MI-0142-01):** each idea card presents name/intent, representative artists and one primary outcome. Supporting detail is subordinate; cards do not impersonate album artwork.
 - **Three outcomes (MI-0142-02):** Play replaces the current mix only after required confirmation, Shape opens configuration without playback mutation, and details remain non-mutating. Operation/order guards prevent late responses from replacing newer intent.
@@ -13,14 +13,14 @@ This document records the source-level contracts implemented by the current Mix 
 
 Sources: `web/src/views/Mixes.tsx`, `MixSetup.tsx`, `styles/creation.css`, `state/readiness.ts`; fixtures: `Mixes.test.tsx`, `MixSetup.test.tsx`.
 
-## Mix shaping — ADR-0143
+## Mix shaping - ADR-0143
 
 - **Committed vs working (MI-0143-05):** form controls own a working configuration until an explicit guarded build/commit response. Current playback and the saved/current mix do not change while inputs move.
 - **Input performance (MI-0143-06):** range and numeric inputs synchronize locally; the energy preview is derived from values without network round trips or perpetual animation. Reduced-motion rules remove spatial/decorative motion.
 
 Sources: `web/src/views/MixSetup.tsx`, `styles/creation.css`; fixtures: `MixSetup.test.tsx`.
 
-## Listen hierarchy and transport — ADR-0144/0145
+## Listen hierarchy and transport - ADR-0144/0145
 
 - **First glance (MI-0144-01):** song title/artist and transport are primary; transition, lyrics, next/request and expert detail are progressively disclosed.
 - **Responsive composition (MI-0144-06):** Listen collapses without hiding transport; long/RTL text uses intrinsic sizing/wrapping and Stage remains optional. Safe-area and keyboard insets come from shell tokens.
@@ -30,7 +30,7 @@ Sources: `web/src/views/MixSetup.tsx`, `styles/creation.css`; fixtures: `MixSetu
 
 Sources: `web/src/views/Now.tsx`, `player.ts`, `App.tsx`, `shell/Shell.tsx`, `audio/focus.ts`, `styles/listening.css`; fixtures: `Now.test.tsx`, `player.test.ts`, `Shell.test.tsx`, `audio/focus.test.tsx`.
 
-## Lyrics and Stage — ADR-0146
+## Lyrics and Stage - ADR-0146
 
 - **Timed lyric semantics (MI-0146-01):** word timing is used only when supplied; line timing/plain lyrics are honest fallbacks. Binary search chooses the current line and announcements avoid word/time spam.
 - **Stage hierarchy (MI-0146-03):** Stage keeps song identity, lyrics and essential transport while removing editing/navigation competition; it never starts playback itself.
@@ -39,7 +39,7 @@ Sources: `web/src/views/Now.tsx`, `player.ts`, `App.tsx`, `shell/Shell.tsx`, `au
 
 Sources: `web/src/views/Now.tsx`, `App.tsx`, `styles/listening.css`; fixtures: `Now.test.tsx`, `App.test.tsx`.
 
-## Up next and handoff — ADR-0147
+## Up next and handoff - ADR-0147
 
 - **State diagram (MI-0147-01):** ordinary playback → transition available/countdown → transition playing → next song; pending/failed/late seams use fallback without claiming rendered audio.
 - **Countdowns (MI-0147-02):** bars/beats appear only when real timing/alignment data supports them; otherwise time/state wording is used.
@@ -50,7 +50,7 @@ Sources: `web/src/views/Now.tsx`, `App.tsx`, `styles/listening.css`; fixtures: `
 
 Sources: `web/src/views/Now.tsx`, `lib.ts`, `player.ts`, `views/SeamInspector.tsx`; fixtures: `Now.test.tsx`, `player.test.ts`, `lib.test.ts`.
 
-## Requests — ADR-0148
+## Requests - ADR-0148
 
 - **Lifecycle board (MI-0148-01):** searching, waiting, proposed bridge, consent required, accepted/joining, joined, failed/cancelled are separately named states.
 - **Bridge consent (MI-0148-03):** proposed extra songs are listed in order with the requested song distinguished; nothing joins before explicit approval and revision guard success.
@@ -59,7 +59,7 @@ Sources: `web/src/views/Now.tsx`, `lib.ts`, `player.ts`, `views/SeamInspector.ts
 
 Sources: `web/src/views/Requests.tsx`, request API routes; fixtures: `Requests.test.tsx`, `RequestsJoining.test.tsx`, `tests/test_request_routes.py`.
 
-## Drafts and render line — ADR-0149
+## Drafts and render line - ADR-0149
 
 - **Current/draft identity (MI-0149-01):** current mix and draft routes/scopes are different types/addresses; all draft mutations carry the draft ID and cannot touch playback.
 - **Safe Play (MI-0149-02):** playing a draft requires explicit activation/replacement confirmation, preserves the former current mix as a draft and remains undoable.
@@ -70,7 +70,7 @@ Sources: `web/src/views/Requests.tsx`, request API routes; fixtures: `Requests.t
 
 Sources: `web/src/views/Drafts.tsx`, `MyMixes.tsx`, `App.tsx`, `state/readiness.ts`, `styles/creation.css`; fixtures: `Drafts.test.tsx`, `tests/test_drafts.py`, E2E draft flows.
 
-## Arrangement editor — ADR-0150
+## Arrangement editor - ADR-0150
 
 - **Selection grammar (MI-0150-01):** stable song-occurrence identity distinguishes duplicate songs; song and following seam remain separate selectable objects.
 - **Insertion affordances (MI-0150-03):** explicit gaps/buttons and keyboard-accessible actions identify the exact insertion position; pointer drag is an additional path.
@@ -78,7 +78,7 @@ Sources: `web/src/views/Drafts.tsx`, `MyMixes.tsx`, `App.tsx`, `state/readiness.
 
 Sources: `web/src/views/Mix.tsx`, `EditorRows.tsx`, `mixScope.ts`, `state/readiness.ts`; fixtures: `Mix.test.tsx`, API contract/draft tests, E2E integration flows.
 
-## Transition Inspector — ADR-0151
+## Transition Inspector - ADR-0151
 
 - **Audition-first hierarchy (MI-0151-01):** selected transition identity and Hear it are primary; technique/cue detail is subordinate and cannot auto-play.
 - **Truth taxonomy (MI-0151-02):** requested settings, queued/rendering state, matching rendered key, preview and heard result are separately represented.
@@ -89,7 +89,7 @@ Sources: `web/src/views/Mix.tsx`, `EditorRows.tsx`, `mixScope.ts`, `state/readin
 
 Sources: `web/src/views/SeamInspector.tsx`, `Mix.tsx`, shared overlay controls, responsive CSS; fixtures: inspector/mix/API contract tests.
 
-## Stem Studio — ADR-0152
+## Stem Studio - ADR-0152
 
 - **Eight-lane cells (MI-0152-01):** every song/part/cell is a named button/gridcell with pressed, unavailable and keyboard-focus states; missing stems are immutable and explained.
 - **Preview/cursor (MI-0152-03):** the audio deck clock owns preview time; stopping or losing ownership stops the cursor/audio immediately. No UI animation claims sound before sources start.

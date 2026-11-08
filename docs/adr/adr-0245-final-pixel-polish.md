@@ -1,4 +1,4 @@
-# ADR-0245 — Final visual-detail audit and art-direction coherence
+# ADR-0245 - Final visual-detail audit and art-direction coherence
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Treat finishing as a disciplined visual review: typography baselines, icon optic
 
 No status hidden for aesthetic minimalism, low-contrast shadow-only focus or flaky screenshot approvals. Preserve a proven reliable interface when a proposed artistic treatment cannot demonstrate improved user outcomes. This docs-only decision does not implement remote services, SaaS, telemetry, accounts or changes to music files.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0245-01 — Audit alignment and spacing.** **Acceptance:** Controls align across scene, card and dialog components. **Required verification:** Pixel-diff review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0245-02 — Audit type and icon optics.** **Acceptance:** Titles, timestamps and icons align optically. **Required verification:** Visual specimen audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0245-03 — Audit borders and depth.** **Acceptance:** Nested panels, elevation and selected states intentional. **Required verification:** Light/dark gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0245-04 — Review state-specific artwork.** **Acceptance:** Empty/failed/loading/pending visuals do not claim data. **Required verification:** Fixture snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0245-05 — Review all hover/focus/active states.** **Acceptance:** Every shared primitive consistent. **Required verification:** Interactive screenshot grid. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0245-06 — Audit content edge cases.** **Acceptance:** Long strings, tiny counts, nulls and overflow handled. **Required verification:** RTL/zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0245-07 — Audit motion finishing.** **Acceptance:** Transitions cancel without jitter or ghost surfaces. **Required verification:** Slow-motion capture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0245-08 — Sign off across devices.** **Acceptance:** Independent reviewer approves exact candidate SHA. **Required verification:** Signed visual QA dossier. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0245-01 - Audit alignment and spacing.** **Acceptance:** Controls align across scene, card and dialog components. **Required verification:** Pixel-diff review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0245-02 - Audit type and icon optics.** **Acceptance:** Titles, timestamps and icons align optically. **Required verification:** Visual specimen audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0245-03 - Audit borders and depth.** **Acceptance:** Nested panels, elevation and selected states intentional. **Required verification:** Light/dark gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0245-04 - Review state-specific artwork.** **Acceptance:** Empty/failed/loading/pending visuals do not claim data. **Required verification:** Fixture snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0245-05 - Review all hover/focus/active states.** **Acceptance:** Every shared primitive consistent. **Required verification:** Interactive screenshot grid. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0245-06 - Audit content edge cases.** **Acceptance:** Long strings, tiny counts, nulls and overflow handled. **Required verification:** RTL/zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0245-07 - Audit motion finishing.** **Acceptance:** Transitions cancel without jitter or ghost surfaces. **Required verification:** Slow-motion capture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0245-08 - Sign off across devices.** **Acceptance:** Independent reviewer approves exact candidate SHA. **Required verification:** Signed visual QA dossier. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

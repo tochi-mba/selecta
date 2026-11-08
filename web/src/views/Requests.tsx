@@ -534,7 +534,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
                 </span>
               </div>
               <span className="coming-progress" role="status">
-                {stage === 'ready' ? 'Ready — waiting for a valid opening' : seams.length ? `${done} of ${seams.length} ready${wait}` : `Getting it ready${wait}`}
+                {stage === 'ready' ? 'Ready - waiting for a valid opening' : seams.length ? `${done} of ${seams.length} ready${wait}` : `Getting it ready${wait}`}
               </span>
               <button aria-label={`Cancel request for ${title}`} title="Cancel this request" onClick={() => void cancel(request)}>Cancel</button>
             </div>
@@ -822,10 +822,10 @@ export function RequestsPanel() {
           {matches.map((song, index) => {
             const already = inMix.has(song.id) ? 'In your mix' : waitingIds.has(song.id) ? 'Requested' : asBridges.has(song.id) ? 'Coming as a bridge' : '';
             const duplicate = matches.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist);
-            const identity = `${song.title ?? 'Untitled'} — ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
+            const identity = `${song.title ?? 'Untitled'} - ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
             return (
               <li key={song.id} id={`request-option-${song.id}`} role="option" aria-selected={activeMatch === index}>
-                <button aria-label={`${identity} — ${already || 'Request'}`} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
+                <button aria-label={`${identity} - ${already || 'Request'}`} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
                   <span className="request-name">
                     <b>{song.title ?? 'Untitled'}</b>
                     <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>

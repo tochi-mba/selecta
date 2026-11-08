@@ -4,7 +4,7 @@
 - **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
-- **Delivery phase:** 1 — Visual foundations and language
+- **Delivery phase:** 1 - Visual foundations and language
 - **Extends:** [ADR-0003](adr-0003-design-tokens-and-brand.md), [ADR-0004](adr-0004-interaction-primitives-and-notifications.md), [ADR-0027](adr-0027-explanations-and-feedback.md), [ADR-0032](adr-0032-diagnostics-and-operations.md); does not silently supersede their behavioural contracts.
 - **Dependencies:** ADR-0033 baseline and inventory.
 - **Checklist:** P0112–P0120 in [polish implementation checklist](polish-implementation-checklist.md).

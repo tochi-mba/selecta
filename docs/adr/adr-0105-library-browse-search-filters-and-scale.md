@@ -29,18 +29,18 @@ Use a structured multi-column desktop list and compact mobile rows while preserv
 - Filter state, result count, URL query and Back/Forward are authoritative user context.
 - Refresh visible/current page readiness, not only initial fixed song subset; avoid fetching entire library every poll.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0105-01 — Redesign desktop list and mobile card-row hierarchy.** Acceptance: Titles, artist, status and actions remain legible with dense data. Required verification: 320/375/768/1280 and 20k screenshot fixtures. **Implementation: Not started; Verified: No.**
-2. **S4-0105-02 — Preserve all existing Library actions and availability rules.** Acceptance: Add/Play next/Start a mix/Analyze/Prioritize/Never play intact. Required verification: Feature parity and action-by-readiness tests. **Implementation: Not started; Verified: No.**
-3. **S4-0105-03 — Preserve URL-backed search/filter/page and history semantics.** Acceptance: Reload/Back/Forward restore correct browse state. Required verification: Deep link and browser navigation E2E. **Implementation: Not started; Verified: No.**
-4. **S4-0105-04 — Harden asynchronous search and debouncing.** Acceptance: Late query response cannot replace newer result. Required verification: Rapid typing/empty query/server failure tests. **Implementation: Not started; Verified: No.**
-5. **S4-0105-05 — Design filter grouping and clear active state.** Acceptance: Every preexisting filter remains accessible and visible. Required verification: Filter-combination/multi-select tests. **Implementation: Not started; Verified: No.**
-6. **S4-0105-06 — Clarify ready/processing/failed/excluded reasons.** Acceptance: Badges never falsely mark track as mix-ready. Required verification: Canonical backend readiness fixture cases. **Implementation: Not started; Verified: No.**
-7. **S4-0105-07 — Fix deep-page readiness freshness during processing.** Acceptance: Currently displayed page updates without requiring return to page 1. Required verification: Page >200 refresh and analysis progress tests. **Implementation: Not started; Verified: No.**
-8. **S4-0105-08 — Measure pagination versus virtualization before changing architecture.** Acceptance: Focus/find-in-page/AT/scroll restoration not sacrificed. Required verification: 20k rows, 100-page deep browsing and memory tests. **Implementation: Not started; Verified: No.**
-9. **S4-0105-09 — Support missing, long, duplicate and RTL metadata.** Acceptance: Search and list never produce wrong song action. Required verification: Synthetic Unicode/colliding titles tests. **Implementation: Not started; Verified: No.**
-10. **S4-0105-10 — Review new advanced tempo/key/genre filters separately.** Acceptance: No unsupported analysis field presented as available. Required verification: Backend capability flag tests if enhancement approved. **Implementation: Not started; Verified: No.**
+1. **S4-0105-01 - Redesign desktop list and mobile card-row hierarchy.** Acceptance: Titles, artist, status and actions remain legible with dense data. Required verification: 320/375/768/1280 and 20k screenshot fixtures. **Implementation: Not started; Verified: No.**
+2. **S4-0105-02 - Preserve all existing Library actions and availability rules.** Acceptance: Add/Play next/Start a mix/Analyze/Prioritize/Never play intact. Required verification: Feature parity and action-by-readiness tests. **Implementation: Not started; Verified: No.**
+3. **S4-0105-03 - Preserve URL-backed search/filter/page and history semantics.** Acceptance: Reload/Back/Forward restore correct browse state. Required verification: Deep link and browser navigation E2E. **Implementation: Not started; Verified: No.**
+4. **S4-0105-04 - Harden asynchronous search and debouncing.** Acceptance: Late query response cannot replace newer result. Required verification: Rapid typing/empty query/server failure tests. **Implementation: Not started; Verified: No.**
+5. **S4-0105-05 - Design filter grouping and clear active state.** Acceptance: Every preexisting filter remains accessible and visible. Required verification: Filter-combination/multi-select tests. **Implementation: Not started; Verified: No.**
+6. **S4-0105-06 - Clarify ready/processing/failed/excluded reasons.** Acceptance: Badges never falsely mark track as mix-ready. Required verification: Canonical backend readiness fixture cases. **Implementation: Not started; Verified: No.**
+7. **S4-0105-07 - Fix deep-page readiness freshness during processing.** Acceptance: Currently displayed page updates without requiring return to page 1. Required verification: Page >200 refresh and analysis progress tests. **Implementation: Not started; Verified: No.**
+8. **S4-0105-08 - Measure pagination versus virtualization before changing architecture.** Acceptance: Focus/find-in-page/AT/scroll restoration not sacrificed. Required verification: 20k rows, 100-page deep browsing and memory tests. **Implementation: Not started; Verified: No.**
+9. **S4-0105-09 - Support missing, long, duplicate and RTL metadata.** Acceptance: Search and list never produce wrong song action. Required verification: Synthetic Unicode/colliding titles tests. **Implementation: Not started; Verified: No.**
+10. **S4-0105-10 - Review new advanced tempo/key/genre filters separately.** Acceptance: No unsupported analysis field presented as available. Required verification: Backend capability flag tests if enhancement approved. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

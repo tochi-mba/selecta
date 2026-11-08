@@ -1,4 +1,4 @@
-# ADR-0213 — Editorial lyrics, verified wordplay and fullscreen Stage
+# ADR-0213 - Editorial lyrics, verified wordplay and fullscreen Stage
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Differentiate Focus, Reading and Stage while honestly representing lyric timing 
 
 No pseudo-word precision, auto-scroll fighting the reader or fullscreen-induced playback changes. Reject spectacle when it costs accessibility, audio continuity or task comprehension. This ADR approves no new SaaS, login, account, cloud upload, telemetry, audio engine rewrite or code change by itself.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0213-01 — Define timing confidence.** **Acceptance:** Line, word and unknown are distinguishable. **Required verification:** Metadata fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0213-02 — Design Focus lyrics.** **Acceptance:** Live lyrics remain unobtrusive. **Required verification:** Listening test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0213-03 — Design Reading lyrics.** **Acceptance:** Manual scroll persists and long text fits. **Required verification:** Scroll E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0213-04 — Design Stage lyrics.** **Acceptance:** Fullscreen accessible with safe fallback. **Required verification:** Escape/refusal test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0213-05 — Reveal real wordplay.** **Acceptance:** Shared phrase only on proven handoff. **Required verification:** Wordplay fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0213-06 — Handle RTL and long lines.** **Acceptance:** No clipping or overlap at 400% zoom. **Required verification:** Unicode snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0213-07 — Limit announcements.** **Acceptance:** No continuous lyric tick chatter. **Required verification:** NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0213-08 — Assess reading comfort.** **Acceptance:** Reduced motion has equivalent meaning. **Required verification:** User reading study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0213-01 - Define timing confidence.** **Acceptance:** Line, word and unknown are distinguishable. **Required verification:** Metadata fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0213-02 - Design Focus lyrics.** **Acceptance:** Live lyrics remain unobtrusive. **Required verification:** Listening test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0213-03 - Design Reading lyrics.** **Acceptance:** Manual scroll persists and long text fits. **Required verification:** Scroll E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0213-04 - Design Stage lyrics.** **Acceptance:** Fullscreen accessible with safe fallback. **Required verification:** Escape/refusal test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0213-05 - Reveal real wordplay.** **Acceptance:** Shared phrase only on proven handoff. **Required verification:** Wordplay fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0213-06 - Handle RTL and long lines.** **Acceptance:** No clipping or overlap at 400% zoom. **Required verification:** Unicode snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0213-07 - Limit announcements.** **Acceptance:** No continuous lyric tick chatter. **Required verification:** NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0213-08 - Assess reading comfort.** **Acceptance:** Reduced motion has equivalent meaning. **Required verification:** User reading study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 2 — Foundations
+- **Phase:** 2 - Foundations
 - **Extends existing decisions:** ADR-0003, ADR-0034, ADR-0044
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0050-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Keep the brand palette and expressive display personality; replace ad-hoc stylin
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0050-01 — Not started.** Lock the raw brand colors and define all semantic status, focus, selected and overlay roles in dark/light themes.
-2. **S3-0050-02 — Not started.** Publish a typography scale including display, headings, song identity, metadata, explanatory copy and tabular counters.
-3. **S3-0050-03 — Not started.** Specify responsive gutters, widths, panel hierarchy, radii, separators, shadow and optical alignment.
-4. **S3-0050-04 — Not started.** Develop and compare comfortable/compact density prototypes for Library, timeline and drafts; retain equivalent functionality.
-5. **S3-0050-05 — Not started.** Unify vector icons and destructive action semantics; never use close X as a substitute for Delete.
-6. **S3-0050-06 — Not started.** Test text wrapping/truncation, full accessible names, RTL/BiDi, emoji and uncommon scripts.
-7. **S3-0050-07 — Not started.** Define restrained motion and reduced-motion fallbacks; avoid unnecessary animation during processing.
-8. **S3-0050-08 — Not started.** Create deterministic design-system fixtures and contrast audit evidence for both themes.
+1. **S3-0050-01 - Not started.** Lock the raw brand colors and define all semantic status, focus, selected and overlay roles in dark/light themes.
+2. **S3-0050-02 - Not started.** Publish a typography scale including display, headings, song identity, metadata, explanatory copy and tabular counters.
+3. **S3-0050-03 - Not started.** Specify responsive gutters, widths, panel hierarchy, radii, separators, shadow and optical alignment.
+4. **S3-0050-04 - Not started.** Develop and compare comfortable/compact density prototypes for Library, timeline and drafts; retain equivalent functionality.
+5. **S3-0050-05 - Not started.** Unify vector icons and destructive action semantics; never use close X as a substitute for Delete.
+6. **S3-0050-06 - Not started.** Test text wrapping/truncation, full accessible names, RTL/BiDi, emoji and uncommon scripts.
+7. **S3-0050-07 - Not started.** Define restrained motion and reduced-motion fallbacks; avoid unnecessary animation during processing.
+8. **S3-0050-08 - Not started.** Create deterministic design-system fixtures and contrast audit evidence for both themes.
 
 ## Preservation and integration constraints
 

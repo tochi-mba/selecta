@@ -29,18 +29,18 @@ Use reversible, feature-flagged, staged implementation PRs and a strict evidence
 - Decision Accepted, implementation Implemented and verification Verified require different recorded artifacts.
 - PR merge of this plan only publishes Proposed decisions and Not started tasks.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0113-01 — Approve baseline, explicit feature parity and release-owner responsibilities.** Acceptance: Every invariant/test has named owner and no inherited status guesses. Required verification: Recorded baseline signature and task mapping. **Implementation: Not started; Verified: No.**
-2. **S4-0113-02 — Conduct initial qualitative listener/creator/expert tasks.** Acceptance: Observed findings logged with no fabricated usability success. Required verification: Participant tasks and reproducible notes. **Implementation: Not started; Verified: No.**
-3. **S4-0113-03 — Approve dark/light visual design and content hierarchy separately.** Acceptance: Both themes independently inspected across devices and states. Required verification: Reviewed screenshot sets and contrast report. **Implementation: Not started; Verified: No.**
-4. **S4-0113-04 — Sequence implementing PRs behind reversible dev feature flag.** Acceptance: Each PR isolated, roll-backable and names S4 task IDs. Required verification: Feature flag and route compatibility smoke. **Implementation: Not started; Verified: No.**
-5. **S4-0113-05 — Define operational migration for preferences and local working copies.** Acceptance: No lost drafts, corrections, ratings, settings or Studio recoveries. Required verification: Old→new→old fixture migration tests. **Implementation: Not started; Verified: No.**
-6. **S4-0113-06 — Review new dependencies, backend needs and PWA compatibility separately.** Acceptance: No unapproved engine/data/network change hidden in UI work. Required verification: API/dependency/security PR checklist. **Implementation: Not started; Verified: No.**
-7. **S4-0113-07 — Require critical cross-feature and real audio acceptance.** Acceptance: Playback, requests, revisions and FLAC verified end-to-end. Required verification: Windows/Edge and decodable export session. **Implementation: Not started; Verified: No.**
-8. **S4-0113-08 — Require WCAG/human AT, viewport and performance evidence.** Acceptance: No inaccessible core workflow and measured scale regression. Required verification: NVDA/Edge and recorded profiler results. **Implementation: Not started; Verified: No.**
-9. **S4-0113-09 — Reconcile P0/P1/P2 defects and acceptance exceptions.** Acceptance: P0 blocks; P1 owner risk approval documented; P2 disposition. Required verification: Issue register, exact SHA and owner signoff. **Implementation: Not started; Verified: No.**
-10. **S4-0113-10 — Prepare exact-head release report and demonstrate rollback.** Acceptance: Final verdict explicitly GO/NO-GO with linked proof. Required verification: Release runbook and rollback exercise. **Implementation: Not started; Verified: No.**
+1. **S4-0113-01 - Approve baseline, explicit feature parity and release-owner responsibilities.** Acceptance: Every invariant/test has named owner and no inherited status guesses. Required verification: Recorded baseline signature and task mapping. **Implementation: Not started; Verified: No.**
+2. **S4-0113-02 - Conduct initial qualitative listener/creator/expert tasks.** Acceptance: Observed findings logged with no fabricated usability success. Required verification: Participant tasks and reproducible notes. **Implementation: Not started; Verified: No.**
+3. **S4-0113-03 - Approve dark/light visual design and content hierarchy separately.** Acceptance: Both themes independently inspected across devices and states. Required verification: Reviewed screenshot sets and contrast report. **Implementation: Not started; Verified: No.**
+4. **S4-0113-04 - Sequence implementing PRs behind reversible dev feature flag.** Acceptance: Each PR isolated, roll-backable and names S4 task IDs. Required verification: Feature flag and route compatibility smoke. **Implementation: Not started; Verified: No.**
+5. **S4-0113-05 - Define operational migration for preferences and local working copies.** Acceptance: No lost drafts, corrections, ratings, settings or Studio recoveries. Required verification: Old→new→old fixture migration tests. **Implementation: Not started; Verified: No.**
+6. **S4-0113-06 - Review new dependencies, backend needs and PWA compatibility separately.** Acceptance: No unapproved engine/data/network change hidden in UI work. Required verification: API/dependency/security PR checklist. **Implementation: Not started; Verified: No.**
+7. **S4-0113-07 - Require critical cross-feature and real audio acceptance.** Acceptance: Playback, requests, revisions and FLAC verified end-to-end. Required verification: Windows/Edge and decodable export session. **Implementation: Not started; Verified: No.**
+8. **S4-0113-08 - Require WCAG/human AT, viewport and performance evidence.** Acceptance: No inaccessible core workflow and measured scale regression. Required verification: NVDA/Edge and recorded profiler results. **Implementation: Not started; Verified: No.**
+9. **S4-0113-09 - Reconcile P0/P1/P2 defects and acceptance exceptions.** Acceptance: P0 blocks; P1 owner risk approval documented; P2 disposition. Required verification: Issue register, exact SHA and owner signoff. **Implementation: Not started; Verified: No.**
+10. **S4-0113-10 - Prepare exact-head release report and demonstrate rollback.** Acceptance: Final verdict explicitly GO/NO-GO with linked proof. Required verification: Release runbook and rollback exercise. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

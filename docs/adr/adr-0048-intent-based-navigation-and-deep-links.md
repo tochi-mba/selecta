@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 1 — Architecture
+- **Phase:** 1 - Architecture
 - **Extends existing decisions:** ADR-0002, ADR-0010, ADR-0012, ADR-0019, ADR-0020
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0048-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Adopt five primary destinations: Listen, Explore, My Mixes, Library and Workspac
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0048-01 — Not started.** Produce a route and destination map, including hidden developer panels and studies; identify canonical and legacy paths.
-2. **S3-0048-02 — Not started.** Build and usability-test alternative navigation labels and task-findability for new listeners, returning listeners and power users.
-3. **S3-0048-03 — Not started.** Define responsive primary/secondary navigation with current-location, descendant-selection and context semantics.
-4. **S3-0048-04 — Not started.** Specify legacy route aliases, URL parameter mapping, unknown-route recovery and scroll restoration policies.
-5. **S3-0048-05 — Not started.** Define draft/current editor context banners and route semantics that prevent edits to the wrong resource.
-6. **S3-0048-06 — Not started.** Provide visible entry points to Requests, Export, listening studies, diagnostics and advanced discoveries without burying existing functionality.
-7. **S3-0048-07 — Not started.** Create a page title and breadcrumb system that preserves Media Session, playback status and assistive-tech route announcements.
-8. **S3-0048-08 — Not started.** Document migration from the old navigation with no data migration required and a reversible route-flag strategy.
+1. **S3-0048-01 - Not started.** Produce a route and destination map, including hidden developer panels and studies; identify canonical and legacy paths.
+2. **S3-0048-02 - Not started.** Build and usability-test alternative navigation labels and task-findability for new listeners, returning listeners and power users.
+3. **S3-0048-03 - Not started.** Define responsive primary/secondary navigation with current-location, descendant-selection and context semantics.
+4. **S3-0048-04 - Not started.** Specify legacy route aliases, URL parameter mapping, unknown-route recovery and scroll restoration policies.
+5. **S3-0048-05 - Not started.** Define draft/current editor context banners and route semantics that prevent edits to the wrong resource.
+6. **S3-0048-06 - Not started.** Provide visible entry points to Requests, Export, listening studies, diagnostics and advanced discoveries without burying existing functionality.
+7. **S3-0048-07 - Not started.** Create a page title and breadcrumb system that preserves Media Session, playback status and assistive-tech route announcements.
+8. **S3-0048-08 - Not started.** Document migration from the old navigation with no data migration required and a reversible route-flag strategy.
 
 ## Preservation and integration constraints
 

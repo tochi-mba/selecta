@@ -33,7 +33,7 @@ def test_destination_steering_persists_and_status_names_the_song(client):
     assert response.status_code == 200
     assert response.json()["target"] == "2"
     status = client.get("/api/status").json()
-    assert status["steering"]["target_label"] == "Artist 2 — Song 2"
+    assert status["steering"]["target_label"] == "Artist 2 - Song 2"
     invalid = client.post("/api/steer", json={"action": "take_me_to", "value": "unknown"})
     assert invalid.status_code == 400
 

@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 2 — Foundations
+- **Phase:** 2 - Foundations
 - **Extends existing decisions:** ADR-0027, ADR-0036, ADR-0044
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0070-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Create a product vocabulary and explanation hierarchy that reuses backend truth,
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0070-01 — Not started.** Publish product-wide glossary of every user-facing state and its canonical API source.
-2. **S3-0070-02 — Not started.** Write consistent primary button, disabled reason, empty state, retry and destructive copy.
-3. **S3-0070-03 — Not started.** Create layered explanations for mix recommendation, steering, seam selection, bridge and rendering fallback.
-4. **S3-0070-04 — Not started.** Document how to label estimates, scores, missing data and subjective ratings honestly.
-5. **S3-0070-05 — Not started.** Specify motion use, limits, reduced-motion, hidden-tab and loading transition behavior.
-6. **S3-0070-06 — Not started.** Replace ambiguous X-as-delete and unlabeled icon-only shortcuts with consistent language.
-7. **S3-0070-07 — Not started.** Review content for privacy consent, local-only claims and nontechnical musician comprehension.
-8. **S3-0070-08 — Not started.** Validate every new string under long translations, RTL metadata and constrained widths.
+1. **S3-0070-01 - Not started.** Publish product-wide glossary of every user-facing state and its canonical API source.
+2. **S3-0070-02 - Not started.** Write consistent primary button, disabled reason, empty state, retry and destructive copy.
+3. **S3-0070-03 - Not started.** Create layered explanations for mix recommendation, steering, seam selection, bridge and rendering fallback.
+4. **S3-0070-04 - Not started.** Document how to label estimates, scores, missing data and subjective ratings honestly.
+5. **S3-0070-05 - Not started.** Specify motion use, limits, reduced-motion, hidden-tab and loading transition behavior.
+6. **S3-0070-06 - Not started.** Replace ambiguous X-as-delete and unlabeled icon-only shortcuts with consistent language.
+7. **S3-0070-07 - Not started.** Review content for privacy consent, local-only claims and nontechnical musician comprehension.
+8. **S3-0070-08 - Not started.** Validate every new string under long translations, RTL metadata and constrained widths.
 
 ## Preservation and integration constraints
 

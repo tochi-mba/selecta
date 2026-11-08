@@ -1,4 +1,4 @@
-# Groove perception and listening evaluation — 6 November 2026
+# Groove perception and listening evaluation - 6 November 2026
 
 ## Evidence and limits
 

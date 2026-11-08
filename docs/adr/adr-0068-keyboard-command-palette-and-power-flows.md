@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 6 — Cross-cutting quality
+- **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0002, ADR-0006, ADR-0023
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0068-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Introduce an optional discoverable Ctrl/Cmd+K command palette and a single short
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0068-01 — Not started.** Inventory all existing keyboard shortcuts and collision with input, sliders, grid and browser controls.
-2. **S3-0068-02 — Not started.** Design searchable command palette with true labels, categories, descriptions and conditions.
-3. **S3-0068-03 — Not started.** Add safe navigation/request/edit/analysis commands, preserving visible alternate entry points.
-4. **S3-0068-04 — Not started.** Define non-destructive default Enter behavior and confirmation for active-mix replacement.
-5. **S3-0068-05 — Not started.** Implement consistent shortcut arbitration across dialogs, Studio, Stage and waveform.
-6. **S3-0068-06 — Not started.** Provide discoverable keyboard shortcut reference and optional user preference for palette use.
-7. **S3-0068-07 — Not started.** Add command identity, capability checks, route focus and Escape restoration tests.
-8. **S3-0068-08 — Not started.** Usability-test novice discovery versus expert acceleration; revise before implementation freeze.
+1. **S3-0068-01 - Not started.** Inventory all existing keyboard shortcuts and collision with input, sliders, grid and browser controls.
+2. **S3-0068-02 - Not started.** Design searchable command palette with true labels, categories, descriptions and conditions.
+3. **S3-0068-03 - Not started.** Add safe navigation/request/edit/analysis commands, preserving visible alternate entry points.
+4. **S3-0068-04 - Not started.** Define non-destructive default Enter behavior and confirmation for active-mix replacement.
+5. **S3-0068-05 - Not started.** Implement consistent shortcut arbitration across dialogs, Studio, Stage and waveform.
+6. **S3-0068-06 - Not started.** Provide discoverable keyboard shortcut reference and optional user preference for palette use.
+7. **S3-0068-07 - Not started.** Add command identity, capability checks, route focus and Escape restoration tests.
+8. **S3-0068-08 - Not started.** Usability-test novice discovery versus expert acceleration; revise before implementation freeze.
 
 ## Preservation and integration constraints
 

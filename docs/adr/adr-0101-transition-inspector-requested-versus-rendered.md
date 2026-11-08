@@ -29,18 +29,18 @@ Organize a contextual inspector around Hear → Change → Refine → Understand
 - Move picker includes effect, selected/available/unavailable state and reason; advanced controls only when relevant.
 - Inspector can be resizable desktop panel or mobile sheet; tab/preview/selection survives safe route movement.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0101-01 — Design Inspector overview with exact pair identity and readiness.** Acceptance: Opening any seam never appears to target another pair after reordering. Required verification: Selected seam removal and request join tests. **Implementation: Not started; Verified: No.**
-2. **S4-0101-02 — Differentiate requested setting, working render and audible fallback.** Acceptance: User understands why actual rendered move differs. Required verification: Fallback, delayed render and failed render fixtures. **Implementation: Not started; Verified: No.**
-3. **S4-0101-03 — Redesign move picker while retaining every available transition style.** Acceptance: All old options, disabled reasons and semantics remain operable. Required verification: Option parity and keyboard selection tests. **Implementation: Not started; Verified: No.**
-4. **S4-0101-04 — Reorganize bar/cue/overlap controls by outgoing/incoming/handoff.** Acceptance: Every existing parameter persists exactly and is validated. Required verification: Boundary, missing cue and out-of-range tests. **Implementation: Not started; Verified: No.**
-5. **S4-0101-05 — Preserve per-seam rendering, retry and status feedback.** Acceptance: No claim of success until matching output key is available. Required verification: Backend delayed/error/old server tests. **Implementation: Not started; Verified: No.**
-6. **S4-0101-06 — Define old/new preview identities and A/B only where actually supported.** Acceptance: No two labels point to one audio version falsely. Required verification: Preview key/snapshot and audio owner tests. **Implementation: Not started; Verified: No.**
-7. **S4-0101-07 — Harden concurrent setting changes and stale responses.** Acceptance: Older render result cannot overwrite newer intent. Required verification: Blend→Cut out-of-order response race. **Implementation: Not started; Verified: No.**
-8. **S4-0101-08 — Preserve rating/comment and detailed why information.** Acceptance: Feedback applies to actually heard transition version. Required verification: Rating after changed render and key mismatch. **Implementation: Not started; Verified: No.**
-9. **S4-0101-09 — Validate inspector tabs/sheet/focus and resize.** Acceptance: Keyboard, NVDA, touch and zoom remain usable. Required verification: Tabs/resize/close/focus-return tests. **Implementation: Not started; Verified: No.**
-10. **S4-0101-10 — Record musical quality limitations distinctly from technical readiness.** Acceptance: Successful render not falsely scored good by algorithm. Required verification: Human auditory review on diverse transitions. **Implementation: Not started; Verified: No.**
+1. **S4-0101-01 - Design Inspector overview with exact pair identity and readiness.** Acceptance: Opening any seam never appears to target another pair after reordering. Required verification: Selected seam removal and request join tests. **Implementation: Not started; Verified: No.**
+2. **S4-0101-02 - Differentiate requested setting, working render and audible fallback.** Acceptance: User understands why actual rendered move differs. Required verification: Fallback, delayed render and failed render fixtures. **Implementation: Not started; Verified: No.**
+3. **S4-0101-03 - Redesign move picker while retaining every available transition style.** Acceptance: All old options, disabled reasons and semantics remain operable. Required verification: Option parity and keyboard selection tests. **Implementation: Not started; Verified: No.**
+4. **S4-0101-04 - Reorganize bar/cue/overlap controls by outgoing/incoming/handoff.** Acceptance: Every existing parameter persists exactly and is validated. Required verification: Boundary, missing cue and out-of-range tests. **Implementation: Not started; Verified: No.**
+5. **S4-0101-05 - Preserve per-seam rendering, retry and status feedback.** Acceptance: No claim of success until matching output key is available. Required verification: Backend delayed/error/old server tests. **Implementation: Not started; Verified: No.**
+6. **S4-0101-06 - Define old/new preview identities and A/B only where actually supported.** Acceptance: No two labels point to one audio version falsely. Required verification: Preview key/snapshot and audio owner tests. **Implementation: Not started; Verified: No.**
+7. **S4-0101-07 - Harden concurrent setting changes and stale responses.** Acceptance: Older render result cannot overwrite newer intent. Required verification: Blend→Cut out-of-order response race. **Implementation: Not started; Verified: No.**
+8. **S4-0101-08 - Preserve rating/comment and detailed why information.** Acceptance: Feedback applies to actually heard transition version. Required verification: Rating after changed render and key mismatch. **Implementation: Not started; Verified: No.**
+9. **S4-0101-09 - Validate inspector tabs/sheet/focus and resize.** Acceptance: Keyboard, NVDA, touch and zoom remain usable. Required verification: Tabs/resize/close/focus-return tests. **Implementation: Not started; Verified: No.**
+10. **S4-0101-10 - Record musical quality limitations distinctly from technical readiness.** Acceptance: Successful render not falsely scored good by algorithm. Required verification: Human auditory review on diverse transitions. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

@@ -560,13 +560,13 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} />}
       {confirmBatch && <Dialog title="Apply batch Library action?" onClose={() => setConfirmBatch(null)}
         footer={<>
-          <button onClick={() => setConfirmBatch(null)}>Cancel — change nothing</button>
+          <button onClick={() => setConfirmBatch(null)}>Cancel - change nothing</button>
           <Action className="primary" working="Updating selected recordings…" run={applyBatch}>Confirm {confirmBatch.songs.length} recordings</Action>
         </>}>
         <p>You are about to <b>{confirmBatch.action === 'never' ? 'exclude from future mixes' : confirmBatch.action === 'allow' ? 'allow in future mixes' : confirmBatch.action === 'prioritize' ? 'prioritize for analysis' : 'remove analysis priority from'}</b> precisely {confirmBatch.songs.length} recording{confirmBatch.songs.length === 1 ? '' : 's'}.</p>
         <p className="hint">Only these exact song IDs will be changed. If any were changed in another tab or scan, the entire action is refused. Original audio and current mix are untouched.</p>
         <ul className="batch-preview">{confirmBatch.songs.slice(0, 15).map((song) =>
-          <li key={song.id}>{song.title} — {song.artist} (ID {song.id})</li>
+          <li key={song.id}>{song.title} - {song.artist} (ID {song.id})</li>
         )}</ul>
         {confirmBatch.songs.length > 15 && <p>…and {confirmBatch.songs.length - 15} more selected recordings.</p>}
       </Dialog>}

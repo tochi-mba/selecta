@@ -1,4 +1,4 @@
-# ADR-0234 — Accessibility as an artistic constraint, WCAG 2.2 AA and semantic parity
+# ADR-0234 - Accessibility as an artistic constraint, WCAG 2.2 AA and semantic parity
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ The expressive redesign must retain keyboard-only access and complete screen-rea
 
 No focus trap, unlabeled transport, auto-playing animated lyric chatter or essential information inside canvas only. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0234-01 — Map focus and reading order.** **Acceptance:** Each scene has correct semantic structure. **Required verification:** Keyboard and DOM audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0234-02 — Validate all core journeys by AT.** **Acceptance:** Listen, Explore, Create, Studio, Requests and Export operable. **Required verification:** NVDA/Edge session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0234-03 — Enforce 2.2 AA contrast and target sizing.** **Acceptance:** Text and essential indicators pass applicable criteria. **Required verification:** Measured contrast and touch-target report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0234-04 — Protect focus under overlays.** **Acceptance:** Nav, toasts, modals and dialogs restore focus correctly. **Required verification:** Dialog Escape/Return E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0234-05 — Define live announcement budget.** **Acceptance:** Lyric ticks and meters do not chatter. **Required verification:** Screen reader listening study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0234-06 — Ensure full motion parity.** **Acceptance:** Still and reduced-motion show all data. **Required verification:** Motion emulator review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0234-07 — Validate 320px and 400% zoom.** **Acceptance:** No hidden or clipped critical action. **Required verification:** Reflow matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0234-08 — Record independent access sign-off.** **Acceptance:** Named reviewer and SHA with blockers resolved. **Required verification:** AT evidence report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0234-01 - Map focus and reading order.** **Acceptance:** Each scene has correct semantic structure. **Required verification:** Keyboard and DOM audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0234-02 - Validate all core journeys by AT.** **Acceptance:** Listen, Explore, Create, Studio, Requests and Export operable. **Required verification:** NVDA/Edge session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0234-03 - Enforce 2.2 AA contrast and target sizing.** **Acceptance:** Text and essential indicators pass applicable criteria. **Required verification:** Measured contrast and touch-target report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0234-04 - Protect focus under overlays.** **Acceptance:** Nav, toasts, modals and dialogs restore focus correctly. **Required verification:** Dialog Escape/Return E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0234-05 - Define live announcement budget.** **Acceptance:** Lyric ticks and meters do not chatter. **Required verification:** Screen reader listening study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0234-06 - Ensure full motion parity.** **Acceptance:** Still and reduced-motion show all data. **Required verification:** Motion emulator review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0234-07 - Validate 320px and 400% zoom.** **Acceptance:** No hidden or clipped critical action. **Required verification:** Reflow matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0234-08 - Record independent access sign-off.** **Acceptance:** Named reviewer and SHA with blockers resolved. **Required verification:** AT evidence report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

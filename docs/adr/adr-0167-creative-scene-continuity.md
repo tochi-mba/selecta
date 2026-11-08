@@ -1,4 +1,4 @@
-# ADR-0167 — Cross-scene continuity, contextual navigation and persistent context
+# ADR-0167 - Cross-scene continuity, contextual navigation and persistent context
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -33,15 +33,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained layout when a richer animation does not measurably improve comprehension, creative control or delight. A preview or graphic is illustrative until connected to actual source data. No fake waveform, beat, word timing, quality score, cover art, render status, autoplay sound or processing percentage. Every animated or direct-manipulation state requires an accessible static/keyboard equivalent.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0167-01 — Map exact object identity across routes.** **Acceptance:** Mix/scope/seam/song IDs survive navigation and stale responses. **Required verification:** Deep-link and popstate matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0167-02 — Storyboard mix idea to generated sequence.** **Acceptance:** The selected concept remains identifiable without false rendered state. **Required verification:** Confirmed-build fixture and review video. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0167-03 — Storyboard seam to Inspector to Studio.** **Acceptance:** Same pair/revision and audio owner always preserved. **Required verification:** Open/close/reorder conflict test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0167-04 — Prioritize contextual actions in shell.** **Acceptance:** Primary creation and request actions clear without utility clutter. **Required verification:** Keyboard/desktop/mobile focus review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0167-05 — Design responsive panel and return path.** **Acceptance:** Closing sheet returns to originating song/seam with meaningful focus. **Required verification:** Escape, nested modal and 320px tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0167-06 — Protect playback through page transitions.** **Acceptance:** No route change unexpectedly plays, seeks or resumes audio. **Required verification:** Real audio multitab and manual Pause audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0167-07 — Test stale state and deep-link recovery.** **Acceptance:** Missing draft or late build never steals navigation or changes wrong mix. **Required verification:** Network-race and missing-route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0167-01 - Map exact object identity across routes.** **Acceptance:** Mix/scope/seam/song IDs survive navigation and stale responses. **Required verification:** Deep-link and popstate matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0167-02 - Storyboard mix idea to generated sequence.** **Acceptance:** The selected concept remains identifiable without false rendered state. **Required verification:** Confirmed-build fixture and review video. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0167-03 - Storyboard seam to Inspector to Studio.** **Acceptance:** Same pair/revision and audio owner always preserved. **Required verification:** Open/close/reorder conflict test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0167-04 - Prioritize contextual actions in shell.** **Acceptance:** Primary creation and request actions clear without utility clutter. **Required verification:** Keyboard/desktop/mobile focus review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0167-05 - Design responsive panel and return path.** **Acceptance:** Closing sheet returns to originating song/seam with meaningful focus. **Required verification:** Escape, nested modal and 320px tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0167-06 - Protect playback through page transitions.** **Acceptance:** No route change unexpectedly plays, seeks or resumes audio. **Required verification:** Real audio multitab and manual Pause audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0167-07 - Test stale state and deep-link recovery.** **Acceptance:** Missing draft or late build never steals navigation or changes wrong mix. **Required verification:** Network-race and missing-route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

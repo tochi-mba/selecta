@@ -20,13 +20,13 @@ def test_unchecked_items_do_not_require_evidence(tmp_path: Path) -> None:
     write(
         tmp_path,
         "docs/adr/implementation-checklist.md",
-        "- [ ] T0001 — A human verification step.\n",
+        "- [ ] T0001 - A human verification step.\n",
     )
     assert validate(tmp_path) == []
 
 
 def test_historical_checks_require_a_done_evidence_row(tmp_path: Path) -> None:
-    write(tmp_path, "docs/adr/implementation-checklist.md", "- [x] T0002 — Existing feature.\n")
+    write(tmp_path, "docs/adr/implementation-checklist.md", "- [x] T0002 - Existing feature.\n")
     assert "needs a Done row" in validate(tmp_path)[0]
 
     write(
@@ -39,7 +39,7 @@ def test_historical_checks_require_a_done_evidence_row(tmp_path: Path) -> None:
     write(
         tmp_path,
         "docs/adr/implementation-evidence.md",
-        "| T0002 Existing feature | Done | — |\n",
+        "| T0002 Existing feature | Done | - |\n",
     )
     assert "needs a Done row" in validate(tmp_path)[0]
 
@@ -53,16 +53,16 @@ def test_historical_checks_require_a_done_evidence_row(tmp_path: Path) -> None:
 
 def test_inline_evidence_is_required_for_new_checked_items(tmp_path: Path) -> None:
     path = "docs/adr/polish-implementation-checklist.md"
-    write(tmp_path, path, "- [x] P0001 — Change implemented.\n")
+    write(tmp_path, path, "- [x] P0001 - Change implemented.\n")
     assert "without cited implementation evidence" in validate(tmp_path)[0]
 
-    write(tmp_path, path, "- [x] P0001 — Change. **Evidence: —; owner: Unassigned.**\n")
+    write(tmp_path, path, "- [x] P0001 - Change. **Evidence: -; owner: Unassigned.**\n")
     assert "without cited implementation evidence" in validate(tmp_path)[0]
 
     write(
         tmp_path,
         path,
-        "- [x] P0001 — Change. **Evidence: `web/src/App.tsx`; owner: Unassigned.**\n",
+        "- [x] P0001 - Change. **Evidence: `web/src/App.tsx`; owner: Unassigned.**\n",
     )
     assert validate(tmp_path) == []
 
@@ -92,7 +92,7 @@ def test_mi_checks_must_match_source_ledger_and_existing_files(tmp_path: Path) -
     write(
         tmp_path,
         path,
-        "- [x] **MI-0135-01 — Built.** **Evidence: `web/src/App.tsx`; owner: X.**\n",
+        "- [x] **MI-0135-01 - Built.** **Evidence: `web/src/App.tsx`; owner: X.**\n",
     )
     setup_mi(tmp_path)
     assert validate(tmp_path) == []
@@ -106,7 +106,7 @@ def test_mi_checks_must_match_source_ledger_and_existing_files(tmp_path: Path) -
 
 
 def test_checked_duplicate_and_unidentifiable_task_are_errors(tmp_path: Path) -> None:
-    line = "- [x] P0001 — Built. **Evidence: `web/src/App.tsx`.**\n"
+    line = "- [x] P0001 - Built. **Evidence: `web/src/App.tsx`.**\n"
     write(tmp_path, "docs/adr/polish-implementation-checklist.md", line)
     write(
         tmp_path,

@@ -1,4 +1,4 @@
-# Selecta 3.0 — feature parity ownership and old/new comparison
+# Selecta 3.0 - feature parity ownership and old/new comparison
 
 - **Decision:** Accepted. **Implementation:** Not started.
 - **All rows:** Planned mappings, not verified behavior. Historical [feature-parity](feature-parity.md) remains authoritative for the existing product.

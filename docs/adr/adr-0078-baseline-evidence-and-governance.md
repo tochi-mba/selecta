@@ -4,7 +4,7 @@
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 0 — evidence baseline
+- **Phase:** 0 - evidence baseline
 - **Extends:** ADR-0047, ADR-0074, ADR-0075, ADR-0076. No inherited task is automatically complete.
 - **Dependencies:** None; finish before aesthetic or interaction changes.
 - **Checklist:** S31-0078-01 through S31-0078-10 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,16 +23,16 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0078-01 — Pin baseline to actual 3.0 merge and current release head.** Acceptance: Evidence record names commit, environment, browser, installed/PWA assumptions and support boundary.
-2. **S31-0078-02 — Reconcile the 258 inherited S3 IDs with merged code and CI.** Acceptance: Every S3 ID maps to code/PR/tests or remains unresolved; no unchecked legacy item is silently marked done.
-3. **S31-0078-03 — Inventory every destination, subview, overlay and always-on surface.** Acceptance: One route/surface map includes Listen, Explore, My Mixes, Edit, Library, Workspace, requests, Stage, Studio, Activity and edge screens.
-4. **S31-0078-04 — Build the state coverage matrix for each surface.** Acceptance: Initial, partial, empty, background refresh, stale, failed, offline and recovered states are recorded or explicitly N/A.
-5. **S31-0078-05 — Capture deterministic light/dark screenshots of the real built app.** Acceptance: Fixture, viewport, theme, browser, font, state and asset license are recorded; no captured private music metadata.
-6. **S31-0078-06 — Run baseline core-task scripts without coaching participants.** Acceptance: Observed completion, hesitation, errors and recovery are separated from hypotheses; no fabricated success rates.
-7. **S31-0078-07 — Create a risk-ranked finding record.** Acceptance: Every finding has repro, affected user, severity P0/P1/P2, owner, acceptance test and old/new ADR link.
-8. **S31-0078-08 — Define non-regression comparisons against current behaviour.** Acceptance: Each proposed polish change specifies expected playback, persisted data, route and UI state unchanged.
-9. **S31-0078-09 — Record decision, implementation and verification status independently.** Acceptance: Proposed/Accepted decision and Not started/In progress/Implemented/Verified are not conflated.
-10. **S31-0078-10 — Approve and freeze the scope and baseline before implementation.** Acceptance: Owner signs decision boundaries and prioritization; no new engine, API or schema work is implied.
+1. **S31-0078-01 - Pin baseline to actual 3.0 merge and current release head.** Acceptance: Evidence record names commit, environment, browser, installed/PWA assumptions and support boundary.
+2. **S31-0078-02 - Reconcile the 258 inherited S3 IDs with merged code and CI.** Acceptance: Every S3 ID maps to code/PR/tests or remains unresolved; no unchecked legacy item is silently marked done.
+3. **S31-0078-03 - Inventory every destination, subview, overlay and always-on surface.** Acceptance: One route/surface map includes Listen, Explore, My Mixes, Edit, Library, Workspace, requests, Stage, Studio, Activity and edge screens.
+4. **S31-0078-04 - Build the state coverage matrix for each surface.** Acceptance: Initial, partial, empty, background refresh, stale, failed, offline and recovered states are recorded or explicitly N/A.
+5. **S31-0078-05 - Capture deterministic light/dark screenshots of the real built app.** Acceptance: Fixture, viewport, theme, browser, font, state and asset license are recorded; no captured private music metadata.
+6. **S31-0078-06 - Run baseline core-task scripts without coaching participants.** Acceptance: Observed completion, hesitation, errors and recovery are separated from hypotheses; no fabricated success rates.
+7. **S31-0078-07 - Create a risk-ranked finding record.** Acceptance: Every finding has repro, affected user, severity P0/P1/P2, owner, acceptance test and old/new ADR link.
+8. **S31-0078-08 - Define non-regression comparisons against current behaviour.** Acceptance: Each proposed polish change specifies expected playback, persisted data, route and UI state unchanged.
+9. **S31-0078-09 - Record decision, implementation and verification status independently.** Acceptance: Proposed/Accepted decision and Not started/In progress/Implemented/Verified are not conflated.
+10. **S31-0078-10 - Approve and freeze the scope and baseline before implementation.** Acceptance: Owner signs decision boundaries and prioritization; no new engine, API or schema work is implied.
 
 ## Required adverse cases and evidence
 

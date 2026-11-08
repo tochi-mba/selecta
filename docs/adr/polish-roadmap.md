@@ -1,4 +1,4 @@
-# Selecta UI/UX polish — scope, ADR index and delivery roadmap
+# Selecta UI/UX polish - scope, ADR index and delivery roadmap
 
 - **Decision status:** Accepted
 - **Programme implementation status:** Not started
@@ -20,20 +20,20 @@ The new P-task checklist is the canonical polish tracker. Decision status and im
 
 | ADR | Phase | Decision | Implementation |
 |---|---|---|---|
-| [ADR-0033 — Polish baseline, complete state inventory and evidence governance](adr-0033-polish-baseline-and-governance.md) | 0 | Accepted | Not started |
-| [ADR-0034 — Precise visual foundations, typography and coherent iconography](adr-0034-polish-visual-system.md) | 1 | Accepted | Not started |
-| [ADR-0035 — Complete shared control states, overlays and recoverable feedback](adr-0035-polish-components-and-feedback.md) | 2 | Accepted | Not started |
-| [ADR-0036 — Content-shaped skeletons and truthful asynchronous state transitions](adr-0036-polish-loading-and-skeletons.md) | 2 | Accepted | Not started |
-| [ADR-0037 — First-run setup, truthful readiness and local privacy explanations](adr-0037-polish-onboarding-and-readiness.md) | 3 | Accepted | Not started |
-| [ADR-0038 — Mix browsing, creation defaults and unmistakable draft scope](adr-0038-polish-mixes-and-drafts.md) | 3 | Accepted | Not started |
-| [ADR-0039 — Calm listening hierarchy, stable transport and shell continuity](adr-0039-polish-listen-and-shell.md) | 3 | Accepted | Not started |
-| [ADR-0040 — Precise editing timeline and context-preserving transition inspector](adr-0040-polish-editor-and-inspector.md) | 4 | Accepted | Not started |
-| [ADR-0041 — Readable Stem Studio grid, audition ownership and explicit commit state](adr-0041-polish-stem-studio.md) | 4 | Accepted | Not started |
-| [ADR-0042 — Understandable requests, explicit bridge consent and auditionable discovery](adr-0042-polish-requests-and-discovery.md) | 3, 5 | Accepted | Not started |
-| [ADR-0043 — Scannable Library, actionable Workshop and polished export/study flows](adr-0043-polish-library-and-workshop.md) | 5 | Accepted | Not started |
-| [ADR-0044 — Consistent product vocabulary, truthful explanations and restrained motion](adr-0044-polish-language-and-motion.md) | 1 | Accepted | Not started |
-| [ADR-0045 — Responsive workspace finish and complete accessible task journeys](adr-0045-polish-responsive-accessibility.md) | 6 | Accepted | Not started |
-| [ADR-0046 — Visual regression, performance, listening and polish release gates](adr-0046-polish-verification-and-release.md) | 7 | Accepted | Not started |
+| [ADR-0033 - Polish baseline, complete state inventory and evidence governance](adr-0033-polish-baseline-and-governance.md) | 0 | Accepted | Not started |
+| [ADR-0034 - Precise visual foundations, typography and coherent iconography](adr-0034-polish-visual-system.md) | 1 | Accepted | Not started |
+| [ADR-0035 - Complete shared control states, overlays and recoverable feedback](adr-0035-polish-components-and-feedback.md) | 2 | Accepted | Not started |
+| [ADR-0036 - Content-shaped skeletons and truthful asynchronous state transitions](adr-0036-polish-loading-and-skeletons.md) | 2 | Accepted | Not started |
+| [ADR-0037 - First-run setup, truthful readiness and local privacy explanations](adr-0037-polish-onboarding-and-readiness.md) | 3 | Accepted | Not started |
+| [ADR-0038 - Mix browsing, creation defaults and unmistakable draft scope](adr-0038-polish-mixes-and-drafts.md) | 3 | Accepted | Not started |
+| [ADR-0039 - Calm listening hierarchy, stable transport and shell continuity](adr-0039-polish-listen-and-shell.md) | 3 | Accepted | Not started |
+| [ADR-0040 - Precise editing timeline and context-preserving transition inspector](adr-0040-polish-editor-and-inspector.md) | 4 | Accepted | Not started |
+| [ADR-0041 - Readable Stem Studio grid, audition ownership and explicit commit state](adr-0041-polish-stem-studio.md) | 4 | Accepted | Not started |
+| [ADR-0042 - Understandable requests, explicit bridge consent and auditionable discovery](adr-0042-polish-requests-and-discovery.md) | 3, 5 | Accepted | Not started |
+| [ADR-0043 - Scannable Library, actionable Workshop and polished export/study flows](adr-0043-polish-library-and-workshop.md) | 5 | Accepted | Not started |
+| [ADR-0044 - Consistent product vocabulary, truthful explanations and restrained motion](adr-0044-polish-language-and-motion.md) | 1 | Accepted | Not started |
+| [ADR-0045 - Responsive workspace finish and complete accessible task journeys](adr-0045-polish-responsive-accessibility.md) | 6 | Accepted | Not started |
+| [ADR-0046 - Visual regression, performance, listening and polish release gates](adr-0046-polish-verification-and-release.md) | 7 | Accepted | Not started |
 
 ## Delivery order and dependencies
 

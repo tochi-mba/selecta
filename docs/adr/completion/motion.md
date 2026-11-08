@@ -15,13 +15,13 @@ wins over the in-app Expressive choice (`web/src/ui/useReducedMotion.ts`).
 | Toast appear | outcome reported by the server (`ui/toasts.tsx`) | reveal | dismiss, timeout | instant |
 | Overlay appear | dialog/drawer mount | overlay | Escape / close | instant |
 | Page reveal | route change (`router.ts`) | reveal | next route change | none |
-| Mix-idea group reveal | cards inserted after load | handoff, once | — | none |
+| Mix-idea group reveal | cards inserted after load | handoff, once | - | none |
 | Skeleton pulse | loading region | 3 cycles then still | content arriving | none |
-| Skeleton → content | data arriving | 160 ms | — | none |
+| Skeleton → content | data arriving | 160 ms | - | none |
 | Field/border focus | focus change | fast | blur | instant |
 | Inspector scroll | selecting a seam | smooth scroll | user scroll | `auto` |
 | Spectrum (15 styles) | `AnalyserNode` of the playing mix (`views/Now.tsx`) | ≤ 15 fps while playing | pause, hidden tab, Stage exit | static frame |
-| Lyric line highlight | player clock | — | seek, pause | highlight changes without scrolling animation |
+| Lyric line highlight | player clock | - | seek, pause | highlight changes without scrolling animation |
 | Transition countdown | seam switch time, beat grid | per beat | seek, skip, pause | numbers only |
 | Playhead | player clock | per frame | seek | moves (it is the information, not decoration) |
 

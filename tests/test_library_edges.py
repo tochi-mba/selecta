@@ -91,7 +91,7 @@ def test_songs_with_the_same_name_are_kept_apart(client, conn):
         "שלום עולם",
         "مرحبا",
         "日本語の歌",
-        "Beyoncé — Déjà Vu",
+        "Beyoncé - Déjà Vu",
         "🔥 Fire 🔥",
         "<script>alert(1)</script>",
         'O\'Neil "Live"',

@@ -1,4 +1,4 @@
-# ADR-0243 — Tactile gestures, pointer feedback and equal keyboard control
+# ADR-0243 - Tactile gestures, pointer feedback and equal keyboard control
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Make drag/reorder, energy shaping and stem-cell painting expressive and predicta
 
 No gesture that silently edits current mix, toggles multiple times per stroke or traps page scroll on touch. Preserve a proven reliable interface when a proposed artistic treatment cannot demonstrate improved user outcomes. This docs-only decision does not implement remote services, SaaS, telemetry, accounts or changes to music files.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0243-01 — Inventory gesture affordances.** **Acceptance:** Every pointer action has explicit drag handle or visual clue. **Required verification:** Interaction review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0243-02 — Define provisional visuals.** **Acceptance:** Hover/drag preview distinct from committed result. **Required verification:** Slow server tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0243-03 — Implement cancel paths.** **Acceptance:** Escape, pointer cancel and navigation restore state. **Required verification:** Pointer E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0243-04 — Make keyboard equivalents.** **Acceptance:** Reorder, paint and arc shape operable without drag. **Required verification:** Keyboard/NVDA tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0243-05 — Design touch scrolling boundaries.** **Acceptance:** Grid and arc avoid unwanted gesture conflicts. **Required verification:** Mobile gesture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0243-06 — Prevent double-application.** **Acceptance:** Each intended stem cell changes at most once per stroke. **Required verification:** Pointer path fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0243-07 — Support stylus and coarse pointers.** **Acceptance:** Hit zones remain precise and accessible. **Required verification:** Device test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0243-08 — Measure editing accuracy.** **Acceptance:** Users can edit quickly with low unintended changes. **Required verification:** Creator study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0243-01 - Inventory gesture affordances.** **Acceptance:** Every pointer action has explicit drag handle or visual clue. **Required verification:** Interaction review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0243-02 - Define provisional visuals.** **Acceptance:** Hover/drag preview distinct from committed result. **Required verification:** Slow server tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0243-03 - Implement cancel paths.** **Acceptance:** Escape, pointer cancel and navigation restore state. **Required verification:** Pointer E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0243-04 - Make keyboard equivalents.** **Acceptance:** Reorder, paint and arc shape operable without drag. **Required verification:** Keyboard/NVDA tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0243-05 - Design touch scrolling boundaries.** **Acceptance:** Grid and arc avoid unwanted gesture conflicts. **Required verification:** Mobile gesture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0243-06 - Prevent double-application.** **Acceptance:** Each intended stem cell changes at most once per stroke. **Required verification:** Pointer path fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0243-07 - Support stylus and coarse pointers.** **Acceptance:** Hit zones remain precise and accessible. **Required verification:** Device test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0243-08 - Measure editing accuracy.** **Acceptance:** Users can edit quickly with low unintended changes. **Required verification:** Creator study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

@@ -4,7 +4,7 @@
 - **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
-- **Delivery phase:** 2 — Shared components and loading
+- **Delivery phase:** 2 - Shared components and loading
 - **Extends:** [ADR-0004](adr-0004-interaction-primitives-and-notifications.md), [ADR-0023](adr-0023-accessibility.md), [ADR-0028](adr-0028-recovery-and-multitab.md); does not silently supersede their behavioural contracts.
 - **Dependencies:** ADR-0033 inventory; ADR-0034 visual roles; ADR-0044 language and motion.
 - **Checklist:** P0021–P0031 in [polish implementation checklist](polish-implementation-checklist.md).

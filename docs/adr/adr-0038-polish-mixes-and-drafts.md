@@ -4,7 +4,7 @@
 - **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
-- **Delivery phase:** 3 — Core listening, mixes and requests
+- **Delivery phase:** 3 - Core listening, mixes and requests
 - **Extends:** [ADR-0010](adr-0010-mix-discovery.md), [ADR-0011](adr-0011-steering-and-energy.md), [ADR-0012](adr-0012-drafts-and-queue.md); does not silently supersede their behavioural contracts.
 - **Dependencies:** ADR-0034 and ADR-0044 foundations, ADR-0035 shared controls and ADR-0036 asynchronous states. Apply ADR-0045 accessibility requirements during implementation.
 - **Checklist:** P0052–P0060 in [polish implementation checklist](polish-implementation-checklist.md).

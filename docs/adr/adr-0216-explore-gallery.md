@@ -1,4 +1,4 @@
-# ADR-0216 — Editorial Explore gallery and genuine mix reveal
+# ADR-0216 - Editorial Explore gallery and genuine mix reveal
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Make musical ideas inviting while keeping eligibility, Play, Shape and Save choi
 
 No autoplay previews, fake computed results, invented classification or silent current-mix replacement. Reject spectacle when it costs accessibility, audio continuity or task comprehension. This ADR approves no new SaaS, login, account, cloud upload, telemetry, audio engine rewrite or code change by itself.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0216-01 — Design featured mix idea.** **Acceptance:** Clear intention and primary action. **Required verification:** Five-second glance. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0216-02 — Curate categories.** **Acceptance:** Counts and family filters match data. **Required verification:** Fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0216-03 — Generate grounded art.** **Acceptance:** Decorative art never claims analyzed traits. **Required verification:** Provenance audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0216-04 — Clarify Play Shape Save.** **Acceptance:** Distinct outcomes and accessible actions. **Required verification:** Task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0216-05 — Show mix eligibility.** **Acceptance:** Not enough ready songs explained. **Required verification:** Backend fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0216-06 — Reveal confirmed plan.** **Acceptance:** Only server result appears as real mix. **Required verification:** Slow/failure E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0216-07 — Protect current playback.** **Acceptance:** Replacement consent maintained. **Required verification:** Audio/draft test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0216-08 — Evaluate inspiration.** **Acceptance:** Emotional quality improves without errors. **Required verification:** Comparative user study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0216-01 - Design featured mix idea.** **Acceptance:** Clear intention and primary action. **Required verification:** Five-second glance. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0216-02 - Curate categories.** **Acceptance:** Counts and family filters match data. **Required verification:** Fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0216-03 - Generate grounded art.** **Acceptance:** Decorative art never claims analyzed traits. **Required verification:** Provenance audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0216-04 - Clarify Play Shape Save.** **Acceptance:** Distinct outcomes and accessible actions. **Required verification:** Task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0216-05 - Show mix eligibility.** **Acceptance:** Not enough ready songs explained. **Required verification:** Backend fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0216-06 - Reveal confirmed plan.** **Acceptance:** Only server result appears as real mix. **Required verification:** Slow/failure E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0216-07 - Protect current playback.** **Acceptance:** Replacement consent maintained. **Required verification:** Audio/draft test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0216-08 - Evaluate inspiration.** **Acceptance:** Emotional quality improves without errors. **Required verification:** Comparative user study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

@@ -1,4 +1,4 @@
-# ADR-0186 — Spectral Lanes: horizontal live-audio visualization
+# ADR-0186 - Spectral Lanes: horizontal live-audio visualization
 
 **Status:** Accepted by the owner, 2026-11-08. Implementation in progress on [PR #33](https://github.com/tochi-mba/selecta/pull/33); authored tests are not independent verification. **Independent verification:** No.
 

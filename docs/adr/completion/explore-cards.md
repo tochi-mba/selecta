@@ -41,8 +41,8 @@ song order, a length or a transition quality; the disclosure says so in words.
 | "N matching songs" | `eligible()` filters the library by the idea's rules | true |
 | tempo range | percentile of the same eligible songs | true (a range, not a target) |
 | "Stays within <family>" | `family_vibe()` restricts eligibility to that family | true |
-| move words | `vibe.language` weights move choice in planning | preference only — labelled so |
-| approximate length | 65 % of eligible song time | approximate — labelled "About" |
+| move words | `vibe.language` weights move choice in planning | preference only - labelled so |
+| approximate length | 65 % of eligible song time | approximate - labelled "About" |
 | Play replaces after confirmation | `ask()` opens the replacement dialog when a mix is active | true (`web/src/views/Mixes.test.tsx` "keeps the active mix until confirmation") |
 | Save draft leaves playback alone | `keepAsDraft()` only creates a draft | true |
 | No genre or mood evidence beyond tags | `describe()` reads stored tags/traits only | true |

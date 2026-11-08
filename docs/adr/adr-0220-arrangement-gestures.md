@@ -1,4 +1,4 @@
-# ADR-0220 — Tactile song reorder and selectable seam objects with revision safety
+# ADR-0220 - Tactile song reorder and selectable seam objects with revision safety
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Give songs clear movable identity and transition edges explicit selection. Point
 
 No optimistic phantom save, lost duplicate song identity, accidental drag or unannounced rejection. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0220-01 — Redesign song rows.** **Acceptance:** Title, sequence, lock and metadata readable. **Required verification:** Long-mix screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0220-02 — Make seam edge an object.** **Acceptance:** From/to identities and state selectable. **Required verification:** Pair identity test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0220-03 — Specify pointer drag preview.** **Acceptance:** Provisional insertion and cancel visibly distinct. **Required verification:** Pointer E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0220-04 — Support keyboard reorder.** **Acceptance:** Move actions and focus predictable. **Required verification:** Keyboard/NVDA test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0220-05 — Preserve locked positions.** **Acceptance:** Protected sections cannot mutate silently. **Required verification:** Lock fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0220-06 — Commit with revision guards.** **Acceptance:** Server reject rolls back exact order. **Required verification:** Conflict/Undo E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0220-07 — Handle hundred-song list.** **Acceptance:** Scrolling and focus remain stable under load. **Required verification:** Stress test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0220-08 — Measure edit confidence.** **Acceptance:** Users reorder intended song without errors. **Required verification:** Creator study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0220-01 - Redesign song rows.** **Acceptance:** Title, sequence, lock and metadata readable. **Required verification:** Long-mix screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0220-02 - Make seam edge an object.** **Acceptance:** From/to identities and state selectable. **Required verification:** Pair identity test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0220-03 - Specify pointer drag preview.** **Acceptance:** Provisional insertion and cancel visibly distinct. **Required verification:** Pointer E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0220-04 - Support keyboard reorder.** **Acceptance:** Move actions and focus predictable. **Required verification:** Keyboard/NVDA test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0220-05 - Preserve locked positions.** **Acceptance:** Protected sections cannot mutate silently. **Required verification:** Lock fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0220-06 - Commit with revision guards.** **Acceptance:** Server reject rolls back exact order. **Required verification:** Conflict/Undo E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0220-07 - Handle hundred-song list.** **Acceptance:** Scrolling and focus remain stable under load. **Required verification:** Stress test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0220-08 - Measure edit confidence.** **Acceptance:** Users reorder intended song without errors. **Required verification:** Creator study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

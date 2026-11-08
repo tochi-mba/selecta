@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 5 — Discovery and operations
+- **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0022, ADR-0026, ADR-0043
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0065-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Treat export as an explicitly revision-bound job visible independently of its in
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0065-01 — Not started.** Inspect existing FLAC export API, file retention, content identity and active job mechanisms.
-2. **S3-0065-02 — Not started.** Define immutable mix-snapshot/revision contract including seam intent and render provenance.
-3. **S3-0065-03 — Not started.** Design export initiation with prerequisites, exact target scope, error conditions and truthful progress.
-4. **S3-0065-04 — Not started.** Provide persistent in-app job entry to recover progress and download after overlay dismissal.
-5. **S3-0065-05 — Not started.** Preserve rendering and download semantics; never auto-replace source mix during export.
-6. **S3-0065-06 — Not started.** Handle cancel/retry where supported, expired files and disk-space failures with explicit messages.
-7. **S3-0065-07 — Not started.** Test actual FLAC decoding and rendered sequence/revision identity.
-8. **S3-0065-08 — Not started.** Run audible comparisons for seam continuity, seek and end-of-file correctness.
+1. **S3-0065-01 - Not started.** Inspect existing FLAC export API, file retention, content identity and active job mechanisms.
+2. **S3-0065-02 - Not started.** Define immutable mix-snapshot/revision contract including seam intent and render provenance.
+3. **S3-0065-03 - Not started.** Design export initiation with prerequisites, exact target scope, error conditions and truthful progress.
+4. **S3-0065-04 - Not started.** Provide persistent in-app job entry to recover progress and download after overlay dismissal.
+5. **S3-0065-05 - Not started.** Preserve rendering and download semantics; never auto-replace source mix during export.
+6. **S3-0065-06 - Not started.** Handle cancel/retry where supported, expired files and disk-space failures with explicit messages.
+7. **S3-0065-07 - Not started.** Test actual FLAC decoding and rendered sequence/revision identity.
+8. **S3-0065-08 - Not started.** Run audible comparisons for seam continuity, seek and end-of-file correctness.
 
 ## Preservation and integration constraints
 

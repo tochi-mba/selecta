@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Playback transport and audio clock | `web/src/player.ts` (one instance, created in `App.tsx`, outside React rendering) | read state, call play/pause/seek/next | create an `AudioContext` for the mix |
 | Who is making sound | `web/src/audio/focus.ts` | `takeAudio` / `releaseAudio` | play without taking ownership |
-| OS media keys | `web/src/audio/mediaSession.ts` | — | register their own handlers |
+| OS media keys | `web/src/audio/mediaSession.ts` | - | register their own handlers |
 | Routes and history | `web/src/router.ts` | `navigate`, `useRoute`, query helpers | touch `history` directly |
 | Navigation names, titles, breadcrumbs | `web/src/shell/manifest.ts` | read | hard-code labels |
 | Server calls | `web/src/api.ts` (`get`, `post`, `del`, types) | call through it | `fetch` the API directly |
@@ -14,7 +14,7 @@
 | Readiness words | `web/src/state/readiness.ts` | read | invent readiness |
 | Activity and Undo | `web/src/state/activity.ts`, `ui/toasts.tsx` | report outcomes | keep private Undo stacks |
 | Background job status | `web/src/state/jobs.ts` | read | poll `/api/jobs` separately |
-| Mix editing | `web/src/views/Mix.tsx` (+ `EditorRows`, `SeamInspector`, `Studio`, `EditorStory`) | — | edit a mix from another page |
+| Mix editing | `web/src/views/Mix.tsx` (+ `EditorRows`, `SeamInspector`, `Studio`, `EditorStory`) | - | edit a mix from another page |
 | Styles | see [css-ownership.md](css-ownership.md) | | |
 
 ## Import direction

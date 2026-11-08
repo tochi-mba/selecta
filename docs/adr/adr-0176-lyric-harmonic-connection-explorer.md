@@ -1,4 +1,4 @@
-# ADR-0176 — Musical discovery: phrase bridges and focused harmonic connection explorer
+# ADR-0176 - Musical discovery: phrase bridges and focused harmonic connection explorer
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This ADR proposes a **new cross-surface design and acceptance delta**, not a cla
 
 Prefer the existing restrained and proven UI when added visuals distract or reduce correctness. No artificial music, artwork, beat, lyric accuracy, quality score or fake render status. All sensory interactions require a usable static, keyboard, high-contrast and reduced-motion alternative. Source truth and explicit human consent outrank polish.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0176-01 — Design legible phrase bridge.** **Acceptance:** Shared word and both songs obvious with long/multilingual lyric lines. **Required verification:** Text and source provenance screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0176-02 — Prototype bounded song-neighbour graph.** **Acceptance:** Only real links appear and dense sets remain traversable. **Required verification:** Graph capacity and keyboard navigation test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0176-03 — Visualize real four-stage harmony audition.** **Acceptance:** Current stage and bar match confirmed clip position. **Required verification:** Media playback and chord clock fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0176-04 — Separate candidate from approved claim.** **Acceptance:** Machine suggestion cannot appear human-validated before rating. **Required verification:** Rating and no-audio state audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0176-05 — Keep audition and add-to-mix scope.** **Acceptance:** No unsolicited playback or wrong draft addition. **Required verification:** Audio ownership and revision tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0176-06 — Design empty and rejected states.** **Acceptance:** Absent candidates and failed previews remain truthful and recoverable. **Required verification:** No analysis/failed clip/offline scenarios. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0176-07 — Evaluate surprise versus comprehension.** **Acceptance:** Users understand relationship and distinguish hypothesis from confirmation. **Required verification:** Uncoached discovery and blind listening notes. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0176-01 - Design legible phrase bridge.** **Acceptance:** Shared word and both songs obvious with long/multilingual lyric lines. **Required verification:** Text and source provenance screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0176-02 - Prototype bounded song-neighbour graph.** **Acceptance:** Only real links appear and dense sets remain traversable. **Required verification:** Graph capacity and keyboard navigation test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0176-03 - Visualize real four-stage harmony audition.** **Acceptance:** Current stage and bar match confirmed clip position. **Required verification:** Media playback and chord clock fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0176-04 - Separate candidate from approved claim.** **Acceptance:** Machine suggestion cannot appear human-validated before rating. **Required verification:** Rating and no-audio state audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0176-05 - Keep audition and add-to-mix scope.** **Acceptance:** No unsolicited playback or wrong draft addition. **Required verification:** Audio ownership and revision tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0176-06 - Design empty and rejected states.** **Acceptance:** Absent candidates and failed previews remain truthful and recoverable. **Required verification:** No analysis/failed clip/offline scenarios. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0176-07 - Evaluate surprise versus comprehension.** **Acceptance:** Users understand relationship and distinguish hypothesis from confirmation. **Required verification:** Uncoached discovery and blind listening notes. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

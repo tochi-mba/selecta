@@ -1,4 +1,4 @@
-# Selecta UI/UX polish — verification matrix
+# Selecta UI/UX polish - verification matrix
 
 - **Status:** Proposed; no runtime checks completed by this planning PR.
 - **Date:** 2026-11-06

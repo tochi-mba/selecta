@@ -29,18 +29,18 @@ Make the current mix a separate featured region, drafts a discoverable project c
 - Queue displays work order rather than pretending to be playlist.
 - Activation warns of current audio effect using the shared replacement policy and exact preservation contract.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0099-01 — Redesign current mix overview and actions.** Acceptance: User can identify actual playing mix and its readiness. Required verification: Active/paused/empty card screenshots. **Implementation: Not started; Verified: No.**
-2. **S4-0099-02 — Redesign saved-draft list with stable identity and status.** Acceptance: Same-name drafts remain disambiguated and editable. Required verification: Duplicate title and multi-draft fixture. **Implementation: Not started; Verified: No.**
-3. **S4-0099-03 — Preserve create, copy, rename, delete and Undo contracts.** Acceptance: No lost work or wrong draft operations. Required verification: CRUD and sequence tests. **Implementation: Not started; Verified: No.**
-4. **S4-0099-04 — Clarify Edit versus Play/Make current behaviour.** Acceptance: Draft editing does not affect live player; activation does only as contracted. Required verification: Play A/edit B task script. **Implementation: Not started; Verified: No.**
-5. **S4-0099-05 — Redesign activation consequence and recovery flow.** Acceptance: Failed activation preserves prior current mix and audio. Required verification: Server error, pause/play and multi-tab activation tests. **Implementation: Not started; Verified: No.**
-6. **S4-0099-06 — Separate rendering queue and progress from saved collection.** Acceptance: Queued, working and finished have truthful distinctions. Required verification: Reorder/remove queue and background completion tests. **Implementation: Not started; Verified: No.**
-7. **S4-0099-07 — Ensure draft render readiness is detailed, not binary.** Acceptance: 8/11 prepared is distinct from saved status. Required verification: Partial/failed seam fixtures. **Implementation: Not started; Verified: No.**
-8. **S4-0099-08 — Preserve user position through draft mutation and navigation.** Acceptance: Selection/focus not redirected to another card. Required verification: Rename/delete/reorder focus tests. **Implementation: Not started; Verified: No.**
-9. **S4-0099-09 — Support long lists, search or sort where supported.** Acceptance: No phantom backend capabilities or lost deep link. Required verification: Long draft dataset and URL restoration. **Implementation: Not started; Verified: No.**
-10. **S4-0099-10 — Review destructive confirmation and scope-aware Undo.** Acceptance: Deleting a draft cannot undo current-mix action. Required verification: Multiple deletion and intervening edit tests. **Implementation: Not started; Verified: No.**
+1. **S4-0099-01 - Redesign current mix overview and actions.** Acceptance: User can identify actual playing mix and its readiness. Required verification: Active/paused/empty card screenshots. **Implementation: Not started; Verified: No.**
+2. **S4-0099-02 - Redesign saved-draft list with stable identity and status.** Acceptance: Same-name drafts remain disambiguated and editable. Required verification: Duplicate title and multi-draft fixture. **Implementation: Not started; Verified: No.**
+3. **S4-0099-03 - Preserve create, copy, rename, delete and Undo contracts.** Acceptance: No lost work or wrong draft operations. Required verification: CRUD and sequence tests. **Implementation: Not started; Verified: No.**
+4. **S4-0099-04 - Clarify Edit versus Play/Make current behaviour.** Acceptance: Draft editing does not affect live player; activation does only as contracted. Required verification: Play A/edit B task script. **Implementation: Not started; Verified: No.**
+5. **S4-0099-05 - Redesign activation consequence and recovery flow.** Acceptance: Failed activation preserves prior current mix and audio. Required verification: Server error, pause/play and multi-tab activation tests. **Implementation: Not started; Verified: No.**
+6. **S4-0099-06 - Separate rendering queue and progress from saved collection.** Acceptance: Queued, working and finished have truthful distinctions. Required verification: Reorder/remove queue and background completion tests. **Implementation: Not started; Verified: No.**
+7. **S4-0099-07 - Ensure draft render readiness is detailed, not binary.** Acceptance: 8/11 prepared is distinct from saved status. Required verification: Partial/failed seam fixtures. **Implementation: Not started; Verified: No.**
+8. **S4-0099-08 - Preserve user position through draft mutation and navigation.** Acceptance: Selection/focus not redirected to another card. Required verification: Rename/delete/reorder focus tests. **Implementation: Not started; Verified: No.**
+9. **S4-0099-09 - Support long lists, search or sort where supported.** Acceptance: No phantom backend capabilities or lost deep link. Required verification: Long draft dataset and URL restoration. **Implementation: Not started; Verified: No.**
+10. **S4-0099-10 - Review destructive confirmation and scope-aware Undo.** Acceptance: Deleting a draft cannot undo current-mix action. Required verification: Multiple deletion and intervening edit tests. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

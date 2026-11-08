@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 5 — Discovery and operations
+- **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0021, ADR-0029, ADR-0043
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0066-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Preserve exact trial, grade and response meanings while making trial progress, A
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0066-01 — Not started.** Redesign study login/setup fields with accurate requirements and error states.
-2. **S3-0066-02 — Not started.** Design readable one-trial A/B layout with stable labels and symmetric transport.
-3. **S3-0066-03 — Not started.** Preserve grade scale, issue tags, preference, cannot-judge and method blindness.
-4. **S3-0066-04 — Not started.** Use one audio owner and expose currently playing A/B clip to assistive technology.
-5. **S3-0066-05 — Not started.** Preserve session recovery, failed submit retries and duplicate prevention.
-6. **S3-0066-06 — Not started.** Test missing clips, incomplete grade, multiple study sessions and study completion.
-7. **S3-0066-07 — Not started.** Protect results from method leakage in UI/diagnostic text and anonymize shared screenshots.
-8. **S3-0066-08 — Not started.** Perform manual listening and accessible keyboard study passes.
+1. **S3-0066-01 - Not started.** Redesign study login/setup fields with accurate requirements and error states.
+2. **S3-0066-02 - Not started.** Design readable one-trial A/B layout with stable labels and symmetric transport.
+3. **S3-0066-03 - Not started.** Preserve grade scale, issue tags, preference, cannot-judge and method blindness.
+4. **S3-0066-04 - Not started.** Use one audio owner and expose currently playing A/B clip to assistive technology.
+5. **S3-0066-05 - Not started.** Preserve session recovery, failed submit retries and duplicate prevention.
+6. **S3-0066-06 - Not started.** Test missing clips, incomplete grade, multiple study sessions and study completion.
+7. **S3-0066-07 - Not started.** Protect results from method leakage in UI/diagnostic text and anonymize shared screenshots.
+8. **S3-0066-08 - Not started.** Perform manual listening and accessible keyboard study passes.
 
 ## Preservation and integration constraints
 

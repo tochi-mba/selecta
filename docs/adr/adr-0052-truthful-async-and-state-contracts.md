@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 2 — Foundations
+- **Phase:** 2 - Foundations
 - **Extends existing decisions:** ADR-0005, ADR-0028, ADR-0036
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0052-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,14 +28,14 @@ Create domain-specific typed view models and a common state contract. Separate i
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0052-01 — Not started.** Inventory initial, populated, empty, partial, refreshing, saving, offline, failed, recovered and unavailable states by route and operation.
-2. **S3-0052-02 — Not started.** Define typed result discriminants and canonical mapping for analysis, song readiness, seams, requests, drafts and export.
-3. **S3-0052-03 — Not started.** Implement request cancellation/ignore-stale policies keyed by resource identity and revision.
-4. **S3-0052-04 — Not started.** Standardize optimistic transaction IDs, rollback, idempotency and server reconciliation.
-5. **S3-0052-05 — Not started.** Build content-shaped skeletons plus explicit delayed/stalled/retry states that preserve geometry.
-6. **S3-0052-06 — Not started.** Provide actionable error boundaries and reconnect behavior without claiming success prematurely.
-7. **S3-0052-07 — Not started.** Specify accessible status announcements that do not produce incessant screen-reader chatter.
-8. **S3-0052-08 — Not started.** Create tests for server disconnect/restart, partial response, out-of-order messages, double click and missing payload fields.
+1. **S3-0052-01 - Not started.** Inventory initial, populated, empty, partial, refreshing, saving, offline, failed, recovered and unavailable states by route and operation.
+2. **S3-0052-02 - Not started.** Define typed result discriminants and canonical mapping for analysis, song readiness, seams, requests, drafts and export.
+3. **S3-0052-03 - Not started.** Implement request cancellation/ignore-stale policies keyed by resource identity and revision.
+4. **S3-0052-04 - Not started.** Standardize optimistic transaction IDs, rollback, idempotency and server reconciliation.
+5. **S3-0052-05 - Not started.** Build content-shaped skeletons plus explicit delayed/stalled/retry states that preserve geometry.
+6. **S3-0052-06 - Not started.** Provide actionable error boundaries and reconnect behavior without claiming success prematurely.
+7. **S3-0052-07 - Not started.** Specify accessible status announcements that do not produce incessant screen-reader chatter.
+8. **S3-0052-08 - Not started.** Create tests for server disconnect/restart, partial response, out-of-order messages, double click and missing payload fields.
 
 ## Preservation and integration constraints
 

@@ -1,4 +1,4 @@
-# Selecta — final-polish incremental roadmap
+# Selecta - final-polish incremental roadmap
 
 **2026-11-08 docs-only planning baseline:** main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. **8 Proposed ADRs** (0264–0271), **64 task acceptances Not started**, 0 In progress, 0 Implemented, **0 independently Verified**. Owner decisions/implementing PRs are not supplied. Existing prior programme ledgers are not changed.
 

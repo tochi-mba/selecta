@@ -1,4 +1,4 @@
-# Selecta 4.0 — complete experience overhaul ADR roadmap and index
+# Selecta 4.0 - complete experience overhaul ADR roadmap and index
 
 - **Proposed:** 2026-11-07.
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (PR #25 and PR #26 already merged at review).
@@ -71,18 +71,18 @@ Retain all existing routes, preference choices, source files, drafts, correction
 
 | Stage | ADRs | Primary result | Exit gate |
 |---|---|---|---|
-| 0 — Baseline | 0089, 0113 | Actual main-state inventory, parity mapping, risk register and observed task baseline | Named owner signs scope and baseline |
-| 1 — Foundations | 0090–0091, 0094–0095, 0110–0111 | Semantic theme system, typography, controls, state architecture, keyboard/performance contracts | Both themes and negative cases verified |
-| 2 — Shell | 0092–0093 | Desktop rail, mobile nav, header, mini-player, inspector container | History and audio continuity preserved |
-| 3 — First value | 0096–0097 | Onboarding, ready count, Explore and steering | Unassisted first valid mix |
-| 4 — Listen | 0098 | Waveform, lyrics, visualizer, Up next, Stage | Live playback and real-audio acceptance |
-| 5 — Creator | 0099–0101 | Drafts, editor and transition inspector | Correct scope, reorder, Undo, render identity |
-| 6 — Expert | 0102 | Eight-lane Studio and safe Apply | Grid keyboard, recovery, 64-cell case |
-| 7 — Discovery | 0103–0104 | Requests/consented bridges, Word and harmonic discovery | No duplicate/partial bridge; accurate feedback |
-| 8 — Library | 0105–0106 | Large browse and safe corrections | 20k Library, deep refresh, original-file safety |
-| 9 — Operations | 0107–0109 | Workspace, sources, storage, FLAC export and blind study | Frozen FLAC decode, true jobs, blinded protocol |
-| 10 — Tests | 0110–0112 | Full WCAG, E2E, visuals, fault injection and performance | Named human/AT/audio evidence, exact test SHA |
-| 11 — Release | 0113 | Rollback, decision reconciliation and owner GO/NO-GO | Explicit sign-off, no P0 and accepted P1 risk |
+| 0 - Baseline | 0089, 0113 | Actual main-state inventory, parity mapping, risk register and observed task baseline | Named owner signs scope and baseline |
+| 1 - Foundations | 0090–0091, 0094–0095, 0110–0111 | Semantic theme system, typography, controls, state architecture, keyboard/performance contracts | Both themes and negative cases verified |
+| 2 - Shell | 0092–0093 | Desktop rail, mobile nav, header, mini-player, inspector container | History and audio continuity preserved |
+| 3 - First value | 0096–0097 | Onboarding, ready count, Explore and steering | Unassisted first valid mix |
+| 4 - Listen | 0098 | Waveform, lyrics, visualizer, Up next, Stage | Live playback and real-audio acceptance |
+| 5 - Creator | 0099–0101 | Drafts, editor and transition inspector | Correct scope, reorder, Undo, render identity |
+| 6 - Expert | 0102 | Eight-lane Studio and safe Apply | Grid keyboard, recovery, 64-cell case |
+| 7 - Discovery | 0103–0104 | Requests/consented bridges, Word and harmonic discovery | No duplicate/partial bridge; accurate feedback |
+| 8 - Library | 0105–0106 | Large browse and safe corrections | 20k Library, deep refresh, original-file safety |
+| 9 - Operations | 0107–0109 | Workspace, sources, storage, FLAC export and blind study | Frozen FLAC decode, true jobs, blinded protocol |
+| 10 - Tests | 0110–0112 | Full WCAG, E2E, visuals, fault injection and performance | Named human/AT/audio evidence, exact test SHA |
+| 11 - Release | 0113 | Rollback, decision reconciliation and owner GO/NO-GO | Explicit sign-off, no P0 and accepted P1 risk |
 
 All stages are sequencing hypotheses, **not promised durations**. Track only actual PR and evidence in the [ledger](selecta-4-evidence.md).
 

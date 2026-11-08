@@ -1,4 +1,4 @@
-# ADR-193 — Afterglow Trails: a landscape, live-audio visualizer
+# ADR-193 - Afterglow Trails: a landscape, live-audio visualizer
 
 **Decision:** Accepted by the product owner on 2026-11-08 as an extension of [PR #33](https://github.com/tochi-mba/selecta/pull/33). **Implementation:** In progress. **Independent verification:** Not yet. No independent tests or external audio/device acceptance have been claimed.
 

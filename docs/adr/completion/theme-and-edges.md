@@ -53,10 +53,10 @@ theme while playing starts nothing again, and the title bar follows").
 
 | Environment | Behaviour | Fallback |
 |---|---|---|
-| Edge / Chrome tab | toolbar follows `theme-color`, updated at runtime | — |
+| Edge / Chrome tab | toolbar follows `theme-color`, updated at runtime | - |
 | Edge / Chrome installed app | title bar follows `theme-color` (manifest `theme_color` is the cold-start colour) | first frame may use the manifest colour |
 | Firefox | ignores `theme-color` | page theme still correct |
-| Safari (macOS/iOS) | honours `theme-color` with `media` | — |
+| Safari (macOS/iOS) | honours `theme-color` with `media` | - |
 
 The installed-app and non-Edge rows still need a person with those browsers (see
 [needs-a-person.md](needs-a-person.md)).

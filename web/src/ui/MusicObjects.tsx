@@ -136,7 +136,7 @@ export function RouteDiagram({ songs, requestedId, state, compact = false }: {
   compact?: boolean;
 }) {
   if (!songs.length) return null;
-  const heading = state === 'proposed' ? 'Proposed route — nothing added' : state === 'ready' ? 'Prepared route — waiting to join' : 'Preparing route — not playable yet';
+  const heading = state === 'proposed' ? 'Proposed route - nothing added' : state === 'ready' ? 'Prepared route - waiting to join' : 'Preparing route - not playable yet';
   if (compact) return (
     <div className={'music-route compact ' + state} role="img" aria-label={heading + '. ' + songs.map((song) => song.title).join(' → ')}>
       <span className="music-route-state">{heading}</span>
@@ -300,7 +300,7 @@ export function EnergyOverview({ items, selectedIndex, onSelect, playingIndex = 
     <section className="energy-overview" aria-label="Measured energy overview">
       <div className="energy-overview-head">
         <strong>Energy through this mix</strong>
-        <small>Relative measured song energy only — not your requested shape or a quality score</small>
+        <small>Relative measured song energy only - not your requested shape or a quality score</small>
       </div>
       <ol ref={list}>
         {items.map((item, index) => {

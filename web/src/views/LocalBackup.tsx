@@ -115,7 +115,7 @@ export function LocalBackup() {
     {notice && <p role="status">{notice}</p>}
     {preview && <Dialog title="Replace local data on next restart?" onClose={() => setPreview(null)}
       footer={<>
-        <button onClick={() => setPreview(null)}>Cancel — keep current data</button>
+        <button onClick={() => setPreview(null)}>Cancel - keep current data</button>
         <Action className="primary" working="Preparing restore…" disabled={working} run={confirm}>Confirm staged restore</Action>
       </>}>
       <p>Archive date: {preview.created_utc}</p>

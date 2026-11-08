@@ -1,4 +1,4 @@
-# Selecta / Flow — independent NO-GO release gates
+# Selecta / Flow - independent NO-GO release gates
 
 **New redesign programme verdict: NO-GO / NOT IMPLEMENTED OR INDEPENDENTLY VERIFIED.** This is an intentionally strict future acceptance verdict for 50 **Accepted** ADRs and 400 **Not started** SF tasks. It is *not* evidence that the existing application is broken or unsafe. Source implementation remains a future separate PR; original historical statuses remain untouched.
 
@@ -28,9 +28,9 @@
 
 ## Blocking severity
 
-- **P0 — must not ship new UI slice:** wrong song/current mix/seam/revision, corruption/rewriting local audio, unconsented or partial bridge, overlapping audio or surprise resume, visually claimed playback that did not happen, false rendered/lyric timing/progress, corrupt or wrong-revision FLAC, inaccessible essential control, unsafe flashing, exposed private media or unsafe filesystem behavior.
-- **P1 — require documented disposition before release:** confused primary task, major mobile/high-zoom/forced-color failure, a Studio recovery loss, severe animation jank, unexplained processing stage, no-action failure recovery or significant dark/light legibility regression.
-- **P2 — cosmetic follow-up only:** small noncritical spacing, shadow, type or icon inconsistency with no control/meaning/access impact.
+- **P0 - must not ship new UI slice:** wrong song/current mix/seam/revision, corruption/rewriting local audio, unconsented or partial bridge, overlapping audio or surprise resume, visually claimed playback that did not happen, false rendered/lyric timing/progress, corrupt or wrong-revision FLAC, inaccessible essential control, unsafe flashing, exposed private media or unsafe filesystem behavior.
+- **P1 - require documented disposition before release:** confused primary task, major mobile/high-zoom/forced-color failure, a Studio recovery loss, severe animation jank, unexplained processing stage, no-action failure recovery or significant dark/light legibility regression.
+- **P2 - cosmetic follow-up only:** small noncritical spacing, shadow, type or icon inconsistency with no control/meaning/access impact.
 
 ## Evidence needed for each release slice
 

@@ -29,18 +29,18 @@ Define shared presentation-state vocabulary but preserve distinct domain state m
 - Undo is scoped by exact mix/draft and operation; Activity's in-memory history cannot be labelled permanent.
 - Reads may back off/retry; writes cannot blindly retry after ambiguous acceptance.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0095-01 — Inventory domain state machines and user-visible labels.** Acceptance: Request/export/analysis/render statuses translate truthfully without data loss. Required verification: State transition table per domain. **Implementation: Not started; Verified: No.**
-2. **S4-0095-02 — Create mutation scope/operation/revision contracts.** Acceptance: Late response cannot target a newer pair or different draft. Required verification: Out-of-order mutation tests. **Implementation: Not started; Verified: No.**
-3. **S4-0095-03 — Define last-intent-wins versus server-authoritative cases.** Acceptance: Newer local intent preserved while conflicts remain visible. Required verification: Rapid transition choice, energy and preference tests. **Implementation: Not started; Verified: No.**
-4. **S4-0095-04 — Enforce safe idempotency and retry policy.** Acceptance: No duplicated request, bridge, export or song insert on timeout/retry. Required verification: Ambiguous commit and duplicate-submit fault tests. **Implementation: Not started; Verified: No.**
-5. **S4-0095-05 — Standardize pending, stale, offline and recovery UI.** Acceptance: Offline does not erase last confirmed data or imply failure. Required verification: Server disconnect/reconnect E2E. **Implementation: Not started; Verified: No.**
-6. **S4-0095-06 — Preserve scoped Undo order and Activity semantics.** Acceptance: Wrong-scope Undo is impossible; older Undo blocked with explanation. Required verification: Draft A/B plus intervening operation tests. **Implementation: Not started; Verified: No.**
-7. **S4-0095-07 — Audit polling ownership/backoff and tab visibility.** Acceptance: No duplicate loops, stale deep Library rows or backend overload. Required verification: Background tab and multi-view poll tests. **Implementation: Not started; Verified: No.**
-8. **S4-0095-08 — Implement user-friendly conflict and supersession notices.** Acceptance: Conflict reveals exact object and safe next action. Required verification: Two-tab edit, deleted target and newer revision tests. **Implementation: Not started; Verified: No.**
-9. **S4-0095-09 — Validate browser storage and migration fallbacks.** Acceptance: Malformed or denied preferences cannot crash or claim persistence. Required verification: Storage denial/quota/version migration tests. **Implementation: Not started; Verified: No.**
-10. **S4-0095-10 — Publish invariant-oriented model/property tests.** Acceptance: Single audio owner, atomic bridge, snapshot export and scoped writes hold. Required verification: Property and model-based race suite. **Implementation: Not started; Verified: No.**
+1. **S4-0095-01 - Inventory domain state machines and user-visible labels.** Acceptance: Request/export/analysis/render statuses translate truthfully without data loss. Required verification: State transition table per domain. **Implementation: Not started; Verified: No.**
+2. **S4-0095-02 - Create mutation scope/operation/revision contracts.** Acceptance: Late response cannot target a newer pair or different draft. Required verification: Out-of-order mutation tests. **Implementation: Not started; Verified: No.**
+3. **S4-0095-03 - Define last-intent-wins versus server-authoritative cases.** Acceptance: Newer local intent preserved while conflicts remain visible. Required verification: Rapid transition choice, energy and preference tests. **Implementation: Not started; Verified: No.**
+4. **S4-0095-04 - Enforce safe idempotency and retry policy.** Acceptance: No duplicated request, bridge, export or song insert on timeout/retry. Required verification: Ambiguous commit and duplicate-submit fault tests. **Implementation: Not started; Verified: No.**
+5. **S4-0095-05 - Standardize pending, stale, offline and recovery UI.** Acceptance: Offline does not erase last confirmed data or imply failure. Required verification: Server disconnect/reconnect E2E. **Implementation: Not started; Verified: No.**
+6. **S4-0095-06 - Preserve scoped Undo order and Activity semantics.** Acceptance: Wrong-scope Undo is impossible; older Undo blocked with explanation. Required verification: Draft A/B plus intervening operation tests. **Implementation: Not started; Verified: No.**
+7. **S4-0095-07 - Audit polling ownership/backoff and tab visibility.** Acceptance: No duplicate loops, stale deep Library rows or backend overload. Required verification: Background tab and multi-view poll tests. **Implementation: Not started; Verified: No.**
+8. **S4-0095-08 - Implement user-friendly conflict and supersession notices.** Acceptance: Conflict reveals exact object and safe next action. Required verification: Two-tab edit, deleted target and newer revision tests. **Implementation: Not started; Verified: No.**
+9. **S4-0095-09 - Validate browser storage and migration fallbacks.** Acceptance: Malformed or denied preferences cannot crash or claim persistence. Required verification: Storage denial/quota/version migration tests. **Implementation: Not started; Verified: No.**
+10. **S4-0095-10 - Publish invariant-oriented model/property tests.** Acceptance: Single audio owner, atomic bridge, snapshot export and scoped writes hold. Required verification: Property and model-based race suite. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

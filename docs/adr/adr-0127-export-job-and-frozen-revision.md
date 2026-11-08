@@ -1,4 +1,4 @@
-# ADR-0127 — Export: truthful frozen revision, job lifecycle and file delivery
+# ADR-0127 - Export: truthful frozen revision, job lifecycle and file delivery
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 newly defined EX tasks).
@@ -26,15 +26,15 @@ A one-click export hides scope and readiness; a large engineering-options dialog
 
 ## Consequences, scope and failure modes
 
-The backend snapshot—not UI text—is authoritative. Revision mismatch, storage full, file deletion and stale retries need meaningful states. Preserve all existing routes, data, local file safety, listening study integrity, explicit bridge consent, revisions/Undo, single-owner transport and frozen-revision FLAC. Neither desktop packaging nor SaaS migration nor unreviewed backend/audio changes are part of this programme.
+The backend snapshot-not UI text-is authoritative. Revision mismatch, storage full, file deletion and stale retries need meaningful states. Preserve all existing routes, data, local file safety, listening study integrity, explicit bridge consent, revisions/Undo, single-owner transport and frozen-revision FLAC. Neither desktop packaging nor SaaS migration nor unreviewed backend/audio changes are part of this programme.
 
 ## New implementation status per task
 
-1. **EX-0127-01 — Specify export source identity**. **Acceptance:** Target draft/current, revision and song range explicit. **Verification:** Cross-scope task walk-through. **Implementation: Not started; Verified: No.**
-2. **EX-0127-02 — Design durable job lifecycle**. **Acceptance:** Progress survives overlay dismissal and refresh. **Verification:** Reload/async job E2E. **Implementation: Not started; Verified: No.**
-3. **EX-0127-03 — Handle blocked/failed/stale jobs**. **Acceptance:** No false completion or wrong-target download. **Verification:** Storage and service fault tests. **Implementation: Not started; Verified: No.**
-4. **EX-0127-04 — Verify final FLAC identity**. **Acceptance:** Decoded output matches frozen revision order and length. **Verification:** ffmpeg and real media inspection. **Implementation: Not started; Verified: No.**
-5. **EX-0127-05 — Keep accessible export parity**. **Acceptance:** Existing actions and link/download semantics preserved. **Verification:** Keyboard/NVDA and browser tests. **Implementation: Not started; Verified: No.**
+1. **EX-0127-01 - Specify export source identity**. **Acceptance:** Target draft/current, revision and song range explicit. **Verification:** Cross-scope task walk-through. **Implementation: Not started; Verified: No.**
+2. **EX-0127-02 - Design durable job lifecycle**. **Acceptance:** Progress survives overlay dismissal and refresh. **Verification:** Reload/async job E2E. **Implementation: Not started; Verified: No.**
+3. **EX-0127-03 - Handle blocked/failed/stale jobs**. **Acceptance:** No false completion or wrong-target download. **Verification:** Storage and service fault tests. **Implementation: Not started; Verified: No.**
+4. **EX-0127-04 - Verify final FLAC identity**. **Acceptance:** Decoded output matches frozen revision order and length. **Verification:** ffmpeg and real media inspection. **Implementation: Not started; Verified: No.**
+5. **EX-0127-05 - Keep accessible export parity**. **Acceptance:** Existing actions and link/download semantics preserved. **Verification:** Keyboard/NVDA and browser tests. **Implementation: Not started; Verified: No.**
 
 ## Independent verification
 

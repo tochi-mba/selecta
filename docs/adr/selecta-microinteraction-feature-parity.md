@@ -1,4 +1,4 @@
-# Selecta — immersive microinteraction feature-parity and no-regression inventory
+# Selecta - immersive microinteraction feature-parity and no-regression inventory
 
 **Purpose:** Map each accepted design delta onto an existing capability or safety obligation to retain. This is a preservation map, not a fresh claim of runtime verification. **Decision:** 30 Accepted; **new source-level implementation on PR #31:** 208 Implemented, 4 In progress, 28 Not started; **independent verification:** 0.
 

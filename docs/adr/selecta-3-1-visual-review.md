@@ -1,4 +1,4 @@
-# Selecta 3.1 — unapproved visual-review candidates
+# Selecta 3.1 - unapproved visual-review candidates
 
 These images are **not approved baselines**, completion evidence or a substitute for accessibility/usability review.
 

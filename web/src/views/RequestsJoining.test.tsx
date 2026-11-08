@@ -219,7 +219,7 @@ describe('a bridge joining as one', () => {
 
   it('does not promise joining before the next valid opening', () => {
     show(value({ stage: 'ready' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Ready — waiting for a valid opening');
+    expect(screen.getByRole('status')).toHaveTextContent('Ready - waiting for a valid opening');
   });
 
   it('words a single song differently', () => {

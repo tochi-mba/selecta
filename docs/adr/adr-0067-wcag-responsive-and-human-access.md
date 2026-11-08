@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 6 — Cross-cutting quality
+- **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0023, ADR-0024, ADR-0045
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0067-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Target WCAG 2.2 AA across essential flows, not just static pages. Support keyboa
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0067-01 — Not started.** Specify WCAG 2.2 AA inventory for every route/overlay and an applicability matrix with exceptions.
-2. **S3-0067-02 — Not started.** Create focus and screen-reader test scripts for first-run, playback, editing, requests, Studio and export.
-3. **S3-0067-03 — Not started.** Audit and fix every essential target below 24x24 or without adequate exceptions; choose comfortable 44px-class controls where useful.
-4. **S3-0067-04 — Not started.** Ensure non-drag alternatives for reorder and every pointer gesture; include touch switch and keyboard testing.
-5. **S3-0067-05 — Not started.** Implement semantic landmark, headings, error association and status announcement contracts.
-6. **S3-0067-06 — Not started.** Verify dialogs, sheets, menus, tabs, grid, sliders and waveform against relevant ARIA APG patterns.
-7. **S3-0067-07 — Not started.** Test 200%/400% zoom, small viewports, safe areas and visible keyboard focus without hidden controls.
-8. **S3-0067-08 — Not started.** Run manual assistive-tech sessions and record device/browser/AT versions and remaining limitations.
-9. **S3-0067-09 — Not started.** Preserve reduced-motion and non-color-only statuses in dark/light themes.
+1. **S3-0067-01 - Not started.** Specify WCAG 2.2 AA inventory for every route/overlay and an applicability matrix with exceptions.
+2. **S3-0067-02 - Not started.** Create focus and screen-reader test scripts for first-run, playback, editing, requests, Studio and export.
+3. **S3-0067-03 - Not started.** Audit and fix every essential target below 24x24 or without adequate exceptions; choose comfortable 44px-class controls where useful.
+4. **S3-0067-04 - Not started.** Ensure non-drag alternatives for reorder and every pointer gesture; include touch switch and keyboard testing.
+5. **S3-0067-05 - Not started.** Implement semantic landmark, headings, error association and status announcement contracts.
+6. **S3-0067-06 - Not started.** Verify dialogs, sheets, menus, tabs, grid, sliders and waveform against relevant ARIA APG patterns.
+7. **S3-0067-07 - Not started.** Test 200%/400% zoom, small viewports, safe areas and visible keyboard focus without hidden controls.
+8. **S3-0067-08 - Not started.** Run manual assistive-tech sessions and record device/browser/AT versions and remaining limitations.
+9. **S3-0067-09 - Not started.** Preserve reduced-motion and non-color-only statuses in dark/light themes.
 
 ## Preservation and integration constraints
 

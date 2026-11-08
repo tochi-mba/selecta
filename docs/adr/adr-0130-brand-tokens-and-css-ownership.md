@@ -1,4 +1,4 @@
-# ADR-0130 — Warm editorial design language, independent themes and CSS ownership
+# ADR-0130 - Warm editorial design language, independent themes and CSS ownership
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 new EX tasks).
@@ -30,11 +30,11 @@ Current overlapping selectors do not establish user-facing breakage. Contrast mu
 
 ## Implementation tasks (all Not started; Verified: No)
 
-1. **EX-0130-01 — Approve semantic color and type contracts**. Acceptance: Both themes have readable hierarchy and status without color alone. Required verification: Contrast, screenshots and control gallery. **Implementation: Not started; Verified: No.**
-2. **EX-0130-02 — Design song-focused compositions**. Acceptance: Title, artist and musical intent outrank tool chrome. Required verification: Cross-route human visual critique. **Implementation: Not started; Verified: No.**
-3. **EX-0130-03 — Audit and assign CSS ownership**. Acceptance: Legacy style overrides enumerated, no silent regressions. Required verification: CSS selector map and before/after captures. **Implementation: Not started; Verified: No.**
-4. **EX-0130-04 — Specify all interactive component states**. Acceptance: Selected/focus/disabled/error/loading clear in dark/light. Required verification: Review fixture and accessibility scan. **Implementation: Not started; Verified: No.**
-5. **EX-0130-05 — Test real-content resilience**. Acceptance: Long/RTL names, system fonts and zoom preserve layout. Required verification: 320px/400% zoom plus screenshots. **Implementation: Not started; Verified: No.**
+1. **EX-0130-01 - Approve semantic color and type contracts**. Acceptance: Both themes have readable hierarchy and status without color alone. Required verification: Contrast, screenshots and control gallery. **Implementation: Not started; Verified: No.**
+2. **EX-0130-02 - Design song-focused compositions**. Acceptance: Title, artist and musical intent outrank tool chrome. Required verification: Cross-route human visual critique. **Implementation: Not started; Verified: No.**
+3. **EX-0130-03 - Audit and assign CSS ownership**. Acceptance: Legacy style overrides enumerated, no silent regressions. Required verification: CSS selector map and before/after captures. **Implementation: Not started; Verified: No.**
+4. **EX-0130-04 - Specify all interactive component states**. Acceptance: Selected/focus/disabled/error/loading clear in dark/light. Required verification: Review fixture and accessibility scan. **Implementation: Not started; Verified: No.**
+5. **EX-0130-05 - Test real-content resilience**. Acceptance: Long/RTL names, system fonts and zoom preserve layout. Required verification: 320px/400% zoom plus screenshots. **Implementation: Not started; Verified: No.**
 
 ## Verification and sources
 

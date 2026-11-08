@@ -464,7 +464,7 @@ function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { 
       history.length = 0;
     };
   }, [player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape]);
-  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${SPECTRUM_MODES.find((mode) => mode.id === spectrumShape)?.label ?? 'Frequency'} — actual mixed-audio frequency levels` : 'Audio frequency visualizer paused'} />;
+  return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${SPECTRUM_MODES.find((mode) => mode.id === spectrumShape)?.label ?? 'Frequency'} - actual mixed-audio frequency levels` : 'Audio frequency visualizer paused'} />;
 }
 
 /** Why there's nothing to follow along with. A song's timing is never made up to fill the gap. */
@@ -497,7 +497,7 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
   const wordIndex = current?.words?.findIndex((word) => word.start <= time && time < word.end) ?? -1;
   const around = focus ? 3 : 1;
   const timingWords = detail.lyric_status === 'plain'
-    ? 'Untimed lyrics — word timing unavailable.'
+    ? 'Untimed lyrics - word timing unavailable.'
     : lines.some((line) => !!line.words?.length)
       ? 'Word highlights follow stored lyric alignment; timing may be approximate.'
       : 'Line-timed lyrics; individual word timing unavailable.';

@@ -1,4 +1,4 @@
-# ADR-0170 — Listen: audio-clock musical scene, real spectrum and handoff
+# ADR-0170 - Listen: audio-clock musical scene, real spectrum and handoff
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained design when a richer animation does not measurably improve comprehension, creative control or delight. Illustrative graphics are not analysed waveforms, beats, timed lyrics, fake quality ratings or album artwork. Every animated interaction needs an accessible static/keyboard equivalent; audio and current/draft correctness outrank motion.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0170-01 — Prototype dominant Listen song scene.** **Acceptance:** Song/artist and transport legible while Next remains discoverable. **Required verification:** Dark/light mobile and wide-display review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0170-02 — Specify real audio-reactive motif variants.** **Acceptance:** No animation without actual analyzer data and valid audio ownership. **Required verification:** Muted, paused, hidden-tab and low-power fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0170-03 — Design two-song transition representation.** **Acceptance:** Visual overlap matches real seam timing and fallback semantics. **Required verification:** Real recorded audio synchronized to frame timeline. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0170-04 — Clarify beat countdown and seeking.** **Acceptance:** Beat labels conditional on known data and blocked seek clearly explained. **Required verification:** Missing timing, seek-during-seam and touch tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0170-05 — Refine intensity settings and persistence.** **Acceptance:** Quiet/standard/focused never change playback or create audio. **Required verification:** Preference and navigation regression tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0170-06 — Protect playback and main-thread budget.** **Acceptance:** Visual effects cannot cause gaps or missed input under render load. **Required verification:** Measured frame/audio trace on named hardware. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0170-07 — Validate listener anticipation and comfort.** **Acceptance:** People can predict handoff without visual fatigue or misinformation. **Required verification:** Uncoached real-audio participant study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0170-01 - Prototype dominant Listen song scene.** **Acceptance:** Song/artist and transport legible while Next remains discoverable. **Required verification:** Dark/light mobile and wide-display review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0170-02 - Specify real audio-reactive motif variants.** **Acceptance:** No animation without actual analyzer data and valid audio ownership. **Required verification:** Muted, paused, hidden-tab and low-power fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0170-03 - Design two-song transition representation.** **Acceptance:** Visual overlap matches real seam timing and fallback semantics. **Required verification:** Real recorded audio synchronized to frame timeline. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0170-04 - Clarify beat countdown and seeking.** **Acceptance:** Beat labels conditional on known data and blocked seek clearly explained. **Required verification:** Missing timing, seek-during-seam and touch tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0170-05 - Refine intensity settings and persistence.** **Acceptance:** Quiet/standard/focused never change playback or create audio. **Required verification:** Preference and navigation regression tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0170-06 - Protect playback and main-thread budget.** **Acceptance:** Visual effects cannot cause gaps or missed input under render load. **Required verification:** Measured frame/audio trace on named hardware. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0170-07 - Validate listener anticipation and comfort.** **Acceptance:** People can predict handoff without visual fatigue or misinformation. **Required verification:** Uncoached real-audio participant study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

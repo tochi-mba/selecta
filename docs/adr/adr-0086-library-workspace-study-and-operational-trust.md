@@ -4,7 +4,7 @@
 - **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
-- **Phase:** 4 — library and discovery
+- **Phase:** 4 - library and discovery
 - **Extends:** ADR-0062, ADR-0063, ADR-0064, ADR-0066, ADR-0072. No inherited task is automatically complete.
 - **Dependencies:** ADRs 0078–0080; request/discovery semantics from ADR-0085.
 - **Checklist:** S31-0086-01 through S31-0086-11 in [the 3.1 checklist](selecta-3-1-implementation-checklist.md).
@@ -23,17 +23,17 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0086-01 — Review Library search, sort, filters, density and URL/history state.** Acceptance: Results match query, Back restores selected filter, and deep links remain valid.
-2. **S31-0086-02 — Rebalance library row title, artist, readiness and action hierarchy.** Acceptance: Scanning reveals song identity and blockers before secondary maintenance controls.
-3. **S31-0086-03 — Review large-result pagination and background refresh behaviour.** Acceptance: Show counts/loaded subset, preserve focus and prior results during refresh or failure.
-4. **S31-0086-04 — Review track detail and manual tempo/key/exclusion controls.** Acceptance: Controls explain effective versus detected values; corrections persist after analysis.
-5. **S31-0086-05 — Audit readiness language across Library, Explore and Workspace.** Acceptance: Same song has the same true readiness and same explanation on every surface.
-6. **S31-0086-06 — Review Workspace overview attention, background jobs and storage.** Acceptance: Users know what's working, what is paused, and what specific action is needed.
-7. **S31-0086-07 — Review watched-folder, scan-stop, drive loss and storage-limit recovery.** Acceptance: Cancelling or losing a drive never appears to destroy original music or its records.
-8. **S31-0086-08 — Review operational diagnostics and local privacy explanations.** Acceptance: Only safe fields shown; metadata lookup disclosure names LRCLIB data accurately.
-9. **S31-0086-09 — Review listening-study setup, progress, A/B answers and completion.** Acceptance: Blinding holds, trials are attributed correctly and user can continue after a failed submission.
-10. **S31-0086-10 — Validate narrow/high-zoom, missing/duplicate/RTL song data.** Acceptance: Every main library and Workspace action is readable and navigable at supported sizes.
-11. **S31-0086-11 — Measure real 20k-track Library scale and constrained hardware response.** Acceptance: Capture input latency, scroll smoothness, memory growth and background-render interference.
+1. **S31-0086-01 - Review Library search, sort, filters, density and URL/history state.** Acceptance: Results match query, Back restores selected filter, and deep links remain valid.
+2. **S31-0086-02 - Rebalance library row title, artist, readiness and action hierarchy.** Acceptance: Scanning reveals song identity and blockers before secondary maintenance controls.
+3. **S31-0086-03 - Review large-result pagination and background refresh behaviour.** Acceptance: Show counts/loaded subset, preserve focus and prior results during refresh or failure.
+4. **S31-0086-04 - Review track detail and manual tempo/key/exclusion controls.** Acceptance: Controls explain effective versus detected values; corrections persist after analysis.
+5. **S31-0086-05 - Audit readiness language across Library, Explore and Workspace.** Acceptance: Same song has the same true readiness and same explanation on every surface.
+6. **S31-0086-06 - Review Workspace overview attention, background jobs and storage.** Acceptance: Users know what's working, what is paused, and what specific action is needed.
+7. **S31-0086-07 - Review watched-folder, scan-stop, drive loss and storage-limit recovery.** Acceptance: Cancelling or losing a drive never appears to destroy original music or its records.
+8. **S31-0086-08 - Review operational diagnostics and local privacy explanations.** Acceptance: Only safe fields shown; metadata lookup disclosure names LRCLIB data accurately.
+9. **S31-0086-09 - Review listening-study setup, progress, A/B answers and completion.** Acceptance: Blinding holds, trials are attributed correctly and user can continue after a failed submission.
+10. **S31-0086-10 - Validate narrow/high-zoom, missing/duplicate/RTL song data.** Acceptance: Every main library and Workspace action is readable and navigable at supported sizes.
+11. **S31-0086-11 - Measure real 20k-track Library scale and constrained hardware response.** Acceptance: Capture input latency, scroll smoothness, memory growth and background-render interference.
 
 ## Required adverse cases and evidence
 

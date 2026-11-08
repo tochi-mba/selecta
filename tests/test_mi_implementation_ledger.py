@@ -38,7 +38,7 @@ def test_each_mi_has_one_coherent_implementation_and_verification_status():
     ledger_lines = {}
 
     for line in checklist.splitlines():
-        match = re.match(r"- \[([ x])\] \*\*(MI-\d{4}-\d{2}) — ", line)
+        match = re.match(r"- \[([ x])\] \*\*(MI-\d{4}-\d{2}) - ", line)
         if match:
             checked, task_id = match.groups()
             assert task_id not in checklist_lines
@@ -100,7 +100,7 @@ def test_each_mi_has_one_coherent_implementation_and_verification_status():
             assert cells[4].strip() == "No"
 
             adr_entry = next(
-                (line for line in adr_doc.splitlines() if f"**{task_id} — " in line),
+                (line for line in adr_doc.splitlines() if f"**{task_id} - " in line),
                 None,
             )
             assert adr_entry, task_id

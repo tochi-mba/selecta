@@ -1,4 +1,4 @@
-# ADR-0231 — Export Studio: frozen revision, honest render progress and finished artifact
+# ADR-0231 - Export Studio: frozen revision, honest render progress and finished artifact
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
@@ -28,16 +28,16 @@ Export should feel like finishing a creative work but remain a reliable exact-re
 
 No fake percentage, output from the wrong draft, implied finished artifact when job is pending or non-decodable file. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist — 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0231-01 — Show frozen revision before export.** **Acceptance:** Selected mix ID and revision explicitly confirmed. **Required verification:** Snapshot fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **SF-0231-02 — Design job phase visualization.** **Acceptance:** Queued, rendering, finalizing, done and failed accurate. **Required verification:** Backend job tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **SF-0231-03 — Display only real progress.** **Acceptance:** Indeterminate used when no reliable percentage. **Required verification:** Slow-job and no-progress tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **SF-0231-04 — Protect edit during export.** **Acceptance:** Changes after submission cannot mutate existing job. **Required verification:** Concurrent edit E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **SF-0231-05 — Handle cancel/retry safely.** **Acceptance:** Actions reflect actual backend semantics. **Required verification:** Cancel failure tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **SF-0231-06 — Present finished artifact.** **Acceptance:** Real path, format, metadata and next action correct. **Required verification:** FLAC decode and metadata validation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **SF-0231-07 — Design failure recovery.** **Acceptance:** Specific cause and retry do not lose context. **Required verification:** Corrupt/storage-full fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-8. **SF-0231-08 — Evaluate finishing moment.** **Acceptance:** Artistic completion never sacrifices job truth. **Required verification:** User and music output review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **SF-0231-01 - Show frozen revision before export.** **Acceptance:** Selected mix ID and revision explicitly confirmed. **Required verification:** Snapshot fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0231-02 - Design job phase visualization.** **Acceptance:** Queued, rendering, finalizing, done and failed accurate. **Required verification:** Backend job tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0231-03 - Display only real progress.** **Acceptance:** Indeterminate used when no reliable percentage. **Required verification:** Slow-job and no-progress tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0231-04 - Protect edit during export.** **Acceptance:** Changes after submission cannot mutate existing job. **Required verification:** Concurrent edit E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0231-05 - Handle cancel/retry safely.** **Acceptance:** Actions reflect actual backend semantics. **Required verification:** Cancel failure tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0231-06 - Present finished artifact.** **Acceptance:** Real path, format, metadata and next action correct. **Required verification:** FLAC decode and metadata validation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0231-07 - Design failure recovery.** **Acceptance:** Specific cause and retry do not lose context. **Required verification:** Corrupt/storage-full fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0231-08 - Evaluate finishing moment.** **Acceptance:** Artistic completion never sacrifices job truth. **Required verification:** User and music output review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 

@@ -30,12 +30,12 @@ The current main/PR #31 lineage contains concrete implementations for persistent
 
 Authoritative shared evidence includes:
 
-- `web/src/router.ts`, `web/src/shell/manifest.ts`, `web/src/App.tsx` — canonical navigation, history and persistent playback.
-- `web/src/state/readiness.ts`, `web/src/views/Library.tsx` — non-conflated readiness, stable identity and bounded large-library behavior.
-- `web/src/views/Drafts.tsx`, `web/src/views/Mix.tsx`, `web/src/views/EditorRows.tsx` — current/draft isolation, stable revisions and accessible editing.
-- `web/src/audio/focus.ts`, `web/src/player.ts`, `web/src/studio.ts` — single audio ownership and scheduling.
-- `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx` — frozen, persistent export jobs and truthful artifacts.
-- `tests/scale_server.py`, `tests/rollback_check.py`, `tests/check_export_audio.py` — repeatable scale, preservation and decoded-audio harnesses; actual candidate results remain evidence to be produced at the test/verification stage.
+- `web/src/router.ts`, `web/src/shell/manifest.ts`, `web/src/App.tsx` - canonical navigation, history and persistent playback.
+- `web/src/state/readiness.ts`, `web/src/views/Library.tsx` - non-conflated readiness, stable identity and bounded large-library behavior.
+- `web/src/views/Drafts.tsx`, `web/src/views/Mix.tsx`, `web/src/views/EditorRows.tsx` - current/draft isolation, stable revisions and accessible editing.
+- `web/src/audio/focus.ts`, `web/src/player.ts`, `web/src/studio.ts` - single audio ownership and scheduling.
+- `web/src/views/ExportPanel.tsx`, `web/src/views/ExportJobs.tsx` - frozen, persistent export jobs and truthful artifacts.
+- `tests/scale_server.py`, `tests/rollback_check.py`, `tests/check_export_audio.py` - repeatable scale, preservation and decoded-audio harnesses; actual candidate results remain evidence to be produced at the test/verification stage.
 
 ## Remaining boundary
 

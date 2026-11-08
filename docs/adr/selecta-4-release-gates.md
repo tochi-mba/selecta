@@ -1,4 +1,4 @@
-# Selecta 4.0 — implementation-release readiness and explicit GO/NO-GO
+# Selecta 4.0 - implementation-release readiness and explicit GO/NO-GO
 
 **Current disposition: NO-GO for a Selecta 4.0 UI release (2026-11-07).** This proposal PR contains documentation only, and **may merge as planning documentation** without claiming that any proposed UI feature shipped.
 
@@ -11,7 +11,7 @@
 
 Historical 3.1 status statements mentioning an open PR #25 are stale after its merge. PR #26 also merged. Do not change historical evidence or count old tasks as Verified automatically. This separate 4.0 release requires its own proof.
 
-## Gate register — all outstanding
+## Gate register - all outstanding
 
 | Gate | Required proof | State |
 |---|---|---|

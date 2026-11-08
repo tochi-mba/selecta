@@ -29,18 +29,18 @@ Refine shared primitives rather than blindly migrating to a new UI library. Docu
 - No essential function depends on hover; icons require discernible names and destructive actions are clearly separated.
 - Toast is temporary feedback, Activity is scoped recent actions, durable job progress comes from authoritative stores.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0094-01 — Publish component state and semantic API contracts.** Acceptance: Every control maps user intent to correct accessible state. Required verification: Unit/story gallery dark/light snapshots. **Implementation: Not started; Verified: No.**
-2. **S4-0094-02 — Standardize buttons, toggles, icon actions and disabled reasons.** Acceptance: Single visible primary action per task context where practical. Required verification: Pointer/keyboard/touch state testing. **Implementation: Not started; Verified: No.**
-3. **S4-0094-03 — Standardize field/search/combobox results and validation.** Acceptance: Typing, Enter/Escape, fast queries and duplicate titles behave consistently. Required verification: ARIA combobox and stale-query tests. **Implementation: Not started; Verified: No.**
-4. **S4-0094-04 — Harden menu/tab/tooltip/roving focus interactions.** Acceptance: No keyboard trap and accurate selected/current state. Required verification: Tab, arrow, Escape and screen reader tests. **Implementation: Not started; Verified: No.**
-5. **S4-0094-05 — Centralize dialogs/drawers/sheets focus and inert background.** Acceptance: Focus returns to invoker or safe fallback after deletion. Required verification: Nested overlay and missing-trigger tests. **Implementation: Not started; Verified: No.**
-6. **S4-0094-06 — Make overlays viewport-safe with visual keyboard.** Acceptance: Close/submit remain accessible at short heights and zoom. Required verification: Mobile on-screen keyboard E2E. **Implementation: Not started; Verified: No.**
-7. **S4-0094-07 — Implement shared pending/error/stale/success feedback.** Acceptance: No false success before authoritative acknowledgement. Required verification: Delayed, failed and reordered response fixtures. **Implementation: Not started; Verified: No.**
-8. **S4-0094-08 — Constrain toast stacking and Undo retention.** Acceptance: Important feedback doesn't obscure player or expire sole undo path. Required verification: Notification timing and Activity scope tests. **Implementation: Not started; Verified: No.**
-9. **S4-0094-09 — Define icon and text contrast in forced-colours.** Acceptance: All selected/status/control boundaries remain discernible. Required verification: NVDA/Edge forced-colours/manual checks. **Implementation: Not started; Verified: No.**
-10. **S4-0094-10 — Audit existing controls for migration parity.** Acceptance: No action disappears because it moved into a menu. Required verification: Feature parity inventory and route task scripts. **Implementation: Not started; Verified: No.**
+1. **S4-0094-01 - Publish component state and semantic API contracts.** Acceptance: Every control maps user intent to correct accessible state. Required verification: Unit/story gallery dark/light snapshots. **Implementation: Not started; Verified: No.**
+2. **S4-0094-02 - Standardize buttons, toggles, icon actions and disabled reasons.** Acceptance: Single visible primary action per task context where practical. Required verification: Pointer/keyboard/touch state testing. **Implementation: Not started; Verified: No.**
+3. **S4-0094-03 - Standardize field/search/combobox results and validation.** Acceptance: Typing, Enter/Escape, fast queries and duplicate titles behave consistently. Required verification: ARIA combobox and stale-query tests. **Implementation: Not started; Verified: No.**
+4. **S4-0094-04 - Harden menu/tab/tooltip/roving focus interactions.** Acceptance: No keyboard trap and accurate selected/current state. Required verification: Tab, arrow, Escape and screen reader tests. **Implementation: Not started; Verified: No.**
+5. **S4-0094-05 - Centralize dialogs/drawers/sheets focus and inert background.** Acceptance: Focus returns to invoker or safe fallback after deletion. Required verification: Nested overlay and missing-trigger tests. **Implementation: Not started; Verified: No.**
+6. **S4-0094-06 - Make overlays viewport-safe with visual keyboard.** Acceptance: Close/submit remain accessible at short heights and zoom. Required verification: Mobile on-screen keyboard E2E. **Implementation: Not started; Verified: No.**
+7. **S4-0094-07 - Implement shared pending/error/stale/success feedback.** Acceptance: No false success before authoritative acknowledgement. Required verification: Delayed, failed and reordered response fixtures. **Implementation: Not started; Verified: No.**
+8. **S4-0094-08 - Constrain toast stacking and Undo retention.** Acceptance: Important feedback doesn't obscure player or expire sole undo path. Required verification: Notification timing and Activity scope tests. **Implementation: Not started; Verified: No.**
+9. **S4-0094-09 - Define icon and text contrast in forced-colours.** Acceptance: All selected/status/control boundaries remain discernible. Required verification: NVDA/Edge forced-colours/manual checks. **Implementation: Not started; Verified: No.**
+10. **S4-0094-10 - Audit existing controls for migration parity.** Acceptance: No action disappears because it moved into a menu. Required verification: Feature parity inventory and route task scripts. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

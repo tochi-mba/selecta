@@ -29,18 +29,18 @@ Divide Song Details into Overview, Musical analysis, Corrections, Selecta behavi
 - Readiness details include specific blockers and actionable analysis steps.
 - Watched folder Source operations remain separated from source-file deletion; never suggest stopping watch deletes originals.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0106-01 — Redesign Song Details section hierarchy and accessibility.** Acceptance: Relevant identity/readiness easy before technical metadata. Required verification: Readiness variants and NVDA reading order. **Implementation: Not started; Verified: No.**
-2. **S4-0106-02 — Preserve measured, override and effective BPM/key distinction.** Acceptance: UI never mislabels manual value as measured. Required verification: Half/double/blank/reset and server validation tests. **Implementation: Not started; Verified: No.**
-3. **S4-0106-03 — Harden correction constraints and input errors.** Acceptance: Out-of-range and malformed Camelot values retain draft input. Required verification: Boundary, locale decimal and invalid text tests. **Implementation: Not started; Verified: No.**
-4. **S4-0106-04 — Expose downstream analysis/transition effects without overclaiming.** Acceptance: User knows edits may trigger rerender without fake guarantee. Required verification: Dependent render invalidation contract tests. **Implementation: Not started; Verified: No.**
-5. **S4-0106-05 — Preserve prioritize/exclude/never/play/music classification.** Acceptance: Actions remain scoped to exact song ID. Required verification: Duplicate-name and conflicting updates tests. **Implementation: Not started; Verified: No.**
-6. **S4-0106-06 — Design analysed/partial/failed/unsuitable readiness explanation.** Acceptance: No false ready from missing beat or key fields. Required verification: Readiness state decision table tests. **Implementation: Not started; Verified: No.**
-7. **S4-0106-07 — Preserve Library context after closing Song Details.** Acceptance: Search page and focused song restored where valid. Required verification: Back/Forward and deletion focus tests. **Implementation: Not started; Verified: No.**
-8. **S4-0106-08 — Represent watched, missing and disconnected sources separately.** Acceptance: Unavailable drive is not interpreted as deleted audio. Required verification: Disconnect/reconnect/path change fixtures. **Implementation: Not started; Verified: No.**
-9. **S4-0106-09 — Verify folder removal semantics and local-file safety.** Acceptance: Stop watch never deletes user music. Required verification: Filesystem snapshot backend contract tests. **Implementation: Not started; Verified: No.**
-10. **S4-0106-10 — Maintain local-first privacy in diagnostics/copy actions.** Acceptance: No accidental private paths in sharing surfaces. Required verification: Redaction, permissions and text injection tests. **Implementation: Not started; Verified: No.**
+1. **S4-0106-01 - Redesign Song Details section hierarchy and accessibility.** Acceptance: Relevant identity/readiness easy before technical metadata. Required verification: Readiness variants and NVDA reading order. **Implementation: Not started; Verified: No.**
+2. **S4-0106-02 - Preserve measured, override and effective BPM/key distinction.** Acceptance: UI never mislabels manual value as measured. Required verification: Half/double/blank/reset and server validation tests. **Implementation: Not started; Verified: No.**
+3. **S4-0106-03 - Harden correction constraints and input errors.** Acceptance: Out-of-range and malformed Camelot values retain draft input. Required verification: Boundary, locale decimal and invalid text tests. **Implementation: Not started; Verified: No.**
+4. **S4-0106-04 - Expose downstream analysis/transition effects without overclaiming.** Acceptance: User knows edits may trigger rerender without fake guarantee. Required verification: Dependent render invalidation contract tests. **Implementation: Not started; Verified: No.**
+5. **S4-0106-05 - Preserve prioritize/exclude/never/play/music classification.** Acceptance: Actions remain scoped to exact song ID. Required verification: Duplicate-name and conflicting updates tests. **Implementation: Not started; Verified: No.**
+6. **S4-0106-06 - Design analysed/partial/failed/unsuitable readiness explanation.** Acceptance: No false ready from missing beat or key fields. Required verification: Readiness state decision table tests. **Implementation: Not started; Verified: No.**
+7. **S4-0106-07 - Preserve Library context after closing Song Details.** Acceptance: Search page and focused song restored where valid. Required verification: Back/Forward and deletion focus tests. **Implementation: Not started; Verified: No.**
+8. **S4-0106-08 - Represent watched, missing and disconnected sources separately.** Acceptance: Unavailable drive is not interpreted as deleted audio. Required verification: Disconnect/reconnect/path change fixtures. **Implementation: Not started; Verified: No.**
+9. **S4-0106-09 - Verify folder removal semantics and local-file safety.** Acceptance: Stop watch never deletes user music. Required verification: Filesystem snapshot backend contract tests. **Implementation: Not started; Verified: No.**
+10. **S4-0106-10 - Maintain local-first privacy in diagnostics/copy actions.** Acceptance: No accidental private paths in sharing surfaces. Required verification: Redaction, permissions and text injection tests. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

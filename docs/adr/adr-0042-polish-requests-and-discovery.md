@@ -4,7 +4,7 @@
 - **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
-- **Delivery phase:** 3 — Core listening, mixes and requests (Discover integration also lands in phase 5)
+- **Delivery phase:** 3 - Core listening, mixes and requests (Discover integration also lands in phase 5)
 - **Extends:** [ADR-0015](adr-0015-requests-and-bridges.md), [ADR-0019](adr-0019-discover-words-and-harmony.md), [ADR-0027](adr-0027-explanations-and-feedback.md); does not silently supersede their behavioural contracts.
 - **Dependencies:** ADR-0034 and ADR-0044 foundations, ADR-0035 shared controls and ADR-0036 asynchronous states. Apply ADR-0045 accessibility requirements during implementation.
 - **Checklist:** P0089–P0099 in [polish implementation checklist](polish-implementation-checklist.md).

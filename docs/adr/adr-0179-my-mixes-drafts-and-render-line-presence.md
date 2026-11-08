@@ -1,4 +1,4 @@
-# ADR-0179 — My Mixes: current-performance identity, drafts and real render line
+# ADR-0179 - My Mixes: current-performance identity, drafts and real render line
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
@@ -34,15 +34,15 @@ This ADR proposes a **new cross-surface design and acceptance delta**, not a cla
 
 Prefer the existing restrained and proven UI when added visuals distract or reduce correctness. No artificial music, artwork, beat, lyric accuracy, quality score or fake render status. All sensory interactions require a usable static, keyboard, high-contrast and reduced-motion alternative. Source truth and explicit human consent outrank polish.
 
-## Implementation checklist — 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 0/7 Implemented, 0/7 Verified
 
-1. **CI-0179-01 — Distinguish current mix and saved draft.** **Acceptance:** Current/draft scope always legible and labelled in all densities. **Required verification:** Side-by-side dark/light and screen reader review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-2. **CI-0179-02 — Design truthful energy thumbnail.** **Acceptance:** Real relative values and unknown fallback only. **Required verification:** Missing and nonnumeric energy fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-3. **CI-0179-03 — Clarify draft action outcomes.** **Acceptance:** Play/Edit/Delete/Prioritize cannot be mistaken for each other. **Required verification:** Current-playing and paused confirmation tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-4. **CI-0179-04 — Visualize segmented transition readiness.** **Acceptance:** Ready/queued/failure shown per seam, no invented total percent. **Required verification:** Render status and ETA fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-5. **CI-0179-05 — Show actual render-line priority.** **Acceptance:** Displayed reorder corresponds to server order under collisions. **Required verification:** Queue reorder/concurrency tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-6. **CI-0179-06 — Preserve missing and empty draft recovery.** **Acceptance:** Cannot silently edit deleted draft or lose current mix. **Required verification:** Stale route and Undo tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
-7. **CI-0179-07 — Measure multi-draft retrieval.** **Acceptance:** Users can find intended project and know readiness quickly. **Required verification:** Timed multi-draft task and comprehension review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
+1. **CI-0179-01 - Distinguish current mix and saved draft.** **Acceptance:** Current/draft scope always legible and labelled in all densities. **Required verification:** Side-by-side dark/light and screen reader review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **CI-0179-02 - Design truthful energy thumbnail.** **Acceptance:** Real relative values and unknown fallback only. **Required verification:** Missing and nonnumeric energy fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **CI-0179-03 - Clarify draft action outcomes.** **Acceptance:** Play/Edit/Delete/Prioritize cannot be mistaken for each other. **Required verification:** Current-playing and paused confirmation tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0179-04 - Visualize segmented transition readiness.** **Acceptance:** Ready/queued/failure shown per seam, no invented total percent. **Required verification:** Render status and ETA fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0179-05 - Show actual render-line priority.** **Acceptance:** Displayed reorder corresponds to server order under collisions. **Required verification:** Queue reorder/concurrency tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0179-06 - Preserve missing and empty draft recovery.** **Acceptance:** Cannot silently edit deleted draft or lose current mix. **Required verification:** Stale route and Undo tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0179-07 - Measure multi-draft retrieval.** **Acceptance:** Users can find intended project and know readiness quickly. **Required verification:** Timed multi-draft task and comprehension review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

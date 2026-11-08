@@ -29,18 +29,18 @@ Reorder Workspace around Needs attention → Ongoing work → Library health →
 - Cache usage and budget show regenerated data versus persistent source audio; settings must not imply original files are removed.
 - Copy diagnostics should redact sensitive local paths per verified backend contract.
 
-## Detailed implementation work — all Not started
+## Detailed implementation work - all Not started
 
-1. **S4-0107-01 — Redesign Workspace overview with attention hierarchy.** Acceptance: Actual blockers distinguish from harmless background activity. Required verification: Storage full, no-ready-songs, offline fixtures. **Implementation: Not started; Verified: No.**
-2. **S4-0107-02 — Preserve analysis start/pause/progress and deprioritization.** Acceptance: Processing state is accurate while user listens. Required verification: Paused/playing/restart/poll cases. **Implementation: Not started; Verified: No.**
-3. **S4-0107-03 — Preserve folder source watch/unwatch and recovery.** Acceptance: Missing drive shown separately from stopped watch. Required verification: Permission, disconnect, rescan and original-file tests. **Implementation: Not started; Verified: No.**
-4. **S4-0107-04 — Rebuild storage budget/meter and meaning labels.** Acceptance: Cache is not confused with durable data or originals. Required verification: Slider min/max/save failed/rapid changes. **Implementation: Not started; Verified: No.**
-5. **S4-0107-05 — Preserve background render jobs, priorities and queue.** Acceptance: Job accepted distinct from complete; queue actions correct. Required verification: Failure, cancel and duplicate mutation tests. **Implementation: Not started; Verified: No.**
-6. **S4-0107-06 — Clarify learning feedback and locate blind study.** Acceptance: Ratings and formal A/B trials remain separate. Required verification: Task findability and study context tests. **Implementation: Not started; Verified: No.**
-7. **S4-0107-07 — Preserve diagnostics operations with privacy-safe copying.** Acceptance: Copied data contains only declared safe fields. Required verification: Actual payload inspection and path-redaction tests. **Implementation: Not started; Verified: No.**
-8. **S4-0107-08 — Expose global critical health attention without header clutter.** Acceptance: Blockers visible outside Workspace with direct route. Required verification: Mobile More and accessible indicator tests. **Implementation: Not started; Verified: No.**
-9. **S4-0107-09 — Harden offline/recovery and old-server capability detection.** Acceptance: Failure to fetch not represented as zero cache usage. Required verification: Backend restart, unsupported API tests. **Implementation: Not started; Verified: No.**
-10. **S4-0107-10 — Measure quiet background polling impact on UI/audio.** Acceptance: No excessive refreshes or animation stutter. Required verification: Performance trace during analysis and render. **Implementation: Not started; Verified: No.**
+1. **S4-0107-01 - Redesign Workspace overview with attention hierarchy.** Acceptance: Actual blockers distinguish from harmless background activity. Required verification: Storage full, no-ready-songs, offline fixtures. **Implementation: Not started; Verified: No.**
+2. **S4-0107-02 - Preserve analysis start/pause/progress and deprioritization.** Acceptance: Processing state is accurate while user listens. Required verification: Paused/playing/restart/poll cases. **Implementation: Not started; Verified: No.**
+3. **S4-0107-03 - Preserve folder source watch/unwatch and recovery.** Acceptance: Missing drive shown separately from stopped watch. Required verification: Permission, disconnect, rescan and original-file tests. **Implementation: Not started; Verified: No.**
+4. **S4-0107-04 - Rebuild storage budget/meter and meaning labels.** Acceptance: Cache is not confused with durable data or originals. Required verification: Slider min/max/save failed/rapid changes. **Implementation: Not started; Verified: No.**
+5. **S4-0107-05 - Preserve background render jobs, priorities and queue.** Acceptance: Job accepted distinct from complete; queue actions correct. Required verification: Failure, cancel and duplicate mutation tests. **Implementation: Not started; Verified: No.**
+6. **S4-0107-06 - Clarify learning feedback and locate blind study.** Acceptance: Ratings and formal A/B trials remain separate. Required verification: Task findability and study context tests. **Implementation: Not started; Verified: No.**
+7. **S4-0107-07 - Preserve diagnostics operations with privacy-safe copying.** Acceptance: Copied data contains only declared safe fields. Required verification: Actual payload inspection and path-redaction tests. **Implementation: Not started; Verified: No.**
+8. **S4-0107-08 - Expose global critical health attention without header clutter.** Acceptance: Blockers visible outside Workspace with direct route. Required verification: Mobile More and accessible indicator tests. **Implementation: Not started; Verified: No.**
+9. **S4-0107-09 - Harden offline/recovery and old-server capability detection.** Acceptance: Failure to fetch not represented as zero cache usage. Required verification: Backend restart, unsupported API tests. **Implementation: Not started; Verified: No.**
+10. **S4-0107-10 - Measure quiet background polling impact on UI/audio.** Acceptance: No excessive refreshes or animation stutter. Required verification: Performance trace during analysis and render. **Implementation: Not started; Verified: No.**
 
 ## Required negative cases and regression strategy
 

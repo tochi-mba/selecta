@@ -5,7 +5,7 @@
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
-- **Phase:** 4 — Creation workspaces
+- **Phase:** 4 - Creation workspaces
 - **Extends existing decisions:** ADR-0013, ADR-0015, ADR-0040
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
 - **Work item statuses:** Every S3-0057-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
@@ -28,15 +28,15 @@ Create a focused three-region editor: mix-scoped header, fluid timeline and cont
 
 ## Detailed implementation work (all Not started)
 
-1. **S3-0057-01 — Not started.** Define editor layout, sticky scoped header, selected song/seam visual state and descriptive row hierarchy.
-2. **S3-0057-02 — Not started.** Redesign insertion targets with realistic pointer/touch target dimensions and explicit position labels.
-3. **S3-0057-03 — Not started.** Provide pointer drag and equivalent single-pointer/non-drag plus keyboard reordering with announced results.
-4. **S3-0057-04 — Not started.** Rebuild song picker around recommendations, analysis eligibility, searching and source-independent identities.
-5. **S3-0057-05 — Not started.** Preserve lock, remove, insert, play-from-here, render, retry, jump-to-problem and scoped Undo.
-6. **S3-0057-06 — Not started.** Connect inspector selection to stable pair identity and prevent stale selection from editing a new pair.
-7. **S3-0057-07 — Not started.** Handle request ghost rows and pending bridges without presenting them as playable timeline items.
-8. **S3-0057-08 — Not started.** Profile and optimize 100-song timeline without remounting audio or losing focus/scroll position.
-9. **S3-0057-09 — Not started.** Add conflict, second-tab, background render, deleted-row and draft/current isolation tests.
+1. **S3-0057-01 - Not started.** Define editor layout, sticky scoped header, selected song/seam visual state and descriptive row hierarchy.
+2. **S3-0057-02 - Not started.** Redesign insertion targets with realistic pointer/touch target dimensions and explicit position labels.
+3. **S3-0057-03 - Not started.** Provide pointer drag and equivalent single-pointer/non-drag plus keyboard reordering with announced results.
+4. **S3-0057-04 - Not started.** Rebuild song picker around recommendations, analysis eligibility, searching and source-independent identities.
+5. **S3-0057-05 - Not started.** Preserve lock, remove, insert, play-from-here, render, retry, jump-to-problem and scoped Undo.
+6. **S3-0057-06 - Not started.** Connect inspector selection to stable pair identity and prevent stale selection from editing a new pair.
+7. **S3-0057-07 - Not started.** Handle request ghost rows and pending bridges without presenting them as playable timeline items.
+8. **S3-0057-08 - Not started.** Profile and optimize 100-song timeline without remounting audio or losing focus/scroll position.
+9. **S3-0057-09 - Not started.** Add conflict, second-tab, background render, deleted-row and draft/current isolation tests.
 
 ## Preservation and integration constraints
 
