@@ -4,16 +4,16 @@
   "baseline_main_sha": "f17944530d54203e49baebdabc08a57ee9f40526",
   "as_of": "2026-11-08",
   "scope": "ADR-0366–0389; UF-0366-01 through UF-0389-08",
-  "document_only": true,
+  "document_only": false,
   "decision_summary": {
-    "Proposed": 24,
-    "Accepted": 0,
+    "Proposed": 0,
+    "Accepted": 24,
     "Rejected": 0,
     "Superseded": 0
   },
   "implementation_summary": {
-    "Not_started": 192,
-    "In_progress": 0,
+    "Not_started": 186,
+    "In_progress": 6,
     "Implemented": 0
   },
   "independent_verification_summary": {
@@ -28,7 +28,7 @@
       "slug": "unified-finish-charter-and-parity",
       "priority": "P0",
       "phase": "01 Baseline",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0199",
@@ -170,7 +170,7 @@
       "slug": "task-research-and-measurement",
       "priority": "P0",
       "phase": "01 Baseline",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0199",
@@ -313,7 +313,7 @@
       "slug": "design-tokens-and-css-ownership",
       "priority": "P0",
       "phase": "02 Foundation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0200",
@@ -459,7 +459,7 @@
       "slug": "typography-music-artwork-and-density",
       "priority": "P1",
       "phase": "02 Foundation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0202",
@@ -604,7 +604,7 @@
       "slug": "shared-controls-overlays-and-feedback",
       "priority": "P0",
       "phase": "02 Foundation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0204",
@@ -748,7 +748,7 @@
       "slug": "truthful-loading-recovery-and-async-state",
       "priority": "P0",
       "phase": "02 Foundation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0232",
@@ -769,12 +769,12 @@
           "title": "Define async state vocabulary",
           "acceptance": "Distinguish initial, stale, queued, running, paused, blocked, cancelled, failed and ready.",
           "required_verification": "Cross-route state matrix.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "527b6c9741a635f758da22609849383c3072f16c",
+          "evidence": "Keyed async load states and unit tests; remaining state vocabulary not yet reconciled",
           "reviewer": null,
           "review_date": null,
           "platform": null
@@ -814,12 +814,12 @@
           "title": "Protect offline context",
           "acceptance": "Stale useful content is labelled and has reconnect/retry route.",
           "required_verification": "Server restart test.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "527b6c9741a635f758da22609849383c3072f16c",
+          "evidence": "Stale-response and retry tests; offline route integration still pending",
           "reviewer": null,
           "review_date": null,
           "platform": null
@@ -844,12 +844,12 @@
           "title": "Handle cancellations correctly",
           "acceptance": "Cancelled, superseded and failed work cannot be shown as successful.",
           "required_verification": "Cancel/revision-change test.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "527b6c9741a635f758da22609849383c3072f16c",
+          "evidence": "Discard superseded reads; server job cancellation verification outstanding",
           "reviewer": null,
           "review_date": null,
           "platform": null
@@ -892,7 +892,7 @@
       "slug": "navigation-onboarding-and-returning-context",
       "priority": "P0",
       "phase": "03 Navigation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0208",
@@ -1037,7 +1037,7 @@
       "slug": "persistent-player-and-audio-focus",
       "priority": "P0",
       "phase": "03 Navigation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0209",
@@ -1181,7 +1181,7 @@
       "slug": "listening-hierarchy-lyrics-and-handoffs",
       "priority": "P1",
       "phase": "04 Listen",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0210",
@@ -1325,7 +1325,7 @@
       "slug": "visualizer-stage-and-sensory-motion",
       "priority": "P1",
       "phase": "04 Listen",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0205",
@@ -1469,7 +1469,7 @@
       "slug": "make-a-mix-quick-play-and-intent",
       "priority": "P0",
       "phase": "05 Creation entry",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0216",
@@ -1613,7 +1613,7 @@
       "slug": "library-experience-integration-and-proof",
       "priority": "P0",
       "phase": "05 Creation entry",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0226",
@@ -1682,12 +1682,12 @@
           "title": "Reconcile readiness counts",
           "acceptance": "Library, Make a Mix and Workspace use canonical source status.",
           "required_verification": "Cross-route fixture.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "471bcdfb50e96188f2f3a7c252b0bedc33cbff06",
+          "evidence": "Excluded song guards and readiness tests; cross-route integration pending",
           "reviewer": null,
           "review_date": null,
           "platform": null
@@ -1760,7 +1760,7 @@
       "slug": "lucy-creation-integration-and-proof",
       "priority": "P0",
       "phase": "05 Creation entry",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0300",
@@ -1908,7 +1908,7 @@
       "slug": "my-mixes-drafts-render-line",
       "priority": "P1",
       "phase": "05 Creation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0228",
@@ -1972,12 +1972,12 @@
           "title": "Show genuine render progression",
           "acceptance": "Queued, failed, blocked by storage and ready are separate recoverable states.",
           "required_verification": "Interrupted job E2E.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "f2afe007c37f22005e34e57ce71fb99e5b86d8c2",
+          "evidence": "Draft failures take precedence over pending progress; broader queue/storage acceptance pending",
           "reviewer": null,
           "review_date": null,
           "platform": null
@@ -2050,7 +2050,7 @@
       "slug": "editor-arrangement-and-song-seam-identity",
       "priority": "P1",
       "phase": "06 Advanced creation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0219",
@@ -2193,7 +2193,7 @@
       "slug": "seam-inspector-audition-and-explanation",
       "priority": "P1",
       "phase": "06 Advanced creation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0221",
@@ -2335,7 +2335,7 @@
       "slug": "stem-studio-musical-canvas",
       "priority": "P1",
       "phase": "06 Advanced creation",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0223",
@@ -2477,7 +2477,7 @@
       "slug": "requests-bridges-and-consent",
       "priority": "P1",
       "phase": "07 Supporting",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0225",
@@ -2619,7 +2619,7 @@
       "slug": "discovery-word-and-harmonic-gallery",
       "priority": "P1",
       "phase": "07 Supporting",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0218",
@@ -2761,7 +2761,7 @@
       "slug": "workspace-operations-storage-and-recovery",
       "priority": "P1",
       "phase": "07 Supporting",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0230",
@@ -2903,7 +2903,7 @@
       "slug": "exports-frozen-revisions-and-listening-study",
       "priority": "P1",
       "phase": "07 Supporting",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0231",
@@ -2937,12 +2937,12 @@
           "title": "Explain missing render prerequisites",
           "acceptance": "Unready directed seams block export with a repair action.",
           "required_verification": "Missing seam fixture.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "471bcdfb50e96188f2f3a7c252b0bedc33cbff06",
+          "evidence": "Export timing guard and component test; other export prerequisites pending",
           "reviewer": null,
           "review_date": null,
           "platform": null
@@ -3045,7 +3045,7 @@
       "slug": "responsive-reflow-and-input-adaptation",
       "priority": "P0",
       "phase": "08 Verification",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0233",
@@ -3189,7 +3189,7 @@
       "slug": "accessibility-language-and-motion-acceptance",
       "priority": "P0",
       "phase": "08 Verification",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0202",
@@ -3335,7 +3335,7 @@
       "slug": "independent-visual-usability-and-release-gates",
       "priority": "P0",
       "phase": "08 Verification",
-      "decision": "Proposed",
+      "decision": "Accepted",
       "owner": null,
       "related_owners": [
         "ADR-0239",
@@ -3474,5 +3474,11 @@
         }
       ]
     }
-  ]
+  ],
+  "decision_record": {
+    "approved_by": "Requester (all UF ADRs approved in PR #41 conversation)",
+    "date": "2026-11-08",
+    "scope": "ADR-0366–0389",
+    "note": "Decision acceptance only; code implementation and independent verification remain separate."
+  }
 }
