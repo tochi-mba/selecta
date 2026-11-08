@@ -104,7 +104,12 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
         raise BackupError("Backup ZIP is corrupt or incomplete.") from problem
     if not isinstance(manifest, dict) or manifest.get("format") != FORMAT or manifest.get("version") != VERSION:
         raise BackupError("This backup format is not supported by this Selecta version.")
-    entry = manifest.get("files", {}).get("selecta.sqlite", {})
+    if not isinstance(manifest.get("created_utc"), str):
+        raise BackupError("Backup manifest is missing its creation date.")
+    files = manifest.get("files")
+    if not isinstance(files, dict) or not isinstance(files.get("selecta.sqlite"), dict):
+        raise BackupError("Backup manifest is missing database metadata.")
+    entry = files["selecta.sqlite"]
     if entry.get("bytes") != len(db_bytes) or entry.get("sha256") != _sha(db_bytes):
         raise BackupError("Backup checksum does not match; nothing has been changed.")
     with tempfile.TemporaryDirectory(prefix="selecta-check-") as tmp:
