@@ -507,8 +507,6 @@ kbd { font: 0.82rem var(--mono); background: var(--panel-2); border: 1px solid v
 .bridge-step { color: var(--ink); }
 .bridge-wanted { color: var(--request); font-weight: 600; }
 
-.listen-view { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
-.listen-view button { min-height: 34px; padding: 4px 12px; font-size: 0.86rem; }
 .strip.can-seek { cursor: pointer; }
 .strip.can-seek:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .transport { align-items: center; }
