@@ -152,3 +152,42 @@ test('mini-player and overlay geometry stay actionable on a narrow phone', async
     transport: bounds, dialog: box,
   }, null, 2));
 });
+
+test('mobile navigation remains keyboard reachable at extreme reflow', async ({ page }) => {
+  // A 220px CSS viewport approximates high browser zoom on a narrow device.
+  await page.setViewportSize({ width: 220, height: 740 });
+  await page.goto('/mixes');
+  const navigation = page.getByRole('navigation', { name: 'Main' });
+  const list = navigation.locator('ul');
+  const metrics = await list.evaluate((element) => ({
+    width: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(metrics.scrollWidth).toBeGreaterThan(metrics.width);
+  const first = navigation.getByRole('link', { name: 'Listen' });
+  const last = navigation.locator('.nav-more-mobile');
+  await expect(first).toBeVisible();
+  await expect(last).toBeVisible();
+  for (const item of [first, last]) {
+    const box = await item.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(64);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
+  await last.focus();
+  await expect(last).toBeFocused();
+  expect(await list.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+});
+
+test('editor keeps full bidirectional identity and exact song occurrence', async ({ page, request }) => {
+  await resetMix(request);
+  await page.goto('/mix/current/edit');
+  const first = page.locator('.timeline .song').first();
+  await expect(first.locator('.song-select')).toBeVisible();
+  await expect(first.locator('.grip')).toHaveAttribute('aria-description', /Song occurrence 1 of \d+/);
+  await expect(first.locator('.song-select')).toHaveAttribute('aria-description', /Song occurrence 1 of \d+/);
+  const title = first.locator('.song-select b');
+  await expect(title).toHaveAttribute('dir', 'auto');
+  await expect(title).toHaveAttribute('title', /.+/);
+  const artist = first.locator('.song-name > span').first();
+  await expect(artist).toHaveAttribute('dir', 'auto');
+});
