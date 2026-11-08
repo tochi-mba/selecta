@@ -23,6 +23,12 @@ type Session = {
 };
 
 const LANE_WORDS: Record<Lane, string> = { vocals: 'Voice', drums: 'Drums', bass: 'Bass', other: 'Melody' };
+/** Equal bar ranges for the same cells in the Grid and List editors. */
+const barRange = (index: number, barsPerCell: number) => {
+  const start = index * barsPerCell + 1;
+  const end = start + barsPerCell - 1;
+  return start === end ? `bar ${start}` : `bars ${start}–${end}`;
+};
 const WAIT_MS = 2000;
 const UNSAVED = 'selecta.studio.';
 /** The column of solo buttons, in front of the squares, in the grid's one tab stop. */
@@ -87,7 +93,7 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
                   {shape[side][lane].map((value, index) => (
                     <label key={index}>
                       <input type="checkbox" data-cell={`${row}-${index}`} checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
-                      <span>Bar {index * barsPerCell + 1}</span>
+                      <span>{barRange(index, barsPerCell)}</span>
                     </label>
                   ))}
                 </div>
@@ -112,7 +118,7 @@ function StudioShapeEditor({ shape, titles, missing, disabled, onSetLane }: {
 }) {
   return (
     <div className="studio-list studio-shape" role="region" aria-label="Guided shape controls">
-      <p className="hint">Choose which musical parts carry through the whole transition. For finer timing, switch to Detailed; every square stays exactly as you left it.</p>
+      <p className="hint">Two songs, each with voice, drums, bass and melody. Use throughout or leave out changes every cell of only that part of that song. Switching to Grid or List preserves the same exact cells; nothing is applied until you choose Apply.</p>
       {SIDES.map((side) => (
         <section key={side} aria-labelledby={`studio-shape-${side}`}>
           <h4 id={`studio-shape-${side}`}>{titles[side]}</h4>
@@ -124,7 +130,7 @@ function StudioShapeEditor({ shape, titles, missing, disabled, onSetLane }: {
             return (
               <fieldset key={name} disabled={lost || disabled}>
                 <legend>{LANE_WORDS[lane]}{lost ? ' — unavailable' : ''}</legend>
-                <p className="hint" role="status">{active === 0 ? 'Left out' : active === total ? 'Used throughout' : `Used in ${active} of ${total} sections`}</p>
+                <p className="hint">{active === 0 ? 'Left out' : active === total ? 'Used throughout' : `Used in ${active} of ${total} sections`}</p>
                 <div className="row wrap">
                   <button type="button" aria-pressed={active === total} onClick={() => onSetLane(side, lane, 1)}>Use throughout</button>
                   <button type="button" aria-pressed={active === 0} onClick={() => onSetLane(side, lane, 0)}>Leave out</button>
@@ -503,7 +509,7 @@ export function Studio(props: {
             <div><dt>Rendered audio</dt><dd>{rendered.words}</dd></div>
           </dl>
           <p className="hint">
-            Each square is {barsPerCell} bar{barsPerCell === 1 ? '' : 's'}. Tap one to turn that part on or off. Press a name to hear only that part.
+            Two songs, four parts per song: voice, drums, bass and melody. Each square is {barsPerCell} bar{barsPerCell === 1 ? '' : 's'} in that song. The Grid and List change the same exact cells. Tap one to turn that part on or off; press a name to hear only that part during a preview.
           </p>
           <p className="hint">Previewing pauses the main mix. After stopping or closing Studio, use the main player to resume it.</p>
           <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes — not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? '. Your work is kept on this browser when you close Studio.' : ''}</p>
@@ -616,8 +622,8 @@ export function Studio(props: {
                             className={`studio-cell ${index === cell ? 'now' : ''} ${changedCells.has(side + '_' + lane + ':' + index) ? 'ai-changed' : ''}`}
                             aria-pressed={Boolean(value)}
                             aria-disabled={lost || saving || undefined}
-                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}
-                            title={lost ? 'This part couldn’t be loaded' : `Bar ${index * barsPerCell + 1}`}
+                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}`}
+                            title={lost ? 'This part couldn’t be loaded' : barRange(index, barsPerCell)}
                             onFocus={() => setFocusCell({ row, column: index })}
                             onClick={(event) => { if (event.detail === 0) toggle(side, lane, index); }}
                           />
