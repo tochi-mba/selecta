@@ -1,3 +1,13 @@
+# Selecta — Library + Lucy experience redesign ADR proposal (2026-11-08)
+
+**New docs-only, scoped redesign programme:** 26 **Proposed** ADRs (0340–0365), 208 individually tracked **Not started** LX implementation tasks, 0 In progress, 0 Implemented and 0 independently Verified. All owners unassigned. Planning baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
+
+**Scope:** Full visual/interaction freedom **only** for Library / Song Details and the Make a Mix front door / Lucy conversation, proposals and approval. Existing application code, tests, audio engine, older ADR statuses and unrelated routes are unchanged. The proposed redesign is **not** claimed implemented or measured.
+
+**Start here:** [Roadmap](selecta-library-lucy-experience-roadmap.md) · [208-task checklist](selecta-library-lucy-experience-implementation-checklist.md) · [evidence ledger](selecta-library-lucy-experience-implementation-evidence.md) · [status JSON](selecta-library-lucy-experience-code-status.json) · [overlap/parity](selecta-library-lucy-experience-overlap-and-parity.md) · [interaction contract](selecta-library-lucy-experience-interaction-contract.md) · [verification](selecta-library-lucy-experience-verification-matrix.md) · [status reconciliation](selecta-library-lucy-experience-status-reconciliation.md) · [release gates](selecta-library-lucy-experience-release-gates.md)
+
+---
+
 # Selecta — proposed measured UI/UX micro-polish ADRs (2026-11-08)
 
 **New documentation-only programme:** [28 ADR roadmap](selecta-measured-micro-polish-roadmap.md) · [224 implementation tasks](selecta-measured-micro-polish-implementation-checklist.md) · [per-task evidence](selecta-measured-micro-polish-implementation-evidence.md) · [status JSON](selecta-measured-micro-polish-code-status.json) · [overlap](selecta-measured-micro-polish-overlap-and-parity.md) · [geometry](selecta-measured-micro-polish-geometry-contract.md) · [verification](selecta-measured-micro-polish-verification-matrix.md) · [reconciliation](selecta-measured-micro-polish-status-reconciliation.md) · [release](selecta-measured-micro-polish-release-gates.md).
