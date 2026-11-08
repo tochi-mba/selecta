@@ -1,7 +1,7 @@
 # ADR-0371 — Long-job progress, asynchronous truth and local recovery
 
-- **Decision:** Proposed (owner review pending; no approval recorded).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
+- **Implementation:** 5/8 Not started; 3/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
 - **Priority / phase:** P0 / 02 Foundation. **Owner:** Unassigned. **Implementing PR/SHA:** —.
@@ -24,12 +24,12 @@ Users complete the named journey with clear action consequences, predictable con
 
 ## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0371-01 — Define async state vocabulary.** **Acceptance:** Distinguish initial, stale, queued, running, paused, blocked, cancelled, failed and ready. **Required verification:** Cross-route state matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0371-01 — Define async state vocabulary.** **Acceptance:** Distinguish initial, stale, queued, running, paused, blocked, cancelled, failed and ready. **Required verification:** Cross-route state matrix. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `527b6c9741a635f758da22609849383c3072f16c`; **Evidence/reviewer:** `web/src/state/async.ts` and async unit tests; independent review pending.
 2. **UF-0371-02 — Reserve skeletons for unknown content.** **Acceptance:** Known long work uses job status or uncertainty; no fake perpetual shimmer. **Required verification:** Delayed-load browser test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 3. **UF-0371-03 — Explain estimated time honestly.** **Acceptance:** Only locally grounded ranges with clear uncertainty appear. **Required verification:** Variable-workload fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0371-04 — Protect offline context.** **Acceptance:** Stale useful content is labelled and has reconnect/retry route. **Required verification:** Server restart test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+4. **UF-0371-04 — Protect offline context.** **Acceptance:** Stale useful content is labelled and has reconnect/retry route. **Required verification:** Server restart test. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `527b6c9741a635f758da22609849383c3072f16c`; **Evidence/reviewer:** `web/src/state/async.ts` and async unit tests; independent review pending.
 5. **UF-0371-05 — Reconcile lost mutation replies.** **Acceptance:** Preserve idempotency key for retries and report actual result. **Required verification:** Lost-ack duplicate guard test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0371-06 — Handle cancellations correctly.** **Acceptance:** Cancelled, superseded and failed work cannot be shown as successful. **Required verification:** Cancel/revision-change test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+6. **UF-0371-06 — Handle cancellations correctly.** **Acceptance:** Cancelled, superseded and failed work cannot be shown as successful. **Required verification:** Cancel/revision-change test. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `527b6c9741a635f758da22609849383c3072f16c`; **Evidence/reviewer:** `web/src/state/async.ts` and async unit tests; independent review pending.
 7. **UF-0371-07 — Keep live feedback calm.** **Acceptance:** Foreground errors take precedence over background completion noise. **Required verification:** Long-running observation. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 8. **UF-0371-08 — Preserve layout and focus.** **Acceptance:** Changing asynchronous content does not jump controls or navigation unexpectedly. **Required verification:** Geometry/CLS/focus measurement. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 
@@ -41,6 +41,6 @@ Compare baseline/candidate at the same route, viewport, theme, density, fixture,
 
 ## Decision, implementation and independent verification
 
-**Proposed** → Accepted/Rejected/Superseded only by named owner/date/rationale. Implementation Not started → In progress → Implemented only after exact source/test PR, SHA and item-specific evidence. Independent verification No → Yes only with separate reviewer/date/device/OS/browser/AT and relevant real user/audio/visual measurements. Update ADR, checklist, evidence ledger and JSON together; preserve older status histories.
+**Accepted** by requester on 2026-11-08; future supersession requires owner/date/rationale. Implementation Not started → In progress → Implemented only after exact source/test PR, SHA and item-specific evidence. Independent verification No → Yes only with separate reviewer/date/device/OS/browser/AT and relevant real user/audio/visual measurements. Update ADR, checklist, evidence ledger and JSON together; preserve older status histories.
 
 [Roadmap](selecta-unified-finish-roadmap.md) · [192-task checklist](selecta-unified-finish-implementation-checklist.md) · [evidence](selecta-unified-finish-implementation-evidence.md) · [JSON](selecta-unified-finish-code-status.json) · [parity](selecta-unified-finish-overlap-and-parity.md) · [interaction contract](selecta-unified-finish-experience-contract.md) · [verification](selecta-unified-finish-verification-matrix.md) · [reconciliation](selecta-unified-finish-status-reconciliation.md) · [release](selecta-unified-finish-release-gates.md)
