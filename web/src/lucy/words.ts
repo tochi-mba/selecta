@@ -35,7 +35,9 @@ export function seamWords(status: string, verified = false): { words: string; ki
   switch (status) {
     case 'already_rendered':
     case 'ready':
-      return { words: 'Ready to play', kind: 'ready' };
+      return verified
+        ? { words: 'Ready to play', kind: 'ready' }
+        : { words: 'Rendered, not verified on disk', kind: 'warning' };
     case 'queued': return { words: 'In line to render', kind: 'queued' };
     case 'rendering': return { words: 'Rendering', kind: 'working' };
     case 'failed': return { words: 'Failed', kind: 'failed' };
