@@ -1,6 +1,6 @@
 # Selecta — creative-interface microinteraction and state matrix
 
-**Proposal only:** 20 ADRs Proposed; 140 implementation tasks Not started; 0 independently Verified. Durations below are candidate design targets and do not assert working animation or real-world performance. Reconcile [prior MI motion matrix](selecta-microinteraction-motion-matrix.md) before implementing.
+**Accepted design (not yet implemented):** 20 ADRs Proposed; 140 implementation tasks Not started; 0 independently Verified. Durations below are candidate design targets and do not assert working animation or real-world performance. Reconcile [prior MI motion matrix](selecta-microinteraction-motion-matrix.md) before implementing.
 
 | Interaction | Trigger | Data authority and meaning | Proposed response | Reduced-motion equivalent | Required guard |
 |---|---|---|---|---|---|

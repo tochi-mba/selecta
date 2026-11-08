@@ -1,6 +1,6 @@
 # ADR-0176 — Musical discovery: phrase bridges and focused harmonic connection explorer
 
-- **Decision:** Proposed (owner acceptance not recorded).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
 - **Independent verification:** No (0/7).
 - **Programme/date/baseline:** Selecta creative-interface synthesis; 2026-11-08; main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd.
@@ -15,7 +15,7 @@ Selecta can find lyric phrases and possible chord relationships in personal musi
 
 This ADR proposes a **new cross-surface design and acceptance delta**, not a claim that existing code/accepted MI decisions are missing. No independent human, visual, audio, device or implementation verification has occurred for these new tasks.
 
-## Proposed decision
+## Accepted decision
 
 - Let a shared phrase visually bridge the exact two lyric lines and their source songs.
 - Offer a bounded, optional local connection explorer for a selected song, not an unreadable global network.
@@ -52,5 +52,5 @@ Preserve the single audio owner, manual Pause, original files, LRCLIB metadata d
 
 - **Depends on:** ADR-0155, ADR-0125, ADR-0104; reconcile old tasks before implementing.
 - **Sequence:** owner acceptance → design prototype/state specs → scoped PR and tests → independent human/audio/AT/performance evidence → signed release gate.
-- **Current:** Proposed; Not started; Independently Verified No, owner unassigned, no implementation PR.
+- **Current:** Accepted; Not started; Independently Verified No, owner unassigned, no implementation PR.
 - [Roadmap](selecta-creative-interface-roadmap.md) · [140-task checklist](selecta-creative-interface-implementation-checklist.md) · [Evidence](selecta-creative-interface-implementation-evidence.md) · [Parity](selecta-creative-interface-feature-parity.md) · [Interaction matrix](selecta-creative-interface-interaction-matrix.md) · [Verification](selecta-creative-interface-verification-matrix.md) · [Gates](selecta-creative-interface-release-gates.md).

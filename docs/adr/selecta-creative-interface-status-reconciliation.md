@@ -1,6 +1,6 @@
 # Selecta — creative-interface cross-programme status reconciliation
 
-**New CI programme (baseline main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd): 20 Proposed, 140 new tasks Not started, 0 In progress, 0 Implemented, 0 independently Verified.** This documentation-only programme does not change any historical status.
+**New CI programme (baseline main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd): 20 Accepted, 140 new tasks Not started, 0 In progress, 0 Implemented, 0 independently Verified.** This documentation-only programme does not change any historical status.
 
 | Programme | Historical evidence | What is reused | Status changed here |
 |---|---|---|---|

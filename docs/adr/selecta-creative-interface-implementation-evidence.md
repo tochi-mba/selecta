@@ -1,6 +1,6 @@
 # Selecta — creative-interface implementation and independent evidence ledger
 
-**20 Proposed ADRs, 140 CI tasks Not started, 0 In progress, 0 Implemented, 0 independently Verified.** All implementing PR/SHA, owner and evidence fields are currently unassigned. A docs-only PR is not implementation evidence.
+**20 Accepted ADRs, 140 CI tasks Not started, 0 In progress, 0 Implemented, 0 independently Verified.** All implementing PR/SHA, owner and evidence fields are currently unassigned. A docs-only PR is not implementation evidence.
 
 | CI task | ADR | Implementation | Independently Verified | Owner | Implementing PR / SHA | Evidence / reviewer |
 |---|---|---|---|---|---|---|

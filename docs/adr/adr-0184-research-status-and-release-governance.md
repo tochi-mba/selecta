@@ -1,6 +1,6 @@
 # ADR-0184 — Incremental implementation, evidence, neutrality and release gates
 
-- **Decision:** Proposed (owner acceptance not recorded).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
 - **Independent verification:** No (0/7).
 - **Programme/date/baseline:** Selecta creative-interface synthesis; 2026-11-08; main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd.
@@ -15,7 +15,7 @@ Earlier MI tasks have published source-level status but no independent verificat
 
 This is a **new, not-yet-implemented design and acceptance delta**, not proof that prior accepted code or source-level MI requirements are missing. No independent verification is claimed.
 
-## Proposed decision
+## Accepted decision
 
 - Keep decision Proposed/Accepted, implementation Not started/In progress/Implemented, and independent Verified No/Yes separate and auditable.
 - Reconcile overlapping prior accepted MI tasks before writing replacement code; implement only new creative deltas.
@@ -52,5 +52,5 @@ Retain single audio owner, original audio, LRCLIB disclosure, current/draft revi
 
 - **Depends on:** ADR-0164, ADR-0133, ADR-0113, ADR-0158; reconcile existing evidence rather than assuming previous work incomplete.
 - **Sequence:** owner acceptance → prototype → fixtures → scoped code PR → independent human/AT/device/audio/performance verification → signed GO/NO-GO.
-- **Current:** Proposed; Not started; Independently Verified No. No implementing PR or SHA.
+- **Current:** Accepted; Not started; Independently Verified No. No implementing PR or SHA.
 - [Roadmap](selecta-creative-interface-roadmap.md) · [140-task checklist](selecta-creative-interface-implementation-checklist.md) · [Evidence](selecta-creative-interface-implementation-evidence.md) · [Parity](selecta-creative-interface-feature-parity.md) · [Interaction matrix](selecta-creative-interface-interaction-matrix.md) · [Verification](selecta-creative-interface-verification-matrix.md) · [Gates](selecta-creative-interface-release-gates.md).

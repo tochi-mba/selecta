@@ -1,6 +1,6 @@
 # ADR-0179 — My Mixes: current-performance identity, drafts and real render line
 
-- **Decision:** Proposed (owner acceptance not recorded).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
 - **Independent verification:** No (0/7).
 - **Programme/date/baseline:** Selecta creative-interface synthesis; 2026-11-08; main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd.
@@ -15,7 +15,7 @@ The current-versus-draft model and render line are technically sound but visuall
 
 This ADR proposes a **new cross-surface design and acceptance delta**, not a claim that existing code/accepted MI decisions are missing. No independent human, visual, audio, device or implementation verification has occurred for these new tasks.
 
-## Proposed decision
+## Accepted decision
 
 - Give the active current mix a more prominent performance identity while drafts remain visually calm.
 - Represent each draft's real song energy and seam readiness at small scale; show a neutral fallback for missing data.
@@ -52,5 +52,5 @@ Preserve the single audio owner, manual Pause, original files, LRCLIB metadata d
 
 - **Depends on:** ADR-0149, ADR-0119, ADR-0099; reconcile old tasks before implementing.
 - **Sequence:** owner acceptance → design prototype/state specs → scoped PR and tests → independent human/audio/AT/performance evidence → signed release gate.
-- **Current:** Proposed; Not started; Independently Verified No, owner unassigned, no implementation PR.
+- **Current:** Accepted; Not started; Independently Verified No, owner unassigned, no implementation PR.
 - [Roadmap](selecta-creative-interface-roadmap.md) · [140-task checklist](selecta-creative-interface-implementation-checklist.md) · [Evidence](selecta-creative-interface-implementation-evidence.md) · [Parity](selecta-creative-interface-feature-parity.md) · [Interaction matrix](selecta-creative-interface-interaction-matrix.md) · [Verification](selecta-creative-interface-verification-matrix.md) · [Gates](selecta-creative-interface-release-gates.md).

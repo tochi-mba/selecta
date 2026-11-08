@@ -1,6 +1,6 @@
 # ADR-0169 — Energy Horizon, tactile shaping and destination scope
 
-- **Decision:** Proposed (owner acceptance not recorded).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
 - **Independent verification:** No (0/7).
 - **Programme/date/baseline:** Selecta creative-interface synthesis; 2026-11-08; main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd.
@@ -15,7 +15,7 @@ The five-stop energy arc already has drawing, presets, sliders and numbers. This
 
 This is a **new, unimplemented design and acceptance delta**. Similar existing source, earlier implementation checkmarks and this docs PR cannot demonstrate that a CI task is implemented or independently verified.
 
-## Proposed decision
+## Accepted decision
 
 - Name a reusable Energy Horizon with Start, Early, Middle, Late and Finish.
 - Provide direct pointer/stylus drawing, numeric input and slider/keyboard parity without false energy precision.
@@ -52,5 +52,5 @@ Preserve single audio owner, manual Pause, original audio files, disclosed LRCLI
 
 - **Depends on:** ADR-0143, ADR-0111, ADR-0150; reconcile old task implementation rather than claiming it incomplete.
 - **Next sequence:** owner decision → object/state prototype → explicit test fixtures → scoped implementation PR → separate human/AT/audio/performance review → recorded GO/NO-GO.
-- **Now:** Decision Proposed; Implementation Not started; Independently Verified No; no implementing PR/SHA.
+- **Now:** Decision Accepted; Implementation Not started; Independently Verified No; no implementing PR/SHA.
 - [Roadmap](selecta-creative-interface-roadmap.md) · [140-task checklist](selecta-creative-interface-implementation-checklist.md) · [Evidence](selecta-creative-interface-implementation-evidence.md) · [Parity](selecta-creative-interface-feature-parity.md) · [Interaction matrix](selecta-creative-interface-interaction-matrix.md) · [Verification](selecta-creative-interface-verification-matrix.md) · [Gates](selecta-creative-interface-release-gates.md).

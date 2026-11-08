@@ -1,6 +1,6 @@
 # Selecta — creative-interface implementation checklist: 140 individually tracked CI tasks
 
-**Documentation-only proposal, 2026-11-08. Decision: 20 Proposed, 0 Accepted. Implementation: 140 Not started, 0 In progress, 0 Implemented. Independent verification: 0 Verified.** All implementation boxes remain unchecked. Previous MI code/status does not automatically complete a new CI requirement.
+**Documentation-only proposal, 2026-11-08. Decision: 20 Accepted (owner approved 2026-11-08). Implementation: 140 Not started, 0 In progress, 0 Implemented. Independent verification: 0 Verified.** All implementation boxes remain unchecked. Previous MI code/status does not automatically complete a new CI requirement.
 
 **Tracking rule:** A checked box eventually means merged implementation and its tests, not independent verification. Every item separately tracks the owner, implementing PR/SHA and real-world evidence in the [CI evidence ledger](selecta-creative-interface-implementation-evidence.md).
 

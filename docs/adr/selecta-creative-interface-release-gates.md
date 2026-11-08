@@ -1,10 +1,10 @@
 # Selecta — creative-interface independent NO-GO release gates
 
-**Current new-programme verdict: NO-GO / NOT IMPLEMENTED.** 20 Proposed decisions; 140 CI tasks Not started; 0 Implemented; 0 independently Verified. This is a future programme release status, **not** a finding that the current app is broken.
+**Current new-programme verdict: NO-GO / NOT IMPLEMENTED.** 20 Accepted decisions; 140 CI tasks Not started; 0 Implemented; 0 independently Verified. This is a future programme release status, **not** a finding that the current app is broken.
 
 | Gate | Required proof | Current |
 |---|---|---|
-| Owner decisions | Dated acceptance/rejection for new ADRs and prior-MI reconciliation | Pending |
+| Owner decisions | Dated acceptance/rejection for new ADRs and prior-MI reconciliation | 20 ADRs accepted 2026-11-08; prior-MI reconciliation pending |
 | Baseline | Exact source SHA and screens/interaction inventory | Pending |
 | Musical visual grammar | Song, seam, energy and route understood across views and sizes | Pending |
 | Music truth | No false waveform, beats, word timing, cover art, quality or ready status | Pending |

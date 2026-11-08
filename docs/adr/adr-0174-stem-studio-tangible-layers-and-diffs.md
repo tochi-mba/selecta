@@ -1,6 +1,6 @@
 # ADR-0174 — Stem Studio: tactile layers, accurate playhead and human–Selecta differences
 
-- **Decision:** Proposed (owner acceptance not recorded).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
 - **Independent verification:** No (0/7).
 - **Programme/date/baseline:** Selecta creative-interface synthesis; 2026-11-08; main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd.
@@ -15,7 +15,7 @@ Eight lanes of vocals, drums, bass and melody are already editable through Shape
 
 This is a **new, unimplemented design and acceptance delta**. Similar existing source, older implementation checkmarks and this docs PR cannot demonstrate that a new CI task is implemented or independently verified.
 
-## Proposed decision
+## Accepted decision
 
 - Give drums, bass, vocals and melody different non-colour patterns and clear labels in both song halves.
 - Shape mode shows broad musical bands; Detailed Grid subdivides precisely the same 8–64 cell arrangement; List stays equivalent.
@@ -52,5 +52,5 @@ Preserve single audio owner and manual Pause, original files and LRCLIB disclosu
 
 - **Depends on:** ADR-0152, ADR-0122, ADR-0102; reconcile old task status against actual source before implementing.
 - **Implementation sequence:** owner decision → visual/state prototype → fixtures → scoped source PR → independent AT/audio/device/human verification → release signoff.
-- **Current:** Proposed; Not started; Independently Verified No. There is no implementing PR/SHA.
+- **Current:** Accepted; Not started; Independently Verified No. There is no implementing PR/SHA.
 - [Roadmap](selecta-creative-interface-roadmap.md) · [140-task checklist](selecta-creative-interface-implementation-checklist.md) · [Evidence](selecta-creative-interface-implementation-evidence.md) · [Parity](selecta-creative-interface-feature-parity.md) · [Interaction matrix](selecta-creative-interface-interaction-matrix.md) · [Verification](selecta-creative-interface-verification-matrix.md) · [Gates](selecta-creative-interface-release-gates.md).

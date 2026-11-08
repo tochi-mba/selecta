@@ -1,6 +1,6 @@
 # ADR-0173 — Arrangement timeline: tactile songs, seam edges and energy overview
 
-- **Decision:** Proposed (owner acceptance not recorded).
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
 - **Independent verification:** No (0/7).
 - **Programme/date/baseline:** Selecta creative-interface synthesis; 2026-11-08; main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd.
@@ -15,7 +15,7 @@ The vertical song/seam editor is accessible and works on narrow screens; it shou
 
 This is a **new, unimplemented design and acceptance delta**. Similar existing source, older implementation checkmarks and this docs PR cannot demonstrate that a new CI task is implemented or independently verified.
 
-## Proposed decision
+## Accepted decision
 
 - Keep songs as objects and transitions as explicit independently selectable connections.
 - Offer a compact, real-data relative-energy overview and locate the current song within long sets.
@@ -52,5 +52,5 @@ Preserve single audio owner and manual Pause, original files and LRCLIB disclosu
 
 - **Depends on:** ADR-0150, ADR-0100, ADR-0120; reconcile old task status against actual source before implementing.
 - **Implementation sequence:** owner decision → visual/state prototype → fixtures → scoped source PR → independent AT/audio/device/human verification → release signoff.
-- **Current:** Proposed; Not started; Independently Verified No. There is no implementing PR/SHA.
+- **Current:** Accepted; Not started; Independently Verified No. There is no implementing PR/SHA.
 - [Roadmap](selecta-creative-interface-roadmap.md) · [140-task checklist](selecta-creative-interface-implementation-checklist.md) · [Evidence](selecta-creative-interface-implementation-evidence.md) · [Parity](selecta-creative-interface-feature-parity.md) · [Interaction matrix](selecta-creative-interface-interaction-matrix.md) · [Verification](selecta-creative-interface-verification-matrix.md) · [Gates](selecta-creative-interface-release-gates.md).
