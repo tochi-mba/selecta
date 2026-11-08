@@ -1,6 +1,29 @@
 /* Shared finish: semantic tokens live only in tokens.css. Rules below refine legacy layouts
    without redefining global values in a later cascade layer. */
 body { text-rendering: optimizeLegibility; }
+/* Feedback stays inside the control: hit targets and keyboard focus never move. */
+button:not(:disabled):not([aria-disabled='true']):active,
+a.button:active { box-shadow: inset 0 0 0 2px currentColor; }
+.chips button[aria-pressed='true'] { box-shadow: inset 0 -2px 0 currentColor; }
+:is(input, textarea, select) {
+  transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
+}
+:is(.tabs a, .nav a, .menu-list button) {
+  transition: color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
+}
+/* One brief reveal per inserted group; no perpetual motion across every card. */
+.vibe-group { animation: feeling-reveal var(--motion-handoff) var(--motion-ease); }
+@keyframes feeling-reveal { from { opacity: .65; } to { opacity: 1; } }
+@media (hover: hover) and (pointer: fine) {
+  .vibe-card:hover .vibe-tempo { border-color: var(--border-strong); color: var(--text); }
+}
+.vibe-card:focus-within .vibe-tempo { border-color: var(--border-strong); color: var(--text); }
+.vibe-tempo { transition: color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease); }
+/* Stop decorative loading pulses after a few cycles; the status remains visible. */
+.skeleton i { animation-iteration-count: 3; }
+@media (prefers-reduced-motion: reduce) {
+  .vibe-group { animation: none; }
+}
 button, a.button, input:not([type='checkbox']):not([type='radio']), select { min-height: var(--control-height); }
 .choice { min-height: var(--control-height); align-items: center; }
 .choice input[type='radio'], .choice input[type='checkbox'] { min-height: 0; }
