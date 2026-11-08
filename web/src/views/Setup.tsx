@@ -84,9 +84,11 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
           <div><dt>Stems</dt><dd>Separating voice, drums, bass and melody only happens later, for the transitions that need it.</dd></div>
         </dl>
       </details>
+      <p className="hint">You can discuss an idea with Lucy while your library is being prepared. It won’t bypass song-readiness checks, send a request on its own, or start playback.</p>
       <div className="row wrap">
         {ready >= READY_NEEDED && <PageLink to="/mixes" className="button primary">Make my first mix</PageLink>}
         <PageLink to="/library" className="button">Open Library</PageLink>
+        <PageLink to="/mixes/lucy" className="button">Plan with Lucy (optional)</PageLink>
         {!status.analysis_running && <Action className="primary" run={onAnalyse}>Analyse my songs</Action>}
         {status.analysis_running && <span className="pill rendering">Analysing now</span>}
         <PageLink to="/workshop" className="button">See progress</PageLink>
