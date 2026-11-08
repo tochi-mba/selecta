@@ -30,6 +30,7 @@ from selecta.api_common import (
 )
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_line_left
+from selecta.library.relevance import match_label, relevance
 from selecta.library.scan import ScanStopped
 
 
@@ -279,13 +280,30 @@ def add_routes(app, ctx) -> None:
     ) -> dict:
         """A page of the library, with a place to carry on from. The place is the last song's own
         sort value and id, so songs arriving meanwhile can't make a page repeat or skip any."""
+        q = q.strip()
+        if len(q) > 128:
+            raise HTTPException(400, "Search must be 128 characters or fewer.")
         order = SORTS.get(sort, SORTS["title"])
         limit = min(max(limit, 1), 200)
         with connect() as conn:
             never = never_played(conn)
             working = set(songs_in_line(conn))
-            conditions = [db.SEARCHING_NAMES, "s.duplicate_of IS NULL"]
-            params: list = [db.containing(q), db.containing(q)]
+            # Search locally across exact recording IDs, titles, artist credits,
+            # versions, accent variants and conservatively matched typos.
+            # Keep explicit sort choices and cursor pagination intact.
+            ranking = "music_relevance(s.id,s.artist,s.title)"
+            if q:
+                conn.create_function(
+                    "music_relevance", 3,
+                    lambda song_id, artist, title: relevance(q, song_id, artist, title),
+                    deterministic=True,
+                )
+                conditions = [f"{ranking} IS NOT NULL", "s.duplicate_of IS NULL"]
+                if sort == "title":
+                    order = ranking
+            else:
+                conditions = ["s.duplicate_of IS NULL"]
+            params: list = []
             ready_lyrics = "l.status IN ('synced','instrumental')"
             if state == "set_aside":
                 conditions.append("s.is_music=0")
@@ -327,7 +345,8 @@ def add_routes(app, ctx) -> None:
                 "COALESCE(o.bpm,a.bpm) bpm,COALESCE(o.camelot,a.camelot) camelot,"
                 "a.bpm detected_bpm,a.camelot detected_camelot,o.bpm override_bpm,"
                 "o.camelot override_camelot,a.energy,a.grid_confidence,a.error analysis_error,"
-                f"a.version analysis_version,l.status lyric_status,{order} sort_value "
+                f"a.version analysis_version,l.status lyric_status,{order} sort_value,"
+                f"{ranking if q else 'NULL'} match_rank "
                 f"{joins} WHERE {page_where} ORDER BY {order}, s.id LIMIT ?",
                 [*page_params, limit + 1],
             ).fetchall()
@@ -352,6 +371,7 @@ def add_routes(app, ctx) -> None:
                     "lyric_status": row["lyric_status"],
                     "never": row["id"] in never,
                     "priority": row["processing_priority"] == 100,
+                    "match": match_label(row["match_rank"]) if q else None,
                     "readiness": readiness_of(row, never, working)
                     if Path(row["path"]).exists()
                     else {"status": "missing", "reason": "The file isn’t where it was."},
