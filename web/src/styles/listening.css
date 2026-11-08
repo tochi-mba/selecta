@@ -290,7 +290,7 @@
 }
 
 /* The listener controls decorative intensity, never the audio engine. */
-.listen-intensity { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+.listen-intensity { display: grid; gap: var(--space-2); min-width: 0; }
 .music-visualizer.focused { height: 124px; }
 .stage .music-visualizer.focused { height: min(20svh, 180px); }
 /* Reading the complete lyric sheet is deliberate and static: playback may
@@ -318,10 +318,112 @@
 
 /* A single native selector scales to six width-first visualizers without six
    competing buttons; all choices retain keyboard, zoom and touch access. */
-.spectrum-choice { display: grid; gap: var(--space-1); flex: 1 1 200px; min-width: 0; max-width: 100%; }
-.spectrum-choice select { width: min(100%, 360px); min-height: var(--control-height); }
+.spectrum-choice { display: grid; gap: var(--space-1); min-width: 0; max-width: 100%; }
+.spectrum-choice select { width: 100%; min-height: var(--control-height); }
 .spectrum-choice small { display: block; line-height: 1.5; max-width: 62ch; }
 .music-visualizer { border-radius: var(--radius-sm); }
 @media (forced-colors: active) {
   .music-visualizer { outline: 1px solid CanvasText; }
+}
+
+/* Listen disclosure: one compact, predictable row for each real choice.
+   Native controls never stretch alongside an explanatory paragraph. */
+.now .dj-controls { min-width: 0; }
+.now .dj-controls > .hint { margin-bottom: var(--space-3); }
+.now .listen-request-action { display: flex; flex-wrap: wrap; margin-block: var(--space-3); }
+.now .listen-view {
+  display: grid;
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-block: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+.now .listen-view legend {
+  margin: 0;
+  padding-inline: var(--space-1);
+  color: var(--text);
+  font-weight: 700;
+}
+.listen-display-toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  min-width: 0;
+}
+.listen-display-toggles button {
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-2);
+  white-space: normal;
+  text-align: center;
+  font-size: var(--text-sm);
+}
+.listen-display-toggles button:last-child { grid-column: 1 / -1; }
+.listen-display-note { margin: 0; line-height: 1.5; }
+.listen-spectrum-settings { display: grid; gap: var(--space-3); min-width: 0; }
+.listen-setting-label, .listen-spectrum-settings .spectrum-choice > span {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+.listen-spectrum-settings .spectrum-choice { gap: var(--space-2); }
+.listen-spectrum-settings .spectrum-choice small {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+.listen-intensity-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+.listen-intensity-choices button {
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-1);
+  white-space: normal;
+  font-size: var(--text-sm);
+}
+.listen-visualizer-help { min-width: 0; border-top: 1px solid var(--border); padding-top: var(--space-2); }
+.listen-visualizer-help summary {
+  display: list-item;
+  min-height: 44px;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--text-soft);
+}
+.listen-visualizer-help[open] .hint { margin: 0 0 var(--space-2); max-width: 48ch; }
+.listen-view-footer { display: flex; flex-wrap: wrap; min-width: 0; }
+.listen-view-footer button { min-height: 44px; }
+.listen-next-steering {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-block: var(--space-4);
+  margin-block: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.listen-next-steering h3 { margin: 0; font-size: var(--text-md); }
+.listen-next-steering .steer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+.listen-next-steering .steer button { min-width: 0; min-height: 44px; white-space: normal; }
+.listen-next-steering .steer-note { margin: 0; line-height: 1.5; }
+@media (max-width: 760px) {
+  .now .listen-view { margin-block: 0; }
+}
+@media (max-width: 420px) {
+  .now .listen-view { padding: var(--space-3); }
+}
+@media (forced-colors: active) {
+  .now .listen-view { border-color: CanvasText; }
+  .listen-visualizer-help { border-color: CanvasText; }
 }

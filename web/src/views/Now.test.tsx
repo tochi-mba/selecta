@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
@@ -116,6 +116,35 @@ describe('listener display options', () => {
     expect(screen.getByText('DJ controls')).toBeVisible();
     expect(screen.getByText('Display options')).toBeInTheDocument();
     await screen.findByText('Hello');
+  });
+
+  it('keeps the countdown compact, preserves choices and explains lyric focus', async () => {
+    window.localStorage.removeItem('selecta.listen');
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    const { container } = render(
+      <Now status={status()} mix={mix} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    fireEvent.click(container.querySelector('details.view-options > summary')!);
+    const panels = screen.getByRole('group', { name: 'Visible listening panels' });
+    expect(within(panels).getAllByRole('button')).toHaveLength(3);
+    const countdown = within(panels).getByRole('button', { name: 'Beat countdown' });
+    expect(countdown).toHaveAttribute('aria-pressed', 'true');
+    expect(countdown.parentElement).toHaveClass('listen-display-toggles');
+    fireEvent.click(countdown);
+    expect(countdown).toHaveAttribute('aria-pressed', 'false');
+    expect(JSON.parse(localStorage.getItem('selecta.listen') ?? '{}').timing).toBe(false);
+
+    fireEvent.click(within(panels).getByRole('button', { name: 'Lyrics focus' }));
+    expect(screen.getByText(/Lyrics focus temporarily hides the spectrum and countdown/)).toBeVisible();
+    expect(within(panels).getByRole('button', { name: 'Spectrum' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('group', { name: 'Visual intensity' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fullscreen lyrics' })).toBeEnabled();
+    expect(player.state.phase).toBe('idle');
+    window.localStorage.removeItem('selecta.listen');
   });
 });
 

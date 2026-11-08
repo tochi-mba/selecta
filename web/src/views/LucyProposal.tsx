@@ -144,7 +144,14 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
   const songs = snap.songs ?? [];
   const needed = Math.max(0, songs.length - 1);
   const ledger = shown.ledger;
-  const ready = Math.min(needed, ledger ? ledger.ready : (snap.seams ?? []).filter((seam) => isReadyStatus(seam.ready.status)).length);
+  // Count verified audio for each current *directed neighbouring pair*, not
+  // unrelated ledger rows or a stale aggregate from a previous order.
+  const readyPairs = new Set((ledger ? ledger.seams
+    .filter((seam) => seam.verified && isReadyStatus(seam.status))
+    : (snap.seams ?? []).filter((seam) => seam.ready.verified && isReadyStatus(seam.ready.status)))
+    .map((seam) => JSON.stringify([seam.a_occ, seam.b_occ])));
+  const ready = songs.slice(1).filter((song, index) =>
+    readyPairs.has(JSON.stringify([songs[index].occurrence, song.occurrence]))).length;
   const currentNumber = proposal.history.find((item) => item.id === currentId)?.number ?? revision?.number;
   const warnings = [...new Set(snap.evaluation?.warnings ?? [])];
 
@@ -204,7 +211,8 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
       <p className="lucy-summary">
         <b>{plural(songs.length, 'song')}</b> · {ready} of {plural(needed, 'transition')} ready · {durationText(snap)}
       </p>
-      {ledger && <p className="hint">Readiness checked {whenWords(ledger.checked_at) || 'just now'}{ledger.playable_now ? '. Every transition is ready to play now.' : '.'}</p>}
+      {ledger && <p className="hint">Readiness checked {whenWords(ledger.checked_at) || 'recently'}{ledger.playable_now && ready === needed ? '. Every directed transition has verified playable audio.' : '. Readiness is not guaranteed until checked again at approval.'}</p>}
+      {snap.ready_only && ready < needed && <p className="lucy-readiness-warning" role="status">Only {ready} of {needed} required directed transitions have verified audio. This strict plan cannot be saved as ready-only yet. Ask Lucy for a shorter ready route, or explicitly change the rule before approving.</p>}
 
       {approve(shown, isCurrent)}
 

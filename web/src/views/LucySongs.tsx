@@ -4,7 +4,7 @@ import type { EditOp, Ledger, LedgerSeam, ProposalSnapshot, PSeam, PSong, Select
 import { bpmWords, energyWords, isReadyStatus, keyDistanceWords, keyWords, seamWords, tempoGapWords } from '../lucy/words';
 import { Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
-import { energySummary, measuredEnergy } from '../ui/MusicObjects';
+import { energySummary, measuredEnergy, SongMotif } from '../ui/MusicObjects';
 
 /** The proposed songs in their exact order, each one known by its place in the mix rather than its
  * song, so the same song twice is still two rows. Between each pair is that transition's real state
@@ -138,6 +138,7 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
             <div className={`lucy-song ${songSelected ? 'is-selected' : ''} ${song.locked ? 'is-locked' : ''}`} data-occ={song.occurrence}>
               <span className="lucy-song-n" aria-hidden="true">{index + 1}</span>
               <div className="lucy-song-main">
+                <SongMotif songId={song.song_id} />
                 <p className="lucy-song-name"><span className="visually-hidden">Song {index + 1}: </span><b dir="auto">{name}</b> <span className="soft" dir="auto">{song.artist || 'Unknown artist'}</span></p>
                 <p className="lucy-song-facts">
                   {song.duration > 0 ? clock(song.duration) : 'Length unknown'} · {bpmWords(song.bpm)} · {keyWords(song.key)} · {energyWords(song.energy)}

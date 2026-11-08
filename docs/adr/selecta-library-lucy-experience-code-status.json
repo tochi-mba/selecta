@@ -1,0 +1,684 @@
+{
+  "schema_version": 1,
+  "programme": "Selecta Library + Lucy experience redesign (LX)",
+  "baseline_main_sha": "da942863e9f57e45653cfc2fda35fe463477b8be",
+  "as_of": "2026-11-08",
+  "scope": "ADR-0340–0365; LX-0340-01 through LX-0365-08",
+  "document_only": true,
+  "decision_summary": {
+    "Proposed": 26,
+    "Accepted": 0,
+    "Rejected": 0,
+    "Superseded": 0
+  },
+  "implementation_summary": {
+    "Not_started": 208,
+    "In_progress": 0,
+    "Implemented": 0
+  },
+  "independent_verification_summary": {
+    "No": 208,
+    "Yes": 0
+  },
+  "owner": "Unassigned",
+  "adrs": [
+    {
+    "number": 340,
+    "title": "Library experience charter, collection-first information architecture and task hierarchy",
+    "slug": "library-experience-charter-and-information-architecture",
+    "priority": "P0",
+    "phase": "Library foundation",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0226",
+      "ADR-0177",
+      "ADR-0291",
+      "ADR-0251"
+    ],
+      "tasks": [
+        {"id":"LX-0340-01","title":"Define collection-first jobs","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0340-02","title":"Inventory existing capabilities","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0340-03","title":"Choose navigation landmarks","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0340-04","title":"Separate discovery and management","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0340-05","title":"Preserve exact song identity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0340-06","title":"Specify mode parity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0340-07","title":"Specify first-run path","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0340-08","title":"Approve design charter","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 341,
+    "title": "Library header, truthful collection overview and readiness-oriented summary",
+    "slug": "library-header-counts-and-collection-overview",
+    "priority": "P0",
+    "phase": "Library hierarchy",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0226",
+      "ADR-0178",
+      "ADR-0180",
+      "ADR-0291"
+    ],
+      "tasks": [
+        {"id":"LX-0341-01","title":"Set header hierarchy","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0341-02","title":"Use canonical counters","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0341-03","title":"Explain readiness","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0341-04","title":"Design responsive counters","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0341-05","title":"Preserve number stability","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0341-06","title":"Avoid vanity metrics","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0341-07","title":"Link attention to action","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0341-08","title":"Validate overview value","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 342,
+    "title": "Library search field, result explanation and exact-recording retrieval",
+    "slug": "library-search-and-exact-recording-retrieval",
+    "priority": "P0",
+    "phase": "Library retrieval",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0251",
+      "ADR-0291",
+      "ADR-0153",
+      "ADR-0314"
+    ],
+      "tasks": [
+        {"id":"LX-0342-01","title":"Design prominent search","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0342-02","title":"Retain URL-state truth","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0342-03","title":"Explain search matches","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0342-04","title":"Protect exact IDs","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0342-05","title":"Stabilise async search","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0342-06","title":"Support clear and reset","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0342-07","title":"Budget retrieval latency","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0342-08","title":"Review new search affordances","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 343,
+    "title": "Library filters, sorting and optional musical-query depth",
+    "slug": "library-filters-sorting-and-musical-query-depth",
+    "priority": "P0",
+    "phase": "Library retrieval",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0291",
+      "ADR-0251",
+      "ADR-0226",
+      "ADR-0153"
+    ],
+      "tasks": [
+        {"id":"LX-0343-01","title":"Prioritise frequent filters","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0343-02","title":"Make active state obvious","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0343-03","title":"Preserve supported sorting","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0343-04","title":"Specify advanced panel","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0343-05","title":"Explain unknown musical facts","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0343-06","title":"Keep scope on layout switches","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0343-07","title":"Design zero-result recovery","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0343-08","title":"Validate musical refinement","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 344,
+    "title": "Library list-row geometry, metadata hierarchy and dense scanning",
+    "slug": "library-list-rows-and-dense-scanning",
+    "priority": "P0",
+    "phase": "Library presentation",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0291",
+      "ADR-0275",
+      "ADR-0226",
+      "ADR-0245"
+    ],
+      "tasks": [
+        {"id":"LX-0344-01","title":"Define track identity geometry","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0344-02","title":"Align facts and column labels","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0344-03","title":"Make numeric scans stable","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0344-04","title":"Redesign row action hierarchy","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0344-05","title":"Specify density variants","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0344-06","title":"Handle wrapping accessibly","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0344-07","title":"Preserve stable IDs","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0344-08","title":"Validate scan efficiency","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 345,
+    "title": "Library collection cards, meaningful artwork and browsing mode",
+    "slug": "library-collection-card-view-and-meaningful-artwork",
+    "priority": "P1",
+    "phase": "Library presentation",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0226",
+      "ADR-0177",
+      "ADR-0245",
+      "ADR-0309"
+    ],
+      "tasks": [
+        {"id":"LX-0345-01","title":"Define purpose of collection cards","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0345-02","title":"Use trustworthy visual assets","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0345-03","title":"Maintain song identity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0345-04","title":"Keep actionable readiness","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0345-05","title":"Establish grid responsiveness","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0345-06","title":"Preserve mode parity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0345-07","title":"Respect large libraries","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0345-08","title":"Validate actual discovery benefit","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 346,
+    "title": "Library per-recording action hierarchy and contextual disclosure",
+    "slug": "library-contextual-track-action-hierarchy",
+    "priority": "P0",
+    "phase": "Library interaction",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0258",
+      "ADR-0267",
+      "ADR-0291",
+      "ADR-0226"
+    ],
+      "tasks": [
+        {"id":"LX-0346-01","title":"Map actions by readiness","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0346-02","title":"Limit visual action competition","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0346-03","title":"Keep start-mix confirmation","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0346-04","title":"Clarify Add versus Play next","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0346-05","title":"Preserve analysis semantics","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0346-06","title":"Make menus fully accessible","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0346-07","title":"Guard async duplicates","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0346-08","title":"Validate novice meaning","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 347,
+    "title": "Library explicit selection mode, exact scope and batch feedback",
+    "slug": "library-bulk-selection-scope-and-feedback",
+    "priority": "P0",
+    "phase": "Library interaction",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0258",
+      "ADR-0267",
+      "ADR-0291",
+      "ADR-0314"
+    ],
+      "tasks": [
+        {"id":"LX-0347-01","title":"Design zero-selection affordance","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0347-02","title":"Declare exact selection scope","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0347-03","title":"Create contextual action rail","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0347-04","title":"Show selected recordings safely","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0347-05","title":"Keep selection invalidation","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0347-06","title":"Restore focus on exit","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0347-07","title":"Preserve server atomicity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0347-08","title":"Test selection confidence","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 348,
+    "title": "Library song inspector, musical metadata and measurement provenance",
+    "slug": "library-song-inspector-and-metadata-provenance",
+    "priority": "P1",
+    "phase": "Library detail",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0227",
+      "ADR-0154",
+      "ADR-0291",
+      "ADR-0315"
+    ],
+      "tasks": [
+        {"id":"LX-0348-01","title":"Design inspector identity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0348-02","title":"Separate facts from controls","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0348-03","title":"Distinguish origin of values","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0348-04","title":"Explain readiness reason","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0348-05","title":"Organise corrections","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0348-06","title":"Keep source and advanced facts","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0348-07","title":"Preserve sheet focus and history","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0348-08","title":"Validate inspector confidence","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 349,
+    "title": "Library readiness explanations, correction safety and recording management",
+    "slug": "library-readiness-corrections-and-guarded-management",
+    "priority": "P0",
+    "phase": "Library detail",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0227",
+      "ADR-0252",
+      "ADR-0258",
+      "ADR-0291"
+    ],
+      "tasks": [
+        {"id":"LX-0349-01","title":"Make corrections predictable","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0349-02","title":"Preserve measured values","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0349-03","title":"Explain transition rebuild impact","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0349-04","title":"Clarify priority meaning","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0349-05","title":"Clarify exclusion and set-aside","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0349-06","title":"Handle errors without loss","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0349-07","title":"Keep advanced file context truthful","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0349-08","title":"Validate no-source-mutation promise","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 350,
+    "title": "Library 20,000-song paging, scroll restoration and input performance",
+    "slug": "library-large-scale-paging-scroll-and-performance",
+    "priority": "P0",
+    "phase": "Library robustness",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0017",
+      "ADR-0062",
+      "ADR-0105",
+      "ADR-0291"
+    ],
+      "tasks": [
+        {"id":"LX-0350-01","title":"Baseline existing performance","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0350-02","title":"Preserve cursor semantics","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0350-03","title":"Protect visible-page refresh","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0350-04","title":"Preserve focus on reorder","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0350-05","title":"Stabilise layout shift","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0350-06","title":"Budget rendered work","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0350-07","title":"Test optional virtualisation","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0350-08","title":"Set release thresholds","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 351,
+    "title": "Library mobile/tablet presentation, high zoom and accessible retrieval",
+    "slug": "library-mobile-tablet-zoom-and-accessibility",
+    "priority": "P0",
+    "phase": "Library responsive",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0233",
+      "ADR-0234",
+      "ADR-0298",
+      "ADR-0291"
+    ],
+      "tasks": [
+        {"id":"LX-0351-01","title":"Define content-driven breakpoints","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0351-02","title":"Retain identity on narrow rows","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0351-03","title":"Keep filter interaction reachable","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0351-04","title":"Protect selection rail","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0351-05","title":"Design details sheet on mobile","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0351-06","title":"Enforce contrast and targets","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0351-07","title":"Test assistive technology","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0351-08","title":"Validate complete mobile journey","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 352,
+    "title": "Library empty, loading, stale, offline and recovery state system",
+    "slug": "library-empty-loading-stale-and-error-experiences",
+    "priority": "P1",
+    "phase": "Library robustness",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0232",
+      "ADR-0279",
+      "ADR-0297",
+      "ADR-0226"
+    ],
+      "tasks": [
+        {"id":"LX-0352-01","title":"Enumerate complete states","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0352-02","title":"Shape initial placeholders","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0352-03","title":"Clarify empty versus no match","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0352-04","title":"Represent stale data","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0352-05","title":"Support retry without loss","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0352-06","title":"Respect Still and reduced motion","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0352-07","title":"Announce asynchronous changes","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0352-08","title":"Review all state screenshots","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 353,
+    "title": "Make a Mix front door: Quick Play and Create with Lucy as clear choices",
+    "slug": "make-a-mix-quick-play-and-lucy-entry-architecture",
+    "priority": "P0",
+    "phase": "Make a Mix entry",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0216",
+      "ADR-0268",
+      "ADR-0283",
+      "ADR-0300",
+      "ADR-0301"
+    ],
+      "tasks": [
+        {"id":"LX-0353-01","title":"Prototype two creation paths","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0353-02","title":"Keep Quick Play efficient","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0353-03","title":"Create visible Lucy entry","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0353-04","title":"Define prompt handoff","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0353-05","title":"Reuse truthful readiness gate","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0353-06","title":"Preserve shell routes","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0353-07","title":"Specify balanced mobile layout","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0353-08","title":"Validate decision confidence","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 354,
+    "title": "Make a Mix mood discovery, preset choices and natural-language handoff",
+    "slug": "make-a-mix-moods-discovery-and-creation-intent",
+    "priority": "P1",
+    "phase": "Make a Mix entry",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0216",
+      "ADR-0259",
+      "ADR-0283",
+      "ADR-0321"
+    ],
+      "tasks": [
+        {"id":"LX-0354-01","title":"Redesign mood-card hierarchy","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0354-02","title":"Keep suggestion provenance","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0354-03","title":"Clarify three action paths","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0354-04","title":"Retain flexible durations","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0354-05","title":"Enable Lucy handoff safely","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0354-06","title":"Handle insufficient candidates","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0354-07","title":"Reduce optional clutter","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0354-08","title":"Validate creation continuity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 355,
+    "title": "Lucy desktop workspace: conversation, current proposal and optional history",
+    "slug": "lucy-desktop-proposal-conversation-workspace",
+    "priority": "P0",
+    "phase": "Lucy workspace",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0301",
+      "ADR-0306",
+      "ADR-0307",
+      "ADR-0233"
+    ],
+      "tasks": [
+        {"id":"LX-0355-01","title":"Define workspace width rules","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0355-02","title":"Simplify visual hierarchy","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0355-03","title":"Keep current proposal persistent","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0355-04","title":"Manage independent scroll","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0355-05","title":"Integrate optional history","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0355-06","title":"Preserve selection across panes","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0355-07","title":"Respect global chrome","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0355-08","title":"Validate creator workspace","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 356,
+    "title": "Lucy conversation readability, assistant explanations and direct user control",
+    "slug": "lucy-readable-transcript-and-conversational-control",
+    "priority": "P0",
+    "phase": "Lucy conversation",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0302",
+      "ADR-0303",
+      "ADR-0308",
+      "ADR-0309"
+    ],
+      "tasks": [
+        {"id":"LX-0356-01","title":"Define typographic rhythm","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0356-02","title":"Preserve safe rendering","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0356-03","title":"Separate conversation from events","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0356-04","title":"Clarify message states","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0356-05","title":"Protect user scroll intent","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0356-06","title":"Offer concise corrections","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0356-07","title":"Control announcements","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0356-08","title":"Validate response comprehension","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 357,
+    "title": "Lucy prompt composer, scoped questions and mobile keyboard safety",
+    "slug": "lucy-composer-context-and-mobile-keyboard",
+    "priority": "P0",
+    "phase": "Lucy conversation",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0307",
+      "ADR-0308",
+      "ADR-0329",
+      "ADR-0334"
+    ],
+      "tasks": [
+        {"id":"LX-0357-01","title":"Make composer clearly primary","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0357-02","title":"Keep exact scope visible","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0357-03","title":"Protect Send semantics","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0357-04","title":"Retain unsent drafts per thread","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0357-05","title":"Expose running and Stop safely","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0357-06","title":"Arbitrate keyboard and player","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0357-07","title":"Keep voice optional and inert","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0357-08","title":"Validate touch and AT parity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 358,
+    "title": "Lucy visible activity, genuine progress and music-specific tool details",
+    "slug": "lucy-music-specific-activity-and-tool-cards",
+    "priority": "P0",
+    "phase": "Lucy activity",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0303",
+      "ADR-0304",
+      "ADR-0305",
+      "ADR-0332"
+    ],
+      "tasks": [
+        {"id":"LX-0358-01","title":"Group meaningful milestones","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0358-02","title":"Keep tool data truthful","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0358-03","title":"Refine compact card hierarchy","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0358-04","title":"Visualise musical steps","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0358-05","title":"Handle progress responsibly","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0358-06","title":"Make permission actions distinct","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0358-07","title":"Respect motion preferences","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0358-08","title":"Validate working-state trust","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 359,
+    "title": "Lucy current proposal summary, constraints and verified readiness",
+    "slug": "lucy-proposal-status-constraints-and-readiness",
+    "priority": "P0",
+    "phase": "Lucy proposal",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0317",
+      "ADR-0318",
+      "ADR-0319",
+      "ADR-0323",
+      "ADR-0328"
+    ],
+      "tasks": [
+        {"id":"LX-0359-01","title":"Present truthful lifecycle","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0359-02","title":"Promote current revision identity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0359-03","title":"Summarise song and duration facts","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0359-04","title":"Count verified seams correctly","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0359-05","title":"Expose required versus preferred rules","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0359-06","title":"Explain infeasible strict plans","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0359-07","title":"Refresh approval proof","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0359-08","title":"Validate readiness understanding","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 360,
+    "title": "Lucy exact song and transition timeline with contextual editing",
+    "slug": "lucy-song-seam-timeline-and-contextual-editing",
+    "priority": "P0",
+    "phase": "Lucy proposal",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0320",
+      "ADR-0322",
+      "ADR-0324",
+      "ADR-0327",
+      "ADR-0306"
+    ],
+      "tasks": [
+        {"id":"LX-0360-01","title":"Design song-first order","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0360-02","title":"Render directed seams between songs","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0360-03","title":"Show truthful energy shape","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0360-04","title":"Make controls reachable","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0360-05","title":"Track repeated songs exactly","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0360-06","title":"Explain transition evidence","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0360-07","title":"Preserve focus after mutation","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0360-08","title":"Test comprehension of musical flow","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 361,
+    "title": "Lucy proposal revisions, musical diff, critique and safe restoration",
+    "slug": "lucy-revision-comparison-critiques-and-undo",
+    "priority": "P1",
+    "phase": "Lucy proposal",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0323",
+      "ADR-0324",
+      "ADR-0325",
+      "ADR-0306"
+    ],
+      "tasks": [
+        {"id":"LX-0361-01","title":"Identify current versus historical","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0361-02","title":"Create compact musical diff","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0361-03","title":"Highlight readiness impact","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0361-04","title":"Explain user critiques","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0361-05","title":"Preserve locked occurrences","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0361-06","title":"Make restore safe","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0361-07","title":"Keep selection and focus stable","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0361-08","title":"Validate revision decision making","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 362,
+    "title": "Lucy approval, draft commit, save-and-play confirmation and audio ownership",
+    "slug": "lucy-approval-commit-and-audio-focus-ux",
+    "priority": "P0",
+    "phase": "Lucy approval",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0326",
+      "ADR-0328",
+      "ADR-0300",
+      "ADR-0270"
+    ],
+      "tasks": [
+        {"id":"LX-0362-01","title":"Distinguish approval actions","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0362-02","title":"Show exact preflight facts","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0362-03","title":"Guard active playback","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0362-04","title":"Preserve idempotent commit","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0362-05","title":"Explain uncertain outcomes","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0362-06","title":"Block invalid ready-only approval","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0362-07","title":"Link to existing editor/drafts","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0362-08","title":"Validate informed consent","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 363,
+    "title": "Lucy history, recovery, optional provider notices and conversation continuity",
+    "slug": "lucy-conversation-history-recovery-and-privacy-controls",
+    "priority": "P1",
+    "phase": "Lucy recovery",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0302",
+      "ADR-0331",
+      "ADR-0334",
+      "ADR-0330"
+    ],
+      "tasks": [
+        {"id":"LX-0363-01","title":"Improve conversation discovery","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0363-02","title":"Separate archive and delete","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0363-03","title":"Protect committed drafts","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0363-04","title":"Persist per-thread context","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0363-05","title":"Show offline recovery paths","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0363-06","title":"Keep provider facts honest","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0363-07","title":"Preserve Quick Mix fallback","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0363-08","title":"Validate recovery confidence","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 364,
+    "title": "Library + Lucy shared art direction, theme, motion and accessibility contract",
+    "slug": "library-lucy-shared-visual-language-and-accessibility",
+    "priority": "P0",
+    "phase": "Shared design",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0200",
+      "ADR-0202",
+      "ADR-0233",
+      "ADR-0234",
+      "ADR-0275",
+      "ADR-0309",
+      "ADR-0336"
+    ],
+      "tasks": [
+        {"id":"LX-0364-01","title":"Define area-specific design tokens","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0364-02","title":"Standardise song identity motifs","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0364-03","title":"Tune information hierarchy","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0364-04","title":"Specify semantic state palette","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0364-05","title":"Apply practical target sizes","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0364-06","title":"Document motion rules","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0364-07","title":"Protect international text","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0364-08","title":"Approve visual cohesiveness","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    },
+    {
+    "number": 365,
+    "title": "Library + Lucy redesign governance, evidence parity and independent GO/NO-GO",
+    "slug": "library-lucy-evidence-parity-and-release-gates",
+    "priority": "P0",
+    "phase": "Verification",
+    "decision": "Proposed",
+    "owner": null,
+    "related_owners": [
+      "ADR-0239",
+      "ADR-0240",
+      "ADR-0271",
+      "ADR-0299",
+      "ADR-0336",
+      "ADR-0339"
+    ],
+      "tasks": [
+        {"id":"LX-0365-01","title":"Record decision status correctly","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0365-02","title":"Publish complete task catalogue","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0365-03","title":"Keep per-task evidence fields","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0365-04","title":"Keep machine status in parity","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0365-05","title":"Crosswalk historical owners","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0365-06","title":"Require independent visual and AT proof","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0365-07","title":"Require audio and performance proof","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null},
+        {"id":"LX-0365-08","title":"Record independent release decision","implementation":"Not started","independently_verified":false,"owner":null,"implementing_pr":null,"implementing_sha":null,"evidence":null,"reviewer":null,"review_date":null,"platform":null}
+      ]
+    }
+  ]
+}

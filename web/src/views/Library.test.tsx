@@ -470,3 +470,42 @@ describe('contextual selection controls', () => {
     expect(calls.filter((call) => call.path === '/library/batch')).toHaveLength(0);
   });
 });
+
+describe('Library music-first retrieval', () => {
+  it('makes duplicate recording IDs visible in both rows and song details', async () => {
+    fakeBackend({ 'GET /library': page(row(1, 'Same title'), row(2, 'Same title')) });
+    show();
+    expect(await screen.findAllByText('Same title')).toHaveLength(2);
+    expect(screen.getByText('Recording 1')).toBeInTheDocument();
+    expect(screen.getByText('Recording 2')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Details for Same title (song 2)' }));
+    expect(screen.getByText('Recording ID 2')).toBeInTheDocument();
+  });
+
+  it('distinguishes analysed songs from mix-ready songs without promising rendered transitions', async () => {
+    fakeBackend({ 'GET /library': page(row(1, 'First')) });
+    show();
+    await screen.findByText('First');
+    expect(screen.getByText(/Analysed means audio has been measured/)).toBeInTheDocument();
+    expect(screen.getByText(/does not mean transitions are already rendered/)).toBeInTheDocument();
+  });
+
+  it('shows exact current flags before confirming a batch edit', async () => {
+    const calls = fakeBackend({ 'GET /library': page({ ...row(1, 'First'), priority: true }) });
+    show();
+    await screen.findByText('First');
+    await userEvent.click(screen.getByRole('checkbox', { name: /Select recording First/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove priority' }));
+    const dialog = screen.getByRole('dialog', { name: 'Apply batch Library action?' });
+    expect(within(dialog).getByText(/ID 1; priority on; excluded no/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel - change nothing' }));
+    expect(calls.some((call) => call.method === 'POST' && call.path === '/library/batch')).toBe(false);
+  });
+
+  it('offers an actual next step for a library without source music', async () => {
+    fakeBackend({ 'GET /library': page() });
+    show(status({ counts: { ...status().counts, music: 0, analysed: 0, ready: 0 } }));
+    expect(await screen.findByRole('heading', { name: 'Your library is empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add music' })).toBeEnabled();
+  });
+});

@@ -252,3 +252,35 @@ button[aria-disabled='true'] { cursor: progress; }
 @media (prefers-reduced-motion: reduce) {
   .content > main.page { animation: none; }
 }
+
+/* Make a Mix has two independently actionable paths. Never place the optional
+   assistant above, or in the way of, one-tap Quick Play. */
+.mixes .mix-paths {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  gap: var(--space-4);
+  align-items: stretch;
+  margin-block: var(--space-5);
+}
+.mixes .mix-paths > section {
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+.mixes .mix-quick.hero { margin: 0; }
+.mixes .mix-path-label { font: var(--type-section); margin: 0 0 var(--space-2); }
+.mixes .mix-create { display: flex; flex-direction: column; align-items: start; gap: var(--space-3); }
+.mixes .mix-create h2 { margin: 0; font: var(--type-section); }
+.mixes .mix-create p { margin: 0; max-width: 48ch; }
+.mixes .mix-create .button { max-width: 100%; white-space: normal; text-align: center; }
+@media (max-width: 850px) {
+  .mixes .mix-paths { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 420px) {
+  .mixes .mix-paths > section { padding: var(--space-3); }
+}
+@media (forced-colors: active) {
+  .mixes .mix-paths > section { border: 1px solid CanvasText; }
+}

@@ -456,3 +456,32 @@ describe('compact Explore comparison and optional detail', () => {
     expect(article.getByText('Vocal rides and long blends')).toBeVisible();
   });
 });
+
+describe('Quick Play and optional Lucy creation', () => {
+  it('shows two distinct choices while keeping Quick Play independent of Lucy', async () => {
+    const calls = fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', '')] });
+    show();
+    const quick = screen.getByRole('region', { name: 'Listen now, shape later' });
+    const lucy = screen.getByRole('region', { name: 'Create with Lucy' });
+    await waitFor(() => expect(within(quick).getByRole('button', { name: 'Play' })).toBeEnabled());
+    expect(within(lucy).getByRole('link', { name: 'Plan a mix with Lucy' })).toHaveAttribute('href', '/mixes/lucy');
+    await screen.findByText('Selecta’s pick');
+    expect(calls.every((call) => call.method === 'GET')).toBe(true);
+  });
+
+  it('offers a feeling-specific, editable Lucy prompt without sending it', async () => {
+    const calls = fakeBackend({ 'GET /vibes': [
+      card('pick', 'Selecta’s pick', ''),
+      card('peak', 'Peak time', 'The moment'),
+    ] });
+    show();
+    const heading = await screen.findByRole('heading', { name: 'Peak time' });
+    const article = within(heading.closest('article')!);
+    fireEvent.click(article.getByText('Why Peak time? More details'));
+    const link = article.getByRole('link', { name: 'Use this feeling with Lucy' });
+    const destination = new URL(link.getAttribute('href')!, 'http://localhost');
+    expect(destination.pathname).toBe('/mixes/lucy');
+    expect(destination.searchParams.get('prompt')).toContain('Peak time feeling');
+    expect(calls.some((call) => call.path.includes('/lucy/') || call.method === 'POST')).toBe(false);
+  });
+});
