@@ -220,6 +220,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         draggable
         data-handle
         aria-label={`Reorder ${item.title}`}
+        aria-description={`Song occurrence ${item.position + 1} of ${total}`}
         aria-pressed={grabbed}
         aria-keyshortcuts="Space ArrowUp ArrowDown"
         title="Drag to move, or press Space and then use the arrow keys"
@@ -234,10 +235,12 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
       </span>
       <span className="count">{item.position + 1}</span>
       <div className="song-name">
-        <button className="song-select" aria-current={selected ? 'true' : undefined} onClick={() => actions.current.selectSong(rowKey)}>
-          <SongMotif songId={item.song_id} /><b>{item.title}</b>
+        <button className="song-select" aria-current={selected ? 'true' : undefined}
+          aria-description={`Song occurrence ${item.position + 1} of ${total}`}
+          onClick={() => actions.current.selectSong(rowKey)}>
+          <SongMotif songId={item.song_id} /><b dir="auto" title={item.title}>{item.title}</b>
         </button>
-        <span>{item.artist}</span>
+        <span dir="auto" title={item.artist}>{item.artist}</span>
         <RequestTag item={item} />
         {item.locked && <span className="locked-badge"><Icon name="lock" width={14} height={14} /> Locked</span>}
       </div>
