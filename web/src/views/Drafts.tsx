@@ -60,6 +60,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   const [deleting, setDeleting] = useState<DraftInfo | null>(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'recent' | 'name' | 'readiness'>('recent');
+  const [visibleCount, setVisibleCount] = useState(40);
   const heading = useRef<HTMLHeadingElement>(null);
   const wasRenaming = useRef<number | null>(null);
   const readVersion = useRef(0);
@@ -209,11 +210,11 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
           <div className="draft-tools">
             <label>
               <span>Find a draft</span>
-              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name" />
+              <input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setVisibleCount(40); }} placeholder="Search by name" />
             </label>
             <label>
               <span>Sort drafts</span>
-              <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}>
+              <select value={sort} onChange={(event) => { setSort(event.target.value as typeof sort); setVisibleCount(40); }}>
                 <option value="recent">Newest first</option>
                 <option value="name">Name</option>
                 <option value="readiness">Most ready</option>
@@ -238,12 +239,12 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
         {drafts.length > 0 && shownDrafts.length === 0 && (
           <div className="empty-state">
             <h3>No drafts match “{query.trim()}”.</h3>
-            <button onClick={() => setQuery('')}>Clear search</button>
+            <button onClick={() => { setQuery(''); setVisibleCount(40); }}>Clear search</button>
           </div>
         )}
         {shownDrafts.length > 0 && (
           <ul className={shownDrafts.length > 20 ? 'draft-list density long' : 'draft-list density'}>
-            {shownDrafts.map((draft) => {
+            {shownDrafts.slice(0, visibleCount).map((draft) => {
               const facts = draftReadiness(draft);
               const failure = failures[draft.id];
               return (
@@ -294,6 +295,14 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
               );
             })}
           </ul>
+        )}
+        {shownDrafts.length > visibleCount && (
+          <button
+            className="drafts-show-more"
+            onClick={() => setVisibleCount((count) => count + 40)}
+          >
+            Show 40 more drafts ({shownDrafts.length - visibleCount} remaining)
+          </button>
         )}
       </section>
       {deleting && (

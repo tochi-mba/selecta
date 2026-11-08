@@ -64,6 +64,26 @@ type Planned = {
   key: string;
 };
 
+/** Keep the playing *occurrence*, not the first matching recording ID.
+ * An artist can deliberately repeat the same track later in a set. If the
+ * sequence changes while playing, prefer the nearest remaining occurrence
+ * instead of jumping to the first copy of that track.
+ */
+export function audiblePosition(mix: Pick<MixItem, 'song_id'>[], songId: number, previous: number): number {
+  if (mix[previous]?.song_id === songId) return previous;
+  let nearest = -1;
+  let gap = Infinity;
+  for (let index = 0; index < mix.length; index += 1) {
+    if (mix[index].song_id !== songId) continue;
+    const distance = Math.abs(index - previous);
+    if (distance < gap) {
+      gap = distance;
+      nearest = index;
+    }
+  }
+  return nearest;
+}
+
 export class SetPlayer {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -386,7 +406,7 @@ export class SetPlayer {
     const current = this.current;
     // pressed again while the last press is still loading: carry on from where that was going
     if (!current && this.state.phase !== 'loading') return;
-    const position = current ? this.getMix().findIndex((item) => item.song_id === current.songId) : this.state.position;
+    const position = current ? audiblePosition(this.getMix(), current.songId, current.position) : this.state.position;
     const following = this.getMix()[position + 1];
     if (!following) return;
     if (!current) {
@@ -416,7 +436,7 @@ export class SetPlayer {
       this.update({ notice: 'A transition is playing. This can go back once it’s finished.' });
       return;
     }
-    const position = this.getMix().findIndex((item) => item.song_id === current.songId);
+    const position = audiblePosition(this.getMix(), current.songId, current.position);
     if (this.songTime() > RESTART_WITHIN || position <= 0) await this.seek(0);
     else await this.playFrom(position - 1);
   }
@@ -425,6 +445,13 @@ export class SetPlayer {
    * the player asks for another further on rather than playing one late. */
   async seek(seconds: number) {
     mainPlayerTouched();
+    // A deliberate seek takes ownership from an audition. Otherwise a
+    // preview may continue while playFrom wakes the main AudioContext.
+    stopPreviewsOnly();
+    if (!Number.isFinite(seconds)) {
+      this.update({ notice: 'That seek position is not valid.' });
+      return;
+    }
     const current = this.current;
     if (!current) {
       if (this.state.phase === 'idle') this.update({ songTime: Math.max(seconds, 0) });
@@ -436,7 +463,7 @@ export class SetPlayer {
       return;
     }
     const wasPaused = this.state.phase === 'paused';
-    const position = this.getMix().findIndex((item) => item.song_id === current.songId);
+    const position = audiblePosition(this.getMix(), current.songId, current.position);
     if (position < 0) return;
     const target = Math.min(Math.max(seconds, 0), Math.max(current.duration - 1, 0));
     await this.playFrom(position, target);
@@ -461,6 +488,7 @@ export class SetPlayer {
   /** Jump to just before the next seam. Past that point, or with no seam ready, go straight on. */
   async skip() {
     mainPlayerTouched();
+    stopPreviewsOnly();
     const mix = this.getMix();
     const current = this.current;
     if (!current) return;
@@ -535,7 +563,7 @@ export class SetPlayer {
         if (!response.ok) return;
         const fresh = await response.json() as SeamState;
         const mix = this.getMix();
-        const position = mix.findIndex((item) => item.song_id === current.songId);
+        const position = audiblePosition(mix, current.songId, current.position);
         const next = mix[position + 1];
         if (controller.signal.aborted || this.current !== current || position < 0
           || next?.song_id !== nextItem.song_id || next.seam?.state.key !== seam.key
@@ -576,7 +604,7 @@ export class SetPlayer {
 
     const current = this.current;
     // the mix may have been edited, so find our place by song
-    const found = mix.findIndex((item) => item.song_id === current.songId);
+    const found = audiblePosition(mix, current.songId, current.position);
     if (found >= 0) current.position = found;
     const nextItem = mix[current.position + 1];
     const listedSeam = nextItem?.seam?.state;
@@ -656,7 +684,7 @@ export class SetPlayer {
     }
     if (this.planned || this.current !== current) return;
     const liveMix = this.getMix();
-    const livePosition = liveMix.findIndex((item) => item.song_id === current.songId);
+    const livePosition = audiblePosition(liveMix, current.songId, current.position);
     const liveNext = liveMix[livePosition + 1];
     if (livePosition < 0 || liveNext?.song_id !== nextItem.song_id
       || liveNext.seam?.state.key !== seam.key
@@ -726,7 +754,7 @@ export class SetPlayer {
     }
     if (this.current !== current || this.planned) return;
     const liveMix = this.getMix();
-    const livePosition = liveMix.findIndex((entry) => entry.song_id === current.songId);
+    const livePosition = audiblePosition(liveMix, current.songId, current.position);
     if (livePosition < 0 || liveMix[position]?.song_id !== item.song_id || position <= livePosition) {
       this.ending = false;
       return;

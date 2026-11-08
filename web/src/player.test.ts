@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SetPlayer } from './player';
+import { audioOwner, takeAudio } from './audio/focus';
 import { fakeBackend, seam, songs } from './test/backend';
 
 class FakeAudio {
@@ -105,6 +106,59 @@ describe('playing through a mix', () => {
     await settle();
     expect(player.state.phase).toBe('idle');
     expect(player.state.notice).toContain('wouldn’t load');
+  });
+
+  it('keeps the later occurrence when the same recording appears twice', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'), seam('none', 'b'), seam('none', 'c'));
+    mix[0].song_id = mix[2].song_id;
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(2);
+    tick(player);
+    expect(player.state.position).toBe(2);
+    await player.next();
+    expect(player.state.position).toBe(3);
+  });
+
+  it('previous and seek do not jump to the first copy of the same song', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'), seam('none', 'b'), seam('none', 'c'));
+    mix[0].song_id = mix[2].song_id;
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(2);
+    await player.seek(15);
+    expect(player.state.position).toBe(2);
+    await player.playFrom(2);
+    await player.previous();
+    expect(player.state.position).toBe(1);
+  });
+
+  it('manual seek and skip end a preview before controlling the mix', async () => {
+    audioBackend([]);
+    const mix = songs(seam('none', 'a'));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    const stop = vi.fn();
+    takeAudio({ id: 'test-audition-seek', label: 'Preview', stop });
+    await player.seek(12);
+    expect(stop).toHaveBeenCalledOnce();
+    expect(audioOwner()).toBeNull();
+
+    const stopSecond = vi.fn();
+    takeAudio({ id: 'test-audition-skip', label: 'Another preview', stop: stopSecond });
+    await player.skip();
+    expect(stopSecond).toHaveBeenCalledOnce();
+    expect(audioOwner()).toBeNull();
+  });
+
+  it('rejects non-finite seeking without changing the playback position', async () => {
+    audioBackend([]);
+    player = new SetPlayer(() => songs(), () => {});
+    await player.playFrom(0);
+    const before = player.state.position;
+    await player.seek(Number.NaN);
+    expect(player.state.position).toBe(before);
+    expect(player.state.notice).toMatch(/not valid/);
   });
 
   it('asks for the next seam once, even if it’s already waiting in line', async () => {

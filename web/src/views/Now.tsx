@@ -109,6 +109,11 @@ const CANT_SEEK = 'You can’t move around during a transition, because it plays
  * something else. */
 function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDetail; time: number; seamAt: number | null; onSeek: (seconds: number) => void; seekBlocked?: boolean }) {
   const noteId = useId();
+  const duration = Number.isFinite(detail.duration) && detail.duration > 0 ? detail.duration : 0;
+  const safeTime = Math.min(Math.max(Number.isFinite(time) ? time : 0, 0), duration);
+  const unavailable = duration === 0;
+  const locked = !!seekBlocked || unavailable;
+  const unavailableWords = 'The duration of this song is not known yet, so seeking is unavailable.';
   // A pointer drag is a proposal, not an actual seek. Keep the real playhead
   // anchored to the audio clock until the pointer is released and the player accepts it.
   const [seekPreview, setSeekPreview] = useState<number | null>(null);
@@ -118,7 +123,7 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
     setSeekPreview(null);
   }, [detail.id, seekBlocked]);
   const percent = (seconds: number) =>
-    100 * Math.min(Math.max(Number.isFinite(seconds) ? seconds : 0, 0), Math.max(detail.duration, 0)) / Math.max(detail.duration, 1);
+    100 * Math.min(Math.max(Number.isFinite(seconds) ? seconds : 0, 0), duration) / Math.max(duration, 1);
   const shape = useMemo(() => {
     const step = 100 / Math.max(detail.peaks.length, 1);
     return detail.peaks
@@ -133,14 +138,14 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
   const clip = `played-${detail.id}`;
   const pointAt = (event: PointerEvent<HTMLDivElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
-    if (!box.width) return null;
-    return Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1) * detail.duration;
+    if (!box.width || unavailable) return null;
+    return Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1) * duration;
   };
   const beginSeek = (event: PointerEvent<HTMLDivElement>) => {
     // Real browsers expose isPrimary; tolerate older PointerEvent shims that omit it.
     if (event.isPrimary === false || event.button !== 0) return;
-    if (seekBlocked) {
-      announce(CANT_SEEK);
+    if (locked) {
+      announce(unavailable ? unavailableWords : CANT_SEEK);
       return;
     }
     const target = pointAt(event);
@@ -159,33 +164,33 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
     dragging.current = null;
     const target = pointAt(event);
     setSeekPreview(null);
-    if (!seekBlocked && target !== null) onSeek(target);
+    if (!locked && target !== null) onSeek(target);
   };
   const cancelSeek = () => {
     dragging.current = null;
     setSeekPreview(null);
   };
   const keys = (event: KeyboardEvent<HTMLDivElement>) => {
-    const moves: Record<string, number> = { ArrowLeft: time - 5, ArrowDown: time - 5, ArrowRight: time + 5, ArrowUp: time + 5, Home: 0, End: detail.duration - 1, PageDown: time - 30, PageUp: time + 30 };
+    const moves: Record<string, number> = { ArrowLeft: safeTime - 5, ArrowDown: safeTime - 5, ArrowRight: safeTime + 5, ArrowUp: safeTime + 5, Home: 0, End: Math.max(duration - 1, 0), PageDown: safeTime - 30, PageUp: safeTime + 30 };
     if (moves[event.key] === undefined) return;
     event.preventDefault();
     event.stopPropagation();
-    if (seekBlocked) announce(CANT_SEEK);
-    else onSeek(moves[event.key]);
+    if (locked) announce(unavailable ? unavailableWords : CANT_SEEK);
+    else onSeek(Math.min(Math.max(moves[event.key], 0), duration));
   };
   return (
     <>
     <div
-      className={`strip ${seekBlocked ? 'seek-blocked' : 'can-seek'}`}
+      className={`strip ${locked ? 'seek-blocked' : 'can-seek'}`}
       role="slider"
       tabIndex={0}
       aria-label="Where in the song"
       aria-valuemin={0}
-      aria-valuemax={Math.round(detail.duration)}
-      aria-valuenow={Math.round(time)}
-      aria-valuetext={`${clock(time)} of ${clock(detail.duration)}`}
-      aria-disabled={seekBlocked || undefined}
-      aria-describedby={seekBlocked ? noteId : undefined}
+      aria-valuemax={Math.round(duration)}
+      aria-valuenow={Math.round(safeTime)}
+      aria-valuetext={unavailable ? 'Duration unknown' : `${clock(safeTime)} of ${clock(duration)}`}
+      aria-disabled={locked || undefined}
+      aria-describedby={locked ? noteId : undefined}
       onPointerDown={beginSeek}
       onPointerMove={moveSeek}
       onPointerUp={endSeek}
@@ -225,10 +230,10 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
         <b className="scrub-ghost" style={{ left: `${percent(seekPreview)}%` }} aria-hidden="true" />
       )}
       <span className="time">
-        {seekPreview === null ? clock(time) : `Seek to ${clock(seekPreview)}`} / {clock(detail.duration)}
+        {seekPreview === null ? clock(safeTime) : `Seek to ${clock(seekPreview)}`} / {unavailable ? 'unknown duration' : clock(duration)}
       </span>
     </div>
-    <p className="hint seek-note" id={noteId}>{seekBlocked ? CANT_SEEK : ' '}</p>
+    <p className="hint seek-note" id={noteId}>{unavailable ? unavailableWords : seekBlocked ? CANT_SEEK : ' '}</p>
     </>
   );
 }

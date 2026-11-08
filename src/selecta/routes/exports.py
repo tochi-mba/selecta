@@ -24,11 +24,12 @@ import uuid
 from collections.abc import Callable
 from pathlib import Path
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from selecta import mix
 from selecta.config import SAMPLE_RATE
 from selecta.seams import request_from
+from selecta.export_validation import verify_export
 
 CHECK_EVERY_SECONDS = 1.0
 ACTIVE = {"preparing", "encoding"}
@@ -124,6 +125,15 @@ def add_routes(app, ctx) -> None:
         known = [job for job in jobs if job]
         return sorted(known, key=lambda job: job["created_at"], reverse=True)
 
+    # Used by the mix-order middleware to distinguish genuine lost replies from
+    # new writes after a restart. This checks durable records, not memory alone.
+    def has_export_operation(operation: str) -> bool:
+        return bool(operation) and any(
+            job.get("operation") == operation for job in every_job()
+        )
+
+    ctx.has_export_operation = has_export_operation
+
     def forget_old_records() -> None:
         """The records, that is. The files they made are left alone."""
         for job in every_job()[JOBS_KEPT:]:
@@ -134,6 +144,12 @@ def add_routes(app, ctx) -> None:
         items = mix.read_mix(conn, store, draft)
         if len(items) < 2:
             raise HTTPException(400, "A mix needs at least two songs.")
+        if any(item["seam"].get("too_soon") for item in items[1:]):
+            raise HTTPException(
+                409,
+                "A transition cuts off the previous handoff. Adjust its timing in the editor "
+                "before saving this mix as an audio file.",
+            )
         snapshot = {
             "scope": "current" if draft is None else "draft",
             "draft": draft,
@@ -175,6 +191,8 @@ def add_routes(app, ctx) -> None:
         return (
             job["scope"] == snapshot["scope"]
             and job["draft"] == snapshot["draft"]
+            and [song["song_id"] for song in job["songs"]]
+            == [song["song_id"] for song in snapshot["songs"]]
             and [seam["key"] for seam in job["seams"]]
             == [seam["key"] for seam in snapshot["seams"]]
         )
@@ -238,6 +256,16 @@ def add_routes(app, ctx) -> None:
                 )
             finally:
                 conn.close()
+            # Encoding finishing does not prove the frozen file is playable. Decode
+            # every frame from the final path before it is ever reported as ready.
+            try:
+                verify_export(exports / job["name"], made["seconds"])
+            except (OSError, ValueError):
+                (exports / job["name"]).unlink(missing_ok=True)
+                raise ValueError(
+                    "The saved audio could not be verified as a complete FLAC file. "
+                    "Check disk space and export again."
+                ) from None
             store.clock.record(
                 "export_per_song", (time.monotonic() - started) / max(len(job["songs"]), 1)
             )
@@ -249,9 +277,22 @@ def add_routes(app, ctx) -> None:
                 running.pop(job["id"], None)
 
     @app.post("/api/exports/jobs")
-    def start_export(draft: int | None = None) -> dict:
-        """Start saving exactly this mix as it is right now. Asking twice for the same thing gets
-        the one already under way, not a second file."""
+    def start_export(request: Request, draft: int | None = None) -> dict:
+        """Start saving a frozen mix; a lost reply returns the same durable job.
+
+        Operation IDs remain meaningful after a server restart, including when
+        the original export already finished, failed, or was interrupted.
+        """
+        operation = request.headers.get("x-operation-id")
+        with lock:
+            if operation:
+                previous = next(
+                    (job for job in every_job() if job.get("operation") == operation), None
+                )
+                if previous:
+                    if previous["draft"] != draft:
+                        raise HTTPException(409, "That export operation belongs to a different mix.")
+                    return as_shown(previous)
         with connect() as conn:
             snapshot = snapshot_of(conn, draft)
             with lock:
@@ -263,6 +304,7 @@ def add_routes(app, ctx) -> None:
                 job = {
                     **snapshot,
                     "id": job_id,
+                    "operation": operation,
                     "state": "preparing",
                     "name": f"selecta-mix-{time.strftime('%Y%m%d-%H%M%S')}-{job_id[:6]}.flac",
                     "seams_total": len(snapshot["seams"]),

@@ -245,6 +245,26 @@ describe('things on top of the page', () => {
 
 });
 
+describe('menu Tab continuity', () => {
+  it('moves forward to the following control when the selected item disappears', () => {
+    render(<><button>Before</button><Menu label="More"><button>One</button><button>Two</button></Menu><button>After</button></>);
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    const item = screen.getByRole('button', { name: 'One' });
+    item.focus();
+    fireEvent.keyDown(item, { key: 'Tab' });
+    expect(screen.getByRole('button', { name: 'After' })).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'One' })).toBeNull();
+  });
+  it('moves back to the preceding control on Shift+Tab', () => {
+    render(<><button>Before</button><Menu label="More"><button>One</button></Menu><button>After</button></>);
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    const item = screen.getByRole('button', { name: 'One' });
+    item.focus();
+    fireEvent.keyDown(item, { key: 'Tab', shiftKey: true });
+    expect(screen.getByRole('button', { name: 'Before' })).toHaveFocus();
+  });
+});
+
 describe('a menu', () => {
   it('opens, moves with the arrow keys, and closes with Escape, back on its button', () => {
     render(<Menu label="More"><button>One</button><button>Two</button></Menu>);

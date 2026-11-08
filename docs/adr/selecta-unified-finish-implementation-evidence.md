@@ -1,0 +1,206 @@
+# Selecta — UF per-task implementation and independent evidence ledger
+
+**Status:** 24 Accepted ADRs (0366–0389); 184 UF tasks Not started; 8 In progress; 0 Implemented; 0 independently Verified. Decision acceptance recorded at requester instruction 2026-11-08; implementation owners and independent reviewers unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app code and regression tests.
+
+All future evidence fields are deliberately blank. The creation of a proposed ADR, checklist, code-status record or screenshot capture instruction is **not source implementation or independent verification**. A synthetic muted browser run does not prove music quality.
+
+| Task | ADR | Decision | Implementation | Independently Verified | Owner | Implementing PR/SHA | Source/test/visual/audio evidence | Independent reviewer/date/device/environment |
+|---|---|---|---|---|---|---|---|---|
+| UF-0366-01 | [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0366-02 | [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0366-03 | [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0366-04 | [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0366-05 | [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0366-06 | [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0366-07 | [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0366-08 | [ADR-0366](adr-0366-unified-finish-charter-and-parity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0367-01 | [ADR-0367](adr-0367-task-research-and-measurement.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0367-02 | [ADR-0367](adr-0367-task-research-and-measurement.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0367-03 | [ADR-0367](adr-0367-task-research-and-measurement.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0367-04 | [ADR-0367](adr-0367-task-research-and-measurement.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0367-05 | [ADR-0367](adr-0367-task-research-and-measurement.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0367-06 | [ADR-0367](adr-0367-task-research-and-measurement.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0367-07 | [ADR-0367](adr-0367-task-research-and-measurement.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0367-08 | [ADR-0367](adr-0367-task-research-and-measurement.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0368-01 | [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0368-02 | [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0368-03 | [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0368-04 | [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0368-05 | [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0368-06 | [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0368-07 | [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0368-08 | [ADR-0368](adr-0368-design-tokens-and-css-ownership.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0369-01 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0369-02 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0369-03 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0369-04 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0369-05 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0369-06 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0369-07 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0369-08 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-01 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-02 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-03 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-04 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-05 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-06 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-07 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-08 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0371-01 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `527b6c9741a635f758da22609849383c3072f16c` | `web/src/state/async.ts`, async unit tests; broader state matrix pending | Independent review pending |
+| UF-0371-02 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0371-03 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0371-04 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `527b6c9741a635f758da22609849383c3072f16c` | `web/src/state/async.ts`, stale/retry unit tests; route checks pending | Independent review pending |
+| UF-0371-05 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0371-06 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `527b6c9741a635f758da22609849383c3072f16c` | `web/src/state/async.ts`, superseded-request unit tests; job lifecycle pending | Independent review pending |
+| UF-0371-07 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0371-08 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-01 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-02 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-03 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-04 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-05 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-06 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-07 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0372-08 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-01 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-02 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-03 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-04 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-05 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-06 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-07 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-08 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-01 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-02 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-03 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-04 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-05 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-06 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-07 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-08 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0375-01 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0375-02 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0375-03 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0375-04 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0375-05 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0375-06 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0375-07 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0375-08 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0376-01 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0376-02 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0376-03 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0376-04 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0376-05 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0376-06 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0376-07 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0376-08 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0377-01 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0377-02 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0377-03 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0377-04 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | In progress | No | Unassigned | #41 / `471bcdfb50e96188f2f3a7c252b0bedc33cbff06` | `web/src/state/readiness.ts` and readiness unit tests; cross-route audit pending | Independent review pending |
+| UF-0377-05 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0377-06 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0377-07 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0377-08 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-01 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-02 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-03 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-04 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-05 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-06 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | In progress | No | Unassigned | #41 / `c1274bda6919e3dcf3466cf72ee4f2b583c07500` | Lucy revision-scoped preflight and commit tests; further verification pending | Independent review pending |
+| UF-0378-07 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0378-08 | [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) | Accepted | In progress | No | Unassigned | #41 / `c1274bda6919e3dcf3466cf72ee4f2b583c07500` | Lucy revision-scoped preflight and commit tests; further verification pending | Independent review pending |
+| UF-0379-01 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0379-02 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0379-03 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0379-04 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | In progress | No | Unassigned | #41 / `f2afe007c37f22005e34e57ce71fb99e5b86d8c2` | `web/src/lib.ts`, readiness and words unit tests; storage/queue checks pending | Independent review pending |
+| UF-0379-05 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0379-06 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0379-07 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0379-08 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-01 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-02 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-03 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-04 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-05 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-06 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-07 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-08 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0381-01 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0381-02 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0381-03 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0381-04 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0381-05 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0381-06 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0381-07 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0381-08 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0382-01 | [ADR-0382](adr-0382-stem-studio-musical-canvas.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0382-02 | [ADR-0382](adr-0382-stem-studio-musical-canvas.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0382-03 | [ADR-0382](adr-0382-stem-studio-musical-canvas.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0382-04 | [ADR-0382](adr-0382-stem-studio-musical-canvas.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0382-05 | [ADR-0382](adr-0382-stem-studio-musical-canvas.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0382-06 | [ADR-0382](adr-0382-stem-studio-musical-canvas.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0382-07 | [ADR-0382](adr-0382-stem-studio-musical-canvas.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0382-08 | [ADR-0382](adr-0382-stem-studio-musical-canvas.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0383-01 | [ADR-0383](adr-0383-requests-bridges-and-consent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0383-02 | [ADR-0383](adr-0383-requests-bridges-and-consent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0383-03 | [ADR-0383](adr-0383-requests-bridges-and-consent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0383-04 | [ADR-0383](adr-0383-requests-bridges-and-consent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0383-05 | [ADR-0383](adr-0383-requests-bridges-and-consent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0383-06 | [ADR-0383](adr-0383-requests-bridges-and-consent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0383-07 | [ADR-0383](adr-0383-requests-bridges-and-consent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0383-08 | [ADR-0383](adr-0383-requests-bridges-and-consent.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0384-01 | [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0384-02 | [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0384-03 | [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0384-04 | [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0384-05 | [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0384-06 | [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0384-07 | [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0384-08 | [ADR-0384](adr-0384-discovery-word-and-harmonic-gallery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0385-01 | [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0385-02 | [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0385-03 | [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0385-04 | [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0385-05 | [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0385-06 | [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0385-07 | [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0385-08 | [ADR-0385](adr-0385-workspace-operations-storage-and-recovery.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0386-01 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0386-02 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | In progress | No | Unassigned | #41 / `471bcdfb50e96188f2f3a7c252b0bedc33cbff06` | `web/src/views/ExportPanel.tsx`, editor tests; export preconditions pending | Independent review pending |
+| UF-0386-03 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0386-04 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0386-05 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0386-06 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0386-07 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0386-08 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0387-01 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0387-02 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0387-03 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0387-04 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0387-05 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0387-06 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0387-07 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0387-08 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-01 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-02 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-03 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-04 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-05 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-06 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-07 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-08 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-01 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-02 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-03 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-04 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-05 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-06 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-07 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-08 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+
+## Evidence requirements
+
+Record exact implementing source/test PR and SHA, the specific acceptance item, design owner's decision, tests/visual comparisons/real audio where relevant, a **separate** named reviewer/date/device/browser/AT environment and observed verdict. Independent verification is not inferred from green CI or docs merges. Never rewrite historic programme task counts to claim feature absence.
+
+[Roadmap](selecta-unified-finish-roadmap.md) · [192-task checklist](selecta-unified-finish-implementation-checklist.md) · [evidence ledger](selecta-unified-finish-implementation-evidence.md) · [status JSON](selecta-unified-finish-code-status.json) · [overlap/parity](selecta-unified-finish-overlap-and-parity.md) · [experience contract](selecta-unified-finish-experience-contract.md) · [verification matrix](selecta-unified-finish-verification-matrix.md) · [status reconciliation](selecta-unified-finish-status-reconciliation.md) · [release gates](selecta-unified-finish-release-gates.md)

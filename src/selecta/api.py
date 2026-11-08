@@ -7,6 +7,7 @@ rendering used, at the level the mix uses, plus finished seams, and joins them o
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import threading
 from collections import deque
 from pathlib import Path
@@ -65,9 +66,12 @@ def create_app(
 
     background = _Background(settings.home)
 
-    finished_operations: dict[str, tuple[int, bytes]] = {}
+    # Operation names are not permission to replay an unrelated command. Bind
+    # each name to the exact route and body that first used it.
+    finished_operations: dict[str, tuple[int, bytes, str]] = {}
 
     running_operations: dict[str, asyncio.Event] = {}
+    active_fingerprints: dict[str, str] = {}
 
     # what happened to the last few, for diagnostics: only the kind of thing, never what it named
     recent_operations: deque[dict] = deque(maxlen=20)
@@ -100,14 +104,34 @@ def create_app(
         operation = request.headers.get("x-operation-id")
         if not operation or request.method != "POST":
             return await call_next(request)
+        if len(operation) > 128:
+            return JSONResponse({"detail": "Operation ID is too long."}, status_code=400)
+        identity = b"\0".join((
+            request.method.encode(),
+            request.url.path.encode(),
+            request.url.query.encode(),
+            await request.body(),
+        ))
+        fingerprint = hashlib.sha256(identity).hexdigest()
         if operation in running_operations:
+            if active_fingerprints.get(operation) != fingerprint:
+                return JSONResponse(
+                    {"detail": "That operation ID already belongs to a different action."},
+                    status_code=409,
+                )
             await running_operations[operation].wait()
         kind = operation.split("-", 1)[0]
         known = finished_operations.get(operation)
         if known is not None:
+            if known[2] != fingerprint:
+                return JSONResponse(
+                    {"detail": "That operation ID already belongs to a different action."},
+                    status_code=409,
+                )
             recent_operations.append({"kind": kind, "status": known[0], "repeat": True})
             return Response(known[1], status_code=known[0], media_type="application/json")
         running_operations[operation] = asyncio.Event()
+        active_fingerprints[operation] = fingerprint
         try:
             response = await call_next(request)
             body = b"".join([chunk async for chunk in response.body_iterator])
@@ -115,11 +139,12 @@ def create_app(
                 {"kind": kind, "status": response.status_code, "repeat": False}
             )
             if response.status_code < 500:
-                finished_operations[operation] = (response.status_code, body)
+                finished_operations[operation] = (response.status_code, body, fingerprint)
                 while len(finished_operations) > OPERATIONS_KEPT:
                     del finished_operations[next(iter(finished_operations))]
         finally:
             running_operations.pop(operation).set()
+            active_fingerprints.pop(operation, None)
         return Response(
             body,
             status_code=response.status_code,
@@ -138,6 +163,15 @@ def create_app(
         operation = request.headers.get("x-operation-id")
         if operation and (
             operation in finished_operations or operation in running_operations
+        ):
+            return await call_next(request)
+        # Export jobs persist across server restarts. A retried operation that
+        # already created a frozen job must recover that exact job even if the
+        # audible mix changed since its original submission.
+        if (
+            operation and request.method == "POST"
+            and request.url.path == "/api/exports/jobs"
+            and ctx.has_export_operation(operation)
         ):
             return await call_next(request)
         draft = request.query_params.get("draft")

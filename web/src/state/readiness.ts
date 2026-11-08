@@ -40,8 +40,8 @@ export function trackReadiness(song: Pick<LibrarySong, 'bpm' | 'readiness'> & Pa
     reason: song.readiness?.reason ?? '',
     canStartMix: status === 'mix_ready',
     // a tempo alone never makes a song mix-ready, but it's what adding one by hand has always needed
-    canAdd: analysed && !['set_aside', 'missing', 'needs_attention'].includes(status),
-    canAnalyse: !analysed && !['set_aside', 'missing'].includes(status),
+    canAdd: analysed && !['set_aside', 'excluded', 'missing', 'needs_attention'].includes(status),
+    canAnalyse: !analysed && !['set_aside', 'excluded', 'missing'].includes(status),
     setAside: status === 'set_aside',
   };
 }
@@ -52,6 +52,8 @@ export type MixReadiness = {
   failed: number;
   waiting: number;
   rendering: number;
+  /** A transition whose incoming edge would be cut off cannot safely be called ready. */
+  blocked: number;
   /** Every transition exists as audio, so it plays exactly as planned from start to finish. */
   allReady: boolean;
   firstProblem: number | null;
@@ -64,7 +66,11 @@ const seamStatus = (item: MixItem): SeamState['status'] | 'unknown' => {
 
 export function mixReadiness(mix: MixItem[]): MixReadiness {
   const seams = mix.slice(1);
-  const count = (...kinds: string[]) => seams.filter((item) => kinds.includes(seamStatus(item))).length;
+  // The server can report a cached, playable seam while also telling us that its
+  // placement would cut off the previous transition. Do not count that edge as
+  // ready, or invite the user to render an invalid placement.
+  const count = (...kinds: string[]) => seams.filter((item) => !item.seam?.too_soon && kinds.includes(seamStatus(item))).length;
+  const blocked = seams.filter((item) => !!item.seam?.too_soon).length;
   const failed = count('failed');
   const firstBad = mix.findIndex((item, index) => index > 0 && (seamStatus(item) === 'failed' || !!item.seam?.too_soon));
   return {
@@ -73,6 +79,7 @@ export function mixReadiness(mix: MixItem[]): MixReadiness {
     failed,
     waiting: count('none', 'unknown'),
     rendering: count('queued', 'rendering'),
+    blocked,
     allReady: seams.length > 0 && count('ready') === seams.length,
     firstProblem: firstBad > 0 ? firstBad : null,
   };
@@ -82,9 +89,11 @@ export function mixReadiness(mix: MixItem[]): MixReadiness {
 export function draftReadiness(draft: DraftInfo): { kind: StatusKind; words: string } {
   const words = draftWords(draft);
   if (draft.songs === 0 || draft.seams === 0) return { kind: 'planned', words };
+  // A failed edge needs attention even while other seams remain in the line.
+  // It must not be hidden behind a reassuring "working" or "in line" badge.
+  if (draft.failed > 0) return { kind: 'warning', words };
   if (draft.rendering) return { kind: 'working', words };
   if (draft.waiting > 0) return { kind: draft.place !== null ? 'queued' : 'planned', words };
-  if (draft.failed > 0) return { kind: 'warning', words };
   return { kind: 'ready', words };
 }
 

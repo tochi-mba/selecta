@@ -260,7 +260,27 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
       opener.current?.focus();
       return;
     }
-    if (event.key === 'Tab') { setOpen(false); return; }
+    if (event.key === 'Tab' && open) {
+      // The focused item is about to unmount. If Tab is allowed to find the
+      // next stop from a removed node, focus can fall to the document body.
+      // Choose the next real stop relative to the trigger, outside this menu.
+      const buttons = [...document.querySelectorAll<HTMLElement>(FOCUSABLE)]
+        .filter((node) => (node === opener.current || !holder.current?.contains(node))
+          && !node.closest('[hidden], [inert], [aria-hidden="true"]')
+          && getComputedStyle(node).display !== 'none'
+          && getComputedStyle(node).visibility !== 'hidden');
+      const at = buttons.indexOf(opener.current!);
+      const next = buttons[(at + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length];
+      if (next && next !== opener.current) {
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(false);
+        next.focus();
+      } else {
+        setOpen(false);
+      }
+      return;
+    }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     if (!open) {
       event.preventDefault();

@@ -40,6 +40,20 @@ async function fromMenu(draft: string, item: string) {
   fireEvent.click(screen.getByRole('menuitem', { name: item }));
 }
 
+describe('large draft collections', () => {
+  it('renders a bounded first page and reveals more without losing exact identities', async () => {
+    show(list(Array.from({ length: 85 }, (_, index) => draft(index + 1))));
+    expect(await screen.findByRole('button', { name: 'Edit Draft 85' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit Draft 45' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /^Edit Draft / })).toHaveLength(40);
+    fireEvent.click(screen.getByRole('button', { name: 'Show 40 more drafts (45 remaining)' }));
+    expect(screen.getAllByRole('button', { name: /^Edit Draft / })).toHaveLength(80);
+    expect(screen.getByRole('button', { name: 'Edit Draft 45' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show 40 more drafts (5 remaining)' }));
+    expect(screen.getAllByRole('button', { name: /^Edit Draft / })).toHaveLength(85);
+  });
+});
+
 describe('your drafts', () => {
   it('invites you to start one when there are none, and starts it in one press', async () => {
     const { calls, openDraft } = show(list([]), { 'POST /drafts': { id: 4, name: 'Draft 1' } });

@@ -196,6 +196,8 @@ describe('where a draft has got to', () => {
   it('says when it is ready, and is honest about seams that failed', () => {
     expect(draftWords({ ...draft, ready: 11, waiting: 0 })).toBe('Ready to play');
     expect(draftWords({ ...draft, ready: 10, failed: 1, waiting: 0 })).toBe('10 of 11 ready, 1 couldn’t be made');
+    expect(draftWords({ ...draft, ready: 3, failed: 1, waiting: 7, place: 1, rendering: true })).toBe('Rendering other transitions. 3 of 11 ready, 1 couldn’t be made; 7 still waiting');
+    expect(draftWords({ ...draft, ready: 3, failed: 1, waiting: 7, place: 2 })).toBe('Other transitions are in line. 3 of 11 ready, 1 couldn’t be made; 7 still waiting');
   });
   it('only quotes a time once it is in line', () => {
     expect(draftWords({ ...draft, ready: 3, waiting: 8 })).toBe('3 of 11 ready');

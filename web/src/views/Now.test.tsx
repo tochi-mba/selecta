@@ -250,6 +250,26 @@ describe('beat-grid transition countdown', () => {
   });
 });
 
+describe('missing or invalid song duration', () => {
+  it('keeps a finite, disabled slider and never attempts a seek', async () => {
+    fakeBackend({ 'GET /songs/1': { ...detail, duration: 0 } });
+    const player = new SetPlayer(() => mix, () => {});
+    const seek = vi.spyOn(player, 'seek').mockResolvedValue(undefined);
+    render(
+      <Now status={status()} mix={mix} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 0 }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    const slider = await screen.findByRole('slider', { name: 'Where in the song' });
+    expect(slider).toHaveAttribute('aria-valuemax', '0');
+    expect(slider).toHaveAttribute('aria-valuetext', 'Duration unknown');
+    expect(slider).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    expect(seek).not.toHaveBeenCalled();
+  });
+});
+
 describe('pointer seeking', () => {
   it('previews the target without seeking until release', async () => {
     fakeBackend({ 'GET /songs/1': detail });
