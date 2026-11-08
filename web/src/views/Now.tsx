@@ -790,33 +790,50 @@ export function Now(props: ViewProps) {
             <details className="dj-controls view-options" open={djControlsOpen} onToggle={(event) => setDjControlsOpen(event.currentTarget.open)}>
               <summary>DJ controls</summary>
               <p className="hint">Shape what comes next, rate transitions, request a song, or change the listening display.</p>
-              <Tooltip text="Shortcut: R">
-                <button onClick={() => openRequests?.()}>
-                  Request a song{waiting ? ` (${waiting} waiting)` : ''}
-                </button>
-              </Tooltip>
-              <fieldset className="listen-view" aria-label="What to show"><legend>Display options</legend>
-                <button aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
-                <button aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
-                <label className="spectrum-choice">
-                  <span>Audio visualizer style</span>
-                  <select aria-label="Audio visualizer style" value={view.spectrumShape}
-                    onChange={(event) => choose({ spectrumShape: event.target.value as SpectrumShape })}>
-                    {SPECTRUM_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
-                  </select>
-                  <small className="hint">{SPECTRUM_MODES.find((mode) => mode.id === view.spectrumShape)?.description}. Driven only by the live mixed-audio analyser, not a simulated beat.</small>
-                </label>
-                <button aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
-                <div className="listen-intensity" role="group" aria-label="Visual intensity">
-                  {(['quiet', 'standard', 'focused'] as const).map((intensity) => (
-                    <button key={intensity} type="button" aria-pressed={view.intensity === intensity} onClick={() => choose({ intensity })}>
-                      {intensity === 'quiet' ? 'Quiet visuals' : intensity === 'focused' ? 'Focused visuals' : 'Standard visuals'}
-                    </button>
-                  ))}
-                </div>
-                <Tooltip text="Shortcut: F">
-                  <button data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>
+              <div className="listen-request-action">
+                <Tooltip text="Shortcut: R">
+                  <button onClick={() => openRequests?.()}>
+                    Request a song{waiting ? ` (${waiting} waiting)` : ''}
+                  </button>
                 </Tooltip>
+              </div>
+              <fieldset className="listen-view" aria-label="What to show">
+                <legend>Display options</legend>
+                <div className="listen-display-toggles" role="group" aria-label="Visible listening panels">
+                  <button type="button" aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
+                  <button type="button" aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
+                  <button type="button" aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
+                </div>
+                <div className="listen-spectrum-settings">
+                  <label className="spectrum-choice">
+                    <span>Audio visualizer style</span>
+                    <select aria-label="Audio visualizer style" value={view.spectrumShape}
+                      onChange={(event) => choose({ spectrumShape: event.target.value as SpectrumShape })}>
+                      {SPECTRUM_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
+                    </select>
+                    <small className="hint">{SPECTRUM_MODES.find((mode) => mode.id === view.spectrumShape)?.description}</small>
+                  </label>
+                  <div className="listen-intensity" role="group" aria-label="Visual intensity">
+                    <span className="listen-setting-label">Visual intensity</span>
+                    <div className="listen-intensity-choices">
+                      {(['quiet', 'standard', 'focused'] as const).map((intensity) => (
+                        <button key={intensity} type="button" aria-label={`${intensity[0].toUpperCase()}${intensity.slice(1)} visuals`}
+                          aria-pressed={view.intensity === intensity} onClick={() => choose({ intensity })}>
+                          {intensity === 'quiet' ? 'Quiet' : intensity === 'focused' ? 'Focused' : 'Standard'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <details className="listen-visualizer-help">
+                  <summary>About the visualizer</summary>
+                  <p className="hint">The visualizer follows the live mixed-audio analyser, not a simulated beat. Quiet visuals hide the spectrum without affecting playback.</p>
+                </details>
+                <div className="listen-view-footer">
+                  <Tooltip text="Shortcut: F">
+                    <button type="button" className="quiet" data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>
+                  </Tooltip>
+                </div>
               </fieldset>
               {now.lastSeamKey && !rated && (
                 <div className="thumbs" role="group" aria-label="Rate that transition">
@@ -826,7 +843,8 @@ export function Now(props: ViewProps) {
                 </div>
               )}
               {next && (
-                <>
+                <section className="listen-next-steering" aria-labelledby="listen-next-steering-title">
+                  <h3 id="listen-next-steering-title">Change the next song</h3>
                   <div className="chips steer" role="group" aria-label="Change what plays next">
                     <Action waiting={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
                     <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>
@@ -836,7 +854,7 @@ export function Now(props: ViewProps) {
                   {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
                   {problem && <p className="warn" role="alert">{problem} Nothing has changed, so the plan above still stands.</p>}
                   <WhyThisTransition from={item} into={next} names={names} />
-                </>
+                </section>
               )}
             </details>
           )}
