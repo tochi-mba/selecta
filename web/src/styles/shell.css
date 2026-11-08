@@ -237,6 +237,7 @@ a.mini-song { flex: 1 1 auto; min-width: 0; display: grid; color: var(--text); t
 .mini-song b, .mini-song span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .mini-song span { color: var(--text-soft); font-size: var(--text-sm); }
 .mini button { flex: none; }
+.mini .round { width: 44px; height: 44px; }
 .mini-next { padding: 8px 10px; min-width: 44px; }
 /* Reserve digits even at zero so arriving requests never shove transport or track identity. */
 .mini-requests .count { display: inline-block; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
