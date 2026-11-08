@@ -41,3 +41,16 @@ describe('library eligibility and render failures', () => {
     expect(draftReadiness(draft).kind).toBe('warning');
   });
 });
+
+describe('inconsistent render counts', () => {
+  it('never claims ready when the server reports fewer ready edges than required', () => {
+    const draft = {
+      id: 3, name: 'Snapshot', songs: 4, seconds: 800, seams: 3,
+      ready: 2, failed: 0, waiting: 0, rendering: false, place: null,
+      eta: null, to_render: 0, missing: 0,
+    };
+    expect(draftReadiness(draft)).toMatchObject({
+      kind: 'unavailable', words: '2 of 3 ready; readiness still unconfirmed',
+    });
+  });
+});

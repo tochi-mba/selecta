@@ -186,7 +186,8 @@ export function draftWords(draft: {
   if (draft.songs === 0) return 'Empty';
   if (draft.seams === 0) return 'Add one more song';
   if (draft.waiting === 0) {
-    if (draft.failed === 0) return 'Ready to play';
+    if (draft.failed === 0 && draft.ready === draft.seams) return 'Ready to play';
+    if (draft.failed === 0) return `${draft.ready} of ${draft.seams} ready; readiness still unconfirmed`;
     return `${draft.ready} of ${draft.seams} ready, ${draft.failed} couldn’t be made`;
   }
   const done = `${draft.ready} of ${draft.seams} ready`;

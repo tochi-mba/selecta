@@ -94,6 +94,9 @@ export function draftReadiness(draft: DraftInfo): { kind: StatusKind; words: str
   if (draft.failed > 0) return { kind: 'warning', words };
   if (draft.rendering) return { kind: 'working', words };
   if (draft.waiting > 0) return { kind: draft.place !== null ? 'queued' : 'planned', words };
+  // A partially upgraded server can omit counts. Never upgrade an inconsistent
+  // reply to "ready to play" just because the wait and failure counts are zero.
+  if (draft.ready !== draft.seams) return { kind: 'unavailable', words };
   return { kind: 'ready', words };
 }
 
