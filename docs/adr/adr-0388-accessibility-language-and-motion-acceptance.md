@@ -1,7 +1,7 @@
 # ADR-0388 — WCAG accessibility, plain-language status and sensory safety
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Implementation:** 7/8 Not started; 1/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
 - **Priority / phase:** P0 / 08 Verification. **Owner:** Unassigned. **Implementing PR/SHA:** —.
@@ -25,7 +25,7 @@ Users understand what is actually available, which exact music object they are a
 ## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
 
 1. **UF-0388-01 — Audit landmarks and accessible names.** **Acceptance:** All routes contain correct headings, labels and keyboard order. **Required verification:** Accessibility tree and human review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0388-02 — Validate component keyboard patterns.** **Acceptance:** Menus, dialogs, tabs, comboboxes and grid follow relevant APG patterns. **Required verification:** Physical keyboard/NVDA/VoiceOver. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+2. **UF-0388-02 — Validate component keyboard patterns.** **Acceptance:** Menus, dialogs, tabs, comboboxes and grid follow relevant APG patterns. **Required verification:** Physical keyboard/NVDA/VoiceOver. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `52b133ef91dd24192db7faf73a5e9fbc303bb6d4`; **Evidence/reviewer:** Menu Tab focus recovery and keyboard tests; physical screen-reader check pending; independent review pending.
 3. **UF-0388-03 — Test applicable WCAG 2.2 AA.** **Acceptance:** Contrast, focus, reflow, target size exceptions and drag alternatives verified. **Required verification:** Independent criteria checklist. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 4. **UF-0388-04 — Verify non-colour state language.** **Acceptance:** Planned/ready/failed/selected survive forced colours, grayscale and AT. **Required verification:** Screenshots and spoken output. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 5. **UF-0388-05 — Unify musical terminology.** **Acceptance:** Ready, analysed, proposed, queued, saved and playing are consistent and explainable. **Required verification:** Copy audit and task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
