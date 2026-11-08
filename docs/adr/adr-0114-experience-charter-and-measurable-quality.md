@@ -1,6 +1,6 @@
 # ADR-0114 — Experience-first product charter and measurable quality
 
-- **Decision:** Proposed; owner sign-off pending.
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 new EX tasks); **Independent verification:** No (0/5).
 - **Date:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).
 - **Related:** ADR-0089 and ADR-0113; these are neither automatically superseded nor retroactively completed.

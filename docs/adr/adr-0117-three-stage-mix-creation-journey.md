@@ -1,6 +1,6 @@
 # ADR-0117 — Three-stage mix creation: choose, shape and commit
 
-- **Decision status:** Proposed, owner review pending.
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Not started (0/5 new tasks implemented).
 - **Independent verification:** No (0/5).
 - **Programme/date:** Experience-first UI/UX; 2026-11-07; baseline `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).

@@ -1,6 +1,6 @@
 # ADR-0077: Choosing light or dark
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress on PR 24; not merged or verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
@@ -66,6 +66,7 @@ A person can choose light or dark from any page and it stays chosen. Both themes
 | Date | Decision | Implementation | Evidence |
 |---|---|---|---|
 | 2026-11-07 | Proposed | In progress on PR 24 | Automation and human review must be confirmed before completion |
+| 2026-11-08 | Accepted | In progress on PR 24 | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 
 ## References
 

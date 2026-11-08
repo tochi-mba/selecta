@@ -6,7 +6,7 @@
 
 ## ADR-0264 — Light interactive boundary roles (P0)
 
-**Decision:** Proposed; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0264-light-interactive-boundaries.md).
+**Decision:** Accepted; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0264-light-interactive-boundaries.md).
 
 - [ ] **FP-0264-01 — Map functional edge roles.** **Acceptance:** Every form control, actionable row, tab, modal, menu and selectable music item has a recorded edge role and adjacent surface; decorative-only lines are explicitly excluded. **Required verification:** Role-by-component inventory; 2 themes and six key UI states **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
 - [ ] **FP-0264-02 — Measure real boundary contrast.** **Acceptance:** Sample computed colours at immediate component/surface adjacency and record whether each essential indicator meets applicable 3:1 non-text contrast. **Required verification:** Contrast report with automated fixture values and justified exemptions **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
@@ -19,7 +19,7 @@
 
 ## ADR-0265 — Manual theme and PWA chrome precedence (P1)
 
-**Decision:** Proposed; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0265-browser-chrome-theme-sync.md).
+**Decision:** Accepted; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0265-browser-chrome-theme-sync.md).
 
 - [ ] **FP-0265-01 — Specify resolved theme precedence.** **Acceptance:** Manual choice always outranks OS colour preference; System follows OS; unavailable storage returns safe documented default. **Required verification:** Truth table for all preference and OS combinations **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
 - [ ] **FP-0265-02 — Reproduce or refute chrome mismatch.** **Acceptance:** Capture browser toolbar and installed PWA chrome for opposing manual/OS choices without presuming every browser supports dynamic metadata. **Required verification:** Actual Chrome/Edge dated screenshots and version record **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
@@ -32,7 +32,7 @@
 
 ## ADR-0266 — Live-theme musical mark parity (P0)
 
-**Decision:** Proposed; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0266-live-theme-music-graphics.md).
+**Decision:** Accepted; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0266-live-theme-music-graphics.md).
 
 - [ ] **FP-0266-01 — Inventory graphical semantic states.** **Acceptance:** List rendered roles, source and colour/treatment for waveform playhead, seek marker, transition countdown, spectrum, seam, energy and eight-lane Studio states. **Required verification:** Graphic state/source inventory with source paths **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
 - [ ] **FP-0266-02 — Preserve music-data identity.** **Acceptance:** A theme switch changes presentation but neither recorded frequency data nor requested/measured energy, selected seam, cue or Studio cell value. **Required verification:** State equality tests and real-audio observation **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
@@ -45,7 +45,7 @@
 
 ## ADR-0267 — Contextual Library selection rail (P0)
 
-**Decision:** Proposed; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0267-contextual-library-batch-presentation.md).
+**Decision:** Accepted; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0267-contextual-library-batch-presentation.md).
 
 - [ ] **FP-0267-01 — Measure current empty-selection clutter.** **Acceptance:** Capture toolbar content and visual competition with no selected rows on list and cards for novice and power tasks. **Required verification:** Existing screenshot fixtures and timed before baseline **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
 - [ ] **FP-0267-02 — Make selection entry discoverable.** **Acceptance:** A clearly named selection action or checkbox remains obvious at zero selected without exposing all disabled batch buttons. **Required verification:** 5-second discovery and keyboard entry task **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
@@ -58,7 +58,7 @@
 
 ## ADR-0268 — Explore card content and disclosure budget (P0)
 
-**Decision:** Proposed; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0268-explore-card-information-budget.md).
+**Decision:** Accepted; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0268-explore-card-information-budget.md).
 
 - [ ] **FP-0268-01 — Inventory actual card copy.** **Acceptance:** Identify title, explanation, artist cues, metrics, eligibility, qualifiers and actions; classify decision-critical versus detailed. **Required verification:** Real and sparse-library card inventory, source references **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
 - [ ] **FP-0268-02 — Specify concise default content.** **Acceptance:** The default scan surface has a recognizable idea, brief supported distinguishing fact and clearly ranked action; essential warnings are never hidden. **Required verification:** Copy specimen, five-second glance and visual density comparison **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
@@ -71,7 +71,7 @@
 
 ## ADR-0269 — Cross-route action-tier register (P1)
 
-**Decision:** Proposed; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0269-cross-route-action-tier-map.md).
+**Decision:** Accepted; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0269-cross-route-action-tier-map.md).
 
 - [ ] **FP-0269-01 — Enumerate route-state actions.** **Acceptance:** List the exact existing command, state availability, frequency, cost/risk and current location for every primary surface. **Required verification:** Route-state-action register linked to current JSX and menus **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
 - [ ] **FP-0269-02 — Assign three contextual tiers.** **Acceptance:** Classify actions as primary, contextual or advanced with written exceptions for emergency/error/destructive controls. **Required verification:** Signed tier rubric with rationale and links to older ADRs **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
@@ -84,7 +84,7 @@
 
 ## ADR-0270 — Stacked-viewport focus and chrome arbitration (P0)
 
-**Decision:** Proposed; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0270-viewport-layer-occlusion.md).
+**Decision:** Accepted; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0270-viewport-layer-occlusion.md).
 
 - [ ] **FP-0270-01 — Enumerate fixed and sticky layers.** **Acceptance:** Identify shell rail, header, mobile bar, player, sticky actions, toast stack, drawer, dialog and Stage with their current layout and stacking tokens. **Required verification:** DOM/source and z-index inventory with representative dimensions **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
 - [ ] **FP-0270-02 — Define a precedence table.** **Acceptance:** Document which chrome hides, reflows or scrolls under each simultaneous overlay/keyboard state, without removing critical actions. **Required verification:** Keyboard+player+sheet, Stage+notification and dialog+toast decision matrix **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
@@ -97,7 +97,7 @@
 
 ## ADR-0271 — Paired same-state light/dark review (P0)
 
-**Decision:** Proposed; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0271-paired-theme-state-visual-evidence.md).
+**Decision:** Accepted; **Implementation:** 0/8 Implemented, 0/8 In progress, 8/8 Not started; **Independent verification:** 0/8 Verified; **Owner:** Unassigned; [ADR](adr-0271-paired-theme-state-visual-evidence.md).
 
 - [ ] **FP-0271-01 — Define canonical route-state fixtures.** **Acceptance:** Identify stable fixture IDs spanning Start, Setup, Explore, Listen, Stage, My Mixes, Edit, Inspector, Studio, Requests, Discovery, Library, Details, Workspace, Backups and Export, including key empty/error/loading states. **Required verification:** Source-linked route/state inventory, not just route names **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.
 - [ ] **FP-0271-02 — Capture paired theme instances.** **Acceptance:** For each critical fixture capture Light/Dark at the same viewport with identical music identity, state, motion, locale and server data. **Required verification:** Deterministic paired Playwright captures with fixture hashes **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Independent evidence:** —.

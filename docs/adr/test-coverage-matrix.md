@@ -1,6 +1,6 @@
 # Selecta 2.0 — tests, fixtures and edge-case matrix
 
-- **Decision status:** Proposed
+- **Decision status:** Accepted
 - **Implementation status of new tests:** In progress ([#22](https://github.com/tochi-mba/selecta/pull/22))
 - **Date proposed:** 2026-11-06
 

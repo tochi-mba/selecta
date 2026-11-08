@@ -122,7 +122,7 @@ Selecta remains an offline/local-first DJ for the user's own music. Listening is
 
 ## Dual status model
 
-- **Decision status:** Proposed → Accepted; or Rejected / Superseded with rationale.
+- **Decision status:** Accepted → Accepted; or Rejected / Superseded with rationale.
 - **Implementation status:** Not started → In progress → Implemented → Verified.
 - **Implemented** means code and its required tests have merged; **Verified** additionally requires recorded acceptance, regression, accessibility and audible evidence as applicable.
 - Documentation can be merged while every decision remains Proposed and every implementation remains Not started.
@@ -132,38 +132,38 @@ Selecta remains an offline/local-first DJ for the user's own music. Listening is
 
 | ADR and decision | Decision status | Implementation status | Phase |
 |---|---|---|---|
-| [ADR-0001 — Product contract, scope and no-regression guarantees](adr-0001-product-contract-and-parity.md) | Proposed | In progress | 0 |
-| [ADR-0002 — Contextual navigation, routing and persistent player shell](adr-0002-routing-and-shell.md) | Proposed | Implemented | 2 |
-| [ADR-0003 — Semantic design system retaining Selecta's colours](adr-0003-design-tokens-and-brand.md) | Proposed | In progress | 1 |
-| [ADR-0004 — Reusable controls, overlays, status and undo](adr-0004-interaction-primitives-and-notifications.md) | Proposed | In progress | 1 |
-| [ADR-0005 — Typed API state, revisions and optimistic mutation consistency](adr-0005-domain-state-mutations.md) | Proposed | In progress | 3 |
-| [ADR-0006 — Web Audio transport, seeking and Media Session semantics](adr-0006-audio-transport-and-media.md) | Proposed | In progress | 4 |
-| [ADR-0007 — Coordinating main player and all audition audio](adr-0007-audio-focus-ownership.md) | Proposed | In progress | 4 |
-| [ADR-0008 — Listen composition, waveform and next-transition clarity](adr-0008-listen-screen.md) | Proposed | In progress | 4 |
-| [ADR-0009 — Synchronized lyrics, lyric focus and fullscreen Stage](adr-0009-lyrics-and-stage.md) | Proposed | In progress | 4 |
-| [ADR-0010 — Vibe discovery, featured choice and build preparation](adr-0010-mix-discovery.md) | Proposed | In progress | 5 |
-| [ADR-0011 — Energy curve, duration, transition feel and destination scope](adr-0011-steering-and-energy.md) | Proposed | In progress | 5 |
-| [ADR-0012 — My Mixes projects, draft operations and render queue](adr-0012-drafts-and-queue.md) | Proposed | Implemented | 6 |
-| [ADR-0013 — Song/seam arrangement timeline and stable edit scope](adr-0013-edit-timeline.md) | Proposed | In progress | 6 |
-| [ADR-0014 — Seam inspector, cues, previews, fallbacks and auditing](adr-0014-seam-inspector.md) | Proposed | In progress | 6 |
-| [ADR-0015 — Live Requests, route consent and atomic bridge joining](adr-0015-requests-and-bridges.md) | Proposed | In progress | 7 |
-| [ADR-0016 — Stem Studio 64-cell creative workstation](adr-0016-stem-studio.md) | Proposed | In progress | 8 |
-| [ADR-0017 — Library scale, filters and canonical mix readiness](adr-0017-library-scale-and-readiness.md) | Proposed | Implemented | 9 |
-| [ADR-0018 — Analysis overrides and secure library-source management](adr-0018-library-corrections-and-folders.md) | Proposed | In progress | 9 |
-| [ADR-0019 — Word-link discovery and harmonic staged auditions](adr-0019-discover-words-and-harmony.md) | Proposed | In progress | 9 |
-| [ADR-0020 — Workshop, background processing, queue and cache transparency](adr-0020-workshop-and-storage.md) | Proposed | In progress | 10 |
-| [ADR-0021 — Blind A/B evaluation protocols and reliable submission](adr-0021-blind-listening.md) | Proposed | In progress | 10 |
-| [ADR-0022 — Rendered FLAC export and artifact lifecycle](adr-0022-flac-export.md) | Proposed | In progress | 6 |
-| [ADR-0023 — WCAG 2.2 AA, screen readers and keyboard conventions](adr-0023-accessibility.md) | Proposed | In progress | 1–12 |
-| [ADR-0024 — Mobile, tablet, wide-screen and high-zoom workspace design](adr-0024-responsive-workspaces.md) | Proposed | In progress | 2–12 |
-| [ADR-0025 — Local-only security, privacy and filesystem boundaries](adr-0025-local-privacy.md) | Proposed | Implemented | 3–13 |
-| [ADR-0026 — Additive backend contracts, stable identifiers and feature detection](adr-0026-api-compatibility.md) | Proposed | In progress | 3–10 |
-| [ADR-0027 — Truthful AI explanations and musical feedback](adr-0027-explanations-and-feedback.md) | Proposed | In progress | 4–10 |
-| [ADR-0028 — Backend-offline recovery, conflicts and multiple tabs](adr-0028-recovery-and-multitab.md) | Proposed | In progress | 3–12 |
-| [ADR-0029 — Regression strategy, real audio fixtures and release quality gates](adr-0029-testing-and-quality.md) | Proposed | In progress | 0–13 |
-| [ADR-0030 — Incremental migration, rollback and ADR status governance](adr-0030-migration-and-release.md) | Proposed | Implemented | 0–13 |
-| [ADR-0031 — Installed PWA, browser features and platform integrations](adr-0031-pwa-and-browsers.md) | Proposed | In progress | 2–13 |
-| [ADR-0032 — Privacy-safe diagnostics and truthful background-job feedback](adr-0032-diagnostics-and-operations.md) | Proposed | In progress | 10–13 |
+| [ADR-0001 — Product contract, scope and no-regression guarantees](adr-0001-product-contract-and-parity.md) | Accepted | In progress | 0 |
+| [ADR-0002 — Contextual navigation, routing and persistent player shell](adr-0002-routing-and-shell.md) | Accepted | Implemented | 2 |
+| [ADR-0003 — Semantic design system retaining Selecta's colours](adr-0003-design-tokens-and-brand.md) | Accepted | In progress | 1 |
+| [ADR-0004 — Reusable controls, overlays, status and undo](adr-0004-interaction-primitives-and-notifications.md) | Accepted | In progress | 1 |
+| [ADR-0005 — Typed API state, revisions and optimistic mutation consistency](adr-0005-domain-state-mutations.md) | Accepted | In progress | 3 |
+| [ADR-0006 — Web Audio transport, seeking and Media Session semantics](adr-0006-audio-transport-and-media.md) | Accepted | In progress | 4 |
+| [ADR-0007 — Coordinating main player and all audition audio](adr-0007-audio-focus-ownership.md) | Accepted | In progress | 4 |
+| [ADR-0008 — Listen composition, waveform and next-transition clarity](adr-0008-listen-screen.md) | Accepted | In progress | 4 |
+| [ADR-0009 — Synchronized lyrics, lyric focus and fullscreen Stage](adr-0009-lyrics-and-stage.md) | Accepted | In progress | 4 |
+| [ADR-0010 — Vibe discovery, featured choice and build preparation](adr-0010-mix-discovery.md) | Accepted | In progress | 5 |
+| [ADR-0011 — Energy curve, duration, transition feel and destination scope](adr-0011-steering-and-energy.md) | Accepted | In progress | 5 |
+| [ADR-0012 — My Mixes projects, draft operations and render queue](adr-0012-drafts-and-queue.md) | Accepted | Implemented | 6 |
+| [ADR-0013 — Song/seam arrangement timeline and stable edit scope](adr-0013-edit-timeline.md) | Accepted | In progress | 6 |
+| [ADR-0014 — Seam inspector, cues, previews, fallbacks and auditing](adr-0014-seam-inspector.md) | Accepted | In progress | 6 |
+| [ADR-0015 — Live Requests, route consent and atomic bridge joining](adr-0015-requests-and-bridges.md) | Accepted | In progress | 7 |
+| [ADR-0016 — Stem Studio 64-cell creative workstation](adr-0016-stem-studio.md) | Accepted | In progress | 8 |
+| [ADR-0017 — Library scale, filters and canonical mix readiness](adr-0017-library-scale-and-readiness.md) | Accepted | Implemented | 9 |
+| [ADR-0018 — Analysis overrides and secure library-source management](adr-0018-library-corrections-and-folders.md) | Accepted | In progress | 9 |
+| [ADR-0019 — Word-link discovery and harmonic staged auditions](adr-0019-discover-words-and-harmony.md) | Accepted | In progress | 9 |
+| [ADR-0020 — Workshop, background processing, queue and cache transparency](adr-0020-workshop-and-storage.md) | Accepted | In progress | 10 |
+| [ADR-0021 — Blind A/B evaluation protocols and reliable submission](adr-0021-blind-listening.md) | Accepted | In progress | 10 |
+| [ADR-0022 — Rendered FLAC export and artifact lifecycle](adr-0022-flac-export.md) | Accepted | In progress | 6 |
+| [ADR-0023 — WCAG 2.2 AA, screen readers and keyboard conventions](adr-0023-accessibility.md) | Accepted | In progress | 1–12 |
+| [ADR-0024 — Mobile, tablet, wide-screen and high-zoom workspace design](adr-0024-responsive-workspaces.md) | Accepted | In progress | 2–12 |
+| [ADR-0025 — Local-only security, privacy and filesystem boundaries](adr-0025-local-privacy.md) | Accepted | Implemented | 3–13 |
+| [ADR-0026 — Additive backend contracts, stable identifiers and feature detection](adr-0026-api-compatibility.md) | Accepted | In progress | 3–10 |
+| [ADR-0027 — Truthful AI explanations and musical feedback](adr-0027-explanations-and-feedback.md) | Accepted | In progress | 4–10 |
+| [ADR-0028 — Backend-offline recovery, conflicts and multiple tabs](adr-0028-recovery-and-multitab.md) | Accepted | In progress | 3–12 |
+| [ADR-0029 — Regression strategy, real audio fixtures and release quality gates](adr-0029-testing-and-quality.md) | Accepted | In progress | 0–13 |
+| [ADR-0030 — Incremental migration, rollback and ADR status governance](adr-0030-migration-and-release.md) | Accepted | Implemented | 0–13 |
+| [ADR-0031 — Installed PWA, browser features and platform integrations](adr-0031-pwa-and-browsers.md) | Accepted | In progress | 2–13 |
+| [ADR-0032 — Privacy-safe diagnostics and truthful background-job feedback](adr-0032-diagnostics-and-operations.md) | Accepted | In progress | 10–13 |
 
 ## Planning and verification artifacts
 

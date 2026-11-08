@@ -263,31 +263,31 @@
 
 | ADR | Decision | Implementation | Verified |
 |---|---|---|---:|
-| [ADR-0089](adr-0089-charter-baseline-parity-and-governance.md) | Proposed | Not started | 0/10 |
-| [ADR-0090](adr-0090-palette-theme-semantics-and-contrast.md) | Proposed | Not started | 0/10 |
-| [ADR-0091](adr-0091-type-spacing-density-and-css-ownership.md) | Proposed | Not started | 0/10 |
-| [ADR-0092](adr-0092-navigation-shell-viewport-and-deep-links.md) | Proposed | Not started | 0/10 |
-| [ADR-0093](adr-0093-persistent-player-audio-focus-and-stage-lifecycle.md) | Proposed | Not started | 0/10 |
-| [ADR-0094](adr-0094-accessible-components-overlays-and-feedback.md) | Proposed | Not started | 0/10 |
-| [ADR-0095](adr-0095-async-consistency-undo-offline-and-multitab.md) | Proposed | Not started | 0/10 |
-| [ADR-0096](adr-0096-onboarding-sources-and-time-to-first-play.md) | Proposed | Not started | 0/10 |
-| [ADR-0097](adr-0097-explore-presets-steering-and-mix-activation.md) | Proposed | Not started | 0/10 |
-| [ADR-0098](adr-0098-listen-waveform-lyrics-visualizer-and-stage.md) | Proposed | Not started | 0/10 |
-| [ADR-0099](adr-0099-my-mixes-drafts-render-line-and-scoped-activation.md) | Proposed | Not started | 0/10 |
-| [ADR-0100](adr-0100-editor-timeline-song-seam-and-identity.md) | Proposed | Not started | 0/10 |
-| [ADR-0101](adr-0101-transition-inspector-requested-versus-rendered.md) | Proposed | Not started | 0/10 |
-| [ADR-0102](adr-0102-stem-studio-arrangement-grid-and-recovery.md) | Proposed | Not started | 0/10 |
-| [ADR-0103](adr-0103-request-states-bridge-consent-and-atomic-join.md) | Proposed | Not started | 0/10 |
-| [ADR-0104](adr-0104-word-connections-harmonic-discovery-and-feedback.md) | Proposed | Not started | 0/10 |
-| [ADR-0105](adr-0105-library-browse-search-filters-and-scale.md) | Proposed | Not started | 0/10 |
-| [ADR-0106](adr-0106-song-details-corrections-and-local-sources.md) | Proposed | Not started | 0/10 |
-| [ADR-0107](adr-0107-workspace-analysis-sources-storage-and-diagnostics.md) | Proposed | Not started | 0/10 |
-| [ADR-0108](adr-0108-flac-export-jobs-and-frozen-revisions.md) | Proposed | Not started | 0/10 |
-| [ADR-0109](adr-0109-blind-listening-study-and-learning-integrity.md) | Proposed | Not started | 0/10 |
-| [ADR-0110](adr-0110-wcag-keyboard-zoom-motion-and-screen-readers.md) | Proposed | Not started | 0/10 |
-| [ADR-0111](adr-0111-frontend-architecture-performance-and-privacy.md) | Proposed | Not started | 0/10 |
-| [ADR-0112](adr-0112-tests-matrix-visual-e2e-and-concurrency.md) | Proposed | Not started | 0/10 |
-| [ADR-0113](adr-0113-research-migration-rollback-and-release.md) | Proposed | Not started | 0/10 |
+| [ADR-0089](adr-0089-charter-baseline-parity-and-governance.md) | Accepted | Not started | 0/10 |
+| [ADR-0090](adr-0090-palette-theme-semantics-and-contrast.md) | Accepted | Not started | 0/10 |
+| [ADR-0091](adr-0091-type-spacing-density-and-css-ownership.md) | Accepted | Not started | 0/10 |
+| [ADR-0092](adr-0092-navigation-shell-viewport-and-deep-links.md) | Accepted | Not started | 0/10 |
+| [ADR-0093](adr-0093-persistent-player-audio-focus-and-stage-lifecycle.md) | Accepted | Not started | 0/10 |
+| [ADR-0094](adr-0094-accessible-components-overlays-and-feedback.md) | Accepted | Not started | 0/10 |
+| [ADR-0095](adr-0095-async-consistency-undo-offline-and-multitab.md) | Accepted | Not started | 0/10 |
+| [ADR-0096](adr-0096-onboarding-sources-and-time-to-first-play.md) | Accepted | Not started | 0/10 |
+| [ADR-0097](adr-0097-explore-presets-steering-and-mix-activation.md) | Accepted | Not started | 0/10 |
+| [ADR-0098](adr-0098-listen-waveform-lyrics-visualizer-and-stage.md) | Accepted | Not started | 0/10 |
+| [ADR-0099](adr-0099-my-mixes-drafts-render-line-and-scoped-activation.md) | Accepted | Not started | 0/10 |
+| [ADR-0100](adr-0100-editor-timeline-song-seam-and-identity.md) | Accepted | Not started | 0/10 |
+| [ADR-0101](adr-0101-transition-inspector-requested-versus-rendered.md) | Accepted | Not started | 0/10 |
+| [ADR-0102](adr-0102-stem-studio-arrangement-grid-and-recovery.md) | Accepted | Not started | 0/10 |
+| [ADR-0103](adr-0103-request-states-bridge-consent-and-atomic-join.md) | Accepted | Not started | 0/10 |
+| [ADR-0104](adr-0104-word-connections-harmonic-discovery-and-feedback.md) | Accepted | Not started | 0/10 |
+| [ADR-0105](adr-0105-library-browse-search-filters-and-scale.md) | Accepted | Not started | 0/10 |
+| [ADR-0106](adr-0106-song-details-corrections-and-local-sources.md) | Accepted | Not started | 0/10 |
+| [ADR-0107](adr-0107-workspace-analysis-sources-storage-and-diagnostics.md) | Accepted | Not started | 0/10 |
+| [ADR-0108](adr-0108-flac-export-jobs-and-frozen-revisions.md) | Accepted | Not started | 0/10 |
+| [ADR-0109](adr-0109-blind-listening-study-and-learning-integrity.md) | Accepted | Not started | 0/10 |
+| [ADR-0110](adr-0110-wcag-keyboard-zoom-motion-and-screen-readers.md) | Accepted | Not started | 0/10 |
+| [ADR-0111](adr-0111-frontend-architecture-performance-and-privacy.md) | Accepted | Not started | 0/10 |
+| [ADR-0112](adr-0112-tests-matrix-visual-e2e-and-concurrency.md) | Accepted | Not started | 0/10 |
+| [ADR-0113](adr-0113-research-migration-rollback-and-release.md) | Accepted | Not started | 0/10 |
 | **25 total** | **25 Proposed** | **250 Not started** | **0/250** |
 
 ## Future evidence entry template

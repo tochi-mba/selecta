@@ -1,6 +1,6 @@
 # Selecta 3.0 — verification, adversarial edge cases and release gates
 
-- **Decision status:** Proposed.
+- **Decision status:** Accepted.
 - **Implementation status:** Not started.
 - **Test execution status:** Not executed for this S3 programme; prior test suites exist but no new outcome is claimed by these docs.
 - **Applies to:** All 30 new ADRs and all 252 unstarted implementation items.

@@ -10,27 +10,27 @@
 
 | ADR | Proposed decision | Phase | Priority | Decision | Implementation | Verified |
 |---|---|---|---|---|---|---|
-| [ADR-114](adr-0114-experience-charter-and-measurable-quality.md) | Experience-first product charter and measurable quality | Baseline | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-115](adr-0115-intent-led-navigation-and-route-continuity.md) | Intent-led navigation, route continuity and entry context | Structure | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-116](adr-0116-listening-first-player-and-optional-controls.md) | Listening-first player, Up Next and optional DJ controls | Listener | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-117](adr-0117-three-stage-mix-creation-journey.md) | Three-stage mix creation: choose, shape and commit | Make a Mix | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-118](adr-0118-recommendation-cards-and-authentic-preview.md) | Recommendations: clear music-first cards and authentic previews | Make a Mix | P1 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-119](adr-0119-my-mixes-drafts-and-render-line.md) | My Mixes: distinct current, draft and render scopes | Creator | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-120](adr-0120-song-transition-editor-workstation.md) | Arrangement editor: distinct song and transition objects | Creator | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-121](adr-0121-transition-inspector-audition-and-truth.md) | Transition Inspector: intent, rendered reality and audition | Creator | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-122](adr-0122-studio-shape-and-detailed-editing.md) | Stem Studio: approachable Shape controls and lossless Detailed mode | Expert | P1 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-123](adr-0123-music-library-browse-and-contextual-actions.md) | Library: music-first browsing and contextual actions | Collection | P1 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-124](adr-0124-requests-lifecycle-and-bridge-consent.md) | Requests: truthful lifecycle and explicit bridge consent | Collection | P1 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-125](adr-0125-musical-discovery-audition-workflows.md) | Musical discovery as clear word and harmonic audition flows | Collection | P1 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-126](adr-0126-browser-first-onboarding-and-readiness.md) | Browser-first onboarding and readiness, without desktop packaging | Listener | P1 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-127](adr-0127-export-job-and-frozen-revision.md) | Export: truthful frozen revision, job lifecycle and file delivery | Operations | P1 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-128](adr-0128-calm-workspace-and-operations.md) | Workspace as a calm, actionable operations center | Operations | P2 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-129](adr-0129-blind-study-neutral-audio.md) | Neutral blind A/B listening study with protocol integrity | Operations | P1 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-130](adr-0130-brand-tokens-and-css-ownership.md) | Warm editorial design language, independent themes and CSS ownership | Foundation | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-131](adr-0131-component-states-and-scoped-recovery.md) | Shared component contracts, honest async states and scoped recovery | Foundation | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-132](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Responsive compositions, WCAG 2.2 AA and purposeful motion | Quality | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-133](adr-0133-user-research-performance-and-release-evidence.md) | Uncoached user research, real performance and release evidence | Quality | P0 | Proposed | Not started (0/5) | No (0/5) |
-| [ADR-134](adr-0134-web-first-future-saas-boundary.md) | Web-first product boundary for a possible future SaaS | Scope | P0 | Proposed | Not started (0/5) | No (0/5) |
+| [ADR-114](adr-0114-experience-charter-and-measurable-quality.md) | Experience-first product charter and measurable quality | Baseline | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-115](adr-0115-intent-led-navigation-and-route-continuity.md) | Intent-led navigation, route continuity and entry context | Structure | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-116](adr-0116-listening-first-player-and-optional-controls.md) | Listening-first player, Up Next and optional DJ controls | Listener | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-117](adr-0117-three-stage-mix-creation-journey.md) | Three-stage mix creation: choose, shape and commit | Make a Mix | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-118](adr-0118-recommendation-cards-and-authentic-preview.md) | Recommendations: clear music-first cards and authentic previews | Make a Mix | P1 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-119](adr-0119-my-mixes-drafts-and-render-line.md) | My Mixes: distinct current, draft and render scopes | Creator | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-120](adr-0120-song-transition-editor-workstation.md) | Arrangement editor: distinct song and transition objects | Creator | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-121](adr-0121-transition-inspector-audition-and-truth.md) | Transition Inspector: intent, rendered reality and audition | Creator | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-122](adr-0122-studio-shape-and-detailed-editing.md) | Stem Studio: approachable Shape controls and lossless Detailed mode | Expert | P1 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-123](adr-0123-music-library-browse-and-contextual-actions.md) | Library: music-first browsing and contextual actions | Collection | P1 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-124](adr-0124-requests-lifecycle-and-bridge-consent.md) | Requests: truthful lifecycle and explicit bridge consent | Collection | P1 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-125](adr-0125-musical-discovery-audition-workflows.md) | Musical discovery as clear word and harmonic audition flows | Collection | P1 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-126](adr-0126-browser-first-onboarding-and-readiness.md) | Browser-first onboarding and readiness, without desktop packaging | Listener | P1 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-127](adr-0127-export-job-and-frozen-revision.md) | Export: truthful frozen revision, job lifecycle and file delivery | Operations | P1 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-128](adr-0128-calm-workspace-and-operations.md) | Workspace as a calm, actionable operations center | Operations | P2 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-129](adr-0129-blind-study-neutral-audio.md) | Neutral blind A/B listening study with protocol integrity | Operations | P1 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-130](adr-0130-brand-tokens-and-css-ownership.md) | Warm editorial design language, independent themes and CSS ownership | Foundation | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-131](adr-0131-component-states-and-scoped-recovery.md) | Shared component contracts, honest async states and scoped recovery | Foundation | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-132](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Responsive compositions, WCAG 2.2 AA and purposeful motion | Quality | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-133](adr-0133-user-research-performance-and-release-evidence.md) | Uncoached user research, real performance and release evidence | Quality | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-134](adr-0134-web-first-future-saas-boundary.md) | Web-first product boundary for a possible future SaaS | Scope | P0 | Accepted | Not started (0/5) | No (0/5) |
 | **Total** | **21 proposed design decisions** | | | **21 Proposed** | **0/105 Implemented** | **0/105 Verified** |
 
 ## Delivery sequence (dependencies, not schedule)

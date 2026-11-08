@@ -1,6 +1,6 @@
 # ADR-0125 — Musical discovery as clear word and harmonic audition flows
 
-- **Decision:** Proposed (requires named owner acceptance).
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Not started (0/5 newly defined EX tasks).
 - **Verified:** No (0/5 independent acceptance).
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.

@@ -7,7 +7,7 @@
 
 ## [ADR-0165 — Creative-interface charter and attention modes](adr-0165-creative-interface-charter.md)
 
-**Priority / phase:** P0 / Foundation. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Foundation. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0165-01 — Inventory current scenes and interruptions.** **Acceptance:** Map primary action, supporting data, conflicts and source state for every core journey. **Required verification:** Annotated source baseline and uncoached observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0165-02 — Define Explore Create Listen scene hierarchy.** **Acceptance:** Each has one first-glance focal object without losing advanced actions. **Required verification:** Design specimens in both themes and five-second glance test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -19,7 +19,7 @@
 
 ## [ADR-0166 — Shared song, seam, Energy Horizon and route visual grammar](adr-0166-music-object-visual-grammar.md)
 
-**Priority / phase:** P0 / Foundation. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Foundation. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0166-01 — Specify four reusable musical objects.** **Acceptance:** Each has stable identity, semantic variants and known/unknown representations. **Required verification:** Component specimens at compact and full sizes. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0166-02 — Design decorative song fingerprint provenance.** **Acceptance:** Identical song yields stable motif with no genre or quality inference. **Required verification:** Missing metadata, duplicate title and re-render fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -31,7 +31,7 @@
 
 ## [ADR-0167 — Cross-scene continuity, contextual navigation and persistent context](adr-0167-creative-scene-continuity.md)
 
-**Priority / phase:** P0 / Foundation. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Foundation. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0167-01 — Map exact object identity across routes.** **Acceptance:** Mix/scope/seam/song IDs survive navigation and stale responses. **Required verification:** Deep-link and popstate matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0167-02 — Storyboard mix idea to generated sequence.** **Acceptance:** The selected concept remains identifiable without false rendered state. **Required verification:** Confirmed-build fixture and review video. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -43,7 +43,7 @@
 
 ## [ADR-0168 — Make a Mix: expressive idea selection and honest result reveal](adr-0168-expressive-mix-selection-and-reveal.md)
 
-**Priority / phase:** P0 / Explore. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Explore. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0168-01 — Design featured hero and one primary CTA.** **Acceptance:** Intent, Play and approximate length readable at first glance. **Required verification:** 375/1440px screenshots and glance testing. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0168-02 — Create distinct card motif set.** **Acceptance:** The moment/mood/sound/journey distinguishable without made-up facts. **Required verification:** Motif provenance and comprehension review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -55,7 +55,7 @@
 
 ## [ADR-0169 — Energy Horizon, tactile shaping and destination scope](adr-0169-energy-horizon-and-scoped-shaping.md)
 
-**Priority / phase:** P0 / Create. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Create. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0169-01 — Design reusable five-stop horizon.** **Acceptance:** Same semantic start/finish form works in builder/draft/editor. **Required verification:** Responsive and state specimens. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0169-02 — Specify finger/stylus drawing precision.** **Acceptance:** Pointer capture, scroll behaviour and cancellation are deterministic. **Required verification:** Touch and stylus trace tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -67,7 +67,7 @@
 
 ## [ADR-0170 — Listen: audio-clock musical scene, real spectrum and handoff](adr-0170-listen-audio-clock-and-handoffs.md)
 
-**Priority / phase:** P0 / Listen. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Listen. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0170-01 — Prototype dominant Listen song scene.** **Acceptance:** Song/artist and transport legible while Next remains discoverable. **Required verification:** Dark/light mobile and wide-display review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0170-02 — Specify real audio-reactive motif variants.** **Acceptance:** No animation without actual analyzer data and valid audio ownership. **Required verification:** Muted, paused, hidden-tab and low-power fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -79,7 +79,7 @@
 
 ## [ADR-0171 — Lyrics, authentic wordplay handoffs and fullscreen Stage](adr-0171-lyrics-wordplay-and-stage.md)
 
-**Priority / phase:** P1 / Listen. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P1 / Listen. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0171-01 — Specify lyrics confidence levels.** **Acceptance:** UI distinguishes timed word, line, plain and missing lyric with truthful fallback. **Required verification:** Actual synced/unsynced/instrumental fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0171-02 — Design shared-phrase visual choreography.** **Acceptance:** Phrase continuity shows real source text and does not imply false precision. **Required verification:** Verified wordplay clip review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -91,7 +91,7 @@
 
 ## [ADR-0172 — Transition Inspector: interpretive seam diagrams and honest A/B audition](adr-0172-seam-inspector-and-audition-comparison.md)
 
-**Priority / phase:** P0 / Create. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Create. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0172-01 — Define diagram variants by real technique.** **Acceptance:** Each actual move has accurately labeled distinct graphic. **Required verification:** Expert semantic review and rendered examples. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0172-02 — Preserve pair/revision identity.** **Acceptance:** Inspector never edits or auditions a newly unrelated seam after reorder. **Required verification:** Stale pair, repeated title and race tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -103,7 +103,7 @@
 
 ## [ADR-0173 — Arrangement timeline: tactile songs, seam edges and energy overview](adr-0173-tactile-mix-editor-and-energy-overview.md)
 
-**Priority / phase:** P0 / Create. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Create. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0173-01 — Define song block/seam link material.** **Acceptance:** Song and connection distinguishable without extra reading. **Required verification:** Full density and 320px specimens. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0173-02 — Prototype affected-seam drag preview.** **Acceptance:** Users see valid insertion and relevant changed neighbours. **Required verification:** Pointer and repeated-ID move fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -115,7 +115,7 @@
 
 ## [ADR-0174 — Stem Studio: tactile layers, accurate playhead and human–Selecta differences](adr-0174-stem-studio-tangible-layers-and-diffs.md)
 
-**Priority / phase:** P0 / Create. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Create. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0174-01 — Design eight-lane visual material system.** **Acceptance:** Four parts and both songs recognized through text/pattern, not only hue. **Required verification:** Color-blind, forced-colors and expert review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0174-02 — Specify Shape Grid List equivalence.** **Acceptance:** No mode switch loses or coarsens cell values or focus. **Required verification:** 8–64-cell roundtrip property tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -127,7 +127,7 @@
 
 ## [ADR-0175 — Requests: visible musical routes, ghost placement and bridge consent](adr-0175-requests-and-consented-route-visualization.md)
 
-**Priority / phase:** P0 / Engage. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Engage. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0175-01 — Specify intent/position/ready visual states.** **Acceptance:** User can distinguish requested, proposed and audible states. **Required verification:** State-machine and screen-reader fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0175-02 — Design direct versus bridge route graphic.** **Acceptance:** Only returned ordered songs and valid edges shown. **Required verification:** Bridge search and unavailable-route tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -139,7 +139,7 @@
 
 ## [ADR-0176 — Musical discovery: phrase bridges and focused harmonic connection explorer](adr-0176-lyric-harmonic-connection-explorer.md)
 
-**Priority / phase:** P1 / Explore. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P1 / Explore. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0176-01 — Design legible phrase bridge.** **Acceptance:** Shared word and both songs obvious with long/multilingual lyric lines. **Required verification:** Text and source provenance screenshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0176-02 — Prototype bounded song-neighbour graph.** **Acceptance:** Only real links appear and dense sets remain traversable. **Required verification:** Graph capacity and keyboard navigation test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -151,7 +151,7 @@
 
 ## [ADR-0177 — Library: expressive collection browsing and trustworthy track identity](adr-0177-musical-library-and-real-track-identity.md)
 
-**Priority / phase:** P1 / Explore. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P1 / Explore. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0177-01 — Prototype alternative song browse layout.** **Acceptance:** Song/artist legible and unknown artwork doesn't imply a real cover. **Required verification:** 1000-song and missing-art fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0177-02 — Preserve list feature parity and deep links.** **Acceptance:** Query/filter/sort/density/search continue identically. **Required verification:** URL and pagination/regression tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -163,7 +163,7 @@
 
 ## [ADR-0178 — Onboarding: honest library awakening and first audible DJ reward](adr-0178-first-run-library-awakening.md)
 
-**Priority / phase:** P1 / Onboarding. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P1 / Onboarding. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0178-01 — Design inviting but clear folder start.** **Acceptance:** Creative purpose understandable while path entry/privacy remain visible. **Required verification:** Cold-start usability and accessible form test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0178-02 — Preserve local path validation.** **Acceptance:** All existing missing/inside-added/no-audio/no-access errors recover. **Required verification:** Filesystem preflight fixture tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -175,7 +175,7 @@
 
 ## [ADR-0179 — My Mixes: current-performance identity, drafts and real render line](adr-0179-my-mixes-drafts-and-render-line-presence.md)
 
-**Priority / phase:** P1 / Create. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P1 / Create. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0179-01 — Distinguish current mix and saved draft.** **Acceptance:** Current/draft scope always legible and labelled in all densities. **Required verification:** Side-by-side dark/light and screen reader review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0179-02 — Design truthful energy thumbnail.** **Acceptance:** Real relative values and unknown fallback only. **Required verification:** Missing and nonnumeric energy fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -187,7 +187,7 @@
 
 ## [ADR-0180 — Workspace: library health, truthful processing and operational calm](adr-0180-workspace-library-health-and-progress.md)
 
-**Priority / phase:** P1 / Operate. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P1 / Operate. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0180-01 — Reframe overview around library health.** **Acceptance:** User sees usable/blocked state and one most relevant next action. **Required verification:** Glance review and actual counts audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0180-02 — Distinguish pipeline status ownership.** **Acceptance:** Scan, lyrics, analysis, seams and export cannot be confused. **Required verification:** Mixed job and readiness fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -199,7 +199,7 @@
 
 ## [ADR-0181 — Export: frozen mix revision, real preparation and finished artifact](adr-0181-export-frozen-revision-and-artifact.md)
 
-**Priority / phase:** P1 / Operate. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P1 / Operate. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0181-01 — Design frozen revision visual object.** **Acceptance:** Export identity remains distinct from current mutable mix. **Required verification:** Concurrent edit and export fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0181-02 — Show prerequisite transition states.** **Acceptance:** Progress derived from real seam readiness and job stages only. **Required verification:** Queued/ready/failed render tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -211,7 +211,7 @@
 
 ## [ADR-0182 — Unified microinteraction vocabulary, semantic feedback and musical copy](adr-0182-causal-motion-and-microcopy.md)
 
-**Priority / phase:** P0 / Foundation. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Foundation. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0182-01 — Inventory triggers and cancellation contract.** **Acceptance:** Every animation has data owner, states and interruption rules. **Required verification:** Per-component microstate matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0182-02 — Specify shared easing and motion tokens.** **Acceptance:** No ad-hoc global animation and every use has semantic reason. **Required verification:** CSS token/style audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -223,7 +223,7 @@
 
 ## [ADR-0183 — Responsive sensory design, keyboard parity and audio performance](adr-0183-responsive-accessibility-and-performance.md)
 
-**Priority / phase:** P0 / Quality. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Quality. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0183-01 — Define intensity choice and persistence.** **Acceptance:** User choice survives reload with no influence on music engine. **Required verification:** Pref and Stage tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0183-02 — Provide no-motion/no-color alternatives.** **Acceptance:** All key objects and actions understandable in forced colors. **Required verification:** NVDA/Edge and high contrast review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
@@ -235,7 +235,7 @@
 
 ## [ADR-0184 — Incremental implementation, evidence, neutrality and release gates](adr-0184-research-status-and-release-governance.md)
 
-**Priority / phase:** P0 / Quality. **Decision:** Proposed; **Implementation:** 0/7; **Verified:** 0/7.
+**Priority / phase:** P0 / Quality. **Decision:** Accepted; **Implementation:** 0/7; **Verified:** 0/7.
 
 - [ ] **CI-0184-01 — Establish source baseline and prior-work crosswalk.** **Acceptance:** CI tasks distinguish novel delta from already implemented MI behavior. **Required verification:** Exact main SHA and parity diff. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.
 - [ ] **CI-0184-02 — Create reversible delivery slices.** **Acceptance:** Each PR changes one bounded surface with rollback plan. **Required verification:** Feature-flag and migration review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** —; **Evidence:** —.

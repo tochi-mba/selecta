@@ -6,7 +6,7 @@
 
 ## [ADR-0248](adr-0248-content-aware-title-typography.md) — Content-aware music title typography
 
-**Priority:** P0. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P0. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0248-01 — Define distinct track, artist, mix and Stage type roles.** **Acceptance:** Define distinct track, artist, mix and Stage type roles is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** light/dark title fixtures, browser layout and NVDA review; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0248-02 — Fit ordinary title size to column width and line count.** **Acceptance:** Fit ordinary title size to column width and line count is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** light/dark title fixtures, browser layout and NVDA review; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -19,7 +19,7 @@
 
 ## [ADR-0249](adr-0249-listen-attention-hierarchy.md) — Listen control hierarchy and attention budget
 
-**Priority:** P0. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P0. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0249-01 — Inventory controls and define foreground versus advanced tiers.** **Acceptance:** Inventory controls and define foreground versus advanced tiers is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0249-02 — Keep core transport fixed when panels open or close.** **Acceptance:** Keep core transport fixed when panels open or close is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -32,7 +32,7 @@
 
 ## [ADR-0250](adr-0250-edit-and-inspector-selection.md) — Edit and Inspector selection arbitration
 
-**Priority:** P0. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P0. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0250-01 — Define selected song versus selected seam visual ownership.** **Acceptance:** Define selected song versus selected seam visual ownership is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** reorder/race E2E, real audition and independent creator test; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0250-02 — Highlight only the logical primary edit target.** **Acceptance:** Highlight only the logical primary edit target is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** reorder/race E2E, real audition and independent creator test; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -45,7 +45,7 @@
 
 ## [ADR-0251](adr-0251-music-aware-search.md) — Music-aware Library search and recording relevance
 
-**Priority:** P0. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P0. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0251-01 — Create labeled exact, remix, feat, typo and accent query fixtures.** **Acceptance:** Create labeled exact, remix, feat, typo and accent query fixtures is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** labeled query corpus, 20k search benchmark and duplicate-selection study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0251-02 — Define normalization that never changes displayed metadata.** **Acceptance:** Define normalization that never changes displayed metadata is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** labeled query corpus, 20k search benchmark and duplicate-selection study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -58,7 +58,7 @@
 
 ## [ADR-0252](adr-0252-safe-library-relink.md) — Non-destructive file relocation and Library re-link
 
-**Priority:** P0. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P0. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0252-01 — Distinguish temporarily disconnected sources from removed tracks.** **Acceptance:** Distinguish temporarily disconnected sources from removed tracks is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** real folder move, collision negatives, SQLite transaction and path-security tests; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0252-02 — Define verifiable candidate matches beyond title equality.** **Acceptance:** Define verifiable candidate matches beyond title equality is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** real folder move, collision negatives, SQLite transaction and path-security tests; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -71,7 +71,7 @@
 
 ## [ADR-0253](adr-0253-durable-local-backups.md) — Durable local data backup and validated restore
 
-**Priority:** P0. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P0. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0253-01 — Inventory all durable user-created data and replaceable caches.** **Acceptance:** Inventory all durable user-created data and replaceable caches is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** SQLite backup API tests, interrupted restore rollback and independent round-trip; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0253-02 — Document manifest, version and checksums in a backup archive.** **Acceptance:** Document manifest, version and checksums in a backup archive is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** SQLite backup API tests, interrupted restore rollback and independent round-trip; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -84,7 +84,7 @@
 
 ## [ADR-0254](adr-0254-physical-audio-interruptions.md) — Physical audio interruption and output recovery
 
-**Priority:** P0. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P0. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0254-01 — Document user-pause, suspended, output-unknown and error states.** **Acceptance:** Document user-pause, suspended, output-unknown and error states is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** actual hardware/OS/browser matrix and live audio continuity log; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0254-02 — Feature-detect browser/device APIs without false guarantees.** **Acceptance:** Feature-detect browser/device APIs without false guarantees is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** actual hardware/OS/browser matrix and live audio continuity log; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -97,7 +97,7 @@
 
 ## [ADR-0255](adr-0255-return-to-work.md) — Returning-session and unfinished-work continuity
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0255-01 — Inventory authoritative resumable draft and seam objects.** **Acceptance:** Inventory authoritative resumable draft and seam objects is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** return-to-task E2E and uncoached longitudinal user study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0255-02 — Design low-noise optional continuation entry.** **Acceptance:** Design low-noise optional continuation entry is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** return-to-task E2E and uncoached longitudinal user study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -110,7 +110,7 @@
 
 ## [ADR-0256](adr-0256-contextual-music-help.md) — Contextual music terms and safe discoverable guidance
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0256-01 — List specialist terms and ambiguous actions across all routes.** **Acceptance:** List specialist terms and ambiguous actions across all routes is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** content audit, touch/NVDA tests and novice uncoached tasks; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0256-02 — Explain each action's effect, scope and reversible limit.** **Acceptance:** Explain each action's effect, scope and reversible limit is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** content audit, touch/NVDA tests and novice uncoached tasks; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -123,7 +123,7 @@
 
 ## [ADR-0257](adr-0257-long-session-comfort.md) — Long-session visual comfort and notification budget
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0257-01 — Count foreground toasts and motion changes by severity.** **Acceptance:** Count foreground toasts and motion changes by severity is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** attention-event trace, long-session human comfort and performance/audio test; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0257-02 — Define noncritical versus critical interruption rules.** **Acceptance:** Define noncritical versus critical interruption rules is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** attention-event trace, long-session human comfort and performance/audio test; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -136,7 +136,7 @@
 
 ## [ADR-0258](adr-0258-safe-batch-library-actions.md) — Exact-scope batch Library operations
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0258-01 — Research real demand for multi-song operations.** **Acceptance:** Research real demand for multi-song operations is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** selection keyboard/NVDA tests, transactional API tests and task-efficiency comparison; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0258-02 — Define selected page, loaded rows and whole-query scope.** **Acceptance:** Define selected page, loaded rows and whole-query scope is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** selection keyboard/NVDA tests, transactional API tests and task-efficiency comparison; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -149,7 +149,7 @@
 
 ## [ADR-0259](adr-0259-explore-expectations.md) — Explore choice comparison and truthful mix expectations
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0259-01 — Audit every mix card promise against planner behavior.** **Acceptance:** Audit every mix card promise against planner behavior is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** seeded planner fixtures and uncoached expectation study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0259-02 — Choose brief comparable supported music attributes.** **Acceptance:** Choose brief comparable supported music attributes is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** seeded planner fixtures and uncoached expectation study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -162,7 +162,7 @@
 
 ## [ADR-0260](adr-0260-discovery-to-create.md) — Evidence-backed Discovery to Create handoff
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0260-01 — Catalogue actual Discovery audition and mutation capabilities.** **Acceptance:** Catalogue actual Discovery audition and mutation capabilities is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** stable-ID/race E2E and real-audio journey test; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0260-02 — Specify ordered source/destination song ID contract.** **Acceptance:** Specify ordered source/destination song ID contract is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** stable-ID/race E2E and real-audio journey test; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -175,7 +175,7 @@
 
 ## [ADR-0261](adr-0261-studio-mental-model.md) — Stem Studio novice mental model and expert confidence
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0261-01 — Explain two songs and all eight stem lanes consistently.** **Acceptance:** Explain two songs and all eight stem lanes consistently is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** 64-cell keyboard/touch parity, live audio and novice/expert task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0261-02 — Keep cell coordinate meaning identical across Shape/Grid/List.** **Acceptance:** Keep cell coordinate meaning identical across Shape/Grid/List is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** 64-cell keyboard/touch parity, live audio and novice/expert task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -188,7 +188,7 @@
 
 ## [ADR-0262](adr-0262-request-outcome-uncertainty.md) — Request waiting uncertainty and promised outcomes
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0262-01 — Define requested, considering, awaiting and placed semantics.** **Acceptance:** Define requested, considering, awaiting and placed semantics is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** status fixtures, atomic joining E2E and listener prediction study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0262-02 — State unknown schedule plainly without fabricated countdown.** **Acceptance:** State unknown schedule plainly without fabricated countdown is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** status fixtures, atomic joining E2E and listener prediction study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
@@ -201,7 +201,7 @@
 
 ## [ADR-0263](adr-0263-workspace-self-service.md) — Workspace self-service recovery and privacy-safe diagnostics
 
-**Priority:** P1. **Decision:** Proposed. **Implementation:** 0/8. **Verified:** 0/8.
+**Priority:** P1. **Decision:** Accepted. **Implementation:** 0/8. **Verified:** 0/8.
 
 - [ ] **GP-0263-01 — Catalogue actual environment, scan, worker and export failures.** **Acceptance:** Catalogue actual environment, scan, worker and export failures is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** failure fixtures, clipboard redaction audit and independent nondeveloper repair task; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.
 - [ ] **GP-0263-02 — Distinguish verified cause from speculative diagnosis.** **Acceptance:** Distinguish verified cause from speculative diagnosis is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** failure fixtures, clipboard redaction audit and independent nondeveloper repair task; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence:** —.

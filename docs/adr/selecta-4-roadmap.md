@@ -21,31 +21,31 @@ Retain all existing routes, preference choices, source files, drafts, correction
 
 | ADR | Workstream | Phase | Decision | Implementation | Open tasks |
 |---|---|---|---|---|---:|
-| [ADR-0089](adr-0089-charter-baseline-parity-and-governance.md) | Selecta 4.0 charter, baseline and full feature-preservation governance | 0 Baseline | Proposed | Not started | 10 |
-| [ADR-0090](adr-0090-palette-theme-semantics-and-contrast.md) | Preserve lime/cream/charcoal identity with an independently polished dark and light theme | 1 Foundations | Proposed | Not started | 10 |
-| [ADR-0091](adr-0091-type-spacing-density-and-css-ownership.md) | Typography, spacing, density, icons, visual hierarchy and CSS ownership | 1 Foundations | Proposed | Not started | 10 |
-| [ADR-0092](adr-0092-navigation-shell-viewport-and-deep-links.md) | Responsive navigation shell, optional inspector, global header and route integrity | 2 Shell | Proposed | Not started | 10 |
-| [ADR-0093](adr-0093-persistent-player-audio-focus-and-stage-lifecycle.md) | Persistent playback presentation, previews, audio focus and immersive Stage lifecycle | 2 Shell / 4 Listen | Proposed | Not started | 10 |
-| [ADR-0094](adr-0094-accessible-components-overlays-and-feedback.md) | Shared accessible controls, menus, sheets, dialogs and activity presentation | 1 Foundations / 2 Shell | Proposed | Not started | 10 |
-| [ADR-0095](adr-0095-async-consistency-undo-offline-and-multitab.md) | Truthful asynchronous state, revision guards, Undo, recovery and multi-tab consistency | 1 Foundations / cross-cutting | Proposed | Not started | 10 |
-| [ADR-0096](adr-0096-onboarding-sources-and-time-to-first-play.md) | First-run folder import, analysis readiness and time to first valid play | 3 Listener | Proposed | Not started | 10 |
-| [ADR-0097](adr-0097-explore-presets-steering-and-mix-activation.md) | Explore discovery, energy and cue customization, and safe current-mix activation | 3 Listener | Proposed | Not started | 10 |
-| [ADR-0098](adr-0098-listen-waveform-lyrics-visualizer-and-stage.md) | Listening-first Now view, accurate waveform, lyrics, spectrum and Stage | 4 Listen | Proposed | Not started | 10 |
-| [ADR-0099](adr-0099-my-mixes-drafts-render-line-and-scoped-activation.md) | My Mixes current-vs-draft clarity, safe activation and render queue | 5 Creator | Proposed | Not started | 10 |
-| [ADR-0100](adr-0100-editor-timeline-song-seam-and-identity.md) | Timeline editor, precise insertion/reorder, persistent scope and problem navigation | 5 Creator | Proposed | Not started | 10 |
-| [ADR-0101](adr-0101-transition-inspector-requested-versus-rendered.md) | Transition Inspector: requested intent, rendered reality, exact cues and safe previews | 5 Creator | Proposed | Not started | 10 |
-| [ADR-0102](adr-0102-stem-studio-arrangement-grid-and-recovery.md) | Stem Studio eight-lane arrangement, accessible time grid and recovery-safe Apply | 6 Expert | Proposed | Not started | 10 |
-| [ADR-0103](adr-0103-request-states-bridge-consent-and-atomic-join.md) | Requests drawer, bridge alternatives, explicit consent and atomic joining | 7 Discovery | Proposed | Not started | 10 |
-| [ADR-0104](adr-0104-word-connections-harmonic-discovery-and-feedback.md) | Lyric-word connections, harmonic four-stage auditions and version-bound feedback | 7 Discovery | Proposed | Not started | 10 |
-| [ADR-0105](adr-0105-library-browse-search-filters-and-scale.md) | Large-Library browse, URL-backed search, readiness filters and 20k-song responsiveness | 8 Library | Proposed | Not started | 10 |
-| [ADR-0106](adr-0106-song-details-corrections-and-local-sources.md) | Song Details, measured-versus-corrected metadata, classification and safe source management | 8 Library | Proposed | Not started | 10 |
-| [ADR-0107](adr-0107-workspace-analysis-sources-storage-and-diagnostics.md) | Workspace operations, background analysis, watched sources, storage and diagnostics | 9 Operations | Proposed | Not started | 10 |
-| [ADR-0108](adr-0108-flac-export-jobs-and-frozen-revisions.md) | Export audio, revision-pinned FLAC jobs, durable progress and verified downloads | 9 Operations | Proposed | Not started | 10 |
-| [ADR-0109](adr-0109-blind-listening-study-and-learning-integrity.md) | Blind A/B listening study, harmonic feedback and learning-data integrity | 9 Operations | Proposed | Not started | 10 |
-| [ADR-0110](adr-0110-wcag-keyboard-zoom-motion-and-screen-readers.md) | WCAG 2.2 AA accessibility, keyboard ownership, touch, reflow and human assistive technology | 1–11 Cross-cutting | Proposed | Not started | 10 |
-| [ADR-0111](adr-0111-frontend-architecture-performance-and-privacy.md) | Frontend module boundaries, CSS performance, 20k/100-song scale and local-first privacy | 1–11 Cross-cutting | Proposed | Not started | 10 |
-| [ADR-0112](adr-0112-tests-matrix-visual-e2e-and-concurrency.md) | Full regression strategy, stable test fixtures, visual review and adversarial races | 0–12 Verification | Proposed | Not started | 10 |
-| [ADR-0113](adr-0113-research-migration-rollback-and-release.md) | User research, phased migration, evidence ledger, rollback and explicit go/no-go | 0–13 Governance/release | Proposed | Not started | 10 |
+| [ADR-0089](adr-0089-charter-baseline-parity-and-governance.md) | Selecta 4.0 charter, baseline and full feature-preservation governance | 0 Baseline | Accepted | Not started | 10 |
+| [ADR-0090](adr-0090-palette-theme-semantics-and-contrast.md) | Preserve lime/cream/charcoal identity with an independently polished dark and light theme | 1 Foundations | Accepted | Not started | 10 |
+| [ADR-0091](adr-0091-type-spacing-density-and-css-ownership.md) | Typography, spacing, density, icons, visual hierarchy and CSS ownership | 1 Foundations | Accepted | Not started | 10 |
+| [ADR-0092](adr-0092-navigation-shell-viewport-and-deep-links.md) | Responsive navigation shell, optional inspector, global header and route integrity | 2 Shell | Accepted | Not started | 10 |
+| [ADR-0093](adr-0093-persistent-player-audio-focus-and-stage-lifecycle.md) | Persistent playback presentation, previews, audio focus and immersive Stage lifecycle | 2 Shell / 4 Listen | Accepted | Not started | 10 |
+| [ADR-0094](adr-0094-accessible-components-overlays-and-feedback.md) | Shared accessible controls, menus, sheets, dialogs and activity presentation | 1 Foundations / 2 Shell | Accepted | Not started | 10 |
+| [ADR-0095](adr-0095-async-consistency-undo-offline-and-multitab.md) | Truthful asynchronous state, revision guards, Undo, recovery and multi-tab consistency | 1 Foundations / cross-cutting | Accepted | Not started | 10 |
+| [ADR-0096](adr-0096-onboarding-sources-and-time-to-first-play.md) | First-run folder import, analysis readiness and time to first valid play | 3 Listener | Accepted | Not started | 10 |
+| [ADR-0097](adr-0097-explore-presets-steering-and-mix-activation.md) | Explore discovery, energy and cue customization, and safe current-mix activation | 3 Listener | Accepted | Not started | 10 |
+| [ADR-0098](adr-0098-listen-waveform-lyrics-visualizer-and-stage.md) | Listening-first Now view, accurate waveform, lyrics, spectrum and Stage | 4 Listen | Accepted | Not started | 10 |
+| [ADR-0099](adr-0099-my-mixes-drafts-render-line-and-scoped-activation.md) | My Mixes current-vs-draft clarity, safe activation and render queue | 5 Creator | Accepted | Not started | 10 |
+| [ADR-0100](adr-0100-editor-timeline-song-seam-and-identity.md) | Timeline editor, precise insertion/reorder, persistent scope and problem navigation | 5 Creator | Accepted | Not started | 10 |
+| [ADR-0101](adr-0101-transition-inspector-requested-versus-rendered.md) | Transition Inspector: requested intent, rendered reality, exact cues and safe previews | 5 Creator | Accepted | Not started | 10 |
+| [ADR-0102](adr-0102-stem-studio-arrangement-grid-and-recovery.md) | Stem Studio eight-lane arrangement, accessible time grid and recovery-safe Apply | 6 Expert | Accepted | Not started | 10 |
+| [ADR-0103](adr-0103-request-states-bridge-consent-and-atomic-join.md) | Requests drawer, bridge alternatives, explicit consent and atomic joining | 7 Discovery | Accepted | Not started | 10 |
+| [ADR-0104](adr-0104-word-connections-harmonic-discovery-and-feedback.md) | Lyric-word connections, harmonic four-stage auditions and version-bound feedback | 7 Discovery | Accepted | Not started | 10 |
+| [ADR-0105](adr-0105-library-browse-search-filters-and-scale.md) | Large-Library browse, URL-backed search, readiness filters and 20k-song responsiveness | 8 Library | Accepted | Not started | 10 |
+| [ADR-0106](adr-0106-song-details-corrections-and-local-sources.md) | Song Details, measured-versus-corrected metadata, classification and safe source management | 8 Library | Accepted | Not started | 10 |
+| [ADR-0107](adr-0107-workspace-analysis-sources-storage-and-diagnostics.md) | Workspace operations, background analysis, watched sources, storage and diagnostics | 9 Operations | Accepted | Not started | 10 |
+| [ADR-0108](adr-0108-flac-export-jobs-and-frozen-revisions.md) | Export audio, revision-pinned FLAC jobs, durable progress and verified downloads | 9 Operations | Accepted | Not started | 10 |
+| [ADR-0109](adr-0109-blind-listening-study-and-learning-integrity.md) | Blind A/B listening study, harmonic feedback and learning-data integrity | 9 Operations | Accepted | Not started | 10 |
+| [ADR-0110](adr-0110-wcag-keyboard-zoom-motion-and-screen-readers.md) | WCAG 2.2 AA accessibility, keyboard ownership, touch, reflow and human assistive technology | 1–11 Cross-cutting | Accepted | Not started | 10 |
+| [ADR-0111](adr-0111-frontend-architecture-performance-and-privacy.md) | Frontend module boundaries, CSS performance, 20k/100-song scale and local-first privacy | 1–11 Cross-cutting | Accepted | Not started | 10 |
+| [ADR-0112](adr-0112-tests-matrix-visual-e2e-and-concurrency.md) | Full regression strategy, stable test fixtures, visual review and adversarial races | 0–12 Verification | Accepted | Not started | 10 |
+| [ADR-0113](adr-0113-research-migration-rollback-and-release.md) | User research, phased migration, evidence ledger, rollback and explicit go/no-go | 0–13 Governance/release | Accepted | Not started | 10 |
 | **TOTAL** | **25 proposed decisions** | | | **0 Implemented / 0 Verified** | **250** |
 
 ## Binding preservation invariants

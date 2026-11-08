@@ -1,6 +1,6 @@
 # ADR-0271 — Matched light/dark route-state visual evidence and verification
 
-- **Decision:** Proposed (owner approval pending).
+- **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** 8/8 Not started, 0/8 In progress, 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta final polish (FP), 2026-11-08; main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`.

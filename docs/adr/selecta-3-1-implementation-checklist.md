@@ -1,6 +1,6 @@
 # Selecta 3.1 — 116-item UI/UX finishing implementation checklist
 
-- **Decision:** Proposed (11 ADRs, ADR-0078–0088).
+- **Decision:** Accepted (11 ADRs, ADR-0078–0088).
 - **Implementation:** PR #25 merged as `6d78cf420c55817e967fc3b8db45749c9817926e` with 29 historically mapped partial tasks; this ledger still records **0/116 independently Verified**.
 - **Baseline:** `main` at `3b01dc1` (merged Selecta 3.0).
 - **Checklist discipline:** Every checkbox intentionally remains unchecked. PR #25 now includes a small amount of implementation, but no task yet has independent Verified evidence.
@@ -24,7 +24,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0078 — Reconcile the shipped 3.0 baseline and govern finishing work](adr-0078-baseline-evidence-and-governance.md)
 
-**Phase:** 0 Baseline. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
+**Phase:** 0 Baseline. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0078-01 — Pin baseline to actual 3.0 merge and current release head.** Acceptance: Evidence record names commit, environment, browser, installed/PWA assumptions and support boundary.
 - [ ] **S31-0078-02 — Reconcile the 258 inherited S3 IDs with merged code and CI.** Acceptance: Every S3 ID maps to code/PR/tests or remains unresolved; no unchecked legacy item is silently marked done.
@@ -41,7 +41,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0079 — Unify typography, themes, visual rhythm and CSS ownership](adr-0079-visual-system-and-css-ownership.md)
 
-**Phase:** 1 Foundations. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
+**Phase:** 1 Foundations. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0079-01 — Approve visual hierarchy for page, song, metadata and technical values.** Acceptance: Screens use a documented typographic scale; long/RTL/missing song metadata remains readable.
 - [ ] **S31-0079-02 — Specify semantic colour role mapping for both themes.** Acceptance: Buttons, links, statuses, playback, requests, caution, focus and selections preserve contrast and meaning in light/dark.
@@ -58,7 +58,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0080 — Make controls, asynchronous states, recovery and Undo dependable](adr-0080-interaction-state-recovery-and-undo.md)
 
-**Phase:** 1 Foundations. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
+**Phase:** 1 Foundations. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0080-01 — Define shared initial/empty/partial/refresh/error/offline/recovery presentation rules.** Acceptance: Each state includes visible facts, allowed actions, focus/announcement behaviour and next step.
 - [ ] **S31-0080-02 — Review skeleton geometry for every high-traffic content surface.** Acceptance: Placeholders match real content structure and do not cause large avoidable layout jumps.
@@ -75,7 +75,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0081 — Reduce friction from first music folder to a confident first mix](adr-0081-first-run-explore-and-mix-choice.md)
 
-**Phase:** 2 Listener. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
+**Phase:** 2 Listener. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0081-01 — Review new-user entry and folder path guidance.** Acceptance: User knows where to find a path, what stays local, what metadata can leave, and why a path can be rejected.
 - [ ] **S31-0081-02 — Design distinct source-check, scan, analysis and mix-ready states.** Acceptance: Every stage has accurate progress or uncertainty, separate failures, and useful next action.
@@ -92,7 +92,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0082 — Polish Listen, navigation, mini-player and Stage without audio regressions](adr-0082-listen-shell-stage-and-audio-trust.md)
 
-**Phase:** 2 Listener. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
+**Phase:** 2 Listener. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
 
 - [ ] **S31-0082-01 — Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete.
 - [ ] **S31-0082-02 — Test Next versus Skip semantics and transition countdown wording.** Acceptance: Users understand whether the next song is immediate or transition-aligned without changing transport behaviour.
@@ -110,7 +110,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0083 — Make drafts, timeline editing, transition intent and export unambiguous](adr-0083-mixes-editor-inspector-and-export.md)
 
-**Phase:** 3 Creator. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/12.
+**Phase:** 3 Creator. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/12.
 
 - [ ] **S31-0083-01 — Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next.
 - [ ] **S31-0083-02 — Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity.
@@ -129,7 +129,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0084 — Refine Stem Studio's expert controls without reducing capability](adr-0084-stem-studio-workstation-polish.md)
 
-**Phase:** 3 Creator. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/9.
+**Phase:** 3 Creator. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/9.
 
 - [ ] **S31-0084-01 — Review session identity and the A/B song context.** Acceptance: User can always tell which songs/pair and revision are being changed.
 - [ ] **S31-0084-02 — Improve lane and square visual/readable semantics.** Acceptance: Voice, drums, bass and melody cells are distinguishable without colour alone.
@@ -145,7 +145,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0085 — Clarify Requests, consented bridges and discovery auditions](adr-0085-requests-and-music-discovery.md)
 
-**Phase:** 4 Discovery/Operations. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
+**Phase:** 4 Discovery/Operations. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/10.
 
 - [ ] **S31-0085-01 — Review request search and duplicate/pre-existing choices.** Acceptance: Users understand requested versus already planned/playing songs and can cancel safely.
 - [ ] **S31-0085-02 — Clarify waiting, preparing, ready, inserted, failed and cancelled states.** Acceptance: Status and detail agree with server truth, including late updates and refresh.
@@ -162,7 +162,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0086 — Polish Library, Workspace, studies and operational status](adr-0086-library-workspace-study-and-operational-trust.md)
 
-**Phase:** 4 Discovery/Operations. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
+**Phase:** 4 Discovery/Operations. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
 
 - [ ] **S31-0086-01 — Review Library search, sort, filters, density and URL/history state.** Acceptance: Results match query, Back restores selected filter, and deep links remain valid.
 - [ ] **S31-0086-02 — Rebalance library row title, artist, readiness and action hierarchy.** Acceptance: Scanning reveals song identity and blockers before secondary maintenance controls.
@@ -180,7 +180,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0087 — Verify WCAG, device reflow, audio latency and scale](adr-0087-accessibility-responsive-and-performance-gates.md)
 
-**Phase:** 5 Cross-cutting quality. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
+**Phase:** 5 Cross-cutting quality. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/11.
 
 - [ ] **S31-0087-01 — Approve platform, width, zoom, orientation and keyboard matrix.** Acceptance: Matrix covers 320/375/390/430/768/1024/1280/1440/1920/3840 CSS px where meaningful.
 - [ ] **S31-0087-02 — Run full keyboard-only tasks across core journeys.** Acceptance: Skip link, menus, forms, tabs, waveform, timeline, Studio grid, requests and export have no traps.
@@ -198,7 +198,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0088 — Require observable user, visual and product acceptance before release](adr-0088-research-visual-regression-and-release.md)
 
-**Phase:** 6 Verification. **Decision:** Proposed. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/12.
+**Phase:** 6 Verification. **Decision:** Accepted. **Implementation:** In progress (selected sub-tasks). **Verified:** 0/12.
 
 - [ ] **S31-0088-01 — Create deterministic visual snapshot matrix for approved screen/state/theme fixtures.** Acceptance: Include full UI, modal open, empty, loading, error, recovery, 320px and desktop examples.
 - [ ] **S31-0088-02 — Require reviewed diffs rather than bulk baseline replacement.** Acceptance: All visual changes have owner approval and intentional reasons; no accidentally hidden content.

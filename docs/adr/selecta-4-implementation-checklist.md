@@ -15,7 +15,7 @@
 
 ### [ADR-0089 — Selecta 4.0 charter, baseline and full feature-preservation governance](adr-0089-charter-baseline-parity-and-governance.md)
 
-**Phase:** 0 Baseline. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 0 Baseline. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0089-01 — Pin and document baseline SHA, supported Windows/Edge/server version and outstanding previous PR history.** Acceptance: Signed inventory identifies actual merged main head; old plans are called historical rather than verified. Required verification: Check exact commit and previous ADR index at implementation start. **Implementation: Not started.**
 - [ ] **S4-0089-02 — Inventory routes, overlays, controls, settings, schemas, API side effects and every state.** Acceptance: All capabilities have traceable owners including obscure menus and error branches. Required verification: Source-to-capability crosscheck against router, views, state and API. **Implementation: Not started.**
@@ -32,7 +32,7 @@
 
 ### [ADR-0090 — Preserve lime/cream/charcoal identity with an independently polished dark and light theme](adr-0090-palette-theme-semantics-and-contrast.md)
 
-**Phase:** 1 Foundations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 1 Foundations. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0090-01 — Audit every current token consumer and hard-coded colour.** Acceptance: Semantic role registry covers all page/overlay/chart surfaces. Required verification: Static scan plus visual spot checks in both themes. **Implementation: Not started.**
 - [ ] **S4-0090-02 — Approve theme palettes, contrast pairings and lime usage.** Acceptance: Text, control boundaries and focus meet WCAG 2.2 AA targets. Required verification: Contrast report for rendered foreground/background pairs. **Implementation: Not started.**
@@ -49,7 +49,7 @@
 
 ### [ADR-0091 — Typography, spacing, density, icons, visual hierarchy and CSS ownership](adr-0091-type-spacing-density-and-css-ownership.md)
 
-**Phase:** 1 Foundations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 1 Foundations. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0091-01 — Define display, H1-H3, body and caption role scale with responsive limits.** Acceptance: Long metadata cannot force primary controls offscreen. Required verification: Long/mixed-direction fixture in all breakpoints. **Implementation: Not started.**
 - [ ] **S4-0091-02 — Define tabular-numeral and bidi-isolation rules.** Acceptance: Times, BPM and keys remain aligned with RTL song metadata. Required verification: Numeric alignment, Arabic/Hebrew/CJK fixture tests. **Implementation: Not started.**
@@ -66,7 +66,7 @@
 
 ### [ADR-0092 — Responsive navigation shell, optional inspector, global header and route integrity](adr-0092-navigation-shell-viewport-and-deep-links.md)
 
-**Phase:** 2 Shell. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 2 Shell. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0092-01 — Inventory deep links, aliases, search params and browser history.** Acceptance: All current routes still load directly and Back/Forward restores context. Required verification: Router E2E for old paths and query combinations. **Implementation: Not started.**
 - [ ] **S4-0092-02 — Implement desktop rail with active and focus identity.** Acceptance: Nested edits retain their correct parent nav destination. Required verification: Keyboard navigation, collapsed rail and screen reader current-page. **Implementation: Not started.**
@@ -83,7 +83,7 @@
 
 ### [ADR-0093 — Persistent playback presentation, previews, audio focus and immersive Stage lifecycle](adr-0093-persistent-player-audio-focus-and-stage-lifecycle.md)
 
-**Phase:** 2 Shell / 4 Listen. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 2 Shell / 4 Listen. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0093-01 — Specify audio-owner state graph for every audition surface.** Acceptance: At most one active owner; no implicit resume after explicit Pause. Required verification: Pairwise preview owner race tests. **Implementation: Not started.**
 - [ ] **S4-0093-02 — Decouple transport lifecycle from routes, themes and overlay mounts.** Acceptance: Playback survives navigation/density/theme changes. Required verification: Real-media route/nav/theme E2E. **Implementation: Not started.**
@@ -100,7 +100,7 @@
 
 ### [ADR-0094 — Shared accessible controls, menus, sheets, dialogs and activity presentation](adr-0094-accessible-components-overlays-and-feedback.md)
 
-**Phase:** 1 Foundations / 2 Shell. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 1 Foundations / 2 Shell. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0094-01 — Publish component state and semantic API contracts.** Acceptance: Every control maps user intent to correct accessible state. Required verification: Unit/story gallery dark/light snapshots. **Implementation: Not started.**
 - [ ] **S4-0094-02 — Standardize buttons, toggles, icon actions and disabled reasons.** Acceptance: Single visible primary action per task context where practical. Required verification: Pointer/keyboard/touch state testing. **Implementation: Not started.**
@@ -117,7 +117,7 @@
 
 ### [ADR-0095 — Truthful asynchronous state, revision guards, Undo, recovery and multi-tab consistency](adr-0095-async-consistency-undo-offline-and-multitab.md)
 
-**Phase:** 1 Foundations / cross-cutting. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 1 Foundations / cross-cutting. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0095-01 — Inventory domain state machines and user-visible labels.** Acceptance: Request/export/analysis/render statuses translate truthfully without data loss. Required verification: State transition table per domain. **Implementation: Not started.**
 - [ ] **S4-0095-02 — Create mutation scope/operation/revision contracts.** Acceptance: Late response cannot target a newer pair or different draft. Required verification: Out-of-order mutation tests. **Implementation: Not started.**
@@ -134,7 +134,7 @@
 
 ### [ADR-0096 — First-run folder import, analysis readiness and time to first valid play](adr-0096-onboarding-sources-and-time-to-first-play.md)
 
-**Phase:** 3 Listener. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 3 Listener. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0096-01 — Redesign welcome hierarchy and path entry guidance.** Acceptance: New user can supply backend-usable path without guessing. Required verification: Unassisted Windows/Edge task and 320px screenshots. **Implementation: Not started.**
 - [ ] **S4-0096-02 — Specify path parsing/quoting/normalization and validation copy.** Acceptance: Input preserved on missing/invalid/unreadable path. Required verification: Quote, space, UNC, Unicode, file-versus-folder tests. **Implementation: Not started.**
@@ -151,7 +151,7 @@
 
 ### [ADR-0097 — Explore discovery, energy and cue customization, and safe current-mix activation](adr-0097-explore-presets-steering-and-mix-activation.md)
 
-**Phase:** 3 Listener. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 3 Listener. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0097-01 — Redesign featured suggestion and category card hierarchy.** Acceptance: Listener sees one clear Play; every other action remains discoverable. Required verification: Light/dark/mobile card screenshots and task completion. **Implementation: Not started.**
 - [ ] **S4-0097-02 — Provide Play/Edit first/Save draft action parity.** Acceptance: Same resulting backend behaviour from all card entry points. Required verification: Generated mix and draft comparison tests. **Implementation: Not started.**
@@ -168,7 +168,7 @@
 
 ### [ADR-0098 — Listening-first Now view, accurate waveform, lyrics, spectrum and Stage](adr-0098-listen-waveform-lyrics-visualizer-and-stage.md)
 
-**Phase:** 4 Listen. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 4 Listen. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0098-01 — Rebuild Listen hierarchy for idle/playing/paused/transition.** Acceptance: Transport and current song are immediate and readable. Required verification: Real media listener testing. **Implementation: Not started.**
 - [ ] **S4-0098-02 — Add optional DJ detail without branching audio behaviour.** Acceptance: All core actions remain in both views. Required verification: Preference change while playing E2E. **Implementation: Not started.**
@@ -185,7 +185,7 @@
 
 ### [ADR-0099 — My Mixes current-vs-draft clarity, safe activation and render queue](adr-0099-my-mixes-drafts-render-line-and-scoped-activation.md)
 
-**Phase:** 5 Creator. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 5 Creator. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0099-01 — Redesign current mix overview and actions.** Acceptance: User can identify actual playing mix and its readiness. Required verification: Active/paused/empty card screenshots. **Implementation: Not started.**
 - [ ] **S4-0099-02 — Redesign saved-draft list with stable identity and status.** Acceptance: Same-name drafts remain disambiguated and editable. Required verification: Duplicate title and multi-draft fixture. **Implementation: Not started.**
@@ -202,7 +202,7 @@
 
 ### [ADR-0100 — Timeline editor, precise insertion/reorder, persistent scope and problem navigation](adr-0100-editor-timeline-song-seam-and-identity.md)
 
-**Phase:** 5 Creator. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 5 Creator. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0100-01 — Implement persistent current/draft scope header and clear actions.** Acceptance: Editing a draft never silently mutates what plays. Required verification: Play A/edit B live scenario. **Implementation: Not started.**
 - [ ] **S4-0100-02 — Redesign song and seam rows with clear hierarchy.** Acceptance: Long, duplicate, RTL song names remain identifiable. Required verification: 2, 20 and 100-song screenshots. **Implementation: Not started.**
@@ -219,7 +219,7 @@
 
 ### [ADR-0101 — Transition Inspector: requested intent, rendered reality, exact cues and safe previews](adr-0101-transition-inspector-requested-versus-rendered.md)
 
-**Phase:** 5 Creator. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 5 Creator. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0101-01 — Design Inspector overview with exact pair identity and readiness.** Acceptance: Opening any seam never appears to target another pair after reordering. Required verification: Selected seam removal and request join tests. **Implementation: Not started.**
 - [ ] **S4-0101-02 — Differentiate requested setting, working render and audible fallback.** Acceptance: User understands why actual rendered move differs. Required verification: Fallback, delayed render and failed render fixtures. **Implementation: Not started.**
@@ -236,7 +236,7 @@
 
 ### [ADR-0102 — Stem Studio eight-lane arrangement, accessible time grid and recovery-safe Apply](adr-0102-stem-studio-arrangement-grid-and-recovery.md)
 
-**Phase:** 6 Expert. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 6 Expert. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0102-01 — Redesign Studio pair header, ruler and eight-lane grid hierarchy.** Acceptance: Track/stem/time identities are always understandable. Required verification: 8/16/32/64-cell screenshot and screen reader tests. **Implementation: Not started.**
 - [ ] **S4-0102-02 — Preserve mouse, touch, Space, arrow, Home/End and Ctrl+Home/End grid actions.** Acceptance: All grid operations act on correct cell with visible focus. Required verification: ARIA grid keyboard and touch-scroll suite. **Implementation: Not started.**
@@ -253,7 +253,7 @@
 
 ### [ADR-0103 — Requests drawer, bridge alternatives, explicit consent and atomic joining](adr-0103-request-states-bridge-consent-and-atomic-join.md)
 
-**Phase:** 7 Discovery. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 7 Discovery. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0103-01 — Rebuild request search and matching results with song identity.** Acceptance: No wrong duplicate-title selection or inaccessible result. Required verification: Rapid search, Unicode, duplicate ID and keyboard tests. **Implementation: Not started.**
 - [ ] **S4-0103-02 — Map all backend request states to truthful user-facing groups.** Acceptance: Waiting/approval/preparing/ready are not conflated. Required verification: State transition matrix including stalled/offline. **Implementation: Not started.**
@@ -270,7 +270,7 @@
 
 ### [ADR-0104 — Lyric-word connections, harmonic four-stage auditions and version-bound feedback](adr-0104-word-connections-harmonic-discovery-and-feedback.md)
 
-**Phase:** 7 Discovery. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 7 Discovery. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0104-01 — Redesign word-connection result card hierarchy.** Acceptance: Shared phrase and exact two tracks precede technical controls. Required verification: Multiple/zero/weak matches snapshots. **Implementation: Not started.**
 - [ ] **S4-0104-02 — Preserve pair previews and actual rendered transition context.** Acceptance: Preview-ready is different from render requested. Required verification: Slow/failed/mismatched render tests. **Implementation: Not started.**
@@ -287,7 +287,7 @@
 
 ### [ADR-0105 — Large-Library browse, URL-backed search, readiness filters and 20k-song responsiveness](adr-0105-library-browse-search-filters-and-scale.md)
 
-**Phase:** 8 Library. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 8 Library. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0105-01 — Redesign desktop list and mobile card-row hierarchy.** Acceptance: Titles, artist, status and actions remain legible with dense data. Required verification: 320/375/768/1280 and 20k screenshot fixtures. **Implementation: Not started.**
 - [ ] **S4-0105-02 — Preserve all existing Library actions and availability rules.** Acceptance: Add/Play next/Start a mix/Analyze/Prioritize/Never play intact. Required verification: Feature parity and action-by-readiness tests. **Implementation: Not started.**
@@ -304,7 +304,7 @@
 
 ### [ADR-0106 — Song Details, measured-versus-corrected metadata, classification and safe source management](adr-0106-song-details-corrections-and-local-sources.md)
 
-**Phase:** 8 Library. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 8 Library. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0106-01 — Redesign Song Details section hierarchy and accessibility.** Acceptance: Relevant identity/readiness easy before technical metadata. Required verification: Readiness variants and NVDA reading order. **Implementation: Not started.**
 - [ ] **S4-0106-02 — Preserve measured, override and effective BPM/key distinction.** Acceptance: UI never mislabels manual value as measured. Required verification: Half/double/blank/reset and server validation tests. **Implementation: Not started.**
@@ -321,7 +321,7 @@
 
 ### [ADR-0107 — Workspace operations, background analysis, watched sources, storage and diagnostics](adr-0107-workspace-analysis-sources-storage-and-diagnostics.md)
 
-**Phase:** 9 Operations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 9 Operations. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0107-01 — Redesign Workspace overview with attention hierarchy.** Acceptance: Actual blockers distinguish from harmless background activity. Required verification: Storage full, no-ready-songs, offline fixtures. **Implementation: Not started.**
 - [ ] **S4-0107-02 — Preserve analysis start/pause/progress and deprioritization.** Acceptance: Processing state is accurate while user listens. Required verification: Paused/playing/restart/poll cases. **Implementation: Not started.**
@@ -338,7 +338,7 @@
 
 ### [ADR-0108 — Export audio, revision-pinned FLAC jobs, durable progress and verified downloads](adr-0108-flac-export-jobs-and-frozen-revisions.md)
 
-**Phase:** 9 Operations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 9 Operations. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0108-01 — Standardize Save/Export/Download terminology across routes.** Acceptance: User cannot confuse editable project and completed file. Required verification: Copy audit plus unassisted task comprehension. **Implementation: Not started.**
 - [ ] **S4-0108-02 — Redesign pre-export scope/snapshot confirmation.** Acceptance: Exact source and revision visible before submission. Required verification: Current/draft same-name and edited-after-start cases. **Implementation: Not started.**
@@ -355,7 +355,7 @@
 
 ### [ADR-0109 — Blind A/B listening study, harmonic feedback and learning-data integrity](adr-0109-blind-listening-study-and-learning-integrity.md)
 
-**Phase:** 9 Operations. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 9 Operations. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0109-01 — Inventory exact trial protocol and field requirements before UI changes.** Acceptance: No study variable is removed or accidentally exposed. Required verification: Protocol comparison against backend and tests. **Implementation: Not started.**
 - [ ] **S4-0109-02 — Redesign enrollment, session status and progress hierarchy.** Acceptance: Study code/input failure and session recovery understandable. Required verification: Invalid/expired code/reload tests. **Implementation: Not started.**
@@ -372,7 +372,7 @@
 
 ### [ADR-0110 — WCAG 2.2 AA accessibility, keyboard ownership, touch, reflow and human assistive technology](adr-0110-wcag-keyboard-zoom-motion-and-screen-readers.md)
 
-**Phase:** 1–11 Cross-cutting. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 1–11 Cross-cutting. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0110-01 — Audit keyboard tab order/landmarks/headings on every route.** Acceptance: Core journeys complete with no focus trap. Required verification: Keyboard-only listener/creator/expert scripts. **Implementation: Not started.**
 - [ ] **S4-0110-02 — Fix Space conflict on custom role-button reorder grip.** Acceptance: Space activates focused control rather than global playback. Required verification: Targeted custom button/global handler test. **Implementation: Not started.**
@@ -389,7 +389,7 @@
 
 ### [ADR-0111 — Frontend module boundaries, CSS performance, 20k/100-song scale and local-first privacy](adr-0111-frontend-architecture-performance-and-privacy.md)
 
-**Phase:** 1–11 Cross-cutting. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 1–11 Cross-cutting. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0111-01 — Document component/domain ownership and import boundaries.** Acceptance: App.tsx complexity reduced incrementally without duplicated stores. Required verification: Dependency diagram and tests. **Implementation: Not started.**
 - [ ] **S4-0111-02 — Separate persistent player state from route composition.** Acceptance: Theme/route/overlay re-render cannot stop playback. Required verification: Transport continuity E2E. **Implementation: Not started.**
@@ -406,7 +406,7 @@
 
 ### [ADR-0112 — Full regression strategy, stable test fixtures, visual review and adversarial races](adr-0112-tests-matrix-visual-e2e-and-concurrency.md)
 
-**Phase:** 0–12 Verification. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 0–12 Verification. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0112-01 — Inventory all prior Python, Web, audio and Edge tests and contracts.** Acceptance: No behavioural assertion silently dropped due to selector change. Required verification: File-by-file old-to-new test mapping. **Implementation: Not started.**
 - [ ] **S4-0112-02 — Create deterministic fixtures for small/large/error/race states.** Acceptance: Fixtures independent and avoid private user music. Required verification: Isolated server/data setup and seeded media checks. **Implementation: Not started.**
@@ -423,7 +423,7 @@
 
 ### [ADR-0113 — User research, phased migration, evidence ledger, rollback and explicit go/no-go](adr-0113-research-migration-rollback-and-release.md)
 
-**Phase:** 0–13 Governance/release. **Decision:** Proposed. **Implementation:** Not started. **Verified:** 0/10.
+**Phase:** 0–13 Governance/release. **Decision:** Accepted. **Implementation:** Not started. **Verified:** 0/10.
 
 - [ ] **S4-0113-01 — Approve baseline, explicit feature parity and release-owner responsibilities.** Acceptance: Every invariant/test has named owner and no inherited status guesses. Required verification: Recorded baseline signature and task mapping. **Implementation: Not started.**
 - [ ] **S4-0113-02 — Conduct initial qualitative listener/creator/expert tasks.** Acceptance: Observed findings logged with no fabricated usability success. Required verification: Participant tasks and reproducible notes. **Implementation: Not started.**

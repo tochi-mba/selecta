@@ -10,7 +10,7 @@
   "scope_note": "New acceptance deltas only; old SF/GP tasks and working source features are not missing claims.",
   "groups": {
     "0264": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "priority": "P0",
       "owner": null,
       "implemented": [],
@@ -31,7 +31,7 @@
       "evidence": null
     },
     "0265": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "priority": "P1",
       "owner": null,
       "implemented": [],
@@ -52,7 +52,7 @@
       "evidence": null
     },
     "0266": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "priority": "P0",
       "owner": null,
       "implemented": [],
@@ -73,7 +73,7 @@
       "evidence": null
     },
     "0267": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "priority": "P0",
       "owner": null,
       "implemented": [],
@@ -94,7 +94,7 @@
       "evidence": null
     },
     "0268": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "priority": "P0",
       "owner": null,
       "implemented": [],
@@ -115,7 +115,7 @@
       "evidence": null
     },
     "0269": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "priority": "P1",
       "owner": null,
       "implemented": [],
@@ -136,7 +136,7 @@
       "evidence": null
     },
     "0270": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "priority": "P0",
       "owner": null,
       "implemented": [],
@@ -157,7 +157,7 @@
       "evidence": null
     },
     "0271": {
-      "decision": "Proposed",
+      "decision": "Accepted",
       "priority": "P0",
       "owner": null,
       "implemented": [],
