@@ -336,7 +336,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const [linkedSong, setLinkedSong] = useState<LibrarySong | null>(null);
   const [linkProblem, setLinkProblem] = useState<'missing' | 'unavailable' | null>(null);
   const [linkRetry, setLinkRetry] = useState(0);
+  const openedFromAddress = useRef<number | null>(null);
   useEffect(() => {
+    // Back/Forward must not leave the previously linked recording open.
+    const previous = openedFromAddress.current;
+    if (previous !== null && previous !== songWanted) {
+      setOpened((current) => current === previous ? null : current);
+    }
+    openedFromAddress.current = songWanted;
     let live = true;
     setLinkedSong(null);
     setLinkProblem(null);
@@ -498,7 +505,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                     checked={selectedIds.includes(song.id)} disabled={searching || failed || selectedIds.length >= 200 && !selectedIds.includes(song.id)}
                     onChange={() => toggleBatch(song.id)} />
                 </label>}
-                <button className="link song-open" onClick={() => setOpened(song.id)} aria-label={`Details for ${name}`}>
+                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`}>
                   <SongMotif songId={song.id} /><b title={title}>{title}</b>
                 </button>
                 <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
