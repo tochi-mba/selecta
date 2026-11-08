@@ -1,6 +1,6 @@
 # Selecta — Unified Experience Finish ADR roadmap (0366–0389)
 
-**Status:** 24 Accepted ADRs (0366–0389); 171 UF tasks Not started; 21 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08. PR #41 includes source changes and regression tests; implementing PR/SHA is recorded per task, and independent reviewers/device evidence remain outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
+**Status:** 24 Accepted ADRs (0366–0389); 170 UF tasks Not started; 22 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08. PR #41 includes source changes and regression tests; implementing PR/SHA is recorded per task, and independent reviewers/device evidence remain outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
 
 ## Why a unified programme
 
@@ -18,7 +18,7 @@ The product direction is three mutually consistent experiences: cinematic and ca
 | [ADR-0369](adr-0369-typography-music-artwork-and-density.md) — Typography, honest artwork, spatial rhythm and density | 02 Foundation | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) — Shared controls, overlays, action hierarchy and feedback | 02 Foundation | P0 | Accepted | 0/8 Implemented (1 In progress) | 0/8 No |
 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) — Long-job progress, asynchronous truth and local recovery | 02 Foundation | P0 | Accepted | 0/8 Implemented (4 In progress) | 0/8 No |
-| [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) — Navigation, first-run readiness and returning-work continuity | 03 Navigation | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) — Navigation, first-run readiness and returning-work continuity | 03 Navigation | P0 | Accepted | 0/8 Implemented (1 In progress) | 0/8 No |
 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) — Persistent player, system media controls and audio focus | 03 Navigation | P0 | Accepted | 0/8 Implemented (3 In progress) | 0/8 No |
 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) — Listen hierarchy, lyrics integrity, seek and transitions | 04 Listen | P1 | Accepted | 0/8 Implemented (1 In progress) | 0/8 No |
 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) — Existing fifteen visualisers, Stage and sensory-safe motion | 04 Listen | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
