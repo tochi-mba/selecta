@@ -167,8 +167,10 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <LinkTabs label="Make a Mix" items={EXPLORE_TABS} current={EXPLORE_TABS.some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
 
-      <section className="hero">
-        <p className="eyebrow">Choose · {firstMix ? 'Your library is ready' : 'Tap and play'}</p>
+      <div className="mix-paths" aria-label="Ways to make a mix">
+      <section className="hero mix-quick" aria-labelledby="mix-quick-title">
+        <p className="eyebrow">Quick Play · {firstMix ? 'Your library is ready' : 'Tap and play'}</p>
+        <h2 id="mix-quick-title" className="mix-path-label">Listen now, shape later</h2>
         <h1 className="display">{hero?.name ?? 'Selecta’s pick'}</h1>
         <p className="lede">{hero?.blurb ?? 'The strongest run it can find through your library.'}</p>
         <div className="row wrap">
@@ -198,9 +200,13 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </p>
       </section>
 
-      <div className="row wrap lucy-entry">
-        <PageLink to="/mixes/lucy" className="button">Make it with Lucy</PageLink>
-        <span className="hint">Describe a mix in your own words. Lucy plans it; nothing is built until you approve it.</span>
+      <section className="mix-create" aria-labelledby="mix-create-title">
+        <p className="eyebrow">Create · Plan before listening</p>
+        <h2 id="mix-create-title">Create with Lucy</h2>
+        <p>Describe the mood, songs or journey you have in mind. Lucy proposes an exact order and transitions for you to review.</p>
+        <PageLink to="/mixes/lucy" className="button primary">Plan a mix with Lucy</PageLink>
+        <p className="hint">Optional. Nothing is sent, saved or played until you choose to do it. Quick Play does not use Lucy.</p>
+      </section>
       </div>
 
       {problem && <p className="warn" role="alert">{problem}</p>}
@@ -263,6 +269,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                       <p className="artists"><span>Draws from</span> {card.artists.join(', ') || 'your mix-ready songs'}</p>
                       <p className="how">{card.moves}</p>
                       <p className="hint">Planning preference, not a promised song order or transition quality. Play replaces the current mix after confirmation; Shape first opens the new mix for editing; Save draft leaves playback unchanged. The generated result depends on available recordings and cues.</p>
+                      <PageLink className="button quiet" to={`/mixes/lucy?prompt=${encodeURIComponent(`I'd like a mix with the ${card.name} feeling. ${card.blurb}`)}`}>Use this feeling with Lucy</PageLink>
+                      <p className="hint">This opens an editable suggestion in Lucy; it does not send a request.</p>
                     </details>
                   </article>
                 ))}
