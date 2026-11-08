@@ -29,7 +29,7 @@ test('all thirteen additional horizontal visualizers are selectable without rest
   const started = await soundsStarted(page);
   const dj = page.locator('details.view-options');
   if (!await dj.evaluate((element) => (element as HTMLDetailsElement).open)) {
-    await dj.locator('summary').click();
+    await dj.locator(':scope > summary').click();
   }
   const choose = page.getByRole('combobox', { name: 'Audio visualizer style' });
   for (const [value, label] of [
