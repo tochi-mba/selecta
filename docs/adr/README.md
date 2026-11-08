@@ -1,12 +1,12 @@
-# Selecta / Flow — proposed artistic UI/UX programme (2026-11-08)
+# Selecta / Flow — owner-accepted artistic UI/UX programme (2026-11-08)
 
-**New documentation-only proposal:** **50 Proposed decisions, ADR-0198–0247; 400 SF implementation tasks Not started; 0 In progress, 0 Implemented and 0 independently Verified.** The new programme builds on the source as of main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` and does **not** mark existing source capabilities missing, revise old implementation histories or change any application code.
+**Owner-accepted design programme (2026-11-08):** **50 Accepted decisions, ADR-0198–0247; 400 SF implementation tasks Not started; 0 In progress, 0 Implemented and 0 independently Verified.** The new programme builds on the source as of main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` and does **not** mark existing source capabilities missing, revise old implementation histories or change any application code.
 
 **Start here:** [50-ADR roadmap](selecta-flow-roadmap.md) · [400-task checklist](selecta-flow-implementation-checklist.md) · [per-task status and independent evidence ledger](selecta-flow-implementation-evidence.md) · [machine-readable statuses](selecta-flow-code-status.json) · [art direction and screen contracts](selecta-flow-design-contracts.md) · [feature preservation](selecta-flow-feature-parity.md) · [motion and interaction matrix](selecta-flow-interaction-matrix.md) · [source map](selecta-flow-source-map.md) · [verification matrix](selecta-flow-verification-matrix.md) · [historical status reconciliation](selecta-flow-status-reconciliation.md) · [independent NO-GO gates](selecta-flow-release-gates.md).
 
 **Direction:** Music is art: cinematic Listen, expressive Explore and precise tactile Create; real handoff choreography and truthful musical visuals. Preserve one audio owner/manual Pause, original local media, current/draft revision and Undo, consented atomic request bridges, full eight-lane Studio, honest Library status and exact frozen-revision FLAC. The fifteen currently source-present spectrum styles remain preserved; new visualizer work concerns polish and independent acceptance, not a claim they are absent. No SaaS, accounts, subscription, cloud media, telemetry, launcher or source audio changes now.
 
-**Status discipline:** Proposed design ≠ owner-accepted decision ≠ implementation ≠ independent verification. Previous T/P/S3/S31/S4/EX/MI/CI history remains exactly as published. This new programme's NO-GO gate applies to the **proposed redesign**, not the current app's fitness.
+**Status discipline:** Owner-accepted decision ≠ implementation ≠ independent verification. Previous T/P/S3/S31/S4/EX/MI/CI history remains exactly as published. This new programme's NO-GO gate applies to the **proposed redesign**, not the current app's fitness.
 
 ---
 
