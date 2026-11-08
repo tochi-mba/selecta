@@ -1,6 +1,6 @@
 # Selecta — Unified Experience Finish ADR roadmap (0366–0389)
 
-**Status:** 24 Accepted ADRs (0366–0389); 186 UF tasks Not started; 6 In progress; 0 Implemented; 0 independently Verified. Acceptance approved by requester on 2026-11-08; implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app source and regression tests.
+**Status:** 24 Accepted ADRs (0366–0389); 184 UF tasks Not started; 8 In progress; 0 Implemented; 0 independently Verified. Acceptance approved by requester on 2026-11-08; implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app source and regression tests.
 
 ## Why a unified programme
 
@@ -24,7 +24,7 @@ The product direction is three mutually consistent experiences: cinematic and ca
 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) — Existing fifteen visualisers, Stage and sensory-safe motion | 04 Listen | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
 | [ADR-0376](adr-0376-make-a-mix-quick-play-and-intent.md) — Make a Mix quick paths, moods, shaping and Lucy handoff | 05 Creation entry | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) — Library integration, LX ownership and exact-recording safety | 05 Creation entry | P0 | Accepted | 0/8 Implemented (1 In progress) | 0/8 No |
-| [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) — Lucy integration, proposal lifecycle, consent and safe approval | 05 Creation entry | P0 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
+| [ADR-0378](adr-0378-lucy-creation-integration-and-proof.md) — Lucy integration, proposal lifecycle, consent and safe approval | 05 Creation entry | P0 | Accepted | 0/8 Implemented (2 In progress) | 0/8 No |
 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) — My Mixes, current/draft identity and render-line hierarchy | 05 Creation | P1 | Accepted | 0/8 Implemented (1 In progress) | 0/8 No |
 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) — Editor sequence, Story/Arrange parity and exact seam identity | 06 Advanced creation | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |
 | [ADR-0381](adr-0381-seam-inspector-audition-and-explanation.md) — Seam Inspector audition, technique truth and accessible editing | 06 Advanced creation | P1 | Accepted | 0/8 Implemented (0 In progress) | 0/8 No |

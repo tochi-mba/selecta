@@ -1,6 +1,6 @@
 # Selecta — Unified Experience Finish ADR proposal (2026-11-08)
 
-**Unified experience finishing programme:** 24 **Accepted** ADRs (0366–0389); **192 UF acceptance items**: 186 Not started, 6 In progress, 0 Implemented and **0 independently Verified**. Requester accepted all UF decisions on 2026-11-08; PR #41 now contains app code and tests. Implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526`.
+**Unified experience finishing programme:** 24 **Accepted** ADRs (0366–0389); **192 UF acceptance items**: 184 Not started, 8 In progress, 0 Implemented and **0 independently Verified**. Requester accepted all UF decisions on 2026-11-08; PR #41 now contains app code and tests. Implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526`.
 
 **Scope:** one source-verified finishing sequence, not a competing redesign: baseline research and parity → semantic CSS, primitives and async state → navigation and playback → Listen/visualisers → Make a Mix/Library/Lucy integration → drafts, Editor, Seam Inspector and Stem Studio → Requests, Discovery, Workspace and Export → responsive/accessibility → independent visual, human, performance and real-audio release gates. This PR changes **only `docs/adr/` markdown/JSON**, not application source/tests/audio or older ADR historical statuses.
 
