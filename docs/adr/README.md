@@ -1,3 +1,15 @@
+# Selecta — Unified Experience Finish ADR proposal (2026-11-08)
+
+**New docs-only cross-product programme:** 24 **Proposed** ADRs (0366–0389), **192 new UF acceptance items** all **Not started**, 0 In progress, 0 Implemented and **0 independently Verified**. Owners unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526`.
+
+**Scope:** one source-verified finishing sequence, not a competing redesign: baseline research and parity → semantic CSS, primitives and async state → navigation and playback → Listen/visualisers → Make a Mix/Library/Lucy integration → drafts, Editor, Seam Inspector and Stem Studio → Requests, Discovery, Workspace and Export → responsive/accessibility → independent visual, human, performance and real-audio release gates. This PR changes **only `docs/adr/` markdown/JSON**, not application source/tests/audio or older ADR historical statuses.
+
+**Authority:** SF/GP/FP/MP visual components and metrics retain existing ownership; LU owns Lucy agent/ready-only correctness; LX owns detailed Library/Make a Mix/Lucy redesign. UF adds cross-screen integration and verification requirements, never claims source-present features are missing simply because proposed task counters start at zero.
+
+**Start here:** [Roadmap](selecta-unified-finish-roadmap.md) · [192-task checklist](selecta-unified-finish-implementation-checklist.md) · [evidence ledger](selecta-unified-finish-implementation-evidence.md) · [status JSON](selecta-unified-finish-code-status.json) · [overlap/parity](selecta-unified-finish-overlap-and-parity.md) · [experience contract](selecta-unified-finish-experience-contract.md) · [verification matrix](selecta-unified-finish-verification-matrix.md) · [status reconciliation](selecta-unified-finish-status-reconciliation.md) · [release gates](selecta-unified-finish-release-gates.md)
+
+---
+
 # Selecta — Library + Lucy experience redesign ADR proposal (2026-11-08)
 
 **New docs-only, scoped redesign programme:** 26 **Proposed** ADRs (0340–0365), 208 individually tracked **Not started** LX implementation tasks, 0 In progress, 0 Implemented and 0 independently Verified. All owners unassigned. Planning baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
