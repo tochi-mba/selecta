@@ -62,13 +62,21 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   startPlaying: () => Promise<void>;
 }) {
   const [approval, setApproval] = useState<Approval | null>(null);
+  // A preflight token applies to one immutable revision. Keep it tied to that
+  // revision even between a prop change and the effect that clears the dialog.
+  const revisionNow = useRef(revision.id);
+  revisionNow.current = revision.id;
+  const [approvalFor, setApprovalFor] = useState('');
+  const activeApproval = approvalFor === revision.id ? approval : null;
   const [understood, setUnderstood] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [lapsed, setLapsed] = useState(false);
   // An approval token describes one exact immutable proposal revision.
   useEffect(() => {
     setApproval(null);
+    setApprovalFor('');
     setUnderstood(false);
+    setOutcome(null);
     setLapsed(false);
   }, [revision.id]);
   const pending = useRef<PendingCommit | null>(readPending());
@@ -94,6 +102,13 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
 
   const settle = async (asked: PendingCommit, commit: Commit) => {
     if (!alive.current) return;
+    // A reply from a prior revision must neither present a saved result as
+    // belonging to this revision nor start music after the person moved on.
+    if (asked.revision !== revisionNow.current) {
+      confirmedHere.current.delete(asked.key);
+      if (commit.status !== 'pending') finish(asked.key);
+      return;
+    }
     if (commit.status === 'pending') {
       setOutcome({ state: 'saving' });
       if (poll.current.count++ < POLL_LIMIT) {
@@ -163,20 +178,24 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   }, [seen]);
 
   const ask = async (action: ApproveAction) => {
+    const requestedRevision = revision.id;
     setOutcome(null);
     setLapsed(false);
     try {
-      const answer = await lucy.approve({ revision: revision.id, hash: revision.hash, action });
+      const answer = await lucy.approve({ revision: requestedRevision, hash: revision.hash, action });
+      if (revisionNow.current !== requestedRevision) return;
       setUnderstood(false);
+      setApprovalFor(requestedRevision);
       setApproval(answer);
     } catch (error) {
+      if (revisionNow.current !== requestedRevision) return;
       if (error instanceof ApiError && error.status === 409) onStale();
       throw error;
     }
   };
 
   const confirm = async () => {
-    const chosen = approval;
+    const chosen = activeApproval;
     if (!chosen) return;
     if (expired(chosen)) {
       setLapsed(true);
@@ -194,9 +213,9 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
 
   const busy = outcome?.state === 'saving' || outcome?.state === 'checking';
   const disabled = !isCurrent || !!blocked || busy;
-  const preflight = approval?.preflight;
+  const preflight = activeApproval?.preflight;
   const problems = preflight?.problems ?? [];
-  const playing = approval?.action === 'draft_and_play';
+  const playing = activeApproval?.action === 'draft_and_play';
   const missingStrictEdges = !!preflight?.ready_only && preflight.ready < preflight.needed;
   const canConfirm = !!preflight && preflight.ok !== false && !problems.length && !missingStrictEdges && (!playing || understood) && !lapsed;
 
@@ -249,7 +268,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
         </div>
       )}
 
-      {approval && preflight && (
+      {activeApproval && preflight && (
         <NativeDialog
           title={playing ? 'Save this mix and play it?' : 'Save this mix as a draft?'}
           onClose={() => setApproval(null)}
