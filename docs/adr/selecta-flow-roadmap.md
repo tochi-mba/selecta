@@ -8,7 +8,7 @@
 
 ## All 50 ADRs and explicit statuses
 
-| ADR / accepted-design decision proposed | Phase | Priority | Decision | New implementation | Independently Verified |
+| ADR / proposed design decision | Phase | Priority | Decision | New implementation | Independently Verified |
 |---|---|---|---|---|---|
 | [ADR-0198 — Artistic product charter and music-first experience](adr-0198-artistic-product-charter.md) | Foundation | P0 | Proposed | Not started (0/8) | No (0/8) |
 | [ADR-0199 — Head baseline and historical ADR implementation reconciliation](adr-0199-historical-status-reconciliation.md) | Foundation | P0 | Proposed | Not started (0/8) | No (0/8) |
