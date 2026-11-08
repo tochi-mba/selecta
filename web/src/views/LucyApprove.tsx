@@ -62,6 +62,12 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   startPlaying: () => Promise<void>;
 }) {
   const [approval, setApproval] = useState<Approval | null>(null);
+  // An approval token describes one exact immutable proposal revision.
+  useEffect(() => {
+    setApproval(null);
+    setUnderstood(false);
+    setLapsed(false);
+  }, [revision.id]);
   const [understood, setUnderstood] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [lapsed, setLapsed] = useState(false);
