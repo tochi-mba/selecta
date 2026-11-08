@@ -52,7 +52,12 @@ export function parseRoute(pathname: string): Route {
     return { page: 'workshop', tab: workshop[1] as WorkshopTab };
   }
   const draft = /^\/mixes\/drafts\/(\d+)\/edit$/.exec(path);
-  if (draft) return { page: 'edit', draft: Number(draft[1]) };
+  if (draft) {
+    const id = Number(draft[1]);
+    if (Number.isSafeInteger(id) && id > 0 && String(id) === draft[1]) {
+      return { page: 'edit', draft: id };
+    }
+  }
   return { page: 'missing', path };
 }
 

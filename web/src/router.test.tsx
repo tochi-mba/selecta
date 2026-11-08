@@ -24,7 +24,7 @@ describe('addresses', () => {
     expect(parseRoute(path)).toEqual(route);
   });
 
-  it.each(['/nope', '/workshop/nope', '/mixes/drafts/seven/edit', '/mixes/drafts/7'])('%s isn’t anywhere, and says so', (path) => {
+  it.each(['/nope', '/workshop/nope', '/mixes/drafts/seven/edit', '/mixes/drafts/7', '/mixes/drafts/0/edit', '/mixes/drafts/9007199254740992/edit', '/mixes/drafts/007/edit'])('%s isn’t anywhere, and says so', (path) => {
     expect(parseRoute(path).page).toBe('missing');
   });
 
