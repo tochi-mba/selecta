@@ -54,6 +54,7 @@ export function buildCommands(context: CommandContext): Command[] {
     ...DESTINATIONS.map((place): Command => ({ id: `go-${place.id}`, label: place.label, group: 'Go to', keywords: place.about, run: () => navigate(place.path) })),
     ...EXPLORE_TABS.filter((tab) => tab.path !== '/mixes').map((tab): Command => ({ id: `go-${tab.path}`, label: tab.label, group: 'Go to', keywords: 'explore discover', run: () => navigate(tab.path) })),
     ...WORKSPACE_TABS.filter((tab) => tab.tab !== 'overview').map((tab): Command => ({ id: `go-${tab.path}`, label: `Workspace: ${tab.label}`, group: 'Go to', keywords: 'workshop settings', run: () => navigate(tab.path) })),
+    { id: 'go-lucy', label: 'Make a mix with Lucy', group: 'Go to', keywords: 'lucy chat describe plan assistant conversation', run: () => navigate('/mixes/lucy') },
     { id: 'go-study', label: 'Listening study', group: 'Go to', keywords: 'blind test comparison', run: () => navigate('/listening') },
     { id: 'go-edit', label: 'Edit current mix', group: 'Go to', keywords: 'timeline change', unavailable: hasMix ? undefined : noMix, run: () => navigate('/mix/current/edit') },
   ];

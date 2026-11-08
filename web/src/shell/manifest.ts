@@ -20,7 +20,7 @@ export const DESTINATIONS: Destination[] = [
 /** The kill switch's navigation: the older labels, over the very same pages. */
 export const CLASSIC_DESTINATIONS: { path: string; label: string; icon: IconName; pages: Route['page'][] }[] = [
   { path: '/listen', label: 'Listen', icon: 'music', pages: ['listen'] },
-  { path: '/mixes', label: 'Mixes', icon: 'mixes', pages: ['mixes', 'edit'] },
+  { path: '/mixes', label: 'Mixes', icon: 'mixes', pages: ['mixes', 'edit', 'lucy'] },
   { path: '/library', label: 'Library', icon: 'library', pages: ['library'] },
   { path: '/discover', label: 'Discover', icon: 'discover', pages: ['discover'] },
   { path: '/workshop', label: 'Workshop', icon: 'settings', pages: ['workshop', 'listening'] },
@@ -45,7 +45,8 @@ export function destinationOf(route: Route): DestinationId | null {
   switch (route.page) {
     case 'listen': return 'listen';
     case 'mixes': return route.tab === 'mine' ? 'mine' : 'explore';
-    case 'discover': return 'explore';
+    case 'discover':
+    case 'lucy': return 'explore';
     case 'edit': return 'mine';
     case 'library': return 'library';
     case 'workshop':
@@ -79,6 +80,7 @@ export function describeRoute(route: Route): { title: string; crumbs: Crumb[] } 
       return { title: label, crumbs: [workspace, { label }] };
     }
     case 'listening': return { title: 'Listening study', crumbs: [workspace, { label: 'Listening study' }] };
+    case 'lucy': return { title: 'Lucy', crumbs: [explore, { label: 'Lucy' }] };
     case 'missing': return { title: 'Not found', crumbs: [{ label: 'Not found' }] };
   }
 }

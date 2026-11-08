@@ -11,6 +11,8 @@ export type Route =
   | { page: 'discover'; tab: 'words' | 'harmonic' }
   | { page: 'workshop'; tab: WorkshopTab }
   | { page: 'listening' }
+  /** Lucy, under Make a Mix: a new conversation, or one by its id. */
+  | { page: 'lucy'; conversation: string | null }
   | { page: 'missing'; path: string };
 
 export type WorkshopTab = 'overview' | 'analysis' | 'storage' | 'sources' | 'learning' | 'diagnostics';
@@ -42,6 +44,9 @@ export function parseRoute(pathname: string): Route {
   if (path === '/workshop') return { page: 'workshop', tab: 'overview' };
   if (path === '/listening') return { page: 'listening' };
   if (path === '/mix/current/edit') return { page: 'edit', draft: null };
+  if (path === '/mixes/lucy') return { page: 'lucy', conversation: null };
+  const conversation = /^\/mixes\/lucy\/([A-Za-z0-9_]+)$/.exec(path);
+  if (conversation) return { page: 'lucy', conversation: conversation[1] };
   const workshop = /^\/workshop\/([a-z]+)$/.exec(path);
   if (workshop && WORKSHOP_TABS.includes(workshop[1] as WorkshopTab)) {
     return { page: 'workshop', tab: workshop[1] as WorkshopTab };
@@ -60,6 +65,7 @@ export function pathOf(route: Route): string {
     case 'discover': return route.tab === 'harmonic' ? '/discover/harmonic' : '/discover';
     case 'workshop': return route.tab === 'overview' ? '/workshop' : `/workshop/${route.tab}`;
     case 'listening': return '/listening';
+    case 'lucy': return route.conversation === null ? '/mixes/lucy' : `/mixes/lucy/${route.conversation}`;
     case 'missing': return route.path;
   }
 }

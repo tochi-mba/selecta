@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS drafts (
     name TEXT NOT NULL,
     items TEXT NOT NULL DEFAULT '[]',
     history TEXT NOT NULL DEFAULT '[]',
+    ready_only INTEGER NOT NULL DEFAULT 0,
     line INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -171,6 +172,13 @@ def connect(path: Path) -> sqlite3.Connection:
             conn.commit()
         except sqlite3.OperationalError as problem:
             # the page opens with two requests at once, and the other one may have just added it
+            if "duplicate column" not in str(problem):
+                raise
+    if "ready_only" not in {row["name"] for row in conn.execute("PRAGMA table_info(drafts)")}:
+        try:
+            conn.execute("ALTER TABLE drafts ADD COLUMN ready_only INTEGER NOT NULL DEFAULT 0")
+            conn.commit()
+        except sqlite3.OperationalError as problem:
             if "duplicate column" not in str(problem):
                 raise
     _saved_mixes_become_drafts(conn)

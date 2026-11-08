@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, DraftList, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
@@ -33,6 +33,9 @@ import { Start } from './views/Start';
 import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
 import type { Undo, View } from './views/shared';
+
+// Lucy is optional and only loaded when someone opens it, so it costs Make a Mix nothing.
+const Lucy = lazy(() => import('./views/Lucy'));
 
 const PATHS: Record<View, string> = {
   Mixes: '/mixes',
@@ -648,6 +651,11 @@ export function App() {
           {route.page === 'discover' && <Links {...shared} tab={route.tab} />}
           {route.page === 'workshop' && <Workshop {...shared} tab={route.tab} />}
           {route.page === 'listening' && <Workshop {...shared} tab="learning" />}
+          {route.page === 'lucy' && (
+            <Suspense fallback={<main className="page" aria-busy="true"><Skeleton label="Opening Lucy" /></main>}>
+              <Lucy conversation={route.conversation} setMixData={setMixData} player={player} />
+            </Suspense>
+          )}
           {route.page === 'missing' && (
             <main className="page" id="main">
               <h1 className="display small">There’s nothing at this address.</h1>
