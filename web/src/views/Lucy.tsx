@@ -98,6 +98,9 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
   const params = new URLSearchParams(useLocationText().split('?')[1] ?? '');
   const askedScope = parseScope(params);
   const backTo = safeReturn(params.get('from'));
+  // A mood handoff offers editable text. It is never a user turn or an automatic send.
+  const suggestedPrompt = !conversation ? (params.get('prompt') ?? '').trim().slice(0, 400) : '';
+  const consumedPrompt = useRef<string | null>(null);
 
   const [status, setStatus] = useState<LucyStatus | null>(null);
   const [statusProblem, setStatusProblem] = useState<{ kind: ProblemKind | 'old'; message: string } | null>(null);
@@ -117,6 +120,12 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
   const unsent = useUnsent(conversation);
   const unsentNow = useRef(unsent);
   unsentNow.current = unsent;
+  useEffect(() => {
+    if (!suggestedPrompt || consumedPrompt.current === suggestedPrompt) return;
+    consumedPrompt.current = suggestedPrompt;
+    // A saved unsent message always wins over a mood suggestion.
+    if (!unsent.text.trim()) unsent.change(suggestedPrompt);
+  }, [suggestedPrompt, unsent.text, unsent.change]);
 
   const readStatus = useCallback(async () => {
     try {
@@ -286,7 +295,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
         <Icon name="thread" width={28} height={28} className="lucy-mark" />
         <div>
           <h1 className="display small">Lucy</h1>
-          <p className="lede">Describe a mix. Lucy plans it; nothing is built until you approve it.</p>
+          <p className="lede">Plan a mix together. Review its songs and transitions before approving a draft or choosing to play.</p>
         </div>
       </div>
       <div className="row wrap lucy-head-actions">
