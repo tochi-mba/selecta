@@ -422,3 +422,27 @@ dialog.lucy-dialog .overlay-body p { margin: 0; }
   .lucy-composer-row .hint { flex-basis: 100%; }
   .lucy-mark { display: none; }
 }
+
+/* Proposal truth is an explicit message, not just a colour-coded badge. */
+.lucy-readiness-warning {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border-inline-start: 3px solid var(--status-warning);
+  border-block: 1px solid var(--border);
+  background: var(--surface-raised);
+  line-height: 1.5;
+}
+.lucy-summary { font-variant-numeric: tabular-nums; }
+.lucy-song-name, .lucy-seam-head, .lucy-thread-title { unicode-bidi: plaintext; overflow-wrap: anywhere; }
+@media (pointer: coarse) {
+  .lucy-tabs [role='tab'], .lucy-seam button, .lucy-msg-actions button { min-height: 44px; }
+}
+@media (max-width: 420px) {
+  .lucy-song-actions { min-width: 0; }
+  .lucy-approve .row { flex-wrap: wrap; }
+  .lucy-approve button { white-space: normal; }
+  .lucy-dock { max-width: 100%; }
+}
+@media (forced-colors: active) {
+  .lucy-readiness-warning { border-inline-start-color: Highlight; border-block-color: CanvasText; }
+}
