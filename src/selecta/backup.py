@@ -10,6 +10,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import sqlite3
 import tempfile
@@ -25,6 +26,12 @@ MAX_ARCHIVE = 128 * 1024 * 1024
 MAX_DATABASE = 256 * 1024 * 1024
 PENDING = ".restore-pending.sqlite"
 ROLLBACK = ".restore-rollback.sqlite"
+PENDING_HISTORY = ".restore-pending-seam-history"
+ROLLBACK_HISTORY = ".restore-rollback-seam-history"
+ACTIVATING = ".restore-activating"
+MAX_HISTORY_FILES = 10000
+MAX_HISTORY_ENTRY = 256 * 1024
+_HISTORY_FILE = re.compile(r"^seam-history/[A-Za-z0-9_-]{1,128}\.json$")
 _REQUIRED_TABLES = {"songs", "analysis", "lyrics", "preferences", "queue", "drafts", "ratings", "seam_book"}
 
 
@@ -58,8 +65,8 @@ def _check_database(path: Path) -> dict[str, int]:
         raise BackupError("The backup database cannot be read.") from problem
 
 
-def export_backup(conn: sqlite3.Connection) -> bytes:
-    """Snapshot WAL-consistent durable user data via SQLite's online backup API."""
+def export_backup(conn: sqlite3.Connection, settings: Settings) -> bytes:
+    """Snapshot SQLite and durable transition feedback; never audio or cache files."""
     with tempfile.TemporaryDirectory(prefix="selecta-backup-") as tmp:
         snapshot = Path(tmp) / "selecta.sqlite"
         dest = sqlite3.connect(snapshot)
@@ -71,19 +78,39 @@ def export_backup(conn: sqlite3.Connection) -> bytes:
         contents = snapshot.read_bytes()
         if len(contents) > MAX_DATABASE:
             raise BackupError("The database is too large for a browser backup.")
+        payload = {"selecta.sqlite": contents}
+        history = settings.home / "seam-history"
+        for file in sorted(history.glob("*.json")):
+            name = "seam-history/" + file.name
+            if not _HISTORY_FILE.fullmatch(name) or file.is_symlink() or not file.is_file():
+                raise BackupError("A transition history record has an unsafe file name.")
+            if len(payload) > MAX_HISTORY_FILES:
+                raise BackupError("Too many transition records for a single backup.")
+            if file.stat().st_size > MAX_HISTORY_ENTRY:
+                raise BackupError("A transition record is too large to back up safely.")
+            raw = file.read_bytes()
+            try:
+                state = json.loads(raw)
+            except (UnicodeError, json.JSONDecodeError) as problem:
+                raise BackupError("A saved transition record is unreadable.") from problem
+            if not isinstance(state, dict) or state.get("key") != file.stem:
+                raise BackupError("A transition history record has an invalid identity.")
+            payload[name] = raw
         manifest = {
             "format": FORMAT, "version": VERSION,
             "created_utc": datetime.now(timezone.utc).isoformat(),
-            "files": {"selecta.sqlite": {"sha256": _sha(contents), "bytes": len(contents)}},
+            "files": {name: {"sha256": _sha(data), "bytes": len(data)}
+                      for name, data in payload.items()},
             "excluded": ["original music", "audio caches", "generated stems", "models", "exports"],
         }
         out = io.BytesIO()
         with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
             archive.writestr("manifest.json", json.dumps(manifest, indent=2))
-            archive.writestr("selecta.sqlite", contents)
+            for name, data in payload.items():
+                archive.writestr(name, data)
         result = out.getvalue()
         if len(result) > MAX_ARCHIVE:
-            raise BackupError("The database is too large for a browser backup.")
+            raise BackupError("Local data exceeds the supported ZIP limit.")
         return result
 
 
@@ -92,30 +119,51 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
         raise BackupError("Backup is empty or larger than the supported limit.")
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as bundle:
-            if sorted(bundle.namelist()) != ["manifest.json", "selecta.sqlite"]:
-                raise BackupError("Unexpected files in backup archive.")
+            names = bundle.namelist()
+            if len(names) != len(set(names)) or len(names) > MAX_HISTORY_FILES + 2:
+                raise BackupError("Backup contains duplicate or excessive records.")
+            if "manifest.json" not in names or "selecta.sqlite" not in names:
+                raise BackupError("Backup database or manifest is missing.")
+            if any(name not in ("manifest.json", "selecta.sqlite")
+                   and not _HISTORY_FILE.fullmatch(name) for name in names):
+                raise BackupError("Backup contains an unexpected or unsafe path.")
             if bundle.getinfo("selecta.sqlite").file_size > MAX_DATABASE:
                 raise BackupError("Backup database exceeds the supported size.")
-            if bundle.getinfo("manifest.json").file_size > 8192:
+            if bundle.getinfo("manifest.json").file_size > 1024 * 1024:
                 raise BackupError("Backup manifest is too large.")
+            if any(bundle.getinfo(name).file_size > MAX_HISTORY_ENTRY for name in names
+                   if name.startswith("seam-history/")):
+                raise BackupError("Backup contains oversized transition history.")
             manifest = json.loads(bundle.read("manifest.json"))
+            if not isinstance(manifest, dict) or manifest.get("format") != FORMAT or manifest.get("version") != VERSION:
+                raise BackupError("This backup format is not supported by this Selecta version.")
+            if not isinstance(manifest.get("created_utc"), str):
+                raise BackupError("Backup manifest is missing its creation date.")
+            files = manifest.get("files")
+            if not isinstance(files, dict) or set(files) != set(names) - {"manifest.json"}:
+                raise BackupError("Backup manifest does not describe all included data.")
+            for name in names:
+                if name == "manifest.json":
+                    continue
+                entry = files[name]
+                if not isinstance(entry, dict):
+                    raise BackupError("Backup manifest contains invalid metadata.")
+                raw = bundle.read(name)
+                if entry.get("bytes") != len(raw) or entry.get("sha256") != _sha(raw):
+                    raise BackupError("Backup checksum does not match; nothing has been changed.")
+                if name.startswith("seam-history/"):
+                    state = json.loads(raw)
+                    if not isinstance(state, dict) or state.get("key") != Path(name).stem:
+                        raise BackupError("Backup transition identity did not match its file.")
             db_bytes = bundle.read("selecta.sqlite")
-    except (zipfile.BadZipFile, RuntimeError, OSError, json.JSONDecodeError, KeyError) as problem:
+    except (zipfile.BadZipFile, RuntimeError, OSError, UnicodeError,
+            json.JSONDecodeError, KeyError) as problem:
         raise BackupError("Backup ZIP is corrupt or incomplete.") from problem
-    if not isinstance(manifest, dict) or manifest.get("format") != FORMAT or manifest.get("version") != VERSION:
-        raise BackupError("This backup format is not supported by this Selecta version.")
-    if not isinstance(manifest.get("created_utc"), str):
-        raise BackupError("Backup manifest is missing its creation date.")
-    files = manifest.get("files")
-    if not isinstance(files, dict) or not isinstance(files.get("selecta.sqlite"), dict):
-        raise BackupError("Backup manifest is missing database metadata.")
-    entry = files["selecta.sqlite"]
-    if entry.get("bytes") != len(db_bytes) or entry.get("sha256") != _sha(db_bytes):
-        raise BackupError("Backup checksum does not match; nothing has been changed.")
     with tempfile.TemporaryDirectory(prefix="selecta-check-") as tmp:
         path = Path(tmp) / "selecta.sqlite"
         path.write_bytes(db_bytes)
         counts = _check_database(path)
+    counts["seam_history"] = len(names) - 2
     return manifest, db_bytes, counts
 
 
