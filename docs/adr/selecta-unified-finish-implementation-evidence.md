@@ -1,6 +1,6 @@
 # Selecta — UF per-task implementation and independent evidence ledger
 
-**Status:** 24 Accepted ADRs (0366–0389); 184 UF tasks Not started; 8 In progress; 0 Implemented; 0 independently Verified. Decision acceptance recorded at requester instruction 2026-11-08; implementation owners and independent reviewers unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app code and regression tests.
+**Status:** 24 Accepted ADRs (0366–0389); 171 UF tasks Not started; 21 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08; implementing PR #41 includes source changes and regression tests; external reviewers/device evidence outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
 
 All future evidence fields are deliberately blank. The creation of a proposed ADR, checklist, code-status record or screenshot capture instruction is **not source implementation or independent verification**. A synthetic muted browser run does not prove music quality.
 
@@ -42,7 +42,7 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0370-02 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0370-03 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0370-04 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0370-05 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0370-05 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | In progress | No | Unassigned | #41 / `52b133ef91dd24192db7faf73a5e9fbc303bb6d4` | Menu Tab and Shift+Tab focus tests; independent AT review pending | Independent review pending |
 | UF-0370-06 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0370-07 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0370-08 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | — | — | — |
@@ -50,7 +50,7 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0371-02 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0371-03 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0371-04 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `527b6c9741a635f758da22609849383c3072f16c` | `web/src/state/async.ts`, stale/retry unit tests; route checks pending | Independent review pending |
-| UF-0371-05 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0371-05 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `f609504a4214a22edf6fa2be8210a2522f949776` | Operation request fingerprint tests and durable export retry; full lost-reply matrix pending | Independent review pending |
 | UF-0371-06 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `527b6c9741a635f758da22609849383c3072f16c` | `web/src/state/async.ts`, superseded-request unit tests; job lifecycle pending | Independent review pending |
 | UF-0371-07 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0371-08 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | — | — | — |
@@ -62,10 +62,10 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0372-06 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0372-07 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0372-08 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0373-01 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-01 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | In progress | No | Unassigned | #41 / `78eb474e7e40dbf1e36a7da3f8ae320bf147b883` | Single focus owner seek/skip regression; cross-screen audio pending | Independent review pending |
 | UF-0373-02 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0373-03 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0373-04 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0373-03 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | In progress | No | Unassigned | #41 / `3c9f6397a5b0591f9f3934ae6b0546a478c27f08` | Seek bounds, invalid-duration and slider tests; OS input check pending | Independent review pending |
+| UF-0373-04 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | In progress | No | Unassigned | #41 / `78eb474e7e40dbf1e36a7da3f8ae320bf147b883` | Preview interruption tests for manual seek and skip; full preview audit pending | Independent review pending |
 | UF-0373-05 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0373-06 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0373-07 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | — | — | — |
@@ -74,7 +74,7 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0374-02 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0374-03 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0374-04 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0374-05 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0374-05 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | In progress | No | Unassigned | #41 / `3c9f6397a5b0591f9f3934ae6b0546a478c27f08` | Now.tsx keyboard/pointer seeking with unavailable-duration test; physical AT pending | Independent review pending |
 | UF-0374-06 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0374-07 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0374-08 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | — | — | — |
@@ -115,11 +115,11 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0379-03 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0379-04 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | In progress | No | Unassigned | #41 / `f2afe007c37f22005e34e57ce71fb99e5b86d8c2` | `web/src/lib.ts`, readiness and words unit tests; storage/queue checks pending | Independent review pending |
 | UF-0379-05 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0379-06 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0379-07 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0379-06 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | In progress | No | Unassigned | #41 / `7ebfff8fc12e5a98d0ac5fa06e92f4eaf12c243c` | App.tsx draft activation idempotency guard and App.test; lost reply E2E pending | Independent review pending |
+| UF-0379-07 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | In progress | No | Unassigned | #41 / `dd07cf13ec4833c603695a06dbefa2825d385dd4` | Drafts.tsx progressive large-list and Drafts.test; device performance pending | Independent review pending |
 | UF-0379-08 | [ADR-0379](adr-0379-my-mixes-drafts-render-line.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0380-01 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0380-02 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0380-02 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | In progress | No | Unassigned | #41 / `438adb252d1af6d3ff20302198804689d3f72c17` | player.ts exact occurrence navigation and player.test.ts; editor AT pending | Independent review pending |
 | UF-0380-03 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0380-04 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0380-05 | [ADR-0380](adr-0380-editor-arrangement-and-song-seam-identity.md) | Accepted | Not started | No | Unassigned | — | — | — |
@@ -169,8 +169,8 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0386-01 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0386-02 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | In progress | No | Unassigned | #41 / `471bcdfb50e96188f2f3a7c252b0bedc33cbff06` | `web/src/views/ExportPanel.tsx`, editor tests; export preconditions pending | Independent review pending |
 | UF-0386-03 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0386-04 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0386-05 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0386-04 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | In progress | No | Unassigned | #41 / `f3d145aca835aa27c7e501cc907f44a4a3e1613b` | Full FLAC decode verification and Python tests; real audio pending | Independent review pending |
+| UF-0386-05 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | In progress | No | Unassigned | #41 / `d9d100bb12469b461e27cfe334c9d9082a50e5a2` | Exports reuse now checks exact frozen song order; revision test matrix pending | Independent review pending |
 | UF-0386-06 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0386-07 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0386-08 | [ADR-0386](adr-0386-exports-frozen-revisions-and-listening-study.md) | Accepted | Not started | No | Unassigned | — | — | — |
@@ -183,7 +183,7 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0387-07 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0387-08 | [ADR-0387](adr-0387-responsive-reflow-and-input-adaptation.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0388-01 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0388-02 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0388-02 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | In progress | No | Unassigned | #41 / `52b133ef91dd24192db7faf73a5e9fbc303bb6d4` | Menu keyboard focus test coverage; real AT walkthrough pending | Independent review pending |
 | UF-0388-03 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0388-04 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0388-05 | [ADR-0388](adr-0388-accessibility-language-and-motion-acceptance.md) | Accepted | Not started | No | Unassigned | — | — | — |
@@ -195,7 +195,7 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0389-03 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0389-04 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0389-05 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
-| UF-0389-06 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
+| UF-0389-06 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | In progress | No | Unassigned | #41 / `78eb474e7e40dbf1e36a7da3f8ae320bf147b883` | Regression tests for core safety including player/export/idempotency; full compatibility pending | Independent review pending |
 | UF-0389-07 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
 | UF-0389-08 | [ADR-0389](adr-0389-independent-visual-usability-and-release-gates.md) | Accepted | Not started | No | Unassigned | — | — | — |
 
