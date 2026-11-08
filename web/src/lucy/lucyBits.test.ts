@@ -37,7 +37,9 @@ describe('unsent words', () => {
 
 describe('plain words for states', () => {
   it('never says ready for something that is gone or unknown', () => {
-    expect(seamWords('already_rendered').words).toBe('Ready to play');
+    expect(seamWords('already_rendered', true).words).toBe('Ready to play');
+    expect(seamWords('already_rendered', false).words).toBe('Rendered, not verified on disk');
+    expect(seamWords('something new', true).words).toBe('Unknown');
     expect(seamWords('gone').words).toBe('Was ready before — gone now');
     expect(seamWords('none').words).toBe('Not rendered yet');
     expect(seamWords('something new').words).toBe('Unknown');
