@@ -14,7 +14,7 @@ import { PageLink } from './PageLink';
 
 export { PageLink };
 
-function clock(seconds: number): string {
+export function clock(seconds: number): string {
   // A seek, loading transition or missing duration must never render NaN/Infinity
   // into the fixed mini-player or alter the transport's layout.
   const whole = Number.isFinite(seconds) ? Math.max(Math.floor(seconds), 0) : 0;
