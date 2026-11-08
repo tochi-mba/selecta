@@ -43,8 +43,12 @@ for (const viewport of [
 
 test('software keyboard makes notification chrome yield without removing notices or the mini-player', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
-  // The mini-player is intentionally absent on Listen itself; it lives on other routes.
-  await page.goto('/library');
+  // A mini-player is present only when playback is active and the user leaves Listen.
+  await page.goto('/listen');
+  const play = page.locator('.now .transport .primary');
+  await play.click();
+  await expect(play).toHaveText('Pause', { timeout: 30_000 });
+  await page.getByRole('link', { name: 'Library' }).first().click();
   await expect(page.locator('.mini')).toBeVisible();
   await page.evaluate(() => { document.documentElement.dataset.keyboard = 'open'; });
   await expect(page.locator('.mini')).toBeHidden();
