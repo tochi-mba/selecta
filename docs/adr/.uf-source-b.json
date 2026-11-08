@@ -1,0 +1,858 @@
+[
+  {
+    "n": 378,
+    "title": "Lucy integration, proposal lifecycle, consent and safe approval",
+    "slug": "lucy-creation-integration-and-proof",
+    "path": "adr-0378-lucy-creation-integration-and-proof.md",
+    "priority": "P0",
+    "phase": "05 Creation entry",
+    "owners": [
+      "ADR-0300",
+      "ADR-0317",
+      "ADR-0319",
+      "ADR-0328",
+      "ADR-0334",
+      "ADR-0355",
+      "ADR-0359",
+      "ADR-0360",
+      "ADR-0362",
+      "ADR-0365"
+    ],
+    "src": [
+      "web/src/views/Lucy.tsx",
+      "web/src/views/LucyProposal.tsx",
+      "web/src/views/LucyApprove.tsx"
+    ],
+    "decision": "LU-0300–0339 and LX-0355–0363 own Lucy behaviour and design. UF closes end-to-end cross-app interaction and evidence gaps only.",
+    "tasks": [
+      {
+        "id": "UF-0378-01",
+        "title": "Crosswalk Lucy owners",
+        "acceptance": "Identify precise non-duplicated UI integration gaps against LU and LX.",
+        "verification": "LU/LX source parity sign-off."
+      },
+      {
+        "id": "UF-0378-02",
+        "title": "Preserve entered music intent",
+        "acceptance": "Song/mood/draft deep links retain exact ID and constraints without auto-send.",
+        "verification": "Scoped prompt and route test."
+      },
+      {
+        "id": "UF-0378-03",
+        "title": "Keep lifecycle visible",
+        "acceptance": "A proposed mix never looks like a saved draft or playing set.",
+        "verification": "Uncoached action-prediction study."
+      },
+      {
+        "id": "UF-0378-04",
+        "title": "Prove ready-only semantics",
+        "acceptance": "K songs require K−1 valid directed cached seams, revalidated at approval.",
+        "verification": "Cache eviction and race fixture."
+      },
+      {
+        "id": "UF-0378-05",
+        "title": "Preserve remote provider consent",
+        "acceptance": "Remote prompts need explicit informed consent and an available safe alternative.",
+        "verification": "Provider-gate/privacy test."
+      },
+      {
+        "id": "UF-0378-06",
+        "title": "Protect idempotent approval",
+        "acceptance": "Save draft and Save and play are separate confirmed commands with lost-reply reconciliation.",
+        "verification": "Duplicate/stale revision E2E."
+      },
+      {
+        "id": "UF-0378-07",
+        "title": "Retain conversation continuity",
+        "acceptance": "History, partial prompts and streaming activity recover across rerender and offline.",
+        "verification": "Network interruption/restart test."
+      },
+      {
+        "id": "UF-0378-08",
+        "title": "Keep approval audio deliberate",
+        "acceptance": "Save draft never starts playback; confirmed Save and play respects single audio owner.",
+        "verification": "Real player/audio-focus test."
+      }
+    ]
+  },
+  {
+    "n": 379,
+    "title": "My Mixes, current/draft identity and render-line hierarchy",
+    "slug": "my-mixes-drafts-render-line",
+    "path": "adr-0379-my-mixes-drafts-render-line.md",
+    "priority": "P1",
+    "phase": "05 Creation",
+    "owners": [
+      "ADR-0228",
+      "ADR-0255",
+      "ADR-0269",
+      "ADR-0286"
+    ],
+    "src": [
+      "web/src/views/MyMixes.tsx",
+      "web/src/views/Drafts.tsx",
+      "web/src/views/CurrentMix.tsx"
+    ],
+    "decision": "Existing draft storage, current mix and priority rendering need easily distinguishable identity and consequence.",
+    "tasks": [
+      {
+        "id": "UF-0379-01",
+        "title": "Differentiate current and saved drafts",
+        "acceptance": "Prominent exact current/draft/revision status and action context.",
+        "verification": "Same-name draft comprehension test."
+      },
+      {
+        "id": "UF-0379-02",
+        "title": "Clarify draft commands",
+        "acceptance": "Edit/copy/prioritize/play/delete appear in safe hierarchy and exact scope.",
+        "verification": "Action order task study."
+      },
+      {
+        "id": "UF-0379-03",
+        "title": "Make queue causality visible",
+        "acceptance": "Prioritized drafts and current rendering show actual order, not misleading parallel promise.",
+        "verification": "Job queue fixture."
+      },
+      {
+        "id": "UF-0379-04",
+        "title": "Show genuine render progression",
+        "acceptance": "Queued, failed, blocked by storage and ready are separate recoverable states.",
+        "verification": "Interrupted job E2E."
+      },
+      {
+        "id": "UF-0379-05",
+        "title": "Restore recent work context",
+        "acceptance": "Returning to a draft preserves scope without switching audio.",
+        "verification": "Reload/back/forward fixture."
+      },
+      {
+        "id": "UF-0379-06",
+        "title": "Protect swap and Undo",
+        "acceptance": "Playback of draft communicates current/draft exchange and recovery.",
+        "verification": "Revision and Undo integration."
+      },
+      {
+        "id": "UF-0379-07",
+        "title": "Keep large draft collections usable",
+        "acceptance": "Duplicate titles, long names and many drafts scan without losing actions.",
+        "verification": "Scale and AT review."
+      },
+      {
+        "id": "UF-0379-08",
+        "title": "Design empty My Mixes path",
+        "acceptance": "No saved mixes gives one direct creation action instead of decorative dead end.",
+        "verification": "First-use walkthrough."
+      }
+    ]
+  },
+  {
+    "n": 380,
+    "title": "Editor sequence, Story/Arrange parity and exact seam identity",
+    "slug": "editor-arrangement-and-song-seam-identity",
+    "path": "adr-0380-editor-arrangement-and-song-seam-identity.md",
+    "priority": "P1",
+    "phase": "06 Advanced creation",
+    "owners": [
+      "ADR-0219",
+      "ADR-0220",
+      "ADR-0222",
+      "ADR-0250",
+      "ADR-0287"
+    ],
+    "src": [
+      "web/src/views/Mix.tsx",
+      "web/src/views/EditorRows.tsx",
+      "web/src/views/EditorStory.tsx"
+    ],
+    "decision": "Song occurrences, directed seam edges and revision-safe editing must remain exact across different visual representations.",
+    "tasks": [
+      {
+        "id": "UF-0380-01",
+        "title": "Keep mode semantics identical",
+        "acceptance": "Story and Arrange show same ordered occurrences and seam state.",
+        "verification": "Mode-toggle equality E2E."
+      },
+      {
+        "id": "UF-0380-02",
+        "title": "Distinguish song from seam focus",
+        "acceptance": "Selection labels and visuals identify exact object even when a song repeats.",
+        "verification": "Repeated-song and AT fixture."
+      },
+      {
+        "id": "UF-0380-03",
+        "title": "Provide reorder alternatives",
+        "acceptance": "Pointer drag, touch and keyboard movement preserve focus and reversibility.",
+        "verification": "Keyboard/pointer reorder test."
+      },
+      {
+        "id": "UF-0380-04",
+        "title": "Expose current/draft scope",
+        "acceptance": "Editor heading and buttons identify revision being modified.",
+        "verification": "Multiple-draft scope regression."
+      },
+      {
+        "id": "UF-0380-05",
+        "title": "Distinguish energy intent from result",
+        "acceptance": "Requested arc and achieved measurements have clear source-backed labels.",
+        "verification": "Energy state fixture."
+      },
+      {
+        "id": "UF-0380-06",
+        "title": "Keep inspector in reach",
+        "acceptance": "Desktop pane and mobile sheet never cover selection or navigation controls.",
+        "verification": "320px/400%/short viewport geometry."
+      },
+      {
+        "id": "UF-0380-07",
+        "title": "Show undo and save provenance",
+        "acceptance": "Each mutation communicates scope and remaining recovery.",
+        "verification": "Revision-guard/undo test."
+      },
+      {
+        "id": "UF-0380-08",
+        "title": "Measure lengthy mix editing",
+        "acceptance": "40+ song sequence remains fast and navigable at realistic widths.",
+        "verification": "Named-device profile."
+      }
+    ]
+  },
+  {
+    "n": 381,
+    "title": "Seam Inspector audition, technique truth and accessible editing",
+    "slug": "seam-inspector-audition-and-explanation",
+    "path": "adr-0381-seam-inspector-audition-and-explanation.md",
+    "priority": "P1",
+    "phase": "06 Advanced creation",
+    "owners": [
+      "ADR-0221",
+      "ADR-0250",
+      "ADR-0269",
+      "ADR-0288"
+    ],
+    "src": [
+      "web/src/views/SeamInspector.tsx",
+      "web/src/ui/AudioPreview.tsx",
+      "web/src/ui/seam.ts"
+    ],
+    "decision": "Inspector already offers options, quality checks, audition and Studio; make requested, rendered and heard transition layers unmistakable.",
+    "tasks": [
+      {
+        "id": "UF-0381-01",
+        "title": "Name directed transition exactly",
+        "acceptance": "Show previous and incoming occurrence plus current revision in all tabs.",
+        "verification": "Duplicate-song fixture."
+      },
+      {
+        "id": "UF-0381-02",
+        "title": "Lead with actual audition",
+        "acceptance": "Play/stop and availability correspond to real preview media, not a fake instant result.",
+        "verification": "Real preview test."
+      },
+      {
+        "id": "UF-0381-03",
+        "title": "Separate plan and rendered states",
+        "acceptance": "Requested, queued, rendered and rated are independently labelled.",
+        "verification": "Fallback/ready matrix."
+      },
+      {
+        "id": "UF-0381-04",
+        "title": "Explain possible techniques",
+        "acceptance": "Show source-backed options and why others cannot be selected.",
+        "verification": "Technique availability review."
+      },
+      {
+        "id": "UF-0381-05",
+        "title": "Guard timing edits",
+        "acceptance": "Bars/cues/entry/exit changes preserve revision guards and reflect re-render needs.",
+        "verification": "Stale-revision E2E."
+      },
+      {
+        "id": "UF-0381-06",
+        "title": "Explain quality and rating",
+        "acceptance": "Machine checks and user Good/Bad do not claim proof of sound quality.",
+        "verification": "Real listening and UI review."
+      },
+      {
+        "id": "UF-0381-07",
+        "title": "Preserve Studio handoff",
+        "acceptance": "Open shape editor for exact seam with safe focus and playback ownership.",
+        "verification": "Inspector-to-Studio audio test."
+      },
+      {
+        "id": "UF-0381-08",
+        "title": "Validate tab and drawer navigation",
+        "acceptance": "Arrow/Home/End/Tab and focus return behave correctly.",
+        "verification": "ARIA APG + screen reader."
+      }
+    ]
+  },
+  {
+    "n": 382,
+    "title": "Eight-lane Stem Studio, shape/grid/list consistency and apply safety",
+    "slug": "stem-studio-musical-canvas",
+    "path": "adr-0382-stem-studio-musical-canvas.md",
+    "priority": "P1",
+    "phase": "06 Advanced creation",
+    "owners": [
+      "ADR-0223",
+      "ADR-0224",
+      "ADR-0261",
+      "ADR-0289"
+    ],
+    "src": [
+      "web/src/views/Studio.tsx",
+      "web/src/studio.ts",
+      "web/src/styles/creation.css"
+    ],
+    "decision": "Existing eight-lane and 8–64-cell Stem Studio work must remain accurate and legible through a visual finish.",
+    "tasks": [
+      {
+        "id": "UF-0382-01",
+        "title": "Preserve cross-mode eight-lane semantics",
+        "acceptance": "Both songs' vocal, drum, bass, melody lanes stay identical in Shape/Grid/List.",
+        "verification": "Mode equivalence test."
+      },
+      {
+        "id": "UF-0382-02",
+        "title": "Make time boundaries explicit",
+        "acceptance": "Two-bar cells, positions and beat context remain consistent across grid lengths.",
+        "verification": "Timing fixture."
+      },
+      {
+        "id": "UF-0382-03",
+        "title": "Define selected and solo states",
+        "acceptance": "Visible plus accessible cell/solo cues do not rely on colour alone.",
+        "verification": "Keyboard/forced-colour screenshots."
+      },
+      {
+        "id": "UF-0382-04",
+        "title": "Keep Shape beginner-friendly",
+        "acceptance": "Accessible broad choices lead to detailed list/grid without vocabulary overload.",
+        "verification": "Novice/expert task study."
+      },
+      {
+        "id": "UF-0382-05",
+        "title": "Protect preview audio ownership",
+        "acceptance": "Hear exact pending shape without overlapping or silently resuming main playback.",
+        "verification": "Real-audio focus sequence."
+      },
+      {
+        "id": "UF-0382-06",
+        "title": "Separate AI suggestion and user change",
+        "acceptance": "Suggested, adjusted and applied shapes cannot be mistaken for one committed state.",
+        "verification": "Dirty-state/undo fixture."
+      },
+      {
+        "id": "UF-0382-07",
+        "title": "Protect unapplied departure",
+        "acceptance": "Close, revision loss and failed Use provide clear recovery without silent mutation.",
+        "verification": "Discard/restart regression."
+      },
+      {
+        "id": "UF-0382-08",
+        "title": "Verify keyboard manipulation",
+        "acceptance": "All necessary grid edits have keyboard or list alternative with readable states.",
+        "verification": "Screen-reader task completion."
+      }
+    ]
+  },
+  {
+    "n": 383,
+    "title": "Song requests, bridge routes and explicit atomic consent",
+    "slug": "requests-bridges-and-consent",
+    "path": "adr-0383-requests-bridges-and-consent.md",
+    "priority": "P1",
+    "phase": "07 Supporting",
+    "owners": [
+      "ADR-0225",
+      "ADR-0262",
+      "ADR-0270",
+      "ADR-0290"
+    ],
+    "src": [
+      "web/src/views/Requests.tsx",
+      "src/selecta/requests.py",
+      "src/selecta/request_planner.py"
+    ],
+    "decision": "Existing request and bridge states need a clear lifecycle and informed user choices without relaxing music safety.",
+    "tasks": [
+      {
+        "id": "UF-0383-01",
+        "title": "Make request stages readable",
+        "acceptance": "Searching, waiting, needs approval, preparing and ready have distinct exact meanings.",
+        "verification": "Stage matrix."
+      },
+      {
+        "id": "UF-0383-02",
+        "title": "Preview full bridge consequences",
+        "acceptance": "Show each added song and landing position before approval.",
+        "verification": "Bridge comprehension test."
+      },
+      {
+        "id": "UF-0383-03",
+        "title": "Require explicit route approval",
+        "acceptance": "Proposed bridges never silently change active mix or request slots.",
+        "verification": "Consent integration."
+      },
+      {
+        "id": "UF-0383-04",
+        "title": "Guarantee atomic availability",
+        "acceptance": "All bridge seams must really be ready before any route can play.",
+        "verification": "Eviction/race fixture."
+      },
+      {
+        "id": "UF-0383-05",
+        "title": "Communicate no-fit choices",
+        "acceptance": "Wait, search bridge and add anyway do not imply a musically safe automatic fit.",
+        "verification": "Impossible-fit task observation."
+      },
+      {
+        "id": "UF-0383-06",
+        "title": "Protect concurrent identities",
+        "acceptance": "Competing requests cannot duplicate song or steal a reserved location.",
+        "verification": "Concurrent planning E2E."
+      },
+      {
+        "id": "UF-0383-07",
+        "title": "Keep audition audio safe",
+        "acceptance": "Bridge audition respects preview focus and deliberate Pause.",
+        "verification": "Real preview sequence."
+      },
+      {
+        "id": "UF-0383-08",
+        "title": "Preserve responsive drawer access",
+        "acceptance": "Search, choices and confirmation remain usable with keyboard inset/zoom.",
+        "verification": "Mobile/AT test."
+      }
+    ]
+  },
+  {
+    "n": 384,
+    "title": "Word/harmonic connections, candidate truth and audition-first discovery",
+    "slug": "discovery-word-and-harmonic-gallery",
+    "path": "adr-0384-discovery-word-and-harmonic-gallery.md",
+    "priority": "P1",
+    "phase": "07 Supporting",
+    "owners": [
+      "ADR-0218",
+      "ADR-0251",
+      "ADR-0260",
+      "ADR-0292"
+    ],
+    "src": [
+      "web/src/views/Links.tsx",
+      "src/selecta/routes/discover.py",
+      "src/selecta/discovery/search.py"
+    ],
+    "decision": "Machine-found lyric and harmonic connections are potential matches, not automatically verified high-quality transitions.",
+    "tasks": [
+      {
+        "id": "UF-0384-01",
+        "title": "Label evidential strength",
+        "acceptance": "Candidate, heard and approved states stay distinct.",
+        "verification": "Discovery state test."
+      },
+      {
+        "id": "UF-0384-02",
+        "title": "Explain why songs connect",
+        "acceptance": "Word or harmonic relationship displayed with real provenance.",
+        "verification": "Novice/expert explanation walkthrough."
+      },
+      {
+        "id": "UF-0384-03",
+        "title": "Prioritise true audition",
+        "acceptance": "Only available audio is offered for audition; missing render gets honest status.",
+        "verification": "Missing-audio fixture."
+      },
+      {
+        "id": "UF-0384-04",
+        "title": "Make reviews easy to correct",
+        "acceptance": "Good/Bad/skip changes exact intended discovery and can be reversed when supported.",
+        "verification": "Review regression."
+      },
+      {
+        "id": "UF-0384-05",
+        "title": "Choose explicit target mix",
+        "acceptance": "Adding pair to current/draft states scope and exact identity.",
+        "verification": "Multi-draft test."
+      },
+      {
+        "id": "UF-0384-06",
+        "title": "Treat no-results meaningfully",
+        "acceptance": "Missing analysis or connection candidates offer appropriate action.",
+        "verification": "Empty/partial library fixture."
+      },
+      {
+        "id": "UF-0384-07",
+        "title": "Preserve pair scroll and identity",
+        "acceptance": "Pagination/search never transfers actions to wrong suggestion.",
+        "verification": "Large list profile."
+      },
+      {
+        "id": "UF-0384-08",
+        "title": "Use accessible connection imagery",
+        "acceptance": "Lines/motifs supplement labels rather than replacing readable status.",
+        "verification": "Keyboard/grayscale/AT test."
+      }
+    ]
+  },
+  {
+    "n": 385,
+    "title": "Workspace hierarchy, diagnostics, sources, storage and local backups",
+    "slug": "workspace-operations-storage-and-recovery",
+    "path": "adr-0385-workspace-operations-storage-and-recovery.md",
+    "priority": "P1",
+    "phase": "07 Supporting",
+    "owners": [
+      "ADR-0230",
+      "ADR-0253",
+      "ADR-0263",
+      "ADR-0293"
+    ],
+    "src": [
+      "web/src/views/Workshop.tsx",
+      "web/src/views/WorkshopPanels.tsx",
+      "web/src/views/LocalBackup.tsx"
+    ],
+    "decision": "Existing local operations need action-first hierarchy, honest background work and safe data recovery.",
+    "tasks": [
+      {
+        "id": "UF-0385-01",
+        "title": "Prioritise actionable issues",
+        "acceptance": "Overview separates problems requiring action from healthy job counts.",
+        "verification": "Task triage review."
+      },
+      {
+        "id": "UF-0385-02",
+        "title": "Explain analysis lifecycle",
+        "acceptance": "Queued, running, paused and resumed state reflects true server jobs.",
+        "verification": "Interrupt/resume test."
+      },
+      {
+        "id": "UF-0385-03",
+        "title": "Protect source-folder handling",
+        "acceptance": "Disappearing or re-linked drives do not imply mass deletion.",
+        "verification": "Folder missing/return fixture."
+      },
+      {
+        "id": "UF-0385-04",
+        "title": "Clarify storage budget",
+        "acceptance": "Disposable cache, priority stems and durable originals are visibly different.",
+        "verification": "Eviction threshold test."
+      },
+      {
+        "id": "UF-0385-05",
+        "title": "Make diagnostics interpretable",
+        "acceptance": "Plain explanation and deeper detail when asked support different skill levels.",
+        "verification": "Comprehension task."
+      },
+      {
+        "id": "UF-0385-06",
+        "title": "Show backup data scope",
+        "acceptance": "Local archive of app data is not misrepresented as containing original music.",
+        "verification": "Archive/task inspection."
+      },
+      {
+        "id": "UF-0385-07",
+        "title": "Guard staged restore",
+        "acceptance": "Preview replacement/skips, restart and rollback before confirming.",
+        "verification": "Injected failure/restore test."
+      },
+      {
+        "id": "UF-0385-08",
+        "title": "Keep interface settings isolated",
+        "acceptance": "Theme, density and motion changes affect no stored mix/audio state.",
+        "verification": "Preference regression."
+      }
+    ]
+  },
+  {
+    "n": 386,
+    "title": "Export progression, exact frozen revisions and blind-study integrity",
+    "slug": "exports-frozen-revisions-and-listening-study",
+    "path": "adr-0386-exports-frozen-revisions-and-listening-study.md",
+    "priority": "P1",
+    "phase": "07 Supporting",
+    "owners": [
+      "ADR-0231",
+      "ADR-0157",
+      "ADR-0158",
+      "ADR-0294"
+    ],
+    "src": [
+      "web/src/views/ExportPanel.tsx",
+      "web/src/views/ExportJobs.tsx",
+      "web/src/views/Listening.tsx"
+    ],
+    "decision": "FLAC export and blinded comparisons already exist; output status and study validity must stay truthful.",
+    "tasks": [
+      {
+        "id": "UF-0386-01",
+        "title": "Expose frozen export identity",
+        "acceptance": "Exact draft/current revision and song scope known before export.",
+        "verification": "Edit-during-export test."
+      },
+      {
+        "id": "UF-0386-02",
+        "title": "Explain missing render prerequisites",
+        "acceptance": "Unready directed seams block export with a repair action.",
+        "verification": "Missing seam fixture."
+      },
+      {
+        "id": "UF-0386-03",
+        "title": "Show real job stages",
+        "acceptance": "Queue, render, encode, verify and complete map to actual jobs.",
+        "verification": "Slow/failed export test."
+      },
+      {
+        "id": "UF-0386-04",
+        "title": "Confirm output decodes",
+        "acceptance": "No completed success until exact frozen file exists and decodes.",
+        "verification": "FLAC inspection."
+      },
+      {
+        "id": "UF-0386-05",
+        "title": "Protect snapshot from later edits",
+        "acceptance": "Ongoing export cannot silently incorporate new mix revision.",
+        "verification": "Concurrent mutation regression."
+      },
+      {
+        "id": "UF-0386-06",
+        "title": "Make download and retry clear",
+        "acceptance": "Filename, saved outcome and failure path are visible.",
+        "verification": "Browser download test."
+      },
+      {
+        "id": "UF-0386-07",
+        "title": "Keep study methods blinded",
+        "acceptance": "Hidden condition names cannot leak to listener surface or accessible labels.",
+        "verification": "Study masking test."
+      },
+      {
+        "id": "UF-0386-08",
+        "title": "Treat missing ratings as missing",
+        "acceptance": "Unrated grades never become good results or efficacy proof.",
+        "verification": "Report/data audit."
+      }
+    ]
+  },
+  {
+    "n": 387,
+    "title": "Responsive geometry, zoom, mobile keyboard and input parity",
+    "slug": "responsive-reflow-and-input-adaptation",
+    "path": "adr-0387-responsive-reflow-and-input-adaptation.md",
+    "priority": "P0",
+    "phase": "08 Verification",
+    "owners": [
+      "ADR-0233",
+      "ADR-0234",
+      "ADR-0270",
+      "ADR-0298",
+      "ADR-0351",
+      "ADR-0357"
+    ],
+    "src": [
+      "web/src/styles/shell.css",
+      "web/src/styles/operations.css",
+      "web/e2e/micro-polish-geometry.e2e.ts"
+    ],
+    "decision": "Full-app polish must be verified across narrow phones, high zoom, short landscape and dynamic overlays, not only ideal desktop.",
+    "tasks": [
+      {
+        "id": "UF-0387-01",
+        "title": "Run viewport matrix",
+        "acceptance": "320,375,620,760,768,1024,1280,1440,1920,3840px and short landscape.",
+        "verification": "Computed geometry and screenshots."
+      },
+      {
+        "id": "UF-0387-02",
+        "title": "Validate 200/400% reflow",
+        "acceptance": "Content and actionable controls remain accessible without unintended page horizontal scroll.",
+        "verification": "WCAG reflow check."
+      },
+      {
+        "id": "UF-0387-03",
+        "title": "Protect player and overlay focus",
+        "acceptance": "Sticky chrome/keyboard safe areas do not obscure active buttons or composer.",
+        "verification": "Occlusion/focus test."
+      },
+      {
+        "id": "UF-0387-04",
+        "title": "Verify Lucy mobile composer",
+        "acceptance": "Keyboard stays clear of Stop, prompt and approval actions.",
+        "verification": "Real mobile input session."
+      },
+      {
+        "id": "UF-0387-05",
+        "title": "Offer non-drag controls",
+        "acceptance": "Energy arc, reorder and Studio grid remain functional by buttons/keys.",
+        "verification": "Keyboard/touch parity."
+      },
+      {
+        "id": "UF-0387-06",
+        "title": "Use wide space intentionally",
+        "acceptance": "Readable bounded content and useful side panels replace stretched paragraphs.",
+        "verification": "3840px visual review."
+      },
+      {
+        "id": "UF-0387-07",
+        "title": "Preserve scroll under updates",
+        "acceptance": "Streaming, errors and async task updates do not force lost context.",
+        "verification": "Focus/scroll stress test."
+      },
+      {
+        "id": "UF-0387-08",
+        "title": "Compare route feature parity",
+        "acceptance": "Desktop and mobile represent identical action semantics and music scope.",
+        "verification": "Cross-device user journey test."
+      }
+    ]
+  },
+  {
+    "n": 388,
+    "title": "WCAG accessibility, plain-language status and sensory safety",
+    "slug": "accessibility-language-and-motion-acceptance",
+    "path": "adr-0388-accessibility-language-and-motion-acceptance.md",
+    "priority": "P0",
+    "phase": "08 Verification",
+    "owners": [
+      "ADR-0202",
+      "ADR-0204",
+      "ADR-0205",
+      "ADR-0233",
+      "ADR-0234",
+      "ADR-0257",
+      "ADR-0298",
+      "ADR-0364"
+    ],
+    "src": [
+      "web/src/ui/primitives.tsx",
+      "web/src/ui/controls.tsx",
+      "web/src/ui/useReducedMotion.ts"
+    ],
+    "decision": "Automated ARIA and motion tests do not constitute independent WCAG 2.2 AA or assistive-technology acceptance.",
+    "tasks": [
+      {
+        "id": "UF-0388-01",
+        "title": "Audit landmarks and accessible names",
+        "acceptance": "All routes contain correct headings, labels and keyboard order.",
+        "verification": "Accessibility tree and human review."
+      },
+      {
+        "id": "UF-0388-02",
+        "title": "Validate component keyboard patterns",
+        "acceptance": "Menus, dialogs, tabs, comboboxes and grid follow relevant APG patterns.",
+        "verification": "Physical keyboard/NVDA/VoiceOver."
+      },
+      {
+        "id": "UF-0388-03",
+        "title": "Test applicable WCAG 2.2 AA",
+        "acceptance": "Contrast, focus, reflow, target size exceptions and drag alternatives verified.",
+        "verification": "Independent criteria checklist."
+      },
+      {
+        "id": "UF-0388-04",
+        "title": "Verify non-colour state language",
+        "acceptance": "Planned/ready/failed/selected survive forced colours, grayscale and AT.",
+        "verification": "Screenshots and spoken output."
+      },
+      {
+        "id": "UF-0388-05",
+        "title": "Unify musical terminology",
+        "acceptance": "Ready, analysed, proposed, queued, saved and playing are consistent and explainable.",
+        "verification": "Copy audit and task study."
+      },
+      {
+        "id": "UF-0388-06",
+        "title": "Enforce motion preference hierarchy",
+        "acceptance": "OS reduced-motion overrides expressive user setting and visual effects.",
+        "verification": "Motion tests."
+      },
+      {
+        "id": "UF-0388-07",
+        "title": "Prevent announcement overload",
+        "acceptance": "Long Lucy streams and background jobs do not spam live regions.",
+        "verification": "Assistive long-session review."
+      },
+      {
+        "id": "UF-0388-08",
+        "title": "Require real AT journey success",
+        "acceptance": "Critical first mix, Library, Lucy, editor and Studio tasks have reviewer/device evidence.",
+        "verification": "Independent completion log."
+      }
+    ]
+  },
+  {
+    "n": 389,
+    "title": "Independent visual, human, performance, real-audio and release GO/NO-GO",
+    "slug": "independent-visual-usability-and-release-gates",
+    "path": "adr-0389-independent-visual-usability-and-release-gates.md",
+    "priority": "P0",
+    "phase": "08 Verification",
+    "owners": [
+      "ADR-0239",
+      "ADR-0240",
+      "ADR-0247",
+      "ADR-0271",
+      "ADR-0299",
+      "ADR-0336",
+      "ADR-0365"
+    ],
+    "src": [
+      "web/e2e/paired-theme.e2e.ts",
+      "web/e2e/visual.e2e.ts",
+      "web/bench/scale.bench.ts"
+    ],
+    "decision": "Existing synthetic visual captures are review candidates and muted E2E cannot prove musical quality or user comprehension.",
+    "tasks": [
+      {
+        "id": "UF-0389-01",
+        "title": "Approve paired visual baselines",
+        "acceptance": "Same fixture/route/state/player/revision/size in Light and Dark, human reviewed.",
+        "verification": "Signed screenshot manifest."
+      },
+      {
+        "id": "UF-0389-02",
+        "title": "Run responsive and AT acceptance",
+        "acceptance": "Mobile, 400%, forced colours, physical keyboard and screen readers cover core routes.",
+        "verification": "Independent platform report."
+      },
+      {
+        "id": "UF-0389-03",
+        "title": "Measure realistic performance",
+        "acceptance": "20k Library, long Lucy, 40+ editor and active spectrum with named devices and budgets.",
+        "verification": "Benchmark report."
+      },
+      {
+        "id": "UF-0389-04",
+        "title": "Publish human success evidence",
+        "acceptance": "Uncoached novice/expert tasks with approved threshold and sample-size caveats.",
+        "verification": "Researcher-reviewed results."
+      },
+      {
+        "id": "UF-0389-05",
+        "title": "Listen to real transitions",
+        "acceptance": "Actual seams, stems, audio focus and output judged separately from synthetic UI tests.",
+        "verification": "Independent real-audio log."
+      },
+      {
+        "id": "UF-0389-06",
+        "title": "Verify functional preservation",
+        "acceptance": "No unsolicited Pause, wrong exact IDs, consent breach, false ready-only or bad frozen FLAC.",
+        "verification": "Regression and manual review."
+      },
+      {
+        "id": "UF-0389-07",
+        "title": "Keep per-task status provenance",
+        "acceptance": "ADR, checklist, evidence and JSON updated together only on proven SHA/review.",
+        "verification": "Consistency validator and negative cases."
+      },
+      {
+        "id": "UF-0389-08",
+        "title": "Require documented release verdict",
+        "acceptance": "Zero unresolved P0; P1 decisions, rollback, named owner and independent GO sign-off.",
+        "verification": "Gate dry run."
+      }
+    ]
+  }
+]
