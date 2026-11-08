@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, DraftList, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
+import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
 import { loadResume } from './lib';
 import { NowState, SetPlayer } from './player';
 import { navigate, useRoute } from './router';
@@ -371,29 +372,24 @@ export function App() {
     if (setUp) rememberSetUp();
   }, [setUp]);
 
-  // Media keys, headsets and the system's now-playing panel: each does what it says it does.
+  // Register media keys just once. Handlers read live state so they cannot act on a stale song.
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
-    const session = navigator.mediaSession;
-    session.metadata = active && playing && typeof MediaMetadata !== 'undefined'
-      ? new MediaMetadata({ title: playing.title, artist: playing.artist, album: data.name })
-      : null;
-    session.playbackState = now.phase === 'playing' ? 'playing' : now.phase === 'paused' ? 'paused' : 'none';
-    const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
-      ['play', () => { if (now.phase !== 'playing') void player.togglePause(); }],
-      ['pause', () => { if (now.phase === 'playing') void player.togglePause(); }],
-      ['nexttrack', () => void player.next()],
-      ['previoustrack', () => void player.previous()],
-      ['seekto', (details) => { if (details.seekTime !== undefined) void player.seek(details.seekTime); }],
-    ];
-    for (const [action, handler] of handlers) {
-      try {
-        session.setActionHandler(action, handler);
-      } catch {
-        // this browser doesn't have that one, which is fine
-      }
-    }
-  }, [active, playing?.title, now.phase, data.name, player]);
+    return bindMediaSession(navigator.mediaSession, player, () => mixRef.current);
+  }, [player]);
+
+  // The OS advances at playbackRate 1 between these authoritative one-second updates.
+  // Preview ownership never turns the paused mix into a second apparent player.
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    const update = () => {
+      const state = player.state;
+      syncMediaSession(navigator.mediaSession, state, mixRef.current[state.position], data.name, !!audioOwner());
+    };
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [player, now.phase, now.position, playing?.song_id, playing?.title, playing?.artist, data.name]);
 
   // Going on stage hides everything that had focus, so coming back puts focus back where it was.
   const beforeStage = useRef<{ element: HTMLElement | null; name: string } | null>(null);
