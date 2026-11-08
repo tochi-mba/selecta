@@ -54,7 +54,9 @@ export function usePaletteSongs(text: string): { commands: Command[]; failed: bo
         group: 'Songs',
         // what the Library says about it, so a found song is never taken for one that's ready
         detail: `${trackReadiness(song).words}, opens its details`,
-        run: () => navigate(`/library?q=${encodeURIComponent(song.title ?? String(song.id))}&song=${song.id}`),
+        // Search by the authoritative recording ID, not by a potentially shared title.
+        // Even a library with hundreds of identically named songs opens this exact result.
+        run: () => navigate(`/library?q=${song.id}&song=${song.id}&show=all`),
       };
     });
   }, [found, text]);
