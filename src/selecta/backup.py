@@ -24,7 +24,7 @@ FORMAT = "selecta.local-data"
 VERSION = 1
 MAX_ARCHIVE = 128 * 1024 * 1024
 MAX_DATABASE = 256 * 1024 * 1024
-PENDING = ".restore-pending.sqlite"
+PENDING = ".restore-pending"
 ROLLBACK = ".restore-rollback.sqlite"
 PENDING_HISTORY = ".restore-pending-seam-history"
 ROLLBACK_HISTORY = ".restore-rollback-seam-history"
@@ -167,65 +167,154 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
     return manifest, db_bytes, counts
 
 
+def _sync_bytes(path: Path, contents: bytes) -> None:
+    """Durably write a new snapshot entry before publishing its parent folder."""
+    with path.open("xb") as out:
+        out.write(contents)
+        out.flush()
+        os.fsync(out.fileno())
+
+
 def stage_restore(settings: Settings, data: bytes, token: str) -> dict:
+    """Stage a *complete* validated snapshot, not just its SQLite database.
+
+    The pending directory is published by a single rename. A failed or
+    interrupted upload cannot leave a half-staged database/history pair.
+    """
     if token != _sha(data):
         raise BackupError("Backup contents changed since preview. Preview again.")
     _, contents, counts = validate_backup(data)
-    with tempfile.NamedTemporaryFile(dir=settings.home, prefix=".restore-writing-", delete=False) as out:
-        staging = Path(out.name)
-        try:
-            out.write(contents)
-            out.flush()
-            os.fsync(out.fileno())
-        except Exception:
-            staging.unlink(missing_ok=True)
-            raise
-    try:
-        _check_database(staging)
-        os.replace(staging, settings.home / PENDING)
-    finally:
-        staging.unlink(missing_ok=True)
+    pending = settings.home / PENDING
+    if pending.exists():
+        raise BackupError("A restore is already waiting for a restart.")
+    settings.home.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=settings.home, prefix=".restore-writing-") as tmp:
+        staging = Path(tmp) / "ready"
+        history = staging / "seam-history"
+        history.mkdir(parents=True)
+        _sync_bytes(staging / "selecta.sqlite", contents)
+        with zipfile.ZipFile(io.BytesIO(data)) as bundle:
+            for name in bundle.namelist():
+                if name.startswith("seam-history/"):
+                    # validate_backup already checked name, identity, size and SHA.
+                    _sync_bytes(history / Path(name).name, bundle.read(name))
+        _check_database(staging / "selecta.sqlite")
+        os.replace(staging, pending)
     return {"status": "pending_restart", "counts": counts, "original_music_untouched": True}
 
 
-def activate_pending_restore(settings: Settings) -> bool:
-    """Run only at startup, before opening database clients or launching workers.
-
-    Keep an on-disk rollback copy. A crash between renames is recoverable on
-    the next launch because a missing destination keeps the staging file.
-    """
-    incoming = settings.home / PENDING
-    current = settings.db_path
-    rollback = settings.home / ROLLBACK
-    if not incoming.exists():
-        return False
-    _check_database(incoming)
-    if current.exists():
-        # Never copy or replace an active WAL database without a checkpoint.
-        conn = sqlite3.connect(current, timeout=1)
+def _snapshot_database(current: Path, rollback: Path, home: Path) -> None:
+    """Create a consistent rollback image even when the source used WAL."""
+    with tempfile.NamedTemporaryFile(dir=home, prefix=".restore-rollback-writing-", delete=False) as tmp:
+        snapshot = Path(tmp.name)
+    try:
+        source = sqlite3.connect(current, timeout=1)
+        target = sqlite3.connect(snapshot)
         try:
-            busy, _, _ = conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+            busy, _, _ = source.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
             if busy:
                 raise BackupError("The database is being used by another process.")
-            with tempfile.NamedTemporaryFile(dir=settings.home, prefix=".restore-rollback-", delete=False) as raw:
-                snapshot = Path(raw.name)
-            try:
-                target = sqlite3.connect(snapshot)
-                try:
-                    conn.backup(target)
-                finally:
-                    target.close()
-                _check_database(snapshot)
-                os.replace(snapshot, rollback)
-            finally:
-                snapshot.unlink(missing_ok=True)
+            source.backup(target)
         finally:
-            conn.close()
+            target.close()
+            source.close()
+        _check_database(snapshot)
+        os.replace(snapshot, rollback)
+    finally:
+        snapshot.unlink(missing_ok=True)
+
+
+def _recover_interrupted(settings: Settings) -> None:
+    """Undo both parts of an interrupted startup restore before opening the DB."""
+    home = settings.home
+    marker = home / ACTIVATING
+    if not marker.exists():
+        return
     try:
-        os.replace(incoming, current)
-    except OSError:
-        # Do not remove the original or the rollback when a replace fails.
-        if not current.exists() and rollback.exists():
-            shutil.copy2(rollback, current)
+        state = json.loads(marker.read_text(encoding="utf-8"))
+        current = settings.db_path
+        rollback = home / ROLLBACK
+        original_history = home / "seam-history"
+        history_backup = home / ROLLBACK_HISTORY
+        if state["had_database"]:
+            if not rollback.is_file():
+                raise BackupError("The restore rollback database is missing.")
+            _check_database(rollback)
+            with tempfile.NamedTemporaryFile(dir=home, prefix=".restore-recover-", delete=False) as tmp:
+                recovered = Path(tmp.name)
+            try:
+                shutil.copyfile(rollback, recovered)
+                os.replace(recovered, current)
+            finally:
+                recovered.unlink(missing_ok=True)
+        else:
+            current.unlink(missing_ok=True)
+        if state["had_history"] and not history_backup.is_dir():
+            raise BackupError("The restore rollback history is missing.")
+        if original_history.exists():
+            if original_history.is_symlink() or not original_history.is_dir():
+                raise BackupError("The existing transition history is not a safe directory.")
+            shutil.rmtree(original_history)
+        if state["had_history"]:
+            shutil.copytree(history_backup, original_history, symlinks=False)
+        pending = home / PENDING
+        if pending.is_dir():
+            shutil.rmtree(pending)
+        marker.unlink()
+    except (OSError, ValueError, KeyError, TypeError) as problem:
+        raise BackupError("The interrupted restore needs manual recovery; do not use the database yet.") from problem
+    raise BackupError("An interrupted restore was rolled back. Your previous local data was kept.")
+
+
+def activate_pending_restore(settings: Settings) -> bool:
+    """Activate at startup only, with a durable rollback for both data stores.
+
+    A marker makes a crash between database and history renames recoverable.
+    No music files or any audio caches are touched.
+    """
+    _recover_interrupted(settings)
+    home = settings.home
+    incoming = home / PENDING
+    if not incoming.exists():
+        return False
+    if not incoming.is_dir() or not (incoming / "seam-history").is_dir():
+        raise BackupError("The staged restore is incomplete; no data was replaced.")
+    incoming_db = incoming / "selecta.sqlite"
+    _check_database(incoming_db)
+    current = settings.db_path
+    history = home / "seam-history"
+    rollback = home / ROLLBACK
+    history_backup = home / ROLLBACK_HISTORY
+    if history.exists() and (history.is_symlink() or not history.is_dir()):
+        raise BackupError("The existing transition history is not a safe directory.")
+    had_database = current.exists()
+    had_history = history.exists()
+    if had_database:
+        _snapshot_database(current, rollback, home)
+    if had_history:
+        with tempfile.TemporaryDirectory(dir=home, prefix=".restore-history-writing-") as tmp:
+            copy = Path(tmp) / "history"
+            shutil.copytree(history, copy, symlinks=False)
+            if history_backup.exists():
+                shutil.rmtree(history_backup)
+            os.replace(copy, history_backup)
+    marker = home / ACTIVATING
+    _sync_bytes(marker, json.dumps({
+        "had_database": had_database, "had_history": had_history
+    }).encode("utf-8"))
+    try:
+        os.replace(incoming_db, current)
+        retired = home / ".restore-replaced-seam-history"
+        if retired.exists():
+            shutil.rmtree(retired)
+        if had_history:
+            os.replace(history, retired)
+        os.replace(incoming / "seam-history", history)
+        shutil.rmtree(incoming)
+        marker.unlink()
+        if retired.is_dir():
+            shutil.rmtree(retired)
+        return True
+    except Exception:
+        _recover_interrupted(settings)
         raise
-    return True
