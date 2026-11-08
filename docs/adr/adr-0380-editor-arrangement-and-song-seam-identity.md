@@ -1,7 +1,7 @@
 # ADR-0380 — Editor sequence, Story/Arrange parity and exact seam identity
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Implementation:** 7/8 Not started; 1/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
 - **Priority / phase:** P1 / 06 Advanced creation. **Owner:** Unassigned. **Implementing PR/SHA:** —.
@@ -25,7 +25,7 @@ Users understand what is actually available, which exact music object they are a
 ## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
 
 1. **UF-0380-01 — Keep mode semantics identical.** **Acceptance:** Story and Arrange show same ordered occurrences and seam state. **Required verification:** Mode-toggle equality E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0380-02 — Distinguish song from seam focus.** **Acceptance:** Selection labels and visuals identify exact object even when a song repeats. **Required verification:** Repeated-song and AT fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+2. **UF-0380-02 — Distinguish song from seam focus.** **Acceptance:** Selection labels and visuals identify exact object even when a song repeats. **Required verification:** Repeated-song and AT fixture. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `438adb252d1af6d3ff20302198804689d3f72c17`; **Evidence/reviewer:** Player occurrence-aware seek/next/seam planning, player.ts/player.test.ts; repeated-title route parity pending; independent reviewer pending.
 3. **UF-0380-03 — Provide reorder alternatives.** **Acceptance:** Pointer drag, touch and keyboard movement preserve focus and reversibility. **Required verification:** Keyboard/pointer reorder test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 4. **UF-0380-04 — Expose current/draft scope.** **Acceptance:** Editor heading and buttons identify revision being modified. **Required verification:** Multiple-draft scope regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 5. **UF-0380-05 — Distinguish energy intent from result.** **Acceptance:** Requested arc and achieved measurements have clear source-backed labels. **Required verification:** Energy state fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.

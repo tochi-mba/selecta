@@ -1,7 +1,7 @@
 # ADR-0379 — My Mixes, current/draft identity and render-line hierarchy
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
-- **Implementation:** 7/8 Not started; 1/8 In progress; 0/8 Implemented.
+- **Implementation:** 5/8 Not started; 3/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
 - **Priority / phase:** P1 / 05 Creation. **Owner:** Unassigned. **Implementing PR/SHA:** —.
@@ -29,8 +29,8 @@ Users understand what is actually available, which exact music object they are a
 3. **UF-0379-03 — Make queue causality visible.** **Acceptance:** Prioritized drafts and current rendering show actual order, not misleading parallel promise. **Required verification:** Job queue fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 4. **UF-0379-04 — Show genuine render progression.** **Acceptance:** Queued, failed, blocked by storage and ready are separate recoverable states. **Required verification:** Interrupted job E2E. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `471bcdfb50e96188f2f3a7c252b0bedc33cbff06`; **Evidence/reviewer:** `web/src/state/readiness.ts` and readiness tests; queue/storage validation pending.
 5. **UF-0379-05 — Restore recent work context.** **Acceptance:** Returning to a draft preserves scope without switching audio. **Required verification:** Reload/back/forward fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0379-06 — Protect swap and Undo.** **Acceptance:** Playback of draft communicates current/draft exchange and recovery. **Required verification:** Revision and Undo integration. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0379-07 — Keep large draft collections usable.** **Acceptance:** Duplicate titles, long names and many drafts scan without losing actions. **Required verification:** Scale and AT review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+6. **UF-0379-06 — Protect swap and Undo.** **Acceptance:** Playback of draft communicates current/draft exchange and recovery. **Required verification:** Revision and Undo integration. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `7ebfff8fc12e5a98d0ac5fa06e92f4eaf12c243c`; **Evidence/reviewer:** Draft activation operation identity and replacement guards, App.tsx/App.test.tsx; lost-ack E2E pending; independent reviewer pending.
+7. **UF-0379-07 — Keep large draft collections usable.** **Acceptance:** Duplicate titles, long names and many drafts scan without losing actions. **Required verification:** Scale and AT review. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `dd07cf13ec4833c603695a06dbefa2825d385dd4`; **Evidence/reviewer:** Progressive 40-draft rendering and stable actions, Drafts.tsx/Drafts.test.tsx; scale audit pending; independent reviewer pending.
 8. **UF-0379-08 — Design empty My Mixes path.** **Acceptance:** No saved mixes gives one direct creation action instead of decorative dead end. **Required verification:** First-use walkthrough. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 
 ## Verification and release boundaries

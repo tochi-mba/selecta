@@ -1,7 +1,7 @@
 # ADR-0374 — Listen hierarchy, lyrics integrity, seek and transitions
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Implementation:** 7/8 Not started; 1/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
 - **Priority / phase:** P1 / 04 Listen. **Owner:** Unassigned. **Implementing PR/SHA:** —.
@@ -28,7 +28,7 @@ Users complete the named journey with clear action consequences, predictable con
 2. **UF-0374-02 — Label timed lyrics honestly.** **Acceptance:** Approximate word timing is not presented as sung-word ground truth. **Required verification:** Real music + no-lyrics fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 3. **UF-0374-03 — Fit long title variations.** **Acceptance:** Long/RTL/CJK song metadata and repeated titles remain readable at zoom. **Required verification:** Responsive text test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 4. **UF-0374-04 — Synchronise handoff information.** **Acceptance:** Countdown and transition scene follow actual playback clock and seam. **Required verification:** Audio/video correlation. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0374-05 — Provide accessible seeking.** **Acceptance:** Overview strip enables keyboard/pointer seeking with bounded status. **Required verification:** Seeking fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+5. **UF-0374-05 — Provide accessible seeking.** **Acceptance:** Overview strip enables keyboard/pointer seeking with bounded status. **Required verification:** Seeking fixture. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #41 / `3c9f6397a5b0591f9f3934ae6b0546a478c27f08`; **Evidence/reviewer:** Bounded keyboard/pointer seeking and unknown-duration explanation in Now.tsx, Now.test.tsx; AT verification pending; independent reviewer pending.
 6. **UF-0374-06 — Clarify next-song steering.** **Acceptance:** Next-up actions do not promise ready audio where absent. **Required verification:** Pending/ready request matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 7. **UF-0374-07 — Reduce optional panel competition.** **Acceptance:** Lyrics, spectrum settings and reasons use a secondary hierarchy. **Required verification:** Narrow viewport and usability review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 8. **UF-0374-08 — Test passive and active listening.** **Acceptance:** No configuration is required to enjoy music; essential controls remain available. **Required verification:** Novice/expert session. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
