@@ -91,6 +91,28 @@ for (const theme of ['light', 'dark'] as const) {
   });
 }
 
+test('cards, panels and display type have one computed owner', async ({ page }) => {
+  await page.goto('/mixes');
+  const computed = await page.evaluate(() => {
+    const probe = document.createElement('div');
+    probe.style.position = 'absolute';
+    probe.style.left = '-9999px';
+    document.body.append(probe);
+    const values = (className: string) => {
+      probe.className = className;
+      const style = getComputedStyle(probe);
+      return { padding: style.paddingTop, fontSize: Number.parseFloat(style.fontSize), lineHeight: Number.parseFloat(style.lineHeight) };
+    };
+    const result = { card: values('card'), panel: values('panel'), display: values('display'), small: values('display small') };
+    probe.remove();
+    return result;
+  });
+  expect(computed.card.padding).toBe('24px');
+  expect(computed.panel.padding).toBe('24px');
+  expect(computed.display.lineHeight / computed.display.fontSize).toBeCloseTo(1.08, 1);
+  expect(computed.small.lineHeight / computed.small.fontSize).toBeCloseTo(1.12, 1);
+});
+
 test('mini-player and overlay geometry stay actionable on a narrow phone', async ({ page, request }, info) => {
   await resetMix(request);
   await page.setViewportSize({ width: 375, height: 667 });
