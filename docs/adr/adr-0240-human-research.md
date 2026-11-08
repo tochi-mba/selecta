@@ -1,6 +1,6 @@
 # ADR-0240 — Independent listening research and artistic quality acceptance
 
-- **Decision:** Proposed; explicit owner acceptance is pending.
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
@@ -47,5 +47,5 @@ Single player and intentional Pause; unchanged local music and explicit LRCLIB m
 
 - **Depends on:** ADR-0164/0184/0021; new ADR-0198/0199 and previous programme acceptance records.
 - **Next:** dated owner decision → design specimens → small code/test PR → separate independent human/AT/audio/performance report → explicit release gate.
-- **Now:** Proposed; 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
+- **Now:** Accepted; 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).
