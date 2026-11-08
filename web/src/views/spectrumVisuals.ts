@@ -1,7 +1,8 @@
 /** Display-only renderers for the actual analyser output. No audio, clock or
  * server writes happen here. All optional modes are horizontal by design. */
 export type SpectrumShape = 'bars' | 'ribbon' | 'aurora' | 'lanes' | 'constellation' | 'waterfall'
-  | 'skyline' | 'threads' | 'pins' | 'matrix' | 'trails';
+  | 'skyline' | 'threads' | 'pins' | 'matrix' | 'trails'
+  | 'dunes' | 'candles' | 'mesh' | 'split';
 
 export const SPECTRUM_MODES: { id: SpectrumShape; label: string; description: string }[] = [
   { id: 'bars', label: 'Frequency bars', description: 'Measured frequencies, centred bars' },
@@ -15,6 +16,10 @@ export const SPECTRUM_MODES: { id: SpectrumShape; label: string; description: st
   { id: 'pins', label: 'Signal pins', description: 'Thin mirrored frequency needles with measured tips' },
   { id: 'matrix', label: 'Spectrum mosaic', description: 'A wide grid of magnitude-coded frequency tiles' },
   { id: 'trails', label: 'Afterglow trails', description: 'Fading outlines of recent real spectrum samples' },
+  { id: 'dunes', label: 'Spectral dunes', description: 'Four broad measured-frequency landscapes along the width' },
+  { id: 'candles', label: 'Signal ranges', description: 'Thin frequency spread wicks with measured mean markers' },
+  { id: 'mesh', label: 'Frequency mesh', description: 'An airy lattice woven between adjacent real spectrum bins' },
+  { id: 'split', label: 'Split flow', description: 'Lower and upper frequencies occupy separate horizontal channels' },
 ];
 
 /** A stable low-to-high frequency axis, using peak magnitude in each actual
@@ -299,6 +304,118 @@ export function paintFrequencyFrame(
       context.strokeStyle = index === history.length - 1 ? brush.soft : brush.accent;
       context.lineWidth = index === history.length - 1 ? 2.5 : 1.2;
       context.globalAlpha = (index + 1) / history.length * 0.82;
+      context.stroke();
+    });
+  } else if (mode === 'dunes') {
+    // Four individually analysed frequency windows form separate filled ridges,
+    // not a repeating generated landscape or a tempo-driven animation.
+    for (let band = 0; band < 4; band += 1) {
+      const start = Math.floor(band * levels.length / 4);
+      const end = Math.max(start + 1, Math.floor((band + 1) * levels.length / 4));
+      const samples = levels.slice(start, end);
+      const baseline = height * (0.235 + band * 0.25);
+      const rise = height * 0.19;
+      context.beginPath();
+      context.moveTo(0, baseline);
+      contour(context, samples, width, baseline, rise);
+      context.lineTo(width, baseline);
+      context.closePath();
+      context.fillStyle = band % 2 ? brush.soft : brush.accent;
+      context.globalAlpha = 0.23 + band * 0.11;
+      context.fill();
+      context.beginPath();
+      contour(context, samples, width, baseline, rise);
+      context.strokeStyle = band % 2 ? brush.accent : brush.soft;
+      context.lineWidth = band === 0 ? 2 : 1.5;
+      context.globalAlpha = 0.68 + band * 0.08;
+      context.stroke();
+    }
+  } else if (mode === 'candles') {
+    // A frequency-span glyph: each wick is the measured min/max within its
+    // contiguous group; each horizontal block marks that group's actual mean.
+    // These are not financial candles, beat onsets or dynamic-range estimates.
+    const groups = Math.min(42, Math.max(1, Math.floor(levels.length / 3)));
+    const interval = width / groups;
+    const floor = height * 0.93;
+    const rise = height * 0.82;
+    for (let group = 0; group < groups; group += 1) {
+      const first = Math.floor(group * levels.length / groups);
+      const last = Math.max(first + 1, Math.floor((group + 1) * levels.length / groups));
+      const samples = levels.slice(first, last);
+      const highest = Math.max(...samples);
+      if (highest <= 0) continue;
+      const lowest = Math.min(...samples);
+      const mean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+      const x = (group + 0.5) * interval;
+      context.strokeStyle = brush.soft;
+      context.lineWidth = Math.max(1, interval * 0.07);
+      context.globalAlpha = 0.75;
+      context.beginPath();
+      context.moveTo(x, floor - lowest * rise);
+      context.lineTo(x, floor - highest * rise);
+      context.stroke();
+      context.fillStyle = brush.accent;
+      context.globalAlpha = 0.9;
+      context.fillRect(
+        x - interval * 0.27,
+        floor - mean * rise - Math.max(1, height * 0.022),
+        interval * 0.54,
+        Math.max(2, height * 0.044),
+      );
+    }
+  } else if (mode === 'mesh') {
+    // The lattice is entirely determined by adjacent measured bins. No
+    // arbitrary vertices, drifting nodes, and no representation of stereo.
+    const stride = Math.max(1, Math.ceil(levels.length / 64));
+    const sampled = levels.filter((_, index) => index % stride === 0);
+    const centre = height / 2;
+    const scale = height * 0.42;
+    const step = width / Math.max(sampled.length - 1, 1);
+    context.beginPath();
+    sampled.forEach((level, index) => {
+      if (level <= 0) return;
+      const x = index * step;
+      const top = centre - level * scale;
+      const bottom = centre + level * scale;
+      context.moveTo(x, top);
+      context.lineTo(x, bottom);
+      if (index === 0 || sampled[index - 1] <= 0) return;
+      const previous = sampled[index - 1];
+      const beforeX = (index - 1) * step;
+      context.moveTo(beforeX, centre - previous * scale);
+      context.lineTo(x, bottom);
+      context.moveTo(beforeX, centre + previous * scale);
+      context.lineTo(x, top);
+    });
+    context.strokeStyle = brush.accent;
+    context.lineWidth = Math.max(1, width / 1100);
+    context.globalAlpha = 0.72;
+    context.stroke();
+  } else if (mode === 'split') {
+    // The upper and lower paths use DIFFERENT halves of the measured
+    // frequency range. They are not mirrored duplicates of one audio band.
+    const middle = Math.max(1, Math.ceil(levels.length / 2));
+    const lower = levels.slice(0, middle);
+    const upper = levels.slice(middle);
+    const partitions = [
+      { samples: lower, baseline: height * 0.47, direction: false, color: brush.accent },
+      { samples: upper, baseline: height * 0.53, direction: true, color: brush.soft },
+    ];
+    partitions.forEach(({ samples, baseline, direction, color }) => {
+      if (!samples.length || !samples.some((value) => value > 0)) return;
+      context.beginPath();
+      context.moveTo(0, baseline);
+      contour(context, samples, width, baseline, height * 0.4, direction);
+      context.lineTo(width, baseline);
+      context.closePath();
+      context.fillStyle = color;
+      context.globalAlpha = 0.54;
+      context.fill();
+      context.beginPath();
+      contour(context, samples, width, baseline, height * 0.4, direction);
+      context.strokeStyle = color;
+      context.lineWidth = 2;
+      context.globalAlpha = 0.95;
       context.stroke();
     });
   }
