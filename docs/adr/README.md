@@ -1,3 +1,13 @@
+# Selecta — proposed measured UI/UX micro-polish ADRs (2026-11-08)
+
+**New documentation-only programme:** [28 ADR roadmap](selecta-measured-micro-polish-roadmap.md) · [224 implementation tasks](selecta-measured-micro-polish-implementation-checklist.md) · [per-task evidence](selecta-measured-micro-polish-implementation-evidence.md) · [status JSON](selecta-measured-micro-polish-code-status.json) · [overlap](selecta-measured-micro-polish-overlap-and-parity.md) · [geometry](selecta-measured-micro-polish-geometry-contract.md) · [verification](selecta-measured-micro-polish-verification-matrix.md) · [reconciliation](selecta-measured-micro-polish-status-reconciliation.md) · [release](selecta-measured-micro-polish-release-gates.md).
+
+**Status:** 28 Proposed decisions, 224 Not started acceptance items, 0 In progress, 0 Implemented, 0 independently Verified. All owners unassigned. Baseline `100df404` on 2026-11-08. No application source, tests, audio or older programme status changed.
+
+Scope: down-to-the-pixel polish of all routes, shared components, titles, margins, alignments, player, editor, Studio, Requests, Library, Discover, Workspace, Export, overlays, motion and responsive/AT/real-audio acceptance. Existing capabilities are credited and old ADR owners retain authority.
+
+---
+
 # Selecta - final-polish incremental UI/UX ADRs (2026-11-08)
 
 **Documentation-only proposal:** [Roadmap](selecta-final-polish-roadmap.md) · [Checklist](selecta-final-polish-implementation-checklist.md) · [Evidence](selecta-final-polish-implementation-evidence.md) · [JSON](selecta-final-polish-code-status.json) · [Parity](selecta-final-polish-overlap-and-parity.md) · [Verification](selecta-final-polish-verification-matrix.md) · [Reconciliation](selecta-final-polish-status-reconciliation.md) · [Release](selecta-final-polish-release-gates.md)
