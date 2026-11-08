@@ -123,8 +123,17 @@ a.button:hover { border-color: var(--text); }
     border-top: 1px solid var(--border);
   }
   .nav .brand, .nav-foot { display: none; }
-  .nav ul { flex: 1 1 auto; min-width: 0; }
-  .nav li { flex: 1 1 0; min-width: 0; }
+  /* At 320px and especially at 200–400% zoom, keep each destination
+     reachable instead of shrinking its icon and label below a usable width.
+     Only the navigation list scrolls, never the document horizontally. */
+  .nav ul {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: var(--space-2);
+  }
+  .nav li { flex: 1 0 64px; min-width: 64px; }
   .nav li a {
     height: 100%;
     display: flex;
