@@ -13,6 +13,14 @@ permissions:
   contents: read
 
 jobs:
+  checklist-evidence:
+    name: Checklist / evidence integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject checked tasks without evidence
+        run: python src/selecta/audit/checklist_evidence.py
+
   python:
     # Every pytest case is assigned to exactly one isolated Windows runner.
     name: Python / tests (shard ${{ matrix.shard }}/2)
@@ -119,16 +127,18 @@ jobs:
     # Combined Python coverage, not a partial shard, must meet the original 70%.
     name: verify
     if: ${{ always() }}
-    needs: [python, web, browser]
+    needs: [checklist-evidence, python, web, browser]
     runs-on: ubuntu-latest
     steps:
       - name: Require all prerequisite jobs to pass
         env:
+          EVIDENCE_RESULT: ${{ needs.checklist-evidence.result }}
           PYTHON_RESULT: ${{ needs.python.result }}
           WEB_RESULT: ${{ needs.web.result }}
           BROWSER_RESULT: ${{ needs.browser.result }}
         run: |
-          echo "Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT"
+          echo "Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT"
+          test "$EVIDENCE_RESULT" = success
           test "$PYTHON_RESULT" = success
           test "$WEB_RESULT" = success
           test "$BROWSER_RESULT" = success
