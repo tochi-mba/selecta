@@ -35,7 +35,7 @@ describe('a request on its way into the mix', () => {
     expect(container.querySelector('li.song.coming')).toBeInTheDocument();
     expect(screen.getByText('Wanted')).toBeInTheDocument();
     expect(screen.getByText('Requested')).toBeInTheDocument();
-    expect(screen.getByText('Getting it ready · about 3 minutes')).toBeInTheDocument();
+    expect(screen.getByText('Getting it ready · audio preparation estimate about 3 minutes')).toBeInTheDocument();
   });
 
   it('can’t be played, because it isn’t in the mix yet', () => {
@@ -201,7 +201,7 @@ describe('a bridge joining as one', () => {
 
   it('counts down how much of it is ready', () => {
     show(value());
-    expect(screen.getByRole('status')).toHaveTextContent('1 of 3 ready · about 2 minutes');
+    expect(screen.getByRole('status')).toHaveTextContent('1 of 3 ready · audio preparation estimate about 2 minutes');
   });
 
   it('has one way to cancel the lot, and nothing that plays', () => {
