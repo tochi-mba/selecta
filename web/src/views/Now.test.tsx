@@ -293,3 +293,42 @@ describe('listener-controlled presentation', () => {
     expect(player.state.phase).toBe('idle');
   });
 });
+
+
+describe('creative Listen states grounded in audio and known timing', () => {
+  it('lets the listener choose a real-data radial spectrum without changing playback', async () => {
+    window.localStorage.removeItem('selecta.listen');
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    render(
+      <Now status={status()} mix={mix} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    await screen.findByText('Hello');
+    fireEvent.click(screen.getByRole('button', { name: 'Radial spectrum' }));
+    expect(JSON.parse(localStorage.getItem('selecta.listen') ?? '{}').spectrumShape).toBe('radial');
+    expect(screen.getByRole('img', { name: 'Radial real audio frequency levels' })).toBeInTheDocument();
+    expect(player.state.phase).toBe('idle');
+    fireEvent.click(screen.getByRole('button', { name: 'Frequency bars' }));
+    expect(screen.getByRole('img', { name: 'Bar real audio frequency levels' })).toBeInTheDocument();
+  });
+
+  it('uses chronological seconds when the next handoff has no valid beat grid', async () => {
+    fakeBackend({ 'GET /songs/1': { ...detail, bar_times: [], beat_times: [] } });
+    const next: MixItem = { ...mix[0], song_id: 2, position: 1, title: 'Next song',
+      seam: { settings: { move: 'auto' }, state: { status: 'ready', key: 'seam-1' } } };
+    const set = [mix[0], next];
+    const player = new SetPlayer(() => set, () => {});
+    render(
+      <Now status={status()} mix={set} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20, seamAt: 12, nextReady: true }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    expect(await screen.findByText(/until the hand-off/)).toBeInTheDocument();
+    expect(screen.getByText(/Beat grid unavailable, so time is shown/)).toBeInTheDocument();
+    expect(screen.queryByRole('timer')).toBeNull();
+  });
+});
