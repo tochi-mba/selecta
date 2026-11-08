@@ -1,6 +1,6 @@
 # ADR-0214 — Truthful playback time, waveform and seek interactions
 
-- **Decision:** Proposed; owner acceptance pending.
+- **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
@@ -47,5 +47,5 @@ Preserve one audio owner and intentional Pause, original local music and LRCLIB 
 
 - **Depends on:** ADR-0145/0170/0101, ADR-0198 and ADR-0199. Reconcile previous code per task rather than reimplementing blindly.
 - **Sequence:** owner decision → design specimens → scoped code/test PR → independent audio/visual/AT/performance review → recorded GO/NO-GO.
-- **Now:** Decision Proposed; Implementation Not started; Independently Verified No; no implementing PR/SHA.
+- **Now:** Decision Accepted; Implementation Not started; Independently Verified No; no implementing PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).
