@@ -1,7 +1,7 @@
 # ADR-275 — Typography scale, text wrapping and numeric metadata
 
 - **Decision:** Proposed (owner review pending).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Implementation:** 7/8 Not started; 0/8 In progress; 1/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme:** Selecta measured micro-polish (MP). **Priority:** P0. **Baseline:** `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4`. **Owner:** Unassigned.
 - **Existing ADR owners:** ADR-0202, ADR-0248, ADR-0257; old statuses unchanged.
@@ -15,10 +15,10 @@ Selecta already has extensive implemented UI, functional tests and earlier accep
 
 Audit the same route, state, theme, viewport, zoom and synthetic music data before and after any pixel-level change. Adopt the smallest change justified by measured layout and human review. Preserve existing design where it already passes and record specialist exceptions. Avoid unrelated feature additions or wholesale redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist — 1/8 Implemented; 0/8 independently Verified
 
 1. **MP-0275-01 — Map typographic hierarchy.** **Acceptance:** Display, page, section, track title, caption and metadata have distinct roles. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **MP-0275-02 — Resolve duplicate display styling.** **Acceptance:** Global and later .display line-height/font rules have intentional ownership. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+2. **MP-0275-02 — Resolve duplicate display styling.** **Acceptance:** Global and later .display line-height/font rules have intentional ownership. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Implemented; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `6a55b1643b0b`; **Evidence/reviewer:** display/small typography in style.css; duplicate in polish.css removed; E2E test added (unrun); independent reviewer —.
 3. **MP-0275-03 — Keep focal song names readable.** **Acceptance:** Listen, Stage and details favour complete titles over arbitrary shrinking. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 4. **MP-0275-04 — Truncate dense rows accessibly.** **Acceptance:** Full identity remains accessible when Library/Editor visually ellipsises. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 5. **MP-0275-05 — Use stable numbers.** **Acceptance:** Time, BPM, percentages and song counts preserve alignment while changing. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
