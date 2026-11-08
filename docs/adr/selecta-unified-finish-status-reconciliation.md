@@ -1,6 +1,6 @@
 # Selecta — UF historical status reconciliation and evidence provenance
 
-**Status:** 24 Accepted ADRs (0366–0389); 171 UF tasks Not started; 21 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08. PR #41 includes code/tests and per-task source evidence; separate human/device/sound acceptance is outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
+**Status:** 24 Accepted ADRs (0366–0389); 170 UF tasks Not started; 22 In progress; 0 Implemented; 0 independently Verified. Requester accepted all UF ADRs on 2026-11-08. PR #41 includes code/tests and per-task source evidence; separate human/device/sound acceptance is outstanding. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08).
 
 ## Three independent statuses
 
