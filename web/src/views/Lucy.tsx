@@ -6,7 +6,7 @@ import type { ConversationScope, LucyStatus, Selection } from '../lucy/types';
 import { forgetSent, keepUnsent, unsentKey, useUnsent } from '../lucy/unsent';
 import { useConversation } from '../lucy/useConversation';
 import { RUN_WORDS } from '../lucy/words';
-import { navigate, useLocationText } from '../router';
+import { navigate, setQuery, useLocationText } from '../router';
 import { PageLink } from '../shell/PageLink';
 import { Drawer, Problem, Skeleton } from '../ui/controls';
 import { Icon } from '../ui/Icon';
@@ -125,6 +125,8 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
     consumedPrompt.current = suggestedPrompt;
     // A saved unsent message always wins over a mood suggestion.
     if (!unsent.text.trim()) unsent.change(suggestedPrompt);
+    // Once stored locally, the prompt no longer needs to remain in the shareable URL.
+    setQuery({ prompt: null });
   }, [suggestedPrompt, unsent.text, unsent.change]);
 
   const readStatus = useCallback(async () => {
