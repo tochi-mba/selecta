@@ -123,7 +123,11 @@ function useKeyboardInset() {
     let focusFrame = 0;
     const measure = () => {
       const covered = Math.max(window.innerHeight - view.height - view.offsetTop, 0);
-      const keyboardOpen = covered > 120;
+      const focused = document.activeElement as HTMLElement | null;
+      const editing = !!focused?.matches('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable="true"]');
+      // The visual viewport also shrinks on pinch zoom. Only a focused editor
+      // may invoke keyboard-yield, otherwise zoom can incorrectly hide navigation.
+      const keyboardOpen = editing && covered > 120 && view.scale <= 1.1;
       root.style.setProperty('--keyboard-inset', `${Math.round(covered)}px`);
       if (keyboardOpen) root.dataset.keyboard = 'open';
       else delete root.dataset.keyboard;
