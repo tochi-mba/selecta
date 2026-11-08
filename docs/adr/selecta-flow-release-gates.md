@@ -1,6 +1,6 @@
 # Selecta / Flow — independent NO-GO release gates
 
-**New redesign programme verdict: NO-GO / NOT IMPLEMENTED OR INDEPENDENTLY VERIFIED.** This is an intentionally strict future acceptance verdict for 50 **Proposed** ADRs and 400 **Not started** SF tasks. It is *not* evidence that the existing application is broken or unsafe. Source implementation remains a future separate PR; original historical statuses remain untouched.
+**New redesign programme verdict: NO-GO / NOT IMPLEMENTED OR INDEPENDENTLY VERIFIED.** This is an intentionally strict future acceptance verdict for 50 **Accepted** ADRs and 400 **Not started** SF tasks. It is *not* evidence that the existing application is broken or unsafe. Source implementation remains a future separate PR; original historical statuses remain untouched.
 
 | Gate | Required objective proof | Current status |
 |---|---|---|
