@@ -61,6 +61,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const [total, setTotal] = useState(0);
   const [next, setNext] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [pageProblem, setPageProblem] = useState('');
   const [opened, setOpened] = useState<number | null>(null);
   const preferences = usePrefs();
   const line = status.analysing ?? [];
@@ -156,6 +157,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       pageCursors.current = cursors;
       pageBySong.current = pagesBySong;
       setFailed(false);
+      setPageProblem('');
     } catch {
       if (mine === asked.current) {
         setFailed(true);
@@ -167,24 +169,31 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const more = async () => {
     const mine = asked.current;
     const cursor = next;
-    const page = await get<LibraryPage>(url(cursor));
-    if (mine !== asked.current) return;
-    const pageIndex = pageCursors.current.length;
-    pageCursors.current = [...pageCursors.current, cursor];
-    for (const song of page.songs) {
-      if (!pageBySong.current.has(song.id)) pageBySong.current.set(song.id, pageIndex);
+    if (!cursor || searching) return;
+    setPageProblem('');
+    try {
+      const page = await get<LibraryPage>(url(cursor));
+      if (mine !== asked.current) return;
+      const pageIndex = pageCursors.current.length;
+      pageCursors.current = [...pageCursors.current, cursor];
+      for (const song of page.songs) {
+        if (!pageBySong.current.has(song.id)) pageBySong.current.set(song.id, pageIndex);
+      }
+      setRows((before) => {
+        const known = new Set(before?.map((song) => song.id));
+        return [...(before ?? []), ...page.songs.filter((song) => !known.has(song.id))];
+      });
+      setNext(page.next);
+      setTotal(page.total);
+      const newPageCount = pagesWanted.current + 1;
+      // Already merged the fetched page locally. Do not refetch all earlier pages
+      // just because the shareable URL now records this scroll depth.
+      pagesJustAppended.current = newPageCount;
+      setAddressQuery({ pages: String(newPageCount) });
+    } catch {
+      // Keep the successful pages and cursor intact so the same page can be retried.
+      if (mine === asked.current) setPageProblem('Couldn’t load more songs. The recordings already shown are unchanged.');
     }
-    setRows((before) => {
-      const known = new Set(before?.map((song) => song.id));
-      return [...(before ?? []), ...page.songs.filter((song) => !known.has(song.id))];
-    });
-    setNext(page.next);
-    setTotal(page.total);
-    const newPageCount = pagesWanted.current + 1;
-    // Already merged the fetched page locally. Do not refetch all earlier pages
-    // just because the shareable URL now records this scroll depth.
-    pagesJustAppended.current = newPageCount;
-    setAddressQuery({ pages: String(newPageCount) });
   };
 
   // Find the visible row in logarithmic time, not by assuming 100
@@ -473,7 +482,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
       {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
-      {failed && committedRows !== null && <p className="warn" role="status">Can’t check on your library right now, so what’s shown may be out of date.</p>}
+      {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant="library" lines={6} label="Loading your songs" />}
       {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
       {committedRows?.length === 0 && !failed && (
@@ -552,7 +561,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           );
         })}
       </ul>
-      {next && <Action className="library-more" working="Loading…" run={more}>Show more songs</Action>}
+      {pageProblem && <p role="alert" className="warn">{pageProblem}</p>}
+      {next && <Action className="library-more" disabled={searching} working="Loading…" run={more}>{pageProblem ? 'Retry showing more songs' : 'Show more songs'}</Action>}
       {songAsked !== null && songWanted === null && (
         <p role="status" className="hint">That recording link is invalid. <button type="button" onClick={closeDetails}>Dismiss</button></p>
       )}
