@@ -4,6 +4,7 @@ import { length, runningTime } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Dialog, Status } from '../ui/controls';
 import { seamFacts } from '../ui/seam';
+import { mixReadiness } from '../state/readiness';
 import { cancelExport, isExportActive, startExport, useExports } from './exportStore';
 import { exportStage } from './ExportJobs';
 import { MixScope, useMixPath } from './mixScope';
@@ -36,8 +37,10 @@ export function ExportPanel(props: {
   const starting = useRef(false);
   const operation = useRef<string | null>(null);
   const seams = mix.slice(1);
-  const ready = seams.filter((item) => item.seam?.state.status === 'ready').length;
-  const left = seams.filter((item) => item.seam?.state.status !== 'ready');
+  const readiness = mixReadiness(mix);
+  const ready = readiness.ready;
+  const left = seams.filter((item) => item.seam?.state.status !== 'ready' || item.seam?.too_soon);
+  const blocked = readiness.blocked > 0;
   const scope = inDraft ? 'draft' : 'current';
 
   // what this opened to: the export just started here, or one of this very version from earlier
@@ -119,6 +122,7 @@ export function ExportPanel(props: {
           {left.length > 8 && <li className="hint">and {left.length - 8} more</li>}
         </ul>
       )}
+      {blocked && <p className="warn" role="alert">A transition would cut off the previous song before its handoff finishes. Adjust the transition timing in the editor before exporting this mix.</p>}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {unsupported && !problem && <p className="warn">This running copy of Selecta can’t do this yet. Restart Selecta, then try again.</p>}
       {mine?.error && <p className="warn" role="alert">{mine.error}</p>}
@@ -131,7 +135,7 @@ export function ExportPanel(props: {
         <p className="notice" role="status">Ready{file.seconds != null ? `, ${length(file.seconds)} long` : ''}: <a href={`/api/exports/${encodeURIComponent(file.name)}`} download>download {file.name}</a></p>
       )}
       {(!file || changedSince) && (
-        <Action className="primary" disabled={going || mix.length < 2} working="Starting export…" run={start}>
+        <Action className="primary" disabled={going || mix.length < 2 || blocked} working="Starting export…" run={start}>
           {mine?.state === 'encoding' ? 'Saving the file…' : going ? `Rendering ${mine?.seams_ready} of ${mine?.seams_total}…` : 'Save it'}
         </Action>
       )}

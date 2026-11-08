@@ -40,8 +40,8 @@ export function trackReadiness(song: Pick<LibrarySong, 'bpm' | 'readiness'> & Pa
     reason: song.readiness?.reason ?? '',
     canStartMix: status === 'mix_ready',
     // a tempo alone never makes a song mix-ready, but it's what adding one by hand has always needed
-    canAdd: analysed && !['set_aside', 'missing', 'needs_attention'].includes(status),
-    canAnalyse: !analysed && !['set_aside', 'missing'].includes(status),
+    canAdd: analysed && !['set_aside', 'excluded', 'missing', 'needs_attention'].includes(status),
+    canAnalyse: !analysed && !['set_aside', 'excluded', 'missing'].includes(status),
     setAside: status === 'set_aside',
   };
 }
@@ -89,9 +89,11 @@ export function mixReadiness(mix: MixItem[]): MixReadiness {
 export function draftReadiness(draft: DraftInfo): { kind: StatusKind; words: string } {
   const words = draftWords(draft);
   if (draft.songs === 0 || draft.seams === 0) return { kind: 'planned', words };
+  // A failed edge needs attention even while other seams remain in the line.
+  // It must not be hidden behind a reassuring "working" or "in line" badge.
+  if (draft.failed > 0) return { kind: 'warning', words };
   if (draft.rendering) return { kind: 'working', words };
   if (draft.waiting > 0) return { kind: draft.place !== null ? 'queued' : 'planned', words };
-  if (draft.failed > 0) return { kind: 'warning', words };
   return { kind: 'ready', words };
 }
 

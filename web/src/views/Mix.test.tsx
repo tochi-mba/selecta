@@ -58,6 +58,13 @@ describe('rendering every seam', () => {
 });
 
 describe('blocked transition timing', () => {
+  it('blocks export until the invalid transition is fixed', async () => {
+    render(<Harness start={songs({ ...seam('ready', 'a'), too_soon: true })} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Download audio' }));
+    expect(screen.getByText(/Adjust the transition timing in the editor before exporting/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save it' })).toBeDisabled();
+  });
+
   it('does not offer to render a cut-off transition', () => {
     render(<Harness start={songs({ ...seam('none', 'a'), too_soon: true })} />);
     expect(screen.getByRole('button', { name: 'Fix transition timing to continue' })).toBeDisabled();
