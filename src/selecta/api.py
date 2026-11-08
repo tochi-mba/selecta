@@ -30,6 +30,7 @@ from selecta.routes.edit import add_routes as edit_routes
 from selecta.routes.exports import add_routes as exports_routes
 from selecta.routes.helpers import add_routes as helpers_routes
 from selecta.routes.library import add_routes as library_routes
+from selecta.routes.lucy import add_routes as lucy_routes
 from selecta.routes.mixes import add_routes as mixes_routes
 from selecta.routes.song_requests import add_routes as song_requests_routes
 from selecta.routes.system import add_routes as system_routes
@@ -87,6 +88,7 @@ def create_app(
     edit_routes(app, ctx)
     song_requests_routes(app, ctx)
     discover_routes(app, ctx)
+    lucy_routes(app, ctx)
     connect = ctx.connect
     ranked_links = ctx.ranked_links
     watch_for_new_songs = ctx.watch_for_new_songs

@@ -40,6 +40,9 @@ class Edit:
         }
         self.notes: list[str] = []
         self.replanned = False
+        self.removed: set[int] = set(snapshot.get("left_out", []))
+        """Songs the person took out stay out of later suggestions unless they ask for them."""
+        self.resized = False
 
     def insert(self, at: int, song_id: int) -> None:
         from selecta.lucy.ids import new_id
@@ -73,7 +76,8 @@ def resolve_target(snapshot: dict, text: str, selection: dict | None) -> dict:
     """Which exact occurrence a critique means: the selection, a position, or a name."""
     songs = snapshot["songs"]
     words = " ".join(text.casefold().split()).strip(" .,!?\"'")
-    words = re.sub(r"^(the )?(song|track) ", "", words)
+    if words.isdigit():
+        words = f"song {words}"
     if words in THIS or not words:
         occurrence = (selection or {}).get("occurrence")
         if occurrence and any(song["occurrence"] == occurrence for song in songs):
@@ -95,6 +99,7 @@ def resolve_target(snapshot: dict, text: str, selection: dict | None) -> dict:
         if 1 <= position <= len(songs):
             return {"status": "ok", "occurrences": [songs[position - 1]["occurrence"]]}
         return {"status": "clarify", "text": f"There are only {len(songs)} songs."}
+    words = re.sub(r"^(the )?(song|track) (called |named )?", "", words)
     hits = [
         song for song in songs
         if words in song["title"].casefold() or words in song["artist"].casefold()
@@ -120,7 +125,8 @@ def _candidates(lib: Library, pool: catalog.Pool, work: Edit, at: int, hint: str
 
     before = lib.by_id.get(work.ids[at - 1]) if at > 0 else None
     after = lib.by_id.get(work.ids[at]) if at < len(work.ids) else None
-    options = [song for song in pool.songs if song.id not in set(work.ids)]
+    options = [song for song in pool.songs
+               if song.id not in set(work.ids) and song.id not in work.removed]
     old = lib.by_id.get(replacing) if replacing is not None else None
     if hint:
         named = catalog.resolve(lib, hint, options)
@@ -190,6 +196,14 @@ def revise(
         problem = _apply(lib, pool, work, op, selection, base, ready)
         if problem is not None:
             return problem
+    count = next((rule for rule in active(rules) if rule.kind == "count"), None)
+    if work.resized and count is not None and count.value != len(work.ids) and not any(
+            rule.kind == "count" for rule in new_rules):
+        # the person changed the length by hand: that is the newer, more specific instruction
+        rules = merge(rules, [Constraint("count", "", len(work.ids), "hard", source="edit",
+                                         created_turn=count.created_turn,
+                                         text="changed by an edit")])
+        work.notes.append(f"Now {len(work.ids)} songs.")
     problem = _enforce(lib, pool, work, rules, ready)
     if problem is not None:
         return problem
@@ -201,6 +215,7 @@ def revise(
     snap = planning.build_snapshot(lib, work.ids, settings, rules, ready_only=ready_only,
                                    title=base["title"], variant=base.get("variant", "balanced"),
                                    occurrences=work.occ, locked=work.locked)
+    snap["left_out"] = sorted(work.removed - set(work.ids))
     planning.evaluate(lib, snap, app.store, inv)
     problems = planning.validate(lib, snap, rules, app.store, inv)
     if problems:
@@ -215,6 +230,7 @@ def _index(work: Edit, occurrence: str) -> int:
 def _apply(lib, pool, work: Edit, op: dict, selection, base, ready) -> Outcome | None:
     kind = op["op"]
     if kind in {"grow", "shrink"}:
+        work.resized = True
         return _resize(lib, pool, work, int(op.get("by") or 1) * (1 if kind == "grow" else -1),
                        ready)
     occurrence = op.get("occurrence")
@@ -237,12 +253,14 @@ def _apply(lib, pool, work: Edit, op: dict, selection, base, ready) -> Outcome |
     if kind == "remove":
         if len(work.ids) <= 1:
             return Outcome("conflict", message="A mix needs at least one song.")
-        work.pop(at)
+        work.removed.add(work.pop(at))
+        work.resized = True
         work.notes.append(f"Removed {name}.")
         return None
     if kind == "replace":
         # ranked for the gap the old song leaves, between its two neighbours
         old = work.pop(at)
+        work.removed.add(old)
         options = [
             song for song in _candidates(lib, pool, work, at, op.get("with"), old, ready)
             if song != old

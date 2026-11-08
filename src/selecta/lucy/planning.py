@@ -233,10 +233,13 @@ def _duration(lib: Library, snapshot: dict, verified: dict) -> dict:
                 "exact": True}
     low = high = source
     for seam in seams:
-        a = lib.by_id.get(seam["a"])
+        a, b = lib.by_id.get(seam["a"]), lib.by_id.get(seam["b"])
         beat = 60.0 / a.bpm if a and a.bpm else 0.5
-        low -= 32 * 4 * beat + 30.0
-        high -= 8 * 4 * beat
+        # an overlap (and the trimmed intro and outro around it) can't eat more than half of
+        # the shorter song
+        room = 0.5 * min(float(a.duration) if a else 240.0, float(b.duration) if b else 240.0)
+        low -= min(32 * 4 * beat + 30.0, room)
+        high -= min(8 * 4 * beat, room)
     return {
         "source_seconds": round(source),
         "low": round(max(0.0, low)),

@@ -166,6 +166,23 @@ def _preparer(store: SeamStore, settings):
     return next_job
 
 
+def _pinned_ready_seams(settings):
+    """Clips a ready-only draft or a fresh ready-only Lucy proposal relies on are kept from
+    pruning for a bounded time, so "ready now" stays true while it's being decided on."""
+    from selecta.lucy.readiness import pinned_keys
+
+    conn = db.connect(settings.db_path)
+    state = {"at": 0.0, "keys": set()}
+
+    def keys() -> set[str]:
+        if time.monotonic() - state["at"] > 60:
+            state["keys"] = pinned_keys(conn)
+            state["at"] = time.monotonic()
+        return state["keys"]
+
+    return keys
+
+
 def _read_requests(store: SeamStore, app_input: TextIO) -> None:
     for line in app_input:
         if line.strip():
@@ -193,7 +210,8 @@ def main() -> None:
     threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()
     store.next_mix_seam, mix_keys, store.mix_moves = _mix_seams(store, settings)
     store.next_line_seam, line_keys, store.draft_moves = _line_seams(store, settings)
-    store.keep_for_now = lambda: mix_keys() | line_keys()
+    pinned = _pinned_ready_seams(settings)
+    store.keep_for_now = lambda: mix_keys() | line_keys() | pinned()
     store.run_forever()
 
 
