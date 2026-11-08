@@ -54,7 +54,7 @@ export function bindMediaSession(session: MediaSession, player: Transport, getMi
 /** Metadata and position always describe the audible song, not a proposed seam or draft. */
 export function syncMediaSession(session: MediaSession, now: NowState, song: MixItem | undefined, mixName: string, previewing = false) {
   const current = !!song && now.phase !== 'idle' && !previewing;
-  session.metadata = current && typeof MediaMetadata !== 'undefined'
+  session.metadata = current && song && typeof MediaMetadata !== 'undefined'
     ? new MediaMetadata({ title: song.title || 'Untitled', artist: song.artist || 'Unknown artist', album: mixName })
     : null;
   session.playbackState = current && now.phase === 'playing' ? 'playing'
