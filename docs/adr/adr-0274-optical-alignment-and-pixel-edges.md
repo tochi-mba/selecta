@@ -1,7 +1,7 @@
 # ADR-274 — Optical alignment, grid guides and one-pixel details
 
 - **Decision:** Proposed (owner review pending).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Implementation:** 7/8 Not started; 1/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme:** Selecta measured micro-polish (MP). **Priority:** P0. **Baseline:** `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4`. **Owner:** Unassigned.
 - **Existing ADR owners:** ADR-0203, ADR-0204, ADR-0245; old statuses unchanged.
@@ -23,7 +23,7 @@ Audit the same route, state, theme, viewport, zoom and synthetic music data befo
 4. **MP-0274-04 — Fix wrapped action alignment.** **Acceptance:** Buttons retain intentional card and row baselines when text wraps. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 5. **MP-0274-05 — Audit border joins.** **Acceptance:** Remove accidental doubled 1px edges, asymmetric corners and clipped focus rings. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 6. **MP-0274-06 — Audit sticky offsets.** **Acceptance:** Header, editor scope, inspector and Studio ruler never collide. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **MP-0274-07 — Prevent scrollbar movement.** **Acceptance:** Scrollbar changes do not shift navigation or content anchors. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+7. **MP-0274-07 — Prevent scrollbar movement.** **Acceptance:** Scrollbar changes do not shift navigation or content anchors. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** In progress; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** #38 / `6a55b1643b0b`; **Evidence/reviewer:** scrollbar-gutter stable added; visual comparisons pending; independent reviewer —.
 8. **MP-0274-08 — Approve optical exceptions.** **Acceptance:** Record measured source-owned offsets with independent reviewer rationale. **Required verification:** source-linked same-state geometry or screenshots, appropriate keyboard/functional regression and independent visual/AT/real-audio review where applicable. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
 
 ## Negative tests and proof
