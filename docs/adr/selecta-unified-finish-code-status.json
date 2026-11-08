@@ -12,8 +12,8 @@
     "Superseded": 0
   },
   "implementation_summary": {
-    "Not_started": 171,
-    "In_progress": 21,
+    "Not_started": 170,
+    "In_progress": 22,
     "Implemented": 0
   },
   "independent_verification_summary": {
@@ -929,12 +929,12 @@
           "title": "Preserve URL meaning",
           "acceptance": "Back, forward, aliases and refresh retain exact draft/conversation/tab target.",
           "required_verification": "Router regression.",
-          "implementation": "Not started",
+          "implementation": "In progress",
           "independently_verified": false,
           "owner": null,
-          "implementing_pr": null,
-          "implementing_sha": null,
-          "evidence": null,
+          "implementing_pr": 41,
+          "implementing_sha": "fbaddff530bac8061ff36fe364f5770b7f5a17c2",
+          "evidence": "router.ts and router.test.tsx bound exact draft URL identity; history and reload tests pending",
           "reviewer": null,
           "review_date": null,
           "platform": null
