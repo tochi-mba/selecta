@@ -22,7 +22,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       const value: unknown = JSON.parse(window.localStorage.getItem(RECENT_DRAFT_KEY) ?? 'null');
       if (value && typeof value === 'object') {
         const candidate = value as { id?: unknown; order?: unknown };
-        if (Number.isSafeInteger(candidate.id) && (candidate.id as number) > 0 && typeof candidate.order === 'string') {
+        if (typeof candidate.id === 'number' && Number.isSafeInteger(candidate.id) && candidate.id > 0 && typeof candidate.order === 'string') {
           saved = { id: candidate.id as number, order: candidate.order };
         }
       }
