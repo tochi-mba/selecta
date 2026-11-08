@@ -46,6 +46,25 @@ function show(energyArc: number[] | null = null) {
   );
 }
 
+describe('distinct visual mix ideas', () => {
+  it('uses different decorative motifs for different ideas even within the same group', async () => {
+    fakeBackend({ 'GET /vibes': [
+      card('pick', 'Selecta’s pick', ''),
+      card('evening-drive', 'Evening drive', 'The moment'),
+      card('quiet-morning', 'Quiet morning', 'The moment'),
+    ] });
+    show();
+    await screen.findByText('Evening drive');
+    const first = document.querySelector('[data-vibe="evening-drive"] .vibe-motif');
+    const second = document.querySelector('[data-vibe="quiet-morning"] .vibe-motif');
+    expect(first).toBeInTheDocument();
+    expect(second).toBeInTheDocument();
+    expect(first?.innerHTML).not.toBe(second?.innerHTML);
+    expect(first).toHaveAttribute('aria-hidden', 'true');
+    expect(second).toHaveAttribute('aria-hidden', 'true');
+  });
+});
+
 describe('Pick a feeling', () => {
   it('does not misreport zero mix-ready songs when an older server omits that count', async () => {
     fakeBackend({ 'GET /vibes': [] });
@@ -176,7 +195,7 @@ describe('Pick a feeling', () => {
     Object.defineProperty(drawing, 'getBoundingClientRect', {
       value: () => ({ left: 0, top: 0, width: 100, height: 40 }),
     });
-    fireEvent.pointerDown(drawing, { clientX: 50, clientY: 4, pointerId: 1 });
+    fireEvent.pointerDown(drawing, { clientX: 50, clientY: 4, pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0 });
     expect(middle).toHaveValue('100');
     await waitFor(() => {
       expect(

@@ -1,6 +1,7 @@
 import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import { get, MixItem, post, SongRow, Status } from '../api';
 import { Action, Dialog, Problem } from '../ui/controls';
+import { EnergyHorizon } from '../ui/MusicObjects';
 import { ViewProps } from './shared';
 
 const ARC_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'];
@@ -30,7 +31,8 @@ export function buildSummary(steering: Status['steering']): string {
  * on one chart as if they could be compared number for number. */
 function achievedArc(mix: MixItem[]): number[] | null {
   const known = mix.map((item) => item.energy).filter((energy): energy is number => typeof energy === 'number');
-  if (known.length < 2) return null;
+  // A gap is unknown, not a quieter song or an invitation to interpolate across it.
+  if (mix.length < 2 || known.length !== mix.length) return null;
   const low = Math.min(...known);
   const high = Math.max(...known);
   const span = high - low || 1;
@@ -61,6 +63,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
   );
   // only the last thing moved gets saved, and an answer to an older save can't move it back
   const arcSaves = useRef(0);
+  const drawing = useRef<{ id: number; previous: number[] | null } | null>(null);
   const arcWrites = useRef(0);
   const savedArc = useRef(JSON.stringify(status.steering.energy_arc));
   const steerQueue = useRef<Promise<void>>(Promise.resolve());
@@ -192,9 +195,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
 
   const arcSaved = JSON.stringify(energyArc) === savedArc.current;
   const arcPreview = energyArc ?? DEFAULT_ARC;
-  const arcPoints = arcPreview.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
   const achieved = achievedArc(mix);
-  const achievedPoints = achieved?.map((energy, index) => `${index * 25},${38 - energy * 0.34}`).join(' ');
   const updateStop = (index: number, value: number) => {
     const next = [...arcPreview];
     next[index] = Math.round(Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0)));
@@ -254,23 +255,37 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
             >{preset.label}</button>
           ))}
         </div>
-        <svg
-          className="energy-arc-preview"
-          viewBox="0 0 100 40"
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="Draw energy arc"
+        <EnergyHorizon
+          values={arcPreview}
+          source="intention"
           onPointerDown={(event) => {
-            drawArcAt(event);
+            // Ignore explicitly secondary pointers; legacy/synthetic pointer events
+            // may omit isPrimary or button, but still provide usable coordinates.
+            if (event.isPrimary === false || event.button > 0 || drawing.current) return;
+            drawing.current = { id: event.pointerId, previous: energyArc ? [...energyArc] : null };
             event.currentTarget.setPointerCapture?.(event.pointerId);
+            drawArcAt(event);
           }}
           onPointerMove={(event) => {
-            if (event.buttons === 1) drawArcAt(event);
+            if (drawing.current?.id === event.pointerId && (event.buttons & 1)) drawArcAt(event);
           }}
-        >
-          <polyline points={arcPoints} />
-          {arcPreview.map((energy, index) => <circle key={ARC_STOPS[index]} cx={index * 25} cy={38 - energy * 0.34} r="2.2" />)}
-        </svg>
+          onPointerUp={(event) => {
+            if (drawing.current?.id !== event.pointerId) return;
+            drawArcAt(event);
+            drawing.current = null;
+            if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={(event) => {
+            if (drawing.current?.id !== event.pointerId) return;
+            setEnergyArc(drawing.current.previous);
+            drawing.current = null;
+          }}
+          onLostPointerCapture={(event) => {
+            if (drawing.current?.id !== event.pointerId) return;
+            setEnergyArc(drawing.current.previous);
+            drawing.current = null;
+          }}
+        />
         <p className="hint" role="status">
           {arcSaving ? 'Saving your shape…'
             : !arcSaved ? 'Your change was not saved. Try again; the previous setting is still on the server.'
@@ -303,9 +318,9 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
             </label>
           ))}
         </div>
-        {achievedPoints && <figure className="achieved-arc">
+        {achieved && <figure className="achieved-arc">
           <figcaption className="energy-arc-title">What your current mix measured</figcaption>
-          <svg className="energy-arc-preview" viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Current mix relative energy, from start to finish"><polyline className="achieved" points={achievedPoints} /></svg>
+          <EnergyHorizon values={achieved} source="measured" />
           <p className="hint">Current mix: relative energy from its quietest to its most energetic song. This uses this mix’s own range, so it is not a score against your requested arc.</p>
         </figure>}
       </section>

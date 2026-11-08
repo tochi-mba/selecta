@@ -9,6 +9,7 @@ import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
 import { buildSummary, MixSetup } from './MixSetup';
+import { VibeMotif } from '../ui/MusicObjects';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
 import { ViewProps } from './shared';
 
@@ -231,6 +232,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
               <div className="cards">
                 {inGroup.map((card) => (
                   <article className="card vibe-card" key={card.key} data-vibe={card.key}>
+                    <VibeMotif idea={card.key} group={card.group} />
                     <div className="vibe-card-head">
                       <h3>{card.name}</h3>
                       {card.tempo && <span className="vibe-tempo">{card.tempo[0]}–{card.tempo[1]} BPM</span>}

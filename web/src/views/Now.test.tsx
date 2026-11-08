@@ -293,3 +293,93 @@ describe('listener-controlled presentation', () => {
     expect(player.state.phase).toBe('idle');
   });
 });
+
+
+describe('creative Listen states grounded in audio and known timing', () => {
+  it('lets the listener choose a full-width real-data frequency ribbon without changing playback', async () => {
+    window.localStorage.removeItem('selecta.listen');
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    render(
+      <Now status={status()} mix={mix} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    await screen.findByText('Hello');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: 'ribbon' } });
+    expect(JSON.parse(localStorage.getItem('selecta.listen') ?? '{}').spectrumShape).toBe('ribbon');
+    expect(screen.getByRole('img', { name: 'Frequency ribbon — actual mixed-audio frequency levels' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Radial spectrum' })).toBeNull();
+    expect(player.state.phase).toBe('idle');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: 'bars' } });
+    expect(screen.getByRole('img', { name: 'Frequency bars — actual mixed-audio frequency levels' })).toBeInTheDocument();
+  });
+
+  it('converts previously saved radial visuals to the horizontal ribbon without changing playback', async () => {
+    window.localStorage.setItem('selecta.listen', JSON.stringify({ spectrumShape: 'radial' }));
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    render(
+      <Now status={status()} mix={mix} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'paused', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    await screen.findByText('Hello');
+    expect(screen.getByRole('combobox', { name: 'Audio visualizer style' })).toHaveValue('ribbon');
+    expect(screen.getByRole('img', { name: 'Audio frequency visualizer paused' })).toBeInTheDocument();
+    expect(player.state.phase).toBe('idle');
+    window.localStorage.removeItem('selecta.listen');
+  });
+
+  it.each([
+    ['aurora', 'Aurora contours'],
+    ['lanes', 'Spectral lanes'],
+    ['constellation', 'Frequency constellation'],
+    ['waterfall', 'Recent spectrum'],
+    ['skyline', 'Spectrum skyline'],
+    ['threads', 'Glass threads'],
+    ['pins', 'Signal pins'],
+    ['matrix', 'Spectrum mosaic'],
+    ['trails', 'Afterglow trails'],
+    ['dunes', 'Spectral dunes'],
+    ['candles', 'Signal ranges'],
+    ['mesh', 'Frequency mesh'],
+    ['split', 'Split flow'],
+  ])('chooses and remembers %s without creating or starting audio', async (id, label) => {
+    window.localStorage.removeItem('selecta.listen');
+    fakeBackend({ 'GET /songs/1': detail });
+    const player = new SetPlayer(() => mix, () => {});
+    const play = vi.spyOn(player, 'playFrom');
+    render(
+      <Now status={status()} mix={mix} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20 }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    await screen.findByText('Hello');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: id } });
+    expect(screen.getByRole('img', { name: label + ' — actual mixed-audio frequency levels' })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('selecta.listen') ?? '{}').spectrumShape).toBe(id);
+    expect(play).not.toHaveBeenCalled();
+    expect(player.state.phase).toBe('idle');
+  });
+
+  it('uses chronological seconds when the next handoff has no valid beat grid', async () => {
+    fakeBackend({ 'GET /songs/1': { ...detail, bar_times: [], beat_times: [] } });
+    const next: MixItem = { ...mix[0], song_id: 2, position: 1, title: 'Next song',
+      seam: { settings: { move: 'auto' }, state: { status: 'ready', key: 'seam-1' } } };
+    const set = [mix[0], next];
+    const player = new SetPlayer(() => set, () => {});
+    render(
+      <Now status={status()} mix={set} mixName="Test mix" canUndo={false}
+        refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}}
+        player={player} now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20, seamAt: 12, nextReady: true }}
+        setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+    );
+    expect(await screen.findByText(/until the hand-off/)).toBeInTheDocument();
+    expect(screen.getByText(/Beat grid unavailable, so time is shown/)).toBeInTheDocument();
+    expect(screen.queryByRole('timer')).toBeNull();
+  });
+});

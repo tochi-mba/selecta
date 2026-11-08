@@ -248,3 +248,18 @@
 @media (max-width: 520px) {
   .energy-arc-stops label { grid-template-columns: 65px minmax(0, 1fr) 72px; }
 }
+
+/* Frequency ribbon uses the entire available horizontal song area, including
+   Stage. These dimensions don't affect audio or cause layout changes per frame. */
+.music-visualizer { display: block; width: 100%; max-width: 100%; min-width: 0; height: clamp(96px, 11vw, 140px); }
+.stage .music-visualizer { height: min(20svh, 180px); }
+
+/* A single native selector scales to six width-first visualizers without six
+   competing buttons; all choices retain keyboard, zoom and touch access. */
+.spectrum-choice { display: grid; gap: var(--space-1); flex: 1 1 200px; min-width: 0; max-width: 100%; }
+.spectrum-choice select { width: min(100%, 360px); min-height: var(--control-height); }
+.spectrum-choice small { display: block; line-height: 1.5; max-width: 62ch; }
+.music-visualizer { border-radius: var(--radius-sm); }
+@media (forced-colors: active) {
+  .music-visualizer { outline: 1px solid CanvasText; }
+}

@@ -3,7 +3,7 @@ import { MixItem, post } from '../api';
 import { clock, etaWords, seamStatusWords } from '../lib';
 import { Action, announce, Menu } from '../ui/controls';
 import { Icon } from '../ui/Icon';
-import { seamFacts } from '../ui/seam';
+import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { useMixPath } from './mixScope';
 import { RequestTag, useRequestComing } from './Requests';
 
@@ -50,11 +50,9 @@ type SeamRowProps = {
 const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, names, guard, actions }: SeamRowProps) {
   const seam = item.seam!;
   const state = seam.state;
-  const plannedBars = state.bars ?? seam.settings.bars;
   const chosen = seam.settings.move ?? 'auto';
   const at = useMixPath();
   const label = state.status === 'ready' ? (state.label ?? names[chosen]) : (names[chosen] ?? chosen);
-  const facts = seamFacts(seam, names);
   const rate = async (rating: string) => {
     await post(`/seams/${state.key}/rate`, { rating: state.rating === rating ? 'none' : rating });
     actions.current.refresh();
@@ -96,15 +94,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
           <button onClick={() => actions.current.toggleSeam(rowKey)}>{open ? 'Close' : 'Change'}</button>
         </div>
       </div>
-      <div className={`seam-visual ${state.status}`} role="img" aria-label={`${facts.words}${plannedBars ? `, ${plannedBars} bars` : ''}, ${previous.title} into ${item.title}`}>
-        <span className="seam-visual-label">{state.status === 'ready' ? 'Transition' : 'Transition plan'} · {plannedBars ? `${plannedBars} bars` : 'Length chosen when rendered'}</span>
-        <div className="seam-visual-bars" aria-hidden="true">
-          {Array.from({ length: plannedBars ? Math.min(Math.max(plannedBars, 1), 8) : 1 }, (_, index) => (
-            <i key={index} />
-          ))}
-        </div>
-        <span className="seam-visual-caption"><b>{previous.title}</b><span>→</span><b>{item.title}</b></span>
-      </div>
+      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} compact />
       {state.status === 'failed' && <p className="warn">Remembered failed attempt: {state.error}</p>}
     </li>
   );
@@ -245,7 +235,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
       <span className="count">{item.position + 1}</span>
       <div className="song-name">
         <button className="song-select" aria-current={selected ? 'true' : undefined} onClick={() => actions.current.selectSong(rowKey)}>
-          <b>{item.title}</b>
+          <SongMotif songId={item.song_id} /><b>{item.title}</b>
         </button>
         <span>{item.artist}</span>
         <RequestTag item={item} />

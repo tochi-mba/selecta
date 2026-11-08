@@ -1,10 +1,11 @@
-import { KeyboardEvent, PointerEvent, useEffect, useRef, useState } from 'react';
+import { KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, Eta, MixData, MixItem, post } from '../api';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
 import { Action, announce, Problem } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { SongMotif } from '../ui/MusicObjects';
 import { moveInGrid } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
 import { useMixPath } from './mixScope';
@@ -199,6 +200,18 @@ export function Studio(props: {
     mainPlayerTouched();
     releaseAudio(owner.current.id);
   };
+  // A Studio preview is an intentional, temporary audio owner, never background music.
+  useEffect(() => {
+    const hide = () => {
+      if (!document.hidden) return;
+      deck.current?.stop();
+      setPlaying(false);
+      setCell(-1);
+      quiet();
+    };
+    document.addEventListener('visibilitychange', hide);
+    return () => document.removeEventListener('visibilitychange', hide);
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -426,6 +439,17 @@ export function Studio(props: {
   const columns = session?.cells ?? 8;
   const committed = session?.shape ?? session?.start_shape;
   const dirty = !!shape && JSON.stringify(shape) !== JSON.stringify(committed);
+  // Only the actual returned eight-lane cells count as an AI change. Freeform explanation
+  // text never drives the visual diff, and editing after a proposal clears this comparison.
+  const aiDiffs = useMemo(() => {
+    if (!before || !shape) return [] as { side: Side; lane: Lane; index: number; from: number; to: number }[];
+    return SIDES.flatMap((side) => LANES.flatMap((lane) =>
+      shape[side][lane].flatMap((to, index) =>
+        before[side][lane][index] === to ? [] : [{ side, lane, index, from: before[side][lane][index], to }],
+      ),
+    ));
+  }, [before, shape]);
+  const changedCells = useMemo(() => new Set(aiDiffs.map((diff) => diff.side + '_' + diff.lane + ':' + diff.index)), [aiDiffs]);
   const rowCount = SIDES.length * LANES.length;
   const rendered = seamFacts(item.seam, names);
   const stemName = (name: string) => {
@@ -449,7 +473,7 @@ export function Studio(props: {
       <header className="studio-head">
         <div className="studio-pair">
           <h3>Shape transition {position}</h3>
-          <p><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <b>{item.title}</b></p>
+          <p><SongMotif songId={previous.song_id} /><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <SongMotif songId={item.song_id} /><b>{item.title}</b></p>
         </div>
         {shape && loaded && (
           <div className="studio-transport">
@@ -457,6 +481,7 @@ export function Studio(props: {
               <Icon name={playing ? 'stop' : 'play'} /> {playing ? 'Stop preview' : 'Play preview'}
             </Action>
             {soloed && <button onClick={() => void solo(soloed)}>Hear everything again</button>}
+            {playing && cell >= 0 && <span className="studio-playhead" role="status">Preview at bar {Math.round(cell * ((session?.bars ?? 8) / (session?.cells ?? 8))) + 1}</span>}
           </div>
         )}
         <button onClick={onClose}>Close</button>
@@ -502,6 +527,17 @@ export function Studio(props: {
               {changes.map((line) => <li key={line}>{line}</li>)}
             </ul>
           )}
+          {before && <details className="studio-diff" open>
+            <summary>{aiDiffs.length} exact cell {aiDiffs.length === 1 ? 'change' : 'changes'} from Selecta’s suggestion</summary>
+            <p className="hint">Only the returned arrangement is compared with your previous working copy. Put it back to undo the whole suggestion.</p>
+            <ol>
+              {aiDiffs.map((diff) => (
+                <li key={diff.side + '-' + diff.lane + '-' + diff.index}>
+                  {titles[diff.side]} · {LANE_WORDS[diff.lane]} · square {diff.index + 1}: {diff.from ? 'On' : 'Off'} → {diff.to ? 'On' : 'Off'}
+                </li>
+              ))}
+            </ol>
+          </details>}
           <div className="chips studio-shapes" role="group" aria-label="Ready-made shapes">
             {SHAPES.map((option) => (
               <button key={option.name} disabled={saving} title={option.about} onClick={() => change(option.change(shape))}>
@@ -577,7 +613,7 @@ export function Studio(props: {
                           <button
                             data-cell={`${row}-${index}`}
                             tabIndex={focusCell.row === row && focusCell.column === index ? 0 : -1}
-                            className={`studio-cell ${index === cell ? 'now' : ''}`}
+                            className={`studio-cell ${index === cell ? 'now' : ''} ${changedCells.has(side + '_' + lane + ':' + index) ? 'ai-changed' : ''}`}
                             aria-pressed={Boolean(value)}
                             aria-disabled={lost || saving || undefined}
                             aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, square ${index + 1}`}

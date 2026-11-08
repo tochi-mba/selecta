@@ -397,4 +397,36 @@ describe('Studio pointer painting', () => {
       Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: prior });
     }
   });
+  it('lists the exact server-returned cell differences and lets the user restore the previous shape', async () => {
+    const suggested = shape(0, 1);
+    open(ready, { 'POST /mix/1/studio/tune': { shape: suggested, changes: ['A new arrangement.'] } });
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
+    expect(cell).toHaveClass('ai-changed');
+    expect(screen.getByText('64 exact cell changes from Selecta’s suggestion')).toBeInTheDocument();
+    expect(screen.getByText('Song 2 · Bass · square 1: Off → On')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Put it back' }));
+    expect(cell).not.toHaveClass('ai-changed');
+    expect(screen.queryByText('64 exact cell changes from Selecta’s suggestion')).toBeNull();
+  });
+
+  it('stops the owned Studio preview and its playhead when the tab becomes hidden', async () => {
+    open();
+    await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Play preview' }));
+    await screen.findByRole('button', { name: 'Stop preview' });
+    // Earlier tests also instantiate mocked decks; use this Studio's deck.
+    act(() => { deck.made.at(-1)!.onCell(3); });
+    expect(screen.getByText(/Preview at bar/)).toBeInTheDocument();
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    try {
+      fireEvent(document, new Event('visibilitychange'));
+      expect(deck.made.at(-1)!.stop).toHaveBeenCalled();
+      expect(screen.queryByText(/Preview at bar/)).toBeNull();
+    } finally {
+      hidden.mockRestore();
+    }
+  });
+
 });

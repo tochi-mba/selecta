@@ -11,6 +11,8 @@ export type Prefs = {
   theme: Theme;
   railCollapsed: boolean;
   density: 'comfortable' | 'compact';
+  /** Library presentation only. Both views have exactly the same available song actions. */
+  libraryLayout: 'list' | 'cards';
   /** Ctrl or Cmd K. Everything it does has an ordinary way to do it too. */
   palette: boolean;
   /** Keys like N and M with no Ctrl held. Speech input can set them off by accident, so they can be off. */
@@ -19,7 +21,7 @@ export type Prefs = {
   classicNav: boolean;
 };
 
-export const DEFAULT_PREFS: Prefs = { theme: 'system', railCollapsed: false, density: 'comfortable', palette: true, singleKeys: true, classicNav: false };
+export const DEFAULT_PREFS: Prefs = { theme: 'system', railCollapsed: false, density: 'comfortable', libraryLayout: 'list', palette: true, singleKeys: true, classicNav: false };
 
 /** What the browser's own title bar should be, matching each theme's background in tokens.css. */
 const BAR_COLOUR = { dark: '#100f0c', light: '#f5f2e9' };
@@ -34,6 +36,7 @@ function read(): Prefs {
       theme: saved.theme === 'light' || saved.theme === 'dark' ? saved.theme : 'system',
       railCollapsed: saved.railCollapsed === true,
       density: saved.density === 'compact' ? 'compact' : 'comfortable',
+      libraryLayout: saved.libraryLayout === 'cards' ? 'cards' : 'list',
       palette: saved.palette !== false,
       singleKeys: saved.singleKeys !== false,
       classicNav: saved.classicNav === true,
