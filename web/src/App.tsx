@@ -484,7 +484,23 @@ export function App() {
           break;
         case 'undo': {
           const place = routeRef.current;
-          void undoNewest(place.page === 'edit' ? place.draft : null);
+          const scope = place.page === 'edit' ? place.draft : null;
+          if (scope !== null) {
+            // A draft link can be open before its response arrives, or after a different
+            // draft's response. In neither case may the shortcut mutate a guessed scope.
+            if (draftRef.current !== scope || draftData?.draft?.id !== scope) {
+              announce('Wait for this draft to load before undoing.');
+              break;
+            }
+            if (!draftData.can_undo) {
+              announce('Nothing to undo in this draft.');
+              break;
+            }
+          } else if (!data.can_undo) {
+            announce('Nothing to undo in the current mix.');
+            break;
+          }
+          void undoNewest(scope).catch((error: Error) => showProblem(error.message));
           break;
         }
         case 'stage':
@@ -500,7 +516,7 @@ export function App() {
     };
     window.addEventListener('keydown', keys);
     return () => window.removeEventListener('keydown', keys);
-  }, [player, undoNewest, toggleStage]);
+  }, [player, undoNewest, toggleStage, draftData, data.can_undo]);
 
   // the drafts it can jump to are only ever as old as this opening of it
   useEffect(() => {
