@@ -68,12 +68,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // Keep old search pages out of the committed result list while a newer URL
   // query/filter/sort is loading. This is distinct from refreshing the same list.
   const searchIdentity = JSON.stringify([query, filter, sort]);
+  // Selection is scoped to the exact loaded result depth as well as search/sort.
+  const selectionIdentity = JSON.stringify([query, filter, sort, pagesAsked]);
   const [resolvedIdentity, setResolvedIdentity] = useState<string | null>(null);
   const committedRows = searchIdentity === resolvedIdentity ? rows : null;
   // A selection belongs to an exact search/filter/sort result. Changing any
   // dimension invalidates it rather than selecting a different filtered row.
   const [batchSelection, setBatchSelection] = useState<{ identity: string; ids: number[] }>({ identity: '', ids: [] });
-  const selectedIds = batchSelection.identity === searchIdentity ? batchSelection.ids : [];
+  const selectedIds = batchSelection.identity === selectionIdentity ? batchSelection.ids : [];
   type BatchAction = 'prioritize' | 'deprioritize' | 'never' | 'allow';
   const [confirmBatch, setConfirmBatch] = useState<{
     action: BatchAction; identity: string;
@@ -81,13 +83,13 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   } | null>(null);
   const visibleSelected = (committedRows ?? []).filter((song) => selectedIds.includes(song.id));
   const toggleBatch = (id: number) => setBatchSelection((before) => {
-    const ids = before.identity === searchIdentity ? before.ids : [];
-    return { identity: searchIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : [...ids, id] };
+    const ids = before.identity === selectionIdentity ? before.ids : [];
+    return { identity: selectionIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : ids.length >= 200 ? ids : [...ids, id] };
   });
   const askBatch = (action: BatchAction) => {
     if (!visibleSelected.length || searching || failed) return;
     setConfirmBatch({
-      action, identity: searchIdentity,
+      action, identity: selectionIdentity,
       songs: visibleSelected.map((song) => ({
         id: song.id, title: song.title ?? 'Untitled', artist: song.artist ?? 'Unknown artist',
         priority: song.priority, never: song.never,
@@ -96,7 +98,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   };
   const applyBatch = async () => {
     const wanted = confirmBatch;
-    if (!wanted || wanted.identity !== searchIdentity || searching || failed) {
+    if (!wanted || wanted.identity !== selectionIdentity || searching || failed) {
       setConfirmBatch(null);
       return;
     }
@@ -108,7 +110,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       })),
     });
     setConfirmBatch(null);
-    setBatchSelection({ identity: searchIdentity, ids: [] });
+    setBatchSelection({ identity: selectionIdentity, ids: [] });
+    window.requestAnimationFrame(() => selectionEntryRef.current?.focus());
     notify(`Updated ${wanted.songs.length} precisely selected recordings.`);
     await load();
   };
@@ -397,7 +400,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
             <button ref={selectionEntryRef} disabled={searching || failed} onClick={() => setBatchSelection({
-              identity: searchIdentity,
+              identity: selectionIdentity,
               ids: committedRows.slice(0, 200).map((song) => song.id),
             })}>Select up to 200 loaded songs</button>
             {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually.</span>}
@@ -407,7 +410,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <p className="hint" role="status">{visibleSelected.length} of {committedRows.length} loaded recordings selected (limit 200). Search, filter or sort changes clear selection; batch changes never move or delete audio.</p>
               <div className="row wrap">
                 <button onClick={() => {
-                  setBatchSelection({ identity: searchIdentity, ids: [] });
+                  setBatchSelection({ identity: selectionIdentity, ids: [] });
                   selectionEntryRef.current?.focus();
                 }}>Clear selection</button>
                 <button disabled={searching || failed} onClick={() => askBatch('prioritize')}>Prioritize selected</button>
