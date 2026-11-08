@@ -10,7 +10,14 @@
     <script>
       try {
         var theme = JSON.parse(localStorage.getItem('selecta.prefs') || '{}').theme;
-        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+        if (theme === 'light' || theme === 'dark') {
+          document.documentElement.dataset.theme = theme;
+          // Match the selected palette in supported browser/PWA chrome before first paint.
+          var chrome = theme === 'light' ? '#f5f2e9' : '#100f0c';
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+            meta.content = chrome;
+          });
+        }
       } catch (error) {}
     </script>
     <link rel="manifest" href="/manifest.webmanifest" />
