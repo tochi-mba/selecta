@@ -450,7 +450,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           const duplicate = duplicateIds.has(song.id);
           const name = duplicate ? `${title} (song ${song.id})` : title;
           return (
-            <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''}`}>
+            <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''} ${selectedIds.includes(song.id) ? 'selected' : ''}`}>
               <div className="song-name">
                 {filter !== 'set_aside' && <label className="library-batch-check">
                   <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
