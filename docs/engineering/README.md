@@ -18,6 +18,16 @@ itself mean that cloud behavior is wired into the running app.
 4. Keep changes focused. Preserve local mode behavior unless the task explicitly changes it, and
    record cross-cutting contract changes in an ADR.
 
+## Guides in this folder
+
+| Read | For |
+|---|---|
+| [Architecture map](architecture.md) | The packages, the two modes, and how a request and a job flow through them |
+| [Conventions](conventions.md) | Database, time, flags, errors, secrets, style and git rules |
+| [How-to recipes](how-to.md) | Adding a flagged feature, a table, a job type, a permission, a plan entitlement |
+| [Testing](testing.md) | Running tests, the two-database fixtures, Hypothesis, CI and the coverage gate |
+| [Glossary](glossary.md) | Lease, fencing token, lane, workspace, kill switch, speaker device and the rest |
+
 ## Current application map
 
 | Area | Current location | Responsibility |
@@ -39,26 +49,7 @@ The accepted Cloud design adds two runtime modes in one codebase. The Cloud path
 until its ADR checklists have implementation and verification evidence. When in doubt, inspect the
 actual route, caller, tests and ADR status rather than inferring behavior from a module name.
 
-The branch has a working Cloud API foundation, but it is not a complete SaaS product. It supports
-readiness, account onboarding, Free storage initialization, account/entitlement reads, targeted
-feature snapshots, Labs opt-ins, sign-out-everywhere, Stripe Checkout and portal sessions, and a
-signature-verified webhook receiver. Checkout prices are selected from `SELECTA_STRIPE_PRICES`; the
-client cannot choose a Stripe price id. The webhook stores events idempotently and re-fetches Stripe
-state before applying entitlements and storage limits. Cloud uploads use workspace-scoped multipart
-sessions, plan limits and atomic quota reservations, with server-side metadata validation and
-acceptance. The authenticated Cloud asset API lists, reads and soft-deletes workspace assets. The web
-app selects Cloud mode from API status and has WorkOS sign-in, onboarding, account, plan, billing,
-upload, private library and original audio preview screens. The standalone `selecta gateway` process authenticates workers, claims fenced jobs,
-and signs scoped R2 URLs; `RemoteWorkerClient` and the cooperative runner handle scoped tokens,
-leases, progress and signed input/output transfer, but worker images and Cloud audio handlers are
-still needed. Cloud `/api/events` streams job outbox
-updates; the UI is not yet consuming it. `DELETE /api/account` hides accounts and revokes sessions
-immediately, then enqueues a durable retryable workflow. Its effect adapter handles job/Stripe
-cancellation, membership cleanup and account tombstones; the offsite ledger writer, scheduled
-workflow and R2 purge runners, and restore replay remain outstanding. Full Cloud mixing,
-scheduled billing reconciliation/webhook retries and Stripe tax setup also remain incomplete. Schema
-migrations are exercised on SQLite; production PostgreSQL and row-level security still need
-implementation and verification.
+What the cloud code does today, task by task, is in the [implementation checklist](../adr/selecta-cloud-implementation-checklist.md): a ticked box cites its evidence, and anything unticked is not done yet. Trust the checklist and the code over any summary, including this page.
 
 ## Set up and run locally
 
@@ -139,6 +130,8 @@ For any change that affects an ADR contract:
 - Link implementation evidence to concrete files, commits or CI runs.
 - Keep independent verification separate from implementation status.
 - Do not describe a proposal, stub, smoke check or passing unit test as a complete release gate.
+
+House rules that surprise newcomers: no em dashes anywhere (code, docs, commit messages); plain-English docstrings that say why; commit and push work in progress often so it's never only on one machine; auto-merge is off, so a person merges once CI is green.
 
 Every repository file must remain below 1,000 lines; `tests/test_file_length.py` enforces this.
 Split large material by responsibility before it approaches that limit.
