@@ -9,6 +9,8 @@ const port = process.env.SELECTA_E2E_PORT ?? '8799';
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.e2e.ts',
+  // the feature-flag sweep is long enough to be its own job: `pnpm e2e:flags`, playwright.flags.config.ts
+  testIgnore: ['**/flags.e2e.ts'],
   timeout: 300_000,
   expect: { timeout: 20_000 },
   // Fully-parallel discovery balances GitHub shards by test, not by file. Within each

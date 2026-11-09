@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, get, LibraryPage, LibrarySong, MixData, post } from '../api';
+import { Gate, useFlags, visible } from '../flags';
 import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
@@ -13,12 +14,12 @@ import { SearchField } from '../ui/primitives';
 import { ViewProps } from './shared';
 import { SongDetails } from './SongDetails';
 
-const FILTERS = [
+const FILTERS: ({ name: string; label: string } & Gate)[] = [
   { name: 'all', label: 'Everything' },
   { name: 'ready', label: 'Ready' },
   { name: 'not_yet', label: 'Not analysed yet' },
   { name: 'attention', label: 'Needs attention' },
-  { name: 'priority', label: 'Priority list' },
+  { name: 'priority', label: 'Priority list', flag: 'library.priority' },
   { name: 'set_aside', label: 'Set aside' },
 ];
 
@@ -403,7 +404,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   }, [rows]);
   const { counts } = status;
   const compact = preferences.density === 'compact';
-  const cardLayout = preferences.libraryLayout === 'cards';
+  const on = useFlags();
+  const cardLayout = preferences.libraryLayout === 'cards' && on('library.card_view');
+  // batch actions need at least one thing they can do
+  const batch = on('library.batch') && (on('library.priority') || on('library.never_play'));
 
   return (
     <main className="page library density" id="main">
@@ -429,13 +433,15 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           <button aria-pressed={!compact} onClick={() => setPrefs({ density: 'comfortable' })}>Comfortable</button>
           <button aria-pressed={compact} onClick={() => setPrefs({ density: 'compact' })}>Compact</button>
         </div>
-        <div className="row library-layout" role="group" aria-label="Library layout">
-          <button type="button" aria-pressed={!cardLayout} onClick={() => setPrefs({ libraryLayout: 'list' })}>List view</button>
-          <button type="button" aria-pressed={cardLayout} onClick={() => setPrefs({ libraryLayout: 'cards' })}>Card view</button>
-        </div>
+        {on('library.card_view') && (
+          <div className="row library-layout" role="group" aria-label="Library layout">
+            <button type="button" aria-pressed={!cardLayout} onClick={() => setPrefs({ libraryLayout: 'list' })}>List view</button>
+            <button type="button" aria-pressed={cardLayout} onClick={() => setPrefs({ libraryLayout: 'cards' })}>Card view</button>
+          </div>
+        )}
       </div>
       <div className="chips library-filters" role="group" aria-label="Filter Library recordings">
-        {FILTERS.map((option) => (
+        {visible(FILTERS).map((option) => (
           <button key={option.name} aria-pressed={filter === option.name} onClick={() => setAddressQuery({ show: option.name === 'all' ? null : option.name, pages: null }, { push: true })}>
             {option.label}
           </button>
@@ -454,7 +460,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           )}
         </div>
       )}
-      {committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
+      {batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
             <button ref={selectionEntryRef} disabled={searching || failed} onClick={() => setBatchSelection({
@@ -471,10 +477,18 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                   setBatchSelection({ identity: selectionIdentity, ids: [] });
                   selectionEntryRef.current?.focus();
                 }}>Clear selection</button>
-                <button disabled={searching || failed} onClick={() => askBatch('prioritize')}>Prioritize selected</button>
-                <button disabled={searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
-                <button disabled={searching || failed} onClick={() => askBatch('never')}>Never play selected</button>
-                <button disabled={searching || failed} onClick={() => askBatch('allow')}>Allow selected</button>
+                {on('library.priority') && (
+                  <>
+                    <button disabled={searching || failed} onClick={() => askBatch('prioritize')}>Prioritize selected</button>
+                    <button disabled={searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
+                  </>
+                )}
+                {on('library.never_play') && (
+                  <>
+                    <button disabled={searching || failed} onClick={() => askBatch('never')}>Never play selected</button>
+                    <button disabled={searching || failed} onClick={() => askBatch('allow')}>Allow selected</button>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -514,7 +528,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           return (
             <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''} ${selectedIdSet.has(song.id) ? 'selected' : ''}`}>
               <div className="song-name">
-                {filter !== 'set_aside' && <label className="library-batch-check">
+                {batch && filter !== 'set_aside' && <label className="library-batch-check">
                   <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
                     checked={selectedIdSet.has(song.id)} disabled={searching || failed || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
                     onChange={() => toggleBatch(song.id)} />
@@ -530,7 +544,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                 <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
                 <span>{song.camelot ?? '–'}</span>
                 <span>{clock(song.duration)}</span>
-                {song.lyric_status === 'synced' && <span>lyrics</span>}
+                {on('lyrics.lookup') && song.lyric_status === 'synced' && <span>lyrics</span>}
               </small>
               <div className="song-readiness">
                 <Status kind={facts.kind}>{facts.words}</Status>
@@ -544,14 +558,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                     {status.eta?.line[song.id] !== undefined && `, ${etaWords(status.eta.line[song.id])}`}
                   </Action>
                 )}
-                {(!facts.setAside || facts.canAdd) && (
+                {((!facts.setAside && (on('library.priority') || on('library.never_play'))) || facts.canAdd) && (
                   <Menu label={<><Icon name="more" /><span className="visually-hidden">More actions for {name}</span></>}>
                     {facts.canAdd && <Action role="menuitem" disabled={already || searching} run={() => add(song)}>{already ? 'Already in current mix' : 'Add to current mix'}</Action>}
                     {facts.canAdd && now.phase !== 'idle' && <Action role="menuitem" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next in current mix</Action>}
-                    {!facts.setAside && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
+                    {!facts.setAside && on('library.priority') && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
                       {song.priority ? 'Priority: on' : 'Prioritize'}
                     </Action>}
-                    {!facts.setAside && <Action role="menuitemcheckbox" aria-checked={song.never} run={() => never(song)} title="Selecta won’t pick this when it builds a mix">
+                    {!facts.setAside && on('library.never_play') && <Action role="menuitemcheckbox" aria-checked={song.never} run={() => never(song)} title="Selecta won’t pick this when it builds a mix">
                       {song.never ? 'Never: on' : 'Never play'}
                     </Action>}
                   </Menu>

@@ -600,6 +600,13 @@ def belonging(name: str, songs: list[SongInfo], traits: dict[int, Traits]) -> di
     return {song: 0.5 + 0.5 * max(value / top, 0.0) for song, value in values.items()}
 
 
+def _blurb(vibe: Vibe) -> str:
+    """What the idea promises, without a word hand-off when this build can't make one."""
+    if any(move_on(move) for move in WORD_MOVES):
+        return vibe.blurb
+    return vibe.blurb.replace(", with a word hand-off or two", "")
+
+
 def describe(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> dict:
     """What a mix's card shows. Everything on it is read from the songs that would really play."""
     found = eligible(vibe, songs, traits)
@@ -614,7 +621,7 @@ def describe(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> di
     return {
         "key": vibe.key,
         "name": vibe.name,
-        "blurb": vibe.blurb,
+        "blurb": _blurb(vibe),
         "group": vibe.group,
         "family": FAMILY_NAMES.get(vibe.family) if vibe.family else None,
         "songs": len(found),

@@ -11,6 +11,7 @@ or main runs.
 | Python shards 1/2 and 2/2 | Separate Windows runners, Python 3.12, FFmpeg | Locked dependencies, Ruff, 1,000-line rule, complete distributed pytest collection |
 | Web | Ubuntu, Node 22, pnpm 10 | Frozen dependencies, all unit tests, TypeScript, production build |
 | Edge shards 1/2 and 2/2 | Separate Windows runners, real muted Edge and FFmpeg | All Playwright E2E tests, real audio, accessibility checks, error recovery |
+| Feature-flag sweep shards 1/2 and 2/2 | Separate Windows runners, real muted Edge | Every feature turned off in turn: each page it shows up on still fits, passes axe, links to nothing that's gone, says nothing about it, asks the server nothing about it and closes up around it. Screenshots uploaded as `flags-sweep-*` |
 | verify | Ubuntu | Every prerequisite succeeded **and** combined Python coverage reached at least 70% |
 
 A failed, skipped, missing, or cancelled prerequisite fails the final verify gate.

@@ -1,3 +1,4 @@
+import { Gate, visible } from '../flags';
 import { FormEvent, useId, useState } from 'react';
 import { lucy } from '../lucy/client';
 import type { Budgets, LucyStatus, PhaseName, Phases, ProviderKind, SettingsChange } from '../lucy/types';
@@ -7,18 +8,18 @@ import { LucyMemory } from './LucyMemory';
  * service can only be chosen after agreeing to exactly what would be sent to it. An API key can be
  * typed in but is never shown back: the page only knows whether one is saved. */
 
-const PROVIDERS: { kind: ProviderKind; label: string; about: string }[] = [
+const PROVIDERS: ({ kind: ProviderKind; label: string; about: string } & Gate)[] = [
   { kind: 'builtin', label: 'Built-in (on this computer, no AI service)', about: 'Plans with Selecta’s own rules. Nothing leaves this computer.' },
-  { kind: 'anthropic', label: 'Anthropic', about: 'Uses Anthropic’s AI service with your own API key.' },
-  { kind: 'openai', label: 'OpenAI-compatible (OpenAI, Ollama, LM Studio…)', about: 'Any service that speaks the OpenAI format, including ones running on your own machine.' },
+  { kind: 'anthropic', flag: 'lucy.remote_providers', label: 'Anthropic', about: 'Uses Anthropic’s AI service with your own API key.' },
+  { kind: 'openai', flag: 'lucy.remote_providers', label: 'OpenAI-compatible (OpenAI, Ollama, LM Studio…)', about: 'Any service that speaks the OpenAI format, including ones running on your own machine.' },
 ];
 
-const PHASES: { name: PhaseName; label: string; about: string }[] = [
+const PHASES: ({ name: PhaseName; label: string; about: string } & Gate)[] = [
   { name: 'chat', label: 'Chat', about: 'Talk to Lucy about mixes.' },
-  { name: 'proposals', label: 'Proposals', about: 'Lucy plans a mix you can look over.' },
-  { name: 'commit', label: 'Saving drafts', about: 'Approved proposals can be saved, and played if you confirm.' },
-  { name: 'memory', label: 'Memory and history', about: 'Lucy remembers what you tell it and what you listen to.' },
-  { name: 'voice', label: 'Voice input', about: 'Speak instead of typing, where this browser can.' },
+  { name: 'proposals', flag: 'lucy.proposals', label: 'Proposals', about: 'Lucy plans a mix you can look over.' },
+  { name: 'commit', flag: 'lucy.commit', label: 'Saving drafts', about: 'Approved proposals can be saved, and played if you confirm.' },
+  { name: 'memory', flag: 'lucy.memory', label: 'Memory and history', about: 'Lucy remembers what you tell it and what you listen to.' },
+  { name: 'voice', flag: 'lucy.voice', label: 'Voice input', about: 'Speak instead of typing, where this browser can.' },
 ];
 
 const BUDGETS: { name: Exclude<keyof Budgets, 'spend_cap_usd' | 'max_output_tokens'>; label: string; help: string }[] = [
@@ -109,7 +110,7 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
             Use Lucy
           </label>
           <p className="hint">Turning Lucy off never changes Make a Mix, your mixes or your music.</p>
-          {PHASES.map((phase) => (
+          {visible(PHASES).map((phase) => (
             <label key={phase.name} className="choice lucy-setting-line">
               <input type="checkbox" checked={phases[phase.name]} disabled={!enabled} onChange={(event) => setPhases({ ...phases, [phase.name]: event.target.checked })} />
               <span><b>{phase.label}</b> <span className="soft">{phase.about}</span></span>
@@ -119,7 +120,7 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
 
         <fieldset>
           <legend>Who does the planning</legend>
-          {PROVIDERS.map((provider) => (
+          {visible(PROVIDERS).map((provider) => (
             <label key={provider.kind} className="choice lucy-setting-line">
               <input type="radio" name={`${ids}-provider`} checked={kind === provider.kind} onChange={() => chooseProvider(provider.kind)} />
               <span><b>{provider.label}</b> <span className="soft">{provider.about}</span></span>

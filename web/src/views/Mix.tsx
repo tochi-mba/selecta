@@ -1,3 +1,4 @@
+import { flagOn } from '../flags';
 import { DragEvent, FormEvent, KeyboardEvent, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, del, DraftList, MixData, MixItem, post, Suggestion } from '../api';
 import { etaRangeWords, runningTime } from '../lib';
@@ -577,7 +578,8 @@ export function Mix(props: ViewProps) {
     );
   }
 
-  const seamInspector = selectedItem && selectedBefore && (
+  const on = flagOn;
+  const seamInspector = on('seam_inspector') && selectedItem && selectedBefore && (
     <SeamInspector
       key={seamKeyOf(keys[selectedIndex - 1], keys[selectedIndex])}
       item={selectedItem}
@@ -621,7 +623,7 @@ export function Mix(props: ViewProps) {
       {inDraft ? (
         <>
           <Action className="primary" working="Starting…" run={() => playDraft?.(draftId)}>Play this mix</Action>
-          {draftPlace ? (
+          {!on('render_line') ? null : draftPlace ? (
             <Action run={() => prioritize(false)}>Take out of line</Action>
           ) : (
             waiting > 0 && (
@@ -641,23 +643,25 @@ export function Mix(props: ViewProps) {
           }}>
             Play from the top
           </button>
-          <button onClick={() => {
-            setName(mixName);
-            setNaming(!naming);
-          }} aria-expanded={naming}>
-            Save a copy
-          </button>
+          {on('drafts') && (
+            <button onClick={() => {
+              setName(mixName);
+              setNaming(!naming);
+            }} aria-expanded={naming}>
+              Save a copy
+            </button>
+          )}
         </>
       )}
       {canUndo && undo && <Action working="Undoing…" run={() => undo(draftId)}>Undo last change</Action>}
-      {readiness.firstProblem !== null && <button onClick={jumpToProblem}><Icon name="warning" /> Jump to first problem</button>}
+      {readiness.firstProblem !== null && on('seam_inspector') && <button onClick={jumpToProblem}><Icon name="warning" /> Jump to first problem</button>}
       {!inDraft && ready < seams && (
         <Action run={renderAll} disabled={!waiting}>
           {waiting ? 'Render every transition' : rendering ? `Rendering ${ready} of ${seams}…` : readiness.blocked ? 'Fix transition timing to continue' : 'Change failed transitions to continue'}
         </Action>
       )}
-      {mix.length > 1 && <button onClick={() => setExporting(true)}>Download audio</button>}
-      <PageLink className="button" to={`/mixes/lucy?${askLucy.toString()}`}>Ask Lucy about this mix</PageLink>
+      {mix.length > 1 && on('export') && <button onClick={() => setExporting(true)}>Download audio</button>}
+      {on('lucy') && <PageLink className="button" to={`/mixes/lucy?${askLucy.toString()}`}>Ask Lucy about this mix</PageLink>}
       {inDraft ? (
         <>
           <button className="destructive" onClick={() => setConfirmDelete(true)}><Icon name="trash" /> Delete</button>

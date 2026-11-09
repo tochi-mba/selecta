@@ -26,7 +26,7 @@
         "POST /api/drafts/{draft}/line/move"
       ],
       "surfaces": ["mine", "edit", "workshop"],
-      "words": ["Render line", "Prioritize"]
+      "words": ["Render line"]
     },
     "mymixes.continue_working": {
       "label": "Continue working",

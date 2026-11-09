@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { DraftList, get, MixEta, MixItem } from '../api';
+import { flagOn, useFlag } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
 import { MixReadiness, orderOf } from '../state/readiness';
 import { Status, StatusKind } from '../ui/controls';
@@ -28,10 +29,11 @@ function readinessWords(state: MixReadiness): { kind: StatusKind; words: string 
 /** Which mix is being edited, for as soon as there's more than one. */
 export function MixSwitcher({ draftId, openDraft, closeDraft }: { draftId: number | null; openDraft?: (id: number) => void; closeDraft: () => void }) {
   const [list, setList] = useState<DraftList | null>(null);
+  const drafts = useFlag('drafts');
   useEffect(() => {
-    get<DraftList>('/drafts').then(setList).catch(() => {});
-  }, [draftId]);
-  if (!list || !list.drafts.length) return null;
+    if (drafts) get<DraftList>('/drafts').then(setList).catch(() => {});
+  }, [draftId, drafts]);
+  if (!drafts || !list || !list.drafts.length) return null;
   return (
     <label className="switcher">
       Editing
@@ -92,10 +94,10 @@ export function EditorHeader(props: {
             {mix.length} {mix.length === 1 ? 'song' : 'songs'}, about {length(totalSeconds)}.
             {seams > 0 && ` ${ready} of ${seams} transitions are ready.`}
             {!inDraft && mixEta && mixEta.seams > 0 && (mixEta.late ? ' The rest are taking longer than usual.' : ` The rest take ${etaRangeWords(mixEta)}.`)}
-            {inDraft && mixEta && mixEta.seams > 0 && (draftPlace
+            {inDraft && flagOn('render_line') && mixEta && mixEta.seams > 0 && (draftPlace
               ? ` ${nth(draftPlace)} in line. All ready in ${etaRangeWords(mixEta)}.`
               : ` Prioritize it and all of it would be ready in ${etaRangeWords(mixEta)}.`)}
-            {seams > 0 && ' Select a transition to hear or change it.'}
+            {seams > 0 && flagOn('seam_inspector') && ' Select a transition to hear or change it.'}
           </p>
           {inDraft && <p className="hint">Saved as you go. What’s playing isn’t affected.</p>}
         </div>

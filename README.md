@@ -93,6 +93,31 @@ count reaches zero. Unchanged comparisons, including non-matches, are reused. Ne
 analysis adds work. Discovery gives way to current mix rendering; it does not approve matches
 for automatic use.
 
+## Feature flags
+
+Every feature has a flag, listed in [docs/flags.md](docs/flags.md) and defined in
+`src/selecta/flags/*.json`, which the server, the site, the CLI and the tests all read. Flags are
+for developers: set `SELECTA_FLAGS` before starting Selecta, and restart to change it.
+
+```bash
+SELECTA_FLAGS="-requests -move.*" uv run selecta web
+```
+
+`-name` turns a flag off, `+name` turns one on, `area.*` reaches every flag in an area, `minimal`
+turns off everything that isn't core and `all` turns everything on. A flag that needs one that's off
+is off too, and core flags can't be turned off. `uv run selecta flags` shows what's on and why.
+
+A feature that's off is gone, as if it had never been built: its routes answer 403 `flag_off`, its
+background work stops, its CLI commands say so, and the site shows no link, tab, button, shortcut,
+command or word about it. Turning a flag off never deletes anything. What someone already chose
+with it (never-play songs, priorities, corrections, ratings, shaping) is kept and still counts; only
+a transition move that's off can't be used, so a seam set to it is planned again.
+
+When adding a feature, give it a flag in the registry with its routes, CLI commands, the pages it
+shows on and the words that name it, then gate it in the site with `useFlag`, `<Flag>` or a
+`flag` field on the shell's lists. `uv run selecta flags --markdown docs/flags.md` updates the
+catalog. `pnpm e2e:flags` checks every page with each feature off.
+
 ## Blind listening comparisons
 
 Prepare two stereo renders of the same source cues and context. Import them with

@@ -1,3 +1,4 @@
+import { flagOn } from '../flags';
 import { useEffect, useRef, useState } from 'react';
 import { LibrarySong, post } from '../api';
 import { clock } from '../lib';
@@ -110,8 +111,9 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
         <div><dt>Tempo measured</dt><dd>{detectedTempo ? `${detectedTempo} BPM` : 'Not measured yet'}</dd></div>
         <div><dt>Key in use</dt><dd>{song.camelot ?? 'Not measured yet'}{song.override_camelot ? ' (your correction)' : ''}</dd></div>
         <div><dt>Key measured</dt><dd>{song.detected_camelot ?? 'Not measured yet'}</dd></div>
-        <div><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>
+        {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>}
       </dl>
+      {flagOn('library.corrections') && (
       <section className="stack">
         <h3>Correct it</h3>
         <p className="hint">If Selecta got something wrong. What it measured is kept, so this can be put back, and analysing the song again won’t lose it. Transitions with this song may be made again, using what you enter here.</p>
@@ -167,20 +169,26 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           )}
         </div>
       </section>
+      )}
+      {!facts.setAside && (flagOn('library.priority') || flagOn('library.never_play')) && (
       <section className="stack">
         <h3>How Selecta treats it</h3>
         <p className="hint">None of these move or delete your file. They only change what Selecta does with this song.</p>
-        {!facts.setAside && (
-          <div className="row wrap">
+        <div className="row wrap">
+          {flagOn('library.priority') && (
             <Action aria-pressed={song.priority} run={() => onPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
               {song.priority ? 'Priority: on' : 'Prioritize'}
             </Action>
+          )}
+          {flagOn('library.never_play') && (
             <Action aria-pressed={song.never} run={() => onNever(song)} title="Selecta won’t pick this when it builds a mix">
               {song.never ? 'Never: on' : 'Never play'}
             </Action>
-          </div>
-        )}
+          )}
+        </div>
       </section>
+      )}
+      {flagOn('library.corrections') && (
       <section className="stack">
         <h3>Is it music?</h3>
         <p className="hint">Something set aside never gets analysed or mixed. Your file isn’t touched either way.</p>
@@ -193,6 +201,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           {song.music_override != null && <Action run={() => send({ clear: ['is_music'] }, 'Selecta will decide again next time it reads your folder.')}>Let Selecta decide</Action>}
         </div>
       </section>
+      )}
       <details className="song-advanced">
         <summary>Advanced</summary>
         <dl className="song-facts">

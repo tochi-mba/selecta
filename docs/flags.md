@@ -141,7 +141,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `library.folder_watching` | **Watching for new songs.** Songs added to a music folder come in by themselves within about a minute. |  |
 | `lyrics.lookup` | **Lyric lookup.** Line-synced lyrics from LRCLIB. Only artist, title, album and duration are sent. |  |
 | `lyrics.word_timing` | **Word timing.** When each sung word lands, for moves that hand over on a word. | `lyrics.lookup` |
-| `analysis.time_estimates` | **Time estimates.** How long the rest will take, from this computer's own past speeds. |  |
+| `analysis.time_estimates` | **Time estimates.** How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds. |  |
 
 ## Learning
 

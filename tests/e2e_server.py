@@ -183,7 +183,26 @@ def main() -> None:
     os.environ["SELECTA_HOME"] = str(home)
     settings = build(home)
     app = create_app(settings, ROOT / "web" / "dist", prepare_links=False)
+    add_flag_switch(app)
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+
+
+def add_flag_switch(app) -> None:
+    """Test only: change this server's flags without restarting it, so the browser sweep can try
+    each one off in turn. Never part of the real app. It goes ahead of the site's files, which
+    would otherwise answer every address."""
+    from fastapi import APIRouter, Body
+
+    from selecta import flags
+
+    router = APIRouter()
+
+    @router.post("/api/test/flags")
+    def switch(body: dict = Body(default={})) -> dict:  # noqa: B008
+        flags.use(str(body.get("flags", "")))
+        return flags.snapshot()
+
+    app.router.routes[:0] = router.routes
 
 
 if __name__ == "__main__":

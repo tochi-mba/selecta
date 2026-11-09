@@ -1,3 +1,4 @@
+import { useFlag } from '../flags';
 import { length, runningTime } from '../lib';
 import { MixSignature } from '../ui/MusicObjects';
 import { PageLink } from '../shell/PageLink';
@@ -9,6 +10,7 @@ import { ViewProps } from './shared';
  * from its songs being saved, so it says which. */
 export function CurrentMix({ mix, mixName, now, player, setView, prominent }: Pick<ViewProps, 'mix' | 'mixName' | 'now' | 'player' | 'setView'> & { prominent?: boolean }) {
   const facts = mixReadiness(mix);
+  const editing = useFlag('editor');
   return (
     <section className={`carry-on ${prominent ? 'prominent' : ''}`} aria-label="Current mix">
       <div className="carry-on-words">
@@ -38,7 +40,7 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent }: Pi
         ) : (
           <button className={prominent ? 'primary' : undefined} onClick={() => setView('Now')}>Open</button>
         )}
-        <button onClick={() => setView('Edit')}>Edit</button>
+        {editing && <button onClick={() => setView('Edit')}>Edit</button>}
       </div>
     </section>
   );
@@ -46,12 +48,13 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent }: Pi
 
 /** Nothing is current yet, which isn't a problem, and here's what to do about it. */
 export function NoCurrentMix() {
+  const drafts = useFlag('drafts');
   return (
     <section className="carry-on prominent" aria-label="Current mix">
       <div className="carry-on-words">
         <p className="eyebrow">Current mix</p>
         <h2>Nothing’s playing yet</h2>
-        <p className="soft">Pick a mix to hear it, or play one of your drafts.</p>
+        <p className="soft">{drafts ? 'Pick a mix to hear it, or play one of your drafts.' : 'Pick a mix to hear it.'}</p>
       </div>
       <PageLink to="/mixes" className="button primary">Find a mix</PageLink>
     </section>

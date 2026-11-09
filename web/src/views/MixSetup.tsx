@@ -1,5 +1,6 @@
 import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import { get, MixItem, post, SongRow, Status } from '../api';
+import { flagOn, useFlags } from '../flags';
 import { Action, Dialog, Problem } from '../ui/controls';
 import { EnergyHorizon } from '../ui/MusicObjects';
 import { ViewProps } from './shared';
@@ -17,13 +18,14 @@ const STEM_WORDS: Record<string, string> = { never: 'no stem moves', sometimes: 
 
 /** How the next mix will get built, in one line, so it can be seen without opening anything. */
 export function buildSummary(steering: Status['steering']): string {
+  // only what this build lets someone shape
   const parts = [
-    FEEL_WORDS[steering.mix_language] ?? steering.mix_language,
-    STEM_WORDS[steering.stems] ?? steering.stems,
-    steering.energy_arc ? 'your energy shape' : 'each mix’s own energy',
-    steering.target ? `ending on ${steering.target_label ?? 'your chosen song'}` : 'Selecta chooses the ending',
+    flagOn('mixes.shaping.feel') && (FEEL_WORDS[steering.mix_language] ?? steering.mix_language),
+    flagOn('mixes.shaping.stem_moves') && (STEM_WORDS[steering.stems] ?? steering.stems),
+    flagOn('mixes.shaping.energy_arc') && (steering.energy_arc ? 'your energy shape' : 'each mix’s own energy'),
+    flagOn('mixes.shaping.destination') && (steering.target ? `ending on ${steering.target_label ?? 'your chosen song'}` : 'Selecta chooses the ending'),
   ];
-  return parts.join(' · ');
+  return parts.filter(Boolean).join(' · ');
 }
 
 /** The energy each song in a mix actually has, on that mix's own scale, from its quietest song to its
@@ -130,7 +132,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
     const timer = window.setTimeout(() => {
       get<SongRow[]>(`/songs?q=${encodeURIComponent(query)}&state=ready&limit=20`)
         .then((rows) => {
-          if (live) setDestinationResults(rows.filter((row) => !row.never && ['synced', 'instrumental'].includes(row.lyric_status ?? '')));
+          if (live) setDestinationResults(rows.filter((row) => !row.never && (!flagOn('lyrics.lookup') || ['synced', 'instrumental'].includes(row.lyric_status ?? ''))));
         })
         .catch(() => { if (live) setDestinationFailed(true); }).finally(() => { if (live) setDestinationLoading(false); });
     }, 120);
@@ -210,13 +212,19 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
     updateStop(stop, energy);
   };
 
+  const on = useFlags();
+  const feel = on('mixes.shaping.feel');
+  const stems = on('mixes.shaping.stem_moves');
+  const arc = on('mixes.shaping.energy_arc');
+  const goal = on('mixes.shaping.destination');
   return (
     <Dialog title="Shape the next mix" onClose={onClose} footer={<button className="primary" onClick={onClose}>Done shaping</button>}>
       <p className="eyebrow">Optional shape</p>
       <p className="hint">These stay as your defaults for every new mix you build. They don’t change a mix you’ve already got or anything playing now. You can change any transition song by song later.</p>
       {problem && <p className="warn" role="alert">{problem}</p>}
 
-      <h3 className="setup-group">How transitions feel</h3>
+      {(feel || stems) && <h3 className="setup-group">How transitions feel</h3>}
+      {feel && (
       <section className="mix-steering" aria-label="Mix controls">
         <label htmlFor="mix-language">Transition feel</label>
         <select id="mix-language" value={mixLanguage} onChange={(event) => void chooseMixLanguage(event.target.value)}>
@@ -225,7 +233,9 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           <option value="punchy">Punchy changes</option>
         </select>
       </section>
+      )}
 
+      {stems && (
       <section className="mix-steering" aria-label="Stem transition controls">
         <label htmlFor="stem-frequency">Stem-assisted moves</label>
         <select id="stem-frequency" value={stemFrequency} onChange={(event) => void chooseStemFrequency(event.target.value)}>
@@ -233,10 +243,12 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           <option value="sometimes">Sometimes</option>
           <option value="often">Often</option>
         </select>
-        <p className="hint">Vocal rides and word hand-offs. They’re only used where the pair fits and the render passes its checks.</p>
+        <p className="hint">{on('lyrics.word_timing') ? 'Vocal rides and word hand-offs.' : 'Vocal rides and stem blends.'} They’re only used where the pair fits and the render passes its checks.</p>
       </section>
+      )}
 
-      <h3 className="setup-group">Where the mix goes</h3>
+      {(arc || goal) && <h3 className="setup-group">Where the mix goes</h3>}
+      {arc && (
       <section className="energy-arc" aria-label="Energy arc controls">
         <div className="energy-arc-heading">
           <div>
@@ -324,7 +336,9 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           <p className="hint">Current mix: relative energy from its quietest to its most energetic song. This uses this mix’s own range, so it is not a score against your requested arc.</p>
         </figure>}
       </section>
+      )}
 
+      {goal && (
       <section className="destination-control" aria-label="Mix destination">
         <label htmlFor="destination-search">Take me to</label>
         <input
@@ -379,6 +393,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
         )}
         <p className="hint">If there’s no good way there from the rest of the mix, it finishes as near as it can. Clear it to let each mix decide.</p>
       </section>
+      )}
     </Dialog>
   );
 }

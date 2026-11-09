@@ -68,7 +68,7 @@
     },
     "analysis.time_estimates": {
       "label": "Time estimates",
-      "about": "How long the rest will take, from this computer's own past speeds.",
+      "about": "How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds.",
       "surfaces": ["workshop.analysis", "library"],
       "cli": ["timings"]
     }

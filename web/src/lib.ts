@@ -1,3 +1,4 @@
+import { flagOn } from './flags';
 import { MixItem, Storage } from './api';
 
 export const clock = (seconds: number | null | undefined): string => {
@@ -146,7 +147,7 @@ export function etaRangeWords(eta: { seconds: number; low: number; high: number;
 
 /** What's left to analyse, in a sentence, including waiting for the mix. */
 export function analysisWords(analysis: { seconds: number; low: number; high: number; after_mix: boolean } | undefined): string {
-  if (!analysis) return 'It runs in the background.';
+  if (!analysis || !flagOn('analysis.time_estimates')) return 'It runs in the background.';
   const wait = etaRangeWords(analysis);
   return analysis.after_mix
     ? `It’ll be done in ${wait}, since it waits for rendering to finish first.`
