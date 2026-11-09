@@ -1,5 +1,6 @@
 import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useRef, useState } from 'react';
 import { MixItem, post } from '../api';
+import { flagOn, useFlags } from '../flags';
 import { clock, etaWords, seamStatusWords } from '../lib';
 import { Action, announce, Menu } from '../ui/controls';
 import { Icon } from '../ui/Icon';
@@ -57,26 +58,36 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
     await post(`/seams/${state.key}/rate`, { rating: state.rating === rating ? 'none' : rating });
     actions.current.refresh();
   };
+  const on = useFlags();
+  // without the inspector a transition is shown, not opened
+  const inspect = on('seam_inspector');
 
   return (
     <li
       className={`seam ${open ? 'open' : ''}`}
       data-seam={seamKey}
-      onClick={(event) => { if (pickedTheRow(event)) actions.current.selectSeam(rowKey); }}
+      onClick={(event) => { if (inspect && pickedTheRow(event)) actions.current.selectSeam(rowKey); }}
     >
       {seam.too_soon && (
         <p className="warn seam-too-soon">This leaves {previous.title} before the way into it has finished, so it would be missed. Pick a later place to leave it, or an earlier place to bring it in.</p>
       )}
       <div className="seam-line">
-        <button className="seam-name" onClick={() => actions.current.toggleSeam(rowKey)} aria-expanded={open}>
-          <b>{label}</b>
-          <span className={`pill ${state.status} ${state.status === 'ready' && !state.passed ? 'warned' : ''}`}>
-            {seamStatusWords(state.status, state.passed)}
-            {state.eta !== undefined && `, ${etaWords(state.eta)}`}
-          </span>
-        </button>
+        {(() => {
+          const name = (
+            <>
+              <b>{label}</b>
+              <span className={`pill ${state.status} ${state.status === 'ready' && !state.passed ? 'warned' : ''}`}>
+                {seamStatusWords(state.status, state.passed)}
+                {state.eta !== undefined && etaWords(state.eta) && `, ${etaWords(state.eta)}`}
+              </span>
+            </>
+          );
+          return inspect
+            ? <button className="seam-name" onClick={() => actions.current.toggleSeam(rowKey)} aria-expanded={open}>{name}</button>
+            : <span className="seam-name">{name}</span>;
+        })()}
         <div className="seam-actions">
-          {state.status === 'ready' && <button onClick={() => actions.current.hearSeam(rowKey)}>Hear it</button>}
+          {inspect && state.status === 'ready' && <button onClick={() => actions.current.hearSeam(rowKey)}>Hear it</button>}
           {(state.status === 'none' || state.status === 'failed') && (
             <Action working="Asking…" run={async () => {
               await post(at(`/mix/${item.position}/render${state.status === 'failed' ? '?retry=true' : ''}`), undefined, guard);
@@ -85,13 +96,13 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
               {state.status === 'failed' ? 'Try again' : 'Render it'}
             </Action>
           )}
-          {state.status === 'ready' && (
+          {on('ratings') && state.status === 'ready' && (
             <span className="pair" role="group" aria-label="Rate this seam">
               <Action aria-pressed={state.rating === 'good'} run={() => rate('good')}>Good</Action>
               <Action aria-pressed={state.rating === 'bad'} run={() => rate('bad')}>Bad</Action>
             </span>
           )}
-          <button onClick={() => actions.current.toggleSeam(rowKey)}>{open ? 'Close' : 'Change'}</button>
+          {inspect && <button onClick={() => actions.current.toggleSeam(rowKey)}>{open ? 'Close' : 'Change'}</button>}
         </div>
       </div>
       <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} compact />
@@ -242,7 +253,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         </button>
         <span dir="auto" title={item.artist}>{item.artist}</span>
         <RequestTag item={item} />
-        {item.locked && <span className="locked-badge"><Icon name="lock" width={14} height={14} /> Locked</span>}
+        {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" width={14} height={14} /> Locked</span>}
       </div>
       <small className="facts">
         {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
@@ -266,9 +277,11 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
           <Icon name="down" />
         </Action>
         <Menu className="song-more" label={<><Icon name="more" /><span className="visually-hidden">More for {item.title}</span></>}>
-          <Action role="menuitem" title="A locked song stays right here when the mix is rebuilt" run={() => actions.current.lock(item)}>
-            <Icon name="lock" /> {item.locked ? 'Unlock' : 'Lock'}
-          </Action>
+          {flagOn('editor.locks') && (
+            <Action role="menuitem" title="A locked song stays right here when the mix is rebuilt" run={() => actions.current.lock(item)}>
+              <Icon name="lock" /> {item.locked ? 'Unlock' : 'Lock'}
+            </Action>
+          )}
           <Action role="menuitem" className="destructive" aria-label={`Remove ${item.title}`} run={() => actions.current.remove(item, rowKey)}>
             <Icon name="trash" /> Remove
           </Action>
@@ -325,13 +338,13 @@ export function SongInspector(props: {
         <div><dt>Length</dt><dd>{clock(item.duration)}</dd></div>
         <div><dt>Tempo</dt><dd>{item.bpm ? `${Math.round(item.bpm)} BPM` : 'Not measured yet'}</dd></div>
         <div><dt>Key</dt><dd>{item.key ?? 'Not measured yet'}</dd></div>
-        <div><dt>Locked</dt><dd>{item.locked ? 'Yes, it stays here when the mix is rebuilt' : 'No'}</dd></div>
+        {flagOn('editor.locks') && <div><dt>Locked</dt><dd>{item.locked ? 'Yes, it stays here when the mix is rebuilt' : 'No'}</dd></div>}
       </dl>
       <div className="row wrap">
         <button className="primary" onClick={onPlay}><Icon name="play" /> Play from here</button>
         <button onClick={onAddAfter}><Icon name="plus" /> Add a song after this</button>
-        {hasIn && <button onClick={onSeamIn}>Transition into this song</button>}
-        {hasOut && <button onClick={onSeamOut}>Transition out of this song</button>}
+        {hasIn && flagOn('seam_inspector') && <button onClick={onSeamIn}>Transition into this song</button>}
+        {hasOut && flagOn('seam_inspector') && <button onClick={onSeamOut}>Transition out of this song</button>}
       </div>
     </div>
   );

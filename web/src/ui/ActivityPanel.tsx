@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityEntry, blockedBy, clearFinishedActivity, markActivitySeen, runUndo, useActivity } from '../state/activity';
 import { Action, Status } from './controls';
-import { PageLink } from '../shell/PageLink';
+import { LinkIfThere } from '../shell/PageLink';
 
 function when(at: number, now: number): string {
   const seconds = Math.round((now - at) / 1000);
@@ -42,9 +42,9 @@ function Row({ entry, all, now }: { entry: ActivityEntry; all: ActivityEntry[]; 
             <div className="row wrap">
               <Action working="Trying again…" run={() => runUndo(entry.id)}>Try Undo again</Action>
               {entry.scope && (
-                <PageLink to={entry.scope.startsWith('draft:')
+                <LinkIfThere to={entry.scope.startsWith('draft:')
                   ? `/mixes/drafts/${entry.scope.slice(6)}/edit`
-                  : '/mix/current/edit'}>Check this mix</PageLink>
+                  : '/mix/current/edit'}>Check this mix</LinkIfThere>
               )}
             </div>
           )}

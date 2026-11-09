@@ -2,7 +2,8 @@ import { KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'reac
 import { closeGlossary, openGlossary, useGlossaryRequests } from '../state/glossaryRequests';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { Dialog } from './controls';
-import { GLOSSARY, glossaryTerm, GlossaryTerm, searchGlossary } from './glossaryTerms';
+import { glossaryOn, glossaryTerm, GlossaryTerm, searchGlossary } from './glossaryTerms';
+import { useFlag } from '../flags';
 import { Field } from './primitives';
 
 /** Plain words for music terms, findable from anywhere. Reading them never plays, changes or saves
@@ -65,7 +66,7 @@ export function GlossaryDialog({ initialTerm, onClose }: { initialTerm?: string 
   };
 
   const count = !text
-    ? `${GLOSSARY.length} music terms.`
+    ? `${glossaryOn().length} music terms.`
     : shown.length
       ? `${shown.length} ${shown.length === 1 ? 'term matches' : 'terms match'} “${text}”.`
       : `No terms match “${text}”. Try another word, like tempo or bridge.`;
@@ -119,7 +120,8 @@ export function TermHint({ term, label }: { term: string; label?: string }) {
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const panelId = useId();
-  if (!entry || !preferences.termHints) return null;
+  const glossary = useFlag('app.glossary');
+  if (!entry || !preferences.termHints || !glossary) return null;
   // "What is studio lane?", but BPM and Selecta stay as they're written
   const name = label ?? (/^[A-Z][a-z]/.test(entry.term) && !entry.term.startsWith('Selecta') ? entry.term[0].toLowerCase() + entry.term.slice(1) : entry.term);
   return (

@@ -1,3 +1,5 @@
+import { flagOn } from '../flags';
+import { LinkIfThere } from '../shell/PageLink';
 import { post, Status } from '../api';
 import { analysisWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -67,32 +69,32 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
       <ol className="readiness-steps" aria-label="Library preparation">
         <li><span>Music found</span><strong>{counts.music}</strong></li>
         <li><span>Audio analysed</span><strong>{counts.analysed}</strong></li>
-        {counts.lyrics !== undefined && <li><span>With timed lyrics</span><strong>{counts.lyrics}</strong></li>}
+        {flagOn('lyrics.lookup') && counts.lyrics !== undefined && <li><span>With timed lyrics</span><strong>{counts.lyrics}</strong></li>}
         <li><span>Ready for mixes</span><strong>{ready} / {READY_NEEDED} needed</strong></li>
       </ol>
       {reading && <p role="status"><StatusMark kind="working">Still reading your folder{scan.folder ? `: ${scan.folder}` : ''}</StatusMark></p>}
       {scan.status === 'failed' && <p className="warn" role="alert">{scan.error ?? 'Reading that folder didn’t finish.'} What was already found is kept.</p>}
       {scan.status === 'cancelled' && <p role="status" className="hint">Reading that folder was stopped. What was already found is kept, and you can read it again from Sources.</p>}
       {!left && ready < READY_NEEDED && (
-        <p className="hint">Audio analysis is finished. More songs need timed lyrics or instrumental cues before they can mix. Open Library → Needs attention to see each song’s reason.</p>
+        <p className="hint">Audio analysis is finished. More songs need {flagOn('lyrics.lookup') ? 'timed lyrics or instrumental cues' : 'clear beats and cues'} before they can mix. Open Library → Needs attention to see each song’s reason.</p>
       )}
       <details className="setup-explain">
         <summary>What’s happening to my songs?</summary>
         <dl>
           <div><dt>Audio analysis</dt><dd>Measures each song’s tempo, key, beats and sections, on this PC. {left > 0 ? analysisWords(status.eta?.analysis) : ''}</dd></div>
-          <div><dt>Lyrics</dt><dd>Artist, title, album and duration are sent to LRCLIB to find timed lyrics. Your audio stays here.</dd></div>
-          <div><dt>Stems</dt><dd>Separating voice, drums, bass and melody only happens later, for the transitions that need it.</dd></div>
+          {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>Artist, title, album and duration are sent to LRCLIB to find timed lyrics. Your audio stays here.</dd></div>}
+          {flagOn('stems') && <div><dt>Stems</dt><dd>Separating voice, drums, bass and melody only happens later, for the transitions that need it.</dd></div>}
         </dl>
       </details>
-      <p className="hint">You can discuss an idea with Lucy while your library is being prepared. It won’t bypass song-readiness checks, send a request on its own, or start playback.</p>
+      {flagOn('lucy') && <p className="hint">You can discuss an idea with Lucy while your library is being prepared. It won’t bypass song-readiness checks, send a request on its own, or start playback.</p>}
       <div className="row wrap">
         {ready >= READY_NEEDED && <PageLink to="/mixes" className="button primary">Make my first mix</PageLink>}
         <PageLink to="/library" className="button">Open Library</PageLink>
-        <PageLink to="/mixes/lucy" className="button">Plan with Lucy (optional)</PageLink>
+        <LinkIfThere to="/mixes/lucy" className="button">Plan with Lucy (optional)</LinkIfThere>
         {!status.analysis_running && <Action className="primary" run={onAnalyse}>Analyse my songs</Action>}
         {status.analysis_running && <span className="pill rendering">Analysing now</span>}
         <PageLink to="/workshop" className="button">See progress</PageLink>
-        <PageLink to="/workshop/sources" className="button">Add another folder</PageLink>
+        <LinkIfThere to="/workshop/sources" className="button">Add another folder</LinkIfThere>
       </div>
     </main>
   );

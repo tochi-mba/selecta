@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ExportJob, ExportJobState } from '../api';
 import { length } from '../lib';
-import { PageLink } from '../shell/PageLink';
+import { LinkIfThere } from '../shell/PageLink';
 import { Action, Skeleton, Status, StatusKind } from '../ui/controls';
 import { cancelExport, isExportActive, refreshExports, useExports } from './exportStore';
 
@@ -70,7 +70,7 @@ function Row({ job }: { job: ExportJob }) {
         {job.state === 'ready' && job.seconds != null && <small className="soft">{length(job.seconds)} long</small>}
         {job.can_cancel && <Action working="Cancelling…" aria-label={`Cancel the export of ${job.mix_name}`} run={() => cancelExport(job.id)}>Cancel export</Action>}
         {/* a new file is always someone's own choice, from the mix as it is by then */}
-        {needsAnother && <PageLink to={editor}>Open this mix to export it again</PageLink>}
+        {needsAnother && <LinkIfThere to={editor}>Open this mix to export it again</LinkIfThere>}
       </div>
     </li>
   );

@@ -1,6 +1,7 @@
 import { Icon } from '../ui/Icon';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { del, DraftInfo, DraftList, get, post } from '../api';
+import { useFlags } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { draftReadiness } from '../state/readiness';
@@ -173,6 +174,8 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
     });
   });
 
+  const on = useFlags();
+  const line = on('render_line');
   // nothing to show yet isn't the same as having no drafts
   if (!list) {
     return couldntLoad
@@ -253,20 +256,22 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                     {renaming === draft.id ? (
                       <RenameDraft id={draft.id} name={draft.name} onDone={() => { setRenaming(null); void refresh(); }} />
                     ) : (
-                      <PageLink id={`draft-${draft.id}`} to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b>{draft.name}</b></PageLink>
+                      on('editor')
+                        ? <PageLink id={`draft-${draft.id}`} to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b>{draft.name}</b></PageLink>
+                        : <b id={`draft-${draft.id}`} className="draft-open">{draft.name}</b>
                     )}
                     <span className="soft">
                       {draft.songs > 0 && `${draft.songs} ${draft.songs === 1 ? 'song' : 'songs'}, about ${length(draft.seconds)}. `}
                       Saved.
                     </span>
                     <Status kind={facts.kind}>{facts.words}</Status>
-                    {draft.place !== null && <span className="soft"> {nth(draft.place)} in the render line.</span>}
+                    {line && draft.place !== null && <span className="soft"> {nth(draft.place)} in the render line.</span>}
                     {draft.seams > 0 && (
                       <div className="draft-progress" role="img" aria-label={`${draft.ready} of ${draft.seams} transitions ready`}>
                         <i style={{ width: `${(100 * draft.ready) / draft.seams}%` }} />
                       </div>
                     )}
-                    {draft.place === null && draft.waiting > 0 && draft.seams > 0 && (
+                    {line && draft.place === null && draft.waiting > 0 && draft.seams > 0 && (
                       <span className="soft"> Rendering it would take {etaRangeWords({ seconds: draft.to_render, low: draft.to_render, high: draft.to_render })}.</span>
                     )}
                     {draft.missing > 0 && (
@@ -275,17 +280,17 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                     {failure && <p className="warn" role="alert">{failure}</p>}
                   </div>
                   <div className="row wrap draft-actions">
-                    <button className="primary" aria-label={`Edit ${draft.name}`} onClick={() => openDraft?.(draft.id)}>Edit</button>
+                    {on('editor') && <button className="primary" aria-label={`Edit ${draft.name}`} onClick={() => openDraft?.(draft.id)}>Edit</button>}
                     <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${draft.name}`} run={() => playDraft?.(draft.id)}>
                       Play
                     </Action>
                     <Menu label={<><Icon name="more" /><span className="visually-hidden">More actions for {draft.name}</span></>}>
                       <MenuItem aria-label={`Rename ${draft.name}`} onClick={() => setRenaming(draft.id)}>Rename</MenuItem>
                       <MenuItem aria-label={`Copy ${draft.name}`} onClick={() => void duplicate(draft)}>Copy</MenuItem>
-                      {draft.place === null && draft.seams > 0 && draft.waiting > 0 && (
+                      {line && draft.place === null && draft.seams > 0 && draft.waiting > 0 && (
                         <MenuItem aria-label={`Prioritize ${draft.name}`} title="Renders in the background, right after your current mix" onClick={() => void prioritize(draft)}>Prioritize</MenuItem>
                       )}
-                      {draft.place !== null && (
+                      {line && draft.place !== null && (
                         <MenuItem aria-label={`Out of line: ${draft.name}`} onClick={() => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</MenuItem>
                       )}
                       <MenuItem danger aria-label={`Delete ${draft.name}`} onClick={() => setDeleting(draft)}><Icon name="trash" /> Delete</MenuItem>
@@ -319,12 +324,12 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
             </>
           )}
         >
-          <p>This removes only the saved draft {deleting.name} and its place in the render line. Your current mix and original music files are untouched.</p>
+          <p>This removes only the saved draft {deleting.name}{line ? ' and its place in the render line' : ''}. Your current mix and original music files are untouched.</p>
           <p className="hint">You can undo this from the notification if the restore point is still available.</p>
           {failures[deleting.id] && <p className="warn" role="alert">{failures[deleting.id]}</p>}
         </Dialog>
       )}
-      {inLine.length > 0 && (
+      {line && inLine.length > 0 && (
         <RenderLine
           inLine={inLine}
           current={current}

@@ -1,3 +1,4 @@
+import { flagOn, useFlags } from '../flags';
 import { useCallback, useEffect, useState } from 'react';
 import { Folders, get, Jobs, post } from '../api';
 import { analysisWords, estimateWords, etaRangeWords } from '../lib';
@@ -23,7 +24,8 @@ function InterfaceChoices() {
     <section className="panel stack interface-choices">
       <h2>Interface</h2>
       <p className="hint">These are kept in this browser. None of them change your music or your mixes.</p>
-      <ThemeChoices />
+      {flagOn('app.theme_choice') && <ThemeChoices />}
+      {flagOn('app.motion_choice') && (
       <fieldset className="theme-choices">
         <legend>Motion</legend>
         <div className="chips" role="radiogroup" aria-label="Motion">
@@ -36,22 +38,23 @@ function InterfaceChoices() {
         </div>
         <p className="hint">Still stops decorative movement. Your computer’s reduced-motion setting always takes priority.</p>
       </fieldset>
+      )}
       <label className="choice">
         <input type="checkbox" checked={preferences.density === 'compact'} onChange={(event) => setPrefs({ density: event.target.checked ? 'compact' : 'comfortable' })} />
         Compact rows in the Library, the timeline and drafts
       </label>
-      <label className="choice">
+      {flagOn('app.command_palette') && <label className="choice">
         <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />
         Use Ctrl K for search and commands
-      </label>
-      <label className="choice">
+      </label>}
+      {flagOn('app.shortcuts') && <label className="choice">
         <input type="checkbox" checked={preferences.singleKeys} onChange={(event) => setPrefs({ singleKeys: event.target.checked })} />
         Single-key shortcuts such as N and M
-      </label>
-      <label className="choice">
+      </label>}
+      {flagOn('app.classic_nav') && <label className="choice">
         <input type="checkbox" checked={preferences.classicNav} onChange={(event) => setPrefs({ classicNav: event.target.checked })} />
-        Use the older navigation: Mixes, Discover and Workshop
-      </label>
+        Use the older navigation: {flagOn('discover.word_links') || flagOn('discover.harmonic') ? 'Mixes, Discover and Workshop' : 'Mixes and Workshop'}
+      </label>}
     </section>
   );
 }
@@ -75,12 +78,12 @@ function Overview({ status }: { status: ViewProps['status'] }) {
         <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
         <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
         <div><strong>{left}</strong><span>still to analyse</span></div>
-        <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>
+        {flagOn('lyrics.lookup') && <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>}
         <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
       </div>
       {jobs && <NeedsYou jobs={jobs} readySongs={counts.ready ?? 0} folders={folders} />}
       <JobsPanel status={status} onJobs={onJobs} />
-      <ExportJobs always />
+      {flagOn('export') && <ExportJobs always />}
       <InterfaceChoices />
     </>
   );
@@ -92,6 +95,8 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
   const route = useRoute();
   const inStudy = route.page === 'listening';
   const here = workspaceTabs().find((section) => section.tab === tab)?.path ?? '/workshop';
+  useFlags();
+  const estimates = flagOn('analysis.time_estimates');
 
   const toggle = async () => {
     await post(status.analysis_running ? '/analysis/stop' : '/analysis/start');
@@ -112,18 +117,20 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
           <p>
             {status.analysis_running
               ? status.mix_rendering
-                ? `Waiting while ${status.mixes_in_line ? 'your mixes render' : 'your mix renders'}, then it carries on. ${left} to go, done in ${etaRangeWords(status.eta?.analysis)}.`
-                : `Working through your songs at low priority, so you can keep using your PC. ${left} to go, done in ${etaRangeWords(status.eta?.analysis)}.`
+                ? `Waiting while ${status.mixes_in_line ? 'your mixes render' : 'your mix renders'}, then it carries on. ${left} to go${estimates ? `, done in ${etaRangeWords(status.eta?.analysis)}` : ''}.`
+                : `Working through your songs at low priority, so you can keep using your PC. ${left} to go${estimates ? `, done in ${etaRangeWords(status.eta?.analysis)}` : ''}.`
               : left
                 ? `${left} song${left === 1 ? '' : 's'} left. ${analysisWords(status.eta?.analysis)}`
                 : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
           </p>
-          {estimateWords(status.eta?.accuracy) && <p className="hint">{estimateWords(status.eta?.accuracy)}</p>}
-          <p className="hint">Times are estimates, from how long this PC has been taking. They’re never a promise.</p>
-          <p className="hint">
-            With nothing else to do, Selecta tries out the best transitions across your library, so they’re ready when you want them.
-            {status.transitions_ready ? ` ${status.transitions_ready} have come out clean so far.` : ''}
-          </p>
+          {estimates && estimateWords(status.eta?.accuracy) && <p className="hint">{estimateWords(status.eta?.accuracy)}</p>}
+          {estimates && <p className="hint">Times are estimates, from how long this PC has been taking. They’re never a promise.</p>}
+          {flagOn('render.spare_time') && (
+            <p className="hint">
+              With nothing else to do, Selecta tries out the best transitions across your library, so they’re ready when you want them.
+              {status.transitions_ready ? ` ${status.transitions_ready} have come out clean so far.` : ''}
+            </p>
+          )}
           {!!status.analysing?.length && <p><Status kind="queued">{status.analysing.length} song{status.analysing.length === 1 ? '' : 's'} you asked for will go first</Status></p>}
           {left > 0 && (
             <div className="row wrap">
@@ -139,12 +146,12 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
         </section>
       )}
 
-      {tab === 'storage' && <><StoragePanel /><LocalBackup /></>}
+      {tab === 'storage' && <>{flagOn('workspace.storage') && <StoragePanel />}{flagOn('workspace.backup') && <LocalBackup />}</>}
       {tab === 'sources' && <FoldersPanel status={status} refreshStatus={refreshStatus} notify={notify} />}
       {tab === 'learning' && (
         <>
-          <MemoryPanel />
-          <Listening />
+          {!inStudy && flagOn('learning.memory') && <MemoryPanel />}
+          {flagOn('listening_study') && <Listening />}
         </>
       )}
       {tab === 'diagnostics' && <Diagnostics />}

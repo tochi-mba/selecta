@@ -1,3 +1,4 @@
+import { flagOn } from '../flags';
 import { FormEvent, useCallback, useEffect, useId, useState } from 'react';
 import { problemKind } from '../api';
 import { lucy } from '../lucy/client';
@@ -123,7 +124,7 @@ export function LucyMemory({ onStatus }: { onStatus: (status: LucyStatus) => voi
             </div>
           </form>
 
-          <div className="lucy-memory-group">
+          {flagOn('lucy.listening_history') && <div className="lucy-memory-group">
             <h4>Listening history</h4>
             <label className="choice">
               <input type="checkbox" checked={memory.history.enabled} onChange={(event) => {
@@ -145,7 +146,7 @@ export function LucyMemory({ onStatus }: { onStatus: (status: LucyStatus) => voi
                 ))}
               </ol>
             )}
-          </div>
+          </div>}
 
           <div className="row wrap lucy-clear">
             {(['inferred', 'history'] as const).map((kind) => (clearing === kind ? (

@@ -1,3 +1,5 @@
+import { Gate, gateOpen } from '../flags';
+
 /** Music and Selecta words, in plain language, with what each one changes and how to take it back.
  * Every claim here is about what this app really does. Nothing in it starts sound, changes a mix or
  * talks to the server: it's words only, kept in the page. */
@@ -327,8 +329,38 @@ export const GLOSSARY: GlossaryTerm[] = [
 
 const BY_ID = new Map(GLOSSARY.map((entry) => [entry.id, entry]));
 
+/** Terms for features a build can leave out. A term whose feature is off isn't explained anywhere,
+ * because nothing on screen can use the word. */
+const TERM_FLAGS: Record<string, Gate> = {
+  draft: { flag: 'drafts' },
+  export: { flag: 'export' },
+  'frozen-revision': { flag: 'export' },
+  stems: { flag: 'stems' },
+  'studio-lane': { flag: 'stem_studio' },
+  'studio-cell': { flag: 'stem_studio' },
+  solo: { flag: 'stem_studio' },
+  suggestion: { flag: 'stem_studio.auto_arrange' },
+  applied: { flag: 'stem_studio' },
+  request: { flag: 'requests' },
+  bridge: { flag: 'requests.bridges' },
+  steering: { flag: 'listen.steering' },
+  'energy-arc': { flag: 'mixes.shaping.energy_arc' },
+  'word-link': { flag: 'discover.word_links' },
+  'harmonic-match': { flag: 'discover.harmonic' },
+  'never-play': { flag: 'library.never_play' },
+  priority: { flag: 'library.priority' },
+};
+
+const termOn = (entry: GlossaryTerm) => !TERM_FLAGS[entry.id] || gateOpen(TERM_FLAGS[entry.id]);
+
+/** The terms this build has. */
+export function glossaryOn(): GlossaryTerm[] {
+  return GLOSSARY.filter(termOn);
+}
+
 export function glossaryTerm(id: string): GlossaryTerm | undefined {
-  return BY_ID.get(id);
+  const entry = BY_ID.get(id);
+  return entry && termOn(entry) ? entry : undefined;
 }
 
 /** Case and accents don't matter, so “cafe” finds “café” and curly quotes match straight ones. */
@@ -341,7 +373,7 @@ export function foldText(text: string): string {
 }
 
 /** Every word has to appear in the term, another name for it, or what it says. Name matches first. */
-export function searchGlossary(query: string, terms: GlossaryTerm[] = GLOSSARY): GlossaryTerm[] {
+export function searchGlossary(query: string, terms: GlossaryTerm[] = glossaryOn()): GlossaryTerm[] {
   const words = foldText(query).split(/\s+/).filter(Boolean);
   if (!words.length) return terms;
   return terms

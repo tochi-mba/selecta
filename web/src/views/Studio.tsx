@@ -1,5 +1,6 @@
 import { KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, Eta, MixData, MixItem, post } from '../api';
+import { flagOn } from '../flags';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
 import { Lane, LANES, Shape, SHAPES, Side, SIDES, StemDeck } from '../studio';
@@ -520,16 +521,18 @@ export function Studio(props: {
               Couldn’t load {missing.map(stemName).join(', ')}, so {missing.length === 1 ? 'that part' : 'those parts'} can’t be heard or changed here. The rest work as normal.
             </p>
           )}
-          <div className="row wrap">
-            <button disabled={saving || !!asking} aria-busy={asking === 'arrange'} onClick={() => void askSelecta(false)}>
-              {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
-            </button>
-            <button disabled={saving || !!asking} aria-busy={asking === 'tune'} onClick={() => void askSelecta(true)}>
-              {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
-            </button>
-            {before && <button disabled={saving} onClick={putBack}>Put it back</button>}
-            <TermHint term="suggestion" />
-          </div>
+          {flagOn('stem_studio.auto_arrange') && (
+            <div className="row wrap">
+              <button disabled={saving || !!asking} aria-busy={asking === 'arrange'} onClick={() => void askSelecta(false)}>
+                {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
+              </button>
+              <button disabled={saving || !!asking} aria-busy={asking === 'tune'} onClick={() => void askSelecta(true)}>
+                {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
+              </button>
+              {before && <button disabled={saving} onClick={putBack}>Put it back</button>}
+              <TermHint term="suggestion" />
+            </div>
+          )}
           {changes && (
             <ul className="studio-changes" role="status">
               {changes.map((line) => <li key={line}>{line}</li>)}

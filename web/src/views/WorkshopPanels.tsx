@@ -1,3 +1,5 @@
+import { flagOn } from '../flags';
+import { LinkIfThere } from '../shell/PageLink';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, FolderCheck, Folders, get, Jobs, post, Storage } from '../api';
 import { gb, storageWords } from '../lib';
@@ -176,7 +178,7 @@ export function NeedsYou({ jobs, readySongs, folders }: { jobs: Jobs; readySongs
             {items.map((item) => (
               <li key={item.key}>
                 <Status kind="needs-action">{item.words}</Status>
-                <PageLink to={item.to}>{item.action}</PageLink>
+                <LinkIfThere to={item.to}>{item.action}</LinkIfThere>
               </li>
             ))}
           </ul>
@@ -211,11 +213,11 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
                   ? <Status kind="queued">{left} transition{left === 1 ? '' : 's'} in line</Status>
                   : <Status kind="ready">Your current mix is done</Status>}
         </li>
-        <li>
+        {flagOn('render_line') && <li>
           <b>Drafts in the render line</b>
           {jobs.drafts_in_line ? <Status kind="queued">{jobs.drafts_in_line} waiting</Status> : <Status kind="planned">None</Status>}
           {jobs.drafts_in_line > 0 && <PageLink to="/mixes/mine">Change the order</PageLink>}
-        </li>
+        </li>}
         <li>
           <b>Analysis</b>
           {jobs.analysis.left === 0
@@ -226,19 +228,19 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
                 ? <Status kind="planned">Paused, {jobs.analysis.left} to go</Status>
                 : <Status kind="planned">{jobs.analysis.left} waiting</Status>}
         </li>
-        <li>
+        {flagOn('render.spare_time') && <li>
           <b>Spare time</b>
           <Status kind="planned">Trying out the best transitions across your library, once everything above is done{status.transitions_ready ? `. ${status.transitions_ready} clean so far` : ''}</Status>
-        </li>
+        </li>}
       </ul>
-      {jobs.storage_full && <p className="hint">Rendering waits until there’s room. <PageLink to="/workshop/storage">Change the limit</PageLink>.</p>}
+      {jobs.storage_full && <p className="hint">Rendering waits until there’s room. <LinkIfThere to="/workshop/storage">Change the limit</LinkIfThere>.</p>}
       {!!jobs.failed_seams.length && (
         <>
           <h3>Transitions that couldn’t be made</h3>
           <ul className="job-failures">
             {jobs.failed_seams.map((seam) => <li key={`${seam.from}-${seam.to}`}><Status kind="failed">{seam.from} into {seam.to}</Status>{seam.why ? <small className="hint"> {seam.why}</small> : null}</li>)}
           </ul>
-          <PageLink to="/mix/current/edit">Choose another move for them</PageLink>
+          <LinkIfThere to="/mix/current/edit">Choose another move for them</LinkIfThere>
         </>
       )}
       {!!jobs.failed_songs.length && (

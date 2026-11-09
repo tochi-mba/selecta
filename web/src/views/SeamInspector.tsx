@@ -1,5 +1,6 @@
 import { useContext, useEffect, useId, useRef, useState } from 'react';
 import { ApiError, get, MixItem, post, SeamOptions, SeamSettings } from '../api';
+import { flagOn, useFlags } from '../flags';
 import { clock, triedWords } from '../lib';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Action, Problem, Skeleton, Status, Workspace } from '../ui/controls';
@@ -235,7 +236,7 @@ function SeamEditor(props: {
         </fieldset>
       )}
 
-      {usesCues && (
+      {usesCues && flagOn('seam_inspector.exact_cues') && (
         <fieldset>
           <legend>Exact cues</legend>
           <div className="cue-row">
@@ -332,6 +333,9 @@ export function SeamInspector(props: {
   const leaveAfter = (seam.settings as SeamSettings & { leave_after?: number }).leave_after;
   const tempo = previous.bpm && item.bpm ? `${Math.round(previous.bpm)} to ${Math.round(item.bpm)} BPM` : null;
   const keys = previous.key && item.key ? `${previous.key} to ${item.key}` : null;
+  const on = useFlags();
+  const tabs = TABS.filter((item) => item.id !== 'studio' || on('stem_studio'));
+  const shownTab = tabs.some((item) => item.id === tab) ? tab : 'listen';
   return (
     <div className="inspector">
       <div className="inspector-identity">
@@ -343,19 +347,21 @@ export function SeamInspector(props: {
         <p className="inspector-state"><Status kind={facts.kind}>{facts.words}</Status></p>
       </div>
       <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} />
-      <Tabs label="This transition" tabs={TABS} current={tab} onChange={setTab}>
-        {tab === 'listen' && (
+      <Tabs label="This transition" tabs={tabs} current={shownTab} onChange={setTab}>
+        {shownTab === 'listen' && (
           <>
             <SeamLayersView seam={seam} names={names} />
             {state.status === 'ready' ? (
               <>
                 {/* keyed by what was rendered, so a clip from before a change can't be mistaken for this one */}
                 <AudioPreview key={state.key} src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} autoPlay={autoPlay} label={`${previous.title} into ${item.title}`} />
-                <div className="thumbs" role="group" aria-label="Rate this seam">
-                  <span>How was it?</span>
-                  <Action aria-pressed={state.rating === 'good'} run={() => rate('good')}>Good</Action>
-                  <Action aria-pressed={state.rating === 'bad'} run={() => rate('bad')}>Bad</Action>
-                </div>
+                {on('ratings') && (
+                  <div className="thumbs" role="group" aria-label="Rate this seam">
+                    <span>How was it?</span>
+                    <Action aria-pressed={state.rating === 'good'} run={() => rate('good')}>Good</Action>
+                    <Action aria-pressed={state.rating === 'bad'} run={() => rate('bad')}>Bad</Action>
+                  </div>
+                )}
               </>
             ) : state.status === 'failed' ? (
               <p className="hint">There’s nothing to hear yet, because this one couldn’t be made. Try another move under Change.</p>
@@ -371,8 +377,8 @@ export function SeamInspector(props: {
             )}
           </>
         )}
-        {tab === 'change' && <SeamEditor position={position} item={item} previous={previous} refreshMix={refreshMix} notify={notify} guard={guard} names={names} />}
-        {tab === 'studio' && (
+        {shownTab === 'change' && <SeamEditor position={position} item={item} previous={previous} refreshMix={refreshMix} notify={notify} guard={guard} names={names} />}
+        {shownTab === 'studio' && (
           <>
             <p className="hint">Both songs’ voice, drums, bass and melody on a grid you can hear straight away. Choose exactly what plays when, or let Selecta arrange it.</p>
             {capabilityError ? <Problem retry={() => setCapabilityAttempt((value) => value + 1)}>Couldn’t check Studio availability.</Problem> : !canStudio ? <Skeleton variant="inspector" label="Checking Studio availability" /> : !canStudio.available ? (
@@ -382,7 +388,7 @@ export function SeamInspector(props: {
             )}
           </>
         )}
-        {tab === 'details' && (
+        {shownTab === 'details' && (
           <div className="report">
             {state.status === 'ready' && <h3 className="report-head">What will play</h3>}
             {state.status === 'ready' && state.label && <p>{state.label}</p>}

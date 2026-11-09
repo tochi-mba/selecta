@@ -461,8 +461,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
 
 /** The tag on a song a request put in the mix, wherever that song is shown. */
 export function RequestTag({ item }: { item: Pick<MixItem, 'from_request'> }) {
+  const on = useFlag('requests');
   const mark = item.from_request;
-  if (!mark) return null;
+  if (!mark || !on) return null;
   return mark.kind === 'bridge'
     ? <span className="request-tag bridge" title="Selecta added this so your request would fit">{mark.for ? `Bridge to ${mark.for}` : 'Bridge to a request'}</span>
     : <span className="request-tag" title="This song is here because it was requested">Requested</span>;
@@ -725,6 +726,7 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
 
 /** Ask for a song, and see what each one is waiting for. */
 export function RequestsPanel() {
+  const bridges = useFlag('requests.bridges');
   const state = useContext(RequestsContext);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<SongRow[] | null>(null);
@@ -903,9 +905,9 @@ export function RequestsPanel() {
                     </div>
                   </div>
                 )}
-                {(CAN_BRIDGE.has(stage) || CAN_FORCE.has(stage)) && (
+                {((bridges && CAN_BRIDGE.has(stage)) || CAN_FORCE.has(stage)) && (
                   <div className="request-force row wrap">
-                    {CAN_BRIDGE.has(stage) && (
+                    {bridges && CAN_BRIDGE.has(stage) && (
                       <button
                         aria-expanded={finding === request.id}
                         title="Goes through every song in your library for the best way to reach this one"

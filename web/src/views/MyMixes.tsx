@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DraftList, get, MixData } from '../api';
+import { useFlags } from '../flags';
 import { orderOf } from '../state/readiness';
 import { CurrentMix, NoCurrentMix } from './CurrentMix';
 import { Drafts } from './Drafts';
@@ -66,10 +67,11 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
     try { window.localStorage.removeItem(RECENT_DRAFT_KEY); } catch { /* storage disabled */ }
   };
 
+  const on = useFlags();
   return (
     <main className="page mixes my-mixes" id="main">
       <h1 className="display small">My Mixes</h1>
-      {recent && <section className="panel stack" aria-label="Continue working">
+      {recent && on('mymixes.continue_working') && on('editor') && <section className="panel stack" aria-label="Continue working">
         <h2>Continue working</h2>
         <p>Return to <b>{recent.name}</b> at its last saved song order. This only opens the editor - no playback starts and no pending Studio edits are applied.</p>
         <div className="row wrap">
@@ -83,7 +85,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       {mix.length > 0
         ? <CurrentMix prominent mix={mix} mixName={mixName} now={now} player={player} setView={setView} />
         : <NoCurrentMix />}
-      <Drafts notify={notify} openDraft={openDraft} playDraft={playDraft} setView={setView} />
+      {on('drafts') && <Drafts notify={notify} openDraft={openDraft} playDraft={playDraft} setView={setView} />}
     </main>
   );
 }

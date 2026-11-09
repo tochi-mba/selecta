@@ -1,3 +1,4 @@
+import { flagOn } from '../flags';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
@@ -368,7 +369,7 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
             {busy ? 'Rendering…' : state.status === 'failed' ? 'Try again' : 'Render it now'}
           </button>
         )}
-        {drafts.length ? (
+        {flagOn('drafts') && drafts.length ? (
           <Menu label="Add both to…">
             <Action role="menuitem" run={() => onAdd(link, move, null)}>Your current mix</Action>
             {drafts.map((draft) => (
@@ -378,7 +379,7 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
         ) : (
           <Action working="Adding…" run={() => onAdd(link, move, null)}>Add both to the mix</Action>
         )}
-        {state.status === 'ready' && (
+        {flagOn('ratings') && state.status === 'ready' && (
           <span className="pair" role="group" aria-label="Rate this link">
             <Action aria-pressed={state.rating === 'good'} run={() => rate('good')}>Good</Action>
             <Action aria-pressed={state.rating === 'bad'} run={() => rate('bad')}>Bad</Action>
@@ -438,7 +439,7 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
   useVisiblePoll(load, 6000, tab === 'words');
 
   useEffect(() => {
-    get<DraftList>('/drafts').then((list) => setDrafts(list.drafts ?? [])).catch(() => {});
+    if (flagOn('drafts')) get<DraftList>('/drafts').then((list) => setDrafts(list.drafts ?? [])).catch(() => {});
   }, []);
 
   // Both songs and their transition must insert atomically. The mix-order
@@ -463,7 +464,7 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
       if (draft === null) {
         setMixData(answer);
         notify(`Added “${link.phrase}” to your mix.`, true);
-        setView('Edit');
+        if (flagOn('editor')) setView('Edit');
       } else {
         notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`);
       }
