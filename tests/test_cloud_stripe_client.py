@@ -44,6 +44,11 @@ def test_create_checkout_session_sends_subscription_fields() -> None:
         assert parse_qs(request.content.decode()) == {
             "mode": ["subscription"],
             "customer": ["cus_123"],
+            # Stripe Tax: an address to tax by, saved to the customer, and VAT ids for businesses.
+            "billing_address_collection": ["required"],
+            "automatic_tax[enabled]": ["true"],
+            "tax_id_collection[enabled]": ["true"],
+            "customer_update[address]": ["auto"],
             "client_reference_id": ["workspace-1"],
             "line_items[0][price]": ["price_standard_month"],
             "line_items[0][quantity]": ["1"],
