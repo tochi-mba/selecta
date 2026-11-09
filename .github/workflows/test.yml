@@ -94,6 +94,8 @@ jobs:
           tests/test_operation_identity.py tests/test_flags.py tests/test_flag_server.py
           -q --cov=selecta --cov-branch --cov-report=json:cloud-coverage.json
           --cov-report=term-missing:skip-covered --cov-fail-under=0
+      - name: Coverage gate (report only until the module tests land; then --enforce)
+        run: uv run python tests/coverage_gate.py cloud-coverage.json
       - name: Keep the cloud coverage report
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
