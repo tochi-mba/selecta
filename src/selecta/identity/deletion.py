@@ -12,7 +12,6 @@ and fencing generation, so an expired worker can't acknowledge a step claimed by
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -170,6 +169,7 @@ def claim_next(
         .values(
             status="running",
             lease_id=lease_id,
+            lease_owner=worker_id,
             lease_generation=generation,
             lease_expires_at=expires,
             attempt_count=attempt_count,
@@ -225,6 +225,7 @@ def complete_step(conn: Connection, claim: DeletionClaim, *, now: float | None =
             status="complete" if done else "pending",
             available_at=available_at,
             lease_id=None,
+            lease_owner=None,
             lease_expires_at=None,
             last_error=None,
             updated_at=moment,
@@ -253,6 +254,7 @@ def retry_step(
             status="pending",
             available_at=retry_at,
             lease_id=None,
+            lease_owner=None,
             lease_expires_at=None,
             last_error=type(error).__name__[:128],
             updated_at=moment,
@@ -267,18 +269,14 @@ def run_once(
     effects: DeletionEffects,
     *,
     lease_seconds: float = LEASE_SECONDS,
-    clock: Callable[[], float] | None = None,
 ) -> bool:
     """Claim and run at most one step. True means a step was claimed, including a failed attempt.
 
     Effects receive an idempotency key (`workflow-id:step-index`) because retry after an external
     success but before the acknowledgement is an expected crash-recovery path.
     """
-    now = clock
     with transaction(engine) as conn:
-        claim = claim_next(
-            conn, worker_id, lease_seconds=lease_seconds, now=now() if now else None
-        )
+        claim = claim_next(conn, worker_id, lease_seconds=lease_seconds)
     if claim is None:
         return False
 
@@ -287,9 +285,9 @@ def run_once(
         effects.apply(claim.step, claim.plan, f"{claim.workflow_id}:{index}")
     except Exception as problem:
         with transaction(engine) as conn:
-            retry_step(conn, claim, problem, now=now() if now else None)
+            retry_step(conn, claim, problem)
         return True
 
     with transaction(engine) as conn:
-        complete_step(conn, claim, now=now() if now else None)
+        complete_step(conn, claim)
     return True

@@ -1,7 +1,7 @@
 # ADR-0407 - Real-time updates over server-sent events
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
+- **Implementation:** 0/4 Implemented; 1/4 In progress; 3/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 6. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -13,7 +13,7 @@
 
 The site polls many endpoints every 1.5–5 seconds. At a thousand online users that is hundreds of mostly-unchanged requests per second, and multi-device playback needs pushed state.
 
-This ADR records a proposed decision. Nothing in it is implemented or measured yet; numbers come from the proposal and must be re-checked when the work starts.
+The first workspace-scoped `/api/events` endpoint reads the durable job outbox and resumes from `Last-Event-ID`. It currently polls the outbox and streams job events only; Postgres listener fan-out, other event families, browser integration and load measurements remain outstanding.
 
 ## Decision
 
@@ -32,7 +32,7 @@ Pages update within a second of real changes, with far less load, and keep worki
 
 ## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0407-01 - Event stream.** **Acceptance:** Events arrive in order with ids; reconnect resumes without gaps. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0407-01 - Event stream.** **Acceptance:** Events arrive in order with ids; reconnect resumes without gaps. **Required verification:** Integration test. **Implementation:** In progress; `/api/events` emits ordered workspace job-outbox events, resumes from `Last-Event-ID`, and stops when the token expires or the client disconnects. Other event families and integration verification remain; **Independently Verified:** No.
 2. **SC-0407-02 - Fan-out.** **Acceptance:** An event raised on one instance reaches clients on every instance. **Required verification:** Multi-instance test. **Implementation:** Not started; **Independently Verified:** No.
 3. **SC-0407-03 - Fallback.** **Acceptance:** With the stream blocked, polling keeps pages correct. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
 4. **SC-0407-04 - Load.** **Acceptance:** SSE connection counts meet the L3 targets. **Required verification:** k6 test. **Implementation:** Not started; **Independently Verified:** No.

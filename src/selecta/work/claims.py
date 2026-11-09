@@ -15,7 +15,8 @@ so claimers queue on that one row only for the final statement.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -43,6 +44,8 @@ class Claim:
     fencing_token: int
     lease_expires_at: float
     boosted: bool = False
+    input_urls: tuple[Mapping[str, str], ...] = field(default_factory=tuple)
+    output_prefix: str | None = None
 
 
 def _job_order():

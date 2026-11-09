@@ -165,6 +165,10 @@ class WorkerRunner:
                 lambda done, total: self.store.progress(
                     claim.attempt_id, claim.fencing_token, done, total
                 ),
+                input_urls=claim.input_urls,
+                output_prefix=claim.output_prefix,
+                input_downloader=getattr(self.store, "download_input", None),
+                artifact_publisher=getattr(self.store, "publish_artifact", None),
             )
             heartbeat_stop = threading.Event()
             heartbeat = threading.Thread(
@@ -219,12 +223,16 @@ class WorkerRunner:
             else:
                 cost = max(self.clock() - started, 0.0)
                 output = value if isinstance(value, JobOutput) else JobOutput(result=value)
+                artifacts_by_input = {
+                    (item.kind, item.input_hash): item
+                    for item in (*context.artifacts.outputs, *output.artifacts)
+                }
                 try:
                     completed = self.store.complete(
                         claim.attempt_id,
                         claim.fencing_token,
                         result=output.result,
-                        artifacts=output.artifacts,
+                        artifacts=tuple(artifacts_by_input.values()),
                         cost_s=cost,
                     )
                 except JobCancelled as problem:
@@ -272,7 +280,9 @@ class WorkerRunner:
                 log.warning("Heartbeat failed for %s", claim.attempt_id, exc_info=True)
                 continue
             if state.cancel_requested:
-                signals.stop_for(signals.cancel, state.cancel_reason or "The attempt was asked to stop.")
+                signals.stop_for(
+                    signals.cancel, state.cancel_reason or "The attempt was asked to stop."
+                )
                 return
 
     def _fail(

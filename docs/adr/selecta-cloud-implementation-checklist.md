@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 9 In progress, 119 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 11 In progress, 117 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -136,7 +136,7 @@
 
 ## [ADR-0407 - Real-time updates over server-sent events](adr-0407-realtime-updates-sse.md)
 
-- [ ] **SC-0407-01 - Event stream.** Acceptance: Events arrive in order with ids; reconnect resumes without gaps. Required verification: Integration test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0407-01 - Event stream.** Acceptance: Events arrive in order with ids; reconnect resumes without gaps. Required verification: Integration test. Implementation: In progress; `/api/events` streams ordered, workspace-filtered durable job outbox records and resumes from `Last-Event-ID`; upload, entitlement, flag, playback and Lucy fan-out plus stream integration verification remain. Independently verified: No.
 - [ ] **SC-0407-02 - Fan-out.** Acceptance: An event raised on one instance reaches clients on every instance. Required verification: Multi-instance test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0407-03 - Fallback.** Acceptance: With the stream blocked, polling keeps pages correct. Required verification: Playwright test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0407-04 - Load.** Acceptance: SSE connection counts meet the L3 targets. Required verification: k6 test. Implementation: Not started; Independently verified: No.
@@ -173,7 +173,7 @@
 ## [ADR-0412 - Privacy, retention and the deletion ledger](adr-0412-privacy-retention-and-deletion.md)
 
 - [ ] **SC-0412-01 - Privacy notice and ICO.** Acceptance: Notice published; ICO fee paid. Required verification: Doc and receipt on file. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0412-02 - Deletion workflow.** Acceptance: Deletion removes objects and rows in batches and releases quota. Required verification: Integration test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0412-02 - Deletion workflow.** Acceptance: Deletion removes objects and rows in batches and releases quota. Required verification: Integration test. Implementation: In progress; account deletion now revokes sessions, hides the account, records its deletion plan and enqueues a leased, fenced, retryable workflow with a 30-day erase delay. Concrete billing, object, row-cleanup and restore-ledger effect adapters remain. Independently verified: No.
 - [ ] **SC-0412-03 - Restore safety.** Acceptance: After a restore, replaying the ledger removes data deleted since the backup. Required verification: Restore drill. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0412-04 - Data export.** Acceptance: Export includes originals, mixes and settings JSON. Required verification: Playwright test. Implementation: Not started; Independently verified: No.
 

@@ -41,7 +41,7 @@ This needs a UK media/IP lawyer before paid launch. Facts that shape the design:
 
 ### 12.4 Data lifecycle
 
-Retention table published in the privacy notice: originals until deleted (or 12 months after a lapsed account stays over quota, with warnings); derived data evicted under budgets; exports per plan; Lucy conversations until deleted (or 24 months idle); audit logs 2 years; database backups 30 days. Deleted songs and accounts disappear at once, are physically erased from live storage after a 30-day recovery window, and from backups within a further 30 days, so erasure completes within 60 days; the privacy notice says so. **Deletion survives restores**: the `deletions` ledger is replayed after any database restore before the service reopens, so a restored backup can't resurrect deleted users or files.
+Retention table published in the privacy notice: originals until deleted (or 12 months after a lapsed account stays over quota, with warnings); derived data evicted under budgets; exports per plan; Lucy conversations until deleted (or 24 months idle); audit logs 2 years; database backups 30 days. The account deletion request immediately hides the account and revokes sessions. A durable workflow is now persisted with per-step leases, fencing, retry backoff and a 30-day delay before final account erasure. Physical file deletion, all row-cleanup effects, the deletion ledger and replay after a database restore are still required before claiming the proposed 60-day erasure guarantee.
 
 ### 12.5 Open source and licensing of Selecta itself
 

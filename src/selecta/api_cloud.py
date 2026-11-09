@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import urlsplit
 
+import sqlalchemy as sa
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -41,6 +42,7 @@ from selecta.identity.tokens import (
 from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
+from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.storage import api as storage_api
 from selecta.usage import quota
 from selecta.work.schema import outbox_events
@@ -316,7 +318,7 @@ def create_cloud_app(
                         f"{json.dumps(frame, separators=(',', ':'), default=str)}\n\n"
                     )
                 now = time.monotonic()
-                if now - heartbeat_at >= 15:
+                if now - heartbeat_at >= 20:
                     yield ": keep-alive\n\n"
                     heartbeat_at = now
                 await asyncio.sleep(0.5 if batch else 2.0)
@@ -327,7 +329,6 @@ def create_cloud_app(
             headers={
                 "Cache-Control": "no-cache, no-transform",
                 "X-Accel-Buffering": "no",
-                "Connection": "keep-alive",
             },
         )
 
@@ -515,6 +516,12 @@ def create_cloud_app(
         principal_for=_principal,
     )
     storage_api.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        principal_for=_principal,
+    )
+    cloud_assets_routes.install_routes(
         app,
         engine=engine,
         current_claims=current_claims,

@@ -30,8 +30,8 @@ schema to the configured PostgreSQL database.
 
 The automated Cloud bootstrap test guards against the local startup hooks running in Cloud mode.
 
-The shared migration set currently contains 50 tables and has been exercised through SQLite
-upgrade, schema comparison and rollback while preserving a legacy `songs` table. PostgreSQL
+The shared migration set currently contains 51 tables across five revisions and has been exercised
+through SQLite upgrade, schema comparison and rollback while preserving a legacy `songs` table. PostgreSQL
 migration execution and row-level security are not yet verified or implemented. Stripe session
 creation and webhook reconciliation are wired, and Cloud uploads can reserve quota, resume
 multipart transfers, check the actual audio metadata and accept objects into workspace storage.
@@ -44,6 +44,14 @@ storage; moving that work to remote workers remains part of the worker gateway e
 gateway is now a standalone `selecta gateway` service with separate host allowlisting, worker
 secrets, readiness checks and R2 URL signing. Long-poll notifications, deploy manifests, worker
 images and end-to-end job handlers remain outstanding.
+
+Cloud also exposes a workspace-scoped `/api/events` stream for ordered durable job-outbox updates;
+clients can resume with `Last-Event-ID`. It currently polls the outbox and has not yet been
+connected to the Cloud UI or expanded to uploads, entitlements and playback events.
+
+Account deletion now hides the account and revokes sessions immediately, then records a durable,
+leased workflow that retries cleanup effects and delays final erasure for 30 days. Stripe and R2
+deletion adapters, full row cleanup and post-restore deletion replay remain to be connected.
 
 ### 4.2 Component map
 

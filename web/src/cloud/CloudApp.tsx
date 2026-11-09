@@ -13,7 +13,8 @@ type Account = {
 type UploadEntry = { index: number; name: string; refused: string | null; duplicate_of: string | null; same_as: string | null; session: { id: string; name: string; size: number; part_size: number; part_count: number; status: string } | null };
 type UploadResult = { uploads: UploadEntry[] };
 type UploadStatus = { upload: { id: string; name: string; size: number; status: string; error: string | null }; uploaded_parts: { number: number; etag: string; size: number }[] };
-type Page = 'home' | 'uploads' | 'billing';
+type Page = 'home' | 'library' | 'uploads' | 'billing';
+type Asset = { id: string; name: string; size: number; sha256: string | null; format: string | null; duration_seconds: number | null; sample_rate: number | null; channels: number | null; created_at: number };
 const apiOrigin = (import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
 const consentVersion = import.meta.env.VITE_CHECKOUT_CONSENT_VERSION ?? '';
 
@@ -54,7 +55,7 @@ export function CloudApp() {
   const [account, setAccount] = useState<Account | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
-  const [page, setPage] = useState<Page>(() => window.location.pathname.includes('/account/billing') ? 'billing' : 'home');
+  const [page, setPage] = useState<Page>(() => window.location.pathname.includes('/account/billing') ? 'billing' : window.location.pathname.includes('/library') ? 'library' : 'home');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -184,15 +185,17 @@ export function CloudApp() {
         <button className="cloud-brand" aria-label="Selecta Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark">S</span><span>Selecta<span className="cloud-brand-sub">CLOUD</span></span></button>
         <nav aria-label="Cloud workspace">
           <button aria-current={page === 'home' ? 'page' : undefined} onClick={() => choosePage('home')}>Overview</button>
-          <button aria-current={page === 'uploads' ? 'page' : undefined} onClick={() => choosePage('uploads')}>Your music</button>
+          <button aria-current={page === 'library' ? 'page' : undefined} onClick={() => choosePage('library')}>Library</button>
+          <button aria-current={page === 'uploads' ? 'page' : undefined} onClick={() => choosePage('uploads')}>Add music</button>
           <button aria-current={page === 'billing' ? 'page' : undefined} onClick={() => choosePage('billing')}>Plan & billing</button>
         </nav>
         <div className="cloud-rail-bottom"><span>{user.email}</span><button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{page === 'home' ? 'Your music workspace' : page === 'uploads' ? 'Your music' : 'Plan & billing'}</h1></div><span className="cloud-plan-chip">{account?.entitlement.plan ?? 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{page === 'home' ? 'Your music workspace' : page === 'library' ? 'Your library' : page === 'uploads' ? 'Add music' : 'Plan & billing'}</h1></div><span className="cloud-plan-chip">{account?.entitlement.plan ?? 'Free'} plan</span></header>
         <Feedback error={error} notice={notice} />
         {page === 'home' && account && <Overview account={account} used={used} limit={limit} percent={pct} go={choosePage} />}
+        {page === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} />}
         {page === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} />}
         {page === 'billing' && account && <Billing account={account} used={used} limit={limit} percent={pct} busy={busy} onCheckout={(plan, interval) => void openCheckout(plan, interval)} onPortal={() => void openPortal()} />}
         <footer className="cloud-footer">Selecta Cloud · Your originals remain private to your workspace.</footer>
@@ -209,13 +212,48 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
 function Overview({ account, used, limit, percent, go }: { account: Account; used: number; limit: number; percent: number; go: (page: Page) => void }) {
   return <>
     <section className="cloud-hero"><div><p className="cloud-eyebrow">MADE FOR YOUR NEXT SET</p><h2>Your library starts here.</h2><p>Add your tracks and Selecta will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>
-    <div className="cloud-cards"><StorageCard used={used} limit={limit} percent={percent} /><section className="cloud-card"><p className="cloud-eyebrow">CURRENT PLAN</p><h2>{account.entitlement.plan[0]?.toUpperCase()}{account.entitlement.plan.slice(1)}</h2><p>Storage and processing limits are managed with your plan.</p><button onClick={() => go('billing')}>Manage plan</button></section><section className="cloud-card"><p className="cloud-eyebrow">NEXT STEP</p><h2>Bring your tracks</h2><p>Upload privately and resume interrupted transfers.</p><button onClick={() => go('uploads')}>Open music library</button></section></div>
+    <div className="cloud-cards"><StorageCard used={used} limit={limit} percent={percent} /><section className="cloud-card"><p className="cloud-eyebrow">CURRENT PLAN</p><h2>{account.entitlement.plan[0]?.toUpperCase()}{account.entitlement.plan.slice(1)}</h2><p>Storage and processing limits are managed with your plan.</p><button onClick={() => go('billing')}>Manage plan</button></section><section className="cloud-card"><p className="cloud-eyebrow">YOUR MUSIC</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section></div>
     <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">PREMIUM FEATURE</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => go('billing')}>{account.feature_locks.rooms === 'premium' ? 'Explore Premium' : 'View plans'}</button></section>
   </>;
 }
 
 function StorageCard({ used, limit, percent }: { used: number; limit: number; percent: number }) {
   return <section className="cloud-card"><div className="cloud-card-heading"><div><p className="cloud-eyebrow">STORAGE</p><h2>{bytes(used)} <small>of {bytes(limit)}</small></h2></div><span>{Math.round(percent)}%</span></div><div className="cloud-meter" role="progressbar" aria-label="Storage used" aria-valuenow={Math.round(percent)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${percent}%` }} /></div><p>Unused space is ready when you are.</p></section>;
+}
+
+function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api: <T,>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>; workspaceId: string; setError: (value: string) => void; refreshAccount: () => Promise<void>; go: (page: Page) => void }) {
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState('');
+  const load = useCallback(async (cursor?: string, append = false) => {
+    setLoading(true); setError('');
+    try {
+      const query = new URLSearchParams({ limit: '50' });
+      if (cursor) query.set('cursor', cursor);
+      const page = await api<{ assets: Asset[]; next_cursor: string | null }>(`/assets?${query}`, {}, workspaceId);
+      setAssets((old) => append ? [...old, ...page.assets] : page.assets);
+      setNextCursor(page.next_cursor);
+    } catch (problem) { setError((problem as Error).message); }
+    finally { setLoading(false); }
+  }, [api, setError, workspaceId]);
+  useEffect(() => { void load(); }, [load]);
+  const remove = async (asset: Asset) => {
+    if (!window.confirm(`Remove ${asset.name} from your library?`)) return;
+    setBusyId(asset.id); setError('');
+    try {
+      await api(`/assets/${encodeURIComponent(asset.id)}`, { method: 'DELETE' }, workspaceId);
+      setAssets((old) => old.filter((entry) => entry.id !== asset.id));
+      await refreshAccount();
+    } catch (problem) { setError((problem as Error).message); }
+    finally { setBusyId(''); }
+  };
+  return <section className="cloud-library"><div className="cloud-library-heading"><div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Uploaded audio stays private. Playback and mixing will appear here as Cloud processing is added.</p></div><div><button onClick={() => void load()} disabled={loading}>Refresh</button><button className="primary" onClick={() => go('uploads')}>Upload tracks</button></div></div>
+    {loading && assets.length === 0 ? <p>Loading your library…</p> : assets.length === 0 ? <div className="cloud-card"><h2>Your library is empty</h2><p>Start by uploading tracks from your device.</p><button className="primary" onClick={() => go('uploads')}>Add tracks</button></div> : <>
+      <div className="cloud-library-list">{assets.map((asset) => <article className="cloud-library-row" key={asset.id}><span className="cloud-library-icon" aria-hidden="true">♪</span><div className="cloud-library-meta"><strong>{asset.name}</strong><span>{asset.format?.toUpperCase() ?? 'Audio'} · {bytes(asset.size)}{asset.duration_seconds ? ` · ${Math.round(asset.duration_seconds / 60)} min` : ''}</span></div><button onClick={() => void remove(asset)} disabled={busyId === asset.id}>{busyId === asset.id ? 'Removing…' : 'Remove'}</button></article>)}</div>
+      {nextCursor && <button onClick={() => void load(nextCursor, true)} disabled={loading}>{loading ? 'Loading…' : 'Load more'}</button>}
+    </>}
+  </section>;
 }
 
 function Billing({ account, used, limit, percent, busy, onCheckout, onPortal }: { account: Account; used: number; limit: number; percent: number; busy: boolean; onCheckout: (plan: 'standard' | 'premium', interval: 'month' | 'year') => void; onPortal: () => void }) {

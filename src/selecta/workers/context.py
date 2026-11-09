@@ -115,6 +115,11 @@ class JobContext:
         scratch: Path,
         signals: AttemptSignals,
         report_progress: Callable[[float, float | None], None],
+        *,
+        input_urls: tuple[Mapping[str, str], ...] = (),
+        output_prefix: str | None = None,
+        input_downloader: Callable[[JobContext, str | int, Path | None], Path] | None = None,
+        artifact_publisher: Callable[..., ArtifactOutput] | None = None,
     ):
         self.job = job
         self.attempt_id = attempt_id
@@ -122,11 +127,53 @@ class JobContext:
         self.scratch = scratch
         self.signals = signals
         self.artifacts = CollectingSink()
+        self.input_urls = input_urls
+        """Short-lived input URLs supplied by a remote gateway; empty for local workers."""
+        self.output_prefix = output_prefix
+        """Attempt-scoped derived-object prefix, when the gateway provides one."""
+        self._input_downloader = input_downloader
+        self._artifact_publisher = artifact_publisher
         self.last_progress_at: float | None = None
         """Monotonic time of the last progress report; None until the handler reports any."""
         self._report = report_progress
         self._sent_at = 0.0
         self._lock = threading.Lock()
+
+    def download_input(self, selector: str | int, destination: Path | None = None) -> Path:
+        """Download a claimed input to scratch using its short-lived signed URL.
+
+        ``selector`` is an input's declared `name` or its zero-based position. Local-mode
+        handlers continue to use their existing paths; this method is available to injected
+        remote handlers without adding cloud URLs to the job's durable input reference.
+        """
+        if self._input_downloader is None:
+            raise RuntimeError("This worker context has no remote input downloader.")
+        return self._input_downloader(self, selector, destination)
+
+    def publish_artifact(
+        self,
+        kind: str,
+        input_hash: str,
+        source: Path,
+        name: str,
+        *,
+        provenance: Mapping[str, Any] | None = None,
+        protected: bool = False,
+    ) -> ArtifactOutput:
+        """Upload one artifact via a signed attempt-scoped slot and queue its manifest row."""
+        if self._artifact_publisher is None:
+            raise RuntimeError("This worker context has no remote artifact publisher.")
+        output = self._artifact_publisher(
+            self,
+            kind,
+            input_hash,
+            source,
+            name,
+            provenance=provenance,
+            protected=protected,
+        )
+        self.artifacts.outputs.append(output)
+        return output
 
     def progress(self, done: float, total: float | None = None) -> None:
         """Real work units done (songs, windows, seconds of audio), never elapsed time."""

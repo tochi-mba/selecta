@@ -52,6 +52,7 @@ account_deletion_workflows = sa.Table(
     sa.Column("status", sa.String(16), nullable=False, server_default=sa.text("'pending'")),
     sa.Column("available_at", Epoch, nullable=False),
     sa.Column("lease_id", Id),
+    sa.Column("lease_owner", sa.String(64)),
     sa.Column("lease_generation", sa.Integer, nullable=False, server_default=sa.text("0")),
     sa.Column("lease_expires_at", Epoch),
     sa.Column("attempt_count", sa.Integer, nullable=False, server_default=sa.text("0")),

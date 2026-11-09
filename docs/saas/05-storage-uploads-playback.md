@@ -41,8 +41,11 @@ The API completes the multipart object itself, downloads it to temporary disk fo
 and metadata probe, then verifies the copied original's byte count and checksum before accepting
 the asset and committing the reservation. This first slice rejects unsupported formats and
 duration/metadata problems, but it does not yet run a decode test or isolate hostile media parsing
-in a constrained worker. The full Cloud library, playback, and download flows are not implemented;
-an accepted asset row is not yet a playable song record. R2 credentials are read from
+in a constrained worker. The workspace-scoped asset API exposes `GET /api/assets` with cursor
+pagination, `GET /api/assets/{asset_id}`, and `DELETE /api/assets/{asset_id}`. Delete hides the
+asset immediately and releases quota while recording physical deletion for retention handling. The
+full Cloud library, playback, and download flows are not implemented; an accepted asset row is not
+yet a playable song record. R2 credentials are read from
 `SELECTA_R2_ACCOUNT_ID`, `SELECTA_R2_ACCESS_KEY_ID`, `SELECTA_R2_SECRET_ACCESS_KEY`, and optional
 `SELECTA_R2_JURISDICTION` / bucket-name variables. The staging bucket CORS policy must allow the
 Cloud web origin to `PUT` signed parts.
