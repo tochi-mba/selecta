@@ -58,6 +58,8 @@
         "GET /api/assets/{asset_id}",
         "DELETE /api/assets/{asset_id}",
         "GET /api/assets/{asset_id}/playback-url",
+        "POST /api/assets/{asset_id}/playback-proxy",
+        "GET /api/assets/{asset_id}/playback-proxy",
         "POST /api/storage/derived-playback-url"
       ],
       "modes": ["cloud"],

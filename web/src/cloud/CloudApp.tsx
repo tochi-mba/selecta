@@ -295,7 +295,21 @@ function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api:
     setPlayback(null);
     setBusyId(asset.id); setError('');
     try {
-      const result = await api<{ url: string }>(`/assets/${encodeURIComponent(asset.id)}/playback-url`, {}, workspaceId);
+      const path = `/assets/${encodeURIComponent(asset.id)}/playback-proxy`;
+      type ProxyStatus = { status: string; url?: string };
+      let result = await api<ProxyStatus>(path, { method: 'POST' }, workspaceId);
+      const deadline = Date.now() + 300_000;
+      while (result.status !== 'ready') {
+        if (generation !== playbackGeneration.current) return;
+        if (['failed', 'cancelled', 'quarantined', 'not_requested'].includes(result.status)) {
+          throw new Error('Audio preparation could not finish. Try Listen again.');
+        }
+        if (Date.now() >= deadline) throw new Error('Audio is still being prepared. Try Listen again shortly.');
+        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+        if (generation !== playbackGeneration.current) return;
+        result = await api<ProxyStatus>(path, {}, workspaceId);
+      }
+      if (!result.url) throw new Error('The prepared audio link is unavailable.');
       if (generation !== playbackGeneration.current) return;
       refreshedUrl.current = false;
       restorePlayback.current = null;
@@ -322,7 +336,8 @@ function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api:
     };
     setError('');
     try {
-      const result = await api<{ url: string }>(`/assets/${encodeURIComponent(current.id)}/playback-url`, {}, workspaceId);
+      const result = await api<{ status: string; url?: string }>(`/assets/${encodeURIComponent(current.id)}/playback-proxy`, {}, workspaceId);
+      if (result.status !== 'ready' || !result.url) throw new Error('The prepared audio is no longer available. Try Listen again.');
       if (generation !== playbackGeneration.current) return;
       setPlayback({ ...current, url: result.url });
     } catch (problem) {
