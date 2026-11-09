@@ -85,19 +85,8 @@ class OutputSlotsRequest(BaseModel):
 
 
 def _job_payload(job: Job) -> dict[str, Any]:
-    """Stable JSON representation; the worker receives only the job's declared input reference."""
-    return {
-        "id": job.id,
-        "workspace_id": job.workspace_id,
-        "type": job.type,
-        "pool": job.pool,
-        "lane": job.lane,
-        "urgency": job.urgency,
-        "input_ref": job.input_ref,
-        "est_cost_s": job.est_cost_s,
-        "max_run_s": job.max_run_s,
-        "attempt_count": job.attempt_count,
-    }
+    """Full worker-safe row so a remote runner can reconstruct the existing `Job` value."""
+    return asdict(job)
 
 
 def _safe_outputs(outputs: list[ArtifactRequest], workspace_id: str, attempt_id: str) -> None:
@@ -201,6 +190,20 @@ def install_routes(
             raise HTTPException(status_code=409, detail={"code": "stale_lease"})
         return attempt
 
+    def issue_worker_token(worker_id: str, pool: str) -> str:
+        issued = int(now())
+        return jwt.encode(
+            {
+                "sub": worker_id,
+                "pool": pool,
+                "aud": TOKEN_AUDIENCE,
+                "iat": issued,
+                "exp": issued + token_ttl_s,
+            },
+            token_secret,
+            algorithm="HS256",
+        )
+
     @app.post("/internal/workers/register", status_code=201)
     def register_worker(
         body: WorkerRegistration,
@@ -229,19 +232,16 @@ def install_routes(
             store.register_worker(caps, worker_id=worker_id)
         except (TypeError, ValueError) as error:
             raise HTTPException(status_code=400, detail={"code": "invalid_worker_caps"}) from error
-        issued = int(now())
-        token = jwt.encode(
-            {
-                "sub": worker_id,
-                "pool": body.pool,
-                "aud": TOKEN_AUDIENCE,
-                "iat": issued,
-                "exp": issued + token_ttl_s,
-            },
-            token_secret,
-            algorithm="HS256",
-        )
+        token = issue_worker_token(worker_id, body.pool)
         return {"worker_id": worker_id, "token": token, "expires_in": token_ttl_s}
+
+    @app.post("/internal/workers/refresh")
+    def refresh_worker_token(claims: dict[str, Any] = Depends(worker_claims)):  # noqa: B008
+        registered_caps(claims)
+        return {
+            "token": issue_worker_token(claims["sub"], claims["pool"]),
+            "expires_in": token_ttl_s,
+        }
 
     @app.post("/internal/workers/claim")
     def claim(claims: dict[str, Any] = Depends(worker_claims)):  # noqa: B008
@@ -292,9 +292,23 @@ def install_routes(
         authorized_attempt(attempt_id, claims, body.fencing_token)
         try:
             state = store.heartbeat(attempt_id, body.fencing_token)
+            store.touch_worker(claims["sub"])
         except StaleLease as error:
             raise HTTPException(status_code=409, detail={"code": "stale_lease"}) from error
         return asdict(state)
+
+    @app.post("/internal/workers/attempts/{attempt_id}/release")
+    def release(
+        attempt_id: str,
+        body: AttemptRequest,
+        claims: dict[str, Any] = Depends(worker_claims),  # noqa: B008
+    ):
+        authorized_attempt(attempt_id, claims, body.fencing_token)
+        try:
+            job = store.release(attempt_id, body.fencing_token)
+        except StaleLease as error:
+            raise HTTPException(status_code=409, detail={"code": "stale_lease"}) from error
+        return {"job_id": job.id, "state": str(job.state)}
 
     @app.post("/internal/workers/attempts/{attempt_id}/progress", status_code=204)
     def progress(

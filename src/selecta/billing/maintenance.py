@@ -29,6 +29,16 @@ class StripeDrainResult:
     errors: int = 0
 
 
+@dataclass(frozen=True)
+class StripeReconcileResult:
+    """One full Stripe reconciliation and the entitlement changes it found."""
+
+    checked: int
+    changed: int
+    unmatched: int
+    quota_limits_updated: int
+
+
 def drain_stripe_events(
     engine: Engine,
     client: StripeClient,
@@ -82,3 +92,39 @@ def drain_stripe_events(
             )
 
     return StripeDrainResult(**counts)
+
+
+def reconcile_stripe_billing(
+    engine: Engine, client: StripeClient, price_map: PriceMap
+) -> StripeReconcileResult:
+    """Re-fetch all Stripe subscriptions and sync affected workspace quota limits.
+
+    Call from a scheduled maintenance process, not a customer request. Stripe lookups and the
+    resulting snapshot/quota changes commit together; a Stripe outage leaves the prior snapshots
+    untouched and can be retried on the next scheduled run.
+    """
+    with transaction(engine) as connection:
+        report = stripe_sync.reconcile_all(connection, client, price_map)
+        affected = {item.workspace_id for item in report.items}
+        for workspace_id in sorted(affected):
+            snapshot = stripe_sync.current_snapshot(connection, workspace_id)
+            if snapshot is not None:
+                quota.set_limit(
+                    connection,
+                    workspace_id,
+                    plans.plan_for(snapshot.plan_id, snapshot.plan_version),
+                )
+    return StripeReconcileResult(
+        checked=report.checked,
+        changed=len(report.items),
+        unmatched=len(report.unmatched),
+        quota_limits_updated=len(affected),
+    )
+
+
+__all__ = [
+    "StripeDrainResult",
+    "StripeReconcileResult",
+    "drain_stripe_events",
+    "reconcile_stripe_billing",
+]
