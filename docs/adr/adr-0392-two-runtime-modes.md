@@ -1,4 +1,4 @@
-# ADR-0392 — Two runtime modes, one codebase
+# ADR-0392 - Two runtime modes, one codebase
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
@@ -31,13 +31,13 @@ The same commit builds the local app and the cloud services; a mode can never ac
 - Forking a separate cloud repository (duplicate engine, drift).
 - Making cloud the only mode.
 
-## Implementation checklist — 0/5 Implemented; 0/5 independently Verified
+## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0392-01 — Mode switch.** **Acceptance:** App factory selects adapters from `SELECTA_MODE`; default `local`. **Required verification:** Unit tests for both modes. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0392-02 — No local side effects in cloud.** **Acceptance:** Cloud mode starts no watcher, warm-up or worker threads and never calls `forget_unfinished()`. **Required verification:** Integration test asserts no threads/subprocesses at start. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0392-03 — Local parity.** **Acceptance:** All existing Python and Playwright tests pass in local mode. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0392-04 — Copy layer.** **Acceptance:** User-facing strings that mention 'this PC' come from a mode-keyed copy layer. **Required verification:** Vitest snapshot per mode. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0392-05 — Linux CI for cloud mode.** **Acceptance:** A Linux job runs the cloud-mode test set. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0392-01 - Mode switch.** **Acceptance:** App factory selects adapters from `SELECTA_MODE`; default `local`. **Required verification:** Unit tests for both modes. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0392-02 - No local side effects in cloud.** **Acceptance:** Cloud mode starts no watcher, warm-up or worker threads and never calls `forget_unfinished()`. **Required verification:** Integration test asserts no threads/subprocesses at start. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0392-03 - Local parity.** **Acceptance:** All existing Python and Playwright tests pass in local mode. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0392-04 - Copy layer.** **Acceptance:** User-facing strings that mention 'this PC' come from a mode-keyed copy layer. **Required verification:** Vitest snapshot per mode. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0392-05 - Linux CI for cloud mode.** **Acceptance:** A Linux job runs the cloud-mode test set. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

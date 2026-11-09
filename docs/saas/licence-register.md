@@ -23,7 +23,7 @@ Considered earlier and **not to be used** in cloud mode: Essentia models and lib
 | Package | Version | Licence | Cloud mode notes |
 |---|---|---|---|
 | pedalboard | 0.9.26 | GPL-3.0 | Server-side use isn't distribution. The local edition stays GPL-3.0-or-later. |
-| Rubber Band (via pedalboard) | — | GPL-2.0-or-later, commercial licence available | As above; a commercial licence only matters if a closed build is ever distributed |
+| Rubber Band (via pedalboard) | - | GPL-2.0-or-later, commercial licence available | As above; a commercial licence only matters if a closed build is ever distributed |
 | mutagen | 1.48.1 | GPL-2.0-or-later | Server-side use isn't distribution |
 | soxr (python-soxr) | 1.1.0 | LGPL-2.1-or-later | Fine as a dynamically linked library |
 | torch | 2.15.0+cpu | Apache-2.0, BSD and others | GPU workers use a CUDA build: record its version here |

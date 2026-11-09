@@ -1,4 +1,4 @@
-# ADR-0412 — Privacy, retention and the deletion ledger
+# ADR-0412 - Privacy, retention and the deletion ledger
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -31,12 +31,12 @@ Users can see, take and delete their data, and a backup restore can never bring 
 - Plain SQL deletes.
 - Analytics cookies needing a consent banner.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0412-01 — Privacy notice and ICO.** **Acceptance:** Notice published; ICO fee paid. **Required verification:** Doc and receipt on file. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0412-02 — Deletion workflow.** **Acceptance:** Deletion removes objects and rows in batches and releases quota. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0412-03 — Restore safety.** **Acceptance:** After a restore, replaying the ledger removes data deleted since the backup. **Required verification:** Restore drill. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0412-04 — Data export.** **Acceptance:** Export includes originals, mixes and settings JSON. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0412-01 - Privacy notice and ICO.** **Acceptance:** Notice published; ICO fee paid. **Required verification:** Doc and receipt on file. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0412-02 - Deletion workflow.** **Acceptance:** Deletion removes objects and rows in batches and releases quota. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0412-03 - Restore safety.** **Acceptance:** After a restore, replaying the ledger removes data deleted since the backup. **Required verification:** Restore drill. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0412-04 - Data export.** **Acceptance:** Export includes originals, mixes and settings JSON. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

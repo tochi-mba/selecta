@@ -1,4 +1,4 @@
-# ADR-0414 — Feature-flag targeting in cloud mode
+# ADR-0414 - Feature-flag targeting in cloud mode
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/7 Implemented; 0/7 In progress; 7/7 Not started.
@@ -35,15 +35,15 @@ The owner can turn any feature off for everyone, a tier or named users in second
 - Sending rules to the browser.
 - Using flags to grant paid features.
 
-## Implementation checklist — 0/7 Implemented; 0/7 independently Verified
+## Implementation checklist - 0/7 Implemented; 0/7 independently Verified
 
-1. **SC-0414-01 — Layered resolver.** **Acceptance:** `decide(flag, ctx)` returns on/off with layer and reason for every flag and context. **Required verification:** Property tests (determinism, no grant beyond plan, core always on, cascade). **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0414-02 — Rules storage and propagation.** **Acceptance:** Rule changes reach every API instance and the worker gateway within targets. **Required verification:** Multi-instance propagation test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0414-03 — Guard and codes.** **Acceptance:** Rule/build off returns 403 `flag_off`; plan-locked returns 403 `plan_required` with the plan. **Required verification:** API tests. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0414-04 — Jobs and workers.** **Acceptance:** Jobs for a feature switched off while queued block or cancel per `when_off`; resume when switched back on. **Required verification:** Integration tests. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0414-05 — Site.** **Acceptance:** Decisions and locks arrive in status and SSE; reflow and teaser sweeps pass in cloud mode. **Required verification:** Playwright sweeps. **Implementation:** Not started; **Independently Verified:** No.
-6. **SC-0414-06 — Admin Flags page.** **Acceptance:** Kill switch, tier, user, rollout and schedule actions with impact preview, trace, history and rollback; broad changes delayed per ADR-0401. **Required verification:** Playwright and audit tests. **Implementation:** Not started; **Independently Verified:** No.
-7. **SC-0414-07 — Local mode unchanged.** **Acceptance:** Local behaviour and `docs/flags.md` generation are identical to ADR-0390. **Required verification:** Existing flag tests. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0414-01 - Layered resolver.** **Acceptance:** `decide(flag, ctx)` returns on/off with layer and reason for every flag and context. **Required verification:** Property tests (determinism, no grant beyond plan, core always on, cascade). **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0414-02 - Rules storage and propagation.** **Acceptance:** Rule changes reach every API instance and the worker gateway within targets. **Required verification:** Multi-instance propagation test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0414-03 - Guard and codes.** **Acceptance:** Rule/build off returns 403 `flag_off`; plan-locked returns 403 `plan_required` with the plan. **Required verification:** API tests. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0414-04 - Jobs and workers.** **Acceptance:** Jobs for a feature switched off while queued block or cancel per `when_off`; resume when switched back on. **Required verification:** Integration tests. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0414-05 - Site.** **Acceptance:** Decisions and locks arrive in status and SSE; reflow and teaser sweeps pass in cloud mode. **Required verification:** Playwright sweeps. **Implementation:** Not started; **Independently Verified:** No.
+6. **SC-0414-06 - Admin Flags page.** **Acceptance:** Kill switch, tier, user, rollout and schedule actions with impact preview, trace, history and rollback; broad changes delayed per ADR-0401. **Required verification:** Playwright and audit tests. **Implementation:** Not started; **Independently Verified:** No.
+7. **SC-0414-07 - Local mode unchanged.** **Acceptance:** Local behaviour and `docs/flags.md` generation are identical to ADR-0390. **Required verification:** Existing flag tests. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

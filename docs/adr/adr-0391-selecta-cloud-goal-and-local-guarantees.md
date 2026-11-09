@@ -1,4 +1,4 @@
-# ADR-0391 — Selecta Cloud becomes a goal; local-only guarantees are scoped to local mode
+# ADR-0391 - Selecta Cloud becomes a goal; local-only guarantees are scoped to local mode
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -31,12 +31,12 @@ A local user notices nothing: same first run, same copy, same privacy promises. 
 - Rewriting or superseding each older ADR one by one (hundreds of edits, high risk of drift).
 - Dropping the local app (the owner chose to keep both).
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0391-01 — Programme entry.** **Acceptance:** `docs/adr/README.md` lists the Selecta Cloud programme and states local guarantees are unchanged. **Required verification:** Doc review. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0391-02 — Guarantee list per mode.** **Acceptance:** A table of local-mode and cloud-mode guarantees exists and is linked from both READMEs. **Required verification:** Doc review. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0391-03 — Local copy unchanged.** **Acceptance:** Local-mode user-facing text about privacy is unchanged by cloud work. **Required verification:** Playwright local-mode suite passes unchanged. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0391-04 — Mode-aware privacy test.** **Acceptance:** `web/e2e/pages.e2e.ts` keeps 'only talks to this computer' in local mode and checks an origin allowlist in cloud mode. **Required verification:** Both e2e modes in CI. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0391-01 - Programme entry.** **Acceptance:** `docs/adr/README.md` lists the Selecta Cloud programme and states local guarantees are unchanged. **Required verification:** Doc review. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0391-02 - Guarantee list per mode.** **Acceptance:** A table of local-mode and cloud-mode guarantees exists and is linked from both READMEs. **Required verification:** Doc review. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0391-03 - Local copy unchanged.** **Acceptance:** Local-mode user-facing text about privacy is unchanged by cloud work. **Required verification:** Playwright local-mode suite passes unchanged. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0391-04 - Mode-aware privacy test.** **Acceptance:** `web/e2e/pages.e2e.ts` keeps 'only talks to this computer' in local mode and checks an origin allowlist in cloud mode. **Required verification:** Both e2e modes in CI. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

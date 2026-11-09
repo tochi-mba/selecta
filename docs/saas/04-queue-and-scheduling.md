@@ -24,10 +24,10 @@ This is where most of the engineering care goes. The rules below are written so 
 | `lyrics.align` | cpu-heavy | 10–40 s | standard | lyrics, analyse | alignment |
 | `stems.window` | gpu (cpu fallback) | 3–5 s GPU / ~120 s CPU | inherits from parent | analyse | 4–5 stem WAV/FLAC |
 | `seam.render` | cpu-heavy | 5–80 s | interactive / standard / speculative by context | analyse ×2, stems (optional) | clip, preview, seam manifest |
-| `mix.prepare` (workflow) | — | — | — | — | marks revision playable |
+| `mix.prepare` (workflow) | - | - | - | - | marks revision playable |
 | `export.render` | cpu-heavy + scratch disk | minutes | standard | all seams of frozen revision | FLAC export, validated |
 | `discover.sweep` | cpu-heavy | bounded slices | speculative | analyses | comparisons, links |
-| `maintenance.*` | internal | — | — | — | GC, reconcile (not tenant-visible) |
+| `maintenance.*` | internal | - | - | - | GC, reconcile (not tenant-visible) |
 
 Room requests ([§11A.2](11a-devices-and-rooms.md#11a2-rooms-premium)) add no new job type: they enter the existing request planner and produce `seam.render` jobs in the host's interactive lane. Every job type names the feature flag that owns it ([§11B.4](11b-feature-flags.md#11b4-enforcement-in-the-cloud)).
 

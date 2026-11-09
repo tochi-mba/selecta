@@ -1,4 +1,4 @@
-# ADR-0411 — Stress, chaos and release-gate testing
+# ADR-0411 - Stress, chaos and release-gate testing
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
@@ -32,13 +32,13 @@ Every release has evidence that Selecta stays correct and fair under load and fa
 - Stress testing only before launch.
 - Running load tests against paid AI providers without caps.
 
-## Implementation checklist — 0/5 Implemented; 0/5 independently Verified
+## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0411-01 — Invariant checker.** **Acceptance:** All ten invariants checked automatically after each test run. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0411-02 — Simulator in CI.** **Acceptance:** Scheduler simulator runs on every PR. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0411-03 — Linux integration job.** **Acceptance:** Postgres and MinIO integration tests run on Linux in CI. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0411-04 — Ladder to L4.** **Acceptance:** L1–L4 pass the thresholds on staging. **Required verification:** Load reports. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0411-05 — Catastrophe suite.** **Acceptance:** L6 combinations pass with clean reconciliation. **Required verification:** Chaos report. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0411-01 - Invariant checker.** **Acceptance:** All ten invariants checked automatically after each test run. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0411-02 - Simulator in CI.** **Acceptance:** Scheduler simulator runs on every PR. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0411-03 - Linux integration job.** **Acceptance:** Postgres and MinIO integration tests run on Linux in CI. **Required verification:** CI. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0411-04 - Ladder to L4.** **Acceptance:** L1–L4 pass the thresholds on staging. **Required verification:** Load reports. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0411-05 - Catastrophe suite.** **Acceptance:** L6 combinations pass with clean reconciliation. **Required verification:** Chaos report. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

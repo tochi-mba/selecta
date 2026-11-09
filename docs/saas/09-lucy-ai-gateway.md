@@ -11,7 +11,7 @@ Plans grant a **capability**; a routing table maps capabilities to **deployments
 | Free | `lucy_basic` | Claude Haiku 5.5 (`claude-haiku-5-5`), effort low | $0.10/$0.50 per M tokens: cheap enough to give Free users a real Lucy |
 | Standard | `lucy_standard` | Haiku 5.5 at medium/high effort for everyday turns; Claude Sonnet 5.5 (`claude-sonnet-5-5`, $2/$10) for a monthly allowance of whole-mix planning turns | Keeps a maxed-out Standard user well inside a £6.99 plan |
 | Premium | `lucy_advanced` | Sonnet 5.5 for everyday turns; Claude Opus 5.5 (`claude-opus-5-5`, $4/$20) for "deep plan" turns within an allowance; Haiku for quick questions | Opus only where it earns its cost |
-| Fallbacks | — | Per-tier chain: next smaller model of the same family → built-in planner (`lucy/builtin.py`) | Lucy degrades, never breaks the app |
+| Fallbacks | - | Per-tier chain: next smaller model of the same family → built-in planner (`lucy/builtin.py`) | Lucy degrades, never breaks the app |
 
 **Routing down, never up.** Within a tier, the gateway sends simple requests (help questions, "skip this song", small edits) to the cheapest model the tier allows, and keeps the bigger model for planning. It never routes a request to a model above the tier.
 
@@ -47,7 +47,7 @@ Unchanged principle from today's design and worth restating: model output never 
 | Memory facts, clear memory, conversation history and deletion | User | User |
 | Provider, model, base URL, API key, consent to a provider | User (bring your own key) | **Hidden**; shows "Lucy Basic / Standard / Advanced" from the plan |
 | Max rounds/steps/seconds, spend limit (USD) | User | **Hidden**; server policy |
-| Usage shown | — | Turns used this month, resets on date |
+| Usage shown | - | Turns used this month, resets on date |
 
 Server-side, API keys move from plaintext `lucy-secrets.json` to the hosting platform's secret store in cloud mode (local mode keeps the file but should restrict its permissions).
 

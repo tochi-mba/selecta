@@ -1,4 +1,4 @@
-# ADR-0401 — Authorization: staff roles, scopes and the audit log
+# ADR-0401 - Authorization: staff roles, scopes and the audit log
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
@@ -34,13 +34,13 @@ The owner sees everything operational, while a stolen session, stale tab or slip
 - Staff impersonation of customers at launch.
 - A UI role editor at launch.
 
-## Implementation checklist — 0/5 Implemented; 0/5 independently Verified
+## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0401-01 — Permission registry and checks.** **Acceptance:** Every admin route declares its permission; unknown permissions fail CI. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0401-02 — Scoped assignments.** **Acceptance:** Assignments respect scope and expiry; revocation takes effect immediately. **Required verification:** Integration tests. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0401-03 — Delayed dangerous actions.** **Acceptance:** Listed actions wait 15 minutes, notify, can be cancelled and re-check authority. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0401-04 — Audit log.** **Acceptance:** Sensitive allows and all admin denies are recorded; the app role cannot update or delete audit rows. **Required verification:** Database permission test. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0401-05 — Compromised-admin drill.** **Acceptance:** Escalation, content access and audit tampering attempts are blocked and alerted. **Required verification:** Security test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0401-01 - Permission registry and checks.** **Acceptance:** Every admin route declares its permission; unknown permissions fail CI. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0401-02 - Scoped assignments.** **Acceptance:** Assignments respect scope and expiry; revocation takes effect immediately. **Required verification:** Integration tests. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0401-03 - Delayed dangerous actions.** **Acceptance:** Listed actions wait 15 minutes, notify, can be cancelled and re-check authority. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0401-04 - Audit log.** **Acceptance:** Sensitive allows and all admin denies are recorded; the app role cannot update or delete audit rows. **Required verification:** Database permission test. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0401-05 - Compromised-admin drill.** **Acceptance:** Escalation, content access and audit tampering attempts are blocked and alerted. **Required verification:** Security test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

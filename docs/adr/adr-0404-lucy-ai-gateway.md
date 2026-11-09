@@ -1,4 +1,4 @@
-# ADR-0404 — Lucy AI gateway with server-owned model routing
+# ADR-0404 - Lucy AI gateway with server-owned model routing
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
@@ -34,14 +34,14 @@ Users get a Lucy that matches their plan without seeing model names; a maxed-out
 - Self-hosted model GPUs (owner chose hosted APIs).
 - Showing token counts to users.
 
-## Implementation checklist — 0/6 Implemented; 0/6 independently Verified
+## Implementation checklist - 0/6 Implemented; 0/6 independently Verified
 
-1. **SC-0404-01 — Registry and routing.** **Acceptance:** Tier requests resolve to the configured deployment; changes apply to new runs only. **Required verification:** Unit and integration tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0404-02 — Allowance ledger.** **Acceptance:** Turns are metered; limits enforced mid-conversation gracefully. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0404-03 — Spend guards.** **Acceptance:** No admission past per-account or platform ceilings, proven with a fake provider. **Required verification:** Load test with fake provider. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0404-04 — Fallback chain.** **Acceptance:** Provider outage degrades to the next model or the built-in planner; the rest of the app is unaffected. **Required verification:** Chaos test. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0404-05 — Settings split.** **Acceptance:** Cloud Lucy settings show only user-owned choices and a usage meter. **Required verification:** Playwright test per mode. **Implementation:** Not started; **Independently Verified:** No.
-6. **SC-0404-06 — Evaluation gate.** **Acceptance:** The Lucy evaluation set passes for each tier's deployment. **Required verification:** Eval run report. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0404-01 - Registry and routing.** **Acceptance:** Tier requests resolve to the configured deployment; changes apply to new runs only. **Required verification:** Unit and integration tests. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0404-02 - Allowance ledger.** **Acceptance:** Turns are metered; limits enforced mid-conversation gracefully. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0404-03 - Spend guards.** **Acceptance:** No admission past per-account or platform ceilings, proven with a fake provider. **Required verification:** Load test with fake provider. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0404-04 - Fallback chain.** **Acceptance:** Provider outage degrades to the next model or the built-in planner; the rest of the app is unaffected. **Required verification:** Chaos test. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0404-05 - Settings split.** **Acceptance:** Cloud Lucy settings show only user-owned choices and a usage meter. **Required verification:** Playwright test per mode. **Implementation:** Not started; **Independently Verified:** No.
+6. **SC-0404-06 - Evaluation gate.** **Acceptance:** The Lucy evaluation set passes for each tier's deployment. **Required verification:** Eval run report. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

@@ -1,4 +1,4 @@
-# ADR-0400 — Identity with WorkOS AuthKit
+# ADR-0400 - Identity with WorkOS AuthKit
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -31,12 +31,12 @@ Users sign in securely on any device; staff sessions are stronger by default.
 - Building our own password system.
 - Long-lived tokens in browser storage.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0400-01 — Sign-up and sign-in.** **Acceptance:** Flows work with verification and the age statement. **Required verification:** Playwright test against AuthKit test environment. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0400-02 — JWT verification.** **Acceptance:** Expired, wrong-audience and tampered tokens are refused. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0400-03 — Session revocation.** **Acceptance:** Revoking sessions signs out every device within the access-token lifetime. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0400-04 — Account deletion.** **Acceptance:** Deletion cancels the subscription and starts the deletion workflow. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0400-01 - Sign-up and sign-in.** **Acceptance:** Flows work with verification and the age statement. **Required verification:** Playwright test against AuthKit test environment. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0400-02 - JWT verification.** **Acceptance:** Expired, wrong-audience and tampered tokens are refused. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0400-03 - Session revocation.** **Acceptance:** Revoking sessions signs out every device within the access-token lifetime. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0400-04 - Account deletion.** **Acceptance:** Deletion cancels the subscription and starts the deletion workflow. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

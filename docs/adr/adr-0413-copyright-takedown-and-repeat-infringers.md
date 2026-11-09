@@ -1,4 +1,4 @@
-# ADR-0413 — Copyright terms, takedown and repeat infringers
+# ADR-0413 - Copyright terms, takedown and repeat infringers
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -31,12 +31,12 @@ Selecta behaves as a responsible host and avoids features that would turn it int
 - Public mix links at launch.
 - Cross-account deduplication.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0413-01 — Terms.** **Acceptance:** Terms cover rights, private use and public performance. **Required verification:** Legal review. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0413-02 — Takedown process.** **Acceptance:** Notices are logged, acted on and audited within the stated time. **Required verification:** Drill. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0413-03 — Repeat-infringer enforcement.** **Acceptance:** Accounts with repeated valid notices are restricted per policy. **Required verification:** Admin test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0413-04 — DMCA agent.** **Acceptance:** Agent registered and renewal calendared. **Required verification:** Registration on file. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0413-01 - Terms.** **Acceptance:** Terms cover rights, private use and public performance. **Required verification:** Legal review. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0413-02 - Takedown process.** **Acceptance:** Notices are logged, acted on and audited within the stated time. **Required verification:** Drill. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0413-03 - Repeat-infringer enforcement.** **Acceptance:** Accounts with repeated valid notices are restricted per policy. **Required verification:** Admin test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0413-04 - DMCA agent.** **Acceptance:** Agent registered and renewal calendared. **Required verification:** Registration on file. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

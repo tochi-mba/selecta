@@ -1,4 +1,4 @@
-# ADR-0402 — Plans, entitlements, quotas and allowances
+# ADR-0402 - Plans, entitlements, quotas and allowances
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -31,12 +31,12 @@ Users see plain meters and specific limits; Selecta's costs stay bounded per pla
 - Storage-only plans (unbounded processing and AI cost).
 - Token or CPU-second meters shown to users.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0402-01 — Plan catalogue.** **Acceptance:** Plans validate against the flag registry; changes are versioned. **Required verification:** Unit test plus CI check. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0402-02 — Usage ledger.** **Acceptance:** Ledger totals match rollups and storage inventory. **Required verification:** Reconciliation test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0402-03 — Over-quota state.** **Acceptance:** Uploads and exports are blocked, playback and downloads work, nothing is deleted. **Required verification:** Integration and Playwright tests. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0402-04 — Meters.** **Acceptance:** Plan & billing shows storage, analysis today, Lucy turns and exports. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0402-01 - Plan catalogue.** **Acceptance:** Plans validate against the flag registry; changes are versioned. **Required verification:** Unit test plus CI check. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0402-02 - Usage ledger.** **Acceptance:** Ledger totals match rollups and storage inventory. **Required verification:** Reconciliation test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0402-03 - Over-quota state.** **Acceptance:** Uploads and exports are blocked, playback and downloads work, nothing is deleted. **Required verification:** Integration and Playwright tests. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0402-04 - Meters.** **Acceptance:** Plan & billing shows storage, analysis today, Lucy turns and exports. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

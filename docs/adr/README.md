@@ -1,4 +1,4 @@
-# Selecta — Selecta Cloud (SaaS) proposal (2026-11-09)
+# Selecta - Selecta Cloud (SaaS) proposal (2026-11-09)
 
 **26 accepted ADRs, [ADR-0391](adr-0391-selecta-cloud-goal-and-local-guarantees.md) to [ADR-0416](adr-0416-rooms-guest-requests.md):** a subscription cloud edition beside the local app, from one codebase. Free, Standard and Premium plans (10, 50 and 100 GB); a durable job queue in Postgres with per-account fair shares by tier, leases and fencing; workers that scale by adding containers; R2 storage with server-completed uploads; Stripe billing; Lucy routed to hosted models per tier; staff roles and an admin console; one playing device per account; Premium Rooms with QR-code guest requests; and layered feature-flag targeting on top of [ADR-0390](adr-0390-feature-flags.md). All 26 Accepted by the owner on 2026-11-09; implementation tracked in the [checklist](selecta-cloud-implementation-checklist.md); 0 independently Verified. Baseline main `3c2f1eb`.
 
@@ -8,7 +8,7 @@
 
 ---
 
-# Selecta — Feature flags ADR proposal (2026-11-09)
+# Selecta - Feature flags ADR proposal (2026-11-09)
 
 **One proposed ADR, [ADR-0390](adr-0390-feature-flags.md):** a single feature-flag registry for every feature, read by the server, the site, the CLI and the tests, with a browser sweep that checks every page with each feature turned off. 7 of 8 tasks Implemented, 1 In progress, 0 independently Verified. The catalog is [docs/flags.md](../flags.md).
 

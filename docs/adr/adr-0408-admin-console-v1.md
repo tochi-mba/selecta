@@ -1,4 +1,4 @@
-# ADR-0408 — Admin console v1
+# ADR-0408 - Admin console v1
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -31,12 +31,12 @@ One place answers 'is Selecta working, what's broken, who's affected, what is it
 - A separate admin app and design system.
 - Dashboards querying the live jobs table.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0408-01 — Six pages.** **Acceptance:** Each page meets its content list in the proposal. **Required verification:** Playwright walkthrough. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0408-02 — Commands not edits.** **Acceptance:** Retry, cancel, quarantine, drain and overrides go through audited commands. **Required verification:** Integration tests. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0408-03 — Read path isolation.** **Acceptance:** Twenty admin viewers don't change customer API latency. **Required verification:** Load test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0408-04 — Freshness.** **Acceptance:** Stale metrics show their age and an unknown state. **Required verification:** Unit test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0408-01 - Six pages.** **Acceptance:** Each page meets its content list in the proposal. **Required verification:** Playwright walkthrough. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0408-02 - Commands not edits.** **Acceptance:** Retry, cancel, quarantine, drain and overrides go through audited commands. **Required verification:** Integration tests. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0408-03 - Read path isolation.** **Acceptance:** Twenty admin viewers don't change customer API latency. **Required verification:** Load test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0408-04 - Freshness.** **Acceptance:** Stale metrics show their age and an unknown state. **Required verification:** Unit test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

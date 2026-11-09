@@ -1,4 +1,4 @@
-# ADR-0395 — Fair scheduling: lanes and per-account weights by tier
+# ADR-0395 - Fair scheduling: lanes and per-account weights by tier
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
@@ -34,14 +34,14 @@ Under load a Premium account gets about six times a Free account's processing ra
 - Tier-level percentage shares (unstable per-user ratios).
 - Hatchet round-robin concurrency (no weights per tier).
 
-## Implementation checklist — 0/6 Implemented; 0/6 independently Verified
+## Implementation checklist - 0/6 Implemented; 0/6 independently Verified
 
-1. **SC-0395-01 — Policy module.** **Acceptance:** `choose(pool, worker_caps, now)` implements the hierarchy; shared by the claim and the simulator. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0395-02 — Simulator.** **Acceptance:** Deterministic simulator with virtual clock, invariants after every event, per-tier wait percentiles and share error. **Required verification:** Runs on every PR. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0395-03 — Fairness threshold.** **Acceptance:** Under saturation, measured share per backlogged account is within ±15% of weight ratio over 10-minute windows. **Required verification:** Simulator scenarios. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0395-04 — No starvation.** **Acceptance:** No backlogged account waits beyond the policy bound in any scenario, including 72 h of Premium demand. **Required verification:** Simulator scenarios. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0395-05 — Admission control.** **Acceptance:** 10M-job submission keeps the API responsive and materialises work lazily. **Required verification:** Load test L4. **Implementation:** Not started; **Independently Verified:** No.
-6. **SC-0395-06 — Rank mapping.** **Acceptance:** Today's six ranks map to lanes and urgency as specified; local mode uses the same policy. **Required verification:** Unit tests plus local listening check. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0395-01 - Policy module.** **Acceptance:** `choose(pool, worker_caps, now)` implements the hierarchy; shared by the claim and the simulator. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0395-02 - Simulator.** **Acceptance:** Deterministic simulator with virtual clock, invariants after every event, per-tier wait percentiles and share error. **Required verification:** Runs on every PR. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0395-03 - Fairness threshold.** **Acceptance:** Under saturation, measured share per backlogged account is within ±15% of weight ratio over 10-minute windows. **Required verification:** Simulator scenarios. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0395-04 - No starvation.** **Acceptance:** No backlogged account waits beyond the policy bound in any scenario, including 72 h of Premium demand. **Required verification:** Simulator scenarios. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0395-05 - Admission control.** **Acceptance:** 10M-job submission keeps the API responsive and materialises work lazily. **Required verification:** Load test L4. **Implementation:** Not started; **Independently Verified:** No.
+6. **SC-0395-06 - Rank mapping.** **Acceptance:** Today's six ranks map to lanes and urgency as specified; local mode uses the same policy. **Required verification:** Unit tests plus local listening check. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

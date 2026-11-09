@@ -1,4 +1,4 @@
-# ADR-0399 — Cloud playback with lossless playback proxies
+# ADR-0399 - Cloud playback with lossless playback proxies
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -32,12 +32,12 @@ Cloud playback keeps transitions as tight as local playback, without the server 
 - Server-side decoding per request (CPU per listener).
 - Making a proxy for every song at upload (roughly 600 GB of playback files for a full 100 GB MP3 library).
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0399-01 — Lazy proxy job.** **Acceptance:** Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0399-02 — Alignment.** **Acceptance:** Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. **Required verification:** Automated alignment check plus listening check. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0399-03 — Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0399-04 — Prefetch.** **Acceptance:** The next song and its transitions are buffered before they're needed. **Required verification:** Playwright timing test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0399-01 - Lazy proxy job.** **Acceptance:** Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0399-02 - Alignment.** **Acceptance:** Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. **Required verification:** Automated alignment check plus listening check. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0399-03 - Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0399-04 - Prefetch.** **Acceptance:** The next song and its transitions are buffered before they're needed. **Required verification:** Playwright timing test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

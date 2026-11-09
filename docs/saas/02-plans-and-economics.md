@@ -34,7 +34,7 @@ Notes:
 | | Free | Standard | Premium |
 |---|---|---|---|
 | Monthly | £0 | £6.99 | £12.99 |
-| Annual | — | £59 | £109 |
+| Annual | - | £59 | £109 |
 
 Reference points: Moises lists Premium around $4–6/month and Pro around $10–30/month (sources disagree); DJ.Studio sells a perpetual licence at the higher end. Selecta's differentiator is automatic, musically clever transitions on *your own* library in the browser, a gap most competitors don't fill (Soundverse DJ One and Fadr are the closest browser tools; djay and DJ.Studio are native apps).
 

@@ -1,4 +1,4 @@
-# ADR-0409 — Hosting topology, regions and environments
+# ADR-0409 - Hosting topology, regions and environments
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -34,12 +34,12 @@ A reproducible, affordable stack that can move compute vendors without touching 
 - Kubernetes at launch.
 - S3 (egress fees).
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0409-01 — Staging environment.** **Acceptance:** Full stack runs end to end with synthetic users. **Required verification:** Staging smoke test. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0409-02 — IaC.** **Acceptance:** Staging and production are reproducible from the repo. **Required verification:** Recreate staging from scratch. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0409-03 — Deploy pipeline.** **Acceptance:** Main deploys to staging; production needs approval; OIDC credentials only. **Required verification:** Pipeline run. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0409-04 — Backups and restore.** **Acceptance:** Restore drill completes in under 60 minutes. **Required verification:** Drill report. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0409-01 - Staging environment.** **Acceptance:** Full stack runs end to end with synthetic users. **Required verification:** Staging smoke test. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0409-02 - IaC.** **Acceptance:** Staging and production are reproducible from the repo. **Required verification:** Recreate staging from scratch. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0409-03 - Deploy pipeline.** **Acceptance:** Main deploys to staging; production needs approval; OIDC credentials only. **Required verification:** Pipeline run. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0409-04 - Backups and restore.** **Acceptance:** Restore drill completes in under 60 minutes. **Required verification:** Drill report. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

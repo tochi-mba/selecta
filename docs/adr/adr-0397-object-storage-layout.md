@@ -1,4 +1,4 @@
-# ADR-0397 — Object storage layout and artifact provenance on R2
+# ADR-0397 - Object storage layout and artifact provenance on R2
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
@@ -32,13 +32,13 @@ Identical requests reuse finished work instantly; engine upgrades never invalida
 - S3 (egress fees for audio).
 - Cross-account dedupe (existence side channel, deletion and copyright complexity).
 
-## Implementation checklist — 0/5 Implemented; 0/5 independently Verified
+## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0397-01 — ArtifactStore interface.** **Acceptance:** Local and R2 implementations behind one interface used by workers. **Required verification:** Unit and integration tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0397-02 — Content-addressed keys.** **Acceptance:** Seam and stem keys derive from content hashes scoped to the workspace. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0397-03 — Provenance.** **Acceptance:** Every artifact row records inputs, versions and checksum. **Required verification:** Schema test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0397-04 — Eviction with protection.** **Acceptance:** Budgets evict least-recent unprotected artifacts only. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0397-05 — Bucket lifecycle.** **Acceptance:** Staging multipart aborts after 1 day; exports expire per plan. **Required verification:** IaC review plus staging check. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0397-01 - ArtifactStore interface.** **Acceptance:** Local and R2 implementations behind one interface used by workers. **Required verification:** Unit and integration tests. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0397-02 - Content-addressed keys.** **Acceptance:** Seam and stem keys derive from content hashes scoped to the workspace. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0397-03 - Provenance.** **Acceptance:** Every artifact row records inputs, versions and checksum. **Required verification:** Schema test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0397-04 - Eviction with protection.** **Acceptance:** Budgets evict least-recent unprotected artifacts only. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0397-05 - Bucket lifecycle.** **Acceptance:** Staging multipart aborts after 1 day; exports expire per plan. **Required verification:** IaC review plus staging check. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

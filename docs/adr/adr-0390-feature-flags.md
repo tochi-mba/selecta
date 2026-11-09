@@ -1,4 +1,4 @@
-# ADR-0390 — One feature-flag system for every feature
+# ADR-0390 - One feature-flag system for every feature
 
 - **Decision:** Proposed (owner review pending).
 - **Implementation:** 7/8 Implemented; 1/8 In progress; 0/8 Not started.
@@ -49,16 +49,16 @@ A switch page in the app (the owner chose developer-only flags); hiding features
 routes and background work running; greying controls out instead of removing them; flags read at
 import time, which tests couldn't change.
 
-## Implementation checklist — 7/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 7/8 Implemented; 0/8 independently Verified
 
-1. **FF-0390-01 — Registry, loader and `SELECTA_FLAGS`.** **Acceptance:** every API route and CLI command belongs to one flag; cascades, presets and errors behave as stated. **Required verification:** `tests/test_flags.py`. **Implementation:** Implemented; **Independently Verified:** No.
-2. **FF-0390-02 — Server enforcement.** **Acceptance:** each flag's routes refuse with `flag_off`; a refusal is never replayed. **Required verification:** `tests/test_flag_server.py`. **Implementation:** Implemented; **Independently Verified:** No.
-3. **FF-0390-03 — Background work and moves.** **Acceptance:** lyric lookup, folder watching, spare time and stem separation stop; off moves are never planned, offered or rendered. **Required verification:** `tests/test_flag_server.py`. **Implementation:** Implemented; **Independently Verified:** No.
-4. **FF-0390-04 — Lucy phases.** **Acceptance:** a phase is on only when the build and the person both say so; the person's choice is kept. **Required verification:** `tests/test_flag_server.py`. **Implementation:** Implemented; **Independently Verified:** No.
-5. **FF-0390-05 — Site plumbing.** **Acceptance:** nav, tabs, commands, shortcuts, glossary and routes follow flags from one place. **Required verification:** `web/src/flags.test.tsx`. **Implementation:** Implemented; **Independently Verified:** No.
-6. **FF-0390-06 — Pages reflow.** **Acceptance:** the contract above for every page and overlay. **Required verification:** `pnpm e2e:flags`. **Implementation:** Implemented; **Independently Verified:** No.
-7. **FF-0390-07 — CI and docs.** **Acceptance:** the sweep is a required CI job; `docs/flags.md` can't fall behind. **Required verification:** CI run. **Implementation:** Implemented; **Independently Verified:** No.
-8. **FF-0390-08 — Full sweep green in CI and screenshots reviewed by a person.** **Acceptance:** all 76 sweep tests pass on CI and the uploaded screenshots look designed. **Required verification:** CI run plus human review. **Implementation:** In progress; **Independently Verified:** No.
+1. **FF-0390-01 - Registry, loader and `SELECTA_FLAGS`.** **Acceptance:** every API route and CLI command belongs to one flag; cascades, presets and errors behave as stated. **Required verification:** `tests/test_flags.py`. **Implementation:** Implemented; **Independently Verified:** No.
+2. **FF-0390-02 - Server enforcement.** **Acceptance:** each flag's routes refuse with `flag_off`; a refusal is never replayed. **Required verification:** `tests/test_flag_server.py`. **Implementation:** Implemented; **Independently Verified:** No.
+3. **FF-0390-03 - Background work and moves.** **Acceptance:** lyric lookup, folder watching, spare time and stem separation stop; off moves are never planned, offered or rendered. **Required verification:** `tests/test_flag_server.py`. **Implementation:** Implemented; **Independently Verified:** No.
+4. **FF-0390-04 - Lucy phases.** **Acceptance:** a phase is on only when the build and the person both say so; the person's choice is kept. **Required verification:** `tests/test_flag_server.py`. **Implementation:** Implemented; **Independently Verified:** No.
+5. **FF-0390-05 - Site plumbing.** **Acceptance:** nav, tabs, commands, shortcuts, glossary and routes follow flags from one place. **Required verification:** `web/src/flags.test.tsx`. **Implementation:** Implemented; **Independently Verified:** No.
+6. **FF-0390-06 - Pages reflow.** **Acceptance:** the contract above for every page and overlay. **Required verification:** `pnpm e2e:flags`. **Implementation:** Implemented; **Independently Verified:** No.
+7. **FF-0390-07 - CI and docs.** **Acceptance:** the sweep is a required CI job; `docs/flags.md` can't fall behind. **Required verification:** CI run. **Implementation:** Implemented; **Independently Verified:** No.
+8. **FF-0390-08 - Full sweep green in CI and screenshots reviewed by a person.** **Acceptance:** all 76 sweep tests pass on CI and the uploaded screenshots look designed. **Required verification:** CI run plus human review. **Implementation:** In progress; **Independently Verified:** No.
 
 ## Governance
 

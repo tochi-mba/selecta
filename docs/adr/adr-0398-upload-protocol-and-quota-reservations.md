@@ -1,4 +1,4 @@
-# ADR-0398 — Upload protocol with server-side completion and quota reservations
+# ADR-0398 - Upload protocol with server-side completion and quota reservations
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
@@ -32,13 +32,13 @@ Uploads resume after refresh, never oversubscribe storage, and reject bad files 
 - Uploading through the API servers (memory and bandwidth bottleneck).
 - Trusting client-declared sizes.
 
-## Implementation checklist — 0/5 Implemented; 0/5 independently Verified
+## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0398-01 — Session planning.** **Acceptance:** Batch planning of up to 500 files with reservations and duplicate flags. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0398-02 — Server completion.** **Acceptance:** Oversize or mismatched uploads are aborted and reservations released. **Required verification:** Integration test with a lying client. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0398-03 — Quota race.** **Acceptance:** 1,000 concurrent uploads for the last 1 GB never exceed the limit. **Required verification:** Concurrency test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0398-04 — Validation sandbox.** **Acceptance:** Decode bombs, fake extensions and truncated files are rejected safely within limits. **Required verification:** Hostile-file test set. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0398-05 — Resume.** **Acceptance:** A refreshed browser resumes from uploaded parts. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0398-01 - Session planning.** **Acceptance:** Batch planning of up to 500 files with reservations and duplicate flags. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0398-02 - Server completion.** **Acceptance:** Oversize or mismatched uploads are aborted and reservations released. **Required verification:** Integration test with a lying client. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0398-03 - Quota race.** **Acceptance:** 1,000 concurrent uploads for the last 1 GB never exceed the limit. **Required verification:** Concurrency test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0398-04 - Validation sandbox.** **Acceptance:** Decode bombs, fake extensions and truncated files are rejected safely within limits. **Required verification:** Hostile-file test set. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0398-05 - Resume.** **Acceptance:** A refreshed browser resumes from uploaded parts. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

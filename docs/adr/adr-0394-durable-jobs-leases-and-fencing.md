@@ -1,4 +1,4 @@
-# ADR-0394 — Durable jobs with leases and fencing
+# ADR-0394 - Durable jobs with leases and fencing
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
@@ -34,14 +34,14 @@ Work survives restarts, crashes and deploys; a stale worker can never overwrite 
 - Celery/Redis as the source of truth (weak durability, no fencing).
 - Keeping file-based status alongside the database (two truths).
 
-## Implementation checklist — 0/6 Implemented; 0/6 independently Verified
+## Implementation checklist - 0/6 Implemented; 0/6 independently Verified
 
-1. **SC-0394-01 — Job tables and state module.** **Acceptance:** All transitions go through one module; illegal transitions raise. **Required verification:** Hypothesis state-machine tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0394-02 — Leases and fencing.** **Acceptance:** A completion with a stale fencing token is refused; the zombie-worker scenario publishes once. **Required verification:** Integration race test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0394-03 — Reaper.** **Acceptance:** Expired attempts return to queued or fail when attempts are exhausted, within lease + interval. **Required verification:** Kill-loop chaos test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0394-04 — Local runner.** **Acceptance:** Seam worker pipe, analysis subprocess and export JSON jobs are replaced in local mode; transitions sound the same. **Required verification:** Existing tests plus the owner's listening check. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0394-05 — Error classes and quarantine.** **Acceptance:** Each error class follows its retry policy; a job that crashes three workers is quarantined. **Required verification:** Unit and chaos tests. **Implementation:** Not started; **Independently Verified:** No.
-6. **SC-0394-06 — Outbox.** **Acceptance:** Every transition writes an outbox event in the same transaction. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0394-01 - Job tables and state module.** **Acceptance:** All transitions go through one module; illegal transitions raise. **Required verification:** Hypothesis state-machine tests. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0394-02 - Leases and fencing.** **Acceptance:** A completion with a stale fencing token is refused; the zombie-worker scenario publishes once. **Required verification:** Integration race test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0394-03 - Reaper.** **Acceptance:** Expired attempts return to queued or fail when attempts are exhausted, within lease + interval. **Required verification:** Kill-loop chaos test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0394-04 - Local runner.** **Acceptance:** Seam worker pipe, analysis subprocess and export JSON jobs are replaced in local mode; transitions sound the same. **Required verification:** Existing tests plus the owner's listening check. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0394-05 - Error classes and quarantine.** **Acceptance:** Each error class follows its retry policy; a job that crashes three workers is quarantined. **Required verification:** Unit and chaos tests. **Implementation:** Not started; **Independently Verified:** No.
+6. **SC-0394-06 - Outbox.** **Acceptance:** Every transition writes an outbox event in the same transaction. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

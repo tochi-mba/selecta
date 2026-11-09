@@ -1,4 +1,4 @@
-# ADR-0407 — Real-time updates over server-sent events
+# ADR-0407 - Real-time updates over server-sent events
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -30,12 +30,12 @@ Pages update within a second of real changes, with far less load, and keep worki
 - WebSockets at launch (more infrastructure, little gain for one-way updates).
 - Polling only.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0407-01 — Event stream.** **Acceptance:** Events arrive in order with ids; reconnect resumes without gaps. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0407-02 — Fan-out.** **Acceptance:** An event raised on one instance reaches clients on every instance. **Required verification:** Multi-instance test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0407-03 — Fallback.** **Acceptance:** With the stream blocked, polling keeps pages correct. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0407-04 — Load.** **Acceptance:** SSE connection counts meet the L3 targets. **Required verification:** k6 test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0407-01 - Event stream.** **Acceptance:** Events arrive in order with ids; reconnect resumes without gaps. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0407-02 - Fan-out.** **Acceptance:** An event raised on one instance reaches clients on every instance. **Required verification:** Multi-instance test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0407-03 - Fallback.** **Acceptance:** With the stream blocked, polling keeps pages correct. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0407-04 - Load.** **Acceptance:** SSE connection counts meet the L3 targets. **Required verification:** k6 test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

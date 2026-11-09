@@ -1,4 +1,4 @@
-# ADR-0410 — Observability, SLOs and emergency controls
+# ADR-0410 - Observability, SLOs and emergency controls
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -32,12 +32,12 @@ Incidents are noticed in minutes and handled with known-safe steps.
 - High-cardinality labels (user or job ids) on metrics.
 - Emergency scripts run from a browser.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0410-01 — Tracing.** **Acceptance:** One trace follows a job from API to worker to storage. **Required verification:** Staging trace review. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0410-02 — SLO dashboards and alerts.** **Acceptance:** Each SLO has a dashboard and burn alert. **Required verification:** Alert test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0410-03 — Runbooks.** **Acceptance:** Every alert links to a runbook. **Required verification:** Doc review. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0410-04 — Emergency controls.** **Acceptance:** Each control works and is audited; recovery restores normal state. **Required verification:** Game-day drill. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0410-01 - Tracing.** **Acceptance:** One trace follows a job from API to worker to storage. **Required verification:** Staging trace review. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0410-02 - SLO dashboards and alerts.** **Acceptance:** Each SLO has a dashboard and burn alert. **Required verification:** Alert test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0410-03 - Runbooks.** **Acceptance:** Every alert links to a runbook. **Required verification:** Doc review. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0410-04 - Emergency controls.** **Acceptance:** Each control works and is audited; recovery restores normal state. **Required verification:** Game-day drill. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

@@ -1,4 +1,4 @@
-# ADR-0405 — Licence register and replacing S-KEY for commercial use
+# ADR-0405 - Licence register and replacing S-KEY for commercial use
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
@@ -31,12 +31,12 @@ Selecta Cloud never ships a model it isn't allowed to use commercially, and mixe
 - Launching with S-KEY and fixing it later.
 - Essentia or madmom models (AGPL or non-commercial).
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0405-01 — Register complete.** **Acceptance:** Every model and dependency in the worker images has a row. **Required verification:** Doc review against image contents. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0405-02 — S-KEY replacement.** **Acceptance:** Chosen replacement meets the agreed accuracy threshold against S-KEY. **Required verification:** Benchmark report plus listening check. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0405-03 — Model allowlist.** **Acceptance:** Cloud mode refuses to load an unlisted model. **Required verification:** Unit test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0405-04 — Legal review.** **Acceptance:** Rows marked Review are resolved by a lawyer before paid launch. **Required verification:** Written advice on file. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0405-01 - Register complete.** **Acceptance:** Every model and dependency in the worker images has a row. **Required verification:** Doc review against image contents. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0405-02 - S-KEY replacement.** **Acceptance:** Chosen replacement meets the agreed accuracy threshold against S-KEY. **Required verification:** Benchmark report plus listening check. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0405-03 - Model allowlist.** **Acceptance:** Cloud mode refuses to load an unlisted model. **Required verification:** Unit test. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0405-04 - Legal review.** **Acceptance:** Rows marked Review are resolved by a lawyer before paid launch. **Required verification:** Written advice on file. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

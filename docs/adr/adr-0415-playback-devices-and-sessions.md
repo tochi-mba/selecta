@@ -1,4 +1,4 @@
-# ADR-0415 — Playback devices and one session per account
+# ADR-0415 - Playback devices and one session per account
 
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
@@ -32,13 +32,13 @@ No room ever hears two copies of the mix, any device can steer, and moving the m
 - Multiple simultaneous playback sessions per account.
 - Peer-to-peer device coordination.
 
-## Implementation checklist — 0/5 Implemented; 0/5 independently Verified
+## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0415-01 — Devices.** **Acceptance:** Registration, naming, list and sign-out work; the 11th device signs out the oldest. **Required verification:** Integration and Playwright tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0415-02 — Lease and remotes.** **Acceptance:** Commands from many remotes apply once and in order. **Required verification:** Concurrency test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0415-03 — Transfer.** **Acceptance:** 'Play here' moves playback with no double audio. **Required verification:** Playwright multi-context test plus real devices. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0415-04 — Offline speaker.** **Acceptance:** A speaker that loses connection keeps playing; reconnect behaviour matches the rules. **Required verification:** Chaos test on real devices. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0415-05 — Device guidance.** **Acceptance:** iOS speaker warning and wake-lock request shown where relevant. **Required verification:** Manual device test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0415-01 - Devices.** **Acceptance:** Registration, naming, list and sign-out work; the 11th device signs out the oldest. **Required verification:** Integration and Playwright tests. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0415-02 - Lease and remotes.** **Acceptance:** Commands from many remotes apply once and in order. **Required verification:** Concurrency test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0415-03 - Transfer.** **Acceptance:** 'Play here' moves playback with no double audio. **Required verification:** Playwright multi-context test plus real devices. **Implementation:** Not started; **Independently Verified:** No.
+4. **SC-0415-04 - Offline speaker.** **Acceptance:** A speaker that loses connection keeps playing; reconnect behaviour matches the rules. **Required verification:** Chaos test on real devices. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0415-05 - Device guidance.** **Acceptance:** iOS speaker warning and wake-lock request shown where relevant. **Required verification:** Manual device test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 
