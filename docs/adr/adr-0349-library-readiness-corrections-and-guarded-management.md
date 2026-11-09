@@ -1,10 +1,10 @@
-# ADR-0349 — Library readiness explanations, correction safety and recording management
+# ADR-0349 - Library readiness explanations, correction safety and recording management
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P0 / Library detail. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Library detail. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0227, ADR-0252, ADR-0258, ADR-0291; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/SongDetails.tsx`; `web/src/state/readiness.ts`; `src/selecta/routes/library.py`.
 
@@ -24,16 +24,16 @@ A listener can fix incorrect tempo/key and manage whether a recording is used wi
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0349-01 — Make corrections predictable.** **Acceptance:** Show permitted tempo/key format, active override and reset effect before Save. **Required verification:** Invalid/valid field tests and human comprehension. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0349-02 — Preserve measured values.** **Acceptance:** Reset restores measured metadata rather than deleting original or changing source music. **Required verification:** Correction/reset API and UI regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0349-03 — Explain transition rebuild impact.** **Acceptance:** Server-returned rework count is shown without inventing completion or ETAs. **Required verification:** Response-dependent message fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0349-04 — Clarify priority meaning.** **Acceptance:** Prioritise affects analysis scheduling/cache protection and not implicit playback order. **Required verification:** Before-action wording study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0349-05 — Clarify exclusion and set-aside.** **Acceptance:** Never play and not music are separate supported states with clear reversal. **Required verification:** Status-to-action mapping and revert E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0349-06 — Handle errors without loss.** **Acceptance:** Failed updates keep user input and focus on actionable errors, not false saved status. **Required verification:** Network/validation/409 failure tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0349-07 — Keep advanced file context truthful.** **Acceptance:** Missing/relinked music state never claims available local audio. **Required verification:** Lost-source and recovery fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0349-08 — Validate no-source-mutation promise.** **Acceptance:** A user action never writes to the original music file or changes unrelated selections. **Required verification:** Backend fixture and real-file integrity test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0349-01 - Make corrections predictable.** **Acceptance:** Show permitted tempo/key format, active override and reset effect before Save. **Required verification:** Invalid/valid field tests and human comprehension. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0349-02 - Preserve measured values.** **Acceptance:** Reset restores measured metadata rather than deleting original or changing source music. **Required verification:** Correction/reset API and UI regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0349-03 - Explain transition rebuild impact.** **Acceptance:** Server-returned rework count is shown without inventing completion or ETAs. **Required verification:** Response-dependent message fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0349-04 - Clarify priority meaning.** **Acceptance:** Prioritise affects analysis scheduling/cache protection and not implicit playback order. **Required verification:** Before-action wording study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0349-05 - Clarify exclusion and set-aside.** **Acceptance:** Never play and not music are separate supported states with clear reversal. **Required verification:** Status-to-action mapping and revert E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0349-06 - Handle errors without loss.** **Acceptance:** Failed updates keep user input and focus on actionable errors, not false saved status. **Required verification:** Network/validation/409 failure tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0349-07 - Keep advanced file context truthful.** **Acceptance:** Missing/relinked music state never claims available local audio. **Required verification:** Lost-source and recovery fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0349-08 - Validate no-source-mutation promise.** **Acceptance:** A user action never writes to the original music file or changes unrelated selections. **Required verification:** Backend fixture and real-file integrity test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

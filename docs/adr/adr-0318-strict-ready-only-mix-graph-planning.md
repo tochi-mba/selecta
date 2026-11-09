@@ -1,10 +1,10 @@
-# ADR-0318 — Strict ready-only mix generation using available rendered seams
+# ADR-0318 - Strict ready-only mix generation using available rendered seams
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Ready-only. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Ready-only. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0100, ADR-0101, ADR-0221, ADR-0237, ADR-0297; statuses and ownership unchanged.
 - **Source touchpoints:** `src/selecta/planner/beam.py`; `src/selecta/planner/vibes.py`; `src/selecta/seams.py`; `src/selecta/mix.py`.
 
@@ -18,7 +18,7 @@ Add a hard ready_only=true planning mode over directed graph G=(eligible recordi
 
 ## Interaction and evidence contract
 
-Show 'Ready transitions only' with N verified of N-1 required seams, candidate/usable graph statistics and truthful duration/quality notices. If no route meets requirements, offer a shorter mix, other endpoint, or explicit relaxation—not a fake complete set.
+Show 'Ready transitions only' with N verified of N-1 required seams, candidate/usable graph statistics and truthful duration/quality notices. If no route meets requirements, offer a shorter mix, other endpoint, or explicit relaxation-not a fake complete set.
 
 **Negative cases:** Graph disconnected, isolated destination, scarce cached edges, wrong direction, edge pair counted twice, ready-but-failed audit, entry-after-prior-exit conflict, pinned tracks, source replacements, cache eviction, ready-only with one song.
 
@@ -26,16 +26,16 @@ Show 'Ready transitions only' with N verified of N-1 required seams, candidate/u
 
 Do not equate historical transition-memory success to playable cached media; do not use model prose as music evidence or build a differently generated order after approval. Reuse the existing local music engine and current/draft authority; any new cache index or planner mode needs direct regression proof. For non-ready-only features, this restriction is relevant when requested.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-318-01 — Define hard ready-only intent.** **Acceptance:** User phrases 'only transitions already ready/no rendering' become non-relaxable generation flag. **Required verification:** Intent and consent classifier eval. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-318-02 — Build directed playable-edge graph.** **Acceptance:** Nodes are eligible recordings; edges are exact playable on-disk cached seams with qualifying audit. **Required verification:** Graph construction and key tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-318-03 — Plan constrained complete paths.** **Acceptance:** All adjacent directed edges exist; no guessed handoffs or automatic render jobs. **Required verification:** Property-based no-missing-edge tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-318-04 — Validate global cue continuity.** **Acceptance:** Previous seam into-track end permits next outgoing seam start; reject 'too_soon' chains. **Required verification:** Three-or-more-seam timing fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-318-05 — Respect other hard constraints.** **Acceptance:** Locked occurrences, song count, exclusions, destination, no repeats and duration checked together. **Required verification:** Infeasible and sparse graph cases. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-318-06 — Guarantee no background new renders.** **Acceptance:** Building ready-only draft cannot enqueue any seam or automatic new analysis as side effect. **Required verification:** Worker/job count before/after E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-318-07 — Handle cache freshness and pinning.** **Acceptance:** Revalidate before commit/playback; retain referenced clips via bounded lease/pin or explain cannot guarantee future readiness. **Required verification:** Eviction/readiness race and disk pressure test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-318-08 — Expose explicit failure/relaxation UX.** **Acceptance:** No qualifying path returns computed limits and user-selectable new request, never hidden constraint relaxation. **Required verification:** Disconnected graph/mobile/AT user study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-318-01 - Define hard ready-only intent.** **Acceptance:** User phrases 'only transitions already ready/no rendering' become non-relaxable generation flag. **Required verification:** Intent and consent classifier eval. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-318-02 - Build directed playable-edge graph.** **Acceptance:** Nodes are eligible recordings; edges are exact playable on-disk cached seams with qualifying audit. **Required verification:** Graph construction and key tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-318-03 - Plan constrained complete paths.** **Acceptance:** All adjacent directed edges exist; no guessed handoffs or automatic render jobs. **Required verification:** Property-based no-missing-edge tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-318-04 - Validate global cue continuity.** **Acceptance:** Previous seam into-track end permits next outgoing seam start; reject 'too_soon' chains. **Required verification:** Three-or-more-seam timing fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-318-05 - Respect other hard constraints.** **Acceptance:** Locked occurrences, song count, exclusions, destination, no repeats and duration checked together. **Required verification:** Infeasible and sparse graph cases. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-318-06 - Guarantee no background new renders.** **Acceptance:** Building ready-only draft cannot enqueue any seam or automatic new analysis as side effect. **Required verification:** Worker/job count before/after E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-318-07 - Handle cache freshness and pinning.** **Acceptance:** Revalidate before commit/playback; retain referenced clips via bounded lease/pin or explain cannot guarantee future readiness. **Required verification:** Eviction/readiness race and disk pressure test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-318-08 - Expose explicit failure/relaxation UX.** **Acceptance:** No qualifying path returns computed limits and user-selectable new request, never hidden constraint relaxation. **Required verification:** Disconnected graph/mobile/AT user study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Hard preservation and evidence gate
 

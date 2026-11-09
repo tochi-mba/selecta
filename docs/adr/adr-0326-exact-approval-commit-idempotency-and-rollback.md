@@ -1,10 +1,10 @@
-# ADR-0326 — Exact revision approval, durable idempotent commit and reversible outcomes
+# ADR-0326 - Exact revision approval, durable idempotent commit and reversible outcomes
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Permissions. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Permissions. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Related existing ADRs:** ADR-0005, ADR-0095, ADR-0199, ADR-0219, ADR-0228, ADR-0237; statuses and scope unchanged.
 - **Source touchpoints:** `src/selecta/api.py`; `src/selecta/mix.py`; `src/selecta/routes/mixes.py`; `src/selecta/db.py`.
 
@@ -26,16 +26,16 @@ Confirmation displays exact revision, number of songs, whether playback changes 
 
 Prefer existing Selecta authoritative models, route/worker APIs and host-controlled permissions over duplicate agent-side audio/mix state. Reject model prose as proof of a write, transition render or real music quality. No SaaS/accounts/remote music/cloud sync/telemetry scope is implied by this ADR; remote model usage requires informed consent.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-326-01 — Create exact approved commit API.** **Acceptance:** Commit consumes frozen order/settings from revision, not vibe regeneration. **Required verification:** Exact input/output integration test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-326-02 — Require host-origin approval.** **Acceptance:** User gesture and signed/token-bound action gate write; model cannot self-authorise. **Required verification:** Prompt injection/forced tool call tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-326-03 — Validate preflight atomically.** **Acceptance:** Library/source/scope/revision/hash/hard constraints checked under safe transaction policy. **Required verification:** Concurrent library/current mix mutation tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-326-04 — Implement durable idempotency ledger.** **Acceptance:** Identical retried approval yields original outcome across server restart. **Required verification:** Crash-after-commit replay tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-326-05 — Distinguish draft and play.** **Acceptance:** Build draft leaves current audio untouched; Build & play gets separate confirmation. **Required verification:** Playing/paused/idle real-audio E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-326-06 — Preserve exact seam settings.** **Acceptance:** Saved draft uses reviewed settings; no hidden different replan or fallback. **Required verification:** Rendered request key parity test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-326-07 — Reconcile uncertain outcome.** **Acceptance:** Client queries commit status instead of issuing new write after network failure. **Required verification:** Lost-ACK/timeout tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-326-08 — Document recovery and Undo scope.** **Acceptance:** Old drafts/current mixes only restored through actual available scoped Undo. **Required verification:** Undo/rollback/backup test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-326-01 - Create exact approved commit API.** **Acceptance:** Commit consumes frozen order/settings from revision, not vibe regeneration. **Required verification:** Exact input/output integration test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-326-02 - Require host-origin approval.** **Acceptance:** User gesture and signed/token-bound action gate write; model cannot self-authorise. **Required verification:** Prompt injection/forced tool call tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-326-03 - Validate preflight atomically.** **Acceptance:** Library/source/scope/revision/hash/hard constraints checked under safe transaction policy. **Required verification:** Concurrent library/current mix mutation tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-326-04 - Implement durable idempotency ledger.** **Acceptance:** Identical retried approval yields original outcome across server restart. **Required verification:** Crash-after-commit replay tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-326-05 - Distinguish draft and play.** **Acceptance:** Build draft leaves current audio untouched; Build & play gets separate confirmation. **Required verification:** Playing/paused/idle real-audio E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-326-06 - Preserve exact seam settings.** **Acceptance:** Saved draft uses reviewed settings; no hidden different replan or fallback. **Required verification:** Rendered request key parity test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-326-07 - Reconcile uncertain outcome.** **Acceptance:** Client queries commit status instead of issuing new write after network failure. **Required verification:** Lost-ACK/timeout tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-326-08 - Document recovery and Undo scope.** **Acceptance:** Old drafts/current mixes only restored through actual available scoped Undo. **Required verification:** Undo/rollback/backup test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Existing product preservation
 

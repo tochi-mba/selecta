@@ -1,10 +1,10 @@
-# ADR-0348 — Library song inspector, musical metadata and measurement provenance
+# ADR-0348 - Library song inspector, musical metadata and measurement provenance
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P1 / Library detail. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / Library detail. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0227, ADR-0154, ADR-0291, ADR-0315; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/SongDetails.tsx`; `web/src/styles/operations.css`; `web/src/state/readiness.ts`.
 
@@ -24,16 +24,16 @@ Users understand which values Selecta measured, which values are in use and what
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0348-01 — Design inspector identity.** **Acceptance:** Exact recording title, artist and meaningful visual anchor lead the sheet. **Required verification:** Duplicate recording and long-title review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0348-02 — Separate facts from controls.** **Acceptance:** BPM, key, length, lyrics and readiness are scan-friendly before edit fields. **Required verification:** First-glance provenance task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0348-03 — Distinguish origin of values.** **Acceptance:** Measured data, user correction and unknown are visibly and semantically separate. **Required verification:** Override/unknown fixture and AT labels. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0348-04 — Explain readiness reason.** **Acceptance:** Known failure or missing source leads to a useful, truthful next step. **Required verification:** Failed/missing/queued detail-state tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0348-05 — Organise corrections.** **Acceptance:** Tempo/key form groups clear affordances, validation and rollback without form overload. **Required verification:** Error focus and form completion E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0348-06 — Keep source and advanced facts.** **Acceptance:** Advanced details remain reachable without presenting raw diagnostic data as the default. **Required verification:** Expert discoverability task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0348-07 — Preserve sheet focus and history.** **Acceptance:** Opening/closing details restores exact Library row, scroll and deep-link state. **Required verification:** Back/Forward and keyboard focus tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0348-08 — Validate inspector confidence.** **Acceptance:** Users can explain active versus measured metadata before applying a correction. **Required verification:** Uncoached correction-and-restore study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0348-01 - Design inspector identity.** **Acceptance:** Exact recording title, artist and meaningful visual anchor lead the sheet. **Required verification:** Duplicate recording and long-title review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0348-02 - Separate facts from controls.** **Acceptance:** BPM, key, length, lyrics and readiness are scan-friendly before edit fields. **Required verification:** First-glance provenance task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0348-03 - Distinguish origin of values.** **Acceptance:** Measured data, user correction and unknown are visibly and semantically separate. **Required verification:** Override/unknown fixture and AT labels. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0348-04 - Explain readiness reason.** **Acceptance:** Known failure or missing source leads to a useful, truthful next step. **Required verification:** Failed/missing/queued detail-state tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0348-05 - Organise corrections.** **Acceptance:** Tempo/key form groups clear affordances, validation and rollback without form overload. **Required verification:** Error focus and form completion E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0348-06 - Keep source and advanced facts.** **Acceptance:** Advanced details remain reachable without presenting raw diagnostic data as the default. **Required verification:** Expert discoverability task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0348-07 - Preserve sheet focus and history.** **Acceptance:** Opening/closing details restores exact Library row, scroll and deep-link state. **Required verification:** Back/Forward and keyboard focus tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0348-08 - Validate inspector confidence.** **Acceptance:** Users can explain active versus measured metadata before applying a correction. **Required verification:** Uncoached correction-and-restore study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

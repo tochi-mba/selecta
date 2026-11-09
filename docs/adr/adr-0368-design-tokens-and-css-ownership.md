@@ -1,10 +1,10 @@
-# ADR-0368 — Semantic design tokens, theme contrast and CSS ownership
+# ADR-0368 - Semantic design tokens, theme contrast and CSS ownership
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P0 / 02 Foundation. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / 02 Foundation. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0200, ADR-0201, ADR-0203, ADR-0236, ADR-0264, ADR-0273, ADR-0278; unchanged.
 - **Source touchpoints (review, not implementation):** `web/src/main.tsx`; `web/src/styles/tokens.css`; `web/src/style.css`; `web/src/styles/polish.css`.
 
@@ -22,16 +22,16 @@ Users complete the named journey with clear action consequences, predictable con
 
 **Preservation and trade-offs:** Keep original music local/unchanged, one authoritative audio owner and deliberate Pause, exact recording/mix/draft/revision/occurrence/seam identities, guarded Undo, consented atomic request bridges, real valid ready-only seams, eight Studio lanes/8–64 cells, true library readiness and lyric provenance, frozen-revision decodable FLAC and blinded human evaluation. No SaaS, telemetry, engine rewrite or unsolicited upload.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0368-01 — Inventory CSS imports.** **Acceptance:** Record import order, selector ownership and high-specificity exceptions. **Required verification:** Computed-style inventory. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0368-02 — Assign semantic token ownership.** **Acceptance:** One source for text, surface, focus, selection, statuses, borders and spacing. **Required verification:** Static token and reference audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0368-03 — Preserve approved visual identity.** **Acceptance:** Retain warm-dark brand and bright accent unless evidence warrants adjustment. **Required verification:** Before/after owner critique. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0368-04 — Reconcile overlapping geometry.** **Acceptance:** Measure panel/card/page values before removing or changing overrides. **Required verification:** Matched CSS geometry report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0368-05 — Verify theme precedence.** **Acceptance:** Manual Light/Dark/System changes and first-paint state remain stable. **Required verification:** Theme persistence and screenshot suite. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0368-06 — Check contrast at final surfaces.** **Acceptance:** Text and non-text boundaries meet applicable WCAG criteria. **Required verification:** Contrast measurement. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0368-07 — Document new CSS rules.** **Acceptance:** Every shared selector and page-local rule has named ownership and an exception policy. **Required verification:** PR review/lint protocol. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0368-08 — Approve cascade regression proof.** **Acceptance:** No unreviewed style drift under representative themes, sizes or density. **Required verification:** Paired screenshot and computed CSS acceptance. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0368-01 - Inventory CSS imports.** **Acceptance:** Record import order, selector ownership and high-specificity exceptions. **Required verification:** Computed-style inventory. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0368-02 - Assign semantic token ownership.** **Acceptance:** One source for text, surface, focus, selection, statuses, borders and spacing. **Required verification:** Static token and reference audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0368-03 - Preserve approved visual identity.** **Acceptance:** Retain warm-dark brand and bright accent unless evidence warrants adjustment. **Required verification:** Before/after owner critique. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0368-04 - Reconcile overlapping geometry.** **Acceptance:** Measure panel/card/page values before removing or changing overrides. **Required verification:** Matched CSS geometry report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0368-05 - Verify theme precedence.** **Acceptance:** Manual Light/Dark/System changes and first-paint state remain stable. **Required verification:** Theme persistence and screenshot suite. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0368-06 - Check contrast at final surfaces.** **Acceptance:** Text and non-text boundaries meet applicable WCAG criteria. **Required verification:** Contrast measurement. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0368-07 - Document new CSS rules.** **Acceptance:** Every shared selector and page-local rule has named ownership and an exception policy. **Required verification:** PR review/lint protocol. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0368-08 - Approve cascade regression proof.** **Acceptance:** No unreviewed style drift under representative themes, sizes or density. **Required verification:** Paired screenshot and computed CSS acceptance. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

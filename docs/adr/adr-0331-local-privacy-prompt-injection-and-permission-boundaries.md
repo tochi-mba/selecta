@@ -1,10 +1,10 @@
-# ADR-0331 — Least-privilege tool access, privacy, prompt injection and write consent
+# ADR-0331 - Least-privilege tool access, privacy, prompt injection and write consent
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Security. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Security. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Related existing ADRs:** ADR-0072, ADR-0111, ADR-0238, ADR-0253, ADR-0299; statuses and scope unchanged.
 - **Source touchpoints:** `src/selecta/api.py`; `src/selecta/routes/system.py`; `src/selecta/db.py`; `web/src/api.ts`.
 
@@ -26,16 +26,16 @@ Requests for consequential writes display exact action/scope, privacy setting is
 
 Prefer existing Selecta authoritative models, route/worker APIs and host-controlled permissions over duplicate agent-side audio/mix state. Reject model prose as proof of a write, transition render or real music quality. No SaaS/accounts/remote music/cloud sync/telemetry scope is implied by this ADR; remote model usage requires informed consent.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-331-01 — Threat model all untrusted inputs.** **Acceptance:** Metadata, lyrics, model responses, tool content and URLs classified as data. **Required verification:** Prompt injection scenario corpus. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-331-02 — Enforce host tool allowlists.** **Acceptance:** Model cannot use filesystem, delete original songs or invoke unsupported ops. **Required verification:** Forced function-call adversarial tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-331-03 — Gate write tiers.** **Acceptance:** Compute and write scopes require exact operation arguments and appropriate user consent. **Required verification:** No-approval and spoofed-approval tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-331-04 — Keep raw media private.** **Acceptance:** Paths, original audio, secrets and unrelated catalog excluded from provider requests. **Required verification:** Network capture and canary leak test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-331-05 — Scope results and identities.** **Acceptance:** Conversation, draft/current and home isolation held at operation execution. **Required verification:** Cross-home/cross-turn penetration tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-331-06 — Sanitize rendered messages.** **Acceptance:** Tool labels/Markdown cannot execute HTML/script or counterfeit UI actions. **Required verification:** XSS/rendering tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-331-07 — Provide auditable privacy settings.** **Acceptance:** User can inspect provider data classes, disable Lucy and clear appropriate records. **Required verification:** Privacy comprehension/accessibility review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-331-08 — Verify abuse and denial safety.** **Acceptance:** Rate limits, timeouts, prompt loops and denied operations cannot starve audio. **Required verification:** Resource/adversarial safety regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-331-01 - Threat model all untrusted inputs.** **Acceptance:** Metadata, lyrics, model responses, tool content and URLs classified as data. **Required verification:** Prompt injection scenario corpus. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-331-02 - Enforce host tool allowlists.** **Acceptance:** Model cannot use filesystem, delete original songs or invoke unsupported ops. **Required verification:** Forced function-call adversarial tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-331-03 - Gate write tiers.** **Acceptance:** Compute and write scopes require exact operation arguments and appropriate user consent. **Required verification:** No-approval and spoofed-approval tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-331-04 - Keep raw media private.** **Acceptance:** Paths, original audio, secrets and unrelated catalog excluded from provider requests. **Required verification:** Network capture and canary leak test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-331-05 - Scope results and identities.** **Acceptance:** Conversation, draft/current and home isolation held at operation execution. **Required verification:** Cross-home/cross-turn penetration tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-331-06 - Sanitize rendered messages.** **Acceptance:** Tool labels/Markdown cannot execute HTML/script or counterfeit UI actions. **Required verification:** XSS/rendering tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-331-07 - Provide auditable privacy settings.** **Acceptance:** User can inspect provider data classes, disable Lucy and clear appropriate records. **Required verification:** Privacy comprehension/accessibility review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-331-08 - Verify abuse and denial safety.** **Acceptance:** Rate limits, timeouts, prompt loops and denied operations cannot starve audio. **Required verification:** Resource/adversarial safety regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Existing product preservation
 

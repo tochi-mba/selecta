@@ -1,10 +1,10 @@
-# ADR-0335 — WeftAI tool contracts, agent trajectories, adversarial and deterministic testing
+# ADR-0335 - WeftAI tool contracts, agent trajectories, adversarial and deterministic testing
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Quality. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Quality. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0112, ADR-0239, ADR-0240, ADR-0271, ADR-0299; unchanged.
 - **Source touchpoints:** `tests/`; `web/src/views/Mixes.test.tsx`; `web/e2e/`; `src/selecta/planner/`.
 
@@ -26,16 +26,16 @@ Failures are attributable to an exact run/plan/tool/proposal revision, and test 
 
 Never prioritise chatbot animation over audio continuity or fabricated estimates over measured truth. Reuse the existing Selecta app and WeftAI typed planning. Before implementing, reconcile related accepted ADRs against current source, tests and actual audio evidence; do not retrofit their historical statuses.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-335-01 — Build typed operation contract tests.** **Acceptance:** Schemas, caps, field errors, ref mismatch and permission flags verified. **Required verification:** WeftAI Python conformance. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-335-02 — Create conversation trajectory corpus.** **Acceptance:** Multi-turn revisions, locks and approval judged against structured state. **Required verification:** Golden 6+turn scenarios. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-335-03 — Test ready-only graph property.** **Acceptance:** Every K-song route uses K-1 playable directed edges with no queued renders. **Required verification:** Property-based music graph tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-335-04 — Simulate streaming failures.** **Acceptance:** Fake provider sends chunks, partial args, duplicates, gaps and cancellations. **Required verification:** Event decoder/browser E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-335-05 — Red-team tool outputs.** **Acceptance:** Malicious tags, lyrics, model instructions and URLs cannot induce writes or XSS. **Required verification:** Security adversarial suite. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-335-06 — Test exact commit recovery.** **Acceptance:** Restart/double approve and stale library never create divergent drafts. **Required verification:** Transactional fault injection. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-335-07 — Preserve music regressions.** **Acceptance:** Existing editor, player, Studio, requests, export and library suites remain green. **Required verification:** CI matrix including audio. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-335-08 — Track reproducible evaluation results.** **Acceptance:** Fixtures/seeds/provider versions/SHAs recorded per quality metric. **Required verification:** Independent eval sign-off. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-335-01 - Build typed operation contract tests.** **Acceptance:** Schemas, caps, field errors, ref mismatch and permission flags verified. **Required verification:** WeftAI Python conformance. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-335-02 - Create conversation trajectory corpus.** **Acceptance:** Multi-turn revisions, locks and approval judged against structured state. **Required verification:** Golden 6+turn scenarios. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-335-03 - Test ready-only graph property.** **Acceptance:** Every K-song route uses K-1 playable directed edges with no queued renders. **Required verification:** Property-based music graph tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-335-04 - Simulate streaming failures.** **Acceptance:** Fake provider sends chunks, partial args, duplicates, gaps and cancellations. **Required verification:** Event decoder/browser E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-335-05 - Red-team tool outputs.** **Acceptance:** Malicious tags, lyrics, model instructions and URLs cannot induce writes or XSS. **Required verification:** Security adversarial suite. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-335-06 - Test exact commit recovery.** **Acceptance:** Restart/double approve and stale library never create divergent drafts. **Required verification:** Transactional fault injection. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-335-07 - Preserve music regressions.** **Acceptance:** Existing editor, player, Studio, requests, export and library suites remain green. **Required verification:** CI matrix including audio. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-335-08 - Track reproducible evaluation results.** **Acceptance:** Fixtures/seeds/provider versions/SHAs recorded per quality metric. **Required verification:** Independent eval sign-off. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Preservation and release proof
 

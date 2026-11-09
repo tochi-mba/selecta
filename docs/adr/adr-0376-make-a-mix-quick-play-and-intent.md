@@ -1,10 +1,10 @@
-# ADR-0376 — Make a Mix quick paths, moods, shaping and Lucy handoff
+# ADR-0376 - Make a Mix quick paths, moods, shaping and Lucy handoff
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P0 / 05 Creation entry. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / 05 Creation entry. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0216, ADR-0217, ADR-0259, ADR-0268, ADR-0283, ADR-0353, ADR-0354; unchanged.
 - **Source touchpoints (review, not implementation):** `web/src/views/Mixes.tsx`; `web/src/views/MixSetup.tsx`.
 
@@ -22,16 +22,16 @@ Users complete the named journey with clear action consequences, predictable con
 
 **Preservation and trade-offs:** Keep original music local/unchanged, one authoritative audio owner and deliberate Pause, exact recording/mix/draft/revision/occurrence/seam identities, guarded Undo, consented atomic request bridges, real valid ready-only seams, eight Studio lanes/8–64 cells, true library readiness and lyric provenance, frozen-revision decodable FLAC and blinded human evaluation. No SaaS, telemetry, engine rewrite or unsolicited upload.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0376-01 — Delegate detailed design to LX.** **Acceptance:** Use existing LX-0353/0354 contracts and classify only integration gaps. **Required verification:** LX parity review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0376-02 — Make Quick Play predictable.** **Acceptance:** Communicate actual readiness and next step without requiring DJ knowledge. **Required verification:** Uncoached first use. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0376-03 — Guard active mix replacement.** **Acceptance:** Show consequence and existing Undo when changing currently audible music. **Required verification:** Replacement fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0376-04 — Use genuine mood facts.** **Acceptance:** Mood cards compare source-backed vibe, duration and eligible song counts. **Required verification:** Card fixture/copy review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0376-05 — Keep advanced controls optional.** **Acceptance:** Energy, stems and target can be shaped without blocking basic listen. **Required verification:** Basic/expert task comparison. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0376-06 — Preserve Lucy handoff scope.** **Acceptance:** Mood/selected prompt is prefilled exactly and never auto-sent. **Required verification:** Deep-link and consent test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0376-07 — Handle insufficient ready songs.** **Acceptance:** Offer scan/analysis path rather than impossible mix action. **Required verification:** Zero-ready fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0376-08 — Check responsive card actions.** **Acceptance:** Mobile layouts retain comparable cards and safe button targets. **Required verification:** Paired screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0376-01 - Delegate detailed design to LX.** **Acceptance:** Use existing LX-0353/0354 contracts and classify only integration gaps. **Required verification:** LX parity review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0376-02 - Make Quick Play predictable.** **Acceptance:** Communicate actual readiness and next step without requiring DJ knowledge. **Required verification:** Uncoached first use. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0376-03 - Guard active mix replacement.** **Acceptance:** Show consequence and existing Undo when changing currently audible music. **Required verification:** Replacement fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0376-04 - Use genuine mood facts.** **Acceptance:** Mood cards compare source-backed vibe, duration and eligible song counts. **Required verification:** Card fixture/copy review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0376-05 - Keep advanced controls optional.** **Acceptance:** Energy, stems and target can be shaped without blocking basic listen. **Required verification:** Basic/expert task comparison. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0376-06 - Preserve Lucy handoff scope.** **Acceptance:** Mood/selected prompt is prefilled exactly and never auto-sent. **Required verification:** Deep-link and consent test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0376-07 - Handle insufficient ready songs.** **Acceptance:** Offer scan/analysis path rather than impossible mix action. **Required verification:** Zero-ready fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0376-08 - Check responsive card actions.** **Acceptance:** Mobile layouts retain comparable cards and safe button targets. **Required verification:** Paired screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

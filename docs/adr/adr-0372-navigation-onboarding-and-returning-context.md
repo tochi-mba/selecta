@@ -1,10 +1,10 @@
-# ADR-0372 — Navigation, first-run readiness and returning-work continuity
+# ADR-0372 - Navigation, first-run readiness and returning-work continuity
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P0 / 03 Navigation. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / 03 Navigation. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0208, ADR-0229, ADR-0256, ADR-0280, ADR-0282, ADR-0340, ADR-0353; unchanged.
 - **Source touchpoints (review, not implementation):** `web/src/shell/manifest.ts`; `web/src/router.ts`; `web/src/views/Start.tsx`.
 
@@ -22,16 +22,16 @@ Users complete the named journey with clear action consequences, predictable con
 
 **Preservation and trade-offs:** Keep original music local/unchanged, one authoritative audio owner and deliberate Pause, exact recording/mix/draft/revision/occurrence/seam identities, guarded Undo, consented atomic request bridges, real valid ready-only seams, eight Studio lanes/8–64 cells, true library readiness and lyric provenance, frozen-revision decodable FLAC and blinded human evaluation. No SaaS, telemetry, engine rewrite or unsolicited upload.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0372-01 — Validate five destination intents.** **Acceptance:** Listen, Make a Mix, My Mixes, Library and Workspace remain understandable. **Required verification:** Uncoached route selection. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0372-02 — Preserve URL meaning.** **Acceptance:** Back, forward, aliases and refresh retain exact draft/conversation/tab target. **Required verification:** Router regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0372-03 — Explain music-folder entry.** **Acceptance:** Local path, access errors and scan consequences are clear without promising unsupported folder pickers. **Required verification:** Setup walkthrough. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0372-04 — Separate readiness stages.** **Acceptance:** Imported, analysed and mix-ready are distinct and actionable. **Required verification:** No-ready/partial-ready fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0372-05 — Protect first playback.** **Acceptance:** Only genuinely eligible sets can be offered as ready; no unrequested autoplay. **Required verification:** Cold-library player test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0372-06 — Restore returning work.** **Acceptance:** Recent drafts and route context return without replacing music. **Required verification:** Restart and route-state test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0372-07 — Remove shell occlusion.** **Acceptance:** Rail, mobile bottom bar, context header and mini-player leave actions usable. **Required verification:** Narrow/short/zoom geometry. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0372-08 — Keep focus navigation obvious.** **Acceptance:** Keyboard palette, landmarks and active destination remain coherent. **Required verification:** NVDA/VoiceOver and tab order. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0372-01 - Validate five destination intents.** **Acceptance:** Listen, Make a Mix, My Mixes, Library and Workspace remain understandable. **Required verification:** Uncoached route selection. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0372-02 - Preserve URL meaning.** **Acceptance:** Back, forward, aliases and refresh retain exact draft/conversation/tab target. **Required verification:** Router regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0372-03 - Explain music-folder entry.** **Acceptance:** Local path, access errors and scan consequences are clear without promising unsupported folder pickers. **Required verification:** Setup walkthrough. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0372-04 - Separate readiness stages.** **Acceptance:** Imported, analysed and mix-ready are distinct and actionable. **Required verification:** No-ready/partial-ready fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0372-05 - Protect first playback.** **Acceptance:** Only genuinely eligible sets can be offered as ready; no unrequested autoplay. **Required verification:** Cold-library player test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0372-06 - Restore returning work.** **Acceptance:** Recent drafts and route context return without replacing music. **Required verification:** Restart and route-state test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0372-07 - Remove shell occlusion.** **Acceptance:** Rail, mobile bottom bar, context header and mini-player leave actions usable. **Required verification:** Narrow/short/zoom geometry. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0372-08 - Keep focus navigation obvious.** **Acceptance:** Keyboard palette, landmarks and active destination remain coherent. **Required verification:** NVDA/VoiceOver and tab order. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

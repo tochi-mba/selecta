@@ -1,4 +1,4 @@
-# Selecta — Unified Experience Finish ADR proposal (2026-11-08)
+# Selecta - Unified Experience Finish ADR proposal (2026-11-08)
 
 **Unified experience finishing programme:** 24 **Accepted** ADRs (0366–0389); **192 UF acceptance items**: 184 Not started, 8 In progress, 0 Implemented and **0 independently Verified**. Requester accepted all UF decisions on 2026-11-08; PR #41 now contains app code and tests. Implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526`.
 
@@ -10,7 +10,7 @@
 
 ---
 
-# Selecta — Library + Lucy experience redesign ADR proposal (2026-11-08)
+# Selecta - Library + Lucy experience redesign ADR proposal (2026-11-08)
 
 **New docs-only, scoped redesign programme:** 26 **Proposed** ADRs (0340–0365), 208 individually tracked **Not started** LX implementation tasks, 0 In progress, 0 Implemented and 0 independently Verified. All owners unassigned. Planning baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
 
@@ -20,7 +20,7 @@
 
 ---
 
-# Selecta — proposed measured UI/UX micro-polish ADRs (2026-11-08)
+# Selecta - proposed measured UI/UX micro-polish ADRs (2026-11-08)
 
 **New documentation-only programme:** [28 ADR roadmap](selecta-measured-micro-polish-roadmap.md) · [224 implementation tasks](selecta-measured-micro-polish-implementation-checklist.md) · [per-task evidence](selecta-measured-micro-polish-implementation-evidence.md) · [status JSON](selecta-measured-micro-polish-code-status.json) · [overlap](selecta-measured-micro-polish-overlap-and-parity.md) · [geometry](selecta-measured-micro-polish-geometry-contract.md) · [verification](selecta-measured-micro-polish-verification-matrix.md) · [reconciliation](selecta-measured-micro-polish-status-reconciliation.md) · [release](selecta-measured-micro-polish-release-gates.md).
 

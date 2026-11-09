@@ -1,10 +1,10 @@
-# ADR-0319 — Ready-only request controls, proof, trade-offs and playback-ready outcome
+# ADR-0319 - Ready-only request controls, proof, trade-offs and playback-ready outcome
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Ready-only UX. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Ready-only UX. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0117, ADR-0216, ADR-0228, ADR-0237, ADR-0268; statuses and ownership unchanged.
 - **Source touchpoints:** `web/src/views/Mixes.tsx`; `web/src/views/MixSetup.tsx`; `web/src/views/Mix.tsx`; `web/src/api.ts`.
 
@@ -26,16 +26,16 @@ Lucy can say 'I found 9 tracks connected by 8 existing ready transitions. No new
 
 Do not equate historical transition-memory success to playable cached media; do not use model prose as music evidence or build a differently generated order after approval. Reuse the existing local music engine and current/draft authority; any new cache index or planner mode needs direct regression proof. For non-ready-only features, this restriction is relevant when requested.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-319-01 — Interpret strict vs preference mode.** **Acceptance:** Natural-language request and UI chip distinguish ready_only from prefer_ready. **Required verification:** Paraphrase intent eval and UI test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-319-02 — Make strict filter visible.** **Acceptance:** Current proposal and every revision show active hard 'already rendered' rule. **Required verification:** Constraint persistence E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-319-03 — Display real seam ledger.** **Acceptance:** Each adjacent exact request shows status, actual move, source and playable-audio proof. **Required verification:** Ready/evicted/near-miss fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-319-04 — Show ready count accurately.** **Acceptance:** N tracks require max(0,N-1) incoming transitions, without double counting. **Required verification:** 1/2/long mix count tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-319-05 — Explain scarce connected paths.** **Acceptance:** No-route state gives feasible shorter options or asks permission to relax rules. **Required verification:** Sparse directed graph novice test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-319-06 — Revalidate approval semantics.** **Acceptance:** Approve/build cannot use stale ready-only snapshot or auto-queue missing audio. **Required verification:** Concurrent eviction/commit tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-319-07 — Preserve instant-play expectation.** **Acceptance:** Only claim playable now if all clips and sources still valid, no render waits. **Required verification:** Cold playback across exact ready graph. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-319-08 — Support accessible compact proof.** **Acceptance:** Phone and AT users can inspect constraints without opening every seam. **Required verification:** 320px/400% zoom/keyboard and screen reader test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-319-01 - Interpret strict vs preference mode.** **Acceptance:** Natural-language request and UI chip distinguish ready_only from prefer_ready. **Required verification:** Paraphrase intent eval and UI test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-319-02 - Make strict filter visible.** **Acceptance:** Current proposal and every revision show active hard 'already rendered' rule. **Required verification:** Constraint persistence E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-319-03 - Display real seam ledger.** **Acceptance:** Each adjacent exact request shows status, actual move, source and playable-audio proof. **Required verification:** Ready/evicted/near-miss fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-319-04 - Show ready count accurately.** **Acceptance:** N tracks require max(0,N-1) incoming transitions, without double counting. **Required verification:** 1/2/long mix count tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-319-05 - Explain scarce connected paths.** **Acceptance:** No-route state gives feasible shorter options or asks permission to relax rules. **Required verification:** Sparse directed graph novice test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-319-06 - Revalidate approval semantics.** **Acceptance:** Approve/build cannot use stale ready-only snapshot or auto-queue missing audio. **Required verification:** Concurrent eviction/commit tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-319-07 - Preserve instant-play expectation.** **Acceptance:** Only claim playable now if all clips and sources still valid, no render waits. **Required verification:** Cold playback across exact ready graph. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-319-08 - Support accessible compact proof.** **Acceptance:** Phone and AT users can inspect constraints without opening every seam. **Required verification:** 320px/400% zoom/keyboard and screen reader test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Hard preservation and evidence gate
 

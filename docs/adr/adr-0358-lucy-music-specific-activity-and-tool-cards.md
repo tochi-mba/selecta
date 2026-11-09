@@ -1,10 +1,10 @@
-# ADR-0358 — Lucy visible activity, genuine progress and music-specific tool details
+# ADR-0358 - Lucy visible activity, genuine progress and music-specific tool details
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P0 / Lucy activity. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Lucy activity. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0303, ADR-0304, ADR-0305, ADR-0332; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/LucyCards.tsx`; `web/src/views/LucyVisuals.tsx`; `web/src/styles/lucy.css`.
 
@@ -24,16 +24,16 @@ Users know whether Lucy is searching, analysing, planning or waiting for approva
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0358-01 — Group meaningful milestones.** **Acceptance:** Show searching, checking, planning and completion from actual step events. **Required verification:** Event-stream timing and ordering test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0358-02 — Keep tool data truthful.** **Acceptance:** Use tool-returned song IDs, counts, tempo/key and seam outcomes; unknown stays unknown. **Required verification:** Adversarial partial-result fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0358-03 — Refine compact card hierarchy.** **Acceptance:** Current running/failed card outranks completed logs; details expandable. **Required verification:** Long-run hierarchy study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0358-04 — Visualise musical steps.** **Acceptance:** Search matches, transition checks and order planning use compact semantic mini-UI. **Required verification:** Result-to-visual snapshot and provenance audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0358-05 — Handle progress responsibly.** **Acceptance:** Known denominator uses numeric progress; indeterminate is labelled, no fake ETA. **Required verification:** Unknown-total and failed-progress tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0358-06 — Make permission actions distinct.** **Acceptance:** Tool permission requests are clearly separate from informational step cards. **Required verification:** Allow/deny task and focus audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0358-07 — Respect motion preferences.** **Acceptance:** Activity animation only conveys actual work; Still retains full textual state. **Required verification:** prefers-reduced-motion and Still E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0358-08 — Validate working-state trust.** **Acceptance:** Users correctly predict what happened and whether anything was saved/played. **Required verification:** Comprehension study with mixed runs. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0358-01 - Group meaningful milestones.** **Acceptance:** Show searching, checking, planning and completion from actual step events. **Required verification:** Event-stream timing and ordering test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0358-02 - Keep tool data truthful.** **Acceptance:** Use tool-returned song IDs, counts, tempo/key and seam outcomes; unknown stays unknown. **Required verification:** Adversarial partial-result fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0358-03 - Refine compact card hierarchy.** **Acceptance:** Current running/failed card outranks completed logs; details expandable. **Required verification:** Long-run hierarchy study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0358-04 - Visualise musical steps.** **Acceptance:** Search matches, transition checks and order planning use compact semantic mini-UI. **Required verification:** Result-to-visual snapshot and provenance audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0358-05 - Handle progress responsibly.** **Acceptance:** Known denominator uses numeric progress; indeterminate is labelled, no fake ETA. **Required verification:** Unknown-total and failed-progress tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0358-06 - Make permission actions distinct.** **Acceptance:** Tool permission requests are clearly separate from informational step cards. **Required verification:** Allow/deny task and focus audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0358-07 - Respect motion preferences.** **Acceptance:** Activity animation only conveys actual work; Still retains full textual state. **Required verification:** prefers-reduced-motion and Still E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0358-08 - Validate working-state trust.** **Acceptance:** Users correctly predict what happened and whether anything was saved/played. **Required verification:** Comprehension study with mixed runs. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

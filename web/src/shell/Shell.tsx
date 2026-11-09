@@ -58,7 +58,7 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { playe
       <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : now.phase === 'loading' ? 'Loading song' : now.phase === 'paused' ? 'Resume' : 'Play'}>
         <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
       </button>
-      <PageLink to="/listen" className="mini-song" title={`${song.title || 'Untitled'} — ${song.artist || 'Unknown artist'}`}>
+      <PageLink to="/listen" className="mini-song" title={`${song.title || 'Untitled'} - ${song.artist || 'Unknown artist'}`}>
         <b title={song.title} dir="auto">{song.title || 'Untitled'}</b>
         <span title={song.artist} dir="auto">{song.artist || 'Unknown artist'} · {clock(now.songTime)} / {clock(now.duration)}{now.inSeam ? ' · Transition playing' : ''}</span>
       </PageLink>

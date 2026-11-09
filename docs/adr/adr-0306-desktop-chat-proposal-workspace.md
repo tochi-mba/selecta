@@ -1,10 +1,10 @@
-# ADR-0306 — Desktop conversation and persistent live proposal workspace
+# ADR-0306 - Desktop conversation and persistent live proposal workspace
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Experience. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Experience. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0219, ADR-0220, ADR-0228, ADR-0233, ADR-0269; their decisions and statuses remain unchanged.
 - **Source touchpoints:** `web/src/views/Mixes.tsx`; `web/src/views/Mix.tsx`; `web/src/styles/creation.css`.
 
@@ -26,16 +26,16 @@ Chat conveys discussion; proposal displays title, actual songs, approximate dura
 
 Prefer integrating the existing Selecta source-of-truth over duplicating music state or adding a detached chatbot. Reject fabricated analysis, unsupported audio effects, model-authorised playback, and generic animation that does not explain real work. Any remote AI provider requires a separate explicit privacy/consent decision.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-306-01 — Define adaptive pane contract.** **Acceptance:** Split only when measured content space supports full readable song and chat controls. **Required verification:** Width/height/zoom geometry matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-306-02 — Design conversation column.** **Acceptance:** Stable transcript, streaming status and composer have clear hierarchy. **Required verification:** First-user reading/order study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-306-03 — Design proposal column.** **Acceptance:** Current revision, exact song order, warnings, locks, duration and actions are visible. **Required verification:** Proposal comprehension E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-306-04 — Preserve selection identity.** **Acceptance:** Selected occurrence/seam follows revisions or explicitly declares removal. **Required verification:** Duplicate and reorder interaction tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-306-05 — Preserve independent scrolling.** **Acceptance:** Neither stream updates nor revision changes force unrelated scroll/focus. **Required verification:** Long transcript automated scroll test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-306-06 — Avoid editor duplication.** **Acceptance:** Deep-link to Story/Arrange/Detail for precision editing on committed drafts. **Required verification:** Editor feature-parity and return tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-306-07 — Handle empty and failure states.** **Acceptance:** No proposal, stale proposal, planner failed or offline show useful recovery. **Required verification:** Empty/skeleton/error screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-306-08 — Review visual hierarchy.** **Acceptance:** Music object outranks AI chrome across themes and density preferences. **Required verification:** Paired themes, human critique and AT acceptance. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-306-01 - Define adaptive pane contract.** **Acceptance:** Split only when measured content space supports full readable song and chat controls. **Required verification:** Width/height/zoom geometry matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-306-02 - Design conversation column.** **Acceptance:** Stable transcript, streaming status and composer have clear hierarchy. **Required verification:** First-user reading/order study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-306-03 - Design proposal column.** **Acceptance:** Current revision, exact song order, warnings, locks, duration and actions are visible. **Required verification:** Proposal comprehension E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-306-04 - Preserve selection identity.** **Acceptance:** Selected occurrence/seam follows revisions or explicitly declares removal. **Required verification:** Duplicate and reorder interaction tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-306-05 - Preserve independent scrolling.** **Acceptance:** Neither stream updates nor revision changes force unrelated scroll/focus. **Required verification:** Long transcript automated scroll test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-306-06 - Avoid editor duplication.** **Acceptance:** Deep-link to Story/Arrange/Detail for precision editing on committed drafts. **Required verification:** Editor feature-parity and return tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-306-07 - Handle empty and failure states.** **Acceptance:** No proposal, stale proposal, planner failed or offline show useful recovery. **Required verification:** Empty/skeleton/error screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-306-08 - Review visual hierarchy.** **Acceptance:** Music object outranks AI chrome across themes and density preferences. **Required verification:** Paired themes, human critique and AT acceptance. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Non-negotiable regression and release boundaries
 

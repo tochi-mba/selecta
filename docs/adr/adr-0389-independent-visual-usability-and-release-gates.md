@@ -1,10 +1,10 @@
-# ADR-0389 — Independent visual, human, performance, real-audio and release GO/NO-GO
+# ADR-0389 - Independent visual, human, performance, real-audio and release GO/NO-GO
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P0 / 08 Verification. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / 08 Verification. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0239, ADR-0240, ADR-0247, ADR-0271, ADR-0299, ADR-0336, ADR-0365; unchanged.
 - **Source touchpoints (review, not implementation):** `web/e2e/paired-theme.e2e.ts`; `web/e2e/visual.e2e.ts`; `web/bench/scale.bench.ts`.
 
@@ -22,16 +22,16 @@ Users understand what is actually available, which exact music object they are a
 
 **Preservation and trade-offs:** Preserve local original music, one authoritative player and deliberate Pause; exact recording/draft/mix/revision/occurrence/seam IDs; revision-guarded mutations and scoped Undo; explicit consent and atomic bridges; actual on-disk valid ready-only seams (K songs need K−1 edges); eight Studio lanes and 8–64-cell arrangement; truthful source/readiness; frozen-revision decodable FLAC; unbiased human listening. No accounts, SaaS, telemetry, remote audio upload or engine rewrite.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0389-01 — Approve paired visual baselines.** **Acceptance:** Same fixture/route/state/player/revision/size in Light and Dark, human reviewed. **Required verification:** Signed screenshot manifest. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0389-02 — Run responsive and AT acceptance.** **Acceptance:** Mobile, 400%, forced colours, physical keyboard and screen readers cover core routes. **Required verification:** Independent platform report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0389-03 — Measure realistic performance.** **Acceptance:** 20k Library, long Lucy, 40+ editor and active spectrum with named devices and budgets. **Required verification:** Benchmark report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0389-04 — Publish human success evidence.** **Acceptance:** Uncoached novice/expert tasks with approved threshold and sample-size caveats. **Required verification:** Researcher-reviewed results. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0389-05 — Listen to real transitions.** **Acceptance:** Actual seams, stems, audio focus and output judged separately from synthetic UI tests. **Required verification:** Independent real-audio log. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0389-06 — Verify functional preservation.** **Acceptance:** No unsolicited Pause, wrong exact IDs, consent breach, false ready-only or bad frozen FLAC. **Required verification:** Regression and manual review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0389-07 — Keep per-task status provenance.** **Acceptance:** ADR, checklist, evidence and JSON updated together only on proven SHA/review. **Required verification:** Consistency validator and negative cases. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0389-08 — Require documented release verdict.** **Acceptance:** Zero unresolved P0; P1 decisions, rollback, named owner and independent GO sign-off. **Required verification:** Gate dry run. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0389-01 - Approve paired visual baselines.** **Acceptance:** Same fixture/route/state/player/revision/size in Light and Dark, human reviewed. **Required verification:** Signed screenshot manifest. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0389-02 - Run responsive and AT acceptance.** **Acceptance:** Mobile, 400%, forced colours, physical keyboard and screen readers cover core routes. **Required verification:** Independent platform report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0389-03 - Measure realistic performance.** **Acceptance:** 20k Library, long Lucy, 40+ editor and active spectrum with named devices and budgets. **Required verification:** Benchmark report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0389-04 - Publish human success evidence.** **Acceptance:** Uncoached novice/expert tasks with approved threshold and sample-size caveats. **Required verification:** Researcher-reviewed results. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0389-05 - Listen to real transitions.** **Acceptance:** Actual seams, stems, audio focus and output judged separately from synthetic UI tests. **Required verification:** Independent real-audio log. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0389-06 - Verify functional preservation.** **Acceptance:** No unsolicited Pause, wrong exact IDs, consent breach, false ready-only or bad frozen FLAC. **Required verification:** Regression and manual review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0389-07 - Keep per-task status provenance.** **Acceptance:** ADR, checklist, evidence and JSON updated together only on proven SHA/review. **Required verification:** Consistency validator and negative cases. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0389-08 - Require documented release verdict.** **Acceptance:** Zero unresolved P0; P1 decisions, rollback, named owner and independent GO sign-off. **Required verification:** Gate dry run. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

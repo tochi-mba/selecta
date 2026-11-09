@@ -60,8 +60,8 @@ export function RichText({ text }: { text: string }) {
 
 const STATE_WORDS: Partial<Record<Message['status'], string>> = {
   streaming: 'Replying…',
-  interrupted: 'Interrupted — this reply is incomplete',
-  cancelled: 'Stopped — this reply is incomplete',
+  interrupted: 'Interrupted - this reply is incomplete',
+  cancelled: 'Stopped - this reply is incomplete',
   failed: 'Didn’t finish',
 };
 

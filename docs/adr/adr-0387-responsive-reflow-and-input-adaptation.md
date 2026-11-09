@@ -1,10 +1,10 @@
-# ADR-0387 — Responsive geometry, zoom, mobile keyboard and input parity
+# ADR-0387 - Responsive geometry, zoom, mobile keyboard and input parity
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P0 / 08 Verification. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / 08 Verification. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0233, ADR-0234, ADR-0270, ADR-0298, ADR-0351, ADR-0357; unchanged.
 - **Source touchpoints (review, not implementation):** `web/src/styles/shell.css`; `web/src/styles/operations.css`; `web/e2e/micro-polish-geometry.e2e.ts`.
 
@@ -22,16 +22,16 @@ Users understand what is actually available, which exact music object they are a
 
 **Preservation and trade-offs:** Preserve local original music, one authoritative player and deliberate Pause; exact recording/draft/mix/revision/occurrence/seam IDs; revision-guarded mutations and scoped Undo; explicit consent and atomic bridges; actual on-disk valid ready-only seams (K songs need K−1 edges); eight Studio lanes and 8–64-cell arrangement; truthful source/readiness; frozen-revision decodable FLAC; unbiased human listening. No accounts, SaaS, telemetry, remote audio upload or engine rewrite.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0387-01 — Run viewport matrix.** **Acceptance:** 320,375,620,760,768,1024,1280,1440,1920,3840px and short landscape. **Required verification:** Computed geometry and screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0387-02 — Validate 200/400% reflow.** **Acceptance:** Content and actionable controls remain accessible without unintended page horizontal scroll. **Required verification:** WCAG reflow check. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0387-03 — Protect player and overlay focus.** **Acceptance:** Sticky chrome/keyboard safe areas do not obscure active buttons or composer. **Required verification:** Occlusion/focus test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0387-04 — Verify Lucy mobile composer.** **Acceptance:** Keyboard stays clear of Stop, prompt and approval actions. **Required verification:** Real mobile input session. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0387-05 — Offer non-drag controls.** **Acceptance:** Energy arc, reorder and Studio grid remain functional by buttons/keys. **Required verification:** Keyboard/touch parity. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0387-06 — Use wide space intentionally.** **Acceptance:** Readable bounded content and useful side panels replace stretched paragraphs. **Required verification:** 3840px visual review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0387-07 — Preserve scroll under updates.** **Acceptance:** Streaming, errors and async task updates do not force lost context. **Required verification:** Focus/scroll stress test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0387-08 — Compare route feature parity.** **Acceptance:** Desktop and mobile represent identical action semantics and music scope. **Required verification:** Cross-device user journey test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0387-01 - Run viewport matrix.** **Acceptance:** 320,375,620,760,768,1024,1280,1440,1920,3840px and short landscape. **Required verification:** Computed geometry and screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0387-02 - Validate 200/400% reflow.** **Acceptance:** Content and actionable controls remain accessible without unintended page horizontal scroll. **Required verification:** WCAG reflow check. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0387-03 - Protect player and overlay focus.** **Acceptance:** Sticky chrome/keyboard safe areas do not obscure active buttons or composer. **Required verification:** Occlusion/focus test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0387-04 - Verify Lucy mobile composer.** **Acceptance:** Keyboard stays clear of Stop, prompt and approval actions. **Required verification:** Real mobile input session. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0387-05 - Offer non-drag controls.** **Acceptance:** Energy arc, reorder and Studio grid remain functional by buttons/keys. **Required verification:** Keyboard/touch parity. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0387-06 - Use wide space intentionally.** **Acceptance:** Readable bounded content and useful side panels replace stretched paragraphs. **Required verification:** 3840px visual review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0387-07 - Preserve scroll under updates.** **Acceptance:** Streaming, errors and async task updates do not force lost context. **Required verification:** Focus/scroll stress test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0387-08 - Compare route feature parity.** **Acceptance:** Desktop and mobile represent identical action semantics and music scope. **Required verification:** Cross-device user journey test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

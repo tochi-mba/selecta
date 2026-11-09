@@ -1,10 +1,10 @@
-# ADR-0360 — Lucy exact song and transition timeline with contextual editing
+# ADR-0360 - Lucy exact song and transition timeline with contextual editing
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P0 / Lucy proposal. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Lucy proposal. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0320, ADR-0322, ADR-0324, ADR-0327, ADR-0306; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/LucySongs.tsx`; `web/src/views/LucyProposal.tsx`; `web/src/styles/lucy.css`.
 
@@ -24,16 +24,16 @@ A user sees the emotional/energy sequence, knows which transition is unready, an
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0360-01 — Design song-first order.** **Acceptance:** Song number, title, artist and key musical facts have strong repeatable hierarchy. **Required verification:** Paired 1/8/64-song timeline screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0360-02 — Render directed seams between songs.** **Acceptance:** Transition card sits between exact neighbouring occurrences, not as a floating quality claim. **Required verification:** K−1 edge alignment fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0360-03 — Show truthful energy shape.** **Acceptance:** Only measured energy drives visual bars; unknown values use labelled nonnumeric fallback. **Required verification:** Known/unknown energy AT and screenshot tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0360-04 — Make controls reachable.** **Acceptance:** Lock, move, remove and contextual Ask are keyboard/touch accessible without drag-only actions. **Required verification:** Move/lock/remove and touch E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0360-05 — Track repeated songs exactly.** **Acceptance:** Occurrence identity survives movement and revision, never title-based deduplication. **Required verification:** Duplicate-occurrence reorder fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0360-06 — Explain transition evidence.** **Acceptance:** Rendered versus requested move, tempo/key gap and historical evidence remain distinguishable. **Required verification:** Seam provenance and status fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0360-07 — Preserve focus after mutation.** **Acceptance:** Reordered/removed song returns focus to valid control without stealing scroll. **Required verification:** Focus retention and stale revision E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0360-08 — Test comprehension of musical flow.** **Acceptance:** Users can describe opening, build and closing and locate a problematic seam. **Required verification:** Novice/expert timeline usability study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0360-01 - Design song-first order.** **Acceptance:** Song number, title, artist and key musical facts have strong repeatable hierarchy. **Required verification:** Paired 1/8/64-song timeline screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0360-02 - Render directed seams between songs.** **Acceptance:** Transition card sits between exact neighbouring occurrences, not as a floating quality claim. **Required verification:** K−1 edge alignment fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0360-03 - Show truthful energy shape.** **Acceptance:** Only measured energy drives visual bars; unknown values use labelled nonnumeric fallback. **Required verification:** Known/unknown energy AT and screenshot tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0360-04 - Make controls reachable.** **Acceptance:** Lock, move, remove and contextual Ask are keyboard/touch accessible without drag-only actions. **Required verification:** Move/lock/remove and touch E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0360-05 - Track repeated songs exactly.** **Acceptance:** Occurrence identity survives movement and revision, never title-based deduplication. **Required verification:** Duplicate-occurrence reorder fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0360-06 - Explain transition evidence.** **Acceptance:** Rendered versus requested move, tempo/key gap and historical evidence remain distinguishable. **Required verification:** Seam provenance and status fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0360-07 - Preserve focus after mutation.** **Acceptance:** Reordered/removed song returns focus to valid control without stealing scroll. **Required verification:** Focus retention and stale revision E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0360-08 - Test comprehension of musical flow.** **Acceptance:** Users can describe opening, build and closing and locate a problematic seam. **Required verification:** Novice/expert timeline usability study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

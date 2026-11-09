@@ -1,4 +1,4 @@
-# Selecta — MP verification matrix
+# Selecta - MP verification matrix
 
 **Status:** 28 Proposed ADRs (0272–0299); 224 acceptance tasks Not started; 0 In progress; 0 Implemented; 0 Independently Verified. Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Docs only.
 

@@ -1,10 +1,10 @@
-# ADR-0352 — Library empty, loading, stale, offline and recovery state system
+# ADR-0352 - Library empty, loading, stale, offline and recovery state system
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P1 / Library robustness. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / Library robustness. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0232, ADR-0279, ADR-0297, ADR-0226; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/Library.tsx`; `web/src/ui/controls.tsx`; `web/src/styles/operations.css`.
 
@@ -24,16 +24,16 @@ Every non-happy state answers what is happening, what remains safe, and what the
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0352-01 — Enumerate complete states.** **Acceptance:** Document empty, first-run, loading, refreshing, stale, offline, failure and recovery variants. **Required verification:** State catalogue linked to test fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0352-02 — Shape initial placeholders.** **Acceptance:** Skeletons mirror actual list or card geometry and never imply actual song content. **Required verification:** Same-state layout-shift screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0352-03 — Clarify empty versus no match.** **Acceptance:** No songs, no ready songs and filtered no results get different accurate next actions. **Required verification:** Empty-state copy and action study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0352-04 — Represent stale data.** **Acceptance:** Old rows remain labelled stale when refresh fails; unsafe writes are guarded. **Required verification:** Refresh-failure E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0352-05 — Support retry without loss.** **Acceptance:** Retry preserves query, sort, filter and scroll when applicable. **Required verification:** Offline-to-online recovery test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0352-06 — Respect Still and reduced motion.** **Acceptance:** No decorative pulse when motion is disabled; progress remains textual. **Required verification:** Preference and OS motion override. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0352-07 — Announce asynchronous changes.** **Acceptance:** Status regions avoid noisy repeated screen-reader messages. **Required verification:** Live-region frequency AT test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0352-08 — Review all state screenshots.** **Acceptance:** Human comparison verifies legibility across themes, density and 320px. **Required verification:** Named reviewer/device/fixture evidence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0352-01 - Enumerate complete states.** **Acceptance:** Document empty, first-run, loading, refreshing, stale, offline, failure and recovery variants. **Required verification:** State catalogue linked to test fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0352-02 - Shape initial placeholders.** **Acceptance:** Skeletons mirror actual list or card geometry and never imply actual song content. **Required verification:** Same-state layout-shift screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0352-03 - Clarify empty versus no match.** **Acceptance:** No songs, no ready songs and filtered no results get different accurate next actions. **Required verification:** Empty-state copy and action study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0352-04 - Represent stale data.** **Acceptance:** Old rows remain labelled stale when refresh fails; unsafe writes are guarded. **Required verification:** Refresh-failure E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0352-05 - Support retry without loss.** **Acceptance:** Retry preserves query, sort, filter and scroll when applicable. **Required verification:** Offline-to-online recovery test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0352-06 - Respect Still and reduced motion.** **Acceptance:** No decorative pulse when motion is disabled; progress remains textual. **Required verification:** Preference and OS motion override. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0352-07 - Announce asynchronous changes.** **Acceptance:** Status regions avoid noisy repeated screen-reader messages. **Required verification:** Live-region frequency AT test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0352-08 - Review all state screenshots.** **Acceptance:** Human comparison verifies legibility across themes, density and 320px. **Required verification:** Named reviewer/device/fixture evidence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 
