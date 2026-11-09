@@ -99,3 +99,20 @@ deletions = sa.Table(
     sa.UniqueConstraint("workspace_id", "kind", "ref"),
     sa.Index(None, "physical_done_at", "physical_after"),
 )
+
+# Durable, transactional handoff to the offsite tombstone mirror. API requests only append to
+# this outbox; a maintenance worker performs R2 writes and retries until acknowledged.
+deletion_mirror_outbox = sa.Table(
+    "deletion_mirror_outbox",
+    metadata,
+    sa.Column("event_key", sa.String(64), primary_key=True),
+    sa.Column("deletion_id", Id, nullable=False, index=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("payload", sa.JSON, nullable=False),
+    sa.Column("created_at", Epoch, nullable=False),
+    sa.Column("delivered_at", Epoch),
+    sa.Column("attempt_count", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("last_error", sa.Text),
+    sa.CheckConstraint("attempt_count >= 0", name="attempt_count_nonnegative"),
+    sa.Index(None, "delivered_at", "created_at"),
+)

@@ -554,13 +554,26 @@ def billing_maintenance(
 def storage_maintenance(
     limit: int = typer.Option(100, min=1, max=1000, help="Maximum due tombstones to process."),
 ) -> None:
-    """Purge R2 objects for deletions whose 30-day recovery window has elapsed."""
+    """Mirror deletion tombstones, then purge R2 objects past their recovery window."""
     from selecta.storage import api as storage_api
     from selecta.storage.maintenance import drain_physical_deletions
+    from selecta.storage.offsite_ledger import drain_deletion_mirror
 
+    ledger_bucket = os.environ.get("SELECTA_R2_BUCKET_DELETION_LEDGER", "").strip()
+    if not ledger_bucket:
+        raise typer.BadParameter(
+            "Set SELECTA_R2_BUCKET_DELETION_LEDGER to a dedicated private R2 bucket."
+        )
     engine = _cloud_database_engine()
     client = storage_api.r2_client()
     try:
+        mirror = drain_deletion_mirror(engine, client, ledger_bucket, limit=limit)
+        console.print(
+            f"Deletion mirror: {mirror.delivered}/{mirror.examined} delivered, "
+            f"{mirror.failed} failed, {mirror.pending} pending."
+        )
+        if mirror.failed or mirror.pending:
+            raise typer.Exit(1)
         report = drain_physical_deletions(
             engine, client, buckets=storage_api.buckets(), limit=limit
         )
@@ -574,6 +587,94 @@ def storage_maintenance(
         close = getattr(client, "close", None)
         if callable(close):
             close()
+        engine.dispose()
+
+
+@app.command("account-deletion-maintenance")
+def account_deletion_maintenance(
+    limit: int = typer.Option(50, min=1, max=500, help="Maximum workflow steps to run."),
+) -> None:
+    """Advance due account-deletion steps; schedule this command in Cloud maintenance."""
+    from selecta.billing.stripe_sync import load_price_map
+    from selecta.billing.webhooks import HttpStripeClient
+    from selecta.identity.deletion import run_once
+    from selecta.identity.deletion_effects import (
+        AccountDeletionEffects,
+        HttpWorkOSUserDeleter,
+    )
+    from selecta.identity.deletion_ledger import R2DeletionLedgerWriter
+    from selecta.storage import api as storage_api
+    from selecta.work.store import JobStore
+
+    stripe_key = os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip()
+    workos_key = os.environ.get("SELECTA_WORKOS_API_KEY", "").strip()
+    ledger_bucket = os.environ.get("SELECTA_R2_BUCKET_DELETION_LEDGER", "").strip()
+    prices = load_price_map()
+    if not stripe_key:
+        raise typer.BadParameter(
+            "Set SELECTA_STRIPE_SECRET_KEY before running deletion maintenance."
+        )
+    if not workos_key:
+        raise typer.BadParameter(
+            "Set SELECTA_WORKOS_API_KEY before running deletion maintenance."
+        )
+    if not ledger_bucket:
+        raise typer.BadParameter(
+            "Set SELECTA_R2_BUCKET_DELETION_LEDGER to a dedicated private R2 bucket."
+        )
+
+    engine = _cloud_database_engine()
+    client = storage_api.r2_client()
+    stripe = HttpStripeClient(
+        stripe_key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION")
+    )
+    effects = AccountDeletionEffects(
+        engine,
+        JobStore(engine),
+        stripe,
+        client,
+        price_map=prices,
+        ledger_writer=R2DeletionLedgerWriter(client, ledger_bucket),
+        identity=HttpWorkOSUserDeleter(
+            workos_key,
+            api_base=os.environ.get("SELECTA_WORKOS_API_BASE", "https://api.workos.com"),
+        ),
+        buckets=storage_api.buckets(),
+    )
+    processed = 0
+    try:
+        while processed < limit and run_once(engine, "account-deletion-cli", effects):
+            processed += 1
+        console.print(f"Account-deletion workflow steps attempted: {processed}.")
+    finally:
+        client.close()
+        engine.dispose()
+
+
+@app.command("replay-deletions-after-restore")
+def replay_deletions_after_restore() -> None:
+    """Replay offsite tombstones before reopening Cloud after a database restore."""
+    from selecta.identity.deletion_ledger import replay_account_deletions_after_restore
+    from selecta.storage import api as storage_api
+    from selecta.storage.offsite_ledger import replay_storage_tombstones_after_restore
+
+    ledger_bucket = os.environ.get("SELECTA_R2_BUCKET_DELETION_LEDGER", "").strip()
+    if not ledger_bucket:
+        raise typer.BadParameter(
+            "Set SELECTA_R2_BUCKET_DELETION_LEDGER to the dedicated private R2 bucket."
+        )
+    engine = _cloud_database_engine()
+    client = storage_api.r2_client()
+    try:
+        storage = replay_storage_tombstones_after_restore(engine, client, ledger_bucket)
+        accounts = replay_account_deletions_after_restore(engine, client, ledger_bucket)
+        console.print(
+            f"Restore replay: {storage.tombstones_replayed} storage tombstones, "
+            f"{accounts.accounts_requeued} account workflows requeued. "
+            "Keep customer traffic closed until this command succeeds."
+        )
+    finally:
+        client.close()
         engine.dispose()
 
 

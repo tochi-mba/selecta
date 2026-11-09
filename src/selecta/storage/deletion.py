@@ -22,6 +22,8 @@ packages that own them; they read `is_deleted` before publishing anything.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
@@ -34,7 +36,7 @@ from sqlalchemy.exc import IntegrityError
 from selecta.persistence import db_now, lock_rows, new_id
 from selecta.storage.keys import Bucket, export_key, original_key, workspace_prefix
 from selecta.storage.ports import StorageReleasePort
-from selecta.storage.schema import assets, deletions, upload_sessions
+from selecta.storage.schema import assets, deletion_mirror_outbox, deletions, upload_sessions
 
 RECOVERY_WINDOW_S = 30 * 24 * 3600
 
@@ -146,6 +148,7 @@ def tombstone(
         raise ValueError("Deleting an export needs its size in bytes.")
     existing = _find(conn, workspace_id, kind, ref)
     if existing is not None:
+        _queue_mirror(conn, existing)
         return Tombstone(existing, 0, created=False)
     if kind is DeletionKind.SONG:
         found = conn.execute(
@@ -175,12 +178,42 @@ def tombstone(
         existing = _find(conn, workspace_id, kind, ref)
         if existing is None:
             raise
+        _queue_mirror(conn, existing)
         return Tombstone(existing, 0, created=False)
     if quota is not None and deletion.bytes_released:
         quota.release_committed(
             conn, workspace_id, deletion.bytes_released, f"deletion:{deletion.id}"
         )
+    _queue_mirror(conn, deletion)
     return Tombstone(deletion, deletion.bytes_released, created=True)
+
+
+def _queue_mirror(conn: Connection, deletion: Deletion) -> None:
+    """Append one deterministic snapshot event in the tombstone transaction."""
+    payload = deletion.as_dict()
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    event_key = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    values = {
+        "event_key": event_key,
+        "deletion_id": deletion.id,
+        "workspace_id": deletion.workspace_id,
+        "payload": payload,
+        "created_at": deletion.requested_at,
+        "delivered_at": None,
+        "attempt_count": 0,
+        "last_error": None,
+    }
+    if conn.dialect.name == "sqlite":
+        from sqlalchemy.dialects.sqlite import insert
+    elif conn.dialect.name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert
+    else:
+        raise RuntimeError("Deletion mirroring requires PostgreSQL or SQLite.")
+    conn.execute(
+        insert(deletion_mirror_outbox)
+        .values(**values)
+        .on_conflict_do_nothing(index_elements=[deletion_mirror_outbox.c.event_key])
+    )
 
 
 def is_deleted(conn: Connection, workspace_id: str, kind: DeletionKind | str, ref: str) -> bool:
@@ -252,6 +285,10 @@ def mark_physical_done(conn: Connection, deletion_id: str) -> bool:
         .where(deletions.c.id == deletion_id, deletions.c.physical_done_at.is_(None))
         .values(physical_done_at=db_now(conn))
     )
+    updated = conn.execute(
+        sa.select(deletions).where(deletions.c.id == deletion_id)
+    ).mappings().one()
+    _queue_mirror(conn, Deletion.from_row(updated))
     sessions = sa.delete(upload_sessions).where(
         upload_sessions.c.workspace_id == deletion.workspace_id
     )
@@ -270,6 +307,11 @@ def mark_backup_done(conn: Connection, deletion_id: str) -> bool:
         .where(deletions.c.id == deletion_id, deletions.c.backup_done_at.is_(None))
         .values(backup_done_at=db_now(conn))
     )
+    if result.rowcount > 0:
+        row = conn.execute(
+            sa.select(deletions).where(deletions.c.id == deletion_id)
+        ).mappings().one()
+        _queue_mirror(conn, Deletion.from_row(row))
     return result.rowcount > 0
 
 

@@ -372,31 +372,38 @@ def replay_account_deletions_after_restore(
         with transaction(engine) as conn:
             now = db_now(conn)
             # The restore may have brought back the live identity, membership or staff state.
-            conn.execute(
-                users.update()
-                .where(users.c.id == plan.user_id)
-                .values(deleted_at=plan.deleted_at)
-            )
-            conn.execute(
-                session_revocations.update()
-                .where(session_revocations.c.user_id == plan.user_id)
-                .values(
-                    revoked_before=sa.case(
-                        (session_revocations.c.revoked_before < plan.deleted_at, plan.deleted_at),
-                        else_=session_revocations.c.revoked_before,
-                    )
-                )
-            )
-            if conn.execute(
-                sa.select(session_revocations.c.user_id)
-                .where(session_revocations.c.user_id == plan.user_id)
-            ).first() is None:
+            user_exists = conn.execute(
+                sa.select(users.c.id).where(users.c.id == plan.user_id)
+            ).first()
+            if user_exists is not None:
                 conn.execute(
-                    session_revocations.insert().values(
-                        user_id=plan.user_id,
-                        revoked_before=plan.deleted_at,
+                    users.update()
+                    .where(users.c.id == plan.user_id)
+                    .values(deleted_at=plan.deleted_at)
+                )
+                conn.execute(
+                    session_revocations.update()
+                    .where(session_revocations.c.user_id == plan.user_id)
+                    .values(
+                        revoked_before=sa.case(
+                            (
+                                session_revocations.c.revoked_before < plan.deleted_at,
+                                plan.deleted_at,
+                            ),
+                            else_=session_revocations.c.revoked_before,
+                        )
                     )
                 )
+                if conn.execute(
+                    sa.select(session_revocations.c.user_id)
+                    .where(session_revocations.c.user_id == plan.user_id)
+                ).first() is None:
+                    conn.execute(
+                        session_revocations.insert().values(
+                            user_id=plan.user_id,
+                            revoked_before=plan.deleted_at,
+                        )
+                    )
             conn.execute(
                 role_assignments.update()
                 .where(

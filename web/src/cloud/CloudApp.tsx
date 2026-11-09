@@ -196,7 +196,7 @@ export function CloudApp() {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url; anchor.download = 'selecta-account-export.zip'; anchor.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
       setNotice('Your export is ready. It contains your originals and profile settings; mix data is not stored in Cloud yet.');
     } catch (problem) { setError((problem as Error).message); setNotice(''); }
     finally { setBusy(false); }

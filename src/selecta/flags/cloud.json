@@ -22,11 +22,11 @@
     },
     "account.data_export": {
       "label": "Account data export",
-      "about": "Download the account's available personal data and originals.",
+      "about": "Download a portable copy of available account data and original files.",
       "core": "People must be able to take a copy of their personal data.",
       "routes": ["GET /api/account/export"],
       "modes": ["cloud"],
-      "owner": "identity"
+      "owner": "privacy"
     },
     "cloud.signups": {
       "label": "New accounts",
@@ -113,13 +113,6 @@
       "when_locked": "teaser",
       "kind": "release",
       "owner": "ai"
-    },
-    "account.data_export": {
-      "label": "Account data export",
-      "about": "Download a portable copy of account data and workspace content.",
-      "modes": ["cloud"],
-      "kind": "release",
-      "owner": "privacy"
     },
     "admin.console": {
       "label": "Staff console",

@@ -107,6 +107,15 @@ Stripe webhook events; use `uv run selecta billing-maintenance --reconcile` for 
 subscription sweep. The repository provides the command, but deployment scheduling remains an
 operations task.
 
+Schedule `uv run selecta account-deletion-maintenance` with `SELECTA_WORKOS_API_KEY`,
+`SELECTA_STRIPE_SECRET_KEY`, `SELECTA_R2_BUCKET_DELETION_LEDGER` (a dedicated private bucket), and
+the Cloud PostgreSQL/R2 settings to advance account deletion. Schedule
+`uv run selecta storage-maintenance` to purge due storage tombstones after their recovery window.
+These maintenance commands require an appropriately privileged database role; the restore replay
+helper `uv run selecta replay-deletions-after-restore` must run successfully before customer
+traffic is reopened after a database restore. Keep the restored API and workers out of service
+until storage tombstones are re-applied and account workflows are requeued.
+
 The Cloud web build also needs `VITE_SELECTA_API_ORIGIN` when the API is hosted on another origin,
 `VITE_WORKOS_CLIENT_ID`, and `VITE_CHECKOUT_CONSENT_VERSION`. The API needs Stripe settings described
 in [billing](../saas/08-billing.md#current-api-implementation) and R2 settings described in

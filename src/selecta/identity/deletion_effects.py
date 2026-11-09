@@ -14,7 +14,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
+from urllib.parse import quote
 
+import httpx
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
@@ -100,6 +102,48 @@ class LedgerWriter(Protocol):
     ) -> None: ...
 
 
+class IdentityDeleter(Protocol):
+    """Permanently remove the AuthKit user after the recovery period."""
+
+    def delete_user(self, auth_subject: str) -> None: ...
+
+
+class HttpWorkOSUserDeleter:
+    """WorkOS User Management delete adapter; 404 is success for workflow retries."""
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        api_base: str = "https://api.workos.com",
+        timeout: float = 20.0,
+    ) -> None:
+        if not api_key.strip():
+            raise ValueError("A WorkOS API key is required for account deletion.")
+        self.api_key = api_key
+        self.api_base = api_base.rstrip("/")
+        self.timeout = timeout
+
+    def delete_user(self, auth_subject: str) -> None:
+        if not auth_subject or len(auth_subject) > 255:
+            raise DeletionEffectError("The WorkOS subject is invalid.")
+        try:
+            with httpx.Client(base_url=self.api_base, timeout=self.timeout) as client:
+                response = client.delete(
+                    f"/user_management/users/{quote(auth_subject, safe='')}",
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                )
+        except httpx.HTTPError as problem:
+            raise DeletionEffectError(
+                f"WorkOS user deletion could not be reached ({type(problem).__name__})."
+            ) from None
+        if response.status_code == 404 or 200 <= response.status_code < 300:
+            return
+        raise DeletionEffectError(
+            f"WorkOS user deletion failed with HTTP {response.status_code}."
+        )
+
+
 class _QuotaRelease:
     """Adapt the quota ledger to the storage deletion port."""
 
@@ -124,6 +168,7 @@ class AccountDeletionEffects(DeletionEffects):
         *,
         price_map: PriceMap,
         ledger_writer: LedgerWriter | None = None,
+        identity: IdentityDeleter | None = None,
         buckets: Buckets = DEFAULT_BUCKETS,
     ) -> None:
         self.engine = engine
@@ -132,6 +177,7 @@ class AccountDeletionEffects(DeletionEffects):
         self.objects = objects
         self.price_map = price_map
         self.ledger_writer = ledger_writer
+        self.identity = identity
         self.buckets = buckets
 
     def apply(self, step: str, plan: DeletionPlan, idempotency_key: str) -> None:
@@ -345,6 +391,16 @@ class AccountDeletionEffects(DeletionEffects):
     def erase_user(self, plan: DeletionPlan, _key: str) -> None:
         if db_now_from_engine(self.engine) < plan.erase_after:
             raise DeletionNotReady("User erasure is held through the 30-day recovery period.")
+        with transaction(self.engine) as conn:
+            user = conn.execute(
+                sa.select(users.c.auth_subject).where(users.c.id == plan.user_id)
+            ).first()
+        if user is not None:
+            if self.identity is None:
+                raise DeletionEffectError("The WorkOS account deletion adapter isn't configured.")
+            # Delete upstream before erasing the local reference. If the acknowledgement is
+            # lost, WorkOS's 404 is success on retry and SQL erasure can continue safely.
+            self.identity.delete_user(str(user.auth_subject))
         with transaction(self.engine) as conn:
             self._clear_user_references(conn, plan.user_id)
             remaining = self._remaining_user_references(conn, plan.user_id)

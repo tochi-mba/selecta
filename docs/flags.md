@@ -187,6 +187,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 |---|---|---|
 | `account.labs` | **Labs.** Opt into preview features that your plan is allowed to use. |  |
 | `account.deletion` | **Account deletion.** Request account removal and revoke active sessions. **Core:** People must always be able to request deletion of their account. |  |
+| `account.data_export` | **Account data export.** Download a portable copy of available account data and original files. **Core:** People must be able to take a copy of their personal data. |  |
 | `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
 | `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
@@ -196,5 +197,4 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |
 | `lucy.deep_plan` | **Lucy deep planning.** Use Lucy's premium planning model and larger plan allowance. | `lucy` |
-| `account.data_export` | **Account data export.** Download a portable copy of account data and workspace content. |  |
 | `admin.console` | **Staff console.** Show internal tools to authenticated staff with the required permission. |  |

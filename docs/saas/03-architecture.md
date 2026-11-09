@@ -55,10 +55,14 @@ clients can resume with `Last-Event-ID`. It currently polls the outbox and has n
 connected to the Cloud UI or expanded to uploads, entitlements and playback events.
 
 Account deletion now has a `DELETE /api/account` route and durable, leased workflow. Its effect
-adapter cancels jobs and Stripe subscriptions, removes memberships, releases upload reservations,
-and tombstones account objects; final cleanup waits for the 30-day recovery window and a completed
-R2 purge. The offsite ledger writer, scheduled workflow/purge runners and post-restore replay remain
-to be connected.
+adapter cancels jobs and Stripe subscriptions, deletes the WorkOS identity after the recovery
+window, removes memberships, releases upload reservations, and tombstones account objects. The
+`account-deletion-maintenance` and `storage-maintenance` CLI commands advance workflows, mirror
+storage tombstones to a dedicated private R2 ledger bucket, and perform the delayed physical purge.
+`replay-deletions-after-restore` re-applies storage tombstones and requeues account workflows before
+restored traffic opens. Those commands need scheduled deployment and a restore drill. Cloud account
+export now packages integrity-checked originals and settings; mixes are unavailable until Cloud
+mix persistence exists.
 
 ### 4.2 Component map
 

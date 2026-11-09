@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import zipfile
 from collections.abc import Callable
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -97,6 +98,17 @@ def install_routes(
         temp_dir = Path(tempfile.mkdtemp(prefix="selecta-account-export-"))
         archive_path = temp_dir / "selecta-account-export.zip"
         exported_assets: list[dict[str, Any]] = []
+
+        @contextmanager
+        def object_client():
+            client = object_client_factory()
+            try:
+                yield client
+            finally:
+                close = getattr(client, "close", None)
+                if callable(close):
+                    close()
+
         try:
             with zipfile.ZipFile(
                 archive_path, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True
@@ -111,7 +123,7 @@ def install_routes(
                     bucket = buckets.name(Bucket.ORIGINALS)
                     local_path = temp_dir / f"{asset_id}.original"
                     try:
-                        with object_client_factory() as client:
+                        with object_client() as client:
                             head = client.head_object(bucket, canonical_key)
                             metadata = {key.lower(): value for key, value in head.metadata.items()}
                             if (
