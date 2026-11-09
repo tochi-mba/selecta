@@ -1,6 +1,14 @@
 {
   "area": "Cloud services",
   "flags": {
+    "account.identity": {
+      "label": "Account and sessions",
+      "about": "Read account settings and end sign-in sessions.",
+      "core": "People must be able to view their account and sign out.",
+      "routes": ["GET /api/account", "POST /api/account/sign-out-everywhere"],
+      "modes": ["cloud"],
+      "owner": "identity"
+    },
     "account.labs": {
       "label": "Labs",
       "about": "Opt into preview features that your plan is allowed to use.",
@@ -70,6 +78,14 @@
       "routes": ["POST /api/billing/portal"],
       "modes": ["cloud"],
       "kind": "release",
+      "owner": "billing"
+    },
+    "billing.webhooks": {
+      "label": "Billing updates",
+      "about": "Accept signed subscription state changes from Stripe.",
+      "core": "Billing changes must be applied even when checkout is paused.",
+      "routes": ["POST /api/webhooks/stripe"],
+      "modes": ["cloud"],
       "owner": "billing"
     },
     "devices.remote_control": {

@@ -215,7 +215,7 @@ def create_cloud_app(
     rule_cache = RulesCache(engine, max_age=5.0)
     app.state.flag_rules = rule_cache
     flags.effective()
-    flag_guard.install(app)
+    flag_guard.install(app, strict=True)
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
     app.add_middleware(
@@ -568,6 +568,8 @@ def create_cloud_app(
         object_client_factory=storage_api.r2_client,
         buckets=storage_api.buckets(),
     )
+
+    flag_guard.assert_cloud_api_routes_owned(app)
 
     return app
 

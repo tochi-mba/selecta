@@ -5,7 +5,7 @@
       "label": "Local server",
       "about": "The server on this computer: its status, the local-only checks and the one data folder.",
       "core": "Everything else talks to it.",
-      "routes": ["GET /api/status"],
+      "routes": ["GET /api/status", "GET /api/ready"],
       "cli": ["web", "gather-data", "flags"]
     },
     "core.library": {
@@ -76,7 +76,7 @@
       "label": "Workspace",
       "about": "The Workspace overview: what's happening now and what needs you.",
       "core": "It's where background work is seen and stopped.",
-      "routes": ["GET /api/jobs"],
+      "routes": ["GET /api/jobs", "GET /api/events"],
       "surfaces": ["workshop"]
     }
   }

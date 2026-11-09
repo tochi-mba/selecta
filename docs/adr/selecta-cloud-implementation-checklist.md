@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 22 In progress, 106 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 23 In progress, 105 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -195,7 +195,7 @@
 - [ ] **SC-0414-07 - Local mode unchanged.** Acceptance: Local behaviour and `docs/flags.md` generation are identical to ADR-0390. Required verification: Existing flag tests. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0414-08 - Staff flag permissions.** Acceptance: Roles hold exactly the flag permissions in §11B.9; AI Admin can change only `lucy.*`; Support overrides only inside its scope; kill switches are instant and alert Owners; broad rules become delayed actions; every change is audited. Required verification: Unit tests for roles and `may_change_flag`; integration tests for the admin flag service. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0414-09 - Labs opt-in.** Acceptance: Beta flags turn on for a user only when they opted in and every other layer allows it; a kill switch or rule always wins; the Labs list shows only betas the plan includes. Required verification: Property and integration tests; Playwright for the Labs setting. Implementation: In progress; preference persistence and account/Labs API routes exist with tests; the UI and real beta rollout remain. Independently verified: No.
-- [ ] **SC-0414-10 - Every cloud feature flagged.** Acceptance: Each cloud feature has a registry flag; every cloud route and job type names its owning flag; the reflow sweep covers the cloud surfaces. Required verification: Registry test that no cloud route or job type lacks a flag; flag sweep in cloud mode. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0414-10 - Every cloud feature flagged.** Acceptance: Each cloud feature has a registry flag; every cloud route and job type names its owning flag; the reflow sweep covers the cloud surfaces. Required verification: Registry test that no cloud route or job type lacks a flag; flag sweep in cloud mode. Implementation: In progress; all mounted customer `/api` routes now have registry owners, Cloud app construction checks route coverage, and the Cloud guard fails closed on an unowned route. The job catalogue already names flags for worker types; a durable registry test and Cloud reflow sweep remain. Independently verified: No.
 
 ## [ADR-0415 - Playback devices and one session per account](adr-0415-playback-devices-and-sessions.md)
 

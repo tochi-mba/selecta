@@ -147,6 +147,11 @@ in `user_flag_preferences`. Only `kind: beta` Cloud flags can be changed there, 
 cannot override a plan gate or a targeting kill switch. The React Labs settings page and a beta
 flag with a shipped capability are still to be built.
 
+Cloud app construction now checks that every mounted customer `/api` route has an owner in the
+registry, and the Cloud request guard fails closed if a route is mounted without one. Local mode
+keeps its existing guard behavior. Worker job types already carry their owner in the job catalogue.
+The Cloud reflow sweep and a durable route/job registry test remain.
+
 ### 11B.11 Every new feature is behind a flag
 
 No cloud feature ships without a registry flag, and the same flag is enforced in three places: the API (routes owned by the flag answer 403 `flag_off`), the workers (job types name their owning flag and are refused at claim), and the site (the page closes up around it, checked by the reflow sweep). The new flags live in a `cloud` area, are cloud-only (`modes: ["cloud"]`), and include at least:

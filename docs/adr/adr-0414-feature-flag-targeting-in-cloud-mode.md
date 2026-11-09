@@ -1,7 +1,7 @@
 # ADR-0414 - Feature-flag targeting in cloud mode
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/10 Implemented; 1/10 In progress; 9/10 Not started.
+- **Implementation:** 0/10 Implemented; 2/10 In progress; 8/10 Not started.
 - **Independent verification:** 0/10 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 4. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -49,7 +49,7 @@ The owner can turn any feature off for everyone, a tier or named users in second
 7. **SC-0414-07 - Local mode unchanged.** **Acceptance:** Local behaviour and `docs/flags.md` generation are identical to ADR-0390. **Required verification:** Existing flag tests. **Implementation:** Not started; **Independently Verified:** No.
 8. **SC-0414-08 - Staff flag permissions.** **Acceptance:** Roles hold exactly the flag permissions in §11B.9; AI Admin can change only `lucy.*`; Support overrides only inside its scope; kill switches are instant and alert Owners; broad rules become delayed actions; every change is audited. **Required verification:** Unit tests for roles and `may_change_flag`; integration tests for the admin flag service. **Implementation:** Not started; **Independently Verified:** No.
 9. **SC-0414-09 - Labs opt-in.** **Acceptance:** Beta flags turn on for a user only when they opted in and every other layer allows it; a kill switch or rule always wins; the Labs list shows only betas the plan includes. **Required verification:** Property and integration tests; Playwright for the Labs setting. **Implementation:** Not started; **Independently Verified:** No.
-10. **SC-0414-10 - Every cloud feature flagged.** **Acceptance:** Each cloud feature has a registry flag; every cloud route and job type names its owning flag; the reflow sweep covers the cloud surfaces. **Required verification:** Registry test that no cloud route or job type lacks a flag; flag sweep in cloud mode. **Implementation:** Not started; **Independently Verified:** No.
+10. **SC-0414-10 - Every cloud feature flagged.** **Acceptance:** Each cloud feature has a registry flag; every cloud route and job type names its owning flag; the reflow sweep covers the cloud surfaces. **Required verification:** Registry test that no cloud route or job type lacks a flag; flag sweep in cloud mode. **Implementation:** In progress; all mounted Cloud customer API routes now have owners, app construction checks coverage, and the strict Cloud guard fails closed on an unowned route. The job catalogue also assigns feature flags to worker job types; a dedicated registry test and Cloud reflow sweep remain; **Independently Verified:** No.
 
 ## Governance
 

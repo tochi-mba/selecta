@@ -185,6 +185,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 
 | Flag | What it is | Needs |
 |---|---|---|
+| `account.identity` | **Account and sessions.** Read account settings and end sign-in sessions. **Core:** People must be able to view their account and sign out. |  |
 | `account.labs` | **Labs.** Opt into preview features that your plan is allowed to use. |  |
 | `account.deletion` | **Account deletion.** Request account removal and revoke active sessions. **Core:** People must always be able to request deletion of their account. |  |
 | `account.data_export` | **Account data export.** Download a portable copy of available account data and original files. **Core:** People must be able to take a copy of their personal data. |  |
@@ -192,6 +193,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
+| `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. |  |
 | `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
 | `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |
