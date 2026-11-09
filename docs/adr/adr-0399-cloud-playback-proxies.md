@@ -13,7 +13,7 @@
 
 The player downloads whole songs decoded to WAV by the server (about 42 MB for four minutes), which keeps sample-accurate alignment with transitions. Lossy formats add encoder delay and padding that browsers handle inconsistently.
 
-Cloud API routes now issue short-lived signed URLs for an owned original or a valid derived object in the caller's workspace. They do not create lazy playback proxies, and the browser does not yet refresh an expired URL while keeping playback state.
+Cloud API routes issue short-lived signed URLs for an owned original or a valid derived object in the caller's workspace. The Cloud library player now requests one replacement URL after a media load error and restores its current time and playing/paused state. This applies to direct original playback; lazy proxies, mix-player integration, and live R2 continuity verification remain outstanding.
 
 ## Decision
 
@@ -36,7 +36,7 @@ Cloud playback keeps transitions as tight as local playback, without the server 
 
 1. **SC-0399-01 - Lazy proxy job.** **Acceptance:** Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
 2. **SC-0399-02 - Alignment.** **Acceptance:** Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. **Required verification:** Automated alignment check plus listening check. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0399-03 - Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** In progress; APIs can mint short-lived owner/workspace-scoped playback URLs, but client-side single refresh and continuity behavior remain; **Independently Verified:** No.
+3. **SC-0399-03 - Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** In progress; the Cloud library player refreshes a failed original-audio URL once and restores playback position and playing state; mix-player integration and live R2/Playwright verification remain. **Independently Verified:** No.
 4. **SC-0399-04 - Prefetch.** **Acceptance:** The next song and its transitions are buffered before they're needed. **Required verification:** Playwright timing test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance

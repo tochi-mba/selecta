@@ -78,7 +78,7 @@
 
 - [ ] **SC-0399-01 - Lazy proxy job.** Acceptance: Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. Required verification: Integration test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0399-02 - Alignment.** Acceptance: Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. Required verification: Automated alignment check plus listening check. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0399-03 - Signed URL refresh.** Acceptance: An expired URL mid-session refreshes once without changing the mix. Required verification: Playwright test. Implementation: In progress; Cloud can mint short-lived owner-checked original and workspace-checked derived playback URLs, but the audio client’s one-time expiry refresh is not implemented. Independently verified: No.
+- [ ] **SC-0399-03 - Signed URL refresh.** Acceptance: An expired URL mid-session refreshes once without changing the mix. Required verification: Playwright test. Implementation: In progress; the Cloud library audio player retries a failed original URL once and restores playback position and playing state; mix-player integration and live R2/Playwright verification remain. Independently verified: No.
 - [ ] **SC-0399-04 - Prefetch.** Acceptance: The next song and its transitions are buffered before they're needed. Required verification: Playwright timing test. Implementation: Not started; Independently verified: No.
 
 ## [ADR-0400 - Identity with WorkOS AuthKit](adr-0400-identity-with-workos-authkit.md)

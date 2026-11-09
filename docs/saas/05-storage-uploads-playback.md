@@ -48,7 +48,8 @@ Cloud API also exposes `GET /api/assets/{asset_id}/playback-url` for an owner-ch
 `POST /api/storage/derived-playback-url` for a workspace-owned derived key. Both check R2 object
 existence before returning a short-lived URL; original delivery also checks stored size and SHA-256
 metadata and can set attachment disposition. The Cloud library can request a signed URL and play an
-original track in a native audio control. It does not yet assemble mixes or create lossless playback
+original track in a native audio control; on a media load error it requests one replacement URL and
+restores the playhead and playing state. It does not yet assemble mixes or create lossless playback
 proxies, and accepted asset rows are not yet playable song records. R2 credentials are read from
 `SELECTA_R2_ACCOUNT_ID`, `SELECTA_R2_ACCESS_KEY_ID`, `SELECTA_R2_SECRET_ACCESS_KEY`, and optional
 `SELECTA_R2_JURISDICTION` / bucket-name variables. The staging bucket CORS policy must allow the
