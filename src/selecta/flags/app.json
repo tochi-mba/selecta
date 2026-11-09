@@ -1,0 +1,47 @@
+{
+  "area": "Across the app",
+  "flags": {
+    "app.command_palette": {
+      "label": "Command palette",
+      "about": "Ctrl K to search songs and run commands.",
+      "surfaces": ["overlay.palette", "overlay.help"]
+    },
+    "app.shortcuts": {
+      "label": "Single-key shortcuts",
+      "about": "Keys like Space, N, M and R work without Ctrl held, listed under ?.",
+      "surfaces": ["overlay.help"],
+      "words": ["Keyboard shortcuts"]
+    },
+    "app.activity": {
+      "label": "Activity",
+      "about": "A list of recent changes, each with its own Undo.",
+      "surfaces": ["overlay.activity"],
+      "words": ["Recent activity"]
+    },
+    "app.glossary": {
+      "label": "Music terms",
+      "about": "Plain explanations of the music words Selecta uses, and the small ? beside them.",
+      "surfaces": ["overlay.glossary"],
+      "words": ["All music terms"]
+    },
+    "app.theme_choice": {
+      "label": "Theme choice",
+      "about": "Light, dark or match this computer.",
+      "surfaces": ["workshop"]
+    },
+    "app.motion_choice": {
+      "label": "Motion choice",
+      "about": "Still, subtle or expressive movement. The computer's reduced-motion setting always wins.",
+      "surfaces": ["workshop"]
+    },
+    "app.classic_nav": {
+      "label": "Classic navigation",
+      "about": "The older navigation labels over the same pages, with ?ui=classic as a way back.",
+      "surfaces": ["workshop"]
+    },
+    "app.install": {
+      "label": "Install as an app",
+      "about": "Chrome and Edge can install Selecta as its own window."
+    }
+  }
+}

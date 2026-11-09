@@ -16,7 +16,7 @@ import { EnergyBars, SongsAndSeams } from './LucySongs';
 export type Lifecycle = 'proposed' | 'approved' | 'draft' | 'rendering' | 'ready' | 'playing';
 
 const LIFECYCLE_WORDS: Record<Lifecycle, string> = {
-  proposed: 'Proposed — not built',
+  proposed: 'Proposed - not built',
   approved: 'Approved',
   draft: 'Saved draft',
   rendering: 'Rendering',
@@ -185,7 +185,7 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
           <Menu className="lucy-revisions" label={<>Revision {shown.number}{isCurrent ? '' : ' (not the current one)'} <Icon name="down" width={14} height={14} /></>}>
             {[...proposal.history].reverse().map((item) => (
               <button key={item.id} type="button" role="menuitemradio" aria-checked={item.id === shown.id} onClick={() => setViewing(item.id === currentId ? null : item.id)}>
-                Revision {item.number}{item.current ? ' · current' : ''}{item.summary ? ` — ${item.summary}` : ''}
+                Revision {item.number}{item.current ? ' · current' : ''}{item.summary ? ` - ${item.summary}` : ''}
               </button>
             ))}
           </Menu>

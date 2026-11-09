@@ -1,3 +1,4 @@
+import { flagOn } from '../flags';
 import type { ListeningEventKind } from './types';
 
 /** What the main player actually played, for Lucy's sense of your taste: when a song started, and
@@ -18,7 +19,7 @@ const seconds = (value: number) => (Number.isFinite(value) ? Math.max(0, Math.ro
 
 export function recordListening(songId: number, event: ListeningEventKind, heard: number, position: number): void {
   try {
-    if (typeof fetch !== 'function' || !Number.isFinite(songId)) return;
+    if (typeof fetch !== 'function' || !Number.isFinite(songId) || !flagOn('lucy.listening_history')) return;
     void fetch('/api/listening/events', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

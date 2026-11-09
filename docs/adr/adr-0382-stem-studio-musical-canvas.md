@@ -1,10 +1,10 @@
-# ADR-0382 — Eight-lane Stem Studio, shape/grid/list consistency and apply safety
+# ADR-0382 - Eight-lane Stem Studio, shape/grid/list consistency and apply safety
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P1 / 06 Advanced creation. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / 06 Advanced creation. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0223, ADR-0224, ADR-0261, ADR-0289; unchanged.
 - **Source touchpoints (review, not implementation):** `web/src/views/Studio.tsx`; `web/src/studio.ts`; `web/src/styles/creation.css`.
 
@@ -22,16 +22,16 @@ Users understand what is actually available, which exact music object they are a
 
 **Preservation and trade-offs:** Preserve local original music, one authoritative player and deliberate Pause; exact recording/draft/mix/revision/occurrence/seam IDs; revision-guarded mutations and scoped Undo; explicit consent and atomic bridges; actual on-disk valid ready-only seams (K songs need K−1 edges); eight Studio lanes and 8–64-cell arrangement; truthful source/readiness; frozen-revision decodable FLAC; unbiased human listening. No accounts, SaaS, telemetry, remote audio upload or engine rewrite.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0382-01 — Preserve cross-mode eight-lane semantics.** **Acceptance:** Both songs' vocal, drum, bass, melody lanes stay identical in Shape/Grid/List. **Required verification:** Mode equivalence test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0382-02 — Make time boundaries explicit.** **Acceptance:** Two-bar cells, positions and beat context remain consistent across grid lengths. **Required verification:** Timing fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0382-03 — Define selected and solo states.** **Acceptance:** Visible plus accessible cell/solo cues do not rely on colour alone. **Required verification:** Keyboard/forced-colour screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0382-04 — Keep Shape beginner-friendly.** **Acceptance:** Accessible broad choices lead to detailed list/grid without vocabulary overload. **Required verification:** Novice/expert task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0382-05 — Protect preview audio ownership.** **Acceptance:** Hear exact pending shape without overlapping or silently resuming main playback. **Required verification:** Real-audio focus sequence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0382-06 — Separate AI suggestion and user change.** **Acceptance:** Suggested, adjusted and applied shapes cannot be mistaken for one committed state. **Required verification:** Dirty-state/undo fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0382-07 — Protect unapplied departure.** **Acceptance:** Close, revision loss and failed Use provide clear recovery without silent mutation. **Required verification:** Discard/restart regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0382-08 — Verify keyboard manipulation.** **Acceptance:** All necessary grid edits have keyboard or list alternative with readable states. **Required verification:** Screen-reader task completion. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0382-01 - Preserve cross-mode eight-lane semantics.** **Acceptance:** Both songs' vocal, drum, bass, melody lanes stay identical in Shape/Grid/List. **Required verification:** Mode equivalence test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0382-02 - Make time boundaries explicit.** **Acceptance:** Two-bar cells, positions and beat context remain consistent across grid lengths. **Required verification:** Timing fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0382-03 - Define selected and solo states.** **Acceptance:** Visible plus accessible cell/solo cues do not rely on colour alone. **Required verification:** Keyboard/forced-colour screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0382-04 - Keep Shape beginner-friendly.** **Acceptance:** Accessible broad choices lead to detailed list/grid without vocabulary overload. **Required verification:** Novice/expert task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0382-05 - Protect preview audio ownership.** **Acceptance:** Hear exact pending shape without overlapping or silently resuming main playback. **Required verification:** Real-audio focus sequence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0382-06 - Separate AI suggestion and user change.** **Acceptance:** Suggested, adjusted and applied shapes cannot be mistaken for one committed state. **Required verification:** Dirty-state/undo fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0382-07 - Protect unapplied departure.** **Acceptance:** Close, revision loss and failed Use provide clear recovery without silent mutation. **Required verification:** Discard/restart regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0382-08 - Verify keyboard manipulation.** **Acceptance:** All necessary grid edits have keyboard or list alternative with readable states. **Required verification:** Screen-reader task completion. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

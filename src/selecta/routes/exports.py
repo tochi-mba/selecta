@@ -28,8 +28,8 @@ from fastapi import HTTPException, Request
 
 from selecta import mix
 from selecta.config import SAMPLE_RATE
-from selecta.seams import request_from
 from selecta.export_validation import verify_export
+from selecta.seams import request_from
 
 CHECK_EVERY_SECONDS = 1.0
 ACTIVE = {"preparing", "encoding"}
@@ -291,7 +291,9 @@ def add_routes(app, ctx) -> None:
                 )
                 if previous:
                     if previous["draft"] != draft:
-                        raise HTTPException(409, "That export operation belongs to a different mix.")
+                        raise HTTPException(
+                            409, "That export operation belongs to a different mix."
+                        )
                     return as_shown(previous)
         with connect() as conn:
             snapshot = snapshot_of(conn, draft)

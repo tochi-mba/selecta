@@ -16,6 +16,7 @@ export function IconButton({ icon, label, className = '', ...rest }: Omit<Button
 
 /** Subpages with real addresses: links, not tabs, so Back, reload and sharing a link all work. */
 export function LinkTabs({ label, items, current }: { label: string; items: { path: string; label: string }[]; current: string }) {
+  if (items.length < 2) return null;  // one tab on its own is no choice, so there are no tabs
   return (
     <nav className="tabs" aria-label={label}>
       {items.map((item) => (

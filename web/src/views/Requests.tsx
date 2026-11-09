@@ -11,6 +11,7 @@ import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { TermHint } from '../ui/Glossary';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
+import { useFlag } from '../flags';
 
 type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
@@ -172,6 +173,8 @@ export const RequestsContext = createContext<RequestsState | null>(null);
  * for one on every page, while the panel only shows on the pages where it's useful. Everything a
  * person presses shows straight away and is put right if the server says no. */
 export function useRequests(playback?: Playback, notify?: Notify): RequestsState {
+  // without requests in this build, nothing here asks the server anything
+  const on = useFlag('requests');
   const [requests, setRequests] = useState<RequestRow[] | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -235,7 +238,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   };
 
   useEffect(() => {
-    if (!playback) return;
+    if (!playback || !on) return;
     let live = true;
     let working = false;
     let again = false;
@@ -293,7 +296,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', visible);
     };
-  }, [!!playback]);
+  }, [!!playback, on]);
 
   // every request is looked at again as soon as anything changes that could affect where it goes
   const mixNow = playback?.mix.map((item) => `${item.song_id}:${JSON.stringify(item.seam?.settings ?? null)}`).join('|');
@@ -314,11 +317,11 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
   };
   useEffect(() => {
     mounted.current = true;
-    void refreshList();
+    if (on) void refreshList();
     return () => { mounted.current = false; };
-  }, []);
+  }, [on]);
   // the saved list only; looking for a spot above stays its own, already visibility-aware loop
-  useVisiblePoll(refreshList, 4000);
+  useVisiblePoll(refreshList, 4000, on);
 
   /** Take a row away for now, and be able to put it back where it was. */
   const removing = (request: RequestRow) => {

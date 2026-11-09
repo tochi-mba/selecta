@@ -18,6 +18,7 @@ from typing import Any
 
 import numpy as np
 
+from selecta import flags
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
 from selecta.arrange import can_arrange
@@ -37,6 +38,7 @@ from selecta.planner.memory import SeamMemory
 from selecta.planner.moods import THEMES, is_english, is_seasonal, read_lyrics
 from selecta.planner.wordreel import modes_for, ride_lines
 from selecta.render.intertwine import can_intertwine
+from selecta.seam_kinds import move_on
 from selecta.styles.wordplay import felt_bpm
 
 MIN_SONGS = 6
@@ -480,6 +482,23 @@ def family_vibe(vibe: Vibe, family: str) -> Vibe:
     )
 
 
+# Mix ideas that answer to a flag of their own, beyond mixes.ideas itself.
+VIBE_FLAGS = {"christmas": "mixes.seasonal", "wordplay": "mixes.wordplay_showcase"}
+
+
+def vibe_on(key: str) -> bool:
+    """Whether this build offers the mix idea. Selecta's pick is core: it's how Quick Play and
+    "Start a mix here" work, so it's always there."""
+    base = key.split("__", 1)[0]
+    if base == "pick":
+        return True
+    if not flags.on("mixes.ideas"):
+        return False
+    if "__" in key and not flags.on("mixes.genre_variants"):
+        return False
+    return flags.on(VIBE_FLAGS[base]) if base in VIBE_FLAGS else True
+
+
 def candidate_vibes(songs: list[SongInfo], traits: dict[int, Traits]) -> tuple[Vibe, ...]:
     """Return only truthful cards, including every family-specific journey the library supports."""
     families = sorted(
@@ -499,7 +518,10 @@ def candidate_vibes(songs: list[SongInfo], traits: dict[int, Traits]) -> tuple[V
     ]
     cards: list[Vibe] = []
     for vibe in VIBES:
-        if vibe.key not in COHESIVE_JOURNEYS:
+        if not vibe_on(vibe.key):
+            continue
+        # without single-genre journeys, a journey draws from the whole library, as it first did
+        if vibe.key not in COHESIVE_JOURNEYS or not flags.on("mixes.genre_variants"):
             cards.append(vibe)
             continue
         for family in supported:
@@ -511,6 +533,8 @@ def candidate_vibes(songs: list[SongInfo], traits: dict[int, Traits]) -> tuple[V
 
 def resolve_vibe(key: str) -> Vibe | None:
     """Resolve static cards and the family-bound journey keys emitted by ``candidate_vibes``."""
+    if not vibe_on(key):
+        return None
     if "__" not in key:
         return BY_KEY.get(key)
     base, family = key.rsplit("__", 1)
@@ -707,6 +731,7 @@ def _word_move(a: SongInfo, b: SongInfo, memory: SeamMemory, showcase: bool = Fa
         name
         for name in modes_for(a, b)
         if name in WORD_MOVES
+        and move_on(name)
         and memory.move_factor(a.id, b.id, name) > 0
         and _word_move_suits(name, a, b, showcase)
     ]
@@ -717,7 +742,9 @@ def _word_move(a: SongInfo, b: SongInfo, memory: SeamMemory, showcase: bool = Fa
 def _moves_that_fit(
     vibe: Vibe, a: SongInfo, b: SongInfo, memory: SeamMemory, stems: str = "sometimes"
 ) -> list[tuple[str, float]]:
-    """Moves these two songs can carry, and how much to favour each."""
+    """Moves these two songs can carry, and how much to favour each. Only moves this build can
+    make, and none that need stems if stems are turned off."""
+    stems = stems if flags.on("stems") else "never"
     options: list[tuple[str, float]] = []
     overlap_lean, other_lean = ratings_lean(a, b), ratings_lean(a, b, overlapping=False)
     ride = memory.move_factor(a.id, b.id, "vocal_ride")
@@ -737,7 +764,7 @@ def _moves_that_fit(
         if known > 0 and enumerate_candidates(a, b, name, exits=exits, entries=entries):
             lean = overlap_lean if name in {"bass_swap_blend", "filter_sweep"} else other_lean
             options.append((name, weight * known * lean))
-    return options
+    return [(name, weight) for name, weight in options if move_on(name)]
 
 
 def _choose_move(
@@ -778,6 +805,7 @@ def seam_choices(
     out when it's rendered, the seam uses the next best thing, and a cut only as a last resort."""
     rng = rng or np.random.default_rng()
     memory = memory or SeamMemory()
+    stems = stems if flags.on("stems") else "never"
     seams: dict[int, dict] = {}
     since_word = WORD_SPACING
     history: list[str] = []

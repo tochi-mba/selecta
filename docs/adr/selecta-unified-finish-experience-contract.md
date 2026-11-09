@@ -1,20 +1,20 @@
-# Selecta — Unified Finish cross-scene visual and interaction contract
+# Selecta - Unified Finish cross-scene visual and interaction contract
 
 **Status:** 24 Accepted ADRs (0366–0389); 184 UF tasks Not started; 8 In progress; 0 Implemented; 0 independently Verified. Acceptance approved by requester on 2026-11-08; implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app source and regression tests.
 
 ## Three complementary music experiences
 
-**Listen — theatre:** first glance shows song identity, actual transport, progress and next handoff. Lyrics and visualiser options are layered for interested listeners; Stage is immersive yet controlled. Real frequency bins and the player clock alone drive visual sound.
+**Listen - theatre:** first glance shows song identity, actual transport, progress and next handoff. Lyrics and visualiser options are layered for interested listeners; Stage is immersive yet controlled. Real frequency bins and the player clock alone drive visual sound.
 
-**Discover — gallery:** inviting mood and connection objects display source-backed eligibility and provenance; suggestions are not ready seams until validated, and unsupported audio is never faked.
+**Discover - gallery:** inviting mood and connection objects display source-backed eligibility and provenance; suggestions are not ready seams until validated, and unsupported audio is never faked.
 
-**Create — instrument:** exact mix revision, song occurrence, directed seam, timeline, heard preview, requested move and achieved output are clearly differentiated. Shape/Grid/List and Story/Arrange preserve musical semantics while offering different complexity.
+**Create - instrument:** exact mix revision, song occurrence, directed seam, timeline, heard preview, requested move and achieved output are clearly differentiated. Shape/Grid/List and Story/Arrange preserve musical semantics while offering different complexity.
 
-**Library — collection:** fast retrieval, authentic art, safe exact-ID operations and trustworthy readiness. LX-0340–0352 owns detailed design.
+**Library - collection:** fast retrieval, authentic art, safe exact-ID operations and trustworthy readiness. LX-0340–0352 owns detailed design.
 
-**Lucy — collaborator:** calm conversation plus precise proposal, constraints, revisions, K−1 ready-only evidence and explicit commit. LU/LX own the detailed visual and engine contracts.
+**Lucy - collaborator:** calm conversation plus precise proposal, constraints, revisions, K−1 ready-only evidence and explicit commit. LU/LX own the detailed visual and engine contracts.
 
-**Workspace — operations:** actionable attention, job truth, data provenance, local recovery and safe backups, not vanity telemetry.
+**Workspace - operations:** actionable attention, job truth, data provenance, local recovery and safe backups, not vanity telemetry.
 
 ## Shared semantics
 

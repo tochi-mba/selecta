@@ -1,10 +1,10 @@
-# ADR-0383 — Song requests, bridge routes and explicit atomic consent
+# ADR-0383 - Song requests, bridge routes and explicit atomic consent
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P1 / 07 Supporting. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / 07 Supporting. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0225, ADR-0262, ADR-0270, ADR-0290; unchanged.
 - **Source touchpoints (review, not implementation):** `web/src/views/Requests.tsx`; `src/selecta/requests.py`; `src/selecta/request_planner.py`.
 
@@ -22,16 +22,16 @@ Users understand what is actually available, which exact music object they are a
 
 **Preservation and trade-offs:** Preserve local original music, one authoritative player and deliberate Pause; exact recording/draft/mix/revision/occurrence/seam IDs; revision-guarded mutations and scoped Undo; explicit consent and atomic bridges; actual on-disk valid ready-only seams (K songs need K−1 edges); eight Studio lanes and 8–64-cell arrangement; truthful source/readiness; frozen-revision decodable FLAC; unbiased human listening. No accounts, SaaS, telemetry, remote audio upload or engine rewrite.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0383-01 — Make request stages readable.** **Acceptance:** Searching, waiting, needs approval, preparing and ready have distinct exact meanings. **Required verification:** Stage matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0383-02 — Preview full bridge consequences.** **Acceptance:** Show each added song and landing position before approval. **Required verification:** Bridge comprehension test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0383-03 — Require explicit route approval.** **Acceptance:** Proposed bridges never silently change active mix or request slots. **Required verification:** Consent integration. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0383-04 — Guarantee atomic availability.** **Acceptance:** All bridge seams must really be ready before any route can play. **Required verification:** Eviction/race fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0383-05 — Communicate no-fit choices.** **Acceptance:** Wait, search bridge and add anyway do not imply a musically safe automatic fit. **Required verification:** Impossible-fit task observation. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0383-06 — Protect concurrent identities.** **Acceptance:** Competing requests cannot duplicate song or steal a reserved location. **Required verification:** Concurrent planning E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0383-07 — Keep audition audio safe.** **Acceptance:** Bridge audition respects preview focus and deliberate Pause. **Required verification:** Real preview sequence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0383-08 — Preserve responsive drawer access.** **Acceptance:** Search, choices and confirmation remain usable with keyboard inset/zoom. **Required verification:** Mobile/AT test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0383-01 - Make request stages readable.** **Acceptance:** Searching, waiting, needs approval, preparing and ready have distinct exact meanings. **Required verification:** Stage matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0383-02 - Preview full bridge consequences.** **Acceptance:** Show each added song and landing position before approval. **Required verification:** Bridge comprehension test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0383-03 - Require explicit route approval.** **Acceptance:** Proposed bridges never silently change active mix or request slots. **Required verification:** Consent integration. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0383-04 - Guarantee atomic availability.** **Acceptance:** All bridge seams must really be ready before any route can play. **Required verification:** Eviction/race fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0383-05 - Communicate no-fit choices.** **Acceptance:** Wait, search bridge and add anyway do not imply a musically safe automatic fit. **Required verification:** Impossible-fit task observation. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0383-06 - Protect concurrent identities.** **Acceptance:** Competing requests cannot duplicate song or steal a reserved location. **Required verification:** Concurrent planning E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0383-07 - Keep audition audio safe.** **Acceptance:** Bridge audition respects preview focus and deliberate Pause. **Required verification:** Real preview sequence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0383-08 - Preserve responsive drawer access.** **Acceptance:** Search, choices and confirmation remain usable with keyboard inset/zoom. **Required verification:** Mobile/AT test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

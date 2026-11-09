@@ -1,0 +1,27 @@
+{
+  "area": "Discover",
+  "flags": {
+    "discover.word_links": {
+      "label": "Word connections",
+      "about": "Lyric links between songs, where a word in one hands off to the same word in the next.",
+      "requires": ["lyrics.lookup"],
+      "routes": ["GET /api/links", "POST /api/seams", "POST /api/mix/pair"],
+      "surfaces": ["discover.words", "mixes", "overlay.palette"],
+      "words": ["Word connections"],
+      "cli": ["discover"]
+    },
+    "discover.harmonic": {
+      "label": "Harmonic matches",
+      "about": "Songs that might share chords, with an audition in four steps.",
+      "routes": [
+        "GET /api/discoveries",
+        "POST /api/discoveries/{discovery_id}/hear",
+        "GET /api/discoveries/{discovery_id}/hear/{step}",
+        "POST /api/discoveries/{discovery_id}/review"
+      ],
+      "surfaces": ["discover.harmonic", "mixes", "overlay.palette"],
+      "words": ["Harmonic matches", "Songs that might share chords"],
+      "cli": ["discover"]
+    }
+  }
+}

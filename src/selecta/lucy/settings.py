@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from selecta import db
+from selecta import db, flags
 
 PREFERENCE = "lucy"
 SECRETS_FILE = "lucy-secrets.json"
@@ -74,9 +74,30 @@ def _merge(base: dict, extra: dict) -> dict:
     return merged
 
 
-def get(conn: sqlite3.Connection) -> dict:
+# The build's flag for each phase. A phase is on only when this build has it and the person
+# hasn't turned it off; chat has no flag of its own, since Lucy without chat is no Lucy.
+PHASE_FLAGS = {
+    "proposals": "lucy.proposals",
+    "commit": "lucy.commit",
+    "memory": "lucy.memory",
+    "voice": "lucy.voice",
+}
+
+
+def _chosen(conn: sqlite3.Connection) -> dict:
+    """What the person chose, before the build's flags have their say."""
     stored = db.preference(conn, PREFERENCE, {}) or {}
-    config = _merge(DEFAULTS, stored)
+    return _merge(DEFAULTS, stored)
+
+
+def get(conn: sqlite3.Connection) -> dict:
+    config = _chosen(conn)
+    if not flags.on("lucy"):
+        config["enabled"] = False
+    for phase, flag in PHASE_FLAGS.items():
+        config["phases"][phase] = config["phases"][phase] and flags.on(flag)
+    if not flags.on("lucy.remote_providers"):
+        config["provider"] = {**DEFAULTS["provider"]}
     config["provider"]["remote"] = is_remote(config["provider"])
     return config
 
@@ -118,8 +139,9 @@ def _write_secret(home: Path, kind: str, key: str | None) -> None:
 
 
 def update(conn: sqlite3.Connection, home: Path, changes: dict) -> dict:
-    """Apply only known, validated settings. A new remote provider starts without consent."""
-    config = get(conn)
+    """Apply only known, validated settings. A new remote provider starts without consent. What a
+    flag hides is kept as the person left it, so turning the flag back on brings it back."""
+    config = _chosen(conn)
     stored = {key: copy.deepcopy(config[key]) for key in DEFAULTS}
     if "enabled" in changes:
         stored["enabled"] = bool(changes["enabled"])
@@ -131,6 +153,8 @@ def update(conn: sqlite3.Connection, home: Path, changes: dict) -> dict:
         kind = provider.get("kind", stored["provider"]["kind"])
         if kind not in PROVIDERS:
             raise ValueError("Choose the built-in Lucy, Anthropic or an OpenAI-compatible host.")
+        if kind != "builtin" and not flags.on("lucy.remote_providers"):
+            raise ValueError("This build only has the built-in Lucy.")
         changed_kind = kind != stored["provider"]["kind"]
         stored["provider"]["kind"] = kind
         for field in ("model", "base_url"):

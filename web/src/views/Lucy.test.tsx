@@ -82,7 +82,7 @@ describe('Lucy', () => {
   it('shows the proposal as not built, with its hard ready-only rule and real readiness', async () => {
     backend();
     render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
-    expect(await screen.findAllByText(/Proposed — not built/i)).not.toHaveLength(0);
+    expect(await screen.findAllByText(/Proposed - not built/i)).not.toHaveLength(0);
     expect(screen.getAllByText(/Only transitions that are already ready/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/2 of 2 transitions ready/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/unknown/i).length).toBeGreaterThan(0); // missing BPM/energy stays unknown

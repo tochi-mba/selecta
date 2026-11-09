@@ -59,6 +59,7 @@ API_FEATURES = [
     "draft_restore_by_id",
     "export_jobs",
     "lucy",
+    "flags",
 ]
 
 

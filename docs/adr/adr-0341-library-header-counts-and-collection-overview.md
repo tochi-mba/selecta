@@ -1,10 +1,10 @@
-# ADR-0341 — Library header, truthful collection overview and readiness-oriented summary
+# ADR-0341 - Library header, truthful collection overview and readiness-oriented summary
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P0 / Library hierarchy. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Library hierarchy. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0226, ADR-0178, ADR-0180, ADR-0291; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/Library.tsx`; `web/src/styles/operations.css`; `web/src/state/readiness.ts`.
 
@@ -24,16 +24,16 @@ People can tell total collection size, ready-for-mixes count and an actionable a
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0341-01 — Set header hierarchy.** **Acceptance:** Library name and primary collection task outrank metrics and decorative information. **Required verification:** Paired desktop/mobile hierarchy critique. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0341-02 — Use canonical counters.** **Acceptance:** Counts are derived from authoritative status and retain unknown state instead of manufacturing a zero. **Required verification:** Unknown/partial status fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0341-03 — Explain readiness.** **Acceptance:** Ready for mixes is explicitly distinct from analysed and from ready transitions. **Required verification:** Comprehension task with misleading-value fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0341-04 — Design responsive counters.** **Acceptance:** Overview folds to readable lines/cards only when content permits, without horizontal scroll. **Required verification:** 320–1440px and 400% zoom geometry tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0341-05 — Preserve number stability.** **Acceptance:** Tabular counts, thousands separators and live changes do not cause avoidable layout shift. **Required verification:** Computed geometry and CLS trace. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0341-06 — Avoid vanity metrics.** **Acceptance:** Do not add fabricated hours listened, ratings, quality scores, cover art or fake completion percentages. **Required verification:** Source/provenance and copy audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0341-07 — Link attention to action.** **Acceptance:** If supported, attention counters navigate to exact Library filtered results. **Required verification:** Navigation, filter and back-stack E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0341-08 — Validate overview value.** **Acceptance:** Users understand relevant collection counts faster than the baseline without compromising song retrieval. **Required verification:** Uncoached count explanation and retrieval comparison. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0341-01 - Set header hierarchy.** **Acceptance:** Library name and primary collection task outrank metrics and decorative information. **Required verification:** Paired desktop/mobile hierarchy critique. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0341-02 - Use canonical counters.** **Acceptance:** Counts are derived from authoritative status and retain unknown state instead of manufacturing a zero. **Required verification:** Unknown/partial status fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0341-03 - Explain readiness.** **Acceptance:** Ready for mixes is explicitly distinct from analysed and from ready transitions. **Required verification:** Comprehension task with misleading-value fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0341-04 - Design responsive counters.** **Acceptance:** Overview folds to readable lines/cards only when content permits, without horizontal scroll. **Required verification:** 320–1440px and 400% zoom geometry tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0341-05 - Preserve number stability.** **Acceptance:** Tabular counts, thousands separators and live changes do not cause avoidable layout shift. **Required verification:** Computed geometry and CLS trace. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0341-06 - Avoid vanity metrics.** **Acceptance:** Do not add fabricated hours listened, ratings, quality scores, cover art or fake completion percentages. **Required verification:** Source/provenance and copy audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0341-07 - Link attention to action.** **Acceptance:** If supported, attention counters navigate to exact Library filtered results. **Required verification:** Navigation, filter and back-stack E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0341-08 - Validate overview value.** **Acceptance:** Users understand relevant collection counts faster than the baseline without compromising song retrieval. **Required verification:** Uncoached count explanation and retrieval comparison. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

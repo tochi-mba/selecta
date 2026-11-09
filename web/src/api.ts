@@ -109,6 +109,8 @@ export type Status = {
     accuracy?: { jobs: number; typical_miss: number | null };
   };
   scan: { status: string; folder?: string; music?: number; set_aside?: number; error?: string };
+  /** Each feature flag and whether it's on in this build. An older server doesn't say. */
+  flags?: Record<string, boolean>;
 };
 
 export type SongRow = {
@@ -216,10 +218,14 @@ export const OFFLINE_WORDS = 'Can’t reach Selecta right now. Try again in a mo
 /** The server broke, rather than saying no. Its own "Internal Server Error" helps nobody. */
 export const SERVER_FAILED_WORDS = 'Something went wrong inside Selecta. Your music and mixes are safe. Try again.';
 
-export type ProblemKind = 'offline' | 'missing' | 'conflict' | 'invalid' | 'storage' | 'server';
+export type ProblemKind = 'offline' | 'missing' | 'conflict' | 'invalid' | 'storage' | 'server' | 'off';
+
+/** What a server says when something is turned off in its build, in place of its own words. */
+export const TURNED_OFF_WORDS = 'That’s turned off in this version of Selecta.';
 
 export function problemKind(error: unknown): ProblemKind {
   if (!(error instanceof ApiError)) return 'offline';
+  if (error.code === 'flag_off') return 'off';
   if (error.code === 'storage_full') return 'storage';
   if (error.status === 404) return 'missing';
   if (error.status === 409) return 'conflict';

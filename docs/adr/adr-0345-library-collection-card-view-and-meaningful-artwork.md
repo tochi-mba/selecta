@@ -1,10 +1,10 @@
-# ADR-0345 — Library collection cards, meaningful artwork and browsing mode
+# ADR-0345 - Library collection cards, meaningful artwork and browsing mode
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P1 / Library presentation. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / Library presentation. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0226, ADR-0177, ADR-0245, ADR-0309; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/Library.tsx`; `web/src/styles/music-objects.css`; `web/src/ui/MusicObjects.tsx`.
 
@@ -24,16 +24,16 @@ Cards support exploration without becoming an inefficient clone of dense rows or
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0345-01 — Define purpose of collection cards.** **Acceptance:** Cards prioritise musical identity and browse decisions rather than duplicating every table column. **Required verification:** Collection versus list first-impression study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0345-02 — Use trustworthy visual assets.** **Acceptance:** Only documented available artwork is displayed; otherwise existing motifs show deliberately. **Required verification:** Asset provenance, missing-art and offline tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0345-03 — Maintain song identity.** **Acceptance:** Duplicate recordings retain exact ID distinction and title/artist accessibility. **Required verification:** Duplicate card task and AT labels. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0345-04 — Keep actionable readiness.** **Acceptance:** A card never suggests playable/ready when canonical state disagrees. **Required verification:** Ready/missing/processing fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0345-05 — Establish grid responsiveness.** **Acceptance:** Cards fit variable widths without cropped titles, horizontal scroll or controls under player. **Required verification:** 320px to wide viewport + zoom screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0345-06 — Preserve mode parity.** **Acceptance:** Switching card/list retains query, filters, sort, selection scope and navigation. **Required verification:** Cross-mode automated identity tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0345-07 — Respect large libraries.** **Acceptance:** Use staged loading and bounded work; never eagerly render all 20k cards. **Required verification:** Large-card count and scroll benchmark. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0345-08 — Validate actual discovery benefit.** **Acceptance:** People explore unfamiliar tracks more effectively than dense list without sacrificing retrieval. **Required verification:** Uncoached browse-and-find study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0345-01 - Define purpose of collection cards.** **Acceptance:** Cards prioritise musical identity and browse decisions rather than duplicating every table column. **Required verification:** Collection versus list first-impression study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0345-02 - Use trustworthy visual assets.** **Acceptance:** Only documented available artwork is displayed; otherwise existing motifs show deliberately. **Required verification:** Asset provenance, missing-art and offline tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0345-03 - Maintain song identity.** **Acceptance:** Duplicate recordings retain exact ID distinction and title/artist accessibility. **Required verification:** Duplicate card task and AT labels. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0345-04 - Keep actionable readiness.** **Acceptance:** A card never suggests playable/ready when canonical state disagrees. **Required verification:** Ready/missing/processing fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0345-05 - Establish grid responsiveness.** **Acceptance:** Cards fit variable widths without cropped titles, horizontal scroll or controls under player. **Required verification:** 320px to wide viewport + zoom screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0345-06 - Preserve mode parity.** **Acceptance:** Switching card/list retains query, filters, sort, selection scope and navigation. **Required verification:** Cross-mode automated identity tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0345-07 - Respect large libraries.** **Acceptance:** Use staged loading and bounded work; never eagerly render all 20k cards. **Required verification:** Large-card count and scroll benchmark. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0345-08 - Validate actual discovery benefit.** **Acceptance:** People explore unfamiliar tracks more effectively than dense list without sacrificing retrieval. **Required verification:** Uncoached browse-and-find study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

@@ -1,0 +1,29 @@
+{
+  "area": "Workspace",
+  "flags": {
+    "workspace.storage": {
+      "label": "Storage",
+      "about": "Free and cached space, and the cache budget.",
+      "routes": ["GET /api/storage", "POST /api/storage"],
+      "surfaces": ["workshop.storage", "workshop"]
+    },
+    "workspace.backup": {
+      "label": "Local backup",
+      "about": "Back up the library's data and restore it on the next start.",
+      "routes": [
+        "GET /api/backup",
+        "POST /api/backup/preview",
+        "POST /api/backup/stage",
+        "GET /api/backup/status"
+      ],
+      "surfaces": ["workshop.storage"],
+      "words": ["Local data backup"]
+    },
+    "workspace.diagnostics": {
+      "label": "Diagnostics",
+      "about": "The raw details of what Selecta is doing, for when something goes wrong.",
+      "routes": ["GET /api/diagnostics"],
+      "surfaces": ["workshop.diagnostics", "workshop"]
+    }
+  }
+}

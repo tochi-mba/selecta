@@ -8,5 +8,7 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     proxy: { '/api': process.env.SELECTA_API ?? 'http://127.0.0.1:8733' },
+    // the feature-flag registry lives with the server, in ../src/selecta/flags, and both read it
+    fs: { allow: ['..'] },
   },
 });

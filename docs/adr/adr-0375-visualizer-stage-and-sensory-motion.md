@@ -1,10 +1,10 @@
-# ADR-0375 — Existing fifteen visualisers, Stage and sensory-safe motion
+# ADR-0375 - Existing fifteen visualisers, Stage and sensory-safe motion
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P1 / 04 Listen. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / 04 Listen. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0205, ADR-0212, ADR-0213, ADR-0266, ADR-0285, ADR-0296; unchanged.
 - **Source touchpoints (review, not implementation):** `web/src/views/spectrumVisuals.ts`; `web/src/views/Now.tsx`; `web/src/ui/useReducedMotion.ts`.
 
@@ -22,16 +22,16 @@ Users complete the named journey with clear action consequences, predictable con
 
 **Preservation and trade-offs:** Keep original music local/unchanged, one authoritative audio owner and deliberate Pause, exact recording/mix/draft/revision/occurrence/seam identities, guarded Undo, consented atomic request bridges, real valid ready-only seams, eight Studio lanes/8–64 cells, true library readiness and lyric provenance, frozen-revision decodable FLAC and blinded human evaluation. No SaaS, telemetry, engine rewrite or unsolicited upload.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0375-01 — Preserve all fifteen options.** **Acceptance:** No visualiser is accidentally removed; choices remain stable. **Required verification:** Style list regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0375-02 — Use live audio bins only.** **Acceptance:** Pause/silence produce truthful visual stillness. **Required verification:** Known frequency/silence fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0375-03 — Make visualiser choice accessible.** **Acceptance:** Recommended presentation does not hide full selector. **Required verification:** Preference-switch task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0375-04 — Sync effects to real transitions.** **Acceptance:** Visual handoffs correspond to actual audio clock not animation loop. **Required verification:** Recorded correlation. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0375-05 — Respect reduced motion first.** **Acceptance:** OS preference overrides Subtle/Expressive; Still mode is consistently calm. **Required verification:** Motion matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0375-06 — Review sensory safety.** **Acceptance:** Flashing, brightness and lyric distraction have conservative defaults. **Required verification:** Sensory and contrast review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0375-07 — Keep Stage usable.** **Acceptance:** Fullscreen entry/exit/escape/focus work across themes and sizes. **Required verification:** Stage keyboard/touch tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0375-08 — Measure frame and energy costs.** **Acceptance:** Active and hidden-tab visualisation stay within agreed named-device budget. **Required verification:** CPU/frame/memory profile. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0375-01 - Preserve all fifteen options.** **Acceptance:** No visualiser is accidentally removed; choices remain stable. **Required verification:** Style list regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0375-02 - Use live audio bins only.** **Acceptance:** Pause/silence produce truthful visual stillness. **Required verification:** Known frequency/silence fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0375-03 - Make visualiser choice accessible.** **Acceptance:** Recommended presentation does not hide full selector. **Required verification:** Preference-switch task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0375-04 - Sync effects to real transitions.** **Acceptance:** Visual handoffs correspond to actual audio clock not animation loop. **Required verification:** Recorded correlation. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0375-05 - Respect reduced motion first.** **Acceptance:** OS preference overrides Subtle/Expressive; Still mode is consistently calm. **Required verification:** Motion matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0375-06 - Review sensory safety.** **Acceptance:** Flashing, brightness and lyric distraction have conservative defaults. **Required verification:** Sensory and contrast review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0375-07 - Keep Stage usable.** **Acceptance:** Fullscreen entry/exit/escape/focus work across themes and sizes. **Required verification:** Stage keyboard/touch tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0375-08 - Measure frame and energy costs.** **Acceptance:** Active and hidden-tab visualisation stay within agreed named-device budget. **Required verification:** CPU/frame/memory profile. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

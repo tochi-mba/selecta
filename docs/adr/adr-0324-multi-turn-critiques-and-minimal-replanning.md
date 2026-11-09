@@ -1,10 +1,10 @@
-# ADR-0324 — Conversational critiques, exact locks and minimal-change proposal repair
+# ADR-0324 - Conversational critiques, exact locks and minimal-change proposal repair
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Revision. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Revision. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Related existing ADRs:** ADR-0100, ADR-0143, ADR-0219, ADR-0237, ADR-0260; statuses and scope unchanged.
 - **Source touchpoints:** `src/selecta/planner/beam.py`; `src/selecta/mix.py`; `web/src/views/Mix.tsx`.
 
@@ -26,16 +26,16 @@ User notes stream as ordinary chat; attached current proposal updates only after
 
 Prefer existing Selecta authoritative models, route/worker APIs and host-controlled permissions over duplicate agent-side audio/mix state. Reject model prose as proof of a write, transition render or real music quality. No SaaS/accounts/remote music/cloud sync/telemetry scope is implied by this ADR; remote model usage requires informed consent.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-324-01 — Parse critiques against revision.** **Acceptance:** Turn includes expected proposal/revision/selected occurrence and requested changes. **Required verification:** Stale-ref and ambiguity fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-324-02 — Distinguish kinds of locks.** **Acceptance:** Occurrence retention, exact position, relative order and segment boundary independent. **Required verification:** Duplicate/relocation lock tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-324-03 — Apply minimal change.** **Acceptance:** Untargeted songs retained when feasible; no wholesale replan disguised as small edit. **Required verification:** Diff-minimisation property test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-324-04 — Re-evaluate affected seams.** **Acceptance:** Replacing/moving a song checks both inbound and outbound and global cue continuity. **Required verification:** Transition context regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-324-05 — Preserve prior compatible notes.** **Acceptance:** Latest instruction supersedes only matching constraint, not unrelated anchors. **Required verification:** Six-turn adversarial conversation eval. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-324-06 — Surface conflict and trade-off.** **Acceptance:** Impossible notes show exact conflicting rules and safe user choices. **Required verification:** Infeasible solver fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-324-07 — Keep proposal write atomic.** **Acceptance:** No partial revision made visible if validation or persistence fails. **Required verification:** Injected failure/parallel tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-324-08 — Verify human edit fidelity.** **Acceptance:** Test users can critique 3 times and recognize each applied change. **Required verification:** Uncoached revision task and diff comprehension. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-324-01 - Parse critiques against revision.** **Acceptance:** Turn includes expected proposal/revision/selected occurrence and requested changes. **Required verification:** Stale-ref and ambiguity fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-324-02 - Distinguish kinds of locks.** **Acceptance:** Occurrence retention, exact position, relative order and segment boundary independent. **Required verification:** Duplicate/relocation lock tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-324-03 - Apply minimal change.** **Acceptance:** Untargeted songs retained when feasible; no wholesale replan disguised as small edit. **Required verification:** Diff-minimisation property test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-324-04 - Re-evaluate affected seams.** **Acceptance:** Replacing/moving a song checks both inbound and outbound and global cue continuity. **Required verification:** Transition context regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-324-05 - Preserve prior compatible notes.** **Acceptance:** Latest instruction supersedes only matching constraint, not unrelated anchors. **Required verification:** Six-turn adversarial conversation eval. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-324-06 - Surface conflict and trade-off.** **Acceptance:** Impossible notes show exact conflicting rules and safe user choices. **Required verification:** Infeasible solver fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-324-07 - Keep proposal write atomic.** **Acceptance:** No partial revision made visible if validation or persistence fails. **Required verification:** Injected failure/parallel tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-324-08 - Verify human edit fidelity.** **Acceptance:** Test users can critique 3 times and recognize each applied change. **Required verification:** Uncoached revision task and diff comprehension. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Existing product preservation
 

@@ -270,6 +270,9 @@ button[aria-disabled='true'] { cursor: progress; }
   background: var(--surface-raised);
 }
 .mixes .mix-quick.hero { margin: 0; }
+/* without Lucy in this build, Quick Play is the one path and takes the row */
+.mixes .mix-paths:not(:has(> .mix-create)) { grid-template-columns: minmax(0, 1fr); }
+.mixes .mix-paths:not(:has(> .mix-create)) .mix-quick .lede { max-width: 60ch; }
 .mixes .mix-path-label { font: var(--type-section); margin: 0 0 var(--space-2); }
 .mixes .mix-create { display: flex; flex-direction: column; align-items: start; gap: var(--space-3); }
 .mixes .mix-create h2 { margin: 0; font: var(--type-section); }

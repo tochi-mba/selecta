@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import HTTPException
 from fastapi.responses import FileResponse
 
-from selecta import db, mix
+from selecta import db, flags, mix
 from selecta.api_common import (
     MOST_FROM_ONE_ARTIST,
     NEARBY_SONGS,
@@ -25,6 +25,8 @@ from selecta.api_common import (
     RateRequest,
     SeamSettings,
 )
+from selecta.flags.guard import refusal
+from selecta.seam_kinds import MOVE_FLAGS, move_on
 from selecta.seams import MOVES, STEM_MOVES, CannotRender, SeamRequest, request_from, seam_options
 
 
@@ -147,6 +149,8 @@ def add_routes(app, ctx) -> None:
                     for item in ranked
                     if text in f"{item.song.artist} {item.song.title}".casefold()
                 ]
+            elif not flags.on("editor.suggestions"):
+                ranked = []  # nothing suggested before a search; searching still works
             else:
                 # recommendations should be a real choice, not one artist's whole catalogue
                 seen: Counter[str] = Counter()
@@ -260,6 +264,8 @@ def add_routes(app, ctx) -> None:
     def set_seam(position: int, body: SeamSettings, draft: int | None = None) -> dict:
         if body.move not in MOVES:
             raise HTTPException(400, f"unknown move: {body.move}")
+        if not move_on(body.move):
+            return refusal(MOVE_FLAGS[body.move])
         with connect() as conn:
             seam_request_at(conn, position, draft)
             mix.remember(conn, "changing that seam", draft)
@@ -316,6 +322,8 @@ def add_routes(app, ctx) -> None:
     def audition(body: PairRequest) -> dict:
         if body.move not in MOVES:
             raise HTTPException(400, f"unknown move: {body.move}")
+        if not move_on(body.move):
+            return refusal(MOVE_FLAGS[body.move])
         # the mix comes first, so this waits behind it, even though someone asked for it by name
         return store.submit(SeamRequest(a=body.a, b=body.b, move=body.move, phrase=body.phrase))
 

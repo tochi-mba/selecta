@@ -1,10 +1,10 @@
-# ADR-0354 — Make a Mix mood discovery, preset choices and natural-language handoff
+# ADR-0354 - Make a Mix mood discovery, preset choices and natural-language handoff
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P1 / Make a Mix entry. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / Make a Mix entry. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0216, ADR-0259, ADR-0283, ADR-0321; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/Mixes.tsx`; `web/src/views/MixSetup.tsx`; `web/src/lucy/words.ts`.
 
@@ -24,16 +24,16 @@ People can choose a mood without confusing a suggestion with an already-built se
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0354-01 — Redesign mood-card hierarchy.** **Acceptance:** Cards prioritise name, feeling, real supporting facts and one action. **Required verification:** Card comprehension and visual hierarchy study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0354-02 — Keep suggestion provenance.** **Acceptance:** Matching counts and audio durations are never labelled full mix or transition readiness. **Required verification:** Live candidate versus actual build fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0354-03 — Clarify three action paths.** **Acceptance:** Play, Shape first and Save draft have distinct concise outcomes. **Required verification:** Before-action prediction study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0354-04 — Retain flexible durations.** **Acceptance:** Approximate lengths indicate source material rather than guaranteed rendered runtime. **Required verification:** Duration/transition copy tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0354-05 — Enable Lucy handoff safely.** **Acceptance:** Selected mood can suggest editable prompt wording but does not send automatically. **Required verification:** Route/prefill and no-commit E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0354-06 — Handle insufficient candidates.** **Acceptance:** Unavailable mood ideas show why and a supported next option. **Required verification:** No-ready and sparse-match fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0354-07 — Reduce optional clutter.** **Acceptance:** Advanced shaping stays accessible without overwhelming core mood discovery. **Required verification:** Progressive-disclosure task test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0354-08 — Validate creation continuity.** **Acceptance:** User moves from mood selection to Lucy or editor without lost context or surprise audio. **Required verification:** Cross-route session task with playback. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0354-01 - Redesign mood-card hierarchy.** **Acceptance:** Cards prioritise name, feeling, real supporting facts and one action. **Required verification:** Card comprehension and visual hierarchy study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0354-02 - Keep suggestion provenance.** **Acceptance:** Matching counts and audio durations are never labelled full mix or transition readiness. **Required verification:** Live candidate versus actual build fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0354-03 - Clarify three action paths.** **Acceptance:** Play, Shape first and Save draft have distinct concise outcomes. **Required verification:** Before-action prediction study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0354-04 - Retain flexible durations.** **Acceptance:** Approximate lengths indicate source material rather than guaranteed rendered runtime. **Required verification:** Duration/transition copy tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0354-05 - Enable Lucy handoff safely.** **Acceptance:** Selected mood can suggest editable prompt wording but does not send automatically. **Required verification:** Route/prefill and no-commit E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0354-06 - Handle insufficient candidates.** **Acceptance:** Unavailable mood ideas show why and a supported next option. **Required verification:** No-ready and sparse-match fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0354-07 - Reduce optional clutter.** **Acceptance:** Advanced shaping stays accessible without overwhelming core mood discovery. **Required verification:** Progressive-disclosure task test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0354-08 - Validate creation continuity.** **Acceptance:** User moves from mood selection to Lucy or editor without lost context or surprise audio. **Required verification:** Cross-route session task with playback. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

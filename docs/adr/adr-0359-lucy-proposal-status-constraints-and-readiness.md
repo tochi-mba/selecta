@@ -1,10 +1,10 @@
-# ADR-0359 — Lucy current proposal summary, constraints and verified readiness
+# ADR-0359 - Lucy current proposal summary, constraints and verified readiness
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P0 / Lucy proposal. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Lucy proposal. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0317, ADR-0318, ADR-0319, ADR-0323, ADR-0328; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/LucyProposal.tsx`; `web/src/lucy/types.ts`; `web/src/views/LucyApprove.tsx`.
 
@@ -24,16 +24,16 @@ People know precisely what would be saved and whether every required transition 
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0359-01 — Present truthful lifecycle.** **Acceptance:** Proposed, approved, saved draft, rendering, ready and playing use distinct wording and semantics. **Required verification:** State machine and copy comprehension tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0359-02 — Promote current revision identity.** **Acceptance:** Revision number/hash scope and historical viewing state are unambiguous. **Required verification:** Older/current snapshot fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0359-03 — Summarise song and duration facts.** **Acceptance:** N songs and actual low/high duration use source-backed estimates, no invented precision. **Required verification:** 1/2/long route and unknown-length tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0359-04 — Count verified seams correctly.** **Acceptance:** K songs require max(0,K−1) directed transitions, and only verified clips count ready. **Required verification:** 0/1/K seams + cache proof E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0359-05 — Expose required versus preferred rules.** **Acceptance:** Hard ready-only and soft preferences cannot be visually conflated. **Required verification:** Constraint change and AT status tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0359-06 — Explain infeasible strict plans.** **Acceptance:** No-route result suggests truthful shorter or relaxed options and requires user choice. **Required verification:** Sparse graph and immovable end-song fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0359-07 — Refresh approval proof.** **Acceptance:** Approval revalidates exact revision, source and on-disk clips, blocking stale ready-only states. **Required verification:** Eviction and concurrent commit tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0359-08 — Validate readiness understanding.** **Acceptance:** People identify whether plan is unbuilt, saved or fully playable without reading code-like labels. **Required verification:** Uncoached musical-state interview. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0359-01 - Present truthful lifecycle.** **Acceptance:** Proposed, approved, saved draft, rendering, ready and playing use distinct wording and semantics. **Required verification:** State machine and copy comprehension tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0359-02 - Promote current revision identity.** **Acceptance:** Revision number/hash scope and historical viewing state are unambiguous. **Required verification:** Older/current snapshot fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0359-03 - Summarise song and duration facts.** **Acceptance:** N songs and actual low/high duration use source-backed estimates, no invented precision. **Required verification:** 1/2/long route and unknown-length tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0359-04 - Count verified seams correctly.** **Acceptance:** K songs require max(0,K−1) directed transitions, and only verified clips count ready. **Required verification:** 0/1/K seams + cache proof E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0359-05 - Expose required versus preferred rules.** **Acceptance:** Hard ready-only and soft preferences cannot be visually conflated. **Required verification:** Constraint change and AT status tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0359-06 - Explain infeasible strict plans.** **Acceptance:** No-route result suggests truthful shorter or relaxed options and requires user choice. **Required verification:** Sparse graph and immovable end-song fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0359-07 - Refresh approval proof.** **Acceptance:** Approval revalidates exact revision, source and on-disk clips, blocking stale ready-only states. **Required verification:** Eviction and concurrent commit tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0359-08 - Validate readiness understanding.** **Acceptance:** People identify whether plan is unbuilt, saved or fully playable without reading code-like labels. **Required verification:** Uncoached musical-state interview. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

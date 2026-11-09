@@ -6,6 +6,7 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+from selecta import flags
 from selecta.analysis.song import Cue, SongInfo
 from selecta.arrange import (
     TAKES,
@@ -37,13 +38,13 @@ from selecta.render.engine import Rendered, SongCache, render
 from selecta.render.intertwine import can_intertwine, intertwine_windows, render_intertwined
 from selecta.render.script import Part, TransitionScript, Warp
 from selecta.seam_kinds import (
-    MOVES,
     NOT_IN_THE_CHOOSER,
     PLACEMENTS_TO_TRY,
     STUDIO_SESSION,
     WORD_MOVES,
     CannotRender,
     SeamRequest,
+    moves_on,
 )
 from selecta.studio import (
     LANES,
@@ -123,7 +124,7 @@ def seam_options(a: SongInfo, b: SongInfo) -> dict:
     """Everything a person could choose for this seam, with a reason for anything ruled out."""
     links = links_between(a, b)
     moves = []
-    for name, (label, description) in MOVES.items():
+    for name, (label, description) in moves_on().items():
         if name in NOT_IN_THE_CHOOSER:
             continue
         reason = _why_unavailable(name, a, b, bool(links))
@@ -136,7 +137,7 @@ def seam_options(a: SongInfo, b: SongInfo) -> dict:
                 "reason": reason,
             }
         )
-    studio_reason = why_no_studio(a, b)
+    studio_reason = why_no_studio(a, b) if flags.on("stem_studio") else "Turned off in this build."
     return {
         "moves": moves,
         "studio": {"available": studio_reason is None, "reason": studio_reason},

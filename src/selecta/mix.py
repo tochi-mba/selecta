@@ -22,6 +22,7 @@ from selecta.analysis.song import load_song
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.render.engine import SongCache
 from selecta.render.setmix import _native, join
+from selecta.seam_kinds import usable_settings
 from selecta.seams import SeamStore, request_from
 
 Item = tuple[int, str | None, int]
@@ -192,7 +193,7 @@ def read_mix(conn: sqlite3.Connection, store: SeamStore, draft: int | None = Non
             "seam": None,
         }
         if index:
-            settings = json.loads(row["seam"] or "{}")
+            settings = usable_settings(json.loads(row["seam"] or "{}"))
             request = request_from(rows[index - 1]["song_id"], row["song_id"], settings)
             state = store.status(request.key)
             item["seam"] = {"settings": settings, "state": state}

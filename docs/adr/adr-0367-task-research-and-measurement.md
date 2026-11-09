@@ -1,10 +1,10 @@
-# ADR-0367 — Uncoached UX research, comprehension baselines and outcome metrics
+# ADR-0367 - Uncoached UX research, comprehension baselines and outcome metrics
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
-- **Priority / phase:** P0 / 01 Baseline. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / 01 Baseline. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0199, ADR-0239, ADR-0240, ADR-0299, ADR-0340, ADR-0365; unchanged.
 - **Source touchpoints (review, not implementation):** `docs/research/ui-ux.md`; `web/e2e/flows.e2e.ts`.
 
@@ -22,16 +22,16 @@ Users complete the named journey with clear action consequences, predictable con
 
 **Preservation and trade-offs:** Keep original music local/unchanged, one authoritative audio owner and deliberate Pause, exact recording/mix/draft/revision/occurrence/seam identities, guarded Undo, consented atomic request bridges, real valid ready-only seams, eight Studio lanes/8–64 cells, true library readiness and lyric provenance, frozen-revision decodable FLAC and blinded human evaluation. No SaaS, telemetry, engine rewrite or unsolicited upload.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **UF-0367-01 — Recruit explicit user groups.** **Acceptance:** Separate new listeners, experienced editors and assistive-technology users; preserve sample details. **Required verification:** Research protocol review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **UF-0367-02 — Define uncoached scenarios.** **Acceptance:** First ready mix, exact song, Lucy proposal, seam edit, bridge and export. **Required verification:** Dry-run neutral task scripts. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **UF-0367-03 — Measure baseline success.** **Acceptance:** Record success, errors, time, confusion, confidence and recovery. **Required verification:** Original app session record. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **UF-0367-04 — Approve threshold before study.** **Acceptance:** Agree proposed >=90% critical-task success separately by cohort, subject to sample caveats. **Required verification:** Dated threshold sign-off. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **UF-0367-05 — Compare matched candidate tasks.** **Acceptance:** Use same complexity and music data for baseline/candidate. **Required verification:** Independent comparative study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **UF-0367-06 — Test lifecycle vocabulary.** **Acceptance:** Observe whether users distinguish analysed, mix-ready, proposal, draft, rendering and playing. **Required verification:** Unprompted explanation exercise. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **UF-0367-07 — Track friction to implementation.** **Acceptance:** Every usability defect gets route, source, severity, reproduction and expected outcome. **Required verification:** Reviewed issue sample. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **UF-0367-08 — Gate research conclusions.** **Acceptance:** Never call automated tests or small qualitative samples statistical superiority. **Required verification:** Independent review of report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **UF-0367-01 - Recruit explicit user groups.** **Acceptance:** Separate new listeners, experienced editors and assistive-technology users; preserve sample details. **Required verification:** Research protocol review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **UF-0367-02 - Define uncoached scenarios.** **Acceptance:** First ready mix, exact song, Lucy proposal, seam edit, bridge and export. **Required verification:** Dry-run neutral task scripts. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **UF-0367-03 - Measure baseline success.** **Acceptance:** Record success, errors, time, confusion, confidence and recovery. **Required verification:** Original app session record. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **UF-0367-04 - Approve threshold before study.** **Acceptance:** Agree proposed >=90% critical-task success separately by cohort, subject to sample caveats. **Required verification:** Dated threshold sign-off. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **UF-0367-05 - Compare matched candidate tasks.** **Acceptance:** Use same complexity and music data for baseline/candidate. **Required verification:** Independent comparative study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0367-06 - Test lifecycle vocabulary.** **Acceptance:** Observe whether users distinguish analysed, mix-ready, proposal, draft, rendering and playing. **Required verification:** Unprompted explanation exercise. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **UF-0367-07 - Track friction to implementation.** **Acceptance:** Every usability defect gets route, source, severity, reproduction and expected outcome. **Required verification:** Reviewed issue sample. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **UF-0367-08 - Gate research conclusions.** **Acceptance:** Never call automated tests or small qualitative samples statistical superiority. **Required verification:** Independent review of report. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Verification and release boundaries
 

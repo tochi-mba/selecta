@@ -1,10 +1,10 @@
-# ADR-0355 — Lucy desktop workspace: conversation, current proposal and optional history
+# ADR-0355 - Lucy desktop workspace: conversation, current proposal and optional history
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P0 / Lucy workspace. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Lucy workspace. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0301, ADR-0306, ADR-0307, ADR-0233; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/Lucy.tsx`; `web/src/styles/lucy.css`; `web/src/views/LucyHistory.tsx`.
 
@@ -24,16 +24,16 @@ A user can read Lucy's answer and inspect the latest exact song order without sc
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0355-01 — Define workspace width rules.** **Acceptance:** Choose split versus stacked based on real available width/zoom and minimum readable pane geometry. **Required verification:** Viewport/container and zoom matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0355-02 — Simplify visual hierarchy.** **Acceptance:** Proposal, chat and actions are distinguishable without excessive nested borders. **Required verification:** Paired visual hierarchy critique. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0355-03 — Keep current proposal persistent.** **Acceptance:** Latest revision and status remain findable during long conversations. **Required verification:** Long-chat retrieval task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0355-04 — Manage independent scroll.** **Acceptance:** Chat streaming and proposal revision changes do not force unrelated pane scroll. **Required verification:** Stream and scroll-anchor E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0355-05 — Integrate optional history.** **Acceptance:** Conversation list can be opened, searched and dismissed without shrinking panes below usable width. **Required verification:** History open/close and keyboard test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0355-06 — Preserve selection across panes.** **Acceptance:** Song/seam exact scope remains associated with chat and survives appropriate view changes. **Required verification:** Duplicate occurrence + pane task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0355-07 — Respect global chrome.** **Acceptance:** Mini-player, header, nav and dialogs never occlude proposal or composer. **Required verification:** Stacked geometry hitbox test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0355-08 — Validate creator workspace.** **Acceptance:** A novice and an expert can explain their current proposal while discussing changes. **Required verification:** Timed desktop describe/revise task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0355-01 - Define workspace width rules.** **Acceptance:** Choose split versus stacked based on real available width/zoom and minimum readable pane geometry. **Required verification:** Viewport/container and zoom matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0355-02 - Simplify visual hierarchy.** **Acceptance:** Proposal, chat and actions are distinguishable without excessive nested borders. **Required verification:** Paired visual hierarchy critique. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0355-03 - Keep current proposal persistent.** **Acceptance:** Latest revision and status remain findable during long conversations. **Required verification:** Long-chat retrieval task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0355-04 - Manage independent scroll.** **Acceptance:** Chat streaming and proposal revision changes do not force unrelated pane scroll. **Required verification:** Stream and scroll-anchor E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0355-05 - Integrate optional history.** **Acceptance:** Conversation list can be opened, searched and dismissed without shrinking panes below usable width. **Required verification:** History open/close and keyboard test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0355-06 - Preserve selection across panes.** **Acceptance:** Song/seam exact scope remains associated with chat and survives appropriate view changes. **Required verification:** Duplicate occurrence + pane task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0355-07 - Respect global chrome.** **Acceptance:** Mini-player, header, nav and dialogs never occlude proposal or composer. **Required verification:** Stacked geometry hitbox test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0355-08 - Validate creator workspace.** **Acceptance:** A novice and an expert can explain their current proposal while discussing changes. **Required verification:** Timed desktop describe/revise task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

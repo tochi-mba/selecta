@@ -1,10 +1,10 @@
-# ADR-0309 — Lucy visual identity, Selecta tokens, motion grammar and human language
+# ADR-0309 - Lucy visual identity, Selecta tokens, motion grammar and human language
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P1 / Visual language. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / Visual language. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0200, ADR-0201, ADR-0202, ADR-0205, ADR-0207, ADR-0242, ADR-0296; unchanged.
 - **Source touchpoints:** `web/src/styles/tokens.css`; `web/src/styles/creation.css`; `web/src/ui/Icon.tsx`.
 
@@ -26,16 +26,16 @@ Assistant identity is recognisable but compact; tool mini visuals are task-speci
 
 Reuse Selecta's authoritative song/mix/worker state and the documented WeftAI Python runtime rather than duplicating DJ logic in a model or new agent server. No fake progress, unconsented remote-media upload or automatic playback. Existing ADRs named above retain scope and historical status.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-309-01 — Define Lucy identity.** **Acceptance:** Icon, name, avatar alternative and label fit Selecta without separate brand chrome. **Required verification:** Visual comparison with Make a Mix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-309-02 — Reuse semantic palette.** **Acceptance:** All surfaces, borders, focus and states use theme variables. **Required verification:** Light/dark/system contrast matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-309-03 — Specify type and density.** **Acceptance:** Composer, tool card and proposal text respect readable type and compact mode. **Required verification:** Typography/zoom snapshot tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-309-04 — Define motion choreography.** **Acceptance:** Animation duration/cause/token table; Still means no decorative motion. **Required verification:** Motion trace and OS override tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-309-05 — Define status microcopy.** **Acceptance:** Idea, candidate, proposed, approved, saved, rendering, ready and playing never conflate. **Required verification:** Comprehension and status fixture review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-309-06 — Avoid false claims.** **Acceptance:** No 'perfect transition' or unknown BPM/score/ready assertions. **Required verification:** Generated response policy eval. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-309-07 — Standardise fallback surfaces.** **Acceptance:** Missing art/analysis uses existing visual grammar, no random stock cover. **Required verification:** Missing-data snapshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-309-08 — Approve human art direction.** **Acceptance:** Named product reviewer tests Lucy beside existing cards/editor in both themes. **Required verification:** Paired visual signoff with exact SHA. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-309-01 - Define Lucy identity.** **Acceptance:** Icon, name, avatar alternative and label fit Selecta without separate brand chrome. **Required verification:** Visual comparison with Make a Mix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-309-02 - Reuse semantic palette.** **Acceptance:** All surfaces, borders, focus and states use theme variables. **Required verification:** Light/dark/system contrast matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-309-03 - Specify type and density.** **Acceptance:** Composer, tool card and proposal text respect readable type and compact mode. **Required verification:** Typography/zoom snapshot tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-309-04 - Define motion choreography.** **Acceptance:** Animation duration/cause/token table; Still means no decorative motion. **Required verification:** Motion trace and OS override tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-309-05 - Define status microcopy.** **Acceptance:** Idea, candidate, proposed, approved, saved, rendering, ready and playing never conflate. **Required verification:** Comprehension and status fixture review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-309-06 - Avoid false claims.** **Acceptance:** No 'perfect transition' or unknown BPM/score/ready assertions. **Required verification:** Generated response policy eval. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-309-07 - Standardise fallback surfaces.** **Acceptance:** Missing art/analysis uses existing visual grammar, no random stock cover. **Required verification:** Missing-data snapshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-309-08 - Approve human art direction.** **Acceptance:** Named product reviewer tests Lucy beside existing cards/editor in both themes. **Required verification:** Paired visual signoff with exact SHA. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Preservation and proof
 

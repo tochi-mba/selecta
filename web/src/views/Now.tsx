@@ -1,5 +1,7 @@
-import { KeyboardEvent, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, PointerEvent, ReactElement, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, get, MixData, post, SongDetail } from '../api';
+import { flagOn, useFlags } from '../flags';
+import { listed } from '../shell/manifest';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
 import { orderOf } from '../state/readiness';
@@ -501,9 +503,10 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
   const current = index >= 0 ? lines[index] : null;
   const wordIndex = current?.words?.findIndex((word) => word.start <= time && time < word.end) ?? -1;
   const around = focus ? 3 : 1;
+  const words = flagOn('listen.word_focus');
   const timingWords = detail.lyric_status === 'plain'
     ? 'Untimed lyrics - word timing unavailable.'
-    : lines.some((line) => !!line.words?.length)
+    : words && lines.some((line) => !!line.words?.length)
       ? 'Word highlights follow stored lyric alignment; timing may be approximate.'
       : 'Line-timed lyrics; individual word timing unavailable.';
   return (
@@ -526,7 +529,7 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
         <p dir="auto" className="dim" key={`before-${back}`}>{lines[index - back]?.text ?? ' '}</p>
       ))}
       <p dir="auto" className={singing ? 'sung' : 'dim'}>
-        {current ? highlightedLine(current.text, singing ? wordIndex : -1) : ' '}
+        {current ? highlightedLine(current.text, singing && words ? wordIndex : -1) : ' '}
       </p>
       {Array.from({ length: around }, (_, gap) => gap + 1).map((ahead) => (
         <p dir="auto" className="dim" key={`after-${ahead}`}>{lines[index + ahead]?.text ?? ' '}</p>
@@ -708,8 +711,29 @@ export function Now(props: ViewProps) {
   const waiting = requests?.requests?.filter((request) => request.id > 0).length ?? 0;
 
   const showChanged = changed && changed.id === next?.song_id ? changed : null;
+  const on = useFlags();
+  const keys = on('app.shortcuts');
+  const hasLyrics = on('listen.lyrics');
+  const lyricFocus = view.lyrics && hasLyrics;
+  const spectrum = view.spectrum && on('listen.visualizers');
+  const timing = view.timing && on('listen.beat_countdown');
+  const editing = on('editor');
+  // the display choices there are, so the row of them closes up around any that aren't
+  const toggles = [hasLyrics && 'lyrics', on('listen.visualizers') && 'spectrum', on('listen.beat_countdown') && 'timing'].filter(Boolean);
+  const display = toggles.length > 0 || on('listen.visualizers') || on('listen.stage');
+  const thumbs = on('ratings') && !!now.lastSeamKey && !rated;
+  const steering = !!next && on('listen.steering');
+  const why = !!next && on('listen.why_transition');
+  const controls = on('requests') || display || thumbs || steering || why;
+  const controlsHint = `${listed([
+    steering && 'Shape what comes next',
+    on('ratings') && 'rate transitions',
+    on('requests') && 'request a song',
+    display && 'change the listening display',
+  ]).replace(/^./, (first) => first.toUpperCase())}.`;
+  const withKey = (text: string, button: ReactElement<{ 'aria-describedby'?: string }>) => (keys ? <Tooltip text={text}>{button}</Tooltip> : button);
   return (
-    <main ref={page} tabIndex={-1} className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''} ${view.lyrics && !stage ? 'lyric-focus' : ''}`} id="main">
+    <main ref={page} tabIndex={-1} className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''} ${lyricFocus && !stage ? 'lyric-focus' : ''}`} id="main">
       <div className="listen-layout">
         <div className="listen-main">
           <header className="listen-identity">
@@ -722,9 +746,7 @@ export function Now(props: ViewProps) {
           {!stage && (
             <>
               <div className="transport">
-                <Tooltip text="Previous song (P)">
-                  <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>
-                </Tooltip>
+                {withKey('Previous song (P)', <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>)}
                 <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
                   {now.phase === 'playing'
                     ? 'Pause'
@@ -736,16 +758,14 @@ export function Now(props: ViewProps) {
                           ? `Resume from ${clock(now.songTime)}`
                           : 'Play'}
                 </button>
-                <Tooltip text="Go straight to the next song (Shift+N)">
-                  <button aria-label="Next song" aria-keyshortcuts="Shift+N" disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>
-                </Tooltip>
+                {withKey('Go straight to the next song (Shift+N)', <button aria-label="Next song" aria-keyshortcuts={keys ? 'Shift+N' : undefined} disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>)}
               </div>
               <div className="transport-more">
-                <Tooltip text="Shortcut: N">
-                  <button aria-keyshortcuts="N" onClick={() => void player.skip()} disabled={idle || !next}>
+                {withKey('Shortcut: N', (
+                  <button aria-keyshortcuts={keys ? 'N' : undefined} onClick={() => void player.skip()} disabled={idle || !next}>
                     Jump to the transition
                   </button>
-                </Tooltip>
+                ))}
                 <VolumeControl player={player} now={now} />
               </div>
               {now.notice && <p className="notice" role="status">{now.notice}</p>}
@@ -753,13 +773,13 @@ export function Now(props: ViewProps) {
           )}
 
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
-          {(view.intensity !== 'quiet' && (stage || (view.spectrum && !view.lyrics))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
-          {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>Couldn’t load lyrics and song details. Playback controls are still available.</Problem>}
-          {shown ? <Lyrics detail={shown} time={now.songTime} focus={view.lyrics && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />}
+          {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
+          {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn’t load lyrics and song details.' : 'Couldn’t load this song’s details.'} Playback controls are still available.</Problem>}
+          {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />)}
         </div>
 
         <aside className="listen-side" aria-label="Coming up">
-          {shown && (stage || (view.timing && !view.lyrics)) && (
+          {shown && on('listen.beat_countdown') && (stage || (timing && !lyricFocus)) && (
             <TransitionCountdown
               detail={shown}
               time={now.songTime}
@@ -775,41 +795,60 @@ export function Now(props: ViewProps) {
           {!stage && (next ? (
             <section className="next-up">
               <p className="eyebrow">Up Next</p>
-              <button className="next-song" aria-label={`Edit upcoming song ${next.title} and its transition`} onClick={() => setView('Edit')}>
-                <b>{next.title}</b>
-                <span>{next.artist}</span>
-                <RequestTag item={next} />
-                <small className="next-edit-hint">Edit upcoming song and transition</small>
-              </button>
+              {editing ? (
+                <button className="next-song" aria-label={`Edit upcoming song ${next.title} and its transition`} onClick={() => setView('Edit')}>
+                  <b>{next.title}</b>
+                  <span>{next.artist}</span>
+                  <RequestTag item={next} />
+                  <small className="next-edit-hint">Edit upcoming song and transition</small>
+                </button>
+              ) : (
+                <div className="next-song">
+                  <b>{next.title}</b>
+                  <span>{next.artist}</span>
+                  <RequestTag item={next} />
+                </div>
+              )}
               <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} />
             </section>
           ) : (
             <section className="next-up">
               <p className="eyebrow">Next</p>
               <p className="soft">This is the last song in the mix.</p>
-              <button onClick={() => setView('Edit')}>Add more songs</button>
+              {editing && <button onClick={() => setView('Edit')}>Add more songs</button>}
             </section>
           ))}
 
-          {!stage && (
+          {!stage && controls && (
             <details className="dj-controls view-options" open={djControlsOpen} onToggle={(event) => setDjControlsOpen(event.currentTarget.open)}>
               <summary>DJ controls</summary>
-              <p className="hint">Shape what comes next, rate transitions, request a song, or change the listening display.</p>
-              <div className="listen-request-action">
-                <Tooltip text="Shortcut: R">
-                  <button onClick={() => openRequests?.()}>
-                    Request a song{waiting ? ` (${waiting} waiting)` : ''}
-                  </button>
-                </Tooltip>
-              </div>
+              <p className="hint">{controlsHint}</p>
+              {on('requests') && (
+                <div className="listen-request-action">
+                  {withKey('Shortcut: R', (
+                    <button onClick={() => openRequests?.()}>
+                      Request a song{waiting ? ` (${waiting} waiting)` : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {display && (
               <fieldset className="listen-view" aria-label="What to show">
                 <legend>Display options</legend>
-                <div className="listen-display-toggles" role="group" aria-label="Visible listening panels">
-                  <button type="button" aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>
-                  <button type="button" aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>
-                  <button type="button" aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>
-                </div>
-                {view.lyrics && <p className="hint listen-display-note" role="status">Lyrics focus temporarily hides the spectrum and countdown. Your choices are remembered.</p>}
+                {toggles.length > 0 && (
+                  <div className="listen-display-toggles" role="group" aria-label="Visible listening panels" data-count={toggles.length}>
+                    {hasLyrics && <button type="button" aria-pressed={view.lyrics} onClick={() => choose({ lyrics: !view.lyrics })}>Lyrics focus</button>}
+                    {on('listen.visualizers') && <button type="button" aria-pressed={view.spectrum} onClick={() => choose({ spectrum: !view.spectrum })}>Spectrum</button>}
+                    {on('listen.beat_countdown') && <button type="button" aria-pressed={view.timing} onClick={() => choose({ timing: !view.timing })}>Beat countdown</button>}
+                  </div>
+                )}
+                {lyricFocus && toggles.length > 1 && (
+                  <p className="hint listen-display-note" role="status">
+                    Lyrics focus temporarily hides the {listed([on('listen.visualizers') && 'spectrum', on('listen.beat_countdown') && 'countdown'])}. Your choices are remembered.
+                  </p>
+                )}
+                {on('listen.visualizers') && (
+                <>
                 <div className="listen-spectrum-settings">
                   <label className="spectrum-choice">
                     <span>Audio visualizer style</span>
@@ -835,20 +874,23 @@ export function Now(props: ViewProps) {
                   <summary>About the visualizer</summary>
                   <p className="hint">The visualizer follows the live mixed-audio analyser, not a simulated beat. Quiet visuals hide the spectrum without affecting playback.</p>
                 </details>
-                <div className="listen-view-footer">
-                  <Tooltip text="Shortcut: F">
-                    <button type="button" className="quiet" data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>
-                  </Tooltip>
-                </div>
+                </>
+                )}
+                {on('listen.stage') && (
+                  <div className="listen-view-footer">
+                    {withKey('Shortcut: F', <button type="button" className="quiet" data-stage-launcher onClick={toggleStage}>Fullscreen lyrics</button>)}
+                  </div>
+                )}
               </fieldset>
-              {now.lastSeamKey && !rated && (
+              )}
+              {thumbs && (
                 <div className="thumbs" role="group" aria-label="Rate that transition">
                   <span>How was that transition?</span>
                   <Action waiting={rateBusy} run={() => rate('good')}>Good</Action>
                   <Action waiting={rateBusy} run={() => rate('bad')}>Bad</Action>
                 </div>
               )}
-              {next && (
+              {steering && (
                 <section className="listen-next-steering" aria-labelledby="listen-next-steering-title">
                   <h3 id="listen-next-steering-title">Change the next song</h3>
                   <div className="chips steer" role="group" aria-label="Change what plays next">
@@ -859,9 +901,9 @@ export function Now(props: ViewProps) {
                   <p className="hint steer-note">Bigger and Calmer swap the next song for one with more or less measured energy<TermHint term="measured-energy" />. Something else picks a different one that fits.<TermHint term="steering" /></p>
                   {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
                   {problem && <p className="warn" role="alert">{problem} Nothing has changed, so the plan above still stands.</p>}
-                  <WhyThisTransition from={item} into={next} names={names} />
                 </section>
               )}
+              {why && next && <WhyThisTransition from={item} into={next} names={names} />}
             </details>
           )}
         </aside>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import random
 import statistics
 import time
@@ -24,6 +25,51 @@ DEFAULT_REEL_OUTPUT = Path("reels/reel-1")
 def _open():
     settings = load_settings()
     return settings, db.connect(settings.db_path)
+
+
+@app.callback()
+def _flags_allow(ctx: typer.Context) -> None:
+    """Runs before every command: a command whose feature is turned off says so and stops."""
+    from selecta import flags
+
+    try:
+        flags.effective()
+    except flags.FlagError as problem:
+        console.print(f"[red]{problem}[/]")
+        raise typer.Exit(2) from problem
+    owners = flags.cli_owners().get(ctx.invoked_subcommand or "", [])
+    if owners and not any(flags.on(owner) for owner in owners):
+        names = " or ".join(f"`{owner}`" for owner in owners)
+        console.print(
+            f"This is turned off in this build (flag {names}). "
+            f"Run with {flags.ENV}=+{owners[0]} to turn it on."
+        )
+        raise typer.Exit(2)
+
+
+@app.command("flags")
+def flags_command(
+    markdown: Path = typer.Option(
+        None, "--markdown", help="Write the catalog as Markdown here, such as docs/flags.md."
+    ),
+) -> None:
+    """Every feature flag: on or off in this shell, and why."""
+    from selecta import flags
+
+    if markdown is not None:
+        markdown.write_text(flags.markdown(), "utf-8", newline="\n")
+        console.print(f"Wrote {markdown}.")
+        return
+    states = flags.effective()
+    table = Table(title=f"Feature flags ({flags.ENV}={os.environ.get(flags.ENV, '')!r})")
+    table.add_column("Flag")
+    table.add_column("On", justify="center")
+    table.add_column("Why")
+    table.add_column("Area")
+    for flag_id, flag in flags.registry().items():
+        state = states[flag_id]
+        table.add_row(flag_id, "yes" if state.on else "[red]no[/]", state.why, flag.area)
+    console.print(table)
 
 
 @app.command()
@@ -378,6 +424,12 @@ def web(
 
     import uvicorn
 
+    from selecta import flags
+
+    off = flags.turned_off()
+    if off:
+        shown = ", ".join(off[:12]) + (f" and {len(off) - 12} more" if len(off) > 12 else "")
+        console.print(f"Turned off in this build: {shown}. `selecta flags` says why.")
     url = f"http://127.0.0.1:{port}/"
     if open_browser:
         webbrowser.open(url)
@@ -433,6 +485,7 @@ def discover(
     pair_limit: int = typer.Option(1000, min=1, help="New pairs per exhaustive run."),
 ) -> None:
     """Search the whole analysed library and fill the Seam Book."""
+    from selecta import flags
     from selecta.analysis.song import load_song
     from selecta.discovery.search import audio_search, lyric_search
     from selecta.jobs import lowest_priority, wait_while_mix_renders
@@ -440,7 +493,10 @@ def discover(
     settings, conn = _open()
     lowest_priority()
     wait_while_mix_renders(settings.home)
-    lyric_count = lyric_search(conn)
+    lyric_count = lyric_search(conn) if flags.on("discover.word_links") else 0
+    if not flags.on("discover.harmonic"):
+        console.print(f"Found {lyric_count} lyric links. Harmonic matches are turned off.")
+        return
     rows = conn.execute(
         "SELECT a.song_id FROM analysis a JOIN songs s ON s.id=a.song_id "
         "WHERE a.version=? AND a.error IS NULL AND s.is_music=1 "

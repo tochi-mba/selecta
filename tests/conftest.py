@@ -13,6 +13,17 @@ from mix_helpers import client, conn, store  # noqa: E402, F401
 from sharding import in_shard  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _every_flag_at_its_default(monkeypatch):
+    """Tests see the build's own flags, whatever SELECTA_FLAGS says in the shell running them."""
+    from selecta import flags
+
+    monkeypatch.delenv(flags.ENV, raising=False)
+    flags.use(None)
+    yield
+    flags.use(None)
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--slow", action="store_true", help="Also run tests that load models.")
 

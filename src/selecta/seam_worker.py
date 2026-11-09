@@ -15,7 +15,7 @@ import time
 from collections import Counter
 from typing import TextIO
 
-from selecta import db, mix
+from selecta import db, flags, mix
 from selecta.config import load_settings
 from selecta.jobs import kill_tree_of_children, set_render_priority, take_app_input
 from selecta.seams import SeamRequest, SeamStore, request_from
@@ -139,7 +139,8 @@ def _preparer(store: SeamStore, settings):
         state["ranked"] = best_links(lyric_links(conn), songs)
         state["pairs"] = best_transitions(songs, store.memory, book, allowed)
         state["library"] = {song.id: song for song in songs}
-        state["stems"] = db.preference(conn, "steering", {}).get("stems", "sometimes")
+        stems = db.preference(conn, "steering", {}).get("stems", "sometimes")
+        state["stems"] = stems if flags.on("stems") else "never"
         state["at"] = time.monotonic()
         conn.close()
 
@@ -204,7 +205,7 @@ def main() -> None:
     settings = load_settings()
     store = SeamStore(settings)
     store.forget_unfinished()
-    if "--prepare" in sys.argv:
+    if "--prepare" in sys.argv and flags.on("render.spare_time"):
         store.next_idle_job = _preparer(store, settings)
     app_input = take_app_input()
     threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()

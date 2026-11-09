@@ -46,7 +46,7 @@ export function seamWords(status: string, verified = false): { words: string; ki
     case 'missing':
     case 'stale':
     case 'lost':
-      return { words: 'Was ready before — gone now', kind: 'warning' };
+      return { words: 'Was ready before - gone now', kind: 'warning' };
     default:
       return { words: 'Unknown', kind: 'unavailable' };
   }
@@ -141,6 +141,6 @@ export function countsWords(counts: Partial<Record<'added' | 'replaced' | 'moved
 
 export const EXAMPLE_PROMPTS = [
   '12 songs that build up slowly',
-  'Only transitions that are already ready — play-ready now',
+  'Only transitions that are already ready - play-ready now',
   'An hour of Afrobeats, no repeats',
 ];

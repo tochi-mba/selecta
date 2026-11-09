@@ -1,10 +1,10 @@
-# ADR-0304 — In-chat WeftAI tool activity cards and truthful progress
+# ADR-0304 - In-chat WeftAI tool activity cards and truthful progress
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Tool UI. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Tool UI. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0204, ADR-0205, ADR-0237, ADR-0270, ADR-0296, ADR-0297; their decisions and statuses remain unchanged.
 - **Source touchpoints:** `web/src/ui/controls.tsx`; `web/src/styles/tokens.css`; `web/src/views/Mixes.tsx`.
 
@@ -26,16 +26,16 @@ Cards remain in chronological conversational context; each has title, compact mi
 
 Prefer integrating the existing Selecta source-of-truth over duplicating music state or adding a detached chatbot. Reject fabricated analysis, unsupported audio effects, model-authorised playback, and generic animation that does not explain real work. Any remote AI provider requires a separate explicit privacy/consent decision.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-304-01 — Define card lifecycle.** **Acceptance:** All 8 activity states and legal transitions have stable identifiers. **Required verification:** State-machine property tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-304-02 — Bind WeftAI hooks.** **Acceptance:** Queued/start/complete/fail events sourced from runtime and actual handlers. **Required verification:** Hook sequence and error-injection tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-304-03 — Support real progress only.** **Acceptance:** Counters/bars driven by measured events; unknown duration uses indeterminate cue. **Required verification:** False-percentage/partial-result negative tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-304-04 — Implement grouped disclosure.** **Acceptance:** Plan activity defaults to concise milestones with complete expandable step detail. **Required verification:** 20-step novice comprehension and expert audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-304-05 — Resolve parallel activity.** **Acceptance:** Out-of-order independent step completions update exactly the right card. **Required verification:** Concurrent fake-plan E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-304-06 — Handle retry and cancellation.** **Acceptance:** Attempt count, error, skipped dependency and recovery are traceable. **Required verification:** Retry/supersede/timeout fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-304-07 — Budget motion and layout.** **Acceptance:** No flash for trivial operations, no indefinite animation, bounded layout shift. **Required verification:** Reduced motion, perf trace, screenshot diffs. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-304-08 — Provide keyboard/AT parity.** **Acceptance:** Every card readable/expandable by keyboard and screen reader with batched announcements. **Required verification:** NVDA/VoiceOver and WCAG 2.2 manual checks. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-304-01 - Define card lifecycle.** **Acceptance:** All 8 activity states and legal transitions have stable identifiers. **Required verification:** State-machine property tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-304-02 - Bind WeftAI hooks.** **Acceptance:** Queued/start/complete/fail events sourced from runtime and actual handlers. **Required verification:** Hook sequence and error-injection tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-304-03 - Support real progress only.** **Acceptance:** Counters/bars driven by measured events; unknown duration uses indeterminate cue. **Required verification:** False-percentage/partial-result negative tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-304-04 - Implement grouped disclosure.** **Acceptance:** Plan activity defaults to concise milestones with complete expandable step detail. **Required verification:** 20-step novice comprehension and expert audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-304-05 - Resolve parallel activity.** **Acceptance:** Out-of-order independent step completions update exactly the right card. **Required verification:** Concurrent fake-plan E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-304-06 - Handle retry and cancellation.** **Acceptance:** Attempt count, error, skipped dependency and recovery are traceable. **Required verification:** Retry/supersede/timeout fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-304-07 - Budget motion and layout.** **Acceptance:** No flash for trivial operations, no indefinite animation, bounded layout shift. **Required verification:** Reduced motion, perf trace, screenshot diffs. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-304-08 - Provide keyboard/AT parity.** **Acceptance:** Every card readable/expandable by keyboard and screen reader with batched announcements. **Required verification:** NVDA/VoiceOver and WCAG 2.2 manual checks. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Non-negotiable regression and release boundaries
 

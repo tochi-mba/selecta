@@ -1,10 +1,10 @@
-# ADR-0365 — Library + Lucy redesign governance, evidence parity and independent GO/NO-GO
+# ADR-0365 - Library + Lucy redesign governance, evidence parity and independent GO/NO-GO
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P0 / Verification. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Verification. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0239, ADR-0240, ADR-0271, ADR-0299, ADR-0336, ADR-0339; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `docs/adr/README.md`; `web/src/views/Library.test.tsx`; `web/src/views/Lucy.test.tsx`; `web/e2e/pages.e2e.ts`.
 
@@ -24,16 +24,16 @@ A reviewer can follow all 208 acceptance items to a future implementing SHA, evi
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0365-01 — Record decision status correctly.** **Acceptance:** All new ADRs start Proposed and require dated owner rationale to Accept/Reject/Supersede. **Required verification:** Decision-status consistency audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0365-02 — Publish complete task catalogue.** **Acceptance:** Each ADR owns eight unique LX items with acceptance and verification; links resolve. **Required verification:** 208-ID and link integrity script. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0365-03 — Keep per-task evidence fields.** **Acceptance:** Every item has owner, source PR/SHA, proof and reviewer/date/platform columns. **Required verification:** Ledger row and ID count audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0365-04 — Keep machine status in parity.** **Acceptance:** JSON status matches ADR/checklist/ledger and never auto-promotes on docs merge. **Required verification:** JSON schema and reconciliation check. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0365-05 — Crosswalk historical owners.** **Acceptance:** Relevant LU/SF/FP/GP/MP decisions and existing code are not silently overridden. **Required verification:** Source-owner overlap review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0365-06 — Require independent visual and AT proof.** **Acceptance:** Both themes, 320px/400% zoom, real users, screen readers and device screenshots are signed. **Required verification:** Named independent review manifest. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0365-07 — Require audio and performance proof.** **Acceptance:** No unsolicited player mutation; 20k results and real ready-only clips are measured on named devices. **Required verification:** Real-player and scale benchmark evidence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0365-08 — Record independent release decision.** **Acceptance:** No unresolved P0, rollback plan, signed owner and independent GO/NO-GO before release. **Required verification:** Gate dry run with refusal cases. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0365-01 - Record decision status correctly.** **Acceptance:** All new ADRs start Proposed and require dated owner rationale to Accept/Reject/Supersede. **Required verification:** Decision-status consistency audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0365-02 - Publish complete task catalogue.** **Acceptance:** Each ADR owns eight unique LX items with acceptance and verification; links resolve. **Required verification:** 208-ID and link integrity script. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0365-03 - Keep per-task evidence fields.** **Acceptance:** Every item has owner, source PR/SHA, proof and reviewer/date/platform columns. **Required verification:** Ledger row and ID count audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0365-04 - Keep machine status in parity.** **Acceptance:** JSON status matches ADR/checklist/ledger and never auto-promotes on docs merge. **Required verification:** JSON schema and reconciliation check. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0365-05 - Crosswalk historical owners.** **Acceptance:** Relevant LU/SF/FP/GP/MP decisions and existing code are not silently overridden. **Required verification:** Source-owner overlap review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0365-06 - Require independent visual and AT proof.** **Acceptance:** Both themes, 320px/400% zoom, real users, screen readers and device screenshots are signed. **Required verification:** Named independent review manifest. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0365-07 - Require audio and performance proof.** **Acceptance:** No unsolicited player mutation; 20k results and real ready-only clips are measured on named devices. **Required verification:** Real-player and scale benchmark evidence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0365-08 - Record independent release decision.** **Acceptance:** No unresolved P0, rollback plan, signed owner and independent GO/NO-GO before release. **Required verification:** Gate dry run with refusal cases. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

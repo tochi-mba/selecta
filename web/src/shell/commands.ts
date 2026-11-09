@@ -1,13 +1,14 @@
 import type { DraftInfo } from '../api';
+import { FlagId, visible } from '../flags';
 import { navigate } from '../router';
 import { openGlossary } from '../state/glossaryRequests';
 import { setPrefs, Theme, Motion } from '../state/prefs';
-import { DESTINATIONS, EXPLORE_TABS, WORKSPACE_TABS } from './manifest';
+import { aboutOf, DESTINATIONS, exploreTabs, workspaceTabs } from './manifest';
 
 /** What the command palette can do. It's a shortcut to things that already have an ordinary way to do
  * them, and nothing here deletes anything or replaces what's playing. Anything that would only opens
  * the page where that choice is made, with its usual warning. A command that can't run right now says
- * why, rather than disappearing. */
+ * why, rather than disappearing. One whose feature isn't in this build isn't there at all. */
 
 export type Command = {
   id: string;
@@ -19,6 +20,9 @@ export type Command = {
   unavailable?: string;
   /** Scope of a mutation, so a draft cannot look like the current mix. */
   detail?: string;
+  /** The features it needs. Without them it isn't offered. */
+  flag?: FlagId | FlagId[];
+  anyFlag?: FlagId[];
   run: () => void;
 };
 
@@ -51,32 +55,33 @@ export function buildCommands(context: CommandContext): Command[] {
   const { hasMix, active, hasNext } = context;
   const noMix = 'Start a mix first.';
   const places: Command[] = [
-    ...DESTINATIONS.map((place): Command => ({ id: `go-${place.id}`, label: place.label, group: 'Go to', keywords: place.about, run: () => navigate(place.path) })),
-    ...EXPLORE_TABS.filter((tab) => tab.path !== '/mixes').map((tab): Command => ({ id: `go-${tab.path}`, label: tab.label, group: 'Go to', keywords: 'explore discover', run: () => navigate(tab.path) })),
-    ...WORKSPACE_TABS.filter((tab) => tab.tab !== 'overview').map((tab): Command => ({ id: `go-${tab.path}`, label: `Workspace: ${tab.label}`, group: 'Go to', keywords: 'workshop settings', run: () => navigate(tab.path) })),
-    { id: 'go-lucy', label: 'Make a mix with Lucy', group: 'Go to', keywords: 'lucy chat describe plan assistant conversation', run: () => navigate('/mixes/lucy') },
-    { id: 'go-study', label: 'Listening study', group: 'Go to', keywords: 'blind test comparison', run: () => navigate('/listening') },
-    { id: 'go-edit', label: 'Edit current mix', group: 'Go to', keywords: 'timeline change', unavailable: hasMix ? undefined : noMix, run: () => navigate('/mix/current/edit') },
+    ...DESTINATIONS.map((place): Command => ({ id: `go-${place.id}`, label: place.label, group: 'Go to', keywords: aboutOf(place.id), run: () => navigate(place.path) })),
+    ...exploreTabs().filter((tab) => tab.path !== '/mixes').map((tab): Command => ({ id: `go-${tab.path}`, label: tab.label, group: 'Go to', keywords: 'explore discover', run: () => navigate(tab.path) })),
+    ...workspaceTabs().filter((tab) => tab.tab !== 'overview').map((tab): Command => ({ id: `go-${tab.path}`, label: `Workspace: ${tab.label}`, group: 'Go to', keywords: 'workshop settings', run: () => navigate(tab.path) })),
+    { id: 'go-lucy', label: 'Make a mix with Lucy', group: 'Go to', keywords: 'lucy chat describe plan assistant conversation', flag: 'lucy', run: () => navigate('/mixes/lucy') },
+    { id: 'go-study', label: 'Listening study', group: 'Go to', keywords: 'blind test comparison', flag: 'listening_study', run: () => navigate('/listening') },
+    { id: 'go-edit', label: 'Edit current mix', group: 'Go to', keywords: 'timeline change', flag: 'editor', unavailable: hasMix ? undefined : noMix, run: () => navigate('/mix/current/edit') },
   ];
   const playback: Command[] = [
     { id: 'play-pause', label: context.playing ? 'Pause' : 'Play', group: 'Playback', unavailable: hasMix ? undefined : noMix, run: context.togglePause },
     { id: 'next', label: 'Next song', group: 'Playback', keywords: 'skip', unavailable: !active ? 'Nothing is playing.' : hasNext ? undefined : 'This is the last song.', run: context.next },
     { id: 'jump', label: 'Jump to the transition', group: 'Playback', unavailable: !active ? 'Nothing is playing.' : hasNext ? undefined : 'This is the last song.', run: context.jump },
-    { id: 'stage', label: 'Fullscreen lyrics', group: 'Playback', keywords: 'stage', unavailable: hasMix ? undefined : noMix, run: context.toggleStage },
+    { id: 'stage', label: 'Fullscreen lyrics', group: 'Playback', keywords: 'stage', flag: 'listen.stage', unavailable: hasMix ? undefined : noMix, run: context.toggleStage },
   ];
   const actions: Command[] = [
-    { id: 'request', label: 'Request a song', group: 'Do', run: context.openRequests },
+    { id: 'request', label: 'Request a song', group: 'Do', flag: 'requests', run: context.openRequests },
     { id: 'new-mix', label: 'Start a new mix', group: 'Do', keywords: 'preset vibe', unavailable: context.readySongs >= 6 ? undefined : `Selecta needs 6 mix-ready songs, and has ${context.readySongs}.`, run: () => navigate('/mixes') },
     { id: 'undo', label: 'Undo the last change', group: 'Do', detail: context.undoScope, unavailable: context.undoUnavailable ?? (context.canUndo ? undefined : 'There’s nothing to undo.'), run: context.undo },
     { id: 'analyse', label: 'Analyse the rest of my library', group: 'Do', unavailable: context.analysing ? 'Analysis is already running.' : context.songsLeftToAnalyse ? undefined : 'Every song has been analysed.', run: context.startAnalysis },
-    { id: 'activity', label: 'Activity and Undo', group: 'Do', keywords: 'history recent', run: context.openActivity },
-    { id: 'help', label: 'Keyboard shortcuts', group: 'Do', keywords: 'keys help', run: context.openHelp },
-    { id: 'glossary', label: 'Music terms (glossary)', group: 'Do', keywords: 'help glossary words meaning definitions explain what is', run: () => openGlossary() },
+    { id: 'activity', label: 'Activity and Undo', group: 'Do', keywords: 'history recent', flag: 'app.activity', run: context.openActivity },
+    { id: 'help', label: 'Keyboard shortcuts', group: 'Do', keywords: 'keys help', flag: 'app.shortcuts', run: context.openHelp },
+    { id: 'glossary', label: 'Music terms (glossary)', group: 'Do', keywords: 'help glossary words meaning definitions explain what is', flag: 'app.glossary', run: () => openGlossary() },
     ...(['light', 'dark', 'system'] as Theme[]).map((theme): Command => ({
       id: `theme-${theme}`,
       label: theme === 'system' ? 'Theme: match this computer' : `Theme: ${theme}`,
       group: 'Do',
       keywords: 'appearance colour color mode',
+      flag: 'app.theme_choice',
       unavailable: context.theme === theme ? 'It’s already using that.' : undefined,
       run: () => setPrefs({ theme }),
     })),
@@ -86,6 +91,7 @@ export function buildCommands(context: CommandContext): Command[] {
       group: 'Do',
       keywords: 'animation movement accessibility visual intensity',
       detail: 'Local visual preference; reduced-motion setting takes priority',
+      flag: 'app.motion_choice',
       unavailable: context.motion === motion ? 'It’s already using that.' : undefined,
       run: () => setPrefs({ motion }),
     })),
@@ -94,10 +100,11 @@ export function buildCommands(context: CommandContext): Command[] {
     id: `draft-${draft.id}`,
     label: `Edit draft: ${draft.name}`,
     group: 'Your drafts',
+    flag: ['drafts', 'editor'],
     // the address says which one, and if it's gone by then, that page says so and changes nothing
     run: () => navigate(`/mixes/drafts/${draft.id}/edit`),
   }));
-  return [...places, ...playback, ...actions, ...drafts];
+  return visible([...places, ...playback, ...actions, ...drafts]);
 }
 
 /** The best matches first. Each word has to appear somewhere. */

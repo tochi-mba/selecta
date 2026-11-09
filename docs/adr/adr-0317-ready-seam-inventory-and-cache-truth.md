@@ -1,10 +1,10 @@
-# ADR-0317 — Existing rendered-transition inventory, exact seam keys and cache truth
+# ADR-0317 - Existing rendered-transition inventory, exact seam keys and cache truth
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08; docs only, implementation pending).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Lucy agentic Make a Mix (LU); 2026-11-08; main `1b53debedc3d6ef3c8d0cf6302b561b0003e8d78`.
-- **Priority / phase:** P0 / Ready-only. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Ready-only. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0101, ADR-0151, ADR-0172, ADR-0221, ADR-0237; statuses and ownership unchanged.
 - **Source touchpoints:** `src/selecta/seams.py`; `src/selecta/mix.py`; `src/selecta/routes/edit.py`; `src/selecta/planner/memory.py`.
 
@@ -26,16 +26,16 @@ Lucy's transition card distinguishes Already rendered and available, Rendered be
 
 Do not equate historical transition-memory success to playable cached media; do not use model prose as music evidence or build a differently generated order after approval. Reuse the existing local music engine and current/draft authority; any new cache index or planner mode needs direct regression proof. For non-ready-only features, this restriction is relevant when requested.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LU-317-01 — Define strict edge identity.** **Acceptance:** Directed A→B plus exact SeamRequest settings and immutable key identify ready candidate. **Required verification:** Request key/recipe/ordering fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LU-317-02 — Enumerate cache safely.** **Acceptance:** Indexed retrieval avoids O(n²) filesystem scans and unbounded model transfer. **Required verification:** Large seam-store profiling. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LU-317-03 — Separate current versus historical.** **Acceptance:** SeamMemory.clean/liked alone never qualifies as currently playable. **Required verification:** Eviction history negative test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LU-317-04 — Verify playable artefacts.** **Acceptance:** status ready, present decodable clip, current source/analysis and accepted quality policy required. **Required verification:** Missing/corrupt/stale clip tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LU-317-05 — Expose actual technique and fallback.** **Acceptance:** Requested versus rendered style and audit checks are kept distinct. **Required verification:** Fallback and near-miss fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LU-317-06 — Handle concurrent cache eviction.** **Acceptance:** Inventory carries snapshot/version; validation rechecks before use. **Required verification:** Eviction race during read/approval. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LU-317-07 — Provide typed ready seam tools.** **Acceptance:** transitions.readyInventory/readyFrom/readyTo and result refs are bounded. **Required verification:** WeftAI collection and cap tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LU-317-08 — Deliver transparent mini UI.** **Acceptance:** Exact ready status, known-only evidence and explanation are readable on all devices. **Required verification:** AT/mobile/provenance comprehension test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LU-317-01 - Define strict edge identity.** **Acceptance:** Directed A→B plus exact SeamRequest settings and immutable key identify ready candidate. **Required verification:** Request key/recipe/ordering fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LU-317-02 - Enumerate cache safely.** **Acceptance:** Indexed retrieval avoids O(n²) filesystem scans and unbounded model transfer. **Required verification:** Large seam-store profiling. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LU-317-03 - Separate current versus historical.** **Acceptance:** SeamMemory.clean/liked alone never qualifies as currently playable. **Required verification:** Eviction history negative test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LU-317-04 - Verify playable artefacts.** **Acceptance:** status ready, present decodable clip, current source/analysis and accepted quality policy required. **Required verification:** Missing/corrupt/stale clip tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LU-317-05 - Expose actual technique and fallback.** **Acceptance:** Requested versus rendered style and audit checks are kept distinct. **Required verification:** Fallback and near-miss fixtures. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LU-317-06 - Handle concurrent cache eviction.** **Acceptance:** Inventory carries snapshot/version; validation rechecks before use. **Required verification:** Eviction race during read/approval. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LU-317-07 - Provide typed ready seam tools.** **Acceptance:** transitions.readyInventory/readyFrom/readyTo and result refs are bounded. **Required verification:** WeftAI collection and cap tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LU-317-08 - Deliver transparent mini UI.** **Acceptance:** Exact ready status, known-only evidence and explanation are readable on all devices. **Required verification:** AT/mobile/provenance comprehension test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementation PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Hard preservation and evidence gate
 

@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from selecta import jobs
+from selecta import flags, jobs
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.eta import JobClock
 
@@ -222,7 +222,9 @@ def window_is_ready(settings: Settings, source: Path, start: float, duration: fl
 def separate_window(
     settings: Settings, source: Path, start: float, duration: float = 46.0
 ) -> StemWindow:
-    """Separate only the transition window; Demucs is optional until this is called."""
+    """Separate only the transition window; Demucs is optional until this is called. With stems
+    turned off in this build, nothing is ever separated: every caller is meant to have checked."""
+    flags.require("stems")
     key = hashlib.sha256(
         f"{source.resolve()}:{source.stat().st_mtime}:{start:.3f}:{duration:.3f}".encode()
     ).hexdigest()[:20]

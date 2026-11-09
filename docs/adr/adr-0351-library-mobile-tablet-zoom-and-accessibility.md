@@ -1,10 +1,10 @@
-# ADR-0351 — Library mobile/tablet presentation, high zoom and accessible retrieval
+# ADR-0351 - Library mobile/tablet presentation, high zoom and accessible retrieval
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P0 / Library responsive. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P0 / Library responsive. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0233, ADR-0234, ADR-0298, ADR-0291; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/Library.tsx`; `web/src/styles/operations.css`; `web/src/ui/controls.tsx`.
 
@@ -24,16 +24,16 @@ The same real recording can be found, inspected, selected and added on keyboard,
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0351-01 — Define content-driven breakpoints.** **Acceptance:** Breakpoints respond to available pane space and text, not device model alone. **Required verification:** Responsive grid geometry matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0351-02 — Retain identity on narrow rows.** **Acceptance:** Title, artist, readiness and one useful action remain visible without horizontal overflow. **Required verification:** 320px and zoom screenshot tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0351-03 — Keep filter interaction reachable.** **Acceptance:** Wrapping/scrolling filters retain labels, active state and keyboard order. **Required verification:** Touch and keyboard filter task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0351-04 — Protect selection rail.** **Acceptance:** Selection count, Cancel and safe actions remain accessible above bottom chrome. **Required verification:** Occlusion and keyboard-inset E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0351-05 — Design details sheet on mobile.** **Acceptance:** Song inspector opens and closes without hidden Save or trapped focus. **Required verification:** iOS/Android sheet and AT review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0351-06 — Enforce contrast and targets.** **Acceptance:** WCAG 2.2 AA plus practical 44px primary touch targets, with documented exceptions. **Required verification:** Measured contrast/hitbox and forced-colors audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0351-07 — Test assistive technology.** **Acceptance:** ARIA labels, lists, selected state, headings and status updates are coherent. **Required verification:** NVDA, VoiceOver and TalkBack task scripts. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0351-08 — Validate complete mobile journey.** **Acceptance:** User completes search to exact song to action without desktop requirement. **Required verification:** Uncoached one-handed task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0351-01 - Define content-driven breakpoints.** **Acceptance:** Breakpoints respond to available pane space and text, not device model alone. **Required verification:** Responsive grid geometry matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0351-02 - Retain identity on narrow rows.** **Acceptance:** Title, artist, readiness and one useful action remain visible without horizontal overflow. **Required verification:** 320px and zoom screenshot tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0351-03 - Keep filter interaction reachable.** **Acceptance:** Wrapping/scrolling filters retain labels, active state and keyboard order. **Required verification:** Touch and keyboard filter task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0351-04 - Protect selection rail.** **Acceptance:** Selection count, Cancel and safe actions remain accessible above bottom chrome. **Required verification:** Occlusion and keyboard-inset E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0351-05 - Design details sheet on mobile.** **Acceptance:** Song inspector opens and closes without hidden Save or trapped focus. **Required verification:** iOS/Android sheet and AT review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0351-06 - Enforce contrast and targets.** **Acceptance:** WCAG 2.2 AA plus practical 44px primary touch targets, with documented exceptions. **Required verification:** Measured contrast/hitbox and forced-colors audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0351-07 - Test assistive technology.** **Acceptance:** ARIA labels, lists, selected state, headings and status updates are coherent. **Required verification:** NVDA, VoiceOver and TalkBack task scripts. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0351-08 - Validate complete mobile journey.** **Acceptance:** User completes search to exact song to action without desktop requirement. **Required verification:** Uncoached one-handed task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 

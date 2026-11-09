@@ -1,3 +1,5 @@
+import { Gate, gateOpen, visible } from '../flags';
+
 /** Every keyboard shortcut, in one list that the handler and the help screen both read, so the help can
  * only ever say what's true.
  *
@@ -13,23 +15,35 @@ export type ShortcutId =
   | 'palette' | 'playPause' | 'jump' | 'next' | 'previous' | 'back5' | 'forward5'
   | 'mute' | 'request' | 'undo' | 'stage' | 'search' | 'help';
 
-export type Shortcut = { id: ShortcutId; keys: string; label: string; group: 'Playback' | 'Go to' | 'Editing' | 'Help' };
+export type Shortcut = { id: ShortcutId; keys: string; label: string; group: 'Playback' | 'Go to' | 'Editing' | 'Help' } & Gate;
 
+/** Keys pressed on their own belong to `app.shortcuts`; Ctrl K belongs to the palette. */
 export const SHORTCUTS: Shortcut[] = [
-  { id: 'playPause', keys: 'Space', label: 'Play or pause', group: 'Playback' },
-  { id: 'jump', keys: 'N', label: 'Jump to the transition', group: 'Playback' },
-  { id: 'next', keys: 'Shift N', label: 'Next song', group: 'Playback' },
-  { id: 'previous', keys: 'P', label: 'Previous song', group: 'Playback' },
-  { id: 'back5', keys: '←', label: 'Back 5 seconds', group: 'Playback' },
-  { id: 'forward5', keys: '→', label: 'Forward 5 seconds', group: 'Playback' },
-  { id: 'mute', keys: 'M', label: 'Mute', group: 'Playback' },
-  { id: 'stage', keys: 'F', label: 'Fullscreen lyrics', group: 'Playback' },
-  { id: 'request', keys: 'R', label: 'Request a song', group: 'Go to' },
-  { id: 'search', keys: '/', label: 'Search your library', group: 'Go to' },
-  { id: 'palette', keys: 'Ctrl K', label: 'Search and commands', group: 'Go to' },
-  { id: 'undo', keys: 'Z', label: 'Undo', group: 'Editing' },
-  { id: 'help', keys: '?', label: 'This list', group: 'Help' },
+  { id: 'playPause', keys: 'Space', label: 'Play or pause', group: 'Playback', flag: 'app.shortcuts' },
+  { id: 'jump', keys: 'N', label: 'Jump to the transition', group: 'Playback', flag: 'app.shortcuts' },
+  { id: 'next', keys: 'Shift N', label: 'Next song', group: 'Playback', flag: 'app.shortcuts' },
+  { id: 'previous', keys: 'P', label: 'Previous song', group: 'Playback', flag: 'app.shortcuts' },
+  { id: 'back5', keys: '←', label: 'Back 5 seconds', group: 'Playback', flag: 'app.shortcuts' },
+  { id: 'forward5', keys: '→', label: 'Forward 5 seconds', group: 'Playback', flag: 'app.shortcuts' },
+  { id: 'mute', keys: 'M', label: 'Mute', group: 'Playback', flag: 'app.shortcuts' },
+  { id: 'stage', keys: 'F', label: 'Fullscreen lyrics', group: 'Playback', flag: ['app.shortcuts', 'listen.stage'] },
+  { id: 'request', keys: 'R', label: 'Request a song', group: 'Go to', flag: ['app.shortcuts', 'requests'] },
+  { id: 'search', keys: '/', label: 'Search your library', group: 'Go to', flag: 'app.shortcuts' },
+  { id: 'palette', keys: 'Ctrl K', label: 'Search and commands', group: 'Go to', flag: 'app.command_palette' },
+  { id: 'undo', keys: 'Z', label: 'Undo', group: 'Editing', flag: 'app.shortcuts' },
+  { id: 'help', keys: '?', label: 'This list', group: 'Help', flag: 'app.shortcuts' },
 ];
+
+/** The shortcuts this build has, for the help list. */
+export function shortcutsOn(): Shortcut[] {
+  return visible(SHORTCUTS);
+}
+
+/** Whether this build has a shortcut at all. */
+export function shortcutOn(id: ShortcutId): boolean {
+  const shortcut = SHORTCUTS.find((item) => item.id === id);
+  return !!shortcut && gateOpen(shortcut);
+}
 
 const OWNS_ITS_KEYS = '[role="grid"],[role="menu"],[role="dialog"],[role="tablist"],[role="slider"],[role="listbox"],[role="combobox"],[role="radiogroup"]';
 const ACTIVATES_WITH_SPACE = 'button,a[href],summary,[role="button"],[role="checkbox"],[role="menuitem"],[role="menuitemcheckbox"],[role="option"],[role="radio"],[role="switch"],[role="tab"]';
@@ -44,8 +58,14 @@ export function anOverlayIsOpen(): boolean {
   return !!document.querySelector('.overlay');
 }
 
-/** Which shortcut this key press means here, if any. */
+/** Which shortcut this key press means here, if any. A key whose feature isn't in this build means
+ * nothing, so it does whatever the browser would do with it. */
 export function shortcutFor(event: Pick<KeyboardEvent, 'key' | 'code' | 'target' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>): ShortcutId | null {
+  const id = anyShortcutFor(event);
+  return id && shortcutOn(id) ? id : null;
+}
+
+function anyShortcutFor(event: Pick<KeyboardEvent, 'key' | 'code' | 'target' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>): ShortcutId | null {
   const key = event.key.toLowerCase();
   // Ctrl/Cmd K is global only when nobody is editing or using a widget.
   // Text editors own their chords too; never interrupt a draft or search input.

@@ -71,6 +71,8 @@
 .vibe-card-facts span + span::before { content: '·'; margin-right: var(--space-3); }
 .vibe-card .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-top: var(--space-1); }
 .vibe-card .card-actions > * { width: 100%; }
+/* Play on its own, when there's no Shape first in this build, takes the whole row */
+.vibe-card .card-actions[data-count='1'] { grid-template-columns: minmax(0, 1fr); }
 .vibe-card .card-actions .save-draft { grid-column: 1 / -1; width: fit-content; padding-inline: 0; border-color: transparent; color: var(--text-soft); }
 .vibe-card .card-actions .save-draft:hover, .vibe-card .card-actions .save-draft:focus-visible { color: var(--text); text-decoration: underline; }
 @media (max-width: 1040px) {
@@ -362,7 +364,9 @@
   text-align: center;
   font-size: var(--text-sm);
 }
-.listen-display-toggles button:last-child { grid-column: 1 / -1; }
+/* one, two or three choices, depending on what this build has: an odd last one spans the row */
+.listen-display-toggles[data-count='1'] { grid-template-columns: minmax(0, 1fr); }
+.listen-display-toggles[data-count='3'] button:last-child { grid-column: 1 / -1; }
 .listen-display-note { margin: 0; line-height: 1.5; }
 .listen-spectrum-settings { display: grid; gap: var(--space-3); min-width: 0; }
 .listen-setting-label, .listen-spectrum-settings .spectrum-choice > span {

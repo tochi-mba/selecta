@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 
-from selecta import mix
+from selecta import flags, mix
 from selecta.api_common import (
     LOCAL_HOSTS,
     OPERATIONS_KEPT,
@@ -26,6 +26,7 @@ from selecta.api_common import (
 )
 from selecta.backup import BackupError, activate_pending_restore
 from selecta.config import Settings, load_settings
+from selecta.flags import guard as flag_guard
 from selecta.routes.discover import add_routes as discover_routes
 from selecta.routes.edit import add_routes as edit_routes
 from selecta.routes.exports import add_routes as exports_routes
@@ -46,6 +47,7 @@ def create_app(
     settings: Settings | None = None, web_dir: Path | None = None, prepare_links: bool = False
 ) -> FastAPI:
     settings = settings or load_settings()
+    flags.effective()  # a mistake in SELECTA_FLAGS stops the start, rather than a request later
 
     settings.home.mkdir(parents=True, exist_ok=True)
     restore_problem = None
@@ -189,6 +191,9 @@ def create_app(
                 status_code=409,
             )
         return await call_next(request)
+
+    # runs straight after local_only: middleware added later runs earlier
+    flag_guard.install(app)
 
     @app.middleware("http")
     async def local_only(request, call_next):

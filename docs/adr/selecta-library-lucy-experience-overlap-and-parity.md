@@ -1,4 +1,4 @@
-# Selecta — LX overlap, ownership, parity and non-destructive scope
+# Selecta - LX overlap, ownership, parity and non-destructive scope
 
 **Status:** 26 Proposed ADRs (0340–0365); 208 LX tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Documentation only.
 

@@ -1,0 +1,39 @@
+{
+  "area": "My Mixes",
+  "flags": {
+    "drafts": {
+      "label": "Drafts",
+      "about": "Mixes you build and edit without touching what's playing.",
+      "routes": [
+        "GET /api/drafts",
+        "POST /api/drafts",
+        "POST /api/drafts/restore",
+        "POST /api/drafts/{draft}/name",
+        "POST /api/drafts/{draft}/duplicate",
+        "DELETE /api/drafts/{draft}",
+        "POST /api/drafts/{draft}/play"
+      ],
+      "surfaces": ["mine", "mixes", "edit", "discover.words", "overlay.palette"],
+      "words": ["Your drafts", "Save draft", "Save a copy"]
+    },
+    "render_line": {
+      "label": "Render line",
+      "about": "Prioritized drafts render in the background after the current mix, in an order you choose.",
+      "requires": ["drafts"],
+      "routes": [
+        "POST /api/drafts/{draft}/line",
+        "DELETE /api/drafts/{draft}/line",
+        "POST /api/drafts/{draft}/line/move"
+      ],
+      "surfaces": ["mine", "edit", "workshop"],
+      "words": ["Render line", "Prioritize"]
+    },
+    "mymixes.continue_working": {
+      "label": "Continue working",
+      "about": "A shortcut back to the draft you last edited.",
+      "requires": ["drafts"],
+      "surfaces": ["mine"],
+      "words": ["Continue working"]
+    }
+  }
+}

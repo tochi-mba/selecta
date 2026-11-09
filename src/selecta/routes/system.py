@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 from fastapi import HTTPException, Request, Response
 from pydantic import BaseModel
 
-from selecta import db, jobs, mix
+from selecta import db, flags, jobs, mix
 from selecta.api_common import (
     API_FEATURES,
     API_VERSION,
@@ -36,7 +36,7 @@ from selecta.backup import (
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_left, analysis_line_left
 from selecta.library.relink import RelinkError, commit_relink, preview_relink
-from selecta.seams import MOVES
+from selecta.seam_kinds import moves_on
 from selecta.session import get_steering, queue, steer
 from selecta.stems import MIN_CACHE_BYTES, cache_bytes, largest_cache_bytes, prune_cache
 
@@ -82,7 +82,7 @@ def add_routes(app, ctx) -> None:
                 "counts": counts,
                 "steering": steering,
                 "queue": queue(conn),
-                "moves": {name: label for name, (label, _) in MOVES.items()},
+                "moves": {name: label for name, (label, _) in moves_on().items()},
                 "analysis_running": bool(
                     background.analysis and background.analysis.poll() is None
                 ),
@@ -91,6 +91,7 @@ def add_routes(app, ctx) -> None:
                 "mixes_in_line": len(mix.line_order(conn)),
                 "transitions_ready": len(store.remembered().clean),
                 "api": {"version": API_VERSION, "features": API_FEATURES},
+                "flags": flags.snapshot(),
                 "eta": {
                     "analysis": analysis_left(
                         conn,

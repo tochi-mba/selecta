@@ -23,7 +23,7 @@ from pathlib import Path
 
 import soundfile as sf
 
-from selecta import db, jobs
+from selecta import db, flags, jobs
 from selecta.analysis.song import SongInfo, load_song
 from selecta.arrange import can_arrange
 from selecta.audit.checks import AuditReport
@@ -56,6 +56,7 @@ from selecta.seam_kinds import (
     fallback_order,
     good_enough,
     line_from,
+    move_on,
     request_from,
 )
 from selecta.seam_making import (
@@ -689,7 +690,7 @@ class SeamStore:
         rendered: Rendered | None = None
         near: tuple | None = None
         preference = db.preference(conn, "steering", {}) if conn is not None else {}
-        stem_preference = preference.get("stems", "sometimes")
+        stem_preference = preference.get("stems", "sometimes") if flags.on("stems") else "never"
         disabled_planned_stem = (
             request.soft and stem_preference == "never" and request.move in STEM_MOVES
         )
@@ -706,7 +707,9 @@ class SeamStore:
                 if not request.soft:
                     raise
                 tried.append({"move": request.move, "why": str(problem)})
-            if request.soft and rendered is not None and not report.passed:
+            # with second takes turned off, the planned move is kept even when it falls short
+            repair = flags.on("render.repair")
+            if repair and request.soft and rendered is not None and not report.passed:
                 if good_enough(report):
                     near = (rendered, report, why, request.move)
                 else:
@@ -731,6 +734,8 @@ class SeamStore:
         return take
 
     def _render_move(self, request: SeamRequest, a: SongInfo, b: SongInfo):
+        if not move_on(request.move):
+            raise CannotRender(f"{MOVES.get(request.move, (request.move,))[0]} is turned off.")
         if request.move == "stem_arrange":
             return _arranged(self.settings, request, a, b, self.memory)
         if request.move in STEM_MOVES:
@@ -790,7 +795,7 @@ class SeamStore:
             if take is None:
                 continue
             rendered, report, why = take
-            if report.passed:
+            if report.passed or not flags.on("render.repair"):
                 return rendered, report, why, asked not in {"auto", move}
             if held is None and good_enough(report):
                 held = (rendered, report, why, move)

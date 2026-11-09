@@ -1,10 +1,10 @@
-# ADR-0361 — Lucy proposal revisions, musical diff, critique and safe restoration
+# ADR-0361 - Lucy proposal revisions, musical diff, critique and safe restoration
 
 - **Decision:** Proposed (owner review pending; this PR does not record approval).
 - **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Library + Lucy experience redesign (LX); 2026-11-08; `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
-- **Priority / phase:** P1 / Lucy proposal. **Owner:** Unassigned. **Implementing PR/SHA:** —.
+- **Priority / phase:** P1 / Lucy proposal. **Owner:** Unassigned. **Implementing PR/SHA:** -.
 - **Existing ADR owners:** ADR-0323, ADR-0324, ADR-0325, ADR-0306; their decisions and statuses remain unchanged.
 - **Source touchpoints (inspection, not implementation):** `web/src/views/LucyProposal.tsx`; `web/src/lucy/reducer.ts`; `web/src/views/LucySongs.tsx`.
 
@@ -24,16 +24,16 @@ A user understands Lucy's changes and can restore a previous arrangement without
 
 **Preservation and trade-offs:** Preserve original local audio files, a single authoritative player/audio-focus owner and intentional Pause; exact recording IDs and mix/draft/revision/occurrence/seam identity, scoped Undo and guarded commits; explicit permission and consented atomic request bridges; eight-lane Studio with 8–64 cells; canonical Library readiness and LRCLIB disclosure; unbiased human listening studies; frozen-revision decodable FLAC. Never imply readiness from historical memory, fabricated artwork or AI prose. No SaaS, accounts, launcher, native folder bridge, telemetry, unsolicited remote upload or audio-engine rewrite in this redesign.
 
-## Implementation checklist — 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
 
-1. **LX-0361-01 — Identify current versus historical.** **Acceptance:** Old revision viewing is clearly labelled read-only and not approvable. **Required verification:** History/current action gating fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-2. **LX-0361-02 — Create compact musical diff.** **Acceptance:** Added, removed, reordered and changed constraint facts appear in plain language. **Required verification:** Synthetic revision-pair accuracy fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-3. **LX-0361-03 — Highlight readiness impact.** **Acceptance:** Revision comparison identifies changes to verified transitions, not merely song counts. **Required verification:** Before/after seam proof test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-4. **LX-0361-04 — Explain user critiques.** **Acceptance:** Direct feedback shows which instruction was honoured, unmet or infeasible. **Required verification:** Constraint-preservation comprehension test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-5. **LX-0361-05 — Preserve locked occurrences.** **Acceptance:** Locked tracks are not silently changed by replanning and always use exact occurrence IDs. **Required verification:** Lock + critique regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-6. **LX-0361-06 — Make restore safe.** **Acceptance:** Restore/make-current actions require correct revision guard and preserve ancestor immutability. **Required verification:** Stale and branch restoration E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-7. **LX-0361-07 — Keep selection and focus stable.** **Acceptance:** Viewing diff/revision never switches scope to a same-title recording. **Required verification:** Multi-occurrence + focus tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
-8. **LX-0361-08 — Validate revision decision making.** **Acceptance:** Users choose the intended version and can state consequences before commit. **Required verification:** Uncoached compare-and-restore study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** —; **Evidence/reviewer:** —.
+1. **LX-0361-01 - Identify current versus historical.** **Acceptance:** Old revision viewing is clearly labelled read-only and not approvable. **Required verification:** History/current action gating fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+2. **LX-0361-02 - Create compact musical diff.** **Acceptance:** Added, removed, reordered and changed constraint facts appear in plain language. **Required verification:** Synthetic revision-pair accuracy fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+3. **LX-0361-03 - Highlight readiness impact.** **Acceptance:** Revision comparison identifies changes to verified transitions, not merely song counts. **Required verification:** Before/after seam proof test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+4. **LX-0361-04 - Explain user critiques.** **Acceptance:** Direct feedback shows which instruction was honoured, unmet or infeasible. **Required verification:** Constraint-preservation comprehension test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+5. **LX-0361-05 - Preserve locked occurrences.** **Acceptance:** Locked tracks are not silently changed by replanning and always use exact occurrence IDs. **Required verification:** Lock + critique regression. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **LX-0361-06 - Make restore safe.** **Acceptance:** Restore/make-current actions require correct revision guard and preserve ancestor immutability. **Required verification:** Stale and branch restoration E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+7. **LX-0361-07 - Keep selection and focus stable.** **Acceptance:** Viewing diff/revision never switches scope to a same-title recording. **Required verification:** Multi-occurrence + focus tests. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+8. **LX-0361-08 - Validate revision decision making.** **Acceptance:** Users choose the intended version and can state consequences before commit. **Required verification:** Uncoached compare-and-restore study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
 ## Evidence and release boundaries
 
