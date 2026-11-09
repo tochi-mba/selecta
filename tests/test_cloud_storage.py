@@ -18,12 +18,11 @@ from selecta.storage.keys import (
     validate_key,
     workspace_of,
 )
-from selecta.storage.objects import ObjectHead, Part, PutResult, R2NotFound
+from selecta.storage.objects import ObjectHead, Part, R2NotFound
 from selecta.storage.ports import PlanLimits, QuotaExceeded
 from selecta.storage.schema import assets, deletions, upload_sessions
 from selecta.storage.uploads import (
     FileSpec,
-    InvalidState,
     Probe,
     Status,
     UploadError,
@@ -92,7 +91,9 @@ class MemoryObjects:
         data, metadata_values = obj
         return ObjectHead(key=key, size=len(data), etag="etag", metadata=metadata_values)
 
-    def copy_object(self, src_bucket, src_key, dst_bucket, dst_key, *, size=None, metadata=None, **_kwargs):
+    def copy_object(
+        self, src_bucket, src_key, dst_bucket, dst_key, *, size=None, metadata=None, **_kwargs
+    ):
         src = self.objects.get((src_bucket, src_key))
         if src is None:
             raise R2NotFound("missing", code="NoSuchKey")
@@ -128,7 +129,10 @@ def test_object_keys_are_tenant_scoped_and_reject_path_input():
     assert validate_key(key_a) is Bucket.ORIGINALS
     assert workspace_of(key_a) == "workspace-a"
     assert validate_key(export_key("workspace-a", "export-1")) is Bucket.EXPORTS
-    assert validate_key(derived_key("workspace-a", "features", "a" * 64, "attempt-1", "features.npz")) is Bucket.DERIVED
+    assert (
+        validate_key(derived_key("workspace-a", "features", "a" * 64, "attempt-1", "features.npz"))
+        is Bucket.DERIVED
+    )
     for unsafe in ("../outside", "/w/a/a/a", "w/a/a/../b", "w/a/a/a\\b"):
         with pytest.raises(UnsafeKey):
             validate_key(unsafe)

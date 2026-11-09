@@ -15,10 +15,9 @@ gated by plans at all; a flag some plans list and others don't is plan-gated, an
 plan doesn't list it gets it locked (hidden, or shown as a teaser, per the flag's `when_locked`).
 Plans only ever lock features; flags never grant what a plan doesn't include (ADR-0414).
 
-Some cloud features don't have a flag in the registry yet, because the code that would own their
-routes isn't written (`rooms`, `cloud.uploads`, ...). They're in `PLANNED_FLAGS`, which `problems()`
-accepts in place of a registry entry. When one of them gets its registry entry, `problems()` says
-so, and it comes out of `PLANNED_FLAGS`, so the set only ever shrinks.
+Cloud plan-gated features have registry entries before their routes ship. This keeps the plan
+catalogue, server flags and frontend types aligned during staged implementation. `PLANNED_FLAGS`
+is reserved for a plan-only design placeholder that has not yet received a registry entry.
 """
 
 from __future__ import annotations

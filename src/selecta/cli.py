@@ -477,7 +477,9 @@ def web(
     if mode is Mode.LOCAL and open_browser:
         webbrowser.open(url)
     elif mode is Mode.CLOUD:
-        console.print(f"Starting Selecta Cloud API on port {port}; web assets are hosted separately.")
+        console.print(
+            f"Starting Selecta Cloud API on port {port}; web assets are hosted separately."
+        )
     uvicorn.run(
         "selecta.api:serve",
         factory=True,

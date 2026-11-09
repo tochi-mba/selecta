@@ -12,7 +12,7 @@ from selecta.authz.check import Actor, authorize
 from selecta.authz.errors import Forbidden, InvalidScope, StepUpRequired
 from selecta.authz.roles import StaffRole
 from selecta.authz.schema import access_grants, audit_events, role_assignments
-from selecta.authz.scopes import ResourceRef, Scope
+from selecta.authz.scopes import Scope
 from selecta.identity import accounts, tokens
 from selecta.identity.schema import session_revocations, users, workspace_members, workspaces
 from selecta.persistence import metadata
@@ -133,7 +133,9 @@ def test_workspace_membership_and_session_revocation_are_enforced(conn):
     principal = accounts.resolve_principal(conn, old_session)
     assert principal.workspace_role.value == "owner"
     with pytest.raises(accounts.NotAMember):
-        accounts.resolve_principal(conn, tokens.Claims("outsider-sub", 100, 1000), owner.workspace.id)
+        accounts.resolve_principal(
+            conn, tokens.Claims("outsider-sub", 100, 1000), owner.workspace.id
+        )
 
     cutoff = accounts.revoke_sessions(conn, owner.user.id)
     assert accounts.is_revoked(conn, old_session)
@@ -214,4 +216,3 @@ def test_authorization_requires_live_staff_session_and_matching_scope(conn):
     )
     with pytest.raises(StepUpRequired):
         authorize(conn, too_old, "platform.emergency_controls.manage")
-

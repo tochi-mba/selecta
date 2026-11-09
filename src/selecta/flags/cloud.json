@@ -1,6 +1,17 @@
 {
   "area": "Cloud services",
   "flags": {
+    "account.labs": {
+      "label": "Labs",
+      "about": "Opt into preview features that your plan is allowed to use.",
+      "routes": [
+        "GET /api/account/labs",
+        "PUT /api/account/labs/{flag_id}"
+      ],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "platform"
+    },
     "cloud.signups": {
       "label": "New accounts",
       "about": "Allow new Cloud users to complete account onboarding.",

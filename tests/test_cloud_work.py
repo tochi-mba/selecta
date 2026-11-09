@@ -43,8 +43,9 @@ def worker(pool: str = "cpu-heavy", **kwargs) -> WorkerCaps:
 
 
 def test_enqueuing_same_live_idempotency_key_returns_one_job(store):
-    spec = JobSpec("workspace-1", "analyse.song", input_ref={"song": "s1"},
-                   idempotency_key="analyse-s1")
+    spec = JobSpec(
+        "workspace-1", "analyse.song", input_ref={"song": "s1"}, idempotency_key="analyse-s1"
+    )
 
     first = store.enqueue(spec)
     second = store.enqueue(spec)
@@ -154,7 +155,7 @@ def test_candidate_eligibility_reasons_are_explicit():
     context = EligibilityContext(now=10, running=0, cap=1)
 
     assert job_blocker(candidate, caps, context) == Ineligible.GPU
-    assert job_blocker(candidate, caps, EligibilityContext(
-        now=10, running=1, cap=1, entitled=False
-    )) == Ineligible.NOT_ENTITLED
-
+    assert (
+        job_blocker(candidate, caps, EligibilityContext(now=10, running=1, cap=1, entitled=False))
+        == Ineligible.NOT_ENTITLED
+    )

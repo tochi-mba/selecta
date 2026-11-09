@@ -31,6 +31,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection, Engine
 
@@ -87,6 +88,17 @@ flag_previews = sa.Table(
     sa.Column("reason", sa.Text, nullable=False),
     sa.Column("created_at", persistence.Epoch, nullable=False),
     sa.Column("expires_at", persistence.Epoch, nullable=True, index=True),
+)
+
+user_flag_preferences = sa.Table(
+    "user_flag_preferences",
+    persistence.metadata,
+    sa.Column(
+        "user_id", persistence.Id, sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    ),
+    sa.Column("flag_id", FlagId, primary_key=True),
+    sa.Column("enabled", sa.Boolean, nullable=False),
+    sa.Column("updated_at", persistence.Epoch, nullable=False),
 )
 
 
@@ -467,6 +479,51 @@ def orphans(
         elif flag.core or is_untargetable(flag_id, untargetable):
             found.append(f"{flag_id} has rules but can't be targeted any more")
     return found
+
+
+def user_preferences(conn: Connection, user_id: str) -> dict[str, bool]:
+    """The user's Labs opt-ins and explicit feature opt-outs."""
+    rows = conn.execute(
+        sa.select(user_flag_preferences.c.flag_id, user_flag_preferences.c.enabled).where(
+            user_flag_preferences.c.user_id == user_id
+        )
+    )
+    return {flag_id: bool(enabled) for flag_id, enabled in rows}
+
+
+def set_user_preference(
+    conn: Connection,
+    user_id: str,
+    flag_id: str,
+    enabled: bool,
+    *,
+    entitled: Collection[str],
+    plan_gated: Collection[str],
+    registry: Mapping[str, flags.Flag] | None = None,
+) -> None:
+    """Store an opt-in only for an entitled Cloud beta; a preference cannot grant a plan feature."""
+    registry = flags.registry() if registry is None else registry
+    flag = registry.get(flag_id)
+    if flag is None or flag.kind != "beta" or "cloud" not in flag.modes:
+        raise RuleError(["only Cloud beta features can be changed in Labs"])
+    if type(enabled) is not bool:
+        raise RuleError(["a Labs choice must be true or false"])
+    if enabled and flag_id in plan_gated and flag_id not in entitled:
+        raise RuleError(["this plan does not include that beta feature"])
+    if conn.dialect.name == "postgresql":
+        insert = postgresql.insert(user_flag_preferences)
+    elif conn.dialect.name == "sqlite":
+        insert = sqlite.insert(user_flag_preferences)
+    else:
+        raise RuntimeError(f"Unsupported database: {conn.dialect.name}")
+    now = persistence.db_now(conn)
+    conn.execute(
+        insert.values(user_id=user_id, flag_id=flag_id, enabled=enabled, updated_at=now)
+        .on_conflict_do_update(
+            index_elements=[user_flag_preferences.c.user_id, user_flag_preferences.c.flag_id],
+            set_={"enabled": enabled, "updated_at": now},
+        )
+    )
 
 
 class RulesCache:

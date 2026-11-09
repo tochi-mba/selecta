@@ -108,12 +108,14 @@ def create_app(
             return await call_next(request)
         if len(operation) > 128:
             return JSONResponse({"detail": "Operation ID is too long."}, status_code=400)
-        identity = b"\0".join((
-            request.method.encode(),
-            request.url.path.encode(),
-            request.url.query.encode(),
-            await request.body(),
-        ))
+        identity = b"\0".join(
+            (
+                request.method.encode(),
+                request.url.path.encode(),
+                request.url.query.encode(),
+                await request.body(),
+            )
+        )
         fingerprint = hashlib.sha256(identity).hexdigest()
         if operation in running_operations:
             if active_fingerprints.get(operation) != fingerprint:
@@ -163,15 +165,14 @@ def create_app(
         # Replaying an accepted operation must return its original result, even
         # though the first successful mutation changed the queue order.
         operation = request.headers.get("x-operation-id")
-        if operation and (
-            operation in finished_operations or operation in running_operations
-        ):
+        if operation and (operation in finished_operations or operation in running_operations):
             return await call_next(request)
         # Export jobs persist across server restarts. A retried operation that
         # already created a frozen job must recover that exact job even if the
         # audible mix changed since its original submission.
         if (
-            operation and request.method == "POST"
+            operation
+            and request.method == "POST"
             and request.url.path == "/api/exports/jobs"
             and ctx.has_export_operation(operation)
         ):

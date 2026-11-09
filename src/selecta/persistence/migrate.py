@@ -28,6 +28,7 @@ def _config(connection=None) -> Config:
     config = Config()
     config.set_main_option("script_location", str(HERE))
     config.set_main_option("version_locations", str(HERE / "versions"))
+    config.set_main_option("path_separator", "os")
     if connection is not None:
         config.attributes["connection"] = connection
     return config

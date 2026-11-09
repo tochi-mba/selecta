@@ -11,6 +11,7 @@ import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,9 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from selecta import flags
 from selecta.billing import plans, stripe_sync
 from selecta.flags import guard as flag_guard
+from selecta.flags import rules as flag_rules
+from selecta.flags import targeting
+from selecta.flags.matching import Context
 from selecta.identity import accounts
 from selecta.identity.tokens import (
     Claims,
@@ -29,10 +33,10 @@ from selecta.identity.tokens import (
     TokenError,
     authkit_verifier,
 )
-from selecta.persistence import make_engine
+from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
-from selecta.persistence import transaction
+from selecta.flags.rules import RulesCache
 from selecta.usage import quota
 
 
@@ -72,10 +76,15 @@ class CloudSettings:
             )
         hosts = _csv("SELECTA_ALLOWED_HOSTS")
         origins = _csv("SELECTA_ALLOWED_ORIGINS")
-        if not hosts or not origins:
+        if not hosts or "*" in hosts or not origins:
             raise CloudConfigurationError(
-                "Cloud mode requires non-empty SELECTA_ALLOWED_HOSTS and "
+                "Cloud mode requires explicit, non-wildcard SELECTA_ALLOWED_HOSTS and "
                 "SELECTA_ALLOWED_ORIGINS allowlists."
+            )
+        if any(not _valid_origin(origin) for origin in origins):
+            raise CloudConfigurationError(
+                "SELECTA_ALLOWED_ORIGINS entries must be HTTPS origins (HTTP is allowed only "
+                "for localhost development), without paths or credentials."
             )
         return cls(
             database_url=url,
@@ -103,8 +112,26 @@ class OnboardingRequest(BaseModel):
     timezone: str = "UTC"
 
 
+class LabPreference(BaseModel):
+    enabled: bool
+
+
 def _csv(name: str) -> tuple[str, ...]:
     return tuple(part.strip() for part in os.environ.get(name, "").split(",") if part.strip())
+
+
+def _valid_origin(value: str) -> bool:
+    parsed = urlsplit(value)
+    loopback = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+    return (
+        (parsed.scheme == "https" or (parsed.scheme == "http" and loopback))
+        and bool(parsed.netloc)
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.path == ""
+        and not parsed.query
+        and not parsed.fragment
+    )
 
 
 def _bearer(request: Request, verifier: Verifier) -> Claims:
@@ -121,7 +148,10 @@ def _bearer(request: Request, verifier: Verifier) -> Claims:
     except JwksUnavailable as error:
         raise HTTPException(
             status_code=503,
-            detail={"code": "identity_unavailable", "message": "Sign-in is temporarily unavailable."},
+            detail={
+                "code": "identity_unavailable",
+                "message": "Sign-in is temporarily unavailable.",
+            },
         ) from error
     except TokenError as error:
         raise HTTPException(
@@ -171,6 +201,8 @@ def create_cloud_app(
     app.state.runtime_mode = "cloud"
     app.state.database_engine = engine
     app.state.token_verifier = verifier
+    rule_cache = RulesCache(engine, max_age=5.0)
+    app.state.flag_rules = rule_cache
     flags.effective()
     flag_guard.install(app)
 
@@ -187,6 +219,23 @@ def create_cloud_app(
 
     def current_claims(request: Request) -> Claims:
         return _bearer(request, verifier)
+
+    def rule_snapshot():
+        rule_cache.refresh_if_stale()
+        return rule_cache.snapshot
+
+    def feature_context(principal, plan, now: float) -> Context:
+        age_days = max(0.0, (now - principal.user.created_at) / 86_400)
+        return Context(
+            environment=os.environ.get("SELECTA_ENV", "production"),
+            mode="cloud",
+            workspace_id=principal.workspace.id,
+            user_id=principal.user.id,
+            plan=plan.id,
+            plan_version=plan.version,
+            staff_roles=frozenset(role.value for role in principal.staff_roles),
+            account_age_days=age_days,
+        )
 
     @app.get("/api/status")
     def status() -> dict[str, str]:
@@ -207,9 +256,12 @@ def create_cloud_app(
         return {"status": "ready", "schema": applied}
 
     @app.post("/api/onboarding/complete", status_code=201)
-    def complete_onboarding(
-        body: OnboardingRequest, claims: Claims = Depends(current_claims)
-    ):
+    def complete_onboarding(body: OnboardingRequest, claims: Claims = Depends(current_claims)):
+        if not claims.email or claims.email_verified is not True:
+            raise HTTPException(
+                status_code=403,
+                detail={"code": "verified_email_required", "message": "Verify your email first."},
+            )
         if body.age_confirmed is not True:
             raise HTTPException(
                 status_code=400,
@@ -223,7 +275,9 @@ def create_cloud_app(
                 free = plans.plan_for(plans.DEFAULT_PLAN)
                 quota.set_limit(conn, provisioned.workspace.id, free)
             except accounts.AgeConfirmationRequired as error:
-                raise HTTPException(status_code=400, detail={"code": "age_confirmation_required"}) from error
+                raise HTTPException(
+                    status_code=400, detail={"code": "age_confirmation_required"}
+                ) from error
             except ValueError as error:
                 raise HTTPException(status_code=400, detail={"code": "invalid_timezone"}) from error
         return {
@@ -238,12 +292,25 @@ def create_cloud_app(
         request: Request,
         claims: Claims = Depends(current_claims),
     ):
+        snapshot = rule_snapshot()
         workspace_id = request.headers.get("x-workspace-id")
         principal = _principal(engine, claims, workspace_id)
         with transaction(engine, principal.workspace.id) as conn:
             entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             storage = quota.usage(conn, principal.workspace.id)
+            now = db_now(conn)
+            preferences = flag_rules.user_preferences(conn, principal.user.id)
+            decisions = targeting.decide_all(
+                feature_context(principal, plan, now),
+                build_states=flags.effective(),
+                rules=snapshot,
+                entitled=plan.flags,
+                plan_gated=plans.plan_gated_flags(),
+                user_prefs=preferences,
+                now=now,
+                lock_plans=plans.unlocking_plans(),
+            )
         return {
             "user": {
                 "id": principal.user.id,
@@ -264,7 +331,98 @@ def create_cloud_app(
                 "storage_used_bytes": storage.used_bytes,
                 "storage_state": storage.state.value,
             },
+            "features": decisions.snapshot(),
+            "feature_locks": dict(decisions.locks),
+            "feature_rule_version": decisions.version,
         }
+
+    @app.get("/api/account/labs")
+    def get_labs(
+        request: Request,
+        claims: Claims = Depends(current_claims),
+    ):
+        snapshot = rule_snapshot()
+        principal = _principal(engine, claims, request.headers.get("x-workspace-id"))
+        with transaction(engine, principal.workspace.id) as conn:
+            entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
+            plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
+            preferences = flag_rules.user_preferences(conn, principal.user.id)
+            now = db_now(conn)
+            beta_preferences = {
+                flag_id: True
+                for flag_id, flag in flags.registry().items()
+                if flag.kind == "beta"
+            }
+            available = []
+            for flag_id, flag in flags.registry().items():
+                if flag.kind != "beta" or "cloud" not in flag.modes:
+                    continue
+                decision = targeting.decide(
+                    flag_id,
+                    feature_context(principal, plan, now),
+                    build_states=flags.effective(),
+                    rules=snapshot,
+                    entitled=plan.flags,
+                    plan_gated=plans.plan_gated_flags(),
+                    user_prefs=preferences | beta_preferences,
+                    now=now,
+                )
+                if decision.on:
+                    available.append(
+                        {
+                            "id": flag_id,
+                            "label": flag.label,
+                            "about": flag.about,
+                            "enabled": preferences.get(flag_id) is True,
+                        }
+                    )
+        return {"flags": available, "version": snapshot.version}
+
+    @app.put("/api/account/labs/{flag_id}")
+    def update_lab(
+        flag_id: str,
+        body: LabPreference,
+        request: Request,
+        claims: Claims = Depends(current_claims),
+    ):
+        snapshot = rule_snapshot()
+        principal = _principal(engine, claims, request.headers.get("x-workspace-id"))
+        with transaction(engine, principal.workspace.id) as conn:
+            entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
+            plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
+            preferences = flag_rules.user_preferences(conn, principal.user.id)
+            now = db_now(conn)
+            if body.enabled:
+                decision = targeting.decide(
+                    flag_id,
+                    feature_context(principal, plan, now),
+                    build_states=flags.effective(),
+                    rules=snapshot,
+                    entitled=plan.flags,
+                    plan_gated=plans.plan_gated_flags(),
+                    user_prefs=preferences | {flag_id: True},
+                    now=now,
+                )
+                if not decision.on:
+                    raise HTTPException(
+                        status_code=403,
+                        detail={"code": "feature_unavailable", "reason": decision.reason},
+                    )
+            try:
+                flag_rules.set_user_preference(
+                    conn,
+                    principal.user.id,
+                    flag_id,
+                    body.enabled,
+                    entitled=plan.flags,
+                    plan_gated=plans.plan_gated_flags(),
+                )
+            except flag_rules.RuleError as error:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"code": "invalid_lab_choice", "problems": error.problems},
+                ) from error
+        return {"id": flag_id, "enabled": body.enabled}
 
     @app.post("/api/account/sign-out-everywhere")
     def sign_out_everywhere(claims: Claims = Depends(current_claims)):
