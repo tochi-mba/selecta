@@ -4,8 +4,7 @@ import pytest
 import sqlalchemy as sa
 from fastapi.testclient import TestClient
 
-from selecta import api
-from selecta import flags
+from selecta import api, flags
 from selecta.api_cloud import CloudConfigurationError, CloudSettings, create_cloud_app
 from selecta.identity.tokens import Claims
 from selecta.modes import Mode, current_mode
@@ -97,6 +96,9 @@ def test_onboarding_requires_age_confirmation_and_starts_free_plan(cloud):
         assert account.status_code == 200
         assert account.json()["entitlement"]["plan"] == "free"
         assert account.json()["entitlement"]["storage_limit_bytes"] == 10_000_000_000
+        assert account.json()["features"]["rooms"] is False
+        assert account.json()["feature_locks"]["rooms"] == "premium"
+        assert client.get("/api/account/labs", headers=headers).json()["flags"] == []
         again = client.post(
             "/api/onboarding/complete", headers=headers, json={"age_confirmed": True}
         )

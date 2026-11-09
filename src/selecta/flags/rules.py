@@ -518,8 +518,9 @@ def set_user_preference(
         raise RuntimeError(f"Unsupported database: {conn.dialect.name}")
     now = persistence.db_now(conn)
     conn.execute(
-        insert.values(user_id=user_id, flag_id=flag_id, enabled=enabled, updated_at=now)
-        .on_conflict_do_update(
+        insert.values(
+            user_id=user_id, flag_id=flag_id, enabled=enabled, updated_at=now
+        ).on_conflict_do_update(
             index_elements=[user_flag_preferences.c.user_id, user_flag_preferences.c.flag_id],
             set_={"enabled": enabled, "updated_at": now},
         )

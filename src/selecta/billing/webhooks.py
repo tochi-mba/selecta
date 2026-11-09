@@ -339,6 +339,97 @@ class HttpStripeClient:
             raise StripeUnavailable(f"Stripe answered {response.status_code} for {path}.")
         return response.json()
 
+    def _post(self, path: str, data: Mapping[str, str], idempotency_key: str) -> dict[str, Any]:
+        """Submit a form to Stripe without exposing credentials or response bodies in errors."""
+        if not idempotency_key or len(idempotency_key) > 255:
+            raise ValueError("A Stripe idempotency key between 1 and 255 characters is required.")
+        headers = {
+            **self._headers,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Idempotency-Key": idempotency_key,
+        }
+        try:
+            with httpx.Client(
+                base_url=self._base_url, timeout=self._timeout, transport=self._transport,
+                follow_redirects=False,
+            ) as client:
+                response = client.post(path, data=data, headers=headers)
+        except httpx.HTTPError as problem:
+            # httpx exceptions can contain request details. Keep the public error bounded.
+            raise StripeUnavailable(
+                f"Can't reach Stripe ({type(problem).__name__})."
+            ) from problem
+        if response.status_code >= 400:
+            raise StripeUnavailable(f"Stripe answered {response.status_code} for {path}.")
+        try:
+            payload = response.json()
+        except (ValueError, json.JSONDecodeError) as problem:
+            raise StripeUnavailable("Stripe returned an invalid response.") from problem
+        if not isinstance(payload, dict):
+            raise StripeUnavailable("Stripe returned an invalid response.")
+        return payload
+
+    @staticmethod
+    def _require_response_string(payload: Mapping[str, Any], field: str, prefix: str) -> str:
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.startswith(prefix) or len(value) > 512:
+            raise StripeUnavailable("Stripe returned an invalid response.")
+        return value
+
+    @staticmethod
+    def _require_session_url(payload: Mapping[str, Any]) -> str:
+        value = payload.get("url")
+        if not isinstance(value, str) or len(value) > 2048:
+            raise StripeUnavailable("Stripe returned an invalid response.")
+        try:
+            parsed = httpx.URL(value)
+        except (TypeError, ValueError) as problem:
+            raise StripeUnavailable("Stripe returned an invalid response.") from problem
+        if parsed.scheme != "https" or not parsed.host:
+            raise StripeUnavailable("Stripe returned an invalid response.")
+        return value
+
+    def create_customer(
+        self, *, workspace_id: str, idempotency_key: str, email: str | None = None,
+    ) -> dict[str, Any]:
+        data = {"metadata[workspace_id]": workspace_id}
+        if email:
+            data["email"] = email
+        payload = self._post("/v1/customers", data, idempotency_key)
+        self._require_response_string(payload, "id", "cus_")
+        return payload
+
+    def create_checkout_session(
+        self, *, workspace_id: str, customer_id: str, price_id: str,
+        success_url: str, cancel_url: str, idempotency_key: str,
+    ) -> dict[str, Any]:
+        data = {
+            "mode": "subscription",
+            "customer": customer_id,
+            "client_reference_id": workspace_id,
+            "line_items[0][price]": price_id,
+            "line_items[0][quantity]": "1",
+            "subscription_data[metadata][workspace_id]": workspace_id,
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+        }
+        payload = self._post("/v1/checkout/sessions", data, idempotency_key)
+        self._require_response_string(payload, "id", "cs_")
+        self._require_session_url(payload)
+        return payload
+
+    def create_portal_session(
+        self, *, customer_id: str, return_url: str, idempotency_key: str,
+    ) -> dict[str, Any]:
+        payload = self._post(
+            "/v1/billing_portal/sessions",
+            {"customer": customer_id, "return_url": return_url},
+            idempotency_key,
+        )
+        self._require_response_string(payload, "id", "bps_")
+        self._require_session_url(payload)
+        return payload
+
     def get_subscription(self, subscription_id: str) -> dict[str, Any] | None:
         return self._get(f"/v1/subscriptions/{subscription_id}",
                          [("expand[]", "latest_invoice")])

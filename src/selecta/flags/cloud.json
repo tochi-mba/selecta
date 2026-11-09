@@ -30,6 +30,15 @@
     "billing.checkout": {
       "label": "Plan checkout",
       "about": "Start or change a paid Selecta Cloud subscription.",
+      "routes": ["POST /api/billing/checkout"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "billing"
+    },
+    "billing.portal": {
+      "label": "Subscription portal",
+      "about": "Manage or cancel an existing paid Selecta Cloud subscription.",
+      "routes": ["POST /api/billing/portal"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "billing"

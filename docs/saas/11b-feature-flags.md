@@ -140,6 +140,13 @@ Support overrides are tied to the case or workspace in the assignment's scope, e
 
 Flags of kind `beta` can be switched on by users themselves in Settings, under Labs. A beta reaches a user only when every earlier layer allows it (build, mode, plan, rules) **and** the user opted in, so a rule or kill switch always wins and nobody gets a feature their plan doesn't include. Opting out is instant. The Labs list shows only betas the user's plan includes, with a short note on what may change.
 
+**Implementation slice:** Cloud account responses include a server-evaluated feature snapshot and
+plan teaser locks. `/api/account/labs` lists beta features the build, mode, plan and targeting rules
+allow; `PUT /api/account/labs/{flag_id}` records a user's opt-in or opt-out. Preferences are stored
+in `user_flag_preferences`. Only `kind: beta` Cloud flags can be changed there, and opting in
+cannot override a plan gate or a targeting kill switch. The React Labs settings page and a beta
+flag with a shipped capability are still to be built.
+
 ### 11B.11 Every new feature is behind a flag
 
 No cloud feature ships without a registry flag, and the same flag is enforced in three places: the API (routes owned by the flag answer 403 `flag_off`), the workers (job types name their owning flag and are refused at claim), and the site (the page closes up around it, checked by the reflow sweep). The new flags live in a `cloud` area, are cloud-only (`modes: ["cloud"]`), and include at least:

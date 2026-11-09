@@ -41,9 +41,10 @@ actual route, caller, tests and ADR status rather than inferring behavior from a
 
 The branch has an early Cloud API slice, but it is not a complete SaaS product. The API currently
 supports readiness, account onboarding, Free storage initialization, account/entitlement reads,
-and sign-out-everywhere. It does not yet accept audio uploads, run remote workers, handle Stripe
-events, or provide the Cloud UI. The schema migrations are tested on SQLite; production PostgreSQL
-and row-level security still need implementation and verification.
+targeted feature snapshots, Labs opt-ins, and sign-out-everywhere. The feature snapshot is returned
+from `/api/account`; beta opt-ins use `/api/account/labs`. It does not yet accept audio uploads, run
+remote workers, handle Stripe events, or provide the Cloud UI. The schema migrations are tested on
+SQLite; production PostgreSQL and row-level security still need implementation and verification.
 
 ## Set up and run locally
 

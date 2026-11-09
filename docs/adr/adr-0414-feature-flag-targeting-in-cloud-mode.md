@@ -1,7 +1,7 @@
 # ADR-0414 - Feature-flag targeting in cloud mode
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/10 Implemented; 0/10 In progress; 10/10 Not started.
+- **Implementation:** 0/10 Implemented; 1/10 In progress; 9/10 Not started.
 - **Independent verification:** 0/10 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 4. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -13,7 +13,7 @@
 
 ADR-0390 built one registry for about 90 features, read once per process from `SELECTA_FLAGS`, enforced on routes and background work, with pages that close up around features that are off. It decided flags are developer-only with no switch page. The owner now wants to turn features off for specific users or whole tiers, which needs per-request context and runtime changes.
 
-This ADR records a proposed decision. Nothing in it is implemented or measured yet; numbers come from the proposal and must be re-checked when the work starts.
+The branch now includes Cloud registry flags, per-account feature snapshots and stored Labs preferences. Runtime admin targeting, cross-instance rule propagation, the Labs UI and independent verification remain incomplete.
 
 ## Decision
 

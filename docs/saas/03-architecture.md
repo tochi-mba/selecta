@@ -22,13 +22,13 @@ The branch now has a first executable Cloud slice: `selecta.api:serve` selects t
 `SELECTA_MODE=cloud`; the Cloud app requires PostgreSQL, explicit AuthKit issuer/audience settings,
 and host/origin allowlists; it starts no local watcher or audio worker. It exposes liveness and
 migration-aware readiness, verified-email and age-confirmed account provisioning, Free-plan storage initialization,
-account/entitlement reads, and sign-out-everywhere. The onboarding route is owned by
-`cloud.signups` in the shared flag registry. `selecta db upgrade` applies the checked-in Alembic
+account/entitlement reads with per-user feature decisions, Labs opt-ins, and sign-out-everywhere.
+The onboarding route is owned by `cloud.signups` in the shared flag registry. `selecta db upgrade` applies the checked-in Alembic
 schema to the configured PostgreSQL database.
 
 The automated Cloud bootstrap test guards against the local startup hooks running in Cloud mode.
 
-The shared migration set currently contains 45 tables and has been exercised through SQLite
+The shared migration set currently contains 49 tables and has been exercised through SQLite
 upgrade, schema comparison and rollback while preserving a legacy `songs` table. PostgreSQL
 migration execution and row-level security are not yet verified or implemented. Upload APIs,
 worker gateway routes, plan-targeted feature decisions, Stripe checkout/webhooks, and the Cloud UI

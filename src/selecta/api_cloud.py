@@ -26,6 +26,7 @@ from selecta.flags import guard as flag_guard
 from selecta.flags import rules as flag_rules
 from selecta.flags import targeting
 from selecta.flags.matching import Context
+from selecta.flags.rules import RulesCache
 from selecta.identity import accounts
 from selecta.identity.tokens import (
     Claims,
@@ -36,7 +37,6 @@ from selecta.identity.tokens import (
 from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
-from selecta.flags.rules import RulesCache
 from selecta.usage import quota
 
 
@@ -349,9 +349,7 @@ def create_cloud_app(
             preferences = flag_rules.user_preferences(conn, principal.user.id)
             now = db_now(conn)
             beta_preferences = {
-                flag_id: True
-                for flag_id, flag in flags.registry().items()
-                if flag.kind == "beta"
+                flag_id: True for flag_id, flag in flags.registry().items() if flag.kind == "beta"
             }
             available = []
             for flag_id, flag in flags.registry().items():
