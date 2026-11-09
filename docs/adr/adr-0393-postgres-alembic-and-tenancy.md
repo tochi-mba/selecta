@@ -1,7 +1,7 @@
 # ADR-0393 - PostgreSQL system of record, Alembic migrations and workspace tenancy
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
+- **Implementation:** 0/5 Implemented; 1/5 In progress; 4/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 1. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -13,7 +13,7 @@
 
 SQLite runs its whole schema on every connect, migrations are ad hoc `ALTER TABLE`s with no version table, some modules create tables lazily, and songs are keyed by absolute file paths. A multi-tenant service needs real migrations, tenant scoping and a server database.
 
-This ADR records a proposed decision. Nothing in it is implemented or measured yet; numbers come from the proposal and must be re-checked when the work starts.
+The branch now registers the SaaS table declarations and contains an initial two-revision Alembic schema. SQLite upgrade/rollback has a test; PostgreSQL migration, tenant query enforcement and RLS remain incomplete.
 
 ## Decision
 

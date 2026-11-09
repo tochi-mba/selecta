@@ -1,7 +1,7 @@
 # ADR-0392 - Two runtime modes, one codebase
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
+- **Implementation:** 0/5 Implemented; 2/5 In progress; 3/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 1. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -13,7 +13,7 @@
 
 One codebase must serve a single-user Windows app and a multi-tenant cloud service. Today the app factory starts background threads, a seam-worker subprocess, a folder watcher and local-only middleware unconditionally.
 
-This ADR records a proposed decision. Nothing in it is implemented or measured yet; numbers come from the proposal and must be re-checked when the work starts.
+The first Cloud API factory and `SELECTA_MODE` dispatch are now present. Mode-specific UI, worker placement, persistence wiring beyond the Cloud bootstrap, and both-mode parity evidence remain incomplete.
 
 ## Decision
 

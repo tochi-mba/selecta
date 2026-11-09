@@ -40,21 +40,9 @@ LUCY_MODEL_CLASSES = ("haiku", "sonnet", "opus")
 # concurrency of its own: it runs only when the other lanes leave room, within its daily budget.
 LANES = ("interactive", "standard")
 
-# Cloud features the catalogue may name before they have a registry entry. Take one out as soon
-# as its flag is added to `src/selecta/flags/*.json`; `problems()` fails until you do.
-PLANNED_FLAGS = frozenset(
-    {
-        "cloud.uploads",
-        "cloud.signups",
-        "billing.checkout",
-        "rooms",
-        "rooms.votes",
-        "rooms.display",
-        "devices.remote_control",
-        "lucy.deep_plan",
-        "account.data_export",
-    }
-)
+# Reserved for plan-gated capabilities whose registry flags have not been added yet. Registered
+# flags must be enforced by the shared catalogue and are never listed here.
+PLANNED_FLAGS = frozenset()
 
 
 class StemAccess(enum.StrEnum):

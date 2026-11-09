@@ -180,3 +180,18 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `tools.set_mix` | **Whole-set render.** Render a planned set straight to one file from the command line. |  |
 | `tools.stem_preview` | **Stem preview.** Hear two songs' stems side by side from the command line. | `stems` |
 | `tools.old_planner` | **Rolling set planner.** The original rolling set plan, before mix ideas. |  |
+
+## Cloud services
+
+| Flag | What it is | Needs |
+|---|---|---|
+| `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
+| `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
+| `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
+| `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. |  |
+| `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
+| `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |
+| `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |
+| `lucy.deep_plan` | **Lucy deep planning.** Use Lucy's premium planning model and larger plan allowance. | `lucy` |
+| `account.data_export` | **Account data export.** Download a portable copy of account data and workspace content. |  |
+| `admin.console` | **Staff console.** Show internal tools to authenticated staff with the required permission. |  |

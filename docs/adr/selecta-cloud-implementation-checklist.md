@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 0 Implemented, 0 In progress, 130 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 0 Implemented, 3 In progress, 127 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -16,15 +16,15 @@
 
 ## [ADR-0392 - Two runtime modes, one codebase](adr-0392-two-runtime-modes.md)
 
-- [ ] **SC-0392-01 - Mode switch.** Acceptance: App factory selects adapters from `SELECTA_MODE`; default `local`. Required verification: Unit tests for both modes. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0392-02 - No local side effects in cloud.** Acceptance: Cloud mode starts no watcher, warm-up or worker threads and never calls `forget_unfinished()`. Required verification: Integration test asserts no threads/subprocesses at start. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0392-01 - Mode switch.** Acceptance: App factory selects adapters from `SELECTA_MODE`; default `local`. Required verification: Unit tests for both modes. Implementation: In progress; cloud `serve()` selection and API factory exist; both-mode selection tests remain. Independently verified: No.
+- [ ] **SC-0392-02 - No local side effects in cloud.** Acceptance: Cloud mode starts no watcher, warm-up or worker threads and never calls `forget_unfinished()`. Required verification: Integration test asserts no threads/subprocesses at start. Implementation: In progress; Cloud factory has no local worker startup; the side-effect integration test remains. Independently verified: No.
 - [ ] **SC-0392-03 - Local parity.** Acceptance: All existing Python and Playwright tests pass in local mode. Required verification: CI. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0392-04 - Copy layer.** Acceptance: User-facing strings that mention 'this PC' come from a mode-keyed copy layer. Required verification: Vitest snapshot per mode. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0392-05 - Linux CI for cloud mode.** Acceptance: A Linux job runs the cloud-mode test set. Required verification: CI. Implementation: Not started; Independently verified: No.
 
 ## [ADR-0393 - PostgreSQL system of record, Alembic migrations and workspace tenancy](adr-0393-postgres-alembic-and-tenancy.md)
 
-- [ ] **SC-0393-01 - Alembic baseline.** Acceptance: Baseline migration reproduces today's schema on SQLite and Postgres. Required verification: Migration up/down test on both. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0393-01 - Alembic baseline.** Acceptance: Baseline migration reproduces today's schema on SQLite and Postgres. Required verification: Migration up/down test on both. Implementation: In progress; 45 shared tables and two revisions are checked in, with SQLite upgrade/compare/rollback coverage; PostgreSQL execution remains. Independently verified: No.
 - [ ] **SC-0393-02 - workspace_id everywhere.** Acceptance: All tenant tables carry `workspace_id`; queries go through repositories that require it. Required verification: Static check plus cross-tenant suite. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0393-03 - RLS policies.** Acceptance: Postgres policies deny rows from other workspaces even if a query forgets the filter. Required verification: Integration test with a deliberately unscoped query. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0393-04 - Local upgrade with backup.** Acceptance: First start after upgrade backs up the SQLite file, then migrates. Required verification: Upgrade test from a copy of a real local database. Implementation: Not started; Independently verified: No.

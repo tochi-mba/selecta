@@ -1,0 +1,83 @@
+{
+  "area": "Cloud services",
+  "flags": {
+    "cloud.signups": {
+      "label": "New accounts",
+      "about": "Allow new Cloud users to complete account onboarding.",
+      "routes": ["POST /api/onboarding/complete"],
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    },
+    "cloud.uploads": {
+      "label": "Cloud uploads",
+      "about": "Upload private audio files to a Cloud workspace.",
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "storage"
+    },
+    "billing.checkout": {
+      "label": "Plan checkout",
+      "about": "Start or change a paid Selecta Cloud subscription.",
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "billing"
+    },
+    "devices.remote_control": {
+      "label": "Remote playback control",
+      "about": "Control the account's active playback session from another device.",
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "playback"
+    },
+    "rooms": {
+      "label": "Rooms",
+      "about": "Let Premium hosts share a request room with guests.",
+      "modes": ["cloud"],
+      "when_locked": "teaser",
+      "kind": "release",
+      "owner": "rooms"
+    },
+    "rooms.votes": {
+      "label": "Room votes",
+      "about": "Let room guests vote on song requests.",
+      "requires": ["rooms"],
+      "modes": ["cloud"],
+      "when_locked": "teaser",
+      "kind": "release",
+      "owner": "rooms"
+    },
+    "rooms.display": {
+      "label": "Room display",
+      "about": "Pair a screen to show the room QR code and playback queue.",
+      "requires": ["rooms"],
+      "modes": ["cloud"],
+      "when_locked": "teaser",
+      "kind": "release",
+      "owner": "rooms"
+    },
+    "lucy.deep_plan": {
+      "label": "Lucy deep planning",
+      "about": "Use Lucy's premium planning model and larger plan allowance.",
+      "requires": ["lucy"],
+      "modes": ["cloud"],
+      "when_locked": "teaser",
+      "kind": "release",
+      "owner": "ai"
+    },
+    "account.data_export": {
+      "label": "Account data export",
+      "about": "Download a portable copy of account data and workspace content.",
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "privacy"
+    },
+    "admin.console": {
+      "label": "Staff console",
+      "about": "Show internal tools to authenticated staff with the required permission.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    }
+  }
+}

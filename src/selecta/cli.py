@@ -15,11 +15,51 @@ from rich.table import Table
 
 from selecta import db
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, load_settings
+from selecta.persistence import make_engine
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+database_app = typer.Typer(no_args_is_help=True, add_completion=False)
+app.add_typer(database_app, name="db", help="Cloud database schema operations.")
 console = Console()
 DEFAULT_MIX_OUTPUT = Path("out/mix.flac")
 DEFAULT_REEL_OUTPUT = Path("reels/reel-1")
+
+
+def _cloud_database_engine():
+    """Cloud database commands must never fall back to the user's local music database."""
+    url = os.environ.get("SELECTA_DATABASE_URL", "").strip()
+    if not url.startswith(("postgresql://", "postgresql+psycopg://")):
+        raise typer.BadParameter(
+            "Set SELECTA_DATABASE_URL to the Cloud PostgreSQL database; local SQLite is not "
+            "upgraded by this command."
+        )
+    return make_engine(url)
+
+
+@database_app.command("upgrade")
+def database_upgrade() -> None:
+    """Apply the checked-in Alembic migrations to the configured Cloud PostgreSQL database."""
+    from selecta.persistence.migrate import current, head, upgrade
+
+    engine = _cloud_database_engine()
+    try:
+        before = current(engine)
+        upgrade(engine)
+        console.print(f"Cloud database schema: {before or 'empty'} → {head()}.")
+    finally:
+        engine.dispose()
+
+
+@database_app.command("current")
+def database_current() -> None:
+    """Show the configured Cloud database revision and the revision expected by this checkout."""
+    from selecta.persistence.migrate import current, head
+
+    engine = _cloud_database_engine()
+    try:
+        console.print(f"Database: {current(engine) or 'empty'}; code: {head() or 'empty'}.")
+    finally:
+        engine.dispose()
 
 
 def _open():
@@ -419,7 +459,7 @@ def web(
     open_browser: bool = typer.Option(True, "--open/--no-open"),
     reload: bool = typer.Option(False, "--reload", help="Restart as the code changes."),
 ) -> None:
-    """Open the local Selecta web app."""
+    """Run Selecta in the selected mode (local app or Cloud API)."""
     import webbrowser
 
     import uvicorn
@@ -430,13 +470,18 @@ def web(
     if off:
         shown = ", ".join(off[:12]) + (f" and {len(off) - 12} more" if len(off) > 12 else "")
         console.print(f"Turned off in this build: {shown}. `selecta flags` says why.")
+    from selecta.modes import Mode, current_mode
+
+    mode = current_mode()
     url = f"http://127.0.0.1:{port}/"
-    if open_browser:
+    if mode is Mode.LOCAL and open_browser:
         webbrowser.open(url)
+    elif mode is Mode.CLOUD:
+        console.print(f"Starting Selecta Cloud API on port {port}; web assets are hosted separately.")
     uvicorn.run(
         "selecta.api:serve",
         factory=True,
-        host="127.0.0.1",
+        host="127.0.0.1" if mode is Mode.LOCAL else os.environ.get("SELECTA_BIND_HOST", "0.0.0.0"),
         port=port,
         log_level="warning",
         reload=reload,

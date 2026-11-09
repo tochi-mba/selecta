@@ -11,7 +11,18 @@ import importlib
 
 from selecta.persistence import metadata
 
-TABLE_MODULES: tuple[str, ...] = ()
+TABLE_MODULES: tuple[str, ...] = (
+    "selecta.identity.schema",
+    "selecta.authz.schema",
+    "selecta.billing.schema",
+    "selecta.usage.schema",
+    "selecta.storage.schema",
+    "selecta.work.schema",
+    "selecta.ai.schema",
+    "selecta.lucy.schema",
+    "selecta.playback.schema",
+    "selecta.rooms.schema",
+)
 
 
 def load_all_tables() -> None:

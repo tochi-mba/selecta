@@ -229,7 +229,14 @@ def create_app(
 
 
 def serve() -> FastAPI:
-    """The app as `selecta web` runs it. Only this starts the worker, not importing the file."""
+    """The app as `selecta web` runs it; only local mode starts local workers."""
+    from selecta.modes import Mode, current_mode
+
+    if current_mode() is Mode.CLOUD:
+        from selecta.api_cloud import create_cloud_app
+
+        return create_cloud_app()
+
     from selecta.homes import gather_if_needed
 
     gather_if_needed(load_settings().home)

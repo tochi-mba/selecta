@@ -447,6 +447,9 @@ class Uploads:
         if probe.size is not None and probe.size != session.declared_size:
             reason = "The file changed size while it was being checked."
             return self._finish(conn, session, Status.REJECTED, reason)
+        if session.sha256 is not None and probe.sha256 != session.sha256:
+            reason = "The file contents changed while they were being checked."
+            return self._finish(conn, session, Status.REJECTED, reason)
         limits = self.limits.limits(conn, session.workspace_id)
         if limits.max_duration_s is not None and probe.duration_s > limits.max_duration_s:
             reason = (
@@ -496,7 +499,6 @@ class Uploads:
                 content_type=FORMAT_TYPES.get(probe.format, DEFAULT_CONTENT_TYPE),
                 metadata={"sha256": probe.sha256},
             )
-            return True
         except R2NotFound:
             pass
         # An earlier attempt may have copied it and removed the staged file before its
@@ -507,6 +509,10 @@ class Uploads:
             return False
         if head.size != session.declared_size:
             raise UploadError(f"The original for upload {session.id} isn't the size it should be.")
+        if head.metadata.get("sha256") != probe.sha256:
+            raise UploadError(
+                f"The original for upload {session.id} doesn't have the expected content hash."
+            )
         return True
 
     def reject(

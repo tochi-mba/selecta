@@ -50,6 +50,12 @@ def upgrade(engine: Engine, target: str = "head") -> None:
         command.upgrade(_config(connection), target)
 
 
+def downgrade(engine: Engine, target: str = "base") -> None:
+    """Roll schema revisions back to `target`; callers must arrange their own data backup."""
+    with engine.begin() as connection:
+        command.downgrade(_config(connection), target)
+
+
 def pending_changes(engine: Engine) -> list:
     """What differs between the declared tables and this database (empty when they agree)."""
     load_all_tables()
