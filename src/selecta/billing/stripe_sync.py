@@ -56,6 +56,7 @@ PAST_DUE_GRACE_SECONDS = 7 * 86_400
 OUTAGE_HOLD_SECONDS = 72 * 3_600
 RENEWAL_SLACK_SECONDS = 2 * 3_600  # a renewal's webhook can trail the period end a little
 GRANTING = frozenset({"active", "trialing"})
+RENEWING = GRANTING  # snapshot reasons whose end Stripe normally extends with a renewal
 ENDED = frozenset({"canceled", "unpaid", "incomplete_expired", "paused", "incomplete"})
 
 
@@ -493,11 +494,12 @@ def effective_entitlement(
                 snapshot.plan_id, snapshot.plan_version, snapshot.source
             )
         elif (
-            snapshot.plan_id != "free"
+            snapshot.reason in RENEWING
             and snapshot.verified_at < snapshot.valid_until
             and now < snapshot.valid_until + OUTAGE_HOLD_SECONDS
         ):
-            # Nothing from Stripe since the plan's end: keep it while Stripe is unreachable.
+            # A renewal was due and Stripe hasn't been heard from since: keep the plan while
+            # Stripe is unreachable. A known end (cancellation, past-due grace) is never held.
             plan_id, plan_version, source, held = (
                 snapshot.plan_id, snapshot.plan_version, snapshot.source, True
             )
