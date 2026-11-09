@@ -263,6 +263,8 @@ function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api:
   const [busyId, setBusyId] = useState('');
   const [playback, setPlayback] = useState<{ id: string; name: string; url: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const playbackGeneration = useRef(0);
+  useEffect(() => () => { playbackGeneration.current += 1; }, [workspaceId]);
   const refreshedUrl = useRef(false);
   const restorePlayback = useRef<{ time: number; wasPlaying: boolean } | null>(null);
   const load = useCallback(async (cursor?: string, append = false) => {
@@ -288,16 +290,24 @@ function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api:
     finally { setBusyId(''); }
   };
   const listen = async (asset: Asset) => {
+    const generation = ++playbackGeneration.current;
+    restorePlayback.current = null;
+    setPlayback(null);
     setBusyId(asset.id); setError('');
     try {
       const result = await api<{ url: string }>(`/assets/${encodeURIComponent(asset.id)}/playback-url`, {}, workspaceId);
+      if (generation !== playbackGeneration.current) return;
       refreshedUrl.current = false;
       restorePlayback.current = null;
       setPlayback({ id: asset.id, name: asset.name, url: result.url });
-    } catch (problem) { setError((problem as Error).message); }
-    finally { setBusyId(''); }
+    } catch (problem) {
+      if (generation === playbackGeneration.current) setError((problem as Error).message);
+    } finally {
+      if (generation === playbackGeneration.current) setBusyId('');
+    }
   };
   const refreshPlaybackUrl = async () => {
+    const generation = playbackGeneration.current;
     const current = playback;
     const audio = audioRef.current;
     if (!current) return;
@@ -313,8 +323,10 @@ function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api:
     setError('');
     try {
       const result = await api<{ url: string }>(`/assets/${encodeURIComponent(current.id)}/playback-url`, {}, workspaceId);
+      if (generation !== playbackGeneration.current) return;
       setPlayback({ ...current, url: result.url });
     } catch (problem) {
+      if (generation !== playbackGeneration.current) return;
       restorePlayback.current = null;
       setError((problem as Error).message || 'This playback link could not be refreshed.');
     }
@@ -328,9 +340,10 @@ function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api:
       audio.currentTime = restore.time;
     }
     if (restore.wasPlaying) void audio.play().catch(() => {});
+    else audio.pause();
   };
   return <section className="cloud-library"><div className="cloud-library-heading"><div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Listen to an original track here. Cloud mixes and prepared playback files are coming next.</p></div><div><button onClick={() => void load()} disabled={loading}>Refresh</button><button className="primary" onClick={() => go('uploads')}>Upload tracks</button></div></div>
-    {playback && <section className="cloud-card cloud-library-player"><div><p className="cloud-eyebrow">NOW PLAYING</p><strong>{playback.name}</strong></div><audio ref={audioRef} controls autoPlay src={playback.url} onLoadedMetadata={restoreAfterUrlRefresh} onError={() => void refreshPlaybackUrl()} /></section>}
+    {playback && <section className="cloud-card cloud-library-player"><div><p className="cloud-eyebrow">NOW PLAYING</p><strong>{playback.name}</strong></div><audio ref={audioRef} controls autoPlay={restorePlayback.current?.wasPlaying ?? true} src={playback.url} onLoadedMetadata={restoreAfterUrlRefresh} onError={() => void refreshPlaybackUrl()} /></section>}
     {loading && assets.length === 0 ? <p>Loading your library…</p> : assets.length === 0 ? <div className="cloud-card"><h2>Your library is empty</h2><p>Start by uploading tracks from your device.</p><button className="primary" onClick={() => go('uploads')}>Add tracks</button></div> : <>
       <div className="cloud-library-list">{assets.map((asset) => <article className="cloud-library-row" key={asset.id}><span className="cloud-library-icon" aria-hidden="true">♪</span><div className="cloud-library-meta"><strong>{asset.name}</strong><span>{asset.format?.toUpperCase() ?? 'Audio'} · {bytes(asset.size)}{asset.duration_seconds ? ` · ${Math.round(asset.duration_seconds / 60)} min` : ''}</span></div><button onClick={() => void listen(asset)} disabled={busyId === asset.id}>{busyId === asset.id ? 'Opening…' : playback?.id === asset.id ? 'Play again' : 'Listen'}</button><button onClick={() => void remove(asset)} disabled={busyId === asset.id}>Remove</button></article>)}</div>
       {nextCursor && <button onClick={() => void load(nextCursor, true)} disabled={loading}>{loading ? 'Loading…' : 'Load more'}</button>}
