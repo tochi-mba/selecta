@@ -63,7 +63,7 @@ The policy is hierarchical: **pool → lane → account → job**.
 
 Lane weights: interactive 4, standard 1, speculative strictly last. Lanes are chosen by the same virtual-time rule as accounts, charged in estimated compute seconds, so when both are backlogged interactive gets about 80% of the pool's compute time and standard at least 20%: the weights *are* the floor that stops a flood of interactive work from freezing imports and exports. Raising standard's weight to 2 makes its floor 33%.
 
-**Headroom for interactive work.** Speculative attempts may never occupy the last free slot of a pool (at least one slot, or 10% of slots, whichever is larger, stays free of speculative work), and they are the one kind of work that may be preempted across accounts ([§4A.5](#4a5-mapping-todays-ranks-onto-the-new-policy)).
+**Headroom for interactive work.** In a pool with two or more slots, speculative attempts may never occupy the last free slots: at least one slot, or 10% of slots, whichever is larger, stays free of speculative work. A pool with a single slot (the local app's one runner thread) has no headroom to keep, so speculative work runs there whenever the pool is otherwise idle and gives way at its next `check_in()` the moment interactive or standard work arrives. Speculative attempts are also the one kind of work that may be preempted across accounts ([§4A.5](#4a5-mapping-todays-ranks-onto-the-new-policy)).
 
 **Accounts inside a lane: weighted fair share with virtual time** (start-time fair queuing).
 - Each `(pool, lane, workspace)` with waiting work has a virtual time `V`.

@@ -2,6 +2,8 @@
 
 ## 15. Stress testing and verification
 
+This chapter covers load, chaos and release gates. Module-by-module correctness and security tests, with every edge case, are in [§18](18-test-plan.md#18-test-plan-every-edge-case-every-layer).
+
 ### 15.1 What must be proven
 
 1. Selecta stays usable with many users online.

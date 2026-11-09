@@ -124,4 +124,4 @@ ADR-0390 (feature flags) already exists; the new set starts at 0391.
 
 ---
 
-[← 16-edge-cases.md](16-edge-cases.md) · [Contents](README.md#chapters) · [sources.md →](sources.md)
+[← 16-edge-cases.md](16-edge-cases.md) · [Contents](README.md#chapters) · [18-test-plan.md →](18-test-plan.md)

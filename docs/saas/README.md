@@ -86,6 +86,7 @@
 | [15-stress-testing.md](15-stress-testing.md) | Invariants, tools, the load ladder, scenarios and thresholds |
 | [16-edge-cases.md](16-edge-cases.md) | Product and correctness edge cases by area |
 | [17-roadmap-and-risks.md](17-roadmap-and-risks.md) | Phases, risks, open questions, repo layout and the ADR list |
+| [18-test-plan.md](18-test-plan.md) | Every edge case and test per module, coverage gates, security suite and CI wiring |
 | [sources.md](sources.md) | Where the facts and prices came from |
 | [licence-register.md](licence-register.md) | Every model and key dependency, its licence and whether cloud mode may use it |
 
