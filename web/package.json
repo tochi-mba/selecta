@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
+    "@workos-inc/authkit-react": "^0.16.3",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest",

@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 0 Implemented, 4 In progress, 126 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 0 Implemented, 6 In progress, 124 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -24,7 +24,7 @@
 
 ## [ADR-0393 - PostgreSQL system of record, Alembic migrations and workspace tenancy](adr-0393-postgres-alembic-and-tenancy.md)
 
-- [ ] **SC-0393-01 - Alembic baseline.** Acceptance: Baseline migration reproduces today's schema on SQLite and Postgres. Required verification: Migration up/down test on both. Implementation: In progress; 45 shared tables and two revisions are checked in, with SQLite upgrade/compare/rollback coverage; PostgreSQL execution remains. Independently verified: No.
+- [ ] **SC-0393-01 - Alembic baseline.** Acceptance: Baseline migration reproduces today's schema on SQLite and Postgres. Required verification: Migration up/down test on both. Implementation: In progress; 50 shared tables and four revisions are checked in, with SQLite upgrade/compare/rollback coverage; PostgreSQL execution remains. Independently verified: No.
 - [ ] **SC-0393-02 - workspace_id everywhere.** Acceptance: All tenant tables carry `workspace_id`; queries go through repositories that require it. Required verification: Static check plus cross-tenant suite. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0393-03 - RLS policies.** Acceptance: Postgres policies deny rows from other workspaces even if a query forgets the filter. Required verification: Integration test with a deliberately unscoped query. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0393-04 - Local upgrade with backup.** Acceptance: First start after upgrade backs up the SQLite file, then migrates. Required verification: Upgrade test from a copy of a real local database. Implementation: Not started; Independently verified: No.
@@ -105,10 +105,10 @@
 
 ## [ADR-0403 - Stripe billing, reconciliation and UK VAT](adr-0403-stripe-billing-and-uk-vat.md)
 
-- [ ] **SC-0403-01 - Webhook store and processing.** Acceptance: Signature verified; duplicates ignored; events processed by re-fetching. Required verification: Integration tests with Stripe test mode. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0403-01 - Webhook store and processing.** Acceptance: Signature verified; duplicates ignored; events processed by re-fetching. Required verification: Integration tests with Stripe test mode. Implementation: In progress; signed endpoint, idempotent event store, current-state re-fetch, entitlement and quota updates are wired; webhook route integration and Stripe test-mode runs remain. Independently verified: No.
 - [ ] **SC-0403-02 - Scrambled-event replay.** Acceptance: Hundreds of thousands of shuffled, duplicated and delayed events produce the correct final entitlements. Required verification: Replay test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0403-03 - Nightly reconciliation.** Acceptance: Drift is detected and corrected with an audit entry. Required verification: Integration test. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0403-04 - UK checkout consent.** Acceptance: Consent text is captured and stored with the subscription. Required verification: Playwright test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0403-04 - UK checkout consent.** Acceptance: Consent text is captured and stored with the subscription. Required verification: Playwright test. Implementation: In progress; checkout requires a server-versioned consent plus explicit immediate-access and cancellation-right acknowledgements and stores the accepted version; consent copy, UI and Playwright coverage remain. Independently verified: No.
 - [ ] **SC-0403-05 - Tax setup.** Acceptance: Stripe Tax configured for UK; EU sales blocked until OSS or merchant of record is decided. Required verification: Configuration review. Implementation: Not started; Independently verified: No.
 
 ## [ADR-0404 - Lucy AI gateway with server-owned model routing](adr-0404-lucy-ai-gateway.md)

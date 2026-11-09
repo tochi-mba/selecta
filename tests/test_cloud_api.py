@@ -157,6 +157,168 @@ def test_sign_out_everywhere_revokes_the_current_token(cloud):
         assert response.json()["detail"]["code"] == "session_revoked"
 
 
+def test_checkout_uses_server_price_consent_and_idempotent_customer(cloud, monkeypatch):
+    from selecta.billing import api as billing_api
+    from selecta.billing.schema import checkout_consents, stripe_customers
+
+    class FakeStripe:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def create_customer(self, **_kwargs):
+            return {"id": "cus_cloud_test"}
+
+        def create_checkout_session(self, **kwargs):
+            assert kwargs["price_id"] == "price_standard_month"
+            assert kwargs["success_url"].startswith("https://app.test/account/billing")
+            return {"id": "cs_cloud_test", "url": "https://checkout.stripe.com/c/pay/test"}
+
+    monkeypatch.setattr(billing_api, "HttpStripeClient", FakeStripe)
+    monkeypatch.setenv("SELECTA_STRIPE_SECRET_KEY", "sk_test_unused")
+    monkeypatch.setenv(
+        "SELECTA_STRIPE_PRICES", '{"price_standard_month":{"plan":"standard","interval":"month"}}'
+    )
+    monkeypatch.setenv("SELECTA_CHECKOUT_CONSENT_VERSION", "terms-2026-11")
+    app, engine, _ = cloud
+    headers = {
+        "Authorization": "Bearer signed-token",
+        "Origin": "https://app.test",
+        "Idempotency-Key": "checkout-test-1",
+    }
+    with TestClient(app) as client:
+        workspace = client.post(
+            "/api/onboarding/complete", headers=headers, json={"age_confirmed": True}
+        ).json()["workspace_id"]
+        headers["X-Workspace-ID"] = workspace
+        missing_consent = client.post(
+            "/api/billing/checkout",
+            headers=headers,
+            json={
+                "plan": "standard",
+                "accepted_terms": False,
+                "consent_version": "terms-2026-11",
+                "requested_immediate_access": True,
+                "acknowledged_cancellation_right": True,
+            },
+        )
+        assert missing_consent.status_code == 400
+        response = client.post(
+            "/api/billing/checkout",
+            headers=headers,
+            json={
+                "plan": "standard",
+                "accepted_terms": True,
+                "consent_version": "terms-2026-11",
+                "requested_immediate_access": True,
+                "acknowledged_cancellation_right": True,
+            },
+        )
+    assert response.status_code == 200
+    assert response.json()["url"] == "https://checkout.stripe.com/c/pay/test"
+    with engine.connect() as conn:
+        assert (
+            conn.execute(sa.select(stripe_customers.c.stripe_customer_id)).scalar_one()
+            == "cus_cloud_test"
+        )
+        assert (
+            conn.execute(sa.select(sa.func.count()).select_from(checkout_consents)).scalar_one()
+            == 1
+        )
+
+
+def test_stripe_webhook_rechecks_subscription_and_updates_plan_and_quota(cloud, monkeypatch):
+    import hashlib
+    import hmac
+    import json
+    import time
+
+    from selecta.billing import api as billing_api
+    from selecta.billing.schema import entitlement_snapshots, stripe_events, subscriptions
+    from selecta.usage.schema import quota_state
+
+    workspace_ref = {"id": ""}
+
+    class FakeStripe:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def get_subscription(self, _subscription_id):
+            return {
+                "id": "sub_webhook_test",
+                "customer": "cus_webhook_test",
+                "status": "active",
+                "metadata": {"workspace_id": workspace_ref["id"]},
+                "items": {"data": [{"price": {"id": "price_standard_month"}}]},
+            }
+
+    monkeypatch.setattr(billing_api, "HttpStripeClient", FakeStripe)
+    monkeypatch.setenv("SELECTA_STRIPE_SECRET_KEY", "sk_test_unused")
+    monkeypatch.setenv("SELECTA_STRIPE_WEBHOOK_SECRETS", "whsec_test")
+    monkeypatch.setenv(
+        "SELECTA_STRIPE_PRICES", '{"price_standard_month":{"plan":"standard","interval":"month"}}'
+    )
+    app, engine, _ = cloud
+    headers = {"Authorization": "Bearer signed-token"}
+    with TestClient(app) as client:
+        onboarding = client.post(
+            "/api/onboarding/complete", headers=headers, json={"age_confirmed": True}
+        ).json()
+        workspace_ref["id"] = onboarding["workspace_id"]
+        event = {
+            "id": "evt_webhook_test",
+            "type": "customer.subscription.updated",
+            "created": int(time.time()),
+            "livemode": False,
+            "data": {
+                "object": {
+                    "object": "subscription",
+                    "id": "sub_webhook_test",
+                    "customer": "cus_webhook_test",
+                    "metadata": {"workspace_id": workspace_ref["id"]},
+                }
+            },
+        }
+        raw = json.dumps(event, separators=(",", ":")).encode()
+        timestamp = str(int(time.time()))
+        digest = hmac.new(
+            b"whsec_test", timestamp.encode() + b"." + raw, hashlib.sha256
+        ).hexdigest()
+        webhook_headers = {
+            "Stripe-Signature": f"t={timestamp},v1={digest}",
+            "Content-Type": "application/json",
+        }
+        invalid = client.post(
+            "/api/webhooks/stripe",
+            content=raw,
+            headers={"Stripe-Signature": f"t={timestamp},v1=bad"},
+        )
+        assert invalid.status_code == 400
+        response = client.post("/api/webhooks/stripe", content=raw, headers=webhook_headers)
+        duplicate = client.post("/api/webhooks/stripe", content=raw, headers=webhook_headers)
+    assert response.status_code == 200
+    assert response.json()["status"] == "processed"
+    assert duplicate.json()["duplicate"] is True
+    with engine.connect() as conn:
+        assert conn.execute(sa.select(sa.func.count()).select_from(stripe_events)).scalar_one() == 1
+        assert conn.execute(sa.select(sa.func.count()).select_from(subscriptions)).scalar_one() == 1
+        assert (
+            conn.execute(
+                sa.select(entitlement_snapshots.c.plan_id)
+                .where(entitlement_snapshots.c.workspace_id == workspace_ref["id"])
+                .order_by(entitlement_snapshots.c.version.desc())
+            ).scalar_one()
+            == "standard"
+        )
+        assert (
+            conn.execute(
+                sa.select(quota_state.c.limit_bytes).where(
+                    quota_state.c.workspace_id == workspace_ref["id"]
+                )
+            ).scalar_one()
+            == 50_000_000_000
+        )
+
+
 def test_cloud_settings_refuse_local_or_incomplete_configuration(monkeypatch):
     for key in (
         "SELECTA_DATABASE_URL",

@@ -39,12 +39,16 @@ The accepted Cloud design adds two runtime modes in one codebase. The Cloud path
 until its ADR checklists have implementation and verification evidence. When in doubt, inspect the
 actual route, caller, tests and ADR status rather than inferring behavior from a module name.
 
-The branch has an early Cloud API slice, but it is not a complete SaaS product. The API currently
-supports readiness, account onboarding, Free storage initialization, account/entitlement reads,
-targeted feature snapshots, Labs opt-ins, and sign-out-everywhere. The feature snapshot is returned
-from `/api/account`; beta opt-ins use `/api/account/labs`. It does not yet accept audio uploads, run
-remote workers, handle Stripe events, or provide the Cloud UI. The schema migrations are tested on
-SQLite; production PostgreSQL and row-level security still need implementation and verification.
+The branch has a working Cloud API foundation, but it is not a complete SaaS product. It supports
+readiness, account onboarding, Free storage initialization, account/entitlement reads, targeted
+feature snapshots, Labs opt-ins, sign-out-everywhere, Stripe Checkout and portal sessions, and a
+signature-verified webhook receiver. Checkout prices are selected from `SELECTA_STRIPE_PRICES`; the
+client cannot choose a Stripe price id. The webhook stores events idempotently and re-fetches Stripe
+state before applying entitlements and storage limits. Cloud uploads use workspace-scoped multipart
+sessions, plan limits and atomic quota reservations, with server-side metadata validation and
+acceptance. The remote worker gateway, nightly billing reconciliation/retry worker, and Cloud UI
+are still incomplete. Schema migrations are exercised on SQLite; production PostgreSQL and
+row-level security still need implementation and verification.
 
 ## Set up and run locally
 

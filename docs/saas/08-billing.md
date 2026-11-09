@@ -8,6 +8,29 @@
 - **Stripe Checkout** for purchase, **Customer Portal** for upgrades, downgrades, payment methods, invoices and cancellation, **Stripe Tax** for VAT calculation, **Smart Retries** for failed renewals.
 - A server-side plan catalogue maps Stripe price IDs → `plan_id` and version; the client never sends a plan name that is trusted.
 
+#### Current API implementation
+
+Cloud mode exposes `POST /api/billing/checkout`, `POST /api/billing/portal`, and
+`POST /api/webhooks/stripe`. Checkout accepts a plan and interval, resolves those to a configured
+server-side price, requires the current versioned consent plus explicit immediate-access and
+cancellation-right acknowledgements, and only builds redirects from the configured CORS origin.
+Both session routes require an `Idempotency-Key`; customer records are workspace-scoped. Portal
+access has its own `billing.portal` kill switch so users can still manage or cancel subscriptions
+when new checkout is disabled.
+
+The webhook caps request bodies, verifies the raw-body Stripe signature (supporting secret
+rotation), inserts each event once, ignores unknown event types, and re-fetches Stripe state before
+updating entitlement snapshots and storage limits. A repeated delivery retries an event that is
+still `received` or `failed`. The background retry job and nightly full reconciliation are not yet
+wired, so Stripe outages still require another delivery or operator action. Production PostgreSQL
+and real Stripe test-mode runs remain to be verified.
+
+Configuration: `SELECTA_STRIPE_SECRET_KEY`, `SELECTA_STRIPE_WEBHOOK_SECRETS` (comma-separated
+rotation set), `SELECTA_STRIPE_PRICES` (JSON price-id to plan/version/interval map),
+`SELECTA_CHECKOUT_CONSENT_VERSION`, and optionally `SELECTA_IP_HASH_KEY` and
+`SELECTA_STRIPE_API_VERSION`. The business still has to finish Stripe Tax and the UK-only beta
+sales configuration before taking payments.
+
 ### 8.2 Event handling
 
 - Webhook endpoint verifies the signature, stores the event id in `stripe_events` (unique), returns 200 fast, and a job processes it.

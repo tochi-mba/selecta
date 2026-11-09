@@ -185,9 +185,11 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 
 | Flag | What it is | Needs |
 |---|---|---|
+| `account.labs` | **Labs.** Opt into preview features that your plan is allowed to use. |  |
 | `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
 | `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
+| `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. |  |
 | `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
 | `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |

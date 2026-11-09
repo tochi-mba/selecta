@@ -23,6 +23,13 @@
     "cloud.uploads": {
       "label": "Cloud uploads",
       "about": "Upload private audio files to a Cloud workspace.",
+      "routes": [
+        "POST /api/uploads/plan",
+        "GET /api/uploads",
+        "GET /api/uploads/{session_id}",
+        "POST /api/uploads/{session_id}/parts",
+        "POST /api/uploads/{session_id}/complete"
+      ],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "storage"

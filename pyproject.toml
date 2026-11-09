@@ -70,6 +70,8 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.lint.per-file-ignores]
 "src/selecta/cli.py" = ["B008"]
 "src/selecta/api_cloud.py" = ["B008"]
+"src/selecta/billing/api.py" = ["B008"]
+"src/selecta/storage/api.py" = ["B008"]
 "src/selecta/planner/reel.py" = ["E501"]
 "src/selecta/planner/gridcheck.py" = ["E501"]
 

@@ -18,22 +18,27 @@
 
 ### 4.1.1 Current implementation on the Cloud branch
 
-The branch now has a first executable Cloud slice: `selecta.api:serve` selects the Cloud app when
+The branch now has an executable Cloud slice: `selecta.api:serve` selects the Cloud app when
 `SELECTA_MODE=cloud`; the Cloud app requires PostgreSQL, explicit AuthKit issuer/audience settings,
 and host/origin allowlists; it starts no local watcher or audio worker. It exposes liveness and
 migration-aware readiness, verified-email and age-confirmed account provisioning, Free-plan storage initialization,
-account/entitlement reads with per-user feature decisions, Labs opt-ins, and sign-out-everywhere.
+account/entitlement reads with per-user feature decisions, Labs opt-ins, sign-out-everywhere,
+Stripe Checkout and customer portal sessions, and a signed Stripe webhook receiver that persists
+event ids and re-fetches subscription state before updating entitlement and storage quota.
 The onboarding route is owned by `cloud.signups` in the shared flag registry. `selecta db upgrade` applies the checked-in Alembic
 schema to the configured PostgreSQL database.
 
 The automated Cloud bootstrap test guards against the local startup hooks running in Cloud mode.
 
-The shared migration set currently contains 49 tables and has been exercised through SQLite
+The shared migration set currently contains 50 tables and has been exercised through SQLite
 upgrade, schema comparison and rollback while preserving a legacy `songs` table. PostgreSQL
-migration execution and row-level security are not yet verified or implemented. Upload APIs,
-worker gateway routes, plan-targeted feature decisions, Stripe checkout/webhooks, and the Cloud UI
-remain future implementation work; their service modules and this target diagram are not evidence
-that those flows are live.
+migration execution and row-level security are not yet verified or implemented. Stripe session
+creation and webhook reconciliation are wired, and Cloud uploads can reserve quota, resume
+multipart transfers, validate metadata and accept objects into workspace storage. Nightly billing
+reconciliation, a durable webhook retry worker, Stripe Tax setup and Cloud billing UI remain
+incomplete. Upload completion currently probes audio metadata in API temporary storage; moving that
+work to remote workers remains part of the worker gateway effort. Worker gateway routes and the
+Cloud UI also remain future implementation work.
 
 ### 4.2 Component map
 

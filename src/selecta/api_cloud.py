@@ -21,6 +21,7 @@ from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from selecta import flags
+from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
 from selecta.flags import guard as flag_guard
 from selecta.flags import rules as flag_rules
@@ -37,6 +38,7 @@ from selecta.identity.tokens import (
 from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
+from selecta.storage import api as storage_api
 from selecta.usage import quota
 
 
@@ -430,6 +432,20 @@ def create_cloud_app(
                 conn, principal.user.id, actor_id=principal.user.id
             )
         return {"revoked_before": revoked_before, "message": "Other sessions will expire shortly."}
+
+    billing_api.install_routes(
+        app,
+        engine=engine,
+        allowed_origins=settings.allowed_origins,
+        current_claims=current_claims,
+        principal_for=_principal,
+    )
+    storage_api.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        principal_for=_principal,
+    )
 
     return app
 

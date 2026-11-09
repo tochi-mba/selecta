@@ -50,14 +50,6 @@ stripe_customers = sa.Table(
     sa.Column("created_at", Epoch, nullable=False),
 )
 
-stripe_customers = sa.Table(
-    "stripe_customers",
-    metadata,
-    sa.Column("workspace_id", Id, primary_key=True),
-    sa.Column("stripe_customer_id", sa.String(255), nullable=False, unique=True),
-    sa.Column("created_at", Epoch, nullable=False),
-)
-
 entitlement_snapshots = sa.Table(
     "entitlement_snapshots",
     metadata,

@@ -13,7 +13,7 @@
 
 SQLite runs its whole schema on every connect, migrations are ad hoc `ALTER TABLE`s with no version table, some modules create tables lazily, and songs are keyed by absolute file paths. A multi-tenant service needs real migrations, tenant scoping and a server database.
 
-The branch now registers the SaaS table declarations and contains an initial two-revision Alembic schema. SQLite upgrade/rollback has a test; PostgreSQL migration, tenant query enforcement and RLS remain incomplete.
+The branch registers 50 SaaS table declarations and contains four Alembic revisions, including the Stripe workspace-customer mapping. SQLite upgrade, metadata comparison and rollback are covered while preserving the legacy `songs` table. PostgreSQL migration execution, tenant query enforcement and RLS remain incomplete.
 
 ## Decision
 
@@ -35,7 +35,7 @@ Local libraries upgrade in place with an automatic backup first; cloud data is i
 
 ## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0393-01 - Alembic baseline.** **Acceptance:** Baseline migration reproduces today's schema on SQLite and Postgres. **Required verification:** Migration up/down test on both. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0393-01 - Alembic baseline.** **Acceptance:** Baseline migration reproduces today's schema on SQLite and Postgres. **Required verification:** Migration up/down test on both. **Implementation:** In progress; 50 SaaS tables are declared in four revisions and SQLite upgrade/compare/rollback coverage exists; PostgreSQL remains unverified. **Independently Verified:** No.
 2. **SC-0393-02 - workspace_id everywhere.** **Acceptance:** All tenant tables carry `workspace_id`; queries go through repositories that require it. **Required verification:** Static check plus cross-tenant suite. **Implementation:** Not started; **Independently Verified:** No.
 3. **SC-0393-03 - RLS policies.** **Acceptance:** Postgres policies deny rows from other workspaces even if a query forgets the filter. **Required verification:** Integration test with a deliberately unscoped query. **Implementation:** Not started; **Independently Verified:** No.
 4. **SC-0393-04 - Local upgrade with backup.** **Acceptance:** First start after upgrade backs up the SQLite file, then migrates. **Required verification:** Upgrade test from a copy of a real local database. **Implementation:** Not started; **Independently Verified:** No.

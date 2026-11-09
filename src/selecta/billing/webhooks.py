@@ -40,21 +40,23 @@ from selecta.billing.stripe_sync import (
 from selecta.persistence import db_now, lock_rows, new_id
 
 TOLERANCE_SECONDS = 300
-HANDLED_TYPES = frozenset({
-    "checkout.session.completed",
-    "customer.subscription.created",
-    "customer.subscription.updated",
-    "customer.subscription.deleted",
-    "customer.subscription.paused",
-    "customer.subscription.resumed",
-    "invoice.paid",
-    "invoice.payment_failed",
-    "invoice.payment_action_required",
-    "charge.refunded",
-    "charge.dispute.created",
-    "charge.dispute.closed",
-    "entitlements.active_entitlement_summary.updated",
-})
+HANDLED_TYPES = frozenset(
+    {
+        "checkout.session.completed",
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+        "customer.subscription.paused",
+        "customer.subscription.resumed",
+        "invoice.paid",
+        "invoice.payment_failed",
+        "invoice.payment_action_required",
+        "charge.refunded",
+        "charge.dispute.created",
+        "charge.dispute.closed",
+        "entitlements.active_entitlement_summary.updated",
+    }
+)
 
 
 class SignatureError(ValueError):
@@ -69,8 +71,12 @@ class EventStatus(StrEnum):
 
 
 def verify_signature(
-    payload: bytes, header: str | None, secrets: str | Sequence[str], *,
-    tolerance: float = TOLERANCE_SECONDS, now: float | None = None,
+    payload: bytes,
+    header: str | None,
+    secrets: str | Sequence[str],
+    *,
+    tolerance: float = TOLERANCE_SECONDS,
+    now: float | None = None,
 ) -> int:
     """Check `Stripe-Signature` (`t=...,v1=...`) and return its timestamp.
 
@@ -109,8 +115,12 @@ def verify_signature(
 
 
 def parse_event(
-    payload: bytes, header: str | None, secrets: str | Sequence[str], *,
-    tolerance: float = TOLERANCE_SECONDS, now: float | None = None,
+    payload: bytes,
+    header: str | None,
+    secrets: str | Sequence[str],
+    *,
+    tolerance: float = TOLERANCE_SECONDS,
+    now: float | None = None,
 ) -> dict[str, Any]:
     """Verify, then decode. Only a verified body is ever parsed."""
     verify_signature(payload, header, secrets, tolerance=tolerance, now=now)
@@ -130,8 +140,11 @@ def event_refs(event: Mapping[str, Any]) -> dict[str, Any]:
     metadata = obj.get("metadata") or {}
     refs: dict[str, Any] = {"object": kind}
     if kind == "subscription":
-        refs.update(subscription=stripe_id(obj.get("id")), customer=stripe_id(obj.get("customer")),
-                    workspace=metadata.get("workspace_id"))
+        refs.update(
+            subscription=stripe_id(obj.get("id")),
+            customer=stripe_id(obj.get("customer")),
+            workspace=metadata.get("workspace_id"),
+        )
     elif kind == "checkout.session":
         refs.update(
             subscription=stripe_id(obj.get("subscription")),
@@ -141,14 +154,19 @@ def event_refs(event: Mapping[str, Any]) -> dict[str, Any]:
         )
     elif kind == "invoice":
         parent = (obj.get("parent") or {}).get("subscription_details") or {}
-        refs.update(subscription=stripe_id(obj.get("subscription") or parent.get("subscription")),
-                    customer=stripe_id(obj.get("customer")))
+        refs.update(
+            subscription=stripe_id(obj.get("subscription") or parent.get("subscription")),
+            customer=stripe_id(obj.get("customer")),
+        )
     elif kind == "charge":
         refs.update(charge=stripe_id(obj.get("id")), customer=stripe_id(obj.get("customer")))
     elif kind == "dispute":
         charge = obj.get("charge")
-        refs.update(charge=stripe_id(charge), dispute=stripe_id(obj.get("id")),
-                    dispute_status=obj.get("status"))
+        refs.update(
+            charge=stripe_id(charge),
+            dispute=stripe_id(obj.get("id")),
+            dispute_status=obj.get("status"),
+        )
         if isinstance(charge, Mapping):
             refs["customer"] = stripe_id(charge.get("customer"))
     else:
@@ -174,13 +192,19 @@ def store_event(conn: Connection, event: Mapping[str, Any]) -> StoredEvent:
     status = EventStatus.RECEIVED if handled else EventStatus.IGNORED
     created = event.get("created")
     stored = insert_ignore(
-        conn, stripe_events,
+        conn,
+        stripe_events,
         {
-            "id": new_id(), "event_id": event_id, "type": event_type,
+            "id": new_id(),
+            "event_id": event_id,
+            "type": event_type,
             "livemode": bool(event.get("livemode")),
             "stripe_created": float(created) if created else None,
-            "refs": event_refs(event) if handled else {}, "received_at": now,
-            "processed_at": None if handled else now, "status": status.value, "attempts": 0,
+            "refs": event_refs(event) if handled else {},
+            "received_at": now,
+            "processed_at": None if handled else now,
+            "status": status.value,
+            "attempts": 0,
         },
         ["event_id"],
     )
@@ -230,28 +254,38 @@ def _fetch(client: StripeClient, refs: Mapping[str, Any]) -> list[dict[str, Any]
     return list(client.list_subscriptions(customer=customer)) if customer else []
 
 
-def _mark(conn: Connection, row_id: str, status: EventStatus, now: float,
-          error: str | None) -> None:
+def _mark(
+    conn: Connection, row_id: str, status: EventStatus, now: float, error: str | None
+) -> None:
     conn.execute(
         sa.update(stripe_events)
         .where(stripe_events.c.id == row_id)
         .values(
-            status=status.value, error=error, attempts=stripe_events.c.attempts + 1,
+            status=status.value,
+            error=error,
+            attempts=stripe_events.c.attempts + 1,
             processed_at=now if status is EventStatus.PROCESSED else None,
         )
     )
 
 
 def process_event(
-    conn: Connection, event_id: str, client: StripeClient, price_map: PriceMap,
+    conn: Connection,
+    event_id: str,
+    client: StripeClient,
+    price_map: PriceMap,
     now: float | None = None,
 ) -> ProcessResult:
     """Re-fetch what the event is about, store it, and recompute entitlements. Call inside a
     transaction, one event per transaction. A Stripe outage marks the event failed for retry
     and leaves every snapshot as it was."""
-    row = conn.execute(
-        lock_rows(sa.select(stripe_events).where(stripe_events.c.event_id == event_id))
-    ).mappings().first()
+    row = (
+        conn.execute(
+            lock_rows(sa.select(stripe_events).where(stripe_events.c.event_id == event_id))
+        )
+        .mappings()
+        .first()
+    )
     if row is None:
         exists = conn.execute(
             sa.select(stripe_events.c.id).where(stripe_events.c.event_id == event_id)
@@ -277,8 +311,9 @@ def process_event(
         if workspace_id is None:
             unmatched.append(str(stripe_id(sub.get("id"))))
             continue
-        upsert_subscription(conn, workspace_id, sub, now, price_map=price_map,
-                            dispute_lost=dispute_lost)
+        upsert_subscription(
+            conn, workspace_id, sub, now, price_map=price_map, dispute_lost=dispute_lost
+        )
         if workspace_id not in touched:
             touched.append(workspace_id)
     if refs.get("session") and refs.get("subscription"):
@@ -312,8 +347,12 @@ class HttpStripeClient:
     """Stripe's REST API over httpx. Nothing is sent until a method is called."""
 
     def __init__(
-        self, api_key: str, *, base_url: str = "https://api.stripe.com",
-        api_version: str | None = None, timeout: float = 20.0,
+        self,
+        api_key: str,
+        *,
+        base_url: str = "https://api.stripe.com",
+        api_version: str | None = None,
+        timeout: float = 20.0,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self._headers = {"Authorization": f"Bearer {api_key}"}
@@ -328,8 +367,9 @@ class HttpStripeClient:
 
     def _get(self, path: str, params: list[tuple[str, str]]) -> dict[str, Any] | None:
         try:
-            with httpx.Client(base_url=self._base_url, timeout=self._timeout,
-                              transport=self._transport) as client:
+            with httpx.Client(
+                base_url=self._base_url, timeout=self._timeout, transport=self._transport
+            ) as client:
                 response = client.get(path, params=params, headers=self._headers)
         except httpx.HTTPError as problem:
             raise StripeUnavailable(f"Can't reach Stripe: {problem}") from problem
@@ -350,15 +390,15 @@ class HttpStripeClient:
         }
         try:
             with httpx.Client(
-                base_url=self._base_url, timeout=self._timeout, transport=self._transport,
+                base_url=self._base_url,
+                timeout=self._timeout,
+                transport=self._transport,
                 follow_redirects=False,
             ) as client:
                 response = client.post(path, data=data, headers=headers)
         except httpx.HTTPError as problem:
             # httpx exceptions can contain request details. Keep the public error bounded.
-            raise StripeUnavailable(
-                f"Can't reach Stripe ({type(problem).__name__})."
-            ) from problem
+            raise StripeUnavailable(f"Can't reach Stripe ({type(problem).__name__}).") from problem
         if response.status_code >= 400:
             raise StripeUnavailable(f"Stripe answered {response.status_code} for {path}.")
         try:
@@ -389,8 +429,19 @@ class HttpStripeClient:
             raise StripeUnavailable("Stripe returned an invalid response.")
         return value
 
+    @staticmethod
+    def _require_stripe_host(url: str, expected: str) -> str:
+        parsed = httpx.URL(url)
+        if parsed.host != expected:
+            raise StripeUnavailable("Stripe returned a session URL on an unexpected host.")
+        return url
+
     def create_customer(
-        self, *, workspace_id: str, idempotency_key: str, email: str | None = None,
+        self,
+        *,
+        workspace_id: str,
+        idempotency_key: str,
+        email: str | None = None,
     ) -> dict[str, Any]:
         data = {"metadata[workspace_id]": workspace_id}
         if email:
@@ -400,8 +451,14 @@ class HttpStripeClient:
         return payload
 
     def create_checkout_session(
-        self, *, workspace_id: str, customer_id: str, price_id: str,
-        success_url: str, cancel_url: str, idempotency_key: str,
+        self,
+        *,
+        workspace_id: str,
+        customer_id: str,
+        price_id: str,
+        success_url: str,
+        cancel_url: str,
+        idempotency_key: str,
     ) -> dict[str, Any]:
         data = {
             "mode": "subscription",
@@ -415,11 +472,15 @@ class HttpStripeClient:
         }
         payload = self._post("/v1/checkout/sessions", data, idempotency_key)
         self._require_response_string(payload, "id", "cs_")
-        self._require_session_url(payload)
+        self._require_stripe_host(self._require_session_url(payload), "checkout.stripe.com")
         return payload
 
     def create_portal_session(
-        self, *, customer_id: str, return_url: str, idempotency_key: str,
+        self,
+        *,
+        customer_id: str,
+        return_url: str,
+        idempotency_key: str,
     ) -> dict[str, Any]:
         payload = self._post(
             "/v1/billing_portal/sessions",
@@ -427,12 +488,11 @@ class HttpStripeClient:
             idempotency_key,
         )
         self._require_response_string(payload, "id", "bps_")
-        self._require_session_url(payload)
+        self._require_stripe_host(self._require_session_url(payload), "billing.stripe.com")
         return payload
 
     def get_subscription(self, subscription_id: str) -> dict[str, Any] | None:
-        return self._get(f"/v1/subscriptions/{subscription_id}",
-                         [("expand[]", "latest_invoice")])
+        return self._get(f"/v1/subscriptions/{subscription_id}", [("expand[]", "latest_invoice")])
 
     def list_subscriptions(self, customer: str | None = None) -> Iterator[dict[str, Any]]:
         params = [("status", "all"), ("limit", "100"), ("expand[]", "data.latest_invoice")]
@@ -440,8 +500,12 @@ class HttpStripeClient:
             params.append(("customer", customer))
         after: str | None = None
         while True:
-            page = self._get("/v1/subscriptions",
-                             params + ([("starting_after", after)] if after else [])) or {}
+            page = (
+                self._get(
+                    "/v1/subscriptions", params + ([("starting_after", after)] if after else [])
+                )
+                or {}
+            )
             data = page.get("data") or []
             yield from data
             if not page.get("has_more") or not data:
