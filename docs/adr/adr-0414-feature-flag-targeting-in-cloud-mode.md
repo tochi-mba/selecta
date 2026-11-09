@@ -1,8 +1,8 @@
 # ADR-0414 - Feature-flag targeting in cloud mode
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/7 Implemented; 0/7 In progress; 7/7 Not started.
-- **Independent verification:** 0/7 Verified.
+- **Implementation:** 0/10 Implemented; 0/10 In progress; 10/10 Not started.
+- **Independent verification:** 0/10 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 4. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
 - **Existing ADR owners:** ADR-0390 (feature flags), whose status is unchanged; their statuses are unchanged.
@@ -24,6 +24,9 @@ This ADR records a proposed decision. Nothing in it is implemented or measured y
 - Server-side evaluation only: the site receives decisions (plus teaser locks), never rules; changes are pushed over SSE; jobs re-check at claim; one snapshot per request, attempt and Lucy turn.
 - Propagation targets: kill switch within 5 s, other changes within 30 s. Local mode is unchanged.
 - In cloud mode only, an admin Flags page with impact preview, per-user decision trace, self-preview, history and rollback. This reverses ADR-0390's 'no switch page' for cloud mode only.
+- Flag powers are separate permissions (`flags.read`, `flags.preview_self`, `flags.user_override`, `flags.kill_switch`, `flags.rules.propose`, `flags.rules.apply`) given per role as in §11B.9; AI Admin may change only `lucy.*` flags; Support overrides are limited to the case or workspace in its scope; broad changes become a delayed action. Emergency controls get their own permission, `platform.emergency_controls.manage`.
+- Users can opt in to `beta` flags themselves (Labs), only when every other layer allows the feature.
+- Every cloud feature has a registry flag in a cloud-only area, enforced at the API, at job claim and in the site (§11B.11).
 
 ## User outcome and acceptance contract
 
@@ -35,7 +38,7 @@ The owner can turn any feature off for everyone, a tier or named users in second
 - Sending rules to the browser.
 - Using flags to grant paid features.
 
-## Implementation checklist - 0/7 Implemented; 0/7 independently Verified
+## Implementation checklist - 0/10 Implemented; 0/10 independently Verified
 
 1. **SC-0414-01 - Layered resolver.** **Acceptance:** `decide(flag, ctx)` returns on/off with layer and reason for every flag and context. **Required verification:** Property tests (determinism, no grant beyond plan, core always on, cascade). **Implementation:** Not started; **Independently Verified:** No.
 2. **SC-0414-02 - Rules storage and propagation.** **Acceptance:** Rule changes reach every API instance and the worker gateway within targets. **Required verification:** Multi-instance propagation test. **Implementation:** Not started; **Independently Verified:** No.
@@ -44,6 +47,9 @@ The owner can turn any feature off for everyone, a tier or named users in second
 5. **SC-0414-05 - Site.** **Acceptance:** Decisions and locks arrive in status and SSE; reflow and teaser sweeps pass in cloud mode. **Required verification:** Playwright sweeps. **Implementation:** Not started; **Independently Verified:** No.
 6. **SC-0414-06 - Admin Flags page.** **Acceptance:** Kill switch, tier, user, rollout and schedule actions with impact preview, trace, history and rollback; broad changes delayed per ADR-0401. **Required verification:** Playwright and audit tests. **Implementation:** Not started; **Independently Verified:** No.
 7. **SC-0414-07 - Local mode unchanged.** **Acceptance:** Local behaviour and `docs/flags.md` generation are identical to ADR-0390. **Required verification:** Existing flag tests. **Implementation:** Not started; **Independently Verified:** No.
+8. **SC-0414-08 - Staff flag permissions.** **Acceptance:** Roles hold exactly the flag permissions in §11B.9; AI Admin can change only `lucy.*`; Support overrides only inside its scope; kill switches are instant and alert Owners; broad rules become delayed actions; every change is audited. **Required verification:** Unit tests for roles and `may_change_flag`; integration tests for the admin flag service. **Implementation:** Not started; **Independently Verified:** No.
+9. **SC-0414-09 - Labs opt-in.** **Acceptance:** Beta flags turn on for a user only when they opted in and every other layer allows it; a kill switch or rule always wins; the Labs list shows only betas the plan includes. **Required verification:** Property and integration tests; Playwright for the Labs setting. **Implementation:** Not started; **Independently Verified:** No.
+10. **SC-0414-10 - Every cloud feature flagged.** **Acceptance:** Each cloud feature has a registry flag; every cloud route and job type names its owning flag; the reflow sweep covers the cloud surfaces. **Required verification:** Registry test that no cloud route or job type lacks a flag; flag sweep in cloud mode. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 

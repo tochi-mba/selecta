@@ -26,6 +26,8 @@ PLATFORM_AREAS = frozenset({"*", "operations"})
 OPERATIONS_PREFIXES = (
     "platform.dashboard.",
     "platform.incidents.",
+    "platform.emergency_controls.",
+    "flags.",
     "jobs.",
     "queues.",
     "workers.",
@@ -99,7 +101,7 @@ class Scope:
         return False
 
     def specificity(self) -> int:
-        """Narrower scopes sort first, so the audit log names the tightest assignment that matched."""
+        """Narrower scopes sort first, so the audit log names the tightest matching assignment."""
         if self.type in (SUPPORT_CASE, WORKSPACE):
             return 0
         return 1 if self.id == "operations" else 2

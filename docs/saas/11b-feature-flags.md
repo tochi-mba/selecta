@@ -102,6 +102,63 @@ New fields: `scope`, `modes`, `when_off`, `when_locked`, `kind` (`release` / `op
 - Mid-flight: flag off during upload, render, export, Lucy turn and an open Room.
 - The existing reflow sweep runs in both modes, plus a "teaser" pass for locked features.
 
+### 11B.9 Who can change flags, and how far
+
+Flag powers are separate permissions, so each role gets exactly what its job needs (`src/selecta/authz/permissions.py`, `roles.py`):
+
+| Permission | What it allows | Danger |
+|---|---|---|
+| `flags.read` | See every flag, its rules and history, and "what does this user see, and why" | read |
+| `flags.preview_self` | Turn a flag on for your own account only, to try it | change |
+| `flags.user_override` | Switch a feature off, or on within their plan, for one workspace | sensitive (audited) |
+| `flags.kill_switch` | Turn a non-core feature off for everyone, at once | dangerous (fresh MFA, alert) |
+| `flags.rules.propose` | Propose rules by plan, segment, percentage or time | change |
+| `flags.rules.apply` | Apply rules; broad ones wait 15 minutes or need a second person | dangerous (fresh MFA) |
+| `platform.emergency_controls.manage` | Pause or resume uploads, worker pools, sign-ups (declarative emergency states, not flags) | dangerous |
+
+| Role | Flag powers | Which flags |
+|---|---|---|
+| Owner, Admin | All of the above | Any non-core flag |
+| Operator | Read, preview, per-workspace override, kill switch, emergency controls | Any non-core flag |
+| AI Admin | Read, preview, kill switch, propose and apply rules | Lucy flags only (`lucy.*`) |
+| Support | Read, preview, per-workspace override | Any non-core flag, only at the support-case or workspace scope they're assigned |
+| Billing, Analyst, Auditor | Read | - |
+
+How a change is checked, in order:
+1. `authorize()` confirms the permission at a scope covering the target (one workspace, or the platform).
+2. `may_change_flag(role, flag)` confirms the role may touch that flag at all (AI Admin only `lucy.*`).
+3. Targeting validation refuses core flags, staff and admin flags, malformed rules and anything that would grant beyond a plan.
+4. Breadth decides speed:
+   - a kill switch is instant, with an alert to every Owner;
+   - a per-workspace override is instant;
+   - a rule switching a feature off for a whole plan, or changing it for more than 10% of active accounts, becomes a delayed action (`flags.rules.broad`): 15 minutes with alerts while there's one operator, a second approver once there are two.
+5. Every change is a new immutable version with author and reason, audited, and pushed to every instance.
+
+Support overrides are tied to the case or workspace in the assignment's scope, expire when that assignment does, and are listed on the account's page so the next person can see them.
+
+### 11B.10 Users opting in to betas ("Labs")
+
+Flags of kind `beta` can be switched on by users themselves in Settings, under Labs. A beta reaches a user only when every earlier layer allows it (build, mode, plan, rules) **and** the user opted in, so a rule or kill switch always wins and nobody gets a feature their plan doesn't include. Opting out is instant. The Labs list shows only betas the user's plan includes, with a short note on what may change.
+
+### 11B.11 Every new feature is behind a flag
+
+No cloud feature ships without a registry flag, and the same flag is enforced in three places: the API (routes owned by the flag answer 403 `flag_off`), the workers (job types name their owning flag and are refused at claim), and the site (the page closes up around it, checked by the reflow sweep). The new flags live in a `cloud` area, are cloud-only (`modes: ["cloud"]`), and include at least:
+
+| Flag | Feature | Notes |
+|---|---|---|
+| `cloud.signups` | New accounts can sign up | Kill switch during abuse |
+| `cloud.uploads` | Uploading music | `when_off: drain` (finishing uploads complete) |
+| `billing.checkout` | Buying or changing a plan | Portal stays reachable to cancel |
+| `devices.remote_control` | Remotes and "Play here" | Off means each device plays on its own |
+| `rooms` | Rooms | Plan-gated (Premium), `when_locked: teaser` |
+| `rooms.votes` | Votes in Rooms | Needs `rooms` |
+| `rooms.display` | Big-screen display | Needs `rooms` |
+| `lucy.deep_plan` | Opus deep-plan turns | Plan-gated (Premium) |
+| `account.data_export` | Download my data | Never targeted off for a whole plan (a legal right); kill switch only for incidents |
+| `admin.console` | The staff console | Core in cloud mode: can't be targeted |
+
+Adding a feature means adding its flag first; [the engineering guide](../engineering/README.md) walks through it.
+
 ---
 
 [← 11a-devices-and-rooms.md](11a-devices-and-rooms.md) · [Contents](README.md#chapters) · [12-security-privacy-legal.md →](12-security-privacy-legal.md)

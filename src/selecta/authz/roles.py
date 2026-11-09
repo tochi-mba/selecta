@@ -79,12 +79,22 @@ _BUNDLES: dict[StaffRole, frozenset[str]] = {
         "storage.assets.reconcile",
         "storage.cleanup.request",
         "platform.incidents.manage",
+        "platform.emergency_controls.manage",
+        "flags.read",
+        "flags.preview_self",
+        "flags.user_override",
+        "flags.kill_switch",
     },
     StaffRole.AI_ADMIN: _OPERATIONAL_READS
     | {
         "models.deployments.manage",
         "models.routing.propose",
         "models.routing.apply",
+        "flags.read",
+        "flags.preview_self",
+        "flags.kill_switch",
+        "flags.rules.propose",
+        "flags.rules.apply",
     },
     StaffRole.SUPPORT: frozenset(
         {
@@ -98,6 +108,9 @@ _BUNDLES: dict[StaffRole, frozenset[str]] = {
             "billing.subscriptions.read",
             "jobs.read",
             "jobs.retry",
+            "flags.read",
+            "flags.preview_self",
+            "flags.user_override",
         }
     ),
     StaffRole.BILLING: frozenset(
@@ -108,16 +121,42 @@ _BUNDLES: dict[StaffRole, frozenset[str]] = {
             "billing.subscriptions.read",
             "billing.subscriptions.reconcile",
             "billing.overrides.create",
+            "flags.read",
         }
     ),
-    StaffRole.ANALYST: _OPERATIONAL_READS,
+    StaffRole.ANALYST: _OPERATIONAL_READS | {"flags.read"},
     StaffRole.AUDITOR: _OPERATIONAL_READS
     | {
         "audit.read",
         "security.audit.read",
         "billing.subscriptions.read",
+        "flags.read",
     },
 }
+
+# Which flags a role may change, by flag-id prefix. `None` means any flag the targeting rules
+# allow (core and staff flags can never be targeted by anyone). A role missing here changes none.
+FLAG_PREFIXES: Mapping[StaffRole, tuple[str, ...] | None] = MappingProxyType(
+    {
+        StaffRole.OWNER: None,
+        StaffRole.ADMIN: None,
+        StaffRole.OPERATOR: None,
+        StaffRole.AI_ADMIN: ("lucy",),
+        StaffRole.SUPPORT: None,
+    }
+)
+
+
+def may_change_flag(role: StaffRole | str, flag_id: str) -> bool:
+    """Whether `role` may change `flag_id` at all; its permissions still decide how."""
+    role = staff_role(role) if isinstance(role, str) else role
+    if role not in FLAG_PREFIXES:
+        return False
+    prefixes = FLAG_PREFIXES[role]
+    if prefixes is None:
+        return True
+    return any(flag_id == p or flag_id.startswith(p + ".") for p in prefixes)
+
 
 # The scope types each role may be assigned at. Owner and Admin are platform-wide only.
 _SCOPE_TYPES: dict[StaffRole, frozenset[str]] = {

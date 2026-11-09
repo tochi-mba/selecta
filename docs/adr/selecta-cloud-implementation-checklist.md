@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 127 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 0 Implemented, 0 In progress, 127 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 0 Implemented, 0 In progress, 130 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -193,6 +193,9 @@
 - [ ] **SC-0414-05 - Site.** Acceptance: Decisions and locks arrive in status and SSE; reflow and teaser sweeps pass in cloud mode. Required verification: Playwright sweeps. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0414-06 - Admin Flags page.** Acceptance: Kill switch, tier, user, rollout and schedule actions with impact preview, trace, history and rollback; broad changes delayed per ADR-0401. Required verification: Playwright and audit tests. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0414-07 - Local mode unchanged.** Acceptance: Local behaviour and `docs/flags.md` generation are identical to ADR-0390. Required verification: Existing flag tests. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0414-08 - Staff flag permissions.** Acceptance: Roles hold exactly the flag permissions in §11B.9; AI Admin can change only `lucy.*`; Support overrides only inside its scope; kill switches are instant and alert Owners; broad rules become delayed actions; every change is audited. Required verification: Unit tests for roles and `may_change_flag`; integration tests for the admin flag service. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0414-09 - Labs opt-in.** Acceptance: Beta flags turn on for a user only when they opted in and every other layer allows it; a kill switch or rule always wins; the Labs list shows only betas the plan includes. Required verification: Property and integration tests; Playwright for the Labs setting. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0414-10 - Every cloud feature flagged.** Acceptance: Each cloud feature has a registry flag; every cloud route and job type names its owning flag; the reflow sweep covers the cloud surfaces. Required verification: Registry test that no cloud route or job type lacks a flag; flag sweep in cloud mode. Implementation: Not started; Independently verified: No.
 
 ## [ADR-0415 - Playback devices and one session per account](adr-0415-playback-devices-and-sessions.md)
 

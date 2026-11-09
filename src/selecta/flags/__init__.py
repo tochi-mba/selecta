@@ -18,7 +18,8 @@ today's behaviour: `scope` says which id a percentage rollout hashes, `modes` sa
 modes the feature makes sense in, `when_off` says whether running work drains or stops, and
 `when_locked` says whether a feature the plan doesn't include is hidden or shown as a teaser.
 `kind`, `owner` and `review_by` say what sort of flag it is, who looks after it and when a
-temporary one should be cleaned up. The targeting that reads them is in `flags/targeting.py`.
+temporary one should be cleaned up; a `beta` flag is only on for people who switch it on
+themselves. The targeting that reads them is in `flags/targeting.py`.
 """
 
 from __future__ import annotations
@@ -107,7 +108,8 @@ SCOPES = ("global", "workspace", "user", "guest")
 MODES = ("local", "cloud")
 WHEN_OFF = ("drain", "stop")
 WHEN_LOCKED = ("hide", "teaser")
-KINDS = ("release", "ops", "experiment")
+# A `beta` flag is one people switch on for themselves in the cloud (a "Labs" setting).
+KINDS = ("release", "ops", "experiment", "beta")
 FLAG_ID = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$")
 ROUTE = re.compile(r"^(GET|POST|PUT|PATCH|DELETE) /api/\S+$")
 PRESETS = {"minimal": False, "all": True}
@@ -250,7 +252,7 @@ def _cloud_problems(flag: Flag) -> list[str]:
         try:
             dt.date.fromisoformat(str(flag.review_by))
         except ValueError:
-            found.append(f"{flag.id}: review_by {flag.review_by!r} should be a date like 2027-01-31")
+            found.append(f"{flag.id}: review_by {flag.review_by!r} isn't a date like 2027-01-31")
     return found
 
 

@@ -10,7 +10,8 @@ The rules, in the order a claim applies them:
   not waited on), speculative (spare time). Interactive and standard share the pool by virtual
   time with weights 4 and 1, so when both are backlogged standard still gets about a fifth of the
   compute: the weight is the floor that keeps imports and exports moving. Speculative runs only
-  when neither has eligible work, and never takes the last free slots.
+  when neither has eligible work. In a pool of two or more slots it never takes the last free
+  ones; in a one-slot pool it runs when the pool is idle and gives way when other work arrives.
 - Accounts inside a lane: start-time fair queuing. Each (pool, lane, workspace) has a virtual time
   V. Dispatch picks the smallest V and charges `est_cost_s / weight`; the finish corrects by the
   difference between actual and estimated cost, clamped. A workspace that comes back after idling
@@ -55,7 +56,10 @@ class Tier(StrEnum):
 
 def _frozen(mapping: Mapping) -> Mapping:
     return MappingProxyType(
-        {key: _frozen(value) if isinstance(value, Mapping) else value for key, value in mapping.items()}
+        {
+            key: _frozen(value) if isinstance(value, Mapping) else value
+            for key, value in mapping.items()
+        }
     )
 
 
@@ -150,8 +154,16 @@ class PolicyConfig:
         return int(self.lane_caps[tier].get(str(lane), 1))
 
     def speculative_headroom(self, slots: int) -> int:
-        """Slots that speculative work must leave free: at least N, or a share, whichever is more."""
-        share = math.ceil(self.speculative_headroom_share * max(slots, 0))
+        """Slots speculative work must leave free in a pool with this many slots.
+
+        A pool of two or more slots keeps at least N, or a share, whichever is more, free for
+        interactive work. A one-slot pool (the local app's single runner thread) keeps none:
+        there, spare-time work runs whenever the pool is otherwise idle, and gives way at its
+        next `check_in()` as soon as interactive or standard work arrives.
+        """
+        if slots < 2:
+            return 0
+        share = math.ceil(self.speculative_headroom_share * slots)
         return max(self.speculative_headroom_slots, share)
 
     def speculative_budget_s(self, tier: str | None) -> float:
@@ -182,15 +194,6 @@ class PolicyConfig:
                 changes[key] = _frozen(value)
         changes.setdefault("version", self.version + 1)
         return replace(self, **changes)
-
-    @classmethod
-    def local(cls) -> PolicyConfig:
-        """The local app: one person, a few threads, and preemption that is instant in-process.
-
-        Today's seam worker runs spare-time work whenever nothing else is waiting and gives way at
-        the next `check_in()`, so local mode keeps no slot back from speculative work.
-        """
-        return cls(speculative_headroom_slots=0, speculative_headroom_share=0.0)
 
 
 # --- Start-time fair queuing -------------------------------------------------------------------
@@ -253,8 +256,13 @@ def job_key(
 
 
 def speculative_allowed(slots: int, busy: int, config: PolicyConfig) -> bool:
-    """Speculative work may start only if it leaves the pool's headroom free."""
-    return slots - busy > config.speculative_headroom(slots)
+    """May speculative work take a slot in a pool of `slots` slots with `busy` in use?
+
+    Only if a slot is free and taking it still leaves the pool's headroom (see
+    `PolicyConfig.speculative_headroom`): none for a one-slot pool, at least one otherwise.
+    """
+    free = slots - busy
+    return free > 0 and free > config.speculative_headroom(slots)
 
 
 def choose_lanes(
@@ -304,14 +312,25 @@ class RunningAttempt:
 
 
 def choose_preemption(
-    running: Sequence[RunningAttempt], interactive_waiting: bool, free_slots: int
+    running: Sequence[RunningAttempt],
+    *,
+    slots: int,
+    free_slots: int,
+    interactive_waiting: bool,
+    standard_waiting: bool = False,
 ) -> str | None:
-    """When interactive work waits and no slot is free, the youngest speculative attempt gives way.
+    """Which speculative attempt gives way, if any, so waiting work can start.
 
-    Speculative work is optional by definition, so this is the one preemption allowed across
-    accounts. The youngest has lost the least work. One already asked to stop isn't asked again.
+    Speculative work is optional by definition, so it is the one kind preempted across
+    accounts. In a pool of two or more slots only waiting interactive work preempts it (the
+    headroom rule keeps a slot free for that, so this is rare). In a one-slot pool, where
+    speculative work runs whenever the pool is idle, any interactive or standard work preempts
+    it. Nothing is preempted while a slot is free. The youngest attempt has lost the least work;
+    one already asked to stop isn't asked again.
     """
-    if not interactive_waiting or free_slots > 0:
+    if free_slots > 0:
+        return None
+    if not (interactive_waiting or (slots < 2 and standard_waiting)):
         return None
     candidates = [
         attempt

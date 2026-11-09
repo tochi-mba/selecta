@@ -31,7 +31,9 @@ class WrongMode(RuntimeError):
     def __init__(self, needed: Mode, current: Mode) -> None:
         self.needed = needed
         self.current = current
-        super().__init__(f"This needs {ENV}={needed.value}, but Selecta is running in {current.value}.")
+        super().__init__(
+            f"This needs {ENV}={needed.value}, but Selecta is running in {current.value}."
+        )
 
 
 def parse_mode(value: str | Mode) -> Mode:

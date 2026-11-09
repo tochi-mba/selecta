@@ -84,7 +84,8 @@ def derived_key(workspace_id: str, kind: str, key: str, attempt_id: str, name: s
 
 def export_key(workspace_id: str, export_id: str) -> str:
     """Where a finished export lives in the exports bucket."""
-    return f"w/{_check(ID, workspace_id, 'Workspace id')}/x/{_check(ID, export_id, 'Export id')}.flac"
+    workspace = _check(ID, workspace_id, "Workspace id")
+    return f"w/{workspace}/x/{_check(ID, export_id, 'Export id')}.flac"
 
 
 def staging_key(upload_session_id: str) -> str:

@@ -145,9 +145,7 @@ class Signer:
         signed_headers["x-amz-date"] = amz_date
         signed_headers["x-amz-content-sha256"] = payload_hash
         cq = canonical_query(query)
-        canonical, signed_list = canonical_request(
-            method, path, cq, signed_headers, payload_hash
-        )
+        canonical, signed_list = canonical_request(method, path, cq, signed_headers, payload_hash)
         signature = self._signature(amz_date, day, canonical)
         credential = f"{self.credentials.access_key_id}/{self._scope(day)}"
         out = {name: value for name, value in signed_headers.items() if name != "host"}

@@ -143,6 +143,9 @@ class Deployment:
     def to_json(self) -> dict[str, Any]:
         """A plain copy for pinning in a run, so later registry edits can't change that run."""
         data = asdict(self)
+        data["provider"] = self.provider.value
+        data["min_tier"] = self.min_tier.value
+        data["status"] = self.status.value
         data["capabilities"] = sorted(self.capabilities)
         return data
 

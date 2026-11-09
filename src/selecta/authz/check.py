@@ -66,8 +66,10 @@ __all__ = [
 class Actor:
     """A staff member making a request, as their admin session describes them.
 
-    `privileged_until` is when the admin session ends. `session_issued_at` is when it started; when
-    it's unknown, `mfa_at` stands in, since an admin session starts with MFA.
+    `privileged_until` is when the admin session ends and `session_issued_at` is when it started.
+    Both come from the server's session store, never from the client. A session without a start
+    time is refused, so a later MFA step-up can't revive a session that began before the user's
+    last "sign out everywhere".
     """
 
     user_id: str
@@ -107,9 +109,7 @@ class Assignment:
         )
 
     def grants(self, permission: str, resource: ResourceRef) -> bool:
-        return permission in ROLE_PERMISSIONS[self.role] and self.scope.covers(
-            permission, resource
-        )
+        return permission in ROLE_PERMISSIONS[self.role] and self.scope.covers(permission, resource)
 
 
 @dataclass(frozen=True)
@@ -206,9 +206,7 @@ def active_grant(
     return AccessGrant.from_row(row) if row else None
 
 
-def staff_holding(
-    conn: Connection, permission: str, now: float | None = None
-) -> frozenset[str]:
+def staff_holding(conn: Connection, permission: str, now: float | None = None) -> frozenset[str]:
     """Distinct live users holding `permission` through a platform-wide assignment."""
     permissions.get(permission)
     roles = [role.value for role, names in ROLE_PERMISSIONS.items() if permission in names]
@@ -248,7 +246,7 @@ def platform_owners(
 def ensure_not_last_owner(
     conn: Connection, user_id: str, *, assignment_id: str | None = None
 ) -> None:
-    """Raise `LastOwner` if revoking `assignment_id` (or all of the user's roles) leaves no Owner."""
+    """Raise `LastOwner` if revoking `assignment_id` (or all the user's roles) leaves no Owner."""
     now = db_now(conn)
     if user_id not in platform_owners(conn, now):
         return
@@ -272,9 +270,7 @@ def require_workspace_action(role: WorkspaceRole | str, action: WorkspaceAction 
 
 
 def _session_problem(conn: Connection, actor: Actor, now: float) -> str | None:
-    user = conn.execute(
-        sa.select(users.c.deleted_at).where(users.c.id == actor.user_id)
-    ).first()
+    user = conn.execute(sa.select(users.c.deleted_at).where(users.c.id == actor.user_id)).first()
     if user is None:
         return "unknown user"
     if user.deleted_at is not None:
@@ -285,15 +281,20 @@ def _session_problem(conn: Connection, actor: Actor, now: float) -> str | None:
         return "staff session expired"
     if actor.privileged_until - now > STAFF_SESSION_SECONDS + CLOCK_LEEWAY:
         return "staff session lasts longer than an hour"
-    started = actor.session_issued_at if actor.session_issued_at is not None else actor.mfa_at
-    if started is not None:
-        revoked_before = conn.execute(
-            sa.select(session_revocations.c.revoked_before).where(
-                session_revocations.c.user_id == actor.user_id
-            )
-        ).scalar_one_or_none()
-        if revoked_before is not None and started < revoked_before:
-            return "session revoked"
+    # The session's own start decides revocation. A later MFA step-up must not revive a session
+    # that began before "sign out everywhere", so a session without a start time is refused.
+    started = actor.session_issued_at
+    if started is None:
+        return "staff session has no start time"
+    if started > now + CLOCK_LEEWAY:
+        return "staff session starts in the future"
+    revoked_before = conn.execute(
+        sa.select(session_revocations.c.revoked_before).where(
+            session_revocations.c.user_id == actor.user_id
+        )
+    ).scalar_one_or_none()
+    if revoked_before is not None and started < revoked_before:
+        return "session revoked"
     return None
 
 
@@ -354,6 +355,9 @@ def authorize(
         _deny(conn, actor, permission, resource, problem)
     if actor.mfa_at is None:
         _deny(conn, actor, permission, resource, "MFA required", step_up=STAFF_SESSION_SECONDS)
+    if actor.mfa_at > now + CLOCK_LEEWAY:
+        # A time from the future would count as fresh forever.
+        _deny(conn, actor, permission, resource, "MFA time is in the future")
     window = _freshness(perm, fresh_mfa_seconds)
     if window is not None and now - actor.mfa_at > window:
         _deny(conn, actor, permission, resource, "MFA isn't fresh enough", step_up=window)
