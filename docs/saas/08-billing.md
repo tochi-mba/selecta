@@ -29,11 +29,19 @@ full subscription sweep. Production scheduling and drift alerts remain outstandi
 Production PostgreSQL
 and real Stripe test-mode runs remain to be verified.
 
+Checkout creation enables Stripe automatic tax, requires a billing address, updates the stored
+Stripe customer address and permits tax-ID collection. Stripe's business address, registrations
+and product tax codes must be configured before paid launch. The UK-only beta restriction must be
+enforced with Stripe account-level controls; collecting an address in Checkout is not a country
+restriction.
+
 Configuration: `SELECTA_STRIPE_SECRET_KEY`, `SELECTA_STRIPE_WEBHOOK_SECRETS` (comma-separated
 rotation set), `SELECTA_STRIPE_PRICES` (JSON price-id to plan/version/interval map),
 `SELECTA_CHECKOUT_CONSENT_VERSION`, and optionally `SELECTA_IP_HASH_KEY` and
-`SELECTA_STRIPE_API_VERSION`. The business still has to finish Stripe Tax and the UK-only beta
-sales configuration before taking payments.
+`SELECTA_STRIPE_API_VERSION`. Checkout requests Stripe automatic tax, a billing address, customer
+address updates, and tax-ID collection. Before taking payments, configure the Stripe account's
+business address, registrations and product tax codes, then enforce the UK-only beta sales boundary
+in account-level controls.
 
 ### 8.2 Event handling
 

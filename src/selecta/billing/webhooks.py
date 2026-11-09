@@ -464,6 +464,10 @@ class HttpStripeClient:
         data = {
             "mode": "subscription",
             "customer": customer_id,
+            "billing_address_collection": "required",
+            "automatic_tax[enabled]": "true",
+            "tax_id_collection[enabled]": "true",
+            "customer_update[address]": "auto",
             "client_reference_id": workspace_id,
             "line_items[0][price]": price_id,
             "line_items[0][quantity]": "1",
