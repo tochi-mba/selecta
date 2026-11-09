@@ -12,10 +12,18 @@ the seam worker and every helper see the same flags as the server that started t
 Core flags are always on: they're listed so the catalog is complete, with the reason they can't be
 turned off. A flag that needs one that's off is off too. Turning a flag off never deletes anything:
 it stops the feature being offered, and stops the work it would do.
+
+Selecta Cloud (ADR-0414) adds optional fields that only the cloud reads, so leaving them out keeps
+today's behaviour: `scope` says which id a percentage rollout hashes, `modes` says which runtime
+modes the feature makes sense in, `when_off` says whether running work drains or stops, and
+`when_locked` says whether a feature the plan doesn't include is hidden or shown as a teaser.
+`kind`, `owner` and `review_by` say what sort of flag it is, who looks after it and when a
+temporary one should be cleaned up. The targeting that reads them is in `flags/targeting.py`.
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import difflib
 import json
 import os
@@ -75,7 +83,31 @@ SURFACES = frozenset(
     }
 )
 
-FIELDS = {"label", "about", "core", "default", "requires", "routes", "surfaces", "words", "cli"}
+FIELDS = {
+    "label",
+    "about",
+    "core",
+    "default",
+    "requires",
+    "routes",
+    "surfaces",
+    "words",
+    "cli",
+    "scope",
+    "modes",
+    "when_off",
+    "when_locked",
+    "kind",
+    "owner",
+    "review_by",
+}
+
+# The cloud-only fields and the values each may take. The first value is the default.
+SCOPES = ("global", "workspace", "user", "guest")
+MODES = ("local", "cloud")
+WHEN_OFF = ("drain", "stop")
+WHEN_LOCKED = ("hide", "teaser")
+KINDS = ("release", "ops", "experiment")
 FLAG_ID = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$")
 ROUTE = re.compile(r"^(GET|POST|PUT|PATCH|DELETE) /api/\S+$")
 PRESETS = {"minimal": False, "all": True}
@@ -106,6 +138,13 @@ class Flag:
     surfaces: tuple[str, ...] = ()
     words: tuple[str, ...] = ()
     cli: tuple[str, ...] = ()
+    scope: str = SCOPES[0]
+    modes: tuple[str, ...] = MODES
+    when_off: str = WHEN_OFF[0]
+    when_locked: str = WHEN_LOCKED[0]
+    kind: str = KINDS[0]
+    owner: str | None = None
+    review_by: str | None = None
 
 
 @dataclass(frozen=True)
@@ -139,6 +178,13 @@ def registry() -> dict[str, Flag]:
                 surfaces=tuple(spec.get("surfaces", ())),
                 words=tuple(spec.get("words", ())),
                 cli=tuple(spec.get("cli", ())),
+                scope=spec.get("scope", SCOPES[0]),
+                modes=tuple(spec.get("modes", MODES)),
+                when_off=spec.get("when_off", WHEN_OFF[0]),
+                when_locked=spec.get("when_locked", WHEN_LOCKED[0]),
+                kind=spec.get("kind", KINDS[0]),
+                owner=spec.get("owner"),
+                review_by=spec.get("review_by"),
             )
     return flags
 
@@ -169,11 +215,61 @@ def problems(flags: dict[str, Flag] | None = None) -> list[str]:
         for surface in flag.surfaces:
             if surface not in SURFACES:
                 found.append(f"{flag.id}: {surface} isn't a known surface")
+        found += _cloud_problems(flag)
     for flag in flags.values():
         cycle = _cycle(flags, flag.id)
         if cycle:
             found.append("requires go round in a circle: " + " -> ".join(cycle))
     return found
+
+
+def _cloud_problems(flag: Flag) -> list[str]:
+    """What's wrong with the fields only the cloud reads."""
+    found: list[str] = []
+    for field, allowed in (
+        ("scope", SCOPES),
+        ("when_off", WHEN_OFF),
+        ("when_locked", WHEN_LOCKED),
+        ("kind", KINDS),
+    ):
+        value = getattr(flag, field)
+        if value not in allowed:
+            found.append(f"{flag.id}: {field} is {value!r}; it can be {', '.join(allowed)}")
+    if not flag.modes:
+        found.append(f"{flag.id}: modes can't be empty; leave it out to mean every mode")
+    for mode in flag.modes:
+        if mode not in MODES:
+            found.append(f"{flag.id}: {mode!r} isn't a mode; modes are {', '.join(MODES)}")
+    if len(set(flag.modes)) != len(flag.modes):
+        found.append(f"{flag.id}: modes lists the same mode twice")
+    if flag.core and set(flag.modes) != set(MODES):
+        found.append(f"{flag.id}: a core flag is on everywhere, so it can't leave out a mode")
+    if flag.owner is not None and (not isinstance(flag.owner, str) or not flag.owner.strip()):
+        found.append(f"{flag.id}: owner should be a name, or left out")
+    if flag.review_by is not None:
+        try:
+            dt.date.fromisoformat(str(flag.review_by))
+        except ValueError:
+            found.append(f"{flag.id}: review_by {flag.review_by!r} should be a date like 2027-01-31")
+    return found
+
+
+def overdue(today: dt.date | None = None, flags: dict[str, Flag] | None = None) -> list[str]:
+    """Flags whose `review_by` date has passed. CI warns about these rather than failing, so a
+    temporary rollout flag gets cleaned up instead of piling up."""
+    flags = registry() if flags is None else flags
+    today = dt.date.today() if today is None else today
+    late: list[str] = []
+    for flag in flags.values():
+        if flag.review_by is None:
+            continue
+        try:
+            due = dt.date.fromisoformat(str(flag.review_by))
+        except ValueError:
+            continue
+        if due < today:
+            late.append(f"{flag.id}: was due for review on {due.isoformat()}")
+    return late
 
 
 def _cycle(flags: dict[str, Flag], start: str) -> list[str] | None:
