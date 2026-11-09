@@ -55,6 +55,53 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+  cloud:
+    # Cloud code on Linux against a real PostgreSQL: row locks, SKIP LOCKED, LISTEN/NOTIFY,
+    # advisory locks and row-level security only exist there. The Windows shards run the same
+    # tests on SQLite. See docs/saas/18-test-plan.md.
+    name: Cloud / PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: selecta
+          POSTGRES_PASSWORD: selecta
+          POSTGRES_DB: selecta_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U selecta -d selecta_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      CI: "true"
+      SELECTA_TEST_POSTGRES_URL: postgresql+psycopg://selecta:selecta@localhost:5432/selecta_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: uv sync --locked
+      - name: Cloud tests on SQLite and PostgreSQL, with branch coverage
+        run: >-
+          uv run pytest
+          tests/test_cloud_*.py tests/test_worker_gateway_api.py tests/test_room_to_play.py
+          tests/test_operation_identity.py tests/test_flags.py tests/test_flag_server.py
+          -q --cov=selecta --cov-branch --cov-report=json:cloud-coverage.json
+          --cov-report=term-missing:skip-covered --cov-fail-under=0
+      - name: Keep the cloud coverage report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-coverage
+          path: cloud-coverage.json
+          if-no-files-found: warn
+
   web:
     name: Web / unit tests and production build
     runs-on: ubuntu-latest
@@ -168,7 +215,7 @@ jobs:
     # Combined Python coverage, not a partial shard, must meet the original 70%.
     name: verify
     if: ${{ always() }}
-    needs: [checklist-evidence, python, web, browser, flags]
+    needs: [checklist-evidence, python, cloud, web, browser, flags]
     runs-on: ubuntu-latest
     steps:
       - name: Require all prerequisite jobs to pass
@@ -178,13 +225,15 @@ jobs:
           WEB_RESULT: ${{ needs.web.result }}
           BROWSER_RESULT: ${{ needs.browser.result }}
           FLAGS_RESULT: ${{ needs.flags.result }}
+          CLOUD_RESULT: ${{ needs.cloud.result }}
         run: |
-          echo "Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT"
+          echo "Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT"
           test "$EVIDENCE_RESULT" = success
           test "$PYTHON_RESULT" = success
           test "$WEB_RESULT" = success
           test "$BROWSER_RESULT" = success
           test "$FLAGS_RESULT" = success
+          test "$CLOUD_RESULT" = success
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
