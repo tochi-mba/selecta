@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from selecta.billing.plans import validate_catalogue
 from selecta.flags.rules import RulesCache
 from selecta.persistence import make_engine
 from selecta.persistence.migrate import current as migration_current
@@ -31,6 +32,7 @@ def _csv(name: str) -> tuple[str, ...]:
 
 def create_gateway_app(*, engine: Engine | None = None) -> FastAPI:
     """Build a production worker gateway with scoped tokens and signed R2 object URLs."""
+    validate_catalogue()
     database_url = os.environ.get("SELECTA_GATEWAY_DATABASE_URL") or os.environ.get(
         "SELECTA_DATABASE_URL", ""
     )

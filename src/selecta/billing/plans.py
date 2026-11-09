@@ -321,6 +321,13 @@ def problems(registry: Mapping[str, flags.Flag] | None = None) -> list[str]:
     return found
 
 
+def validate_catalogue(registry: Mapping[str, flags.Flag] | None = None) -> None:
+    """Refuse to start a Cloud service with plans that contradict the flag registry."""
+    found = problems(registry)
+    if found:
+        raise ValueError("Invalid Cloud plan catalogue: " + "; ".join(found))
+
+
 def _plan_problems(plan_id: str, plan: Plan, registry: Mapping[str, flags.Flag]) -> list[str]:
     name = f"{plan_id} v{plan.version}"
     found: list[str] = []

@@ -4,6 +4,8 @@
 
 ### 3.1 Plan catalogue (starting values, all admin-tunable and versioned)
 
+**Current implementation:** Plans are versioned in `src/selecta/billing/plans.py`. Cloud API and worker gateway startup call `validate_catalogue()` to catch stale flag ids, invalid plan versions and plan-gating conflicts before serving requests. The required unit and CI checks have not yet been run.
+
 Storage is your decision. Everything else is a proposed starting point to validate in beta.
 
 | Entitlement | Free | Standard | Premium |

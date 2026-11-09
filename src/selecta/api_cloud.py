@@ -198,6 +198,7 @@ def create_cloud_app(
 ) -> FastAPI:
     """Create the cloud API without starting any local-mode threads or touching local music."""
     settings = settings or CloudSettings.from_environment()
+    plans.validate_catalogue()
     owns_engine = engine is None
     engine = engine or make_engine(settings.database_url)
     verifier = verifier or settings.verifier()

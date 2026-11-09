@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 23 In progress, 105 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 24 In progress, 104 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -98,7 +98,7 @@
 
 ## [ADR-0402 - Plans, entitlements, quotas and allowances](adr-0402-plans-entitlements-and-quotas.md)
 
-- [ ] **SC-0402-01 - Plan catalogue.** Acceptance: Plans validate against the flag registry; changes are versioned. Required verification: Unit test plus CI check. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0402-01 - Plan catalogue.** Acceptance: Plans validate against the flag registry; changes are versioned. Required verification: Unit test plus CI check. Implementation: In progress; versioned plan catalogue validation now runs before Cloud API and worker gateway startup and rejects flags or versions inconsistent with the registry. Unit/CI verification remains. Independently verified: No.
 - [ ] **SC-0402-02 - Usage ledger.** Acceptance: Ledger totals match rollups and storage inventory. Required verification: Reconciliation test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0402-03 - Over-quota state.** Acceptance: Uploads and exports are blocked, playback and downloads work, nothing is deleted. Required verification: Integration and Playwright tests. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0402-04 - Meters.** Acceptance: Plan & billing shows storage, analysis today, Lucy turns and exports. Required verification: Playwright test. Implementation: Not started; Independently verified: No.
