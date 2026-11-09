@@ -8,6 +8,7 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 
+from selecta import flags
 from selecta.audit.checks import AuditReport, Check
 from selecta.config import ANALYSIS_VERSION
 from selecta.lyrics.lrclib import Line
@@ -57,6 +58,39 @@ WORD_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
 STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine", "stem_studio", "stem_arrange"}
 
 STUDIO_SESSION = "studio_session"
+
+# The flag each move answers to. "auto" has none: letting Selecta pick is always possible, since
+# a cut is core and can't be turned off.
+MOVE_FLAGS = {
+    "cut_on_one": "move.cut",
+    "bass_swap_blend": "move.bass_swap_blend",
+    "vocal_ride": "move.vocal_ride",
+    "filter_sweep": "move.filter_sweep",
+    "tempo_ramp": "move.tempo_ramp",
+    "echo_out": "move.echo_out",
+    "delay_throw": "move.delay_throw",
+    "reverb_wash": "move.reverb_wash",
+    "word_cut": "move.word_cut",
+    "word_blend": "move.word_blend",
+    "phrase_roll": "move.phrase_roll",
+    "word_exchange": "move.call_and_response",
+    "stem_arrange": "move.strip_and_land",
+    "stem_intertwine": "move.intertwined_stems",
+    "stem_studio": "stem_studio",
+    STUDIO_SESSION: "stem_studio",
+}
+
+
+def move_on(move: str) -> bool:
+    """Whether this build can make the move. One that isn't a move at all is left for whatever
+    checks names to refuse."""
+    flag = MOVE_FLAGS.get(move)
+    return flag is None or flags.on(flag)
+
+
+def moves_on() -> dict[str, tuple[str, str]]:
+    """The moves this build can make, with their names and descriptions."""
+    return {name: words for name, words in MOVES.items() if move_on(name)}
 
 NOT_IN_THE_CHOOSER = {"stem_studio"}
 
@@ -136,7 +170,7 @@ def fallback_order(
     ride = ["vocal_ride"] if can_ride else []
     strip = ["stem_arrange"] if can_strip else []
     middle = [*blends, *ride, *strip] if rides_full else [*ride, *strip, *blends]
-    return [*middle, *effects, "reverb_wash"]
+    return [move for move in (*middle, *effects, "reverb_wash") if move_on(move)]
 
 
 def good_enough(report: AuditReport) -> bool:
@@ -155,8 +189,18 @@ def _what_failed(report: AuditReport) -> str:
     return f"It didn't pass: {names}"
 
 
-def request_from(a: int, b: int, seam: dict | None) -> SeamRequest:
+def usable_settings(seam: dict | None) -> dict:
+    """A seam's saved settings, with a move this build can't make read as "Let Selecta pick".
+    Nothing saved is changed, so turning the move back on brings the choice back."""
     seam = seam or {}
+    move = seam.get("move")
+    if move and not move_on(move):
+        return {**seam, "move": "auto"}
+    return seam
+
+
+def request_from(a: int, b: int, seam: dict | None) -> SeamRequest:
+    seam = usable_settings(seam)
     return SeamRequest(
         a=a,
         b=b,

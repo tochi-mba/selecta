@@ -268,12 +268,12 @@ def effective() -> dict[str, State]:
     return _states
 
 
-def use(text: str | None) -> dict[str, State]:
+def use(text: str | None) -> None:
     """Replace this process's flags. For tests and the browser-test server only; `None` goes back
-    to reading `SELECTA_FLAGS`. Nothing caches a flag at import, so this takes effect at once."""
+    to reading `SELECTA_FLAGS`, the next time a flag is asked for. Nothing caches a flag at
+    import, so this takes effect at once."""
     global _states
     _states = None if text is None else resolve(text)
-    return effective()
 
 
 def on(flag_id: str) -> bool:

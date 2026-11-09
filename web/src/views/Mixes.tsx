@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, get, MixData, post, VibeCard } from '../api';
+import { useFlags } from '../flags';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { useLocationText } from '../router';
 import { orderOf } from '../state/readiness';
 import { operationId } from '../state/async';
-import { EXPLORE_TABS } from '../shell/manifest';
+import { exploreTabs, listed } from '../shell/manifest';
 import { PageLink } from '../shell/PageLink';
 import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
@@ -39,6 +40,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const [confirming, setConfirming] = useState<Asked | null>(null);
   const here = useLocationText().split('?')[0];
   const { counts } = status;
+  const on = useFlags();
+  // the setup only opens when there's something in it to shape
+  const shaping = on('mixes.shaping') && (on('mixes.shaping.feel') || on('mixes.shaping.energy_arc') || on('mixes.shaping.destination') || on('mixes.shaping.stem_moves'));
 
   useEffect(() => {
     let live = true;
@@ -165,7 +169,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </p>
       )}
       <h1 className="display small">Make a Mix</h1>
-      <LinkTabs label="Make a Mix" items={EXPLORE_TABS} current={EXPLORE_TABS.some((tab) => tab.path === here) ? here : '/mixes'} />
+      <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
@@ -191,16 +195,17 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
               </button>
             ))}
           </div>
-          <button aria-label="Customize" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>
+          {shaping && <button aria-label="Customize" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>
         {hero && !hero.ready && <p className="hint">{hero.name} needs {hero.needs} more mix-ready {hero.needs === 1 ? 'song' : 'songs'} before it can play.</p>}
-        <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>
+        {shaping && <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>}
         <p className="hint">
-          <b>Commit</b> · Play now, edit first, or save a draft. {songs} songs. How long it really runs depends on where the transitions fall.
-          {replacing ? ` Playing a new mix replaces ${mixName}, which you can undo. To keep it playing, use Save as draft.` : ''}
+          <b>Commit</b> · {listed(['Play now', on('editor') && 'edit first', on('drafts') && 'save a draft']).replace(' and ', ', or ')}. {songs} songs. How long it really runs depends on where the transitions fall.
+          {replacing ? ` Playing a new mix replaces ${mixName}, which you can undo.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
         </p>
       </section>
 
+      {on('lucy') && (
       <section className="mix-create" aria-labelledby="mix-create-title">
         <p className="eyebrow">Create · Plan before listening</p>
         <h2 id="mix-create-title">Create with Lucy</h2>
@@ -208,10 +213,12 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <PageLink to="/mixes/lucy" className="button primary">Plan a mix with Lucy</PageLink>
         <p className="hint">Optional. Nothing is sent, saved or played until you choose to do it. Quick Play does not use Lucy.</p>
       </section>
+      )}
       </div>
 
       {problem && <p className="warn" role="alert">{problem}</p>}
 
+      {on('mixes.ideas') && (
       <section>
         <div className="vibe-browser-head">
           <div>
@@ -259,19 +266,23 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                       <span>{card.songs} matching songs</span>
                       <span>About {length(card.seconds)} of matching source songs</span>
                     </div>
-                    <div className="row card-actions">
+                    <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
                       <Action className="primary" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
-                      <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>
-                      <Action className="quiet save-draft" disabled={!!building} working="Saving…" aria-label={`Save ${card.name} as a draft`} run={() => keepAsDraft(card.key)}>Save draft</Action>
+                      {on('editor') && <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
+                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building} working="Saving…" aria-label={`Save ${card.name} as a draft`} run={() => keepAsDraft(card.key)}>Save draft</Action>}
                     </div>
                     <details className="vibe-card-detail">
                       <summary>Why {card.name}? More details</summary>
                       <p>{card.blurb}</p>
                       <p className="artists"><span>Draws from</span> {card.artists.join(', ') || 'your mix-ready songs'}</p>
                       <p className="how">{card.moves}</p>
-                      <p className="hint">Planning preference, not a promised song order or transition quality. Play replaces the current mix after confirmation; Shape first opens the new mix for editing; Save draft leaves playback unchanged. The generated result depends on available recordings and cues.</p>
-                      <PageLink className="button quiet" to={`/mixes/lucy?prompt=${encodeURIComponent(`I'd like a mix with the ${card.name} feeling. ${card.blurb}`)}`}>Use this feeling with Lucy</PageLink>
-                      <p className="hint">This opens an editable suggestion in Lucy; it does not send a request.</p>
+                      <p className="hint">Planning preference, not a promised song order or transition quality. Play replaces the current mix after confirmation{on('editor') ? '; Shape first opens the new mix for editing' : ''}{on('drafts') ? '; Save draft leaves playback unchanged' : ''}. The generated result depends on available recordings and cues.</p>
+                      {on('lucy') && (
+                        <>
+                          <PageLink className="button quiet" to={`/mixes/lucy?prompt=${encodeURIComponent(`I'd like a mix with the ${card.name} feeling. ${card.blurb}`)}`}>Use this feeling with Lucy</PageLink>
+                          <p className="hint">This opens an editable suggestion in Lucy; it does not send a request.</p>
+                        </>
+                      )}
                     </details>
                   </article>
                 ))}
@@ -280,8 +291,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           );
         })}
       </section>
+      )}
 
-      {waiting.length > 0 && (
+      {on('mixes.ideas') && waiting.length > 0 && (
         <section className="waiting">
           <h2 className="section-title">Needs more mix-ready songs</h2>
           <p className="hint">These ideas do not have enough eligible recordings yet. You can try another available idea, or analyse more local songs. No new mix will be made from an unavailable idea.</p>
@@ -298,7 +310,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       {left > 0 && (
         <section className="nudge">
           <p>
-            <b>{counts.analysed} of {counts.music} songs have audio analysis; {counts.ready ?? 0} are ready for mixes.</b> The rest will mean more variety and word links. {analysisWords(status.eta?.analysis)}
+            <b>{counts.analysed} of {counts.music} songs have audio analysis; {counts.ready ?? 0} are ready for mixes.</b> The rest will mean more variety{on('discover.word_links') ? ' and word links' : ''}. {analysisWords(status.eta?.analysis)}
           </p>
           {status.analysis_running ? (
             <button onClick={() => setView('Workshop')}>Analysing now, see progress</button>
@@ -308,7 +320,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </section>
       )}
 
-      {customizing && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} onClose={() => setCustomizing(false)} />}
+      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} onClose={() => setCustomizing(false)} />}
       {confirming && (
         <Dialog
           title={`Replace ${mixName}?`}
@@ -316,7 +328,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           footer={(
             <>
               <button onClick={() => setConfirming(null)}>Cancel</button>
-              <Action working="Saving…" run={async () => { const { key } = confirming; setConfirming(null); await keepAsDraft(key); }}>Save as draft instead</Action>
+              {on('drafts') && <Action working="Saving…" run={async () => { const { key } = confirming; setConfirming(null); await keepAsDraft(key); }}>Save as draft instead</Action>}
               <Action className="primary" working="Building…" run={async () => { const asked = confirming; setConfirming(null); await start(asked); }}>
                 {confirming.open ? 'Replace and edit' : 'Replace and play'}
               </Action>
@@ -326,7 +338,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           <p>
             <b>{confirming.name}</b> would take over from <b>{mixName}</b>, which is {now.phase === 'paused' ? 'paused' : 'playing'}. You can undo this straight afterwards.
           </p>
-          <p className="hint">Saving it as a draft instead leaves what’s playing exactly as it is.</p>
+          {on('drafts') && <p className="hint">Saving it as a draft instead leaves what’s playing exactly as it is.</p>}
         </Dialog>
       )}
     </main>

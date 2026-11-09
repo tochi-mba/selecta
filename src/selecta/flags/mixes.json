@@ -9,13 +9,13 @@
     },
     "mixes.genre_variants": {
       "label": "Single-genre journeys",
-      "about": "Each journey drawn from one genre only, such as Afrobeats · Slow burn.",
+      "about": "Each journey drawn from one genre only, such as Afrobeats · Slow burn. Without it, journeys draw from the whole library.",
       "requires": ["mixes.ideas"],
       "surfaces": ["mixes"]
     },
     "mixes.seasonal": {
       "label": "Seasonal mixes",
-      "about": "The Christmas mix, and keeping Christmas songs out of every other mix.",
+      "about": "The Christmas mix, once there are enough Christmas songs. They stay out of every other mix either way.",
       "requires": ["mixes.ideas"],
       "surfaces": ["mixes"],
       "words": ["Christmas"]

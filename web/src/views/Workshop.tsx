@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Folders, get, Jobs, post } from '../api';
 import { analysisWords, estimateWords, etaRangeWords } from '../lib';
 import { useRoute, type WorkshopTab } from '../router';
-import { WORKSPACE_TABS } from '../shell/manifest';
+import { workspaceTabs } from '../shell/manifest';
 import { PageLink } from '../shell/PageLink';
 import { ThemeChoices } from '../ui/ThemeChoice';
 import { setPrefs, usePrefs } from '../state/prefs';
@@ -91,7 +91,7 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const route = useRoute();
   const inStudy = route.page === 'listening';
-  const here = WORKSPACE_TABS.find((section) => section.tab === tab)?.path ?? '/workshop';
+  const here = workspaceTabs().find((section) => section.tab === tab)?.path ?? '/workshop';
 
   const toggle = async () => {
     await post(status.analysis_running ? '/analysis/stop' : '/analysis/start');
@@ -102,7 +102,7 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
   return (
     <main className="page browse workspace" id="main">
       <h1 className="display small">{inStudy ? 'Listening study' : 'Workspace'}</h1>
-      <LinkTabs label="Workspace" items={WORKSPACE_TABS} current={here} />
+      <LinkTabs label="Workspace" items={workspaceTabs()} current={here} />
 
       {tab === 'overview' && <Overview status={status} />}
 

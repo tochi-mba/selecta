@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
+import { useFlags } from '../flags';
 import { NowState, SetPlayer } from '../player';
 import { Route, savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
@@ -9,7 +10,7 @@ import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
-import { CLASSIC_DESTINATIONS, describeRoute, DESTINATIONS, destinationOf, WORKSPACE_TABS } from './manifest';
+import { aboutOf, classicDestinations, describeRoute, DESTINATIONS, destinationOf, workspaceTabs } from './manifest';
 import { PageLink } from './PageLink';
 
 export { PageLink };
@@ -50,6 +51,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
  * appearing or going away. */
 function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { player: SetPlayer; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number }) {
   const progress = now.duration > 0 && Number.isFinite(now.songTime) ? Math.min(Math.max(now.songTime / now.duration, 0), 1) : 0;
+  const on = useFlags();
   return (
     <aside className="mini" aria-label={now.inSeam ? 'Playing transition' : now.phase === 'paused' ? 'Paused playback' : now.phase === 'loading' ? 'Loading playback' : 'Now playing'}>
       <i className="mini-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
@@ -61,9 +63,11 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { playe
         <span title={song.artist} dir="auto">{song.artist || 'Unknown artist'} · {clock(now.songTime)} / {clock(now.duration)}{now.inSeam ? ' · Transition playing' : ''}</span>
       </PageLink>
       <button className="mini-next" disabled={now.phase === 'loading' || !hasNext} onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
-      <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
-        Request<span className="count" aria-hidden={!waiting}>{waiting || '\u00a0'}</span>
-      </button>
+      {on('requests') && (
+        <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
+          Request<span className="count" aria-hidden={!waiting}>{waiting || '\u00a0'}</span>
+        </button>
+      )}
       <div className="mini-volume"><VolumeControl player={player} now={now} /></div>
     </aside>
   );
@@ -75,6 +79,7 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
   const unseen = useUnseenActivity();
   const { jobs } = useJobsStatus();
   const attention = jobAttention(jobs);
+  const on = useFlags();
   return (
     <header className="context-bar">
       <nav className="crumbs" aria-label="Breadcrumb">
@@ -89,24 +94,28 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
         </ol>
       </nav>
       <div className="context-actions">
-        {palette && (
+        {palette && on('app.command_palette') && (
           <button className="context-button palette-button" onClick={onCommands} aria-label="Search and commands" title="Search and commands (Ctrl K)">
             <Icon name="search" /><span className="context-label">Search</span><kbd className="context-label">Ctrl K</kbd>
           </button>
         )}
-        <button className="context-button context-request" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
-          <Icon name="request" />{waiting ? <span className="count">{waiting}</span> : null}
-        </button>
-        <ThemeMenu />
-        <button className="context-button" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
-          <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
-        </button>
+        {on('requests') && (
+          <button className="context-button context-request" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
+            <Icon name="request" />{waiting ? <span className="count">{waiting}</span> : null}
+          </button>
+        )}
+        {on('app.theme_choice') && <ThemeMenu />}
+        {on('app.activity') && (
+          <button className="context-button" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
+            <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
+          </button>
+        )}
         {attention > 0 && (
           <PageLink className="context-button health-attention" to="/workshop" aria-label={`Workspace, ${attention} ${attention === 1 ? 'item needs' : 'items need'} your attention`} title="Workspace needs your attention">
             <Icon name="warning" /><span className="count">{attention}</span>
           </PageLink>
         )}
-        <button className="context-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={onHelp}><Icon name="help" /></button>
+        {on('app.shortcuts') && <button className="context-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={onHelp}><Icon name="help" /></button>}
       </div>
     </header>
   );
@@ -194,6 +203,7 @@ export function Shell({
   const [popped, setPopped] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const prefs = usePrefs();
+  const on = useFlags();
   useKeyboardInset();
 
   useEffect(() => {
@@ -230,6 +240,7 @@ export function Shell({
   const collapsed = prefs.railCollapsed;
   const primaryDestinations = DESTINATIONS.filter((item) => item.id !== 'workspace');
   const workspace = DESTINATIONS.find((item) => item.id === 'workspace');
+  const classic = prefs.classicNav && on('app.classic_nav');
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`}>
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
@@ -237,8 +248,8 @@ export function Shell({
         <nav className="nav" aria-label="Main">
           <PageLink to="/mixes" className="brand" aria-label="Selecta, go to Make a Mix"><span className="brand-word">Selecta</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
           <ul>
-            {prefs.classicNav
-              ? CLASSIC_DESTINATIONS.map((item) => (
+            {classic
+              ? classicDestinations().map((item) => (
                   <li key={item.path}>
                     <PageLink to={item.path} data-tip={item.label} aria-current={item.pages.includes(route.page) && !editing ? 'page' : undefined}>
                       <Icon name={item.icon} />
@@ -254,7 +265,7 @@ export function Shell({
                     </PageLink>
                   </li>
                 ))}
-            {!prefs.classicNav && workspace && (
+            {!classic && workspace && (
               <li className="nav-more">
                 <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
                   <Icon name={workspace.icon} />
@@ -266,7 +277,7 @@ export function Shell({
                 </button>
               </li>
             )}
-            {hasMix && (
+            {hasMix && on('editor') && (
               <li className="nav-context">
                 <PageLink to="/mix/current/edit" data-tip="Edit" aria-current={editing ? 'page' : undefined}>
                   <Icon name="edit" />
@@ -276,9 +287,11 @@ export function Shell({
             )}
           </ul>
           <div className="nav-foot">
-            <button className="nav-request" onClick={onRequests} aria-label={waitingRequests ? `Requests, ${waitingRequests} waiting` : 'Requests'} title="Request a song (R)">
-              <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
-            </button>
+            {on('requests') && (
+              <button className="nav-request" onClick={onRequests} aria-label={waitingRequests ? `Requests, ${waitingRequests} waiting` : 'Requests'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
+                <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
+              </button>
+            )}
             <button
               className="nav-collapse quiet"
               aria-pressed={collapsed}
@@ -301,9 +314,9 @@ export function Shell({
         <Drawer title="More" onClose={() => setMoreOpen(false)}>
           <nav className="more-nav" aria-label="Workspace">
             <p className="eyebrow">Workspace</p>
-            <p className="hint">Analysis, sources, storage, learning and diagnostics.</p>
+            <p className="hint">{aboutOf('workspace')}.</p>
             <ul>
-              {WORKSPACE_TABS.map((item) => (
+              {workspaceTabs().map((item) => (
                 <li key={item.tab}>
                   <PageLink to={item.path} aria-current={route.page === 'workshop' && route.tab === item.tab ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{item.label}</PageLink>
                 </li>

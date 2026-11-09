@@ -11,6 +11,7 @@ from bisect import bisect_left, bisect_right
 from collections.abc import Callable, Iterable
 from typing import Any
 
+from selecta import flags
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
 from selecta.lyrics.lrclib import clean_artist
@@ -170,6 +171,7 @@ def next_transition(
     """The most useful thing left to make. A quick one for every pair comes first, then vocal rides,
     which the listener likes most but which take minutes each, and more room."""
     known = [(a, b) for a, b in pairs if a in library and b in library]
+    stems = stems if flags.on("stems") else "never"
     for a, b in known:
         moves = [
             name for name, _ in book.moves(library[a], library[b]) if name not in NOT_IN_SPARE_TIME

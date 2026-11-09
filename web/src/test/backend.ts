@@ -3,6 +3,15 @@ import { MixItem, SeamState, Status } from '../api';
 
 type Answer = unknown | ((body: unknown, url: string) => unknown);
 
+/** An answer with its own status code, such as a 403 for a feature that's turned off. */
+export class Reply {
+  constructor(readonly status: number, readonly body: unknown) {}
+}
+
+/** What a server answers for a route whose feature is turned off in its build. */
+export const turnedOff = (flag: string) =>
+  new Reply(403, { detail: 'That is turned off in this build.', code: 'flag_off', flag });
+
 /** A stand-in for the server: answers by route, and remembers what it was asked. */
 export function fakeBackend(routes: Record<string, Answer>) {
   const calls: { method: string; path: string; body: unknown }[] = [];
@@ -16,6 +25,7 @@ export function fakeBackend(routes: Record<string, Answer>) {
       const route = routes[`${method} ${path.split('?')[0]}`];
       if (route === undefined) return new Response(JSON.stringify({ detail: 'Not Found' }), { status: 404 });
       const answer = typeof route === 'function' ? (route as (b: unknown, u: string) => unknown)(body, path) : route;
+      if (answer instanceof Reply) return new Response(JSON.stringify(answer.body), { status: answer.status });
       return new Response(JSON.stringify(answer), { status: 200 });
     }),
   );

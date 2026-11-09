@@ -16,6 +16,7 @@ from pathlib import Path
 
 import soundfile as sf
 
+from selecta import flags
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo, load_song
 from selecta.audit.deep import sung_overlap
@@ -105,8 +106,8 @@ def load_library(conn: sqlite3.Connection, settings: Settings) -> list[SongInfo]
             except OSError:
                 continue
         loaded[song_id] = (stamp, song)
-        if not song.vocals_known and not song.instrumental:
-            continue
+        if not song.vocals_known and not song.instrumental and flags.on("lyrics.lookup"):
+            continue  # unless lookup is off, when timed lyrics can never arrive to wait for
         songs.append(song)
     _LOADED[settings.home] = loaded
     return songs

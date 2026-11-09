@@ -18,6 +18,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from selecta import flags
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
 from selecta.library.scan import identity
@@ -28,6 +29,7 @@ from selecta.planner.choose import enumerate_candidates
 from selecta.planner.memory import RULES_VERSION, SeamMemory
 from selecta.planner.wordreel import BLEND_MIN_GRID, modes_for, ride_lines
 from selecta.requests import Slot, custom_seam, find_slot, open_spots
+from selecta.seam_kinds import move_on
 from selecta.seams import request_from
 
 QUICK_BLENDS = ("bass_swap_blend", "filter_sweep", "tempo_ramp")
@@ -181,8 +183,10 @@ class PairBook:
         facts = self.facts(a, b)
         if facts.quality < GOOD_ENOUGH:
             return []
-        usable = list(facts.moves)
-        if stems != "never" and self._can_ride(a, b):
+        # only what this build can make; the facts are kept whole, so turning a move back on works
+        usable = [(name, score) for name, score in facts.moves if move_on(name)]
+        can_ride = stems != "never" and flags.on("stems") and move_on("vocal_ride")
+        if can_ride and self._can_ride(a, b):
             blends = sum(name in QUICK_BLENDS for name, _ in usable)
             usable.insert(blends, ("vocal_ride", RIDE_SCORE))
         return usable

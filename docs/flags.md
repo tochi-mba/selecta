@@ -49,8 +49,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `mixes.ideas` | **Mix ideas.** Ready-made mixes under the moment, the mood, the sound and the journey. |  |
-| `mixes.genre_variants` | **Single-genre journeys.** Each journey drawn from one genre only, such as Afrobeats · Slow burn. | `mixes.ideas` |
-| `mixes.seasonal` | **Seasonal mixes.** The Christmas mix, and keeping Christmas songs out of every other mix. | `mixes.ideas` |
+| `mixes.genre_variants` | **Single-genre journeys.** Each journey drawn from one genre only, such as Afrobeats · Slow burn. Without it, journeys draw from the whole library. | `mixes.ideas` |
+| `mixes.seasonal` | **Seasonal mixes.** The Christmas mix, once there are enough Christmas songs. They stay out of every other mix either way. | `mixes.ideas` |
 | `mixes.wordplay_showcase` | **Wordplay showcase.** A mix built around word hand-offs. | `mixes.ideas`, `lyrics.word_timing` |
 | `mixes.shaping` | **Shape this mix.** The optional setup that shapes the next mix before it's built. |  |
 | `mixes.shaping.feel` | **Transition feel.** Balanced, seamless, punchy or wordplay. | `mixes.shaping` |

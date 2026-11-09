@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from selecta import __version__, db
+from selecta import __version__, db, flags
 from selecta.library.scan import _ARTIST_SPLIT, _FEAT_TAIL, _TITLE_NOISE
 
 API = "https://lrclib.net/api"
@@ -116,6 +116,8 @@ def fetch_all(
     limit: int = 0,
     on_progress: Callable[[int, int, str, str], None] | None = None,
 ) -> dict[str, int]:
+    if not flags.on("lyrics.lookup"):
+        return {}  # turned off in this build: nothing is sent to LRCLIB
     rows = conn.execute(
         "SELECT s.id, s.artist, s.title, s.album, s.duration FROM songs s "
         "LEFT JOIN lyrics l ON l.song_id = s.id "

@@ -4,7 +4,7 @@ import { ApiError, DraftList, get, Link, LinkList, MixData, post, SeamState } fr
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
-import { EXPLORE_TABS } from '../shell/manifest';
+import { exploreTabs } from '../shell/manifest';
 import { operationId } from '../state/async';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
@@ -488,7 +488,7 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
 
   return (
     <main className="page browse" id="main">
-      <LinkTabs label="Make a Mix" items={EXPLORE_TABS} current={tab === 'harmonic' ? '/discover/harmonic' : '/discover'} />
+      <LinkTabs label="Make a Mix" items={exploreTabs()} current={tab === 'harmonic' ? '/discover/harmonic' : '/discover'} />
       <h1 className="display small">{tab === 'harmonic' ? 'Harmonic matches' : 'Word connections'}</h1>
       {tab === 'harmonic' && <HarmonicDiscoveries secondsToPrepare={status.eta?.jobs.audition} />}
       {tab === 'words' && (

@@ -2,16 +2,17 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, DraftList, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
+import { setFlags, useFlags } from './flags';
 import { loadResume } from './lib';
 import { NowState, SetPlayer } from './player';
 import { navigate, useRoute } from './router';
 import { buildCommands } from './shell/commands';
-import { describeRoute } from './shell/manifest';
+import { describeRoute, shownRoute } from './shell/manifest';
 import { PageLink, Shell } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
 import { orderOf } from './state/readiness';
-import { SHORTCUTS, shortcutFor } from './state/shortcuts';
+import { shortcutFor, shortcutsOn } from './state/shortcuts';
 import { openGlossary } from './state/glossaryRequests';
 import { sayThisTabIsPlaying, whenAnotherTabPlays } from './state/tabs';
 import { ActivityPanel } from './ui/ActivityPanel';
@@ -69,7 +70,9 @@ const scopeKey = (scope: number | null) => (scope === null ? 'current' : `draft:
 const nameOfControl = (control: HTMLElement) => (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
 
 export function App() {
-  const route = useRoute();
+  // a page whose feature is off in this build is Not Found, as if it had never been built
+  const on = useFlags();
+  const route = shownRoute(useRoute());
   const routeRef = useRef(route);
   routeRef.current = route;
   const [status, setStatus] = useState<Status | null>(null);
@@ -116,6 +119,7 @@ export function App() {
     if (statusReading.current) return statusReading.current;
     const work = get<Status>('/status')
       .then((next) => {
+        setFlags(next.flags);
         setStatus(next);
         setProblem('');
       })
@@ -360,15 +364,16 @@ export function App() {
   }, [setUp]);
 
   // Register media keys just once. Handlers read live state so they cannot act on a stale song.
+  const mediaKeys = on('listen.media_keys');
   useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
+    if (!('mediaSession' in navigator) || !mediaKeys) return;
     return bindMediaSession(navigator.mediaSession, player, () => mixRef.current);
-  }, [player]);
+  }, [player, mediaKeys]);
 
   // The OS advances at playbackRate 1 between these authoritative one-second updates.
   // Preview ownership never turns the paused mix into a second apparent player.
   useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
+    if (!('mediaSession' in navigator) || !mediaKeys) return;
     const update = () => {
       const state = player.state;
       syncMediaSession(navigator.mediaSession, state, mixRef.current[state.position], data.name, !!audioOwner());
@@ -376,7 +381,7 @@ export function App() {
     update();
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
-  }, [player, now.phase, now.position, playing?.song_id, playing?.title, playing?.artist, data.name]);
+  }, [player, mediaKeys, now.phase, now.position, playing?.song_id, playing?.title, playing?.artist, data.name]);
 
   // Going on stage hides everything that had focus, so coming back puts focus back where it was.
   const beforeStage = useRef<{ element: HTMLElement | null; name: string } | null>(null);
@@ -388,6 +393,7 @@ export function App() {
   const stageRef = useRef(false);
   stageRef.current = stage;
   const toggleStage = useCallback(() => {
+    if (!on('listen.stage') && !stageRef.current) return;
     noteFocusForStage();
     if (document.fullscreenElement) {
       void document.exitFullscreen();
@@ -508,7 +514,7 @@ export function App() {
 
   // the drafts it can jump to are only ever as old as this opening of it
   useEffect(() => {
-    if (!commanding) return;
+    if (!commanding || !on('drafts')) return;
     let live = true;
     get<DraftList>('/drafts').then((list) => { if (live) setCommandDrafts(list.drafts ?? []); }).catch(() => { if (live) setCommandDrafts([]); });
     return () => { live = false; };
@@ -684,22 +690,22 @@ export function App() {
           <p className="hint">Cancel to keep listening without changing either mix.</p>
         </Dialog>
       )}
-      {requesting && (
+      {requesting && on('requests') && (
         <Drawer title="Requests" onClose={() => setRequesting(false)}>
           <RequestsPanel />
         </Drawer>
       )}
-      {activityOpen && (
-        <Drawer title="Activity" onClose={() => setActivityOpen(false)}>
-          <ActivityPanel />
-          <ExportJobs />
+      {activityOpen && (on('app.activity') || on('export')) && (
+        <Drawer title={on('app.activity') ? 'Activity' : 'Exports'} onClose={() => setActivityOpen(false)}>
+          {on('app.activity') && <ActivityPanel />}
+          {on('export') && <ExportJobs />}
         </Drawer>
       )}
-      {commanding && <CommandPalette commands={commands} onClose={() => setCommanding(false)} />}
-      {helping && (
-        <Dialog title="Keyboard shortcuts" onClose={() => setHelping(false)} footer={<><button onClick={() => openGlossary()}>Music terms</button><button autoFocus data-autofocus onClick={() => setHelping(false)}>Close</button></>}>
+      {commanding && on('app.command_palette') && <CommandPalette commands={commands} onClose={() => setCommanding(false)} />}
+      {helping && on('app.shortcuts') && (
+        <Dialog title="Keyboard shortcuts" onClose={() => setHelping(false)} footer={<>{on('app.glossary') && <button onClick={() => openGlossary()}>Music terms</button>}<button autoFocus data-autofocus onClick={() => setHelping(false)}>Close</button></>}>
           <dl className="keys">
-            {SHORTCUTS.filter((shortcut) => shortcut.id !== 'palette' || preferences.palette).map((shortcut) => (
+            {shortcutsOn().filter((shortcut) => shortcut.id !== 'palette' || preferences.palette).map((shortcut) => (
               <div key={shortcut.id}>
                 <dt><kbd>{shortcut.keys}</kbd></dt>
                 <dd>{shortcut.label}</dd>
@@ -707,10 +713,12 @@ export function App() {
             ))}
           </dl>
           <div className="row wrap">
-            <label className="choice">
-              <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />
-              Use Ctrl K for search and commands
-            </label>
+            {on('app.command_palette') && (
+              <label className="choice">
+                <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />
+                Use Ctrl K for search and commands
+              </label>
+            )}
             <label className="choice">
               <input type="checkbox" checked={preferences.singleKeys} onChange={(event) => setPrefs({ singleKeys: event.target.checked })} />
               Use single-key shortcuts
@@ -718,7 +726,7 @@ export function App() {
           </div>
         </Dialog>
       )}
-      <GlossaryHost />
+      {on('app.glossary') && <GlossaryHost />}
     </RequestsContext.Provider>
   );
 }

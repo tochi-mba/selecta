@@ -22,6 +22,7 @@ from selecta.planner.fit import (
     relative_level,
 )
 from selecta.render.engine import Rendered, SongCache, render
+from selecta.seam_kinds import move_on
 from selecta.styles import Recipe, all_recipes
 
 MAX_REPAIRS = 4
@@ -252,7 +253,11 @@ def styles_for_language(language: str, stems: str = "sometimes") -> set[str] | N
         "seamless": {"bass_swap_blend", "filter_sweep", "tempo_ramp"},
         "punchy": {"cut_on_one", "echo_out", "delay_throw"},
     }
-    return families.get(language)
+    family = families.get(language)
+    if family is None:
+        return None
+    # moves turned off in this build drop out; a family with none left means any move that's on
+    return {move for move in family if move_on(move)} or None
 
 
 def _score(

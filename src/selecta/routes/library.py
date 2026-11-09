@@ -17,7 +17,7 @@ from fastapi import HTTPException, Response
 from pydantic import BaseModel, Field
 
 from selecta import audio as audio_io
-from selecta import db
+from selecta import db, flags
 from selecta.api_common import (
     CAMELOT,
     FIRST_LOOK_SECONDS,
@@ -79,13 +79,7 @@ def add_routes(app, ctx) -> None:
                     "set_aside": sum(report.set_aside.values()),
                 }
                 # nobody should have to find a button to make the app start working
-                subprocess.run(
-                    [sys.executable, "-m", "selecta.cli", "lyrics"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    env={**os.environ, "SELECTA_HOME": str(settings.home)},
-                    check=False,
-                )
+                look_up_lyrics()
                 start_analysis()
             except ScanStopped:
                 background.scan = {"status": "cancelled", "folder": str(folder)}
@@ -106,6 +100,19 @@ def add_routes(app, ctx) -> None:
             background.scan_stop.set()
         return background.scan
 
+    def look_up_lyrics() -> None:
+        """Lyrics for every song that has none yet, unless lyric lookup is turned off, in which
+        case nothing is sent anywhere."""
+        if not flags.on("lyrics.lookup"):
+            return
+        subprocess.run(
+            [sys.executable, "-m", "selecta.cli", "lyrics"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SELECTA_HOME": str(settings.home)},
+            check=False,
+        )
+
     def remember_folder(conn: sqlite3.Connection, folder: Path) -> None:
         folders = db.preference(conn, "library_folders", [])
         if str(folder) not in folders:
@@ -115,13 +122,7 @@ def add_routes(app, ctx) -> None:
         """Lyrics for the new songs, then analysis. It can take a while, so it doesn't hold up the
         songs appearing, and one batch at a time goes through."""
         with background.settling:
-            subprocess.run(
-                [sys.executable, "-m", "selecta.cli", "lyrics"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                env={**os.environ, "SELECTA_HOME": str(settings.home)},
-                check=False,
-            )
+            look_up_lyrics()
             if not background.paused:
                 start_analysis()
 
@@ -174,7 +175,8 @@ def add_routes(app, ctx) -> None:
         time.sleep(FIRST_LOOK_SECONDS)
         while True:
             try:
-                check_for_new_songs()
+                if flags.on("library.folder_watching"):
+                    check_for_new_songs()
                 carry_on_analysing()
             except (OSError, sqlite3.Error, ValueError, RuntimeError):
                 pass  # a folder that's busy or unplugged just gets looked at again later
@@ -333,7 +335,7 @@ def add_routes(app, ctx) -> None:
             return {"status": "queued", "reason": "Waiting to be analysed."}
         if song in never:
             return {"status": "excluded", "reason": "You’ve set this to never play."}
-        if row["lyric_status"] in {"synced", "instrumental"}:
+        if row["lyric_status"] in {"synced", "instrumental"} or not flags.on("lyrics.lookup"):
             return {"status": "mix_ready", "reason": ""}
         if row["lyric_status"] is None:
             return {"status": "analysed_incomplete", "reason": "Still looking up its lyrics."}
@@ -377,7 +379,9 @@ def add_routes(app, ctx) -> None:
             else:
                 conditions = ["s.duplicate_of IS NULL"]
             params: list = []
-            ready_lyrics = "l.status IN ('synced','instrumental')"
+            ready_lyrics = (
+                "l.status IN ('synced','instrumental')" if flags.on("lyrics.lookup") else "1=1"
+            )
             if state == "set_aside":
                 conditions.append("s.is_music=0")
             elif state == "ready":

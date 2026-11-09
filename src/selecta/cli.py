@@ -424,6 +424,12 @@ def web(
 
     import uvicorn
 
+    from selecta import flags
+
+    off = flags.turned_off()
+    if off:
+        shown = ", ".join(off[:12]) + (f" and {len(off) - 12} more" if len(off) > 12 else "")
+        console.print(f"Turned off in this build: {shown}. `selecta flags` says why.")
     url = f"http://127.0.0.1:{port}/"
     if open_browser:
         webbrowser.open(url)
