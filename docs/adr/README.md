@@ -1,3 +1,9 @@
+# Selecta — Feature flags ADR proposal (2026-11-09)
+
+**One proposed ADR, [ADR-0390](adr-0390-feature-flags.md):** a single feature-flag registry for every feature, read by the server, the site, the CLI and the tests, with a browser sweep that checks every page with each feature turned off. 7 of 8 tasks Implemented, 1 In progress, 0 independently Verified. The catalog is [docs/flags.md](../flags.md).
+
+---
+
 # Selecta - Unified Experience Finish ADR proposal (2026-11-08)
 
 **Unified experience finishing programme:** 24 **Accepted** ADRs (0366–0389); **192 UF acceptance items**: 184 Not started, 8 In progress, 0 Implemented and **0 independently Verified**. Requester accepted all UF decisions on 2026-11-08; PR #41 now contains app code and tests. Implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526`.
