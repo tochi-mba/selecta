@@ -193,6 +193,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
+| `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. |  |
 | `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |

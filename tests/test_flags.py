@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from cloud_helpers import make_cloud_app
 from fastapi.routing import APIRoute
 from typer.main import get_command
 
@@ -25,17 +26,39 @@ def test_every_core_flag_says_why_it_cant_be_turned_off():
     assert core and all(len(flag.core) > 10 for flag in core)
 
 
-def test_every_api_route_belongs_to_exactly_one_flag(tmp_path):
-    app = create_app(Settings(tmp_path), tmp_path / "no-web")
-    owners = flags.route_owners()
-    served = {
+def _served(app) -> set[str]:
+    return {
         f"{method} {route.path}"
         for route in app.routes
         if isinstance(route, APIRoute) and route.path.startswith("/api/")
         for method in route.methods
     }
-    assert sorted(served - set(owners)) == [], "add these to a flag's routes"
-    assert sorted(set(owners) - served) == [], "these routes don't exist any more"
+
+
+def test_every_api_route_belongs_to_exactly_one_flag(tmp_path):
+    """Both apps: every route has an owning flag that exists in that app's mode, and every
+    route a flag owns is served by an app in one of the flag's modes."""
+    cloud_app, engine, _ = make_cloud_app(tmp_path)
+    try:
+        served = {
+            "local": _served(create_app(Settings(tmp_path), tmp_path / "no-web")),
+            "cloud": _served(cloud_app),
+        }
+    finally:
+        engine.dispose()
+    owners = flags.route_owners()
+    registry = flags.registry()
+    for mode, routes in served.items():
+        assert sorted(routes - set(owners)) == [], f"{mode}: add these to a flag's routes"
+        owned = routes & set(owners)
+        wrong_mode = sorted(r for r in owned if mode not in registry[owners[r]].modes)
+        assert wrong_mode == [], f"{mode} app serves routes of flags that aren't in {mode} mode"
+    gone = sorted(
+        route
+        for route, owner in owners.items()
+        if not any(route in served[mode] for mode in registry[owner].modes)
+    )
+    assert gone == [], "these routes don't exist any more"
 
 
 def test_every_cli_command_belongs_to_a_flag():

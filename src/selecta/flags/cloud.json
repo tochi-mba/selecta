@@ -82,6 +82,21 @@
       "kind": "release",
       "owner": "billing"
     },
+    "cloud.operations": {
+      "label": "Cloud operations",
+      "about": "Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct.",
+      "core": "The cloud service can't run, recover or erase data on time without them.",
+      "cli": [
+        "db",
+        "gateway",
+        "account-deletion-maintenance",
+        "billing-maintenance",
+        "storage-maintenance",
+        "replay-deletions-after-restore"
+      ],
+      "modes": ["cloud"],
+      "owner": "platform"
+    },
     "billing.webhooks": {
       "label": "Billing updates",
       "about": "Accept signed subscription state changes from Stripe.",

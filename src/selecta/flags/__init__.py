@@ -10,8 +10,11 @@ per process, so changing a flag means restarting Selecta. Child processes inheri
 the seam worker and every helper see the same flags as the server that started them.
 
 Core flags are always on: they're listed so the catalog is complete, with the reason they can't be
-turned off. A flag that needs one that's off is off too. Turning a flag off never deletes anything:
-it stops the feature being offered, and stops the work it would do.
+turned off. A core flag is core where it exists: `modes` says where, so a
+cloud-only core flag (account deletion, Stripe webhooks) can never be switched off in the cloud
+and simply has nothing to do on the local app. A flag that needs one that's off is off too.
+Turning a flag off never deletes anything: it stops the feature being offered, and stops the
+work it would do.
 
 Selecta Cloud (ADR-0414) adds optional fields that only the cloud reads, so leaving them out keeps
 today's behaviour: `scope` says which id a percentage rollout hashes, `modes` says which runtime
@@ -245,8 +248,6 @@ def _cloud_problems(flag: Flag) -> list[str]:
             found.append(f"{flag.id}: {mode!r} isn't a mode; modes are {', '.join(MODES)}")
     if len(set(flag.modes)) != len(flag.modes):
         found.append(f"{flag.id}: modes lists the same mode twice")
-    if flag.core and set(flag.modes) != set(MODES):
-        found.append(f"{flag.id}: a core flag is on everywhere, so it can't leave out a mode")
     if flag.owner is not None and (not isinstance(flag.owner, str) or not flag.owner.strip()):
         found.append(f"{flag.id}: owner should be a name, or left out")
     if flag.review_by is not None:
