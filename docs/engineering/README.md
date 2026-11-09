@@ -46,9 +46,11 @@ signature-verified webhook receiver. Checkout prices are selected from `SELECTA_
 client cannot choose a Stripe price id. The webhook stores events idempotently and re-fetches Stripe
 state before applying entitlements and storage limits. Cloud uploads use workspace-scoped multipart
 sessions, plan limits and atomic quota reservations, with server-side metadata validation and
-acceptance. The remote worker gateway, nightly billing reconciliation/retry worker, and Cloud UI
-are still incomplete. Schema migrations are exercised on SQLite; production PostgreSQL and
-row-level security still need implementation and verification.
+acceptance. The web app selects Cloud mode from API status and has WorkOS sign-in, onboarding,
+account, plan, billing and upload screens. The full Cloud mixing/library/playback experience, remote
+worker gateway wiring, nightly billing reconciliation/retry worker, and Stripe tax setup remain
+incomplete. Schema migrations are exercised on SQLite; production PostgreSQL and row-level security
+still need implementation and verification.
 
 ## Set up and run locally
 
@@ -87,6 +89,12 @@ with `uv run selecta db upgrade`, then run `uv run selecta web --no-open`. Cloud
 `0.0.0.0` by default for container hosting and serves the API only; the React app is hosted
 separately. Keep local development on the default `SELECTA_MODE=local` unless you have a disposable
 Cloud test database and AuthKit test credentials.
+
+The Cloud web build also needs `VITE_SELECTA_API_ORIGIN` when the API is hosted on another origin,
+`VITE_WORKOS_CLIENT_ID`, and `VITE_CHECKOUT_CONSENT_VERSION`. The API needs Stripe settings described
+in [billing](../saas/08-billing.md#current-api-implementation) and R2 settings described in
+[uploads](../saas/05-storage-uploads-playback.md#current-api-implementation). Configure the R2
+bucket's CORS policy to allow the Cloud web origin to `PUT` signed upload parts.
 
 Browser tests run against synthetic data and are muted; they should not need a personal music
 library. Do not run stress, destructive recovery or real-account flows against production services.

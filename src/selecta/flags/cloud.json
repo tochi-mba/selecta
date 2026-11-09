@@ -28,7 +28,8 @@
         "GET /api/uploads",
         "GET /api/uploads/{session_id}",
         "POST /api/uploads/{session_id}/parts",
-        "POST /api/uploads/{session_id}/complete"
+        "POST /api/uploads/{session_id}/complete",
+        "DELETE /api/uploads/{session_id}"
       ],
       "modes": ["cloud"],
       "kind": "release",

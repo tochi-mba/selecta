@@ -28,6 +28,25 @@ Because R2 can't enforce size in a presigned policy, the server controls the one
 5. **Accept**: `ingest.validate` runs in a sandboxed worker: ffprobe with strict limits, real format check (not extension), duration and channel/sample-rate sanity, decode test of the first and last minute, tag parsing with length limits and Unicode normalisation, full SHA-256. Valid → server-side copy into `sel-originals` (`CopyObject`; plan file limits stay under its 5 GB single-copy limit) and delete the staging object, create `assets` + `songs` rows, convert the reservation into committed usage, enqueue analysis. Playback files are made later, only when needed ([§5.8](#58-playback-in-the-cloud-a-real-design-problem)). Invalid → delete, release reservation, show the reason.
 6. **Idempotency**: every step is keyed by the session id; repeating "complete" returns the same outcome; a lost response is recovered by polling the session.
 
+#### Current API implementation
+
+Cloud mode exposes `POST /api/uploads/plan`, `GET /api/uploads`,
+`GET /api/uploads/{session_id}`, `POST /api/uploads/{session_id}/parts`,
+`POST /api/uploads/{session_id}/complete`, and `DELETE /api/uploads/{session_id}`. Every session
+lookup is scoped to the authenticated workspace. Planning applies server-side plan limits, reserves
+quota atomically, and detects duplicate and in-flight hashes. The Cloud UI hashes selected files in
+chunks, uploads parts directly to R2, and can resume by reselecting the same file after refresh.
+
+The API completes the multipart object itself, downloads it to temporary disk for a Mutagen format
+and metadata probe, then verifies the copied original's byte count and checksum before accepting
+the asset and committing the reservation. This first slice rejects unsupported formats and
+duration/metadata problems, but it does not yet run a decode test or isolate hostile media parsing
+in a constrained worker. The full Cloud library, playback, and download flows are not implemented;
+an accepted asset row is not yet a playable song record. R2 credentials are read from
+`SELECTA_R2_ACCOUNT_ID`, `SELECTA_R2_ACCESS_KEY_ID`, `SELECTA_R2_SECRET_ACCESS_KEY`, and optional
+`SELECTA_R2_JURISDICTION` / bucket-name variables. The staging bucket CORS policy must allow the
+Cloud web origin to `PUT` signed parts.
+
 ### 5.3 Quota accounting
 
 - `usage = committed_bytes + active_reservations`; a new reservation succeeds only if `usage + size ≤ limit`, checked in the same transaction with a row lock on the workspace's quota row, so 1,000 parallel uploads can't oversubscribe the last gigabyte.

@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 0 Implemented, 6 In progress, 124 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 9 In progress, 119 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -16,7 +16,7 @@
 
 ## [ADR-0392 - Two runtime modes, one codebase](adr-0392-two-runtime-modes.md)
 
-- [ ] **SC-0392-01 - Mode switch.** Acceptance: App factory selects adapters from `SELECTA_MODE`; default `local`. Required verification: Unit tests for both modes. Implementation: In progress; cloud `serve()` selection and API factory exist; both-mode selection tests remain. Independently verified: No.
+- [x] **SC-0392-01 - Mode switch.** Acceptance: App factory selects adapters from `SELECTA_MODE`; default `local`. Required verification: Unit tests for both modes. Implementation: Implemented; `serve()` defaults to local and selects the Cloud factory when configured. Evidence: `tests/test_cloud_api.py::test_serve_defaults_to_local_and_cloud_does_not_start_local_workers`. Independently verified: No.
 - [ ] **SC-0392-02 - No local side effects in cloud.** Acceptance: Cloud mode starts no watcher, warm-up or worker threads and never calls `forget_unfinished()`. Required verification: Integration test asserts no threads/subprocesses at start. Implementation: In progress; Cloud factory and mode-selection test avoid local startup hooks; complete mode parity remains. Independently verified: No.
 - [ ] **SC-0392-03 - Local parity.** Acceptance: All existing Python and Playwright tests pass in local mode. Required verification: CI. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0392-04 - Copy layer.** Acceptance: User-facing strings that mention 'this PC' come from a mode-keyed copy layer. Required verification: Vitest snapshot per mode. Implementation: Not started; Independently verified: No.
@@ -50,7 +50,7 @@
 
 ## [ADR-0396 - Worker gateway and worker pools](adr-0396-worker-gateway-and-pools.md)
 
-- [ ] **SC-0396-01 - Gateway endpoints.** Acceptance: All six endpoints exist with token auth and idempotency. Required verification: Integration tests. Implementation: Not started; Independently verified: No.
+- [x] **SC-0396-01 - Gateway endpoints.** Acceptance: All six endpoints exist with token auth and idempotency. Required verification: Integration tests. Implementation: Implemented; standalone gateway app, CLI service command, scoped enrollment/worker tokens, fenced job lifecycle routes, signed R2 URLs and readiness endpoint. Evidence: `tests/test_worker_gateway_api.py`; `src/selecta/gateway_cloud.py`; `src/selecta/work/gateway_api.py`. Independently verified: No.
 - [ ] **SC-0396-02 - Worker image.** Acceptance: Linux image with ffmpeg, torch CPU and pinned models runs analysis and renders end to end. Required verification: Staging smoke test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0396-03 - GPU pool.** Acceptance: Demucs windows run on Modal with CPU fallback when GPU capacity is absent. Required verification: Staging test; timing recorded. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0396-04 - Scale-out.** Acceptance: Throughput rises monotonically with worker count to a documented bottleneck. Required verification: Worker scaling benchmark 1→32. Implementation: Not started; Independently verified: No.
@@ -68,11 +68,11 @@
 
 ## [ADR-0398 - Upload protocol with server-side completion and quota reservations](adr-0398-upload-protocol-and-quota-reservations.md)
 
-- [ ] **SC-0398-01 - Session planning.** Acceptance: Batch planning of up to 500 files with reservations and duplicate flags. Required verification: Integration test. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0398-02 - Server completion.** Acceptance: Oversize or mismatched uploads are aborted and reservations released. Required verification: Integration test with a lying client. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0398-01 - Session planning.** Acceptance: Batch planning of up to 500 files with reservations and duplicate flags. Required verification: Integration test. Implementation: In progress; Cloud routes plan workspace-scoped batches, reserve quota, flag duplicates and support cancellation; the Cloud UI submits file hashes and asks before keeping duplicates. R2 production verification and full batch browser workflow remain. Independently verified: No.
+- [ ] **SC-0398-02 - Server completion.** Acceptance: Oversize or mismatched uploads are aborted and reservations released. Required verification: Integration test with a lying client. Implementation: In progress; server lists parts, checks declared size, probes actual metadata and verifies the stored original's size/hash before committing quota; hostile-file sandbox and live R2 integration remain. Independently verified: No.
 - [ ] **SC-0398-03 - Quota race.** Acceptance: 1,000 concurrent uploads for the last 1 GB never exceed the limit. Required verification: Concurrency test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0398-04 - Validation sandbox.** Acceptance: Decode bombs, fake extensions and truncated files are rejected safely within limits. Required verification: Hostile-file test set. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0398-05 - Resume.** Acceptance: A refreshed browser resumes from uploaded parts. Required verification: Playwright test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0398-05 - Resume.** Acceptance: A refreshed browser resumes from uploaded parts. Required verification: Playwright test. Implementation: In progress; the API lists completed parts and the Cloud UI hashes reselected files to find and resume their prior session; browser refresh verification remains. Independently verified: No.
 
 ## [ADR-0399 - Cloud playback with lossless playback proxies](adr-0399-cloud-playback-proxies.md)
 

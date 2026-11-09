@@ -7,7 +7,10 @@ configured explicitly; migrations run as a release command rather than at web-pr
 
 from __future__ import annotations
 
+import asyncio
+import json
 import os
+import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Protocol
@@ -15,7 +18,7 @@ from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -40,6 +43,7 @@ from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
 from selecta.storage import api as storage_api
 from selecta.usage import quota
+from selecta.work.schema import outbox_events
 
 
 class CloudConfigurationError(RuntimeError):
@@ -256,6 +260,76 @@ def create_cloud_app(
                 {"status": "not_ready", "reason": "migrations_pending"}, status_code=503
             )
         return {"status": "ready", "schema": applied}
+
+    @app.get("/api/events")
+    async def events_stream(
+        request: Request,
+        after: int = 0,
+        claims: Claims = Depends(current_claims),
+    ):
+        """Stream this workspace's durable outbox events; reconnect with Last-Event-ID."""
+        if after < 0:
+            raise HTTPException(status_code=400, detail={"code": "invalid_event_cursor"})
+        principal = _principal(engine, claims, request.headers.get("x-workspace-id"))
+        cursor_header = request.headers.get("last-event-id")
+        if cursor_header:
+            try:
+                after = max(after, int(cursor_header))
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=400, detail={"code": "invalid_event_cursor"}
+                ) from error
+        workspace_id = principal.workspace.id
+
+        def fetch(cursor: int):
+            with transaction(engine, workspace_id) as connection:
+                rows = connection.execute(
+                    sa.select(
+                        outbox_events.c.id,
+                        outbox_events.c.topic,
+                        outbox_events.c.payload,
+                    )
+                    .where(outbox_events.c.workspace_id == workspace_id)
+                    .where(outbox_events.c.id > cursor)
+                    .order_by(outbox_events.c.id)
+                    .limit(100)
+                )
+                return [dict(row._mapping) for row in rows]
+
+        async def frames():
+            cursor = after
+            heartbeat_at = time.monotonic()
+            deadline = time.monotonic() + 600
+            while time.monotonic() < deadline and time.time() < claims.expires_at:
+                if await request.is_disconnected():
+                    break
+                batch = await asyncio.to_thread(fetch, cursor)
+                for row in batch:
+                    cursor = row["id"]
+                    frame = {
+                        "id": cursor,
+                        "topic": row["topic"],
+                        "payload": row["payload"],
+                    }
+                    yield (
+                        f"id: {cursor}\nevent: selecta\ndata: "
+                        f"{json.dumps(frame, separators=(',', ':'), default=str)}\n\n"
+                    )
+                now = time.monotonic()
+                if now - heartbeat_at >= 15:
+                    yield ": keep-alive\n\n"
+                    heartbeat_at = now
+                await asyncio.sleep(0.5 if batch else 2.0)
+
+        return StreamingResponse(
+            frames(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
 
     @app.post("/api/onboarding/complete", status_code=201)
     def complete_onboarding(body: OnboardingRequest, claims: Claims = Depends(current_claims)):

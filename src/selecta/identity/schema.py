@@ -39,6 +39,38 @@ users = sa.Table(
     sa.Index("ix_users_email", "email"),
 )
 
+# A deletion request must survive the request process exiting. The account is hidden and sessions
+# are revoked in the same transaction that inserts this durable workflow row. The worker keeps a
+# short lease and fencing generation so a stale worker can't advance it after another takes over.
+account_deletion_workflows = sa.Table(
+    "account_deletion_workflows",
+    metadata,
+    sa.Column("id", Id, primary_key=True),
+    sa.Column("user_id", Id, nullable=False, unique=True),
+    sa.Column("plan", sa.JSON, nullable=False),
+    sa.Column("next_step", sa.Integer, nullable=False, server_default=sa.text("0")),
+    sa.Column("status", sa.String(16), nullable=False, server_default=sa.text("'pending'")),
+    sa.Column("available_at", Epoch, nullable=False),
+    sa.Column("lease_id", Id),
+    sa.Column("lease_generation", sa.Integer, nullable=False, server_default=sa.text("0")),
+    sa.Column("lease_expires_at", Epoch),
+    sa.Column("attempt_count", sa.Integer, nullable=False, server_default=sa.text("0")),
+    sa.Column("last_error", sa.Text),
+    sa.Column("created_at", Epoch, nullable=False),
+    sa.Column("updated_at", Epoch, nullable=False),
+    sa.Column("completed_at", Epoch),
+    sa.CheckConstraint(_one_of("status", ("pending", "running", "complete")), name="status"),
+    sa.CheckConstraint("next_step >= 0", name="next_step_nonnegative"),
+    sa.CheckConstraint("lease_generation >= 0", name="lease_generation_nonnegative"),
+    sa.CheckConstraint("attempt_count >= 0", name="attempt_count_nonnegative"),
+)
+sa.Index(
+    "ix_account_deletion_workflows_available",
+    account_deletion_workflows.c.status,
+    account_deletion_workflows.c.available_at,
+    account_deletion_workflows.c.lease_expires_at,
+)
+
 workspaces = sa.Table(
     "workspaces",
     metadata,

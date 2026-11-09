@@ -412,7 +412,12 @@ def start_account_deletion(
     if user is None:
         raise NotProvisioned(f"no user {user_id}")
     if user.deleted_at is not None:
-        return _deletion_plan(conn, user_id, user.deleted_at, again=True)
+        plan = _deletion_plan(conn, user_id, user.deleted_at, again=True)
+        # Also repairs accounts deleted before the durable workflow was installed.
+        from selecta.identity.deletion import enqueue
+
+        enqueue(conn, plan)
+        return plan
     ensure_not_last_owner(conn, user_id)
 
     now = db_now(conn)
@@ -443,4 +448,9 @@ def start_account_deletion(
             "erase_after": plan.erase_after,
         },
     )
+    # The task is committed atomically with the deleted marker and session revocation, so a
+    # process crash after this request cannot strand an account in a half-deleted state.
+    from selecta.identity.deletion import enqueue
+
+    enqueue(conn, plan)
     return plan

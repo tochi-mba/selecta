@@ -492,6 +492,28 @@ def web(
 
 
 @app.command()
+def gateway(
+    port: int = typer.Option(8734),
+    host: str | None = typer.Option(
+        None, help="Defaults to SELECTA_GATEWAY_BIND_HOST or 0.0.0.0."
+    ),
+    reload: bool = typer.Option(False, "--reload", help="Restart as the code changes."),
+) -> None:
+    """Run the isolated Cloud worker gateway service."""
+    import uvicorn
+
+    uvicorn.run(
+        "selecta.gateway_cloud:create_gateway_app",
+        factory=True,
+        host=host or os.environ.get("SELECTA_GATEWAY_BIND_HOST", "0.0.0.0"),
+        port=port,
+        log_level="warning",
+        reload=reload,
+        reload_dirs=[str(Path(__file__).parent)] if reload else None,
+    )
+
+
+@app.command()
 def plan(
     count: int = typer.Option(20, help="Songs to put in the rolling set plan."),
     start: int = typer.Option(None, help="Optional starting song id."),

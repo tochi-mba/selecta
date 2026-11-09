@@ -345,6 +345,21 @@ def install_routes(
             raise map_error(error) from error
         return _outcome_json(outcome)
 
+    @app.delete("/api/uploads/{session_id}")
+    def cancel_upload(
+        session_id: str,
+        request: Request,
+        claims: Claims = Depends(current_claims),
+    ):
+        workspace_id = workspace(request, claims)
+        try:
+            with service() as (uploads, _client):
+                with transaction(engine, workspace_id) as conn:
+                    outcome = uploads.cancel(conn, session_id, workspace_id=workspace_id)
+        except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
+            raise map_error(error) from error
+        return _outcome_json(outcome)
+
 
 def _outcome_json(outcome: Outcome) -> dict[str, Any]:
     return {

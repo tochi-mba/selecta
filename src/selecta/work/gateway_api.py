@@ -22,7 +22,7 @@ from selecta.persistence import new_id
 from selecta.scheduling.policy import WorkerCaps
 from selecta.work.catalogue import POOLS, lookup
 from selecta.work.errors import CompletionRejected, JobCancelled, StaleLease
-from selecta.work.model import ErrorClass, Job
+from selecta.work.model import Attempt, ErrorClass, Job
 from selecta.work.ports import ArtifactOutput
 from selecta.work.schema import workers
 from selecta.work.store import JobStore
@@ -79,6 +79,11 @@ class FailRequest(AttemptRequest):
     cost_s: float | None = Field(default=None, ge=0)
 
 
+class OutputSlotsRequest(BaseModel):
+    fencing_token: int = Field(ge=1)
+    names: list[str] = Field(min_length=1, max_length=100)
+
+
 def _job_payload(job: Job) -> dict[str, Any]:
     """Stable JSON representation; the worker receives only the job's declared input reference."""
     return {
@@ -125,6 +130,9 @@ def install_routes(
     max_slots: int = 8,
     token_ttl_s: int = 900,
     now: Callable[[], float] = time.time,
+    sign_inputs: Callable[[Job], list[dict[str, str]]] | None = None,
+    output_prefix_for: Callable[[Job, str], str | None] | None = None,
+    sign_outputs: Callable[[Attempt, list[str]], list[dict[str, str]]] | None = None,
 ) -> None:
     """Install `/internal/workers/*` with a bootstrap enrollment route and scoped JWT auth."""
     if len(token_secret.encode()) < 32 or len(bootstrap_token.encode()) < 32:
@@ -253,10 +261,27 @@ def install_routes(
                 "lease_expires_at": claimed.lease_expires_at,
                 "boosted": claimed.boosted,
                 "job": _job_payload(job),
-                "input_urls": [],
-                "output_prefix": None,
+                "input_urls": sign_inputs(job) if sign_inputs else [],
+                "output_prefix": output_prefix_for(job, claimed.attempt_id)
+                if output_prefix_for
+                else None,
             }
         }
+
+    @app.post("/internal/workers/attempts/{attempt_id}/outputs")
+    def output_slots(
+        attempt_id: str,
+        body: OutputSlotsRequest,
+        claims: dict[str, Any] = Depends(worker_claims),  # noqa: B008
+    ):
+        attempt = authorized_attempt(attempt_id, claims, body.fencing_token)
+        if sign_outputs is None:
+            raise HTTPException(status_code=503, detail={"code": "worker_outputs_unavailable"})
+        try:
+            result = sign_outputs(attempt, body.names)
+        except (TypeError, ValueError) as error:
+            raise HTTPException(status_code=422, detail={"code": "invalid_output_slots"}) from error
+        return {"outputs": result}
 
     @app.post("/internal/workers/attempts/{attempt_id}/heartbeat")
     def heartbeat(

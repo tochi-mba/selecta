@@ -34,11 +34,16 @@ The shared migration set currently contains 50 tables and has been exercised thr
 upgrade, schema comparison and rollback while preserving a legacy `songs` table. PostgreSQL
 migration execution and row-level security are not yet verified or implemented. Stripe session
 creation and webhook reconciliation are wired, and Cloud uploads can reserve quota, resume
-multipart transfers, validate metadata and accept objects into workspace storage. Nightly billing
-reconciliation, a durable webhook retry worker, Stripe Tax setup and Cloud billing UI remain
-incomplete. Upload completion currently probes audio metadata in API temporary storage; moving that
-work to remote workers remains part of the worker gateway effort. Worker gateway routes and the
-Cloud UI also remain future implementation work.
+multipart transfers, check the actual audio metadata and accept objects into workspace storage.
+The React app now selects local or Cloud mode from `/api/status`; Cloud mode includes WorkOS
+sign-in, account onboarding, plan and billing screens, and browser multipart uploads. Nightly billing
+reconciliation, a durable webhook retry worker and Stripe Tax setup remain incomplete. The first
+Cloud screens are live, but the complete mixing, library and playback Cloud
+interface remains outstanding. Upload completion currently probes audio metadata in API temporary
+storage; moving that work to remote workers remains part of the worker gateway effort. The worker
+gateway is now a standalone `selecta gateway` service with separate host allowlisting, worker
+secrets, readiness checks and R2 URL signing. Long-poll notifications, deploy manifests, worker
+images and end-to-end job handlers remain outstanding.
 
 ### 4.2 Component map
 

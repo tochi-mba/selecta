@@ -11,6 +11,7 @@
     "e2e:flags": "playwright test -c playwright.flags.config.ts"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "@vitejs/plugin-react": "latest",
     "@workos-inc/authkit-react": "^0.16.3",
     "react": "latest",
