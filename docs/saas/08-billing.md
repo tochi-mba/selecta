@@ -26,6 +26,8 @@ subscription reconciliation with quota synchronization and append-only audit ent
 the same transaction as each correction (including unmatched Stripe subscriptions). Run `uv run
 selecta billing-maintenance` from a scheduled process to drain events and add `--reconcile` for the
 full subscription sweep. Production scheduling and drift alerts remain outstanding.
+Reconciliation records changes to entitlement versions, expiry, source and reason as well as
+plan names, so a catalogue version change also updates the workspace quota and audit trail.
 Production PostgreSQL
 and real Stripe test-mode runs remain to be verified.
 

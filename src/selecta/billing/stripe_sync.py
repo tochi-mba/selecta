@@ -613,6 +613,20 @@ def reconcile_all(
         if old_plan != after.plan_id:
             report.items.append(DriftItem(workspace_id, after.stripe_subscription_id,
                                           "entitlement", old_plan, after.plan_id))
+        # Catalogue remaps and time-based expiry can change a snapshot without changing
+        # the subscription mirror or plan name. Include those differences so callers
+        # audit them and synchronize the workspace's quota in the same transaction.
+        if changed:
+            for name in (
+                "plan_version", "source", "reason", "stripe_subscription_id", "valid_until",
+            ):
+                previous = getattr(before, name) if before is not None else None
+                current = getattr(after, name)
+                if previous != current:
+                    report.items.append(DriftItem(
+                        workspace_id, after.stripe_subscription_id,
+                        f"entitlement.{name}", previous, current,
+                    ))
     return report
 
 
