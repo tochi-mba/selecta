@@ -8,6 +8,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from cloud_db import (  # noqa: E402, F401
+    clock,
+    cloud_engine,
+    postgres_engine,
+    sqlite_engine,
+)
 from lucy_helpers import lucy, lucy_home, lucy_template  # noqa: E402, F401
 from mix_helpers import client, conn, store  # noqa: E402, F401
 from sharding import in_shard  # noqa: E402

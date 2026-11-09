@@ -118,12 +118,17 @@ def transaction(engine: Engine, workspace_id: str | None = None) -> Iterator[Con
         yield connection
 
 
+def wall_clock() -> float:
+    """This machine's clock in epoch seconds. SQLite's database time; tests replace it."""
+    return time.time()
+
+
 def db_now(connection: Connection) -> float:
     """The database's clock in epoch seconds. SQLite runs on this machine, so its clock is ours."""
     if is_postgres(connection):
         clock = sa.text("SELECT extract(epoch FROM clock_timestamp())")
         return float(connection.execute(clock).scalar_one())
-    return time.time()
+    return wall_clock()
 
 
 def lock_rows(select: Select) -> Select:
