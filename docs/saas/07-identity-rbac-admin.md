@@ -49,4 +49,4 @@ Append-only `audit_events` written by a dedicated role (the app role can insert 
 
 ---
 
-[← 06-data-model.md](06-data-model.md) · [Contents](README.md#chapters) · [08-billing.md →](08-billing.md)
+[← 06-data-model.md](06-data-model.md) · [Contents](README.md#chapters) · [07a-authentication.md →](07a-authentication.md)

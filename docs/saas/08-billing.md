@@ -77,4 +77,4 @@ in account-level controls.
 
 ---
 
-[← 07-identity-rbac-admin.md](07-identity-rbac-admin.md) · [Contents](README.md#chapters) · [09-lucy-ai-gateway.md →](09-lucy-ai-gateway.md)
+[← 07a-authentication.md](07a-authentication.md) · [Contents](README.md#chapters) · [09-lucy-ai-gateway.md →](09-lucy-ai-gateway.md)

@@ -74,6 +74,7 @@
 | [05-storage-uploads-playback.md](05-storage-uploads-playback.md) | R2 layout, uploads, quotas, deletion and cloud playback |
 | [06-data-model.md](06-data-model.md) | Schema approach, tables by domain and local data migration |
 | [07-identity-rbac-admin.md](07-identity-rbac-admin.md) | Sign-in, staff roles, dangerous actions, admin console and audit |
+| [07a-authentication.md](07a-authentication.md) | Sign-up, Google, forgot password, sessions, sign out everywhere, WorkOS webhooks, staff sign-in, every edge case |
 | [08-billing.md](08-billing.md) | Stripe setup, webhooks, entitlement rules and UK obligations |
 | [09-lucy-ai-gateway.md](09-lucy-ai-gateway.md) | Model routing per tier, spend protection and settings split |
 | [10-audio-engine-in-cloud.md](10-audio-engine-in-cloud.md) | Engine storage abstraction, CPU vs GPU, model licences, lyrics |
