@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review. Decision: [ADR-0405](../adr/adr-0405-licence-register-and-s-key-replacement.md).*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09. Decision: [ADR-0405](../adr/adr-0405-licence-register-and-s-key-replacement.md).*
 
 # Licence register
 

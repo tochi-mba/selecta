@@ -1,6 +1,6 @@
 # ADR-0394 — Durable jobs with leases and fencing
 
-- **Decision:** Proposed (owner review pending).
+- **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
 - **Independent verification:** 0/6 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
@@ -45,4 +45,4 @@ Work survives restarts, crashes and deploys; a stale worker can never overwrite 
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.

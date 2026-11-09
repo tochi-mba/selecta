@@ -1,6 +1,6 @@
 # ADR-0395 — Fair scheduling: lanes and per-account weights by tier
 
-- **Decision:** Proposed (owner review pending).
+- **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
 - **Independent verification:** 0/6 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
@@ -45,4 +45,4 @@ Under load a Premium account gets about six times a Free account's processing ra
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.

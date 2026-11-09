@@ -1,6 +1,6 @@
 # ADR-0396 — Worker gateway and worker pools
 
-- **Decision:** Proposed (owner review pending).
+- **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/7 Implemented; 0/7 In progress; 7/7 Not started.
 - **Independent verification:** 0/7 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
@@ -45,4 +45,4 @@ Adding a worker means starting a container with pool settings and a credential; 
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.

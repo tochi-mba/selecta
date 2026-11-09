@@ -1,6 +1,6 @@
 # ADR-0409 — Hosting topology, regions and environments
 
-- **Decision:** Proposed (owner review pending).
+- **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
@@ -43,4 +43,4 @@ A reproducible, affordable stack that can move compute vendors without touching 
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.

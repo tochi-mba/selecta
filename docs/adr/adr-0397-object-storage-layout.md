@@ -1,6 +1,6 @@
 # ADR-0397 — Object storage layout and artifact provenance on R2
 
-- **Decision:** Proposed (owner review pending).
+- **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
@@ -42,4 +42,4 @@ Identical requests reuse finished work instantly; engine upgrades never invalida
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.

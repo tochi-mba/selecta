@@ -2,7 +2,7 @@
 
 *Prepared 9 November 2026 for Tochi Mba. Grounded in the `tochi-mba/selecta` repo at `main` (3c2f1eb, including the feature-flag work merged today), three code maps of the backend, frontend and docs/CI, and web research on hosting, queues, billing, AI pricing, licensing and music-locker law. Prices are from public pages and third-party summaries as of Oct–Nov 2026 and must be re-checked before any spend decision.*
 
-**Status:** Proposed, for owner review. Decisions are recorded as ADR-0391 to ADR-0416 (all Proposed). Local mode keeps every guarantee it has today.
+**Status:** Accepted by the owner on 2026-11-09. Decisions are recorded as ADR-0391 to ADR-0416 (all Accepted); progress is tracked in the [implementation checklist](../adr/selecta-cloud-implementation-checklist.md). Local mode keeps every guarantee it has today.
 
 ---
 
