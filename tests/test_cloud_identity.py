@@ -11,28 +11,18 @@ from selecta.authz import roles
 from selecta.authz.check import Actor, authorize
 from selecta.authz.errors import Forbidden, InvalidScope, StepUpRequired
 from selecta.authz.roles import StaffRole
-from selecta.authz.schema import access_grants, audit_events, role_assignments
+from selecta.authz.schema import role_assignments
 from selecta.authz.scopes import Scope
 from selecta.identity import accounts, tokens
-from selecta.identity.schema import session_revocations, users, workspace_members, workspaces
-from selecta.persistence import metadata
+from selecta.identity.schema import users, workspaces
+from selecta.persistence import migrate
 
 
 @pytest.fixture
 def conn():
     engine = sa.create_engine("sqlite:///:memory:")
-    metadata.create_all(
-        engine,
-        tables=[
-            users,
-            workspaces,
-            workspace_members,
-            session_revocations,
-            role_assignments,
-            access_grants,
-            audit_events,
-        ],
-    )
+    # The real migrations, so new tables (account deletion workflows) exist here too.
+    migrate.upgrade(engine)
     with engine.begin() as connection:
         yield connection
     engine.dispose()

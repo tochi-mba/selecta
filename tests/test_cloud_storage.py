@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import sqlalchemy as sa
 
-from selecta.persistence import make_engine, metadata, transaction
+from selecta.persistence import make_engine, migrate, transaction
 from selecta.storage.artifacts import ArtifactMissing, LocalArtifactStore
 from selecta.storage.deletion import DeletionKind, is_deleted, physical_targets, tombstone
 from selecta.storage.keys import (
@@ -20,7 +20,7 @@ from selecta.storage.keys import (
 )
 from selecta.storage.objects import ObjectHead, Part, R2NotFound
 from selecta.storage.ports import PlanLimits, QuotaExceeded
-from selecta.storage.schema import assets, deletions, upload_sessions
+from selecta.storage.schema import assets
 from selecta.storage.uploads import (
     FileSpec,
     Probe,
@@ -111,7 +111,8 @@ class MemoryObjects:
 @pytest.fixture
 def engine():
     engine = make_engine("sqlite://")
-    metadata.create_all(engine, tables=[upload_sessions, assets, deletions])
+    # The real migrations, so new tables (the deletion mirror outbox) exist here too.
+    migrate.upgrade(engine)
     yield engine
     engine.dispose()
 
