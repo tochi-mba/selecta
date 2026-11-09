@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
 from selecta.authz import audit
@@ -13,6 +14,7 @@ from selecta.billing.stripe_sync import PriceMap, StripeClient
 from selecta.billing.webhooks import pending_events, process_event
 from selecta.persistence import transaction
 from selecta.usage import quota
+from selecta.usage.schema import quota_state
 
 log = logging.getLogger(__name__)
 
@@ -74,13 +76,11 @@ def drain_stripe_events(
                 # process_event recomputes billing snapshots. Keep storage quotas in sync in the
                 # same transaction so retries cannot leave entitlements and limits out of step.
                 for workspace_id in result.workspaces:
-                    snapshot, _changed = stripe_sync.recompute_snapshot(
-                        connection, workspace_id, price_map
-                    )
+                    entitlement = stripe_sync.effective_entitlement(connection, workspace_id)
                     quota.set_limit(
                         connection,
                         workspace_id,
-                        plans.plan_for(snapshot.plan_id, snapshot.plan_version),
+                        plans.plan_for(entitlement.plan_id, entitlement.plan_version),
                     )
             status = result.status
             counts[status] = counts.get(status, 0) + 1
@@ -108,14 +108,16 @@ def reconcile_stripe_billing(
     with transaction(engine) as connection:
         report = stripe_sync.reconcile_all(connection, client, price_map)
         affected = {item.workspace_id for item in report.items}
+        # Overrides may expire without any Stripe change. Refresh all existing quota
+        # accounts too, using the effective entitlement rather than the paid snapshot.
+        affected.update(connection.execute(select(quota_state.c.workspace_id)).scalars())
         for workspace_id in sorted(affected):
-            snapshot = stripe_sync.current_snapshot(connection, workspace_id)
-            if snapshot is not None:
-                quota.set_limit(
-                    connection,
-                    workspace_id,
-                    plans.plan_for(snapshot.plan_id, snapshot.plan_version),
-                )
+            entitlement = stripe_sync.effective_entitlement(connection, workspace_id)
+            quota.set_limit(
+                connection,
+                workspace_id,
+                plans.plan_for(entitlement.plan_id, entitlement.plan_version),
+            )
         # Keep the drift correction and its audit evidence atomic. Values here are limited to
         # the compared billing fields; the Stripe payload itself is never copied into the log.
         for item in report.items:

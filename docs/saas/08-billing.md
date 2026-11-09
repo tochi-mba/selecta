@@ -28,6 +28,9 @@ selecta billing-maintenance` from a scheduled process to drain events and add `-
 full subscription sweep. Production scheduling and drift alerts remain outstanding.
 Reconciliation records changes to entitlement versions, expiry, source and reason as well as
 plan names, so a catalogue version change also updates the workspace quota and audit trail.
+Webhook processing and maintenance use the effective entitlement when setting storage limits,
+including active staff overrides. Full reconciliation also refreshes every existing quota account
+so an expired override returns to the underlying plan even when Stripe has not changed.
 Production PostgreSQL
 and real Stripe test-mode runs remain to be verified.
 

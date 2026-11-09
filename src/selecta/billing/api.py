@@ -259,11 +259,11 @@ def install_routes(
                 conn, event_id=stored.event_id, client=stripe(), price_map=price_map
             )
             for workspace_id in result.workspaces:
-                snapshot, _changed = stripe_sync.recompute_snapshot(conn, workspace_id, price_map)
+                entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
                 quota.set_limit(
                     conn,
                     workspace_id,
-                    plans.plan_for(snapshot.plan_id, snapshot.plan_version),
+                    plans.plan_for(entitlement.plan_id, entitlement.plan_version),
                 )
         return {"received": True, "status": result.status}
 
