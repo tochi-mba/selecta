@@ -22,9 +22,10 @@ The webhook caps request bodies, verifies the raw-body Stripe signature (support
 rotation), inserts each event once, ignores unknown event types, and re-fetches Stripe state before
 updating entitlement snapshots and storage limits. A repeated delivery retries an event that is
 still `received` or `failed`. `billing.maintenance` now provides a bounded retry drain and a full
-subscription reconciliation with quota synchronization. Run `uv run selecta billing-maintenance`
-from a scheduled process to drain events and add `--reconcile` for the full subscription sweep.
-Deployment scheduling, reconciliation audit entries and drift alerts remain outstanding.
+subscription reconciliation with quota synchronization and append-only audit entries written in
+the same transaction as each correction (including unmatched Stripe subscriptions). Run `uv run
+selecta billing-maintenance` from a scheduled process to drain events and add `--reconcile` for the
+full subscription sweep. Production scheduling and drift alerts remain outstanding.
 Production PostgreSQL
 and real Stripe test-mode runs remain to be verified.
 

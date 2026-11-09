@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.engine import Engine
 
+from selecta.authz import audit
 from selecta.billing import plans, stripe_sync
 from selecta.billing.stripe_sync import PriceMap, StripeClient
 from selecta.billing.webhooks import pending_events, process_event
@@ -37,6 +38,7 @@ class StripeReconcileResult:
     changed: int
     unmatched: int
     quota_limits_updated: int
+    audit_entries: int = 0
 
 
 def drain_stripe_events(
@@ -114,11 +116,34 @@ def reconcile_stripe_billing(
                     workspace_id,
                     plans.plan_for(snapshot.plan_id, snapshot.plan_version),
                 )
+        # Keep the drift correction and its audit evidence atomic. Values here are limited to
+        # the compared billing fields; the Stripe payload itself is never copied into the log.
+        for item in report.items:
+            audit.record(
+                connection,
+                action="billing.reconciliation.drift_corrected",
+                result=audit.AuditResult.SUCCESS,
+                resource_type="stripe_subscription",
+                resource_id=item.subscription_id,
+                workspace_id=item.workspace_id,
+                reason=f"Stripe reconciliation corrected {item.field}",
+                metadata={"field": item.field, "before": item.ours, "after": item.stripe},
+            )
+        for subscription_id in report.unmatched:
+            audit.record(
+                connection,
+                action="billing.reconciliation.unmatched_subscription",
+                result=audit.AuditResult.FAILURE,
+                resource_type="stripe_subscription",
+                resource_id=subscription_id,
+                reason="Stripe subscription could not be associated with a workspace",
+            )
     return StripeReconcileResult(
         checked=report.checked,
         changed=len(report.items),
         unmatched=len(report.unmatched),
         quota_limits_updated=len(affected),
+        audit_entries=len(report.items) + len(report.unmatched),
     )
 
 

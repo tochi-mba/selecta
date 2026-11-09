@@ -544,7 +544,8 @@ def billing_maintenance(
             report = reconcile_stripe_billing(engine, client, prices)
             console.print(
                 f"Reconciliation: {report.checked} subscriptions checked, "
-                f"{report.changed} differences, {report.unmatched} unmatched."
+                f"{report.changed} differences, {report.unmatched} unmatched, "
+                f"{report.audit_entries} audit entries."
             )
     finally:
         engine.dispose()
