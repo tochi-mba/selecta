@@ -1,0 +1,90 @@
+{
+  "area": "Lucy",
+  "flags": {
+    "lucy": {
+      "label": "Lucy",
+      "about": "Make a mix by describing it in a conversation.",
+      "routes": [
+        "GET /api/lucy/status",
+        "PUT /api/lucy/settings",
+        "GET /api/lucy/conversations",
+        "POST /api/lucy/conversations",
+        "GET /api/lucy/conversations/{conversation}",
+        "PATCH /api/lucy/conversations/{conversation}",
+        "DELETE /api/lucy/conversations/{conversation}",
+        "POST /api/lucy/conversations/{conversation}/branch",
+        "POST /api/lucy/conversations/{conversation}/turns",
+        "POST /api/lucy/conversations/{conversation}/stop",
+        "POST /api/lucy/conversations/{conversation}/retry",
+        "GET /api/lucy/conversations/{conversation}/events.json",
+        "GET /api/lucy/conversations/{conversation}/events",
+        "POST /api/lucy/permissions/{permission}",
+        "GET /api/lucy/diagnostics"
+      ],
+      "surfaces": ["mixes", "edit", "lucy", "overlay.palette"],
+      "words": ["Lucy"]
+    },
+    "lucy.proposals": {
+      "label": "Lucy's proposals",
+      "about": "Lucy proposes a mix with rules you can see, edit, compare and restore.",
+      "requires": ["lucy"],
+      "routes": [
+        "GET /api/lucy/revisions/{revision}",
+        "GET /api/lucy/revisions/{revision}/readiness",
+        "GET /api/lucy/revisions/{revision}/diff",
+        "POST /api/lucy/proposals/{proposal}/current",
+        "POST /api/lucy/revisions/{revision}/edit",
+        "POST /api/lucy/revisions/{revision}/rules/{rule}/remove",
+        "POST /api/lucy/revisions/{revision}/restore",
+        "POST /api/lucy/revisions/{revision}/branch"
+      ],
+      "surfaces": ["lucy"]
+    },
+    "lucy.commit": {
+      "label": "Saving Lucy's mixes",
+      "about": "Approving a proposal into the current mix or a draft.",
+      "requires": ["lucy.proposals"],
+      "routes": [
+        "POST /api/lucy/approvals",
+        "POST /api/lucy/commits",
+        "GET /api/lucy/commits/{key}"
+      ],
+      "surfaces": ["lucy"]
+    },
+    "lucy.memory": {
+      "label": "Lucy's memory",
+      "about": "What Lucy remembers between conversations, which you can see, edit and clear.",
+      "requires": ["lucy"],
+      "routes": [
+        "GET /api/lucy/memory",
+        "POST /api/lucy/memory",
+        "PATCH /api/lucy/memory/{fact}",
+        "DELETE /api/lucy/memory/{fact}",
+        "POST /api/lucy/memory/clear"
+      ],
+      "surfaces": ["lucy"],
+      "words": ["What Lucy remembers"]
+    },
+    "lucy.voice": {
+      "label": "Voice input",
+      "about": "Talking to Lucy instead of typing.",
+      "requires": ["lucy"],
+      "surfaces": ["lucy"]
+    },
+    "lucy.remote_providers": {
+      "label": "AI services for Lucy",
+      "about": "Planning with Anthropic or an OpenAI-compatible host instead of the built-in planner.",
+      "requires": ["lucy"],
+      "surfaces": ["lucy"],
+      "words": ["OpenAI-compatible"]
+    },
+    "lucy.listening_history": {
+      "label": "Listening history for Lucy",
+      "about": "What you play is noted so Lucy can know your most-played songs.",
+      "requires": ["lucy"],
+      "routes": ["POST /api/listening/events"],
+      "surfaces": ["lucy"],
+      "words": ["Listening history"]
+    }
+  }
+}

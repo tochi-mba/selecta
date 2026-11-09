@@ -1,0 +1,76 @@
+{
+  "area": "Library",
+  "flags": {
+    "library.batch": {
+      "label": "Batch actions",
+      "about": "Select several songs and act on them at once.",
+      "routes": ["POST /api/library/batch"],
+      "surfaces": ["library"],
+      "words": ["Prioritize selected", "Never play selected"]
+    },
+    "library.priority": {
+      "label": "Priority songs",
+      "about": "Songs analysed first, whose stems are kept when the cache is cleared.",
+      "routes": ["POST /api/songs/{song_id}/priority"],
+      "surfaces": ["library", "overlay.song_details"],
+      "words": ["Priority list"]
+    },
+    "library.never_play": {
+      "label": "Never play",
+      "about": "Songs Selecta won't pick when it builds a mix.",
+      "routes": ["POST /api/songs/{song_id}/never"],
+      "surfaces": ["library", "overlay.song_details"],
+      "words": ["Never play"]
+    },
+    "library.corrections": {
+      "label": "Corrections",
+      "about": "Fix a song's measured tempo, or say whether it's music.",
+      "routes": ["POST /api/songs/{song_id}/correct"],
+      "surfaces": ["overlay.song_details"],
+      "words": ["Correct it"]
+    },
+    "library.card_view": {
+      "label": "Card view",
+      "about": "The Library as cards instead of a list.",
+      "surfaces": ["library"],
+      "words": ["Card view"]
+    },
+    "library.folders": {
+      "label": "Music folders",
+      "about": "The Sources tab: more than one folder, checking for new songs, and stopping watching one.",
+      "routes": ["POST /api/library/check", "POST /api/folders/stop-watching"],
+      "surfaces": ["workshop.sources", "workshop"],
+      "words": ["Your music folders", "Add another folder"]
+    },
+    "library.relink": {
+      "label": "Re-link a moved folder",
+      "about": "Point Selecta at a folder that moved, with a preview first.",
+      "requires": ["library.folders"],
+      "routes": ["POST /api/folders/relink/preview", "POST /api/folders/relink"],
+      "surfaces": ["workshop.sources"],
+      "words": ["Find moved folder"]
+    },
+    "library.folder_watching": {
+      "label": "Watching for new songs",
+      "about": "Songs added to a music folder come in by themselves within about a minute."
+    },
+    "lyrics.lookup": {
+      "label": "Lyric lookup",
+      "about": "Line-synced lyrics from LRCLIB. Only artist, title, album and duration are sent.",
+      "surfaces": ["library", "workshop", "overlay.song_details"],
+      "words": ["LRCLIB", "with timed lyrics"],
+      "cli": ["lyrics"]
+    },
+    "lyrics.word_timing": {
+      "label": "Word timing",
+      "about": "When each sung word lands, for moves that hand over on a word.",
+      "requires": ["lyrics.lookup"]
+    },
+    "analysis.time_estimates": {
+      "label": "Time estimates",
+      "about": "How long the rest will take, from this computer's own past speeds.",
+      "surfaces": ["workshop.analysis", "library"],
+      "cli": ["timings"]
+    }
+  }
+}
