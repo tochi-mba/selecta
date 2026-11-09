@@ -13,7 +13,7 @@ type Account = {
 type UploadEntry = { index: number; name: string; refused: string | null; duplicate_of: string | null; same_as: string | null; session: { id: string; name: string; size: number; part_size: number; part_count: number; status: string } | null };
 type UploadResult = { uploads: UploadEntry[] };
 type UploadStatus = { upload: { id: string; name: string; size: number; status: string; error: string | null }; uploaded_parts: { number: number; etag: string; size: number }[] };
-type Page = 'home' | 'library' | 'uploads' | 'billing';
+type Page = 'home' | 'library' | 'uploads' | 'billing' | 'settings';
 type Asset = { id: string; name: string; size: number; sha256: string | null; format: string | null; duration_seconds: number | null; sample_rate: number | null; channels: number | null; created_at: number };
 const apiOrigin = (import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
 const consentVersion = import.meta.env.VITE_CHECKOUT_CONSENT_VERSION ?? '';
@@ -180,6 +180,28 @@ export function CloudApp() {
     finally { setBusy(false); }
   };
 
+  const downloadAccountExport = async () => {
+    if (!account) return;
+    setBusy(true); setError(''); setNotice('Preparing your account export…');
+    try {
+      const token = await getAccessToken();
+      const response = await fetch(`${apiOrigin}/api/account/export`, {
+        headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': account.workspace.id },
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new CloudError(messageOf(payload, `Export failed (${response.status}).`), response.status);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url; anchor.download = 'selecta-account-export.zip'; anchor.click();
+      URL.revokeObjectURL(url);
+      setNotice('Your export is ready. It contains your originals and profile settings; mix data is not stored in Cloud yet.');
+    } catch (problem) { setError((problem as Error).message); setNotice(''); }
+    finally { setBusy(false); }
+  };
+
   const choosePage = (next: Page) => { setPage(next); setNotice(''); setError(''); };
 
   if (isLoading) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Checking your sign-in…</p></main>;
@@ -199,16 +221,18 @@ export function CloudApp() {
           <button aria-current={page === 'library' ? 'page' : undefined} onClick={() => choosePage('library')}>Library</button>
           <button aria-current={page === 'uploads' ? 'page' : undefined} onClick={() => choosePage('uploads')}>Add music</button>
           <button aria-current={page === 'billing' ? 'page' : undefined} onClick={() => choosePage('billing')}>Plan & billing</button>
+          <button aria-current={page === 'settings' ? 'page' : undefined} onClick={() => choosePage('settings')}>Settings</button>
         </nav>
         <div className="cloud-rail-bottom"><span>{user.email}</span><button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button><button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{page === 'home' ? 'Your music workspace' : page === 'library' ? 'Your library' : page === 'uploads' ? 'Add music' : 'Plan & billing'}</h1></div><span className="cloud-plan-chip">{account?.entitlement.plan ?? 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{page === 'home' ? 'Your music workspace' : page === 'library' ? 'Your library' : page === 'uploads' ? 'Add music' : page === 'billing' ? 'Plan & billing' : 'Account settings'}</h1></div><span className="cloud-plan-chip">{account?.entitlement.plan ?? 'Free'} plan</span></header>
         <Feedback error={error} notice={notice} />
         {page === 'home' && account && <Overview account={account} used={used} limit={limit} percent={pct} go={choosePage} />}
         {page === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} />}
         {page === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} />}
         {page === 'billing' && account && <Billing account={account} used={used} limit={limit} percent={pct} busy={busy} onCheckout={(plan, interval) => void openCheckout(plan, interval)} onPortal={() => void openPortal()} />}
+        {page === 'settings' && account && <section className="cloud-card"><p className="cloud-eyebrow">YOUR DATA</p><h2>Download a copy</h2><p>Your export contains your original audio files, account profile settings and a file manifest. Mixes are not stored in Selecta Cloud yet.</p><button className="primary" disabled={busy} onClick={() => void downloadAccountExport()}>{busy ? 'Preparing export…' : 'Download my data'}</button></section>}
         <footer className="cloud-footer">Selecta Cloud · Your originals remain private to your workspace.</footer>
       </main>
     </div>

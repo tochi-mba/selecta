@@ -67,7 +67,7 @@ Never delete music because of a plan change. When usage exceeds the plan: state 
 
 ### 5.5 Deletion
 
-Deletion is a workflow, not a `DELETE`: mark tombstone (the song disappears and its quota is released immediately) → cancel jobs → remove from mixes per policy (old frozen revisions keep a "song deleted" placeholder rather than silently changing) → after a 30-day recovery window, delete the original and derived objects in batches, then the backup copy → confirm → audit. Support can restore a song within the window; after it, deletion is final. Account deletion follows the same path for everything the account owns. Tombstones survive in a small `deletions` ledger so a database restore can re-apply them ([§12.4](12-security-privacy-legal.md#124-data-lifecycle)).
+Deletion is a workflow, not a `DELETE`: mark tombstone (the song disappears and its quota is released immediately) → cancel jobs → remove from mixes per policy (old frozen revisions keep a "song deleted" placeholder rather than silently changing) → after a 30-day recovery window, delete objects in bounded batches, then the backup copy → confirm → audit. `selecta storage-maintenance` drains due tombstones; it marks physical completion only after all R2 targets delete successfully, so partial failures retry on a later run. Support can restore a song within the window; after it, deletion is final. Account deletion follows the same path for everything the account owns. Tombstones survive in a small `deletions` ledger, with a separate R2 snapshot/replay helper intended to re-apply them after a database restore ([§12.4](12-security-privacy-legal.md#124-data-lifecycle)). Backup expiry and replay-before-serving still require deployment integration.
 
 ### 5.6 No cross-account deduplication
 

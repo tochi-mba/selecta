@@ -550,6 +550,33 @@ def billing_maintenance(
         engine.dispose()
 
 
+@app.command("storage-maintenance")
+def storage_maintenance(
+    limit: int = typer.Option(100, min=1, max=1000, help="Maximum due tombstones to process."),
+) -> None:
+    """Purge R2 objects for deletions whose 30-day recovery window has elapsed."""
+    from selecta.storage import api as storage_api
+    from selecta.storage.maintenance import drain_physical_deletions
+
+    engine = _cloud_database_engine()
+    client = storage_api.r2_client()
+    try:
+        report = drain_physical_deletions(
+            engine, client, buckets=storage_api.buckets(), limit=limit
+        )
+        console.print(
+            f"Storage deletions: {report.completed}/{report.examined} purged, "
+            f"{report.failed} need retry; {report.objects_deleted} objects removed."
+        )
+        if report.failed:
+            raise typer.Exit(1)
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
+        engine.dispose()
+
+
 @app.command()
 def plan(
     count: int = typer.Option(20, help="Songs to put in the rolling set plan."),

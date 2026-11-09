@@ -53,8 +53,9 @@ and signs scoped R2 URLs; `RemoteWorkerClient` and the cooperative runner handle
 leases, progress and signed input/output transfer, but worker images and Cloud audio handlers are
 still needed. Cloud `/api/events` streams job outbox
 updates; the UI is not yet consuming it. `DELETE /api/account` hides accounts and revokes sessions
-immediately, then enqueues a durable retryable workflow; its Stripe/R2/database effect adapters and
-restore replay remain outstanding. Full Cloud mixing,
+immediately, then enqueues a durable retryable workflow. Its effect adapter handles job/Stripe
+cancellation, membership cleanup and account tombstones; the offsite ledger writer, scheduled
+workflow and R2 purge runners, and restore replay remain outstanding. Full Cloud mixing,
 scheduled billing reconciliation/webhook retries and Stripe tax setup also remain incomplete. Schema
 migrations are exercised on SQLite; production PostgreSQL and row-level security still need
 implementation and verification.

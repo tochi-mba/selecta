@@ -44,6 +44,7 @@ from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
 from selecta.routes import cloud_assets as cloud_assets_routes
+from selecta.routes import cloud_export as cloud_export_routes
 from selecta.storage import api as storage_api
 from selecta.storage import playback_api as playback_api
 from selecta.usage import quota
@@ -552,6 +553,14 @@ def create_cloud_app(
         principal_for=_principal,
     )
     playback_api.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        principal_for=_principal,
+        object_client_factory=storage_api.r2_client,
+        buckets=storage_api.buckets(),
+    )
+    cloud_export_routes.install_routes(
         app,
         engine=engine,
         current_claims=current_claims,

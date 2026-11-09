@@ -41,7 +41,7 @@ This needs a UK media/IP lawyer before paid launch. Facts that shape the design:
 
 ### 12.4 Data lifecycle
 
-Retention table published in the privacy notice: originals until deleted (or 12 months after a lapsed account stays over quota, with warnings); derived data evicted under budgets; exports per plan; Lucy conversations until deleted (or 24 months idle); audit logs 2 years; database backups 30 days. The account deletion request immediately hides the account and revokes sessions. A durable workflow is now persisted with per-step leases, fencing, retry backoff and a 30-day delay before final account erasure. Physical file deletion, all row-cleanup effects, the deletion ledger and replay after a database restore are still required before claiming the proposed 60-day erasure guarantee.
+Retention table published in the privacy notice: originals until deleted (or 12 months after a lapsed account stays over quota, with warnings); derived data evicted under budgets; exports per plan; Lucy conversations until deleted (or 24 months idle); audit logs 2 years; database backups 30 days. `DELETE /api/account` immediately hides the account and revokes sessions. A durable workflow has per-step leases, fencing, retry backoff and a 30-day delay. Its adapter cancels jobs/subscriptions, removes memberships, releases upload reservations, tombstones account objects, and defers row erasure until physical purge. `selecta storage-maintenance` performs bounded retryable R2 deletion for due tombstones. The workflow/purge schedulers, R2 deletion-ledger bucket injection, restore replay-before-serving hook and final backup-expiry confirmation remain required before claiming the proposed 60-day erasure guarantee.
 
 ### 12.5 Open source and licensing of Selecta itself
 

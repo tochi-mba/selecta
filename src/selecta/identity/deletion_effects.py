@@ -18,6 +18,12 @@ from typing import Any, Protocol
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
+from selecta.authz.schema import (
+    access_grants,
+    audit_events,
+    dangerous_actions,
+    role_assignments,
+)
 from selecta.billing import stripe_sync
 from selecta.billing.schema import (
     checkout_consents,
@@ -25,12 +31,6 @@ from selecta.billing.schema import (
     subscriptions,
 )
 from selecta.billing.stripe_sync import PriceMap, StripeClient
-from selecta.authz.schema import (
-    access_grants,
-    audit_events,
-    dangerous_actions,
-    role_assignments,
-)
 from selecta.flags.rules import flag_previews, flag_rule_versions, user_flag_preferences
 from selecta.identity.accounts import DeletionPlan
 from selecta.identity.deletion import DeletionEffects
@@ -42,7 +42,7 @@ from selecta.identity.schema import (
 )
 from selecta.persistence import db_now, metadata, transaction
 from selecta.persistence.registry import load_all_tables
-from selecta.storage.artifacts import Buckets, DEFAULT_BUCKETS
+from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets
 from selecta.storage.deletion import DeletionKind, tombstone
 from selecta.storage.objects import ObjectClient
 from selecta.storage.schema import deletions, upload_sessions
@@ -92,7 +92,12 @@ class DeletionNotReady(DeletionEffectError):
 class LedgerWriter(Protocol):
     """A durable external ledger sink; writes must deduplicate on the supplied key."""
 
-    def write(self, entries: Sequence[Mapping[str, Any]], idempotency_key: str) -> None: ...
+    def write(
+        self,
+        entries: Sequence[Mapping[str, Any]],
+        idempotency_key: str,
+        plan: DeletionPlan,
+    ) -> None: ...
 
 
 class _QuotaRelease:
@@ -335,7 +340,7 @@ class AccountDeletionEffects(DeletionEffects):
                         )
                     ).mappings()
                 ]
-            self.ledger_writer.write(entries, f"{key}:{workspace_id}")
+            self.ledger_writer.write(entries, f"{key}:{workspace_id}", plan)
 
     def erase_user(self, plan: DeletionPlan, _key: str) -> None:
         if db_now_from_engine(self.engine) < plan.erase_after:
