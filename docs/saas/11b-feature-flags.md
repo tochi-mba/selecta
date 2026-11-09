@@ -1,0 +1,107 @@
+*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+
+## 11B. Feature flags and targeting
+
+### 11B.1 What exists now (merged in PR #42 and #43, ADR-0390)
+
+- One registry of about 90 flags in `src/selecta/flags/*.json`, one file per area, each with label, description, `core`, `default`, `requires`, the API routes, CLI commands and site surfaces it owns, and the words that name it. `docs/flags.md` is generated from it and a test keeps it current.
+- `SELECTA_FLAGS` (e.g. `-requests -move.*`, `minimal`, `all`) is read **once per process**; child processes inherit it. `flags.on(id)` answers for the whole process; `resolve()` returns each flag's state and the reason (core, default, `SELECTA_FLAGS`, "needs X").
+- `flags/guard.py` refuses a route whose owning flag is off with **403 `flag_off`** (never 404, which the site reads as "older server"), before the database is touched and before idempotency replay.
+- Background work checks flags at its source (`stems.py`, `seams.py`, `seam_worker.py`, `planner/vibes.py`, `lyrics/lrclib.py`, `lucy/settings.py`…); a saved seam whose move is off is planned again without changing what's saved.
+- The site imports the same JSON (`web/src/flags.ts`), learns which flags are on from `/api/status`, and every page closes up around a feature that's off: no link, word, tab or empty container. A Playwright sweep (`web/e2e/flags.e2e.ts`, `pnpm e2e:flags`) turns each flag off in turn at 375 and 1280 px.
+- ADR-0390 decided flags are **developer-only, with no switch page**, and records that as your choice.
+
+This is an excellent base: the registry, the dependency cascade, route ownership, the 403 contract and the reflow sweep all carry over. What it lacks for the cloud is **context**: it can't say "on for this user, off for that tier", and it can't change without a restart.
+
+### 11B.2 Four questions, kept separate
+
+A feature reaches a user only if all four say yes. Each has a different owner and lifetime.
+
+| Layer | Question | Owner | Changes by |
+|---|---|---|---|
+| 1. Build | Is this code path available in this deployment at all? | Developer | `SELECTA_FLAGS` + JSON defaults (today's system, unchanged) |
+| 2. Mode | Does it make sense in this runtime mode? | Registry | New `modes` field (e.g. music folders, local backup, cache slider, bring-your-own-key Lucy are local-only; uploads, billing, Rooms are cloud-only) |
+| 3. Plan | Does the account's plan include it? | Billing / plan catalogue | Entitlements ([§3](02-plans-and-economics.md#3-product-plans-entitlements-and-economics), [§8](08-billing.md#8-billing-and-entitlements-stripe-uk-business)); never a flag |
+| 4. Rules | Is it currently switched on for this user, workspace, tier or cohort? | Admin, at runtime | Targeting rules (below), no restart |
+
+Then today's `requires` cascade runs over the result, and a user's own preference (e.g. Lucy phases, already modelled in `lucy/settings.py`) applies last.
+
+**Key rule: flags can only switch features off or roll them out; they never grant what a plan doesn't include.** Giving a Free user a Premium feature is an entitlement override ([§8.3](08-billing.md#83-entitlement-rules)), audited and expiring. This stops a mistyped rule from giving away paid features.
+
+### 11B.3 Targeting rules
+
+Each flag can have an ordered list of rules, evaluated against a context; the first rule that matches decides; if none match, the flag's cloud default applies.
+
+**Context** (built once per request, job or SSE connection): environment, mode, `workspace_id`, `user_id`, plan and plan version, staff roles, account age, country, client version, device kind, and for Room guests a `guest` context with only `room_id`.
+
+**Rule kinds**:
+- **Kill switch**: off for everyone, now. Bypasses delays; for incidents.
+- **Lists**: off (or on) for these user ids or workspace ids.
+- **Segments**: by plan (`plan in [free]`), staff, account age, country, client version, device kind.
+- **Percentage rollout**: on for N% of a segment, chosen by a stable hash of `flag_id + salt + workspace_id`, so the same account gets the same answer on every device, and raising the percentage only adds accounts. Changing the salt reshuffles and warns.
+- **Schedule**: from/until (UTC), e.g. switch a feature on at launch time.
+
+**Flag scope** (new registry field): `global`, `workspace`, `user` or `guest`, so percentage rollouts hash the right id and workspace features don't change when a different member signs in.
+
+**Off behaviour** (new registry field `when_off`): `drain` (running work finishes; nothing new starts) or `stop` (running work stops at its next safe checkpoint). Default `drain`.
+
+**Plan-locked behaviour** (new registry field `when_locked`): `hide` (today's "gone as if never built") or `teaser` (shown with a lock and the plan that includes it, e.g. "Rooms · Premium"). A feature switched off by a rule is always hidden, never teased.
+
+### 11B.4 Enforcement in the cloud
+
+- **One resolver**: `flags.decide(flag_id, ctx) → Decision(on, layer, reason)`, extending today's `resolve()` and `State.why`. Reasons are machine codes: `core`, `build_off`, `mode_off`, `plan_locked`, `rule_off`, `needs:<flag>`, `user_off`.
+- **Middleware order and cost**: in cloud mode the authentication middleware runs first and builds the context; `guard.py` runs straight after it, still before the database is opened and before idempotency replay (as ADR-0390 requires). It reads the workspace's entitlement snapshot and the rules snapshot from per-instance caches keyed by version, so a flag decision never costs a database query; caches refresh on the same `NOTIFY` as rules, and on an entitlement-version bump.
+- **API**: `guard.py` evaluates with the request context. Rule or build off → 403 `flag_off` as today. Plan-locked → 403 `plan_required` with the plan that includes it, so the site can show an upgrade prompt for teaser features.
+- **Site**: `/api/status` (cloud: `/api/me`) returns the *decided* flags for that user plus, for teaser features, `locked: {flag: plan}`. **Rules are never sent to the browser** (they'd leak lists and segments). Changes arrive as a `flags.changed` event on the SSE stream; the existing reflow contract makes the feature vanish cleanly. `flags.ts` keeps its "older server: assume on" handling. Responses carrying flags are `Cache-Control: private`.
+- **Jobs and workers**: each job type declares its owning flag. Producers check before creating jobs. The claim transaction re-checks for the job's workspace (an eligibility filter, [§4A.4](04-queue-and-scheduling.md#4a4-scheduling-policy)), so jobs for a feature switched off while queued become `blocked` with reason `feature_off` (`drain`) or are cancelled (`stop`). The claim response includes the decisions the worker needs, so workers never evaluate rules themselves.
+- **Lucy**: tool availability is decided at the start of each turn; a kill switch stops the run at its next step.
+- **Consistency**: one snapshot per request (no flag flipping halfway through a request), one per job attempt, one per Lucy turn.
+- **Propagation**: rules live in Postgres (`flag_rules`, immutable `flag_rule_versions`); each API instance and the worker gateway hold an in-memory snapshot, refreshed on a Postgres `NOTIFY` and at most every 30 s. Target: a kill switch enforced everywhere within 5 s; a rollout change within 30 s. Every response carries the snapshot version in a header for debugging.
+- **Local mode**: unchanged. No rules, no context: `SELECTA_FLAGS` and the JSON defaults, exactly as ADR-0390 describes.
+- **Cloud build ceiling**: `SELECTA_FLAGS` still applies per deployment (e.g. staging `all`, production defaults), and rules can't switch on anything the build has off.
+
+### 11B.5 The admin Flags page (joins admin v1, making six pages)
+
+- Every flag from the registry, grouped by area as in `docs/flags.md`, with its effective cloud default and current rules.
+- One-click actions: **Off for everyone** (kill switch, instant, audited, alerted), **Off for a tier**, **Off for these users** (search and pick), **Roll out to N% of a tier**, **Schedule**.
+- **Impact preview** before saving: how many accounts and active sessions change, broken down by plan, and which dependent flags go off with it (from `requires`).
+- **"What does this user see, and why?"**: pick an account and get every flag's decision with its reason chain. The same trace answers support questions.
+- **Preview on my account**: staff can switch a flag on for themselves only, for QA.
+- **History and rollback**: every change is a new version with author and reason; one click restores a previous version.
+- **Safety**: broad changes (off for a whole tier, or for more than 10% of active users) use the delayed-execution rule in [§7.4](07-identity-rbac-admin.md#74-dangerous-actions-when-theres-only-one-staff-member) unless they're a kill switch; core flags can't be targeted at all; rules naming a removed flag fail CI until cleaned up by a migration.
+
+### 11B.6 Registry additions
+
+New fields: `scope`, `modes`, `when_off`, `when_locked`, `kind` (`release` / `ops` / `experiment`), `owner`, `review_by` (temporary rollout flags get a date, and CI warns when it passes, so flags don't pile up). New flags for SaaS features, e.g. `cloud.uploads`, `cloud.signups`, `billing.checkout`, `rooms`, `rooms.votes`, `rooms.display`, `devices.remote_control`, `lucy.deep_plan`, `account.data_export`. New surfaces for the reflow sweep: account, billing, uploads tray, room panel, guest page, display, admin. The plan catalogue lists the flag ids each plan includes; CI fails if a plan names a flag that doesn't exist.
+
+### 11B.7 Edge cases for flags
+
+| Case | Behaviour |
+|---|---|
+| Flag turned off while a user is on that page | SSE `flags.changed`; the feature closes up; unsaved local edits in it (e.g. Stem Studio) are kept in local storage with "This feature is paused. Your changes are saved on this device." |
+| Turned off while jobs are queued or running | `drain`: running finish, queued become `blocked: feature_off`; `stop`: running stop at the next checkpoint |
+| Turned back on | Blocked jobs return to `queued` automatically; nothing was deleted |
+| Flapping (on/off/on in a minute) | Allowed, but the admin page warns after 3 changes in 10 minutes; jobs use the decision at claim time |
+| Saved data referencing an off feature | Kept; behaviour follows today's rule (e.g. a seam set to an off move is planned again without changing what's saved) |
+| Plan changes mid-session | Entitlement version bump → flags re-decided → SSE push |
+| Same user on several devices | Workspace- and user-scoped hashing gives every device the same answer |
+| Room guests | Only guest-scoped flags apply; a host's rules apply to their room (`rooms` off for the host closes the room with notice to guests) |
+| Old site, new server | Unknown flags in the response are ignored; a `flag_off` refusal is handled as today |
+| Old worker during a deploy | Decisions arrive in the claim response; unknown flags are treated as off for that worker's jobs |
+| Rule references a deleted user | Ignored and flagged for cleanup |
+| Instance with a stale snapshot | Bounded by NOTIFY + 30 s refresh; kill switches also checked against a version counter on every claim |
+| Admin locks themselves out of the admin console | The admin console and staff routes are core in cloud mode and can't be targeted |
+| Unauthenticated pages (sign-up, guest join) | Evaluated with an anonymous context; `cloud.signups` can close sign-ups during abuse |
+| Experiments | Sticky assignment; exposure logged once per account per experiment; never mixed with a kill switch on the same flag |
+
+### 11B.8 Tests added on top of today's sweep
+
+- Property tests: decisions are deterministic for a context; raising a rollout percentage never removes accounts; flags never grant beyond the plan; core flags are always on; `requires` cascade holds in every context.
+- A tier matrix: every plan-gated and teaser flag checked for Free, Standard and Premium in the API and the site (hidden vs teaser vs on).
+- Propagation: change a rule, then assert every API instance and the gateway enforce it within the targets.
+- Mid-flight: flag off during upload, render, export, Lucy turn and an open Room.
+- The existing reflow sweep runs in both modes, plus a "teaser" pass for locked features.
+
+---
+
+[← 11a-devices-and-rooms.md](11a-devices-and-rooms.md) · [Contents](README.md#chapters) · [12-security-privacy-legal.md →](12-security-privacy-legal.md)
