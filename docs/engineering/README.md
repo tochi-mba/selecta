@@ -47,13 +47,15 @@ client cannot choose a Stripe price id. The webhook stores events idempotently a
 state before applying entitlements and storage limits. Cloud uploads use workspace-scoped multipart
 sessions, plan limits and atomic quota reservations, with server-side metadata validation and
 acceptance. The authenticated Cloud asset API lists, reads and soft-deletes workspace assets. The web
-app selects Cloud mode from API status and has WorkOS sign-in, onboarding, account, plan, billing and
-upload screens. The standalone `selecta gateway` process authenticates workers, claims fenced jobs,
-and signs scoped R2 URLs; the durable worker runner supports injected handlers, but a remote HTTP
-worker client and Cloud audio handlers are still needed. Cloud `/api/events` streams job outbox
-updates; the UI is not yet consuming it. Account deletion now has a durable retryable workflow, but
-its Stripe/R2/database effect adapters and restore replay remain outstanding. Full Cloud mixing,
-nightly billing reconciliation, webhook retries and Stripe tax setup also remain incomplete. Schema
+app selects Cloud mode from API status and has WorkOS sign-in, onboarding, account, plan, billing,
+upload, private library and original audio preview screens. The standalone `selecta gateway` process authenticates workers, claims fenced jobs,
+and signs scoped R2 URLs; `RemoteWorkerClient` and the cooperative runner handle scoped tokens,
+leases, progress and signed input/output transfer, but worker images and Cloud audio handlers are
+still needed. Cloud `/api/events` streams job outbox
+updates; the UI is not yet consuming it. `DELETE /api/account` hides accounts and revokes sessions
+immediately, then enqueues a durable retryable workflow; its Stripe/R2/database effect adapters and
+restore replay remain outstanding. Full Cloud mixing,
+scheduled billing reconciliation/webhook retries and Stripe tax setup also remain incomplete. Schema
 migrations are exercised on SQLite; production PostgreSQL and row-level security still need
 implementation and verification.
 
@@ -99,6 +101,10 @@ Deploy the worker gateway as its own process with `uv run selecta gateway`. Set
 `SELECTA_GATEWAY_DATABASE_URL` or `SELECTA_DATABASE_URL`, `SELECTA_GATEWAY_ALLOWED_HOSTS`,
 `SELECTA_WORKER_TOKEN_SECRET`, and `SELECTA_WORKER_BOOTSTRAP_TOKEN`; configure the shared R2
 environment for object URL signing. The gateway refuses wildcard host allowlists and short secrets.
+Run `uv run selecta billing-maintenance` from a scheduled Cloud maintenance process to drain stored
+Stripe webhook events; use `uv run selecta billing-maintenance --reconcile` for the slower full
+subscription sweep. The repository provides the command, but deployment scheduling remains an
+operations task.
 
 The Cloud web build also needs `VITE_SELECTA_API_ORIGIN` when the API is hosted on another origin,
 `VITE_WORKOS_CLIENT_ID`, and `VITE_CHECKOUT_CONSENT_VERSION`. The API needs Stripe settings described

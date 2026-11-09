@@ -13,7 +13,7 @@
 
 Rules: object keys never contain filenames or user text; all buckets private (no public access, no r2.dev); reads and writes only through short-lived presigned URLs (≤ 15 min, single object), handed to browsers per action and to workers per claimed attempt, so no browser or worker ever holds a bucket credential; only the API, gateway and maintenance services hold R2 keys. R2's EU jurisdiction keeps data in the EU (fine under UK GDPR, which recognises EU adequacy). R2 is strongly consistent: a completed write is immediately readable everywhere, so the database never points at an object that "isn't there yet".
 
-**Bucket CORS**: only the app's origin may `PUT` (staging bucket, exposing `ETag`) or `GET` (derived and exports buckets, for playback and downloads). Presigned URLs work only on R2's S3 endpoint, not on custom domains, so that endpoint is the one in the CORS rules and the CSP.
+**Bucket CORS**: only the app's origin may `PUT` (staging bucket, exposing `ETag`) or `GET` (originals, derived and exports buckets, for playback and downloads). Allow `Range` requests and expose `Accept-Ranges`, `Content-Length`, `Content-Range` and `ETag` for browser audio seeking. Presigned URLs work only on R2's S3 endpoint, not on custom domains, so that endpoint is the one in the CORS rules and the CSP.
 
 **System-managed data budget**: each workspace's derived data (features, playback files, stems, clips, waveforms) is capped at about 15% of its plan storage and evicted least-recently-used, except anything a playing or frozen revision references. Evicted items are regenerated on demand, which costs compute and egress, so eviction is tuned from beta measurements.
 
@@ -44,8 +44,12 @@ duration/metadata problems, but it does not yet run a decode test or isolate hos
 in a constrained worker. The workspace-scoped asset API exposes `GET /api/assets` with cursor
 pagination, `GET /api/assets/{asset_id}`, and `DELETE /api/assets/{asset_id}`. Delete hides the
 asset immediately and releases quota while recording physical deletion for retention handling. The
-full Cloud library, playback, and download flows are not implemented; an accepted asset row is not
-yet a playable song record. R2 credentials are read from
+Cloud API also exposes `GET /api/assets/{asset_id}/playback-url` for an owner-checked original and
+`POST /api/storage/derived-playback-url` for a workspace-owned derived key. Both check R2 object
+existence before returning a short-lived URL; original delivery also checks stored size and SHA-256
+metadata and can set attachment disposition. The Cloud library can request a signed URL and play an
+original track in a native audio control. It does not yet assemble mixes or create lossless playback
+proxies, and accepted asset rows are not yet playable song records. R2 credentials are read from
 `SELECTA_R2_ACCOUNT_ID`, `SELECTA_R2_ACCESS_KEY_ID`, `SELECTA_R2_SECRET_ACCESS_KEY`, and optional
 `SELECTA_R2_JURISDICTION` / bucket-name variables. The staging bucket CORS policy must allow the
 Cloud web origin to `PUT` signed parts.

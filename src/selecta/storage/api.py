@@ -175,6 +175,16 @@ def _buckets() -> Buckets:
     )
 
 
+def r2_client() -> R2Client:
+    """Create a configured R2 client for other Cloud storage route modules."""
+    return _r2_client()
+
+
+def buckets() -> Buckets:
+    """Resolve the configured private R2 bucket names."""
+    return _buckets()
+
+
 def install_routes(
     app: FastAPI,
     *,

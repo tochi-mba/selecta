@@ -12,6 +12,14 @@
       "kind": "release",
       "owner": "platform"
     },
+    "account.deletion": {
+      "label": "Account deletion",
+      "about": "Request account removal and revoke active sessions.",
+      "core": "People must always be able to request deletion of their account.",
+      "routes": ["DELETE /api/account"],
+      "modes": ["cloud"],
+      "owner": "identity"
+    },
     "cloud.signups": {
       "label": "New accounts",
       "about": "Allow new Cloud users to complete account onboarding.",
@@ -32,7 +40,9 @@
         "DELETE /api/uploads/{session_id}",
         "GET /api/assets",
         "GET /api/assets/{asset_id}",
-        "DELETE /api/assets/{asset_id}"
+        "DELETE /api/assets/{asset_id}",
+        "GET /api/assets/{asset_id}/playback-url",
+        "POST /api/storage/derived-playback-url"
       ],
       "modes": ["cloud"],
       "kind": "release",

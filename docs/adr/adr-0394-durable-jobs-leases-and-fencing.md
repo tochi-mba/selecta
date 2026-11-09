@@ -1,7 +1,7 @@
 # ADR-0394 - Durable jobs with leases and fencing
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
+- **Implementation:** 0/6 Implemented; 6/6 In progress; 0/6 Not started.
 - **Independent verification:** 0/6 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 1. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -13,7 +13,7 @@
 
 Background work is coordinated through a stdin pipe to one seam-worker subprocess, in-memory deques, `seam.json` status files, a `rendering-mix` sign file, an analysis subprocess and JSON export-job files tracked in a process dict. None of it survives multiple instances or remote workers, and some of it corrupts state when a second instance starts.
 
-This ADR records a proposed decision. Nothing in it is implemented or measured yet; numbers come from the proposal and must be re-checked when the work starts.
+The shared schema, fenced job store, retry/reaper lifecycle, transactional outbox and cooperative handler runner are implemented in code. Local audio handlers have not been migrated, PostgreSQL race behavior is not verified, and the required Hypothesis/chaos evidence remains outstanding.
 
 ## Decision
 
@@ -36,12 +36,12 @@ Work survives restarts, crashes and deploys; a stale worker can never overwrite 
 
 ## Implementation checklist - 0/6 Implemented; 0/6 independently Verified
 
-1. **SC-0394-01 - Job tables and state module.** **Acceptance:** All transitions go through one module; illegal transitions raise. **Required verification:** Hypothesis state-machine tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0394-02 - Leases and fencing.** **Acceptance:** A completion with a stale fencing token is refused; the zombie-worker scenario publishes once. **Required verification:** Integration race test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0394-03 - Reaper.** **Acceptance:** Expired attempts return to queued or fail when attempts are exhausted, within lease + interval. **Required verification:** Kill-loop chaos test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0394-04 - Local runner.** **Acceptance:** Seam worker pipe, analysis subprocess and export JSON jobs are replaced in local mode; transitions sound the same. **Required verification:** Existing tests plus the owner's listening check. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0394-05 - Error classes and quarantine.** **Acceptance:** Each error class follows its retry policy; a job that crashes three workers is quarantined. **Required verification:** Unit and chaos tests. **Implementation:** Not started; **Independently Verified:** No.
-6. **SC-0394-06 - Outbox.** **Acceptance:** Every transition writes an outbox event in the same transaction. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0394-01 - Job tables and state module.** **Acceptance:** All transitions go through one module; illegal transitions raise. **Required verification:** Hypothesis state-machine tests. **Implementation:** In progress; shared job/attempt/artifact tables and one transition module exist; Hypothesis state-machine coverage remains. **Independently Verified:** No.
+2. **SC-0394-02 - Leases and fencing.** **Acceptance:** A completion with a stale fencing token is refused; the zombie-worker scenario publishes once. **Required verification:** Integration race test. **Implementation:** In progress; claims issue fencing tokens and completion is idempotent while rejecting stale holders; PostgreSQL race verification remains. **Independently Verified:** No.
+3. **SC-0394-03 - Reaper.** **Acceptance:** Expired attempts return to queued or fail when attempts are exhausted, within lease + interval. **Required verification:** Kill-loop chaos test. **Implementation:** In progress; expired-lease reaping and a term-fenced maintenance loop exist; kill-loop chaos verification remains. **Independently Verified:** No.
+4. **SC-0394-04 - Local runner.** **Acceptance:** Seam worker pipe, analysis subprocess and export JSON jobs are replaced in local mode; transitions sound the same. **Required verification:** Existing tests plus the owner's listening check. **Implementation:** In progress; cooperative durable runner supports injected handlers, but local audio jobs still use existing workers. **Independently Verified:** No.
+5. **SC-0394-05 - Error classes and quarantine.** **Acceptance:** Each error class follows its retry policy; a job that crashes three workers is quarantined. **Required verification:** Unit and chaos tests. **Implementation:** In progress; retry policies, resource escalation and poison quarantine are implemented; required class/chaos coverage remains. **Independently Verified:** No.
+6. **SC-0394-06 - Outbox.** **Acceptance:** Every transition writes an outbox event in the same transaction. **Required verification:** Integration test. **Implementation:** In progress; lifecycle changes emit durable outbox rows and PostgreSQL notifications in the same transaction; integration verification remains. **Independently Verified:** No.
 
 ## Governance
 

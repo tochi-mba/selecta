@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 11 In progress, 117 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 130 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 21 In progress, 107 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -32,12 +32,12 @@
 
 ## [ADR-0394 - Durable jobs with leases and fencing](adr-0394-durable-jobs-leases-and-fencing.md)
 
-- [ ] **SC-0394-01 - Job tables and state module.** Acceptance: All transitions go through one module; illegal transitions raise. Required verification: Hypothesis state-machine tests. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0394-02 - Leases and fencing.** Acceptance: A completion with a stale fencing token is refused; the zombie-worker scenario publishes once. Required verification: Integration race test. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0394-03 - Reaper.** Acceptance: Expired attempts return to queued or fail when attempts are exhausted, within lease + interval. Required verification: Kill-loop chaos test. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0394-04 - Local runner.** Acceptance: Seam worker pipe, analysis subprocess and export JSON jobs are replaced in local mode; transitions sound the same. Required verification: Existing tests plus the owner's listening check. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0394-05 - Error classes and quarantine.** Acceptance: Each error class follows its retry policy; a job that crashes three workers is quarantined. Required verification: Unit and chaos tests. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0394-06 - Outbox.** Acceptance: Every transition writes an outbox event in the same transaction. Required verification: Integration test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0394-01 - Job tables and state module.** Acceptance: All transitions go through one module; illegal transitions raise. Required verification: Hypothesis state-machine tests. Implementation: In progress; shared job/attempt/artifact tables, one transition module and durable store exist; a Hypothesis state-machine suite remains. Independently verified: No.
+- [ ] **SC-0394-02 - Leases and fencing.** Acceptance: A completion with a stale fencing token is refused; the zombie-worker scenario publishes once. Required verification: Integration race test. Implementation: In progress; claims issue fencing tokens and completion is idempotent while rejecting stale holders; PostgreSQL race verification remains. Independently verified: No.
+- [ ] **SC-0394-03 - Reaper.** Acceptance: Expired attempts return to queued or fail when attempts are exhausted, within lease + interval. Required verification: Kill-loop chaos test. Implementation: In progress; expired-lease reaping and a term-fenced maintenance loop exist; kill-loop chaos verification remains. Independently verified: No.
+- [ ] **SC-0394-04 - Local runner.** Acceptance: Seam worker pipe, analysis subprocess and export JSON jobs are replaced in local mode; transitions sound the same. Required verification: Existing tests plus the owner's listening check. Implementation: In progress; the cooperative durable worker runner now supports injected handlers, but local audio jobs still use the existing workers and have not been migrated. Independently verified: No.
+- [ ] **SC-0394-05 - Error classes and quarantine.** Acceptance: Each error class follows its retry policy; a job that crashes three workers is quarantined. Required verification: Unit and chaos tests. Implementation: In progress; retry policies, resource escalation and poison quarantine are implemented; the required class/chaos coverage remains. Independently verified: No.
+- [ ] **SC-0394-06 - Outbox.** Acceptance: Every transition writes an outbox event in the same transaction. Required verification: Integration test. Implementation: In progress; lifecycle state changes write durable outbox rows and PostgreSQL notifications in the transaction; integration verification remains. Independently verified: No.
 
 ## [ADR-0395 - Fair scheduling: lanes and per-account weights by tier](adr-0395-fair-scheduling-policy.md)
 
@@ -51,11 +51,11 @@
 ## [ADR-0396 - Worker gateway and worker pools](adr-0396-worker-gateway-and-pools.md)
 
 - [x] **SC-0396-01 - Gateway endpoints.** Acceptance: All six endpoints exist with token auth and idempotency. Required verification: Integration tests. Implementation: Implemented; standalone gateway app, CLI service command, scoped enrollment/worker tokens, fenced job lifecycle routes, signed R2 URLs and readiness endpoint. Evidence: `tests/test_worker_gateway_api.py`; `src/selecta/gateway_cloud.py`; `src/selecta/work/gateway_api.py`. Independently verified: No.
-- [ ] **SC-0396-02 - Worker image.** Acceptance: Linux image with ffmpeg, torch CPU and pinned models runs analysis and renders end to end. Required verification: Staging smoke test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0396-02 - Worker image.** Acceptance: Linux image with ffmpeg, torch CPU and pinned models runs analysis and renders end to end. Required verification: Staging smoke test. Implementation: In progress; remote client and cooperative worker runner can claim fenced jobs and transfer signed objects, but no pinned Linux image or real Cloud audio handlers exist yet. Independently verified: No.
 - [ ] **SC-0396-03 - GPU pool.** Acceptance: Demucs windows run on Modal with CPU fallback when GPU capacity is absent. Required verification: Staging test; timing recorded. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0396-04 - Scale-out.** Acceptance: Throughput rises monotonically with worker count to a documented bottleneck. Required verification: Worker scaling benchmark 1→32. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0396-05 - Spend ceilings.** Acceptance: A pool stops scaling at its ceiling and alerts. Required verification: Staging test with a low ceiling. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0396-06 - Gateway isolation.** Acceptance: A worker storm on the gateway leaves customer API p95 unchanged. Required verification: Load test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0396-06 - Gateway isolation.** Acceptance: A worker storm on the gateway leaves customer API p95 unchanged. Required verification: Load test. Implementation: In progress; gateway has a separate app factory and `selecta gateway` deployment entry point, but production separation and comparative API p95 load measurements remain. Independently verified: No.
 - [ ] **SC-0396-07 - Egress measured.** Acceptance: Bytes uploaded per job type are recorded and match the cost model. Required verification: Phase 0 benchmark and staging metrics. Implementation: Not started; Independently verified: No.
 
 ## [ADR-0397 - Object storage layout and artifact provenance on R2](adr-0397-object-storage-layout.md)
@@ -78,7 +78,7 @@
 
 - [ ] **SC-0399-01 - Lazy proxy job.** Acceptance: Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. Required verification: Integration test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0399-02 - Alignment.** Acceptance: Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. Required verification: Automated alignment check plus listening check. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0399-03 - Signed URL refresh.** Acceptance: An expired URL mid-session refreshes once without changing the mix. Required verification: Playwright test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0399-03 - Signed URL refresh.** Acceptance: An expired URL mid-session refreshes once without changing the mix. Required verification: Playwright test. Implementation: In progress; Cloud can mint short-lived owner-checked original and workspace-checked derived playback URLs, but the audio client’s one-time expiry refresh is not implemented. Independently verified: No.
 - [ ] **SC-0399-04 - Prefetch.** Acceptance: The next song and its transitions are buffered before they're needed. Required verification: Playwright timing test. Implementation: Not started; Independently verified: No.
 
 ## [ADR-0400 - Identity with WorkOS AuthKit](adr-0400-identity-with-workos-authkit.md)
@@ -105,9 +105,9 @@
 
 ## [ADR-0403 - Stripe billing, reconciliation and UK VAT](adr-0403-stripe-billing-and-uk-vat.md)
 
-- [ ] **SC-0403-01 - Webhook store and processing.** Acceptance: Signature verified; duplicates ignored; events processed by re-fetching. Required verification: Integration tests with Stripe test mode. Implementation: In progress; signed endpoint, idempotent event store, current-state re-fetch, entitlement and quota updates are wired; webhook route integration and Stripe test-mode runs remain. Independently verified: No.
+- [ ] **SC-0403-01 - Webhook store and processing.** Acceptance: Signature verified; duplicates ignored; events processed by re-fetching. Required verification: Integration tests with Stripe test mode. Implementation: In progress; signed endpoint, idempotent event store, current-state re-fetch, entitlement and quota updates are wired, with a bounded retry-drain helper; scheduled execution and Stripe test-mode runs remain. Independently verified: No.
 - [ ] **SC-0403-02 - Scrambled-event replay.** Acceptance: Hundreds of thousands of shuffled, duplicated and delayed events produce the correct final entitlements. Required verification: Replay test. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0403-03 - Nightly reconciliation.** Acceptance: Drift is detected and corrected with an audit entry. Required verification: Integration test. Implementation: Not started; Independently verified: No.
+- [ ] **SC-0403-03 - Nightly reconciliation.** Acceptance: Drift is detected and corrected with an audit entry. Required verification: Integration test. Implementation: In progress; full Stripe subscription reconciliation and quota-limit synchronization helpers exist, but scheduled execution, audit entries and drift alerting remain unwired. Independently verified: No.
 - [ ] **SC-0403-04 - UK checkout consent.** Acceptance: Consent text is captured and stored with the subscription. Required verification: Playwright test. Implementation: In progress; checkout requires a server-versioned consent plus explicit immediate-access and cancellation-right acknowledgements and stores the accepted version; consent copy, UI and Playwright coverage remain. Independently verified: No.
 - [ ] **SC-0403-05 - Tax setup.** Acceptance: Stripe Tax configured for UK; EU sales blocked until OSS or merchant of record is decided. Required verification: Configuration review. Implementation: Not started; Independently verified: No.
 
@@ -173,7 +173,7 @@
 ## [ADR-0412 - Privacy, retention and the deletion ledger](adr-0412-privacy-retention-and-deletion.md)
 
 - [ ] **SC-0412-01 - Privacy notice and ICO.** Acceptance: Notice published; ICO fee paid. Required verification: Doc and receipt on file. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0412-02 - Deletion workflow.** Acceptance: Deletion removes objects and rows in batches and releases quota. Required verification: Integration test. Implementation: In progress; account deletion now revokes sessions, hides the account, records its deletion plan and enqueues a leased, fenced, retryable workflow with a 30-day erase delay. Concrete billing, object, row-cleanup and restore-ledger effect adapters remain. Independently verified: No.
+- [ ] **SC-0412-02 - Deletion workflow.** Acceptance: Deletion removes objects and rows in batches and releases quota. Required verification: Integration test. Implementation: In progress; `DELETE /api/account` hides the account, revokes sessions and enqueues a leased, fenced, retryable workflow with a 30-day erase delay. Concrete billing, object, row-cleanup and restore-ledger effect adapters remain. Independently verified: No.
 - [ ] **SC-0412-03 - Restore safety.** Acceptance: After a restore, replaying the ledger removes data deleted since the backup. Required verification: Restore drill. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0412-04 - Data export.** Acceptance: Export includes originals, mixes and settings JSON. Required verification: Playwright test. Implementation: Not started; Independently verified: No.
 

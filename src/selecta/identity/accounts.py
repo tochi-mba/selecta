@@ -50,8 +50,8 @@ DELETION_STEPS = (
     "cancel_subscriptions",
     "remove_memberships",
     "delete_objects",
-    "delete_workspace_rows",
     "record_in_deletions_ledger",
+    "delete_workspace_rows",
     "erase_user",
 )
 

@@ -49,6 +49,10 @@ class AttemptRequest(BaseModel):
     fencing_token: int = Field(ge=1)
 
 
+class ReleaseRequest(AttemptRequest):
+    cost_s: float | None = Field(default=None, ge=0)
+
+
 class ProgressRequest(AttemptRequest):
     done: float = Field(ge=0)
     total: float | None = Field(default=None, gt=0)
@@ -281,7 +285,14 @@ def install_routes(
             result = sign_outputs(attempt, body.names)
         except (TypeError, ValueError) as error:
             raise HTTPException(status_code=422, detail={"code": "invalid_output_slots"}) from error
-        return {"outputs": result}
+        if not isinstance(result, list) or len(result) != len(body.names):
+            raise HTTPException(status_code=502, detail={"code": "invalid_output_slots"})
+        return {
+            "outputs": [
+                (dict(slot) | {"name": name}) if isinstance(slot, dict) else slot
+                for name, slot in zip(body.names, result, strict=True)
+            ]
+        }
 
     @app.post("/internal/workers/attempts/{attempt_id}/heartbeat")
     def heartbeat(
@@ -300,12 +311,14 @@ def install_routes(
     @app.post("/internal/workers/attempts/{attempt_id}/release")
     def release(
         attempt_id: str,
-        body: AttemptRequest,
+        body: ReleaseRequest,
         claims: dict[str, Any] = Depends(worker_claims),  # noqa: B008
     ):
         authorized_attempt(attempt_id, claims, body.fencing_token)
         try:
-            job = store.release(attempt_id, body.fencing_token)
+            job = store.release(attempt_id, body.fencing_token, body.cost_s)
+        except JobCancelled as error:
+            raise HTTPException(status_code=409, detail={"code": "job_cancelled"}) from error
         except StaleLease as error:
             raise HTTPException(status_code=409, detail={"code": "stale_lease"}) from error
         return {"job_id": job.id, "state": str(job.state)}
@@ -338,12 +351,19 @@ def install_routes(
                 artifacts=[item.as_output() for item in body.artifacts],
                 cost_s=body.cost_s,
             )
-        except (StaleLease, JobCancelled) as error:
+        except JobCancelled as error:
+            raise HTTPException(status_code=409, detail={"code": "job_cancelled"}) from error
+        except StaleLease as error:
             raise HTTPException(status_code=409, detail={"code": "stale_lease"}) from error
         except CompletionRejected as error:
+            current = store.job(attempt.job_id)
             raise HTTPException(
                 status_code=422,
-                detail={"code": "completion_rejected", "error_class": error.error_class},
+                detail={
+                    "code": "completion_rejected",
+                    "error_class": error.error_class,
+                    "state": str(current.state) if current else "failed",
+                },
             ) from error
         except ValueError as error:
             raise HTTPException(status_code=413, detail={"code": "result_too_large"}) from error

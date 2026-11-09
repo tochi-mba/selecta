@@ -1,7 +1,7 @@
 # ADR-0399 - Cloud playback with lossless playback proxies
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
+- **Implementation:** 0/4 Implemented; 1/4 In progress; 3/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 3. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -13,7 +13,7 @@
 
 The player downloads whole songs decoded to WAV by the server (about 42 MB for four minutes), which keeps sample-accurate alignment with transitions. Lossy formats add encoder delay and padding that browsers handle inconsistently.
 
-This ADR records a proposed decision. Nothing in it is implemented or measured yet; numbers come from the proposal and must be re-checked when the work starts.
+Cloud API routes now issue short-lived signed URLs for an owned original or a valid derived object in the caller's workspace. They do not create lazy playback proxies, and the browser does not yet refresh an expired URL while keeping playback state.
 
 ## Decision
 
@@ -36,7 +36,7 @@ Cloud playback keeps transitions as tight as local playback, without the server 
 
 1. **SC-0399-01 - Lazy proxy job.** **Acceptance:** Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
 2. **SC-0399-02 - Alignment.** **Acceptance:** Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. **Required verification:** Automated alignment check plus listening check. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0399-03 - Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0399-03 - Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** In progress; APIs can mint short-lived owner/workspace-scoped playback URLs, but client-side single refresh and continuity behavior remain; **Independently Verified:** No.
 4. **SC-0399-04 - Prefetch.** **Acceptance:** The next song and its transitions are buffered before they're needed. **Required verification:** Playwright timing test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance

@@ -169,6 +169,17 @@ export function CloudApp() {
     finally { setBusy(false); }
   };
 
+  const deleteAccount = async () => {
+    const confirmed = window.confirm('Delete your Selecta Cloud account? Your account will be hidden and you will be signed out immediately. Final erasure is scheduled after the 30-day recovery window.');
+    if (!confirmed) return;
+    setBusy(true); setError('');
+    try {
+      await api('/account', { method: 'DELETE' }, account?.workspace.id);
+      signOut({ returnTo: window.location.origin });
+    } catch (problem) { setError((problem as Error).message); }
+    finally { setBusy(false); }
+  };
+
   const choosePage = (next: Page) => { setPage(next); setNotice(''); setError(''); };
 
   if (isLoading) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Checking your sign-in…</p></main>;
@@ -189,7 +200,7 @@ export function CloudApp() {
           <button aria-current={page === 'uploads' ? 'page' : undefined} onClick={() => choosePage('uploads')}>Add music</button>
           <button aria-current={page === 'billing' ? 'page' : undefined} onClick={() => choosePage('billing')}>Plan & billing</button>
         </nav>
-        <div className="cloud-rail-bottom"><span>{user.email}</span><button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button></div>
+        <div className="cloud-rail-bottom"><span>{user.email}</span><button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button><button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
         <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{page === 'home' ? 'Your music workspace' : page === 'library' ? 'Your library' : page === 'uploads' ? 'Add music' : 'Plan & billing'}</h1></div><span className="cloud-plan-chip">{account?.entitlement.plan ?? 'Free'} plan</span></header>
@@ -226,6 +237,7 @@ function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api:
   const [loading, setLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [busyId, setBusyId] = useState('');
+  const [playback, setPlayback] = useState<{ id: string; name: string; url: string } | null>(null);
   const load = useCallback(async (cursor?: string, append = false) => {
     setLoading(true); setError('');
     try {
@@ -248,9 +260,18 @@ function LibraryPanel({ api, workspaceId, setError, refreshAccount, go }: { api:
     } catch (problem) { setError((problem as Error).message); }
     finally { setBusyId(''); }
   };
-  return <section className="cloud-library"><div className="cloud-library-heading"><div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Uploaded audio stays private. Playback and mixing will appear here as Cloud processing is added.</p></div><div><button onClick={() => void load()} disabled={loading}>Refresh</button><button className="primary" onClick={() => go('uploads')}>Upload tracks</button></div></div>
+  const listen = async (asset: Asset) => {
+    setBusyId(asset.id); setError('');
+    try {
+      const result = await api<{ url: string }>(`/assets/${encodeURIComponent(asset.id)}/playback-url`, {}, workspaceId);
+      setPlayback({ id: asset.id, name: asset.name, url: result.url });
+    } catch (problem) { setError((problem as Error).message); }
+    finally { setBusyId(''); }
+  };
+  return <section className="cloud-library"><div className="cloud-library-heading"><div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Listen to an original track here. Cloud mixes and prepared playback files are coming next.</p></div><div><button onClick={() => void load()} disabled={loading}>Refresh</button><button className="primary" onClick={() => go('uploads')}>Upload tracks</button></div></div>
+    {playback && <section className="cloud-card cloud-library-player"><div><p className="cloud-eyebrow">NOW PLAYING</p><strong>{playback.name}</strong></div><audio controls autoPlay src={playback.url} onError={() => setError('This playback link expired or the audio could not be loaded. Try Listen again.')} /></section>}
     {loading && assets.length === 0 ? <p>Loading your library…</p> : assets.length === 0 ? <div className="cloud-card"><h2>Your library is empty</h2><p>Start by uploading tracks from your device.</p><button className="primary" onClick={() => go('uploads')}>Add tracks</button></div> : <>
-      <div className="cloud-library-list">{assets.map((asset) => <article className="cloud-library-row" key={asset.id}><span className="cloud-library-icon" aria-hidden="true">♪</span><div className="cloud-library-meta"><strong>{asset.name}</strong><span>{asset.format?.toUpperCase() ?? 'Audio'} · {bytes(asset.size)}{asset.duration_seconds ? ` · ${Math.round(asset.duration_seconds / 60)} min` : ''}</span></div><button onClick={() => void remove(asset)} disabled={busyId === asset.id}>{busyId === asset.id ? 'Removing…' : 'Remove'}</button></article>)}</div>
+      <div className="cloud-library-list">{assets.map((asset) => <article className="cloud-library-row" key={asset.id}><span className="cloud-library-icon" aria-hidden="true">♪</span><div className="cloud-library-meta"><strong>{asset.name}</strong><span>{asset.format?.toUpperCase() ?? 'Audio'} · {bytes(asset.size)}{asset.duration_seconds ? ` · ${Math.round(asset.duration_seconds / 60)} min` : ''}</span></div><button onClick={() => void listen(asset)} disabled={busyId === asset.id}>{busyId === asset.id ? 'Opening…' : playback?.id === asset.id ? 'Play again' : 'Listen'}</button><button onClick={() => void remove(asset)} disabled={busyId === asset.id}>Remove</button></article>)}</div>
       {nextCursor && <button onClick={() => void load(nextCursor, true)} disabled={loading}>{loading ? 'Loading…' : 'Load more'}</button>}
     </>}
   </section>;

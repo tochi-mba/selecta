@@ -25,6 +25,7 @@ from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from selecta import flags
+from selecta.authz.errors import LastOwner
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
 from selecta.flags import guard as flag_guard
@@ -44,6 +45,7 @@ from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
 from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.storage import api as storage_api
+from selecta.storage import playback_api as playback_api
 from selecta.usage import quota
 from selecta.work.schema import outbox_events
 
@@ -508,6 +510,28 @@ def create_cloud_app(
             )
         return {"revoked_before": revoked_before, "message": "Other sessions will expire shortly."}
 
+    @app.delete("/api/account", status_code=202)
+    def delete_account(claims: Claims = Depends(current_claims)):
+        """Hide the account and enqueue its durable deletion workflow."""
+        principal = _principal(engine, claims)
+        try:
+            with transaction(engine) as conn:
+                plan = accounts.start_account_deletion(
+                    conn,
+                    principal.user.id,
+                    requested_by=principal.user.id,
+                    reason="account holder requested deletion",
+                )
+        except LastOwner as error:
+            raise HTTPException(
+                status_code=409, detail={"code": "last_owner", "message": str(error)}
+            ) from error
+        return {
+            "status": "deletion_queued",
+            "erase_after": plan.erase_after,
+            "backups_clear_by": plan.backups_clear_by,
+        }
+
     billing_api.install_routes(
         app,
         engine=engine,
@@ -526,6 +550,14 @@ def create_cloud_app(
         engine=engine,
         current_claims=current_claims,
         principal_for=_principal,
+    )
+    playback_api.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        principal_for=_principal,
+        object_client_factory=storage_api.r2_client,
+        buckets=storage_api.buckets(),
     )
 
     return app

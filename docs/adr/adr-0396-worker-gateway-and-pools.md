@@ -1,7 +1,7 @@
 # ADR-0396 - Worker gateway and worker pools
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 1/7 Implemented; 0/7 In progress; 6/7 Not started.
+- **Implementation:** 1/7 Implemented; 2/7 In progress; 4/7 Not started.
 - **Independent verification:** 0/7 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 3. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -36,11 +36,11 @@ Adding a worker means starting a container with pool settings and a credential; 
 ## Implementation checklist - 1/7 Implemented; 0/7 independently Verified
 
 1. **SC-0396-01 - Gateway endpoints.** **Acceptance:** All six endpoints exist with token auth and idempotency. **Required verification:** Integration tests. **Implementation:** Implemented; standalone `selecta gateway` service, scoped tokens, fenced lifecycle routes and signed object URLs. **Evidence:** `tests/test_worker_gateway_api.py`, `src/selecta/gateway_cloud.py`, `src/selecta/work/gateway_api.py`; **Independently Verified:** No.
-2. **SC-0396-02 - Worker image.** **Acceptance:** Linux image with ffmpeg, torch CPU and pinned models runs analysis and renders end to end. **Required verification:** Staging smoke test. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0396-02 - Worker image.** **Acceptance:** Linux image with ffmpeg, torch CPU and pinned models runs analysis and renders end to end. **Required verification:** Staging smoke test. **Implementation:** In progress; remote client and cooperative runner can claim jobs and transfer signed objects, but the pinned Linux image and actual audio handlers remain; **Independently Verified:** No.
 3. **SC-0396-03 - GPU pool.** **Acceptance:** Demucs windows run on Modal with CPU fallback when GPU capacity is absent. **Required verification:** Staging test; timing recorded. **Implementation:** Not started; **Independently Verified:** No.
 4. **SC-0396-04 - Scale-out.** **Acceptance:** Throughput rises monotonically with worker count to a documented bottleneck. **Required verification:** Worker scaling benchmark 1→32. **Implementation:** Not started; **Independently Verified:** No.
 5. **SC-0396-05 - Spend ceilings.** **Acceptance:** A pool stops scaling at its ceiling and alerts. **Required verification:** Staging test with a low ceiling. **Implementation:** Not started; **Independently Verified:** No.
-6. **SC-0396-06 - Gateway isolation.** **Acceptance:** A worker storm on the gateway leaves customer API p95 unchanged. **Required verification:** Load test. **Implementation:** Not started; **Independently Verified:** No.
+6. **SC-0396-06 - Gateway isolation.** **Acceptance:** A worker storm on the gateway leaves customer API p95 unchanged. **Required verification:** Load test. **Implementation:** In progress; gateway app and CLI allow independent deployment, but deployment separation and comparative API p95 measurements remain. **Independently Verified:** No.
 7. **SC-0396-07 - Egress measured.** **Acceptance:** Bytes uploaded per job type are recorded and match the cost model. **Required verification:** Phase 0 benchmark and staging metrics. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance

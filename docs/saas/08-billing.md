@@ -21,8 +21,11 @@ when new checkout is disabled.
 The webhook caps request bodies, verifies the raw-body Stripe signature (supporting secret
 rotation), inserts each event once, ignores unknown event types, and re-fetches Stripe state before
 updating entitlement snapshots and storage limits. A repeated delivery retries an event that is
-still `received` or `failed`. The background retry job and nightly full reconciliation are not yet
-wired, so Stripe outages still require another delivery or operator action. Production PostgreSQL
+still `received` or `failed`. `billing.maintenance` now provides a bounded retry drain and a full
+subscription reconciliation with quota synchronization. Run `uv run selecta billing-maintenance`
+from a scheduled process to drain events and add `--reconcile` for the full subscription sweep.
+Deployment scheduling, reconciliation audit entries and drift alerts remain outstanding.
+Production PostgreSQL
 and real Stripe test-mode runs remain to be verified.
 
 Configuration: `SELECTA_STRIPE_SECRET_KEY`, `SELECTA_STRIPE_WEBHOOK_SECRETS` (comma-separated

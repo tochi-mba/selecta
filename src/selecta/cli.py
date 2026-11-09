@@ -513,6 +513,43 @@ def gateway(
     )
 
 
+@app.command("billing-maintenance")
+def billing_maintenance(
+    limit: int = typer.Option(50, min=1, max=500, help="Maximum webhook events to drain."),
+    reconcile: bool = typer.Option(
+        False, "--reconcile", help="Also re-fetch every subscription and repair drift."
+    ),
+) -> None:
+    """Drain Stripe webhook retries; optionally run the slower full reconciliation."""
+    from selecta.billing.maintenance import drain_stripe_events, reconcile_stripe_billing
+    from selecta.billing.stripe_sync import load_price_map
+    from selecta.billing.webhooks import HttpStripeClient
+
+    key = os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip()
+    prices = load_price_map()
+    if not key or not prices:
+        raise typer.BadParameter(
+            "Set SELECTA_STRIPE_SECRET_KEY and SELECTA_STRIPE_PRICES before running "
+            "billing maintenance."
+        )
+    engine = _cloud_database_engine()
+    client = HttpStripeClient(key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION"))
+    try:
+        drained = drain_stripe_events(engine, client, prices, limit=limit)
+        console.print(
+            f"Stripe webhooks: {drained.processed} processed, {drained.failed} failed, "
+            f"{drained.busy} busy, {drained.errors} maintenance errors."
+        )
+        if reconcile:
+            report = reconcile_stripe_billing(engine, client, prices)
+            console.print(
+                f"Reconciliation: {report.checked} subscriptions checked, "
+                f"{report.changed} differences, {report.unmatched} unmatched."
+            )
+    finally:
+        engine.dispose()
+
+
 @app.command()
 def plan(
     count: int = typer.Option(20, help="Songs to put in the rolling set plan."),

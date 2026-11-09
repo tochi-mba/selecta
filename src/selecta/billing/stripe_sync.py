@@ -65,9 +65,11 @@ class StripeUnavailable(RuntimeError):
 
 
 class StripeClient(Protocol):
-    """The three Stripe reads billing needs. `webhooks.HttpStripeClient` is the real one."""
+    """Stripe operations used by billing and account lifecycle workflows."""
 
     def get_subscription(self, subscription_id: str) -> dict[str, Any] | None: ...
+
+    def cancel_subscription(self, subscription_id: str) -> dict[str, Any] | None: ...
 
     def list_subscriptions(self, customer: str | None = None) -> Iterable[dict[str, Any]]:
         """Every subscription in any status, all pages, optionally for one customer."""

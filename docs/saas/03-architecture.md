@@ -37,13 +37,18 @@ creation and webhook reconciliation are wired, and Cloud uploads can reserve quo
 multipart transfers, check the actual audio metadata and accept objects into workspace storage.
 The React app now selects local or Cloud mode from `/api/status`; Cloud mode includes WorkOS
 sign-in, account onboarding, plan and billing screens, and browser multipart uploads. Nightly billing
-reconciliation, a durable webhook retry worker and Stripe Tax setup remain incomplete. The first
-Cloud screens are live, but the complete mixing, library and playback Cloud
-interface remains outstanding. Upload completion currently probes audio metadata in API temporary
+scheduled billing retries/reconciliation and Stripe Tax setup remain incomplete. The Cloud web app
+now has a private paginated asset library and can play an owned original through a short-lived URL;
+mix assembly, derived playback proxies and the complete Cloud listening experience remain
+outstanding. Upload completion currently probes audio metadata in API temporary
 storage; moving that work to remote workers remains part of the worker gateway effort. The worker
 gateway is now a standalone `selecta gateway` service with separate host allowlisting, worker
 secrets, readiness checks and R2 URL signing. Long-poll notifications, deploy manifests, worker
 images and end-to-end job handlers remain outstanding.
+
+`RemoteWorkerClient` and the cooperative `WorkerRunner` now speak the gateway protocol and exchange
+audio only through attempt-scoped signed URLs. Cloud job handlers and pinned worker images remain
+to be built, so the transport cannot yet process real mixes end to end.
 
 Cloud also exposes a workspace-scoped `/api/events` stream for ordered durable job-outbox updates;
 clients can resume with `Last-Event-ID`. It currently polls the outbox and has not yet been

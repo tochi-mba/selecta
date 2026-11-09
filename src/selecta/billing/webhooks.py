@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 import time
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
@@ -493,6 +494,40 @@ class HttpStripeClient:
 
     def get_subscription(self, subscription_id: str) -> dict[str, Any] | None:
         return self._get(f"/v1/subscriptions/{subscription_id}", [("expand[]", "latest_invoice")])
+
+    def cancel_subscription(self, subscription_id: str) -> dict[str, Any] | None:
+        """Cancel a subscription immediately; deleting an already absent one is harmless.
+
+        Stripe's DELETE endpoint is naturally idempotent for this operation. We deliberately do
+        not persist payment methods or issue a second customer deletion here; invoice retention
+        and customer-data erasure need their own billing policy.
+        """
+        if not isinstance(subscription_id, str) or not re.fullmatch(
+            r"sub_[A-Za-z0-9]{1,250}", subscription_id
+        ):
+            raise ValueError("A valid Stripe subscription id is required.")
+        path = f"/v1/subscriptions/{subscription_id}"
+        try:
+            with httpx.Client(
+                base_url=self._base_url,
+                timeout=self._timeout,
+                transport=self._transport,
+                follow_redirects=False,
+            ) as client:
+                response = client.delete(path, headers=self._headers)
+        except httpx.HTTPError as problem:
+            raise StripeUnavailable(f"Can't reach Stripe ({type(problem).__name__}).") from problem
+        if response.status_code == 404:
+            return None
+        if response.status_code >= 400:
+            raise StripeUnavailable(f"Stripe answered {response.status_code} for {path}.")
+        try:
+            payload = response.json()
+        except (ValueError, json.JSONDecodeError) as problem:
+            raise StripeUnavailable("Stripe returned an invalid response.") from problem
+        if not isinstance(payload, dict):
+            raise StripeUnavailable("Stripe returned an invalid response.")
+        return payload
 
     def list_subscriptions(self, customer: str | None = None) -> Iterator[dict[str, Any]]:
         params = [("status", "all"), ("limit", "100"), ("expand[]", "data.latest_invoice")]

@@ -186,6 +186,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `account.labs` | **Labs.** Opt into preview features that your plan is allowed to use. |  |
+| `account.deletion` | **Account deletion.** Request account removal and revoke active sessions. **Core:** People must always be able to request deletion of their account. |  |
 | `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
 | `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |

@@ -307,9 +307,8 @@ class WorkerRunner:
         return self._result(claim, failed, outcome, detail)
 
     @staticmethod
-    def _result(
-        claim: Claim, job: Job, outcome: AttemptOutcome, detail: str = ""
-    ) -> RunResult:
+    def _result(claim: Claim, job: Job, outcome: AttemptOutcome, detail: str = "") -> RunResult:
         return RunResult(claim.attempt_id, job.id, str(job.state), str(outcome), detail)
+
 
 __all__ = ["DurableStore", "RunResult", "WorkerRunner"]

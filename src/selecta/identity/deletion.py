@@ -150,8 +150,9 @@ def claim_next(
         )
         return None
     step = plan.steps[index]
-    # User erasure is the irreversible action and starts only after the promised recovery period.
-    if step == "erase_user" and moment < plan.erase_after:
+    # Workspace-row cleanup and user erasure are destructive. Keep the complete cloud workspace
+    # recoverable through the same 30-day period, and let object maintenance finish its purge.
+    if step in {"delete_workspace_rows", "erase_user"} and moment < plan.erase_after:
         conn.execute(
             table.update()
             .where(table.c.id == row["id"])
