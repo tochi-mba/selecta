@@ -11,7 +11,7 @@ import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { TermHint } from '../ui/Glossary';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { useFlag } from '../flags';
+import { useFlag, useFlagHeard } from '../flags';
 
 type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
@@ -174,7 +174,7 @@ export const RequestsContext = createContext<RequestsState | null>(null);
  * person presses shows straight away and is put right if the server says no. */
 export function useRequests(playback?: Playback, notify?: Notify): RequestsState {
   // without requests in this build, nothing here asks the server anything
-  const on = useFlag('requests');
+  const on = useFlagHeard('requests');
   const [requests, setRequests] = useState<RequestRow[] | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');

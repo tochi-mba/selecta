@@ -1,4 +1,5 @@
 import { flagOn, useFlags } from '../flags';
+import { listed } from '../shell/manifest';
 import { useCallback, useEffect, useState } from 'react';
 import { Folders, get, Jobs, post } from '../api';
 import { analysisWords, estimateWords, etaRangeWords } from '../lib';
@@ -41,7 +42,7 @@ function InterfaceChoices() {
       )}
       <label className="choice">
         <input type="checkbox" checked={preferences.density === 'compact'} onChange={(event) => setPrefs({ density: event.target.checked ? 'compact' : 'comfortable' })} />
-        Compact rows in the Library, the timeline and drafts
+        Compact rows in the {listed(['Library', flagOn('editor') && 'the timeline', flagOn('drafts') && 'drafts'])}
       </label>
       {flagOn('app.command_palette') && <label className="choice">
         <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />

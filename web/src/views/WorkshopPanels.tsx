@@ -252,7 +252,7 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
           <PageLink to="/library?show=attention">See them in your library</PageLink>
         </>
       )}
-      <p className="hint">{jobs.estimates}</p>
+      {flagOn('analysis.time_estimates') && <p className="hint">{jobs.estimates}</p>}
     </section>
   );
 }

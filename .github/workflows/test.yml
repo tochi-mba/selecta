@@ -122,12 +122,53 @@ jobs:
           path: web/test-results/**/candidate-*.png
           if-no-files-found: ignore
 
+  flags:
+    # Every feature turned off in turn, on every page it shows up on: layout, accessibility, links,
+    # wording and server calls. Screenshots are review candidates, uploaded every time.
+    name: Feature-flag sweep (shard ${{ matrix.shard }}/2)
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install FFmpeg
+        run: choco install ffmpeg --yes --no-progress
+      - run: uv sync --locked
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - run: pnpm build
+        working-directory: web
+      - name: Every feature off, in Edge, muted
+        run: pnpm e2e:flags --shard=${{ matrix.shard }}/2
+        working-directory: web
+      - name: Upload what the pages look like with features off
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flags-sweep-${{ matrix.shard }}
+          path: web/test-results
+          if-no-files-found: ignore
+
   verify:
     # A canceled, missing or failing shard cannot yield a green verification.
     # Combined Python coverage, not a partial shard, must meet the original 70%.
     name: verify
     if: ${{ always() }}
-    needs: [checklist-evidence, python, web, browser]
+    needs: [checklist-evidence, python, web, browser, flags]
     runs-on: ubuntu-latest
     steps:
       - name: Require all prerequisite jobs to pass
@@ -136,12 +177,14 @@ jobs:
           PYTHON_RESULT: ${{ needs.python.result }}
           WEB_RESULT: ${{ needs.web.result }}
           BROWSER_RESULT: ${{ needs.browser.result }}
+          FLAGS_RESULT: ${{ needs.flags.result }}
         run: |
-          echo "Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT"
+          echo "Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT"
           test "$EVIDENCE_RESULT" = success
           test "$PYTHON_RESULT" = success
           test "$WEB_RESULT" = success
           test "$BROWSER_RESULT" = success
+          test "$FLAGS_RESULT" = success
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:

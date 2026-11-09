@@ -1,18 +1,18 @@
 import { createElement, Fragment, ReactNode, useSyncExternalStore } from 'react';
-import app from '../../src/selecta/flags/app.json';
-import core from '../../src/selecta/flags/core.json';
-import discover from '../../src/selecta/flags/discover.json';
-import editor from '../../src/selecta/flags/editor.json';
-import learning from '../../src/selecta/flags/learning.json';
-import library from '../../src/selecta/flags/library.json';
-import listen from '../../src/selecta/flags/listen.json';
-import lucy from '../../src/selecta/flags/lucy.json';
-import mixes from '../../src/selecta/flags/mixes.json';
-import moves from '../../src/selecta/flags/moves.json';
-import mymixes from '../../src/selecta/flags/mymixes.json';
-import requests from '../../src/selecta/flags/requests.json';
-import tools from '../../src/selecta/flags/tools.json';
-import workspace from '../../src/selecta/flags/workspace.json';
+import app from '../../src/selecta/flags/app.json' with { type: 'json' };
+import core from '../../src/selecta/flags/core.json' with { type: 'json' };
+import discover from '../../src/selecta/flags/discover.json' with { type: 'json' };
+import editor from '../../src/selecta/flags/editor.json' with { type: 'json' };
+import learning from '../../src/selecta/flags/learning.json' with { type: 'json' };
+import library from '../../src/selecta/flags/library.json' with { type: 'json' };
+import listen from '../../src/selecta/flags/listen.json' with { type: 'json' };
+import lucy from '../../src/selecta/flags/lucy.json' with { type: 'json' };
+import mixes from '../../src/selecta/flags/mixes.json' with { type: 'json' };
+import moves from '../../src/selecta/flags/moves.json' with { type: 'json' };
+import mymixes from '../../src/selecta/flags/mymixes.json' with { type: 'json' };
+import requests from '../../src/selecta/flags/requests.json' with { type: 'json' };
+import tools from '../../src/selecta/flags/tools.json' with { type: 'json' };
+import workspace from '../../src/selecta/flags/workspace.json' with { type: 'json' };
 
 /** Feature flags, the site's side. The registry is the same JSON the server reads, so a flag's name
  * can't drift between the two, and a misspelt one doesn't compile. Which flags are on comes from the
@@ -51,14 +51,25 @@ export const FLAG_IDS = Object.keys(REGISTRY) as FlagId[];
 
 /** What the server said, or null before it has, or when it's too old to say. */
 let current: Readonly<Record<string, boolean>> | null = null;
+/** Whether the server has said yet. Until it has, anything that would ask it about a feature waits. */
+let heard = false;
 const listeners = new Set<() => void>();
 
-/** From `/api/status`. Only a real change tells anyone, so the 4-second poll doesn't re-render. */
+/** From `/api/status`. Only a real change tells anyone, so the 4-second poll doesn't re-render.
+ * `null` forgets what was heard, for tests; `undefined` is an older server that doesn't say. */
 export function setFlags(next: Record<string, boolean> | undefined | null) {
   const value = next ?? null;
-  if (JSON.stringify(value) === JSON.stringify(current)) return;
+  const nowHeard = next !== null;
+  if (JSON.stringify(value) === JSON.stringify(current) && nowHeard === heard) return;
   current = value ? { ...value } : null;
+  heard = nowHeard;
   for (const listener of listeners) listener();
+}
+
+/** On, and known to be: for work that asks the server something, which mustn't start on a guess. */
+export function useFlagHeard(id: FlagId): boolean {
+  useSyncExternalStore(subscribe, () => heard && flagOn(id), () => heard && flagOn(id));
+  return heard && flagOn(id);
 }
 
 export function flagOn(id: FlagId): boolean {
