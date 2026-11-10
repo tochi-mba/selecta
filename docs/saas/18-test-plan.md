@@ -193,6 +193,7 @@ Runner:
   - monthly reset;
   - concurrent `try_consume` never goes below zero.
 - Ledger append-only; daily rollup idempotent.
+- The reconciler reports a rollup that disagrees with the ledger, a missing or orphaned rollup, committed bytes that disagree with the storage ledger and originals kept without being charged, and changes no row (`tests/test_cloud_usage_reconcile.py`).
 
 ### 18.10 Authorization, audit and identity (SC-0401, SC-0400)
 

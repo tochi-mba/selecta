@@ -62,6 +62,7 @@ Cloud web origin to `PUT` signed parts.
 - `usage = committed_bytes + active_reservations`; a new reservation succeeds only if `usage + size ≤ limit`, checked in the same transaction with a row lock on the workspace's quota row, so 1,000 parallel uploads can't oversubscribe the last gigabyte.
 - Reservations expire with their session (2 days) and are released by the maintenance leader.
 - A nightly reconciler compares Postgres totals with an R2 inventory listing and reports drift; it never silently "fixes" by deleting.
+- The database half of that check exists: `usage.reconcile.reconcile(connection)` compares every `usage_daily` rollup with the ledger it sums (total and entries, per workspace, UTC day and kind), and each workspace's storage ledger with its `quota_state.committed_bytes` and with the originals it still keeps (`assets` not deleted). It only reads and returns each difference as a `Drift`; rebuilding a rollup or correcting a charge is a separate, deliberate step. Tests: `tests/test_cloud_usage_reconcile.py`. The R2 inventory listing and the nightly schedule are still to do.
 - Deleting a song releases its bytes as soon as the deletion is recorded (the song is hidden and unusable at once). The copy Selecta keeps for the 30-day recovery window ([§5.5](#55-deletion)) is Selecta's cost, not the user's quota.
 
 ### 5.4 Over quota (downgrades and expired subscriptions)
