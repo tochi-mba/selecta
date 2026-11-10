@@ -224,7 +224,12 @@ class SeamStore:
                     previous.get("status") in {"ready", "failed"}
                     and previous.get("key") == meta.parent.name
                 ):
-                    self._remember(previous)
+                    # Startup recovery only: successful workers already wrote the
+                    # history when they completed. Do not rewrite thousands of
+                    # identical records on each launch (or clobber newer ratings).
+                    history = settings.home / "seam-history" / f"{previous['key']}.json"
+                    if not history.exists() or meta.stat().st_mtime_ns > history.stat().st_mtime_ns:
+                        self._remember(previous)
             except (OSError, ValueError):
                 continue
 
