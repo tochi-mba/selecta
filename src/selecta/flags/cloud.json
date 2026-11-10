@@ -49,6 +49,7 @@
       "about": "Choose whether to use Lucy, its phases and what it may share; see this month's Lucy turns.",
       "routes": ["GET /api/account/lucy", "PUT /api/account/lucy"],
       "requires": ["lucy"],
+      "surfaces": ["cloud.settings"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "lucy"
@@ -79,6 +80,8 @@
         "GET /api/assets/{asset_id}/playback-proxy",
         "POST /api/storage/derived-playback-url"
       ],
+      "surfaces": ["cloud.home", "cloud.library", "cloud.uploads"],
+      "words": ["Upload tracks"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "storage"
@@ -87,6 +90,8 @@
       "label": "Plan checkout",
       "about": "Start or change a paid Selecta Cloud subscription.",
       "routes": ["POST /api/billing/checkout"],
+      "surfaces": ["cloud.billing"],
+      "words": ["Before subscribing"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "billing"
@@ -95,6 +100,8 @@
       "label": "Subscription portal",
       "about": "Manage or cancel an existing paid Selecta Cloud subscription.",
       "routes": ["POST /api/billing/portal"],
+      "surfaces": ["cloud.billing"],
+      "words": ["Change plan or cancel"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "billing"
@@ -136,6 +143,8 @@
         "POST /api/playback/take-over",
         "POST /api/playback/reconnect"
       ],
+      "surfaces": ["cloud.listen", "cloud.settings"],
+      "words": ["Play here"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "playback"
@@ -145,6 +154,7 @@
       "about": "Control the account's active playback session from another device.",
       "routes": ["POST /api/playback/commands"],
       "requires": ["devices"],
+      "surfaces": ["cloud.listen"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "playback"
@@ -175,6 +185,8 @@
         "PUT /api/guest/rooms/{room_id}/nickname",
         "POST /api/guest/rooms/{room_id}/leave"
       ],
+      "surfaces": ["cloud.home", "cloud.listen", "cloud.billing"],
+      "words": ["request room", "Open a room", "Rooms are part of"],
       "modes": ["cloud"],
       "when_locked": "teaser",
       "kind": "release",
@@ -188,6 +200,8 @@
         "DELETE /api/guest/rooms/{room_id}/requests/{request_id}/vote"
       ],
       "requires": ["rooms"],
+      "surfaces": ["cloud.listen"],
+      "words": ["Guests can vote"],
       "modes": ["cloud"],
       "when_locked": "teaser",
       "kind": "release",
@@ -203,6 +217,8 @@
         "GET /api/display/view"
       ],
       "requires": ["rooms"],
+      "surfaces": ["cloud.listen"],
+      "words": ["Big screen", "Pair screen"],
       "modes": ["cloud"],
       "when_locked": "teaser",
       "kind": "release",

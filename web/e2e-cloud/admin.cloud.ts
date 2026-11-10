@@ -1,27 +1,9 @@
-import { expect, Page, test } from '@playwright/test';
-import { accessible, listener, signedIn } from './cloud';
+import { expect, test } from '@playwright/test';
+import { accessible, asStaff, enterConsole as enter, listener, signedIn } from './cloud';
 
 // The staff console's six pages (§7.5) against the real Cloud API: an Owner enters an admin
 // session and walks through each page. Nothing here changes shared state another test could
 // notice (no emergency control, no flag rule is applied): changes are previewed, not saved.
-
-async function asStaff(page: Page, request: import('@playwright/test').APIRequestContext, role = 'owner') {
-  const name = listener(role);
-  await signedIn(page, request, name);
-  const made = await request.post('/test/staff', { data: { user: name, role } });
-  expect(made.ok(), await made.text()).toBeTruthy();
-  await page.reload();
-  return name;
-}
-
-async function enter(page: Page) {
-  await page.getByRole('button', { name: 'Staff console' }).click();
-  await expect(page).toHaveURL(/\/admin$/);
-  await page.getByRole('button', { name: 'Enter console' }).click();
-  const nav = page.getByRole('navigation', { name: 'Admin pages' });
-  await expect(nav).toBeVisible();
-  return nav;
-}
 
 test('a customer never sees the staff console', async ({ page, request }) => {
   await signedIn(page, request, listener('customer'));

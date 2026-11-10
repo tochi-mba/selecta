@@ -181,8 +181,10 @@ for (const area of AREAS) {
   });
 }
 
-for (const id of FLAG_IDS.filter((flag) => !REGISTRY[flag].core && (REGISTRY[flag].surfaces ?? []).length)) {
+// The local site's surfaces only: `cloud.*` ones are the Cloud site's, swept by e2e-cloud/flags.cloud.ts.
+const localSurfaces = (id: FlagId) => (REGISTRY[id].surfaces ?? []).filter((surface) => surface in SURFACES);
+for (const id of FLAG_IDS.filter((flag) => !REGISTRY[flag].core && localSurfaces(flag).length)) {
   test(`with ${id} turned off, the pages it was on still hold together`, async ({ page, request }) => {
-    expect(await sweep(page, request, `-${id}`, REGISTRY[id].surfaces ?? [])).toEqual([]);
+    expect(await sweep(page, request, `-${id}`, localSurfaces(id))).toEqual([]);
   });
 }

@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { Account, planName } from './api';
+import { Account, featureOn, lockedTo, planName } from './api';
 import { CheckoutPhase, Consent, consentComplete, NO_CONSENT } from './checkout';
 import { Meters } from './Meters';
 
@@ -15,6 +15,13 @@ const PLANS: { id: Paid; name: string; storage: string; month: string; year: str
   { id: 'standard', name: 'Standard', storage: '50 GB', month: '£6.99 / month', year: '£59 / year', about: 'More room for your working library.' },
   { id: 'premium', name: 'Premium', storage: '100 GB', month: '£12.99 / month', year: '£109 / year', about: 'Priority processing and guest request rooms.', featured: true },
 ];
+
+/** What a plan card says it includes, without naming a feature that's switched off for this
+ * account (a plan-locked teaser still names it: that's what the plan unlocks). */
+function aboutPlan(plan: (typeof PLANS)[number], account: Account) {
+  const rooms = featureOn(account, 'rooms') || Boolean(lockedTo(account, 'rooms'));
+  return plan.id === 'premium' && !rooms ? 'Priority processing.' : plan.about;
+}
 
 export function CheckoutStatus({ phase, account }: { phase: CheckoutPhase; account: Account }) {
   if (phase === 'idle') return null;
@@ -56,6 +63,9 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   const [interval, setInterval] = useState<Interval>('month');
   const [consent, setConsent] = useState<Consent>(NO_CONSENT);
   const paid = account.entitlement.plan !== 'free';
+  // Each way to change plan is its own feature: with one off, it's gone from the page.
+  const checkout = featureOn(account, 'billing.checkout');
+  const portal = featureOn(account, 'billing.portal');
   const ready = consentComplete(consent) && Boolean(consentVersion) && !busy;
   const confirming = phase === 'confirming';
   return (
@@ -65,15 +75,15 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
         <div>
           <p className="cloud-eyebrow">CURRENT PLAN</p>
           <h2>{planName(account)}</h2>
-          {account.lucy && <p>Includes {account.lucy.tier}.</p>}
+          {account.lucy && featureOn(account, 'lucy') && <p>Includes {account.lucy.tier}.</p>}
         </div>
-        {paid && <button className="primary" disabled={busy} onClick={onPortal}>Change plan or cancel</button>}
+        {paid && portal && <button className="primary" disabled={busy} onClick={onPortal}>Change plan or cancel</button>}
       </section>
       <h2 className="cloud-section-title">This period’s usage</h2>
       <Meters account={account} />
       {paid
-        ? <section className="cloud-card"><p className="cloud-eyebrow">UPGRADE OR DOWNGRADE</p><p>Upgrades start now and are prorated. Downgrades take effect at the end of the period; if your library is then bigger than the new plan, it stays playable and nothing is deleted. Payment details and invoices are in the same secure Stripe portal.</p></section>
-        : !confirming && <>
+        ? portal && <section className="cloud-card"><p className="cloud-eyebrow">UPGRADE OR DOWNGRADE</p><p>Upgrades start now and are prorated. Downgrades take effect at the end of the period; if your library is then bigger than the new plan, it stays playable and nothing is deleted. Payment details and invoices are in the same secure Stripe portal.</p></section>
+        : checkout && !confirming && <>
           <ConsentForm consent={consent} onChange={setConsent} version={consentVersion} />
           <div className="cloud-interval" role="group" aria-label="Billing interval">
             <button aria-pressed={interval === 'month'} onClick={() => setInterval('month')}>Monthly</button>
@@ -85,14 +95,14 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
                 <p className="cloud-eyebrow">{plan.featured ? 'MOST ROOM TO PLAY' : 'FOR YOUR GROWING LIBRARY'}</p>
                 <h2>{plan.name}</h2><strong>{plan.storage}</strong>
                 <p className="cloud-price">{interval === 'month' ? plan.month : plan.year}</p>
-                <p>{plan.about}</p>
+                <p>{aboutPlan(plan, account)}</p>
                 <button className={plan.featured ? 'primary' : ''} disabled={!ready} onClick={() => onCheckout(plan.id, interval, consent)}>Choose {plan.name}</button>
               </section>
             ))}
           </div>
           {!consentComplete(consent) && <p className="cloud-hint">Tick all three boxes above to choose a plan.</p>}
         </>}
-      {blocked && <p className="cloud-hint">Upgrading lifts the pause on uploads and exports as soon as your new plan is confirmed.</p>}
+      {blocked && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading lifts the pause on uploads and exports as soon as your new plan is confirmed.</p>}
     </div>
   );
 }

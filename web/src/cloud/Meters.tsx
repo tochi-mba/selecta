@@ -1,4 +1,4 @@
-import { Account, Allowance, bytes, isOverQuota, resetWords } from './api';
+import { Account, Allowance, bytes, featureOn, isOverQuota, resetWords } from './api';
 
 // The usage meters on Plan & billing (docs/saas/11-ui-ux.md §11.1): storage used of the limit,
 // songs analysed today, Lucy turns this month and exports this month, each with when it resets.
@@ -47,12 +47,12 @@ export function Meters({ account }: { account: Account }) {
       <StorageMeter account={account} />
       <Meter label="Analysis today" used={usage.analysis_today.used} limit={usage.analysis_today.limit}
         words={allowanceWords(usage.analysis_today, 'songs')} reset={resetWords(usage.analysis_today.resets_at, 'day', zone)} />
-      <Meter label="Lucy turns this month" used={lucy.used} limit={lucy.limit}
+      {featureOn(account, 'lucy') && <Meter label="Lucy turns this month" used={lucy.used} limit={lucy.limit}
         words={lucy.limit === null ? `${lucy.used} turns` : `${lucy.used} of ${lucy.limit} turns${lucy.fair_use ? ', plus fair-use quick turns' : ''}`}
-        reset={lucy.resets_at ? resetWords(lucy.resets_at, 'month', zone) : undefined} />
-      <Meter label="Exports this month" used={exports.used} limit={exports.limit} warn={exports.blocked}
+        reset={lucy.resets_at ? resetWords(lucy.resets_at, 'month', zone) : undefined} />}
+      {featureOn(account, 'export') && <Meter label="Exports this month" used={exports.used} limit={exports.limit} warn={exports.blocked}
         words={exports.limit === null ? `${exports.used} exports` : `${exports.used} of ${exports.limit} exports`}
-        reset={exports.blocked ? 'Paused while you are over your storage limit' : `${resetWords(exports.resets_at, 'month', zone)} · kept ${exports.retention_days} days`} />
+        reset={exports.blocked ? 'Paused while you are over your storage limit' : `${resetWords(exports.resets_at, 'month', zone)} · kept ${exports.retention_days} days`} />}
     </div>
   );
 }

@@ -72,8 +72,8 @@
         "GET /api/exports/jobs/{job_id}",
         "DELETE /api/exports/jobs/{job_id}"
       ],
-      "surfaces": ["edit", "overlay.export", "overlay.activity", "workshop"],
-      "words": ["Download audio"]
+      "surfaces": ["edit", "overlay.export", "overlay.activity", "workshop", "cloud.billing"],
+      "words": ["Download audio", "Exports this month"]
     }
   }
 }

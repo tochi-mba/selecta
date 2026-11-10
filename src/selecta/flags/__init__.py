@@ -85,6 +85,13 @@ SURFACES = frozenset(
         "overlay.export",
         "overlay.shaping",
         "overlay.song_details",
+        # The Cloud site's pages (web/src/cloud), swept by web/e2e-cloud/flags.cloud.ts.
+        "cloud.home",
+        "cloud.listen",
+        "cloud.library",
+        "cloud.uploads",
+        "cloud.billing",
+        "cloud.settings",
     }
 )
 

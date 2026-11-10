@@ -23,7 +23,27 @@ export type Asset = { id: string; name: string; size: number; sha256: string | n
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 export type Page = 'home' | 'listen' | 'library' | 'uploads' | 'billing' | 'settings';
 
-export const apiOrigin = (import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
+/** Whether a feature is on for this account. The server decides, per account, and says so in
+ * `/api/account` (again after each `flags.changed`); a flag it doesn't mention is on, as with an
+ * older server. Off means gone: no page, button or word for it (ADR-0414, ADR-0390). */
+export function featureOn(account: Pick<Account, 'features'> | null, flag: string) {
+  return account?.features[flag] !== false;
+}
+
+/** The plan that unlocks a feature this account can see only as a teaser, or undefined. */
+export function lockedTo(account: Pick<Account, 'feature_locks'> | null, flag: string): string | undefined {
+  return account?.feature_locks[flag] || undefined;
+}
+
+/** The flag a page needs, if any: with it off the page is gone, from the menu and the address. */
+const PAGE_FLAGS: Partial<Record<Page, string>> = { library: 'cloud.uploads', uploads: 'cloud.uploads' };
+
+export function pageShown(account: Pick<Account, 'features'> | null, page: Page) {
+  const flag = PAGE_FLAGS[page];
+  return !flag || featureOn(account, flag);
+}
+
+export const apiOrigin =(import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
 export const OVER_QUOTA = 'over_quota_read_only';
 
 export class CloudError extends Error {

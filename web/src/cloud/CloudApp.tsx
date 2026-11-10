@@ -4,7 +4,7 @@ import { DevicesPanel } from '../devices/DevicesPanel';
 import { CloudListen } from '../rooms/CloudListen';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { AccountData } from './AccountData';
-import { Account, apiOrigin, CloudError, idempotencyKey, isOverQuota, messageOf, Page, planName } from './api';
+import { Account, apiOrigin, CloudError, featureOn, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
 import { BLOCKED_MESSAGES, BlockedCode, blockedCode, refusalMessage, SUSPENDED_NOTICE } from './authConfig';
 import { Billing } from './Billing';
 import { checkoutBody, Consent, consentVersionFor, useCheckoutReturn } from './checkout';
@@ -32,7 +32,7 @@ export function pageFor(pathname: string): Page {
   return 'home';
 }
 
-const PATHS: Record<Page, string> = { home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
+const PATHS: Record<Page, string> ={ home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
 const LABELS: Record<Page, string> = { home: 'Overview', listen: 'Listen', library: 'Library', uploads: 'Add music', billing: 'Plan & billing', settings: 'Settings' };
 const TITLES: Record<Page, string> = { home: 'Your music workspace', listen: 'Listen', library: 'Your library', uploads: 'Add music', billing: 'Plan & billing', settings: 'Account settings' };
 
@@ -95,7 +95,9 @@ export function CloudApp() {
 
   // Pages stay correct from the event stream, or from polling while it's blocked.
   const onEvent = useCallback((event: CloudEvent) => {
-    if (event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.')) void refreshAccount();
+    // `flags.changed`: the rules moved, so this account's decisions may have; the page closes up
+    // around anything now off (ADR-0414), or opens up around anything back on.
+    if (event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.')) void refreshAccount();
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); }
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);
@@ -185,29 +187,31 @@ export function CloudApp() {
   }
 
   const quotaBlock = blockedByQuota(account);
+  // A page whose feature is off isn't there: its address shows the overview instead.
+  const shown: Page = pageShown(account, page) ? page : 'home';
   return (
     <div className="cloud-shell" data-stream={stream}>
       <aside className="cloud-rail">
         <button className="cloud-brand" aria-label="Selecta Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark">S</span><span>Selecta<span className="cloud-brand-sub">CLOUD</span></span></button>
         <nav aria-label="Cloud workspace">
-          {(Object.keys(LABELS) as Page[]).map((target) => (
-            <button key={target} aria-current={page === target ? 'page' : undefined} onClick={() => choosePage(target)}>{LABELS[target]}</button>
+          {(Object.keys(LABELS) as Page[]).filter((target) => pageShown(account, target)).map((target) => (
+            <button key={target} aria-current={shown === target ? 'page' : undefined} onClick={() => choosePage(target)}>{LABELS[target]}</button>
           ))}
         </nav>
         <div className="cloud-rail-bottom">{showsAdmin(account) && <button onClick={() => { setInAdmin(true); window.history.pushState({}, '', '/admin'); }}>Staff console</button>}<span>{user.email}</span><button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button><button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{TITLES[page]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
         {account?.user.suspended && <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>}
         <OverQuotaBanner account={account} go={choosePage} />
         {stream === 'polling' && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
         <Feedback error={error} notice={notice} />
-        {page === 'home' && account && <Overview account={account} go={choosePage} />}
-        {page === 'listen' && account && <CloudListen api={api} account={account} />}
-        {page === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} />}
-        {page === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} />}
-        {page === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
-        {page === 'settings' && account && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} />{account.features.devices !== false && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{account.features.lucy !== false && account.features['account.lucy_settings'] !== false && <LucyCloudSettings request={lucyRequest} features={account.features} />}</div>}
+        {shown === 'home' && account && <Overview account={account} go={choosePage} />}
+        {shown === 'listen' && account && <CloudListen api={api} account={account} />}
+        {shown === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} />}
+        {shown === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} />}
+        {shown === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
+        {shown === 'settings' && account && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}</div>}
         <footer className="cloud-footer">Selecta Cloud · Your originals remain private to your workspace.</footer>
       </main>
     </div>
@@ -228,9 +232,22 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
 }
 
 function Overview({ account, go }: { account: Account; go: (page: Page) => void }) {
+  const uploads = featureOn(account, 'cloud.uploads');
   return <>
-    <section className="cloud-hero"><div><p className="cloud-eyebrow">MADE FOR YOUR NEXT SET</p><h2>Your library starts here.</h2><p>Add your tracks and Selecta will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>
-    <div className="cloud-cards"><StorageMeter account={account} /><section className="cloud-card"><p className="cloud-eyebrow">CURRENT PLAN</p><h2>{planName(account)}</h2><p>Storage and processing limits are managed with your plan.</p><button onClick={() => go('billing')}>Manage plan</button></section><section className="cloud-card"><p className="cloud-eyebrow">YOUR MUSIC</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section></div>
-    <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">PREMIUM FEATURE</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => go('billing')}>{account.feature_locks.rooms === 'premium' ? 'Explore Premium' : 'View plans'}</button></section>
+    {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow">MADE FOR YOUR NEXT SET</p><h2>Your library starts here.</h2><p>Add your tracks and Selecta will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>}
+    <div className="cloud-cards"><StorageMeter account={account} /><section className="cloud-card"><p className="cloud-eyebrow">CURRENT PLAN</p><h2>{planName(account)}</h2><p>Storage and processing limits are managed with your plan.</p><button onClick={() => go('billing')}>Manage plan</button></section>{uploads && <section className="cloud-card"><p className="cloud-eyebrow">YOUR MUSIC</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section>}</div>
+    <RoomsCard account={account} go={go} />
   </>;
+}
+
+/** Rooms on the overview: an invitation when the account has Rooms, a locked teaser naming the
+ * plan when only a plan unlocks it, and nothing at all when it's switched off. */
+function RoomsCard({ account, go }: { account: Account; go: (page: Page) => void }) {
+  const plan = lockedTo(account, 'rooms');
+  if (plan) {
+    const name = `${plan[0]?.toUpperCase() ?? ''}${plan.slice(1)}`;
+    return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">{name.toUpperCase()} FEATURE</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set. Rooms are part of {name}.</p></div><button onClick={() => go('billing')}>Explore {name}</button></section>;
+  }
+  if (!featureOn(account, 'rooms')) return null;
+  return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">ROOMS</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => go('listen')}>Open a room</button></section>;
 }

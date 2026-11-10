@@ -47,6 +47,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).parent))
 
 import cloud_db  # noqa: E402
+import e2e_cloud_flags  # noqa: E402
 import e2e_cloud_staff  # noqa: E402
 import httpx  # noqa: E402
 import numpy as np  # noqa: E402
@@ -224,18 +225,23 @@ def build(port: int):
                     )
     songs = {index: quiet_song(index) for index in range(6)}
 
-    def workspace_of(user: str) -> str:
+    def account_of(user: str) -> dict:
         answer = httpx.get(f"{base}/api/account", headers={"Authorization": f"Bearer e2e:{user}"})
         answer.raise_for_status()
-        return answer.json()["workspace"]["id"]
+        return answer.json()
+
+    def workspace_of(user: str) -> str:
+        return account_of(user)["workspace"]["id"]
 
     # -- test controls ------------------------------------------------------------------------
 
     e2e_cloud_staff.install(app, engine)
+    e2e_cloud_flags.install(app, engine, lambda user: account_of(user)["user"]["id"])
 
     @app.post("/test/seed")
     def seed(body: dict = Body(default={})):  # noqa: B008
-        """Sign up `user` and give them `songs` ready-to-play songs of `seconds` each."""
+        """Sign up `user` and give them `songs` ready-to-play songs of `seconds` each, on
+        `plan` (free unless it names a paid plan, given as an expiring override)."""
         user = str(body["user"])
         auth = {"Authorization": f"Bearer e2e:{user}", "Origin": base}
         made = httpx.post(
@@ -245,6 +251,12 @@ def build(port: int):
         )
         assert made.status_code in (200, 201), made.text
         workspace_id = made.json()["workspace_id"]
+        if body.get("plan", "free") != "free":
+            with transaction(engine) as conn:
+                stripe_sync.grant_override(
+                    conn, workspace_id=workspace_id, plan_id=str(body["plan"]),
+                    reason="browser tests", actor="e2e", expires_at=db_now(conn) + 86_400,
+                )
         ids = []
         for number in range(int(body.get("songs", 0))):
             audio = wav(float(body.get("seconds", 4.0)), tone=220.0 + 40 * number)

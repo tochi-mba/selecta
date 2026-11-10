@@ -37,9 +37,10 @@ export function CloudListen({ api, account }: { api: Api; account: Account }) {
   const workspaceId = account.workspace.id;
   const library = useMemo(() => librarySource(api, workspaceId), [api, workspaceId]);
   const roomsHidden = account.features.rooms === false && !account.feature_locks.rooms;
+  const devices = account.features.devices !== false;
   return (
     <div className="cloud-listen">
-      {account.features.devices !== false && <PlayingBar api={api} workspaceId={workspaceId} source={library.source} songName={library.name} />}
+      {devices && <PlayingBar api={api} workspaceId={workspaceId} source={library.source} songName={library.name} remoteControl={account.features['devices.remote_control'] !== false} />}
       {!roomsHidden && (
         <RoomPanel
           api={api}
@@ -47,6 +48,7 @@ export function CloudListen({ api, account }: { api: Api; account: Account }) {
           locked={account.feature_locks.rooms}
           votesOn={account.features['rooms.votes'] !== false}
           displayOn={account.features['rooms.display'] !== false}
+          playHereOn={devices}
         />
       )}
     </div>

@@ -16,6 +16,26 @@ export async function signedIn(page: Page, request: APIRequestContext, user: str
   return (await seeded.json()) as { workspace_id: string; assets: string[] };
 }
 
+/** A new test person given a staff role, signed in on `page`. */
+export async function asStaff(page: Page, request: APIRequestContext, role = 'owner') {
+  const name = listener(role);
+  await signedIn(page, request, name);
+  const made = await request.post('/test/staff', { data: { user: name, role } });
+  expect(made.ok(), await made.text()).toBeTruthy();
+  await page.reload();
+  return name;
+}
+
+/** Open the staff console from the Cloud site and enter an admin session; the console's menu. */
+export async function enterConsole(page: Page) {
+  await page.getByRole('button', { name: 'Staff console' }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.getByRole('button', { name: 'Enter console' }).click();
+  const nav = page.getByRole('navigation', { name: 'Admin pages' });
+  await expect(nav).toBeVisible();
+  return nav;
+}
+
 export async function r2Log(request: APIRequestContext) {
   return ((await (await request.get('/test/r2/log')).json()) as { requests: { method: string; key: string; part?: number; serial?: number; status: number; time: number }[] }).requests;
 }

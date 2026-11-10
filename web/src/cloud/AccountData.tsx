@@ -27,7 +27,14 @@ export async function downloadExport(token: string, workspaceId: string, fetchIm
   return blob.size;
 }
 
-export function AccountData({ token, workspaceId }: { token: () => Promise<string>; workspaceId: string }) {
+/** The settings the export names: only features this account has on (a feature that's off isn't
+ * mentioned anywhere, ADR-0390), though whatever was saved before is still in the file. */
+export function settingsWords(features: Record<string, boolean> = {}) {
+  const parts = ['account', 'plan', ...(features.lucy !== false ? ['Lucy choices'] : []), ...(features.devices !== false ? ['devices'] : [])];
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
+}
+
+export function AccountData({ token, workspaceId, features }: { token: () => Promise<string>; workspaceId: string; features?: Record<string, boolean> }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [problem, setProblem] = useState('');
@@ -43,7 +50,7 @@ export function AccountData({ token, workspaceId }: { token: () => Promise<strin
     <section className="cloud-card" aria-labelledby="cloud-data-title">
       <p className="cloud-eyebrow">YOUR DATA</p>
       <h2 id="cloud-data-title">Download a copy</h2>
-      <p>One ZIP file with your original audio, your settings (account, plan, Lucy choices and devices) as settings.json, and what Cloud keeps about your mixes as mixes.json. Mix revisions themselves aren’t stored in Cloud yet.</p>
+      <p>One ZIP file with your original audio, your settings ({settingsWords(features)}) as settings.json, and what Cloud keeps about your mixes as mixes.json. Mix revisions themselves aren’t stored in Cloud yet.</p>
       <button className="primary" disabled={busy} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button>
       {notice && <p role="status">{notice}</p>}
       {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}

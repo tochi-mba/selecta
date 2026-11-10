@@ -124,3 +124,24 @@ describe('coming back from Checkout', () => {
     expect(result.current).toBe('cancelled');
   });
 });
+
+describe('Plan & billing with a way to change plan switched off', () => {
+  it('drops checkout for a Free account, and the portal for a paid one', () => {
+    const free = { ...cloudAccount(), features: { 'billing.checkout': false } };
+    const { unmount } = render(<Billing account={free} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(screen.queryByText('Before subscribing')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Choose / })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Free' })).toBeInTheDocument();
+    unmount();
+    const paid = { ...cloudAccount({ plan: 'premium' }), features: { 'billing.portal': false } };
+    render(<Billing account={paid} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(screen.queryByRole('button', { name: 'Change plan or cancel' })).toBeNull();
+    expect(screen.queryByText(/Stripe portal/)).toBeNull();
+  });
+
+  it('never names Lucy or exports when they are off, nor rooms when a rule switched them off', () => {
+    const account = { ...cloudAccount(), features: { lucy: false, export: false, rooms: false } };
+    render(<Billing account={account} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(document.body.textContent).not.toMatch(/Lucy|Exports this month|request rooms/);
+  });
+});

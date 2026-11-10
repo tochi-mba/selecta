@@ -15,7 +15,10 @@ function clock(ms: number) {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
-export function PlayingBar({ api, workspaceId, source, songName }: { api: Api; workspaceId: string; source: (index: number) => Promise<string | null>; songName?: SongName }) {
+/** `remoteControl` off (the `devices.remote_control` flag): play, pause and skip are playback
+ * commands, which the server then refuses, so they're gone; the bar still shows where the music
+ * is and offers Play here, so each device plays on its own (docs/saas/11b-feature-flags.md). */
+export function PlayingBar({ api, workspaceId, source, songName, remoteControl = true }: { api: Api; workspaceId: string; source: (index: number) => Promise<string | null>; songName?: SongName; remoteControl?: boolean }) {
   const audio = useRef<HTMLAudioElement>(null);
   const [speaker, setSpeaker] = useState<Speaker | null>(null);
   useEffect(() => { if (audio.current) setSpeaker(audioSpeaker(audio.current, source)); }, [source]);
@@ -45,7 +48,7 @@ export function PlayingBar({ api, workspaceId, source, songName }: { api: Api; w
     setAsking(false);
     void pb.playHere();
   };
-  const remote = view?.speaker === 'elsewhere' || (here && Boolean(session));
+  const remote = remoteControl && (view?.speaker === 'elsewhere' || (here && Boolean(session)));
 
   return (
     <section className="playing-bar" aria-label="Playback">

@@ -1,4 +1,4 @@
-import { Account, bytes, isOverQuota, overBy, Page, planName } from './api';
+import { Account, bytes, isOverQuota, overBy, Page, pageShown, planName } from './api';
 
 // Over quota (docs/saas/05-storage-uploads-playback.md §5.4): the banner names the overage and
 // offers the two ways out. Nothing is deleted, and listening and downloads keep working; only
@@ -14,7 +14,7 @@ export function OverQuotaBanner({ account, go }: { account: Account | null; go: 
         <p>Uploads and exports are paused until your library fits. You can still listen, download and remove songs. Nothing has been deleted.</p>
       </div>
       <div className="cloud-over-quota-actions">
-        <button onClick={() => go('library')}>Manage storage</button>
+        {pageShown(account, 'library') && <button onClick={() => go('library')}>Manage storage</button>}
         <button className="primary" onClick={() => go('billing')}>Upgrade</button>
       </div>
     </section>

@@ -21,8 +21,8 @@ type Panel = {
 const POLL_MS = 3000;
 const songText = (song: Song | null) => (song ? `${song.title} - ${song.artist}` : 'A song');
 
-export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn = true, origin = window.location.origin }: {
-  api: Api; workspaceId: string; locked?: string; votesOn?: boolean; displayOn?: boolean; origin?: string;
+export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn = true, playHereOn = true, origin = window.location.origin }: {
+  api: Api; workspaceId: string; locked?: string; votesOn?: boolean; displayOn?: boolean; playHereOn?: boolean; origin?: string;
 }) {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -94,7 +94,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         <h2 id="room-title">{room.name}</h2>
         <span className="room-status" data-testid="room-status">{room.status === 'locked' ? 'Locked: no new guests' : 'Open'}</span>
       </header>
-      {panel.music_paused && <p className="room-banner">No speaker is playing, so guests see "The music's paused". Press Play here on a device to start.</p>}
+      {panel.music_paused && <p className="room-banner">{`No speaker is playing, so guests see "The music's paused".${playHereOn ? ' Press Play here on a device to start.' : ''}`}</p>}
       <div className="room-share">
         {link && <div className="room-qr" data-testid="room-qr" data-link={link} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${room.name}`) }} />}
         <div>
@@ -148,6 +148,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
       </section>
       <section aria-labelledby="guests-title">
         <h3 id="guests-title">Guests ({panel.guests.filter((g) => g.status === 'active').length})</h3>
+        {!panel.guests.some((g) => g.status === 'active' || g.status === 'pending') && <p className="room-muted">No guests yet. They join with the code or the QR code.</p>}
         <ul className="room-list">{panel.guests.filter((g) => g.status === 'active' || g.status === 'pending').map((guest) => (
           <li key={guest.id} data-testid="room-guest"><span>{guest.nickname}{guest.status === 'pending' ? ' · waiting to be let in' : ''}</span>
             {guest.status === 'pending' && <button type="button" className="primary" onClick={() => void act(`${base}/guests/${guest.id}/approve`)}>Let in</button>}
