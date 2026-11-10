@@ -100,8 +100,8 @@ def install_routes(
             raise HTTPException(status_code=404, detail={"code": "asset_not_found"})
 
         # Never sign the database value blindly: reconstruct the only key this asset may own.
-        canonical_key = original_key(workspace_id, asset_id)
         try:
+            canonical_key = original_key(workspace_id, asset_id)
             bucket = validate_key(canonical_key)
         except UnsafeKey:
             raise HTTPException(status_code=404, detail={"code": "asset_not_found"}) from None
