@@ -1,4 +1,4 @@
-@cd /d "%~dp0" & (where uv >nul 2>nul || (echo Install uv from https://docs.astral.sh/uv/ & exit /b 1)) & uv run python -x "%~f0" %* & exit /b
+@cd /d "%~dp0" & (where uv >nul 2>nul || (echo Install uv from https://docs.astral.sh/uv/ & exit /b 1)) & (if /I "%~1"=="doctor" (uv run --no-sync python -x "%~f0" %*) else (uv run python -x "%~f0" %*)) & exit /b
 """One-command local development: Python API, hot-reloading site and health checks.
 
 Windows: double-click dev.cmd or run it from cmd/PowerShell.
@@ -64,16 +64,37 @@ def require_pnpm() -> str:
     pnpm = shutil.which("pnpm")
     if pnpm is None:
         raise StartupError("pnpm is missing. Install it: https://pnpm.io/installation")
-    if shutil.which("node") is None:
-        raise StartupError("Node.js is missing. Install Node 22+: https://nodejs.org/")
+    node = shutil.which("node")
+    if node is None:
+        raise StartupError("Node.js is missing. Install Node 22.12+: https://nodejs.org/")
+    try:
+        result = subprocess.run(
+            [node, "--version"], capture_output=True, text=True, check=False
+        )
+        major, minor, *_ = (int(part) for part in result.stdout.strip().lstrip("v").split("."))
+    except (OSError, ValueError) as problem:
+        raise StartupError("Could not determine Node.js version. Run node --version.") from problem
+    if result.returncode or major < 22 or (major == 22 and minor < 12):
+        raise StartupError(
+            f"Node {result.stdout.strip()} is too old. Vite needs Node 22.12+ or newer."
+        )
     return pnpm
+
+
+def data_home() -> Path:
+    """The local API's actual data folder, with relative overrides made unambiguous."""
+    configured = os.environ.get("SELECTA_HOME")
+    if not configured:
+        return Path.home() / ".selecta"
+    chosen = Path(configured).expanduser()
+    return (ROOT / chosen).resolve() if not chosen.is_absolute() else chosen
 
 
 def doctor() -> int:
     say("CHECK", f"Project: {ROOT}")
     say("CHECK", f"Python: {sys.version.split()[0]} ({sys.executable})")
     say("CHECK", f"Mode: {os.environ.get('SELECTA_MODE', 'local')}")
-    say("CHECK", f"Data: {os.environ.get('SELECTA_HOME') or 'default Selecta user folder'}")
+    say("CHECK", f"Data: {data_home()}")
     missing = False
     for name, url in (
         ("uv", "https://docs.astral.sh/uv/"),
@@ -87,6 +108,12 @@ def doctor() -> int:
         else:
             missing = True
             say("MISSING", f"{name}: {url}")
+    if shutil.which("node") and shutil.which("pnpm"):
+        try:
+            require_pnpm()
+        except StartupError as problem:
+            missing = True
+            say("ERROR", str(problem))
     if os.environ.get("SELECTA_MODE", "local").strip().lower() not in ("", "local"):
         missing = True
         say("ERROR", "This launcher is local only; unset SELECTA_MODE or set it to local.")
@@ -232,7 +259,10 @@ def wait_until_ready(
         if now - last_report >= 5:
             waiting = ", ".join(name.lower() for name, ok in checks.items() if not ok)
             elapsed = int(max(0, timeout - (deadline - now)))
-            say("WAIT", f"{elapsed}s elapsed; waiting for {waiting}. Logs appear above as they arrive.")
+            say(
+                "WAIT",
+                f"{elapsed}s elapsed; waiting for {waiting}. Logs appear above as they arrive.",
+            )
             last_report = now
         time.sleep(0.5)
     missing = ", ".join(name.lower() for name in ("API", "SITE", "PROXY") if name not in ready)
@@ -282,7 +312,11 @@ def run(options: argparse.Namespace) -> int:
                 "ffmpeg is missing: the site can start, but music analysis/playback will not work. "
                 "Install it from https://ffmpeg.org/download.html",
             )
-        say("INFO", f"Data folder: {os.environ.get('SELECTA_HOME') or 'your normal user data'}")
+        home = data_home()
+        say("INFO", f"Data folder: {home}")
+        # Pin the resolved path: the Python server runs from ROOT even if the
+        # launcher was invoked from a different current working directory.
+        local_env = {**os.environ, "SELECTA_MODE": "local", "SELECTA_HOME": str(home)}
         phase(2, 4, "Preparing browser dependencies")
         install_site_tools(pnpm)
         phase(3, 4, "Starting hot-reloading API and website")
@@ -304,14 +338,17 @@ def run(options: argparse.Namespace) -> int:
                         "--reload", "--port", str(api_port),
                     ],
                     ROOT,
-                    {**os.environ, "SELECTA_MODE": "local"},
+                    local_env,
                 )
             )
         site_port = free_port(options.site_port)
         services.append(
             start_service(
                 "SITE",
-                [pnpm, "exec", "vite", "--host", "127.0.0.1", "--port", str(site_port), "--strictPort"],
+                [
+                    pnpm, "exec", "vite", "--host", "127.0.0.1",
+                    "--port", str(site_port), "--strictPort",
+                ],
                 WEB,
                 {**os.environ, "SELECTA_API": f"http://127.0.0.1:{api_port}"},
             )

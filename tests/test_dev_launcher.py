@@ -129,3 +129,10 @@ def test_reuse_requires_a_healthy_existing_selecta_api(launcher, monkeypatch):
         api_port=8733, site_port=5173, reuse_server=True, no_browser=True, check=True
     )
     assert launcher.run(options) == 1
+
+
+def test_data_home_defaults_to_user_folder_and_resolves_relative_override(launcher, monkeypatch):
+    monkeypatch.delenv("SELECTA_HOME", raising=False)
+    assert launcher.data_home() == Path.home() / ".selecta"
+    monkeypatch.setenv("SELECTA_HOME", "local-dev-library")
+    assert launcher.data_home() == ROOT / "local-dev-library"

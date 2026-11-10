@@ -65,7 +65,7 @@ dev.cmd
 ```
 
 You need [uv](https://docs.astral.sh/uv/), [Node.js 22+](https://nodejs.org/), and
-[pnpm](https://pnpm.io/) on your PATH. The launcher prepares Python dependencies through
+[pnpm](https://pnpm.io/) on your PATH. The launcher checks Node is at least 22.12 and prepares Python dependencies through
 `uv run` and performs an incremental, lockfile-checked `pnpm install` itself.
 Install [ffmpeg](https://ffmpeg.org/download.html) for music analysis and playback; missing ffmpeg
 is reported prominently rather than hidden. No production Cloud credentials or hosted services are
@@ -108,7 +108,9 @@ The existing server is never stopped when this launcher exits.
 
 For non-Windows systems, replace the `dev.cmd` prefix with `uv run python -x dev.cmd`.
 The `--check` option is useful after setup, and `doctor` is useful when the prerequisite
-check reports something missing. `SELECTA_MODE=cloud` is deliberately rejected; Cloud's API,
+check reports something missing. For a fast macOS/Linux doctor that skips project dependency
+installation, use `uv run --no-sync python -x dev.cmd doctor`; the Windows command does that
+automatically. `SELECTA_MODE=cloud` is deliberately rejected; Cloud's API,
 gateway, identity, storage and database require their separate deployment configuration.
 
 **CI runs more than `dev.cmd test`.** In particular, GitHub Actions also runs PostgreSQL
