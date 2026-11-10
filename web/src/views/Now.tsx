@@ -714,8 +714,10 @@ export function Now(props: ViewProps) {
       const data = await post<MixData>(`/mix/${place}/swap?direction=${direction}`, undefined, { 'x-mix-order': orderOf(mix) });
       setMixData(data);
       const after = data.mix[place];
-      setChanged(after && before && after.title !== before ? { from: before, to: after.title, id: after.song_id } : null);
-      notify(`Next up: ${after?.title}.`, true);
+      const swapped = !!(after && before && after.title !== before);
+      setChanged(swapped ? { from: before, to: after.title, id: after.song_id } : null);
+      // S4-0098-07: the server taking the request is not the same as a different song being chosen.
+      notify(swapped ? `Next up: ${after?.title}.` : `Nothing else fits there, so ${before ?? 'the next song'} stays next.`, true);
     } catch (error) {
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       setProblem((error as Error).message);

@@ -73,11 +73,15 @@ offline banner.
 | Edit | row and inspector skeletons | one-song and empty mix messages | unrendered/failed seams with "Jump to first problem" | badges update by themselves | per-action busy, revision-guarded | moved-on mix refused with a message | change not sent says so | moves list disabled reasons | Undo, retry render |
 | Studio | stems loading/separating | no stems: says why | missing lanes disabled with reasons | preview playhead from deck clock | Apply busy | stale pair refused, work kept | work kept locally | shaping unavailable says why | Put it back / local recovery |
 | Library | row skeletons | "Nothing matches" with clear search | cards/rows mark not-ready reasons | "Updating results…" keeps rows | correction "Saving…" | can't load ≠ no songs | Banner | set-aside list hides batch rail | retry / clear filters |
-| Requests | - | "nothing asked yet" | waiting / finding a place / needs approval | polls while open | "Asking…" | each request says what failed | queued ask is not claimed sent | no mix: explains waiting | cancel, retry, keep waiting |
+| Requests | "Loading your requests…" text; search shows a row skeleton | "nothing asked yet" | waiting / finding a place / needs approval | polls while open | "Asking…" | each request says what failed | queued ask is not claimed sent | no mix: explains waiting | cancel, retry, keep waiting |
 | Discovery | pair skeleton, preparation estimate | "nothing yet" | candidates without prepared audio | list refresh keeps place | verdict "Saving…" keeps focus | can't load ≠ nothing there | Banner | pair can't be played: still answerable | try saving again |
 | Workspace | panel skeletons | no folders / no jobs | jobs queued/paused/failed counted | jobs poll while visible | budget/relink busy | each panel has its own Problem | Banner | relink preview blocks unverified songs | check again |
-| Export | dialog prerequisites | - | some seams not ready: explained before start | job stages from server | "Starting export…" | failed/expired job with Try again | job keeps running server-side | expired file not downloadable | job list after reload |
-| Listening study | enrolment form | no trials left | partial study restored | - | "Saving…" | failed save stays on the trial | answer kept to retry | clip missing explained | retry send |
+| Export | dialog prerequisites | not applicable: export starts from a mix that has songs; with fewer than two songs the start button is disabled (`ExportPanel.tsx`), so there is no empty export list | some seams not ready: explained before start | job stages from server | "Starting export…" | failed/expired job with Try again | job keeps running server-side | expired file not downloadable | job list after reload |
+| Listening study | enrolment form | no trials left | partial study restored | not applicable: the study never polls; each trial is fetched once and the page changes only when you answer | "Saving…" | failed save stays on the trial | answer kept to retry | clip missing explained | retry send |
+
+"Populated" is the normal view each row describes; "Success" is the Saving column's end, shown as a
+notice naming what changed with Undo where it can be undone (see State rules 5 and 9). A cell that
+reads "not applicable" says why that state cannot happen on that surface.
 
 ## State rules
 

@@ -289,6 +289,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                         ? <PageLink id={`draft-${draft.id}`} to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b>{draft.name}</b></PageLink>
                         : <b id={`draft-${draft.id}`} className="draft-open">{draft.name}</b>
                     )}
+                    {draft.song_ids?.length ? <MixSignature items={draft.song_ids.map((song_id) => ({ song_id }))} compact /> : null}
                     <span className="soft">
                       {draft.songs > 0 && `${draft.songs} ${draft.songs === 1 ? 'song' : 'songs'}, about ${length(draft.seconds)}. `}
                       Saved.

@@ -1,0 +1,11 @@
+{
+  "about": "Model weights baked into the Cloud worker image, pinned by SHA-256 (ADR-0396 SC-0396-02). Only models the licence register allows in cloud mode may be listed (src/selecta/modes/model_allowlist.json); tests/test_cloud_worker_image.py checks both. The image build downloads each file and fails on any hash or size mismatch.",
+  "models": {
+    "beat_this.small0": {
+      "url": "https://cloud.cp.jku.at/public.php/dav/files/7ik4RrBKTS273gp/small0.ckpt",
+      "path": "torch/hub/checkpoints/beat_this-small0.ckpt",
+      "sha256": "6074be2c4d490c5f6101fcc374a1ec72ae93456e23bb6019783b849f5dc7d47b",
+      "bytes": 8451101
+    }
+  }
+}

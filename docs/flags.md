@@ -173,6 +173,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `app.theme_choice` | **Theme choice.** Light, dark or match this computer. |  |
 | `app.motion_choice` | **Motion choice.** Still, subtle or expressive movement. The computer's reduced-motion setting always wins. |  |
 | `app.classic_nav` | **Classic navigation.** The older navigation labels over the same pages, with ?ui=classic as a way back. |  |
+| `app.scene_transitions` | **Page cross-fades.** With Expressive motion, pages cross-fade where the browser supports it; otherwise they change at once. | `app.motion_choice` |
 | `app.install` | **Install as an app.** Chrome and Edge can install Selecta as its own window. |  |
 
 ## Tools

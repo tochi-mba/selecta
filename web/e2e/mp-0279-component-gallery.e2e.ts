@@ -44,7 +44,7 @@ test.beforeEach(async ({ page }) => {
 
 test('MP-0279-01 controls, fields, tabs, menus, skeletons, overlays and statuses are all in the gallery', async ({ page }) => {
   const gallery = await openGallery(page);
-  for (const name of ['Default', 'Primary', 'Disabled', 'Toggle selection', 'Example icon action', 'Working', 'Busy and disabled', 'Save', 'Tooltip', 'More actions']) {
+  for (const name of ['Default', 'Primary', 'Disabled', 'Toggle selection', 'Example icon action', 'Working', 'Busy and disabled', 'Save', 'Tooltip', 'More actions', 'Delete example']) {
     await expect(gallery.getByRole('button', { name, exact: true }), `button ${name}`).toBeVisible();
   }
   for (const [role, name] of [['searchbox', 'Search'], ['textbox', 'Invalid field'], ['combobox', 'Choice'], ['slider', 'Range'], ['checkbox', 'Checkbox label']] as const) {
@@ -53,6 +53,10 @@ test('MP-0279-01 controls, fields, tabs, menus, skeletons, overlays and statuses
   await expect(gallery.getByRole('tablist', { name: 'Example tabs' }).getByRole('tab')).toHaveCount(3);
   await gallery.getByRole('button', { name: 'More actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'First action' })).toBeVisible();
+  // S31-0079-06: the destructive state is in the gallery, and looks different from an ordinary action
+  await expect(page.getByRole('menuitem', { name: 'Delete from menu' })).toHaveClass(/destructive/);
+  const colour = (name: string) => gallery.getByRole('button', { name, exact: true }).evaluate((element) => getComputedStyle(element).color);
+  expect(await colour('Delete example'), 'destructive differs from default').not.toBe(await colour('Default'));
   await page.keyboard.press('Escape');
   expect(await gallery.locator('.status').count(), 'every status kind').toBeGreaterThanOrEqual(8);
   expect(await gallery.locator('.skeleton').count(), 'every skeleton variant').toBeGreaterThanOrEqual(9);

@@ -1,0 +1,526 @@
+{
+  "about": "Machine-readable licence register for Selecta Cloud images (ADR-0405). One row per package in the runtime closure of uv.lock plus the observability extra, which is exactly what the worker image installs; system tools below; models live in model_allowlist.json. Regenerate rows with `python src/selecta/audit/licence_register.py --write`; hand-written status and note are kept. Status: allowed, review (needs a lawyer before paid launch) or blocked. Not legal advice; see docs/saas/licence-register.md.",
+  "models": "src/selecta/modes/model_allowlist.json",
+  "packages": {
+    "alembic": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "1.20.1"
+    },
+    "annotated-doc": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.0.5"
+    },
+    "annotated-types": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.8.0"
+    },
+    "anthropic": {
+      "licence": "Apache Software License",
+      "status": "allowed",
+      "version": "2.6.0"
+    },
+    "anyio": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "4.16.0"
+    },
+    "beat-this": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "1.1.0"
+    },
+    "certifi": {
+      "licence": "Mozilla Public License 2.0 (MPL 2.0)",
+      "note": "MPL-2.0, used unmodified.",
+      "status": "allowed",
+      "version": "2026.10.23"
+    },
+    "cffi": {
+      "licence": "MIT-0",
+      "status": "allowed",
+      "version": "2.1.1"
+    },
+    "charset-normalizer": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "3.5.2"
+    },
+    "click": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "8.5.0"
+    },
+    "cloudpickle": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "3.1.2"
+    },
+    "colorama": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "0.4.6"
+    },
+    "decorator": {
+      "licence": "BSD-2-Clause",
+      "status": "allowed",
+      "version": "5.3.1"
+    },
+    "demucs": {
+      "licence": "MIT License",
+      "note": "Code MIT; the htdemucs weights are a separate row (review) in model_allowlist.json.",
+      "status": "allowed",
+      "version": "4.1.0"
+    },
+    "docstring-parser": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "0.18.0"
+    },
+    "einops": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "0.8.2"
+    },
+    "fastapi": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.162.1"
+    },
+    "filelock": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "4.2.9"
+    },
+    "fsspec": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "2026.9.0"
+    },
+    "googleapis-common-protos": {
+      "licence": "Apache-2.0",
+      "note": "Licence from the project's PyPI page; not installed in the Windows dev environment, so not read from local metadata.",
+      "status": "allowed",
+      "version": "1.76.0"
+    },
+    "h11": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "0.16.0"
+    },
+    "hf-xet": {
+      "licence": "Apache-2.0",
+      "status": "allowed",
+      "version": "1.8.0"
+    },
+    "httpcore": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "1.0.9"
+    },
+    "httpcore2": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "2.16.0"
+    },
+    "httpx": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "0.28.1"
+    },
+    "httpx2": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "2.16.0"
+    },
+    "httpx2-jsfetch": {
+      "licence": "Not declared",
+      "note": "Pulled in by anthropic for browser runtimes only; not installed on Windows; confirm its licence.",
+      "status": "review",
+      "version": "1.0"
+    },
+    "huggingface-hub": {
+      "licence": "Apache Software License",
+      "status": "allowed",
+      "version": "2.4.0"
+    },
+    "idna": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "3.20"
+    },
+    "jinja2": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "3.1.6"
+    },
+    "jiter": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.19.0"
+    },
+    "joblib": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "1.6.0"
+    },
+    "julius": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "0.2.8"
+    },
+    "lameenc": {
+      "licence": "LGPL-3.0-or-later",
+      "note": "LGPL-3.0-or-later, dynamically linked; MP3 encoding.",
+      "status": "allowed",
+      "version": "1.9.0"
+    },
+    "lazy-loader": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "0.6"
+    },
+    "librosa": {
+      "licence": "ISC License (ISCL)",
+      "status": "allowed",
+      "version": "1.0.0"
+    },
+    "llvmlite": {
+      "licence": "BSD-2-Clause AND Apache-2.0 WITH LLVM-exception",
+      "status": "allowed",
+      "version": "0.50.0"
+    },
+    "mako": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "1.4.3"
+    },
+    "markdown-it-py": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "4.2.0"
+    },
+    "markupsafe": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "3.0.4"
+    },
+    "mdurl": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "0.1.2"
+    },
+    "mpmath": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "1.3.0"
+    },
+    "msgpack": {
+      "licence": "Apache-2.0",
+      "status": "allowed",
+      "version": "1.2.4"
+    },
+    "mutagen": {
+      "licence": "GPL-2.0-or-later",
+      "note": "GPL-2.0-or-later: server-side use is not distribution.",
+      "status": "allowed",
+      "version": "1.48.1"
+    },
+    "narwhals": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "2.28.0"
+    },
+    "networkx": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "3.7"
+    },
+    "nnaudio": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "0.3.4"
+    },
+    "numba": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "0.68.1"
+    },
+    "numpy": {
+      "licence": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+      "status": "allowed",
+      "version": "2.5.4"
+    },
+    "opentelemetry-api": {
+      "licence": "Apache-2.0",
+      "status": "allowed",
+      "version": "1.45.2"
+    },
+    "opentelemetry-exporter-http-transport": {
+      "licence": "Apache-2.0",
+      "note": "Licence from the project's PyPI page; not installed in the Windows dev environment, so not read from local metadata.",
+      "status": "allowed",
+      "version": "0.66b2"
+    },
+    "opentelemetry-exporter-otlp-common": {
+      "licence": "Apache-2.0",
+      "note": "Licence from the project's PyPI page; not installed in the Windows dev environment, so not read from local metadata.",
+      "status": "allowed",
+      "version": "0.66b2"
+    },
+    "opentelemetry-exporter-otlp-proto-common": {
+      "licence": "Apache-2.0",
+      "note": "Licence from the project's PyPI page; not installed in the Windows dev environment, so not read from local metadata.",
+      "status": "allowed",
+      "version": "1.45.2"
+    },
+    "opentelemetry-exporter-otlp-proto-http": {
+      "licence": "Apache-2.0",
+      "note": "Licence from the project's PyPI page; not installed in the Windows dev environment, so not read from local metadata.",
+      "status": "allowed",
+      "version": "1.45.2"
+    },
+    "opentelemetry-proto": {
+      "licence": "Apache-2.0",
+      "note": "Licence from the project's PyPI page; not installed in the Windows dev environment, so not read from local metadata.",
+      "status": "allowed",
+      "version": "1.45.2"
+    },
+    "opentelemetry-sdk": {
+      "licence": "Apache-2.0",
+      "status": "allowed",
+      "version": "1.45.2"
+    },
+    "opentelemetry-semantic-conventions": {
+      "licence": "Apache-2.0",
+      "status": "allowed",
+      "version": "0.66b2"
+    },
+    "packaging": {
+      "licence": "Apache-2.0 OR BSD-2-Clause",
+      "status": "allowed",
+      "version": "26.3"
+    },
+    "pedalboard": {
+      "licence": "GNU General Public License v3 (GPLv3)",
+      "note": "GPL-3.0: server-side use is not distribution; the local edition stays GPL-3.0-or-later.",
+      "status": "allowed",
+      "version": "0.9.26"
+    },
+    "platformdirs": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "4.14.5"
+    },
+    "pooch": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "1.9.0"
+    },
+    "protobuf": {
+      "licence": "BSD-3-Clause",
+      "note": "Licence from the project's PyPI page; not installed in the Windows dev environment, so not read from local metadata.",
+      "status": "allowed",
+      "version": "7.36.2"
+    },
+    "psutil": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "7.2.2"
+    },
+    "psycopg": {
+      "licence": "LGPL-3.0-only",
+      "note": "LGPL-3.0-only, used unmodified as a library.",
+      "status": "allowed",
+      "version": "3.3.8"
+    },
+    "pycparser": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "3.12"
+    },
+    "pydantic": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "2.14.2"
+    },
+    "pydantic-core": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "2.50.2"
+    },
+    "pygments": {
+      "licence": "BSD-2-Clause",
+      "status": "allowed",
+      "version": "2.21.0"
+    },
+    "pyjwt": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "2.15.1"
+    },
+    "pyloudnorm": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.2.0"
+    },
+    "pyyaml": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "6.0.3"
+    },
+    "requests": {
+      "licence": "Apache Software License",
+      "status": "allowed",
+      "version": "2.34.2"
+    },
+    "rich": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "15.0.0"
+    },
+    "rotary-embedding-torch": {
+      "licence": "MIT License",
+      "status": "allowed",
+      "version": "0.9.1"
+    },
+    "safetensors": {
+      "licence": "Apache Software License",
+      "status": "allowed",
+      "version": "0.8.0"
+    },
+    "scikit-learn": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "1.9.1"
+    },
+    "scipy": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "1.18.1"
+    },
+    "setuptools": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "84.2.1"
+    },
+    "shellingham": {
+      "licence": "ISC License (ISCL)",
+      "status": "allowed",
+      "version": "1.5.4"
+    },
+    "sniffio": {
+      "licence": "MIT License; Apache Software License",
+      "status": "allowed",
+      "version": "1.3.1"
+    },
+    "soundfile": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "0.14.0"
+    },
+    "soxr": {
+      "licence": "LGPL-2.1-or-later",
+      "note": "LGPL-2.1-or-later, dynamically linked.",
+      "status": "allowed",
+      "version": "1.1.0"
+    },
+    "sphn": {
+      "licence": "Not declared",
+      "note": "No licence in the package metadata; confirm upstream before paid launch.",
+      "status": "review",
+      "version": "0.2.1"
+    },
+    "sqlalchemy": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "2.1.8"
+    },
+    "starlette": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "1.10.0"
+    },
+    "sympy": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "1.14.0"
+    },
+    "threadpoolctl": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "3.7.0"
+    },
+    "torch": {
+      "licence": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND ISC AND MIT AND Zlib",
+      "note": "GPU workers use a CUDA build; record its version and NVIDIA redistributable terms before the GPU image ships.",
+      "status": "allowed",
+      "version": "2.15.0+cpu"
+    },
+    "torchaudio": {
+      "licence": "BSD License",
+      "status": "allowed",
+      "version": "2.11.1+cpu"
+    },
+    "tqdm": {
+      "licence": "MPL-2.0 AND MIT",
+      "note": "MPL-2.0 AND MIT, used unmodified.",
+      "status": "allowed",
+      "version": "4.70.1"
+    },
+    "truststore": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.10.5"
+    },
+    "typer": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.28.0"
+    },
+    "typing-extensions": {
+      "licence": "PSF-2.0",
+      "status": "allowed",
+      "version": "4.16.0"
+    },
+    "typing-inspection": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.4.5"
+    },
+    "tzdata": {
+      "licence": "Apache-2.0",
+      "status": "allowed",
+      "version": "2026.6"
+    },
+    "urllib3": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "2.8.0"
+    },
+    "uvicorn": {
+      "licence": "BSD-3-Clause",
+      "status": "allowed",
+      "version": "0.54.0"
+    },
+    "weftai": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.7.0"
+    },
+    "weftai-providers": {
+      "licence": "MIT",
+      "status": "allowed",
+      "version": "0.7.0"
+    }
+  },
+  "system_tools": {
+    "ffmpeg": {
+      "status": "review",
+      "licence": "LGPL-2.1-or-later, or GPL-2.0-or-later when built with GPL parts",
+      "note": "The worker image installs Debian's ffmpeg package (GPL build); record the exact build and configure flags per image."
+    }
+  }
+}

@@ -250,6 +250,12 @@ button[aria-disabled='true'] { cursor: progress; }
 .content > main.page { animation: route-reveal var(--motion-reveal) ease-out both; }
 .on-stage .content > main.page { animation: none; }
 @keyframes route-reveal { from { opacity: 0.9; } to { opacity: 1; } }
+/* SF-0208-07: the optional View Transitions cross-fade (Expressive only, see shell/sceneTransition.ts).
+   It runs for the same short reveal time, and never under reduced motion. */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--motion-reveal); }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
 
 /* These small focus and target cues remain present with animation turned off. */
 .strip.can-seek:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }

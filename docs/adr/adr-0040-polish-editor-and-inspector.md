@@ -1,7 +1,7 @@
 # ADR-0040: Precise editing timeline and context-preserving transition inspector
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-10 reconciliation: 3 of 10 tasks ticked (P0075-P0077), 5 implemented but not verified, P0072 open, P0079 needs a person. See the [evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 4 - Editing and Stem Studio

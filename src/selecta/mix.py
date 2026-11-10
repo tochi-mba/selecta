@@ -244,6 +244,20 @@ def remove_at(conn: sqlite3.Connection, position: int, draft: int | None = None)
         write_order(conn, items, draft)
 
 
+def locked_in_the_way(
+    conn: sqlite3.Connection, source: int, target: int, draft: int | None = None
+) -> int | None:
+    """SF-0220-05: the position of a locked song that moving `source` to `target` would shift.
+
+    Moving a song past a locked one slides the locked song by a place, which would change a
+    protected position without anyone choosing to. Moving the locked song itself is a choice."""
+    items = _items(conn, draft)
+    if not (0 <= source < len(items) and 0 <= target < len(items)) or source == target:
+        return None
+    shifted = range(source + 1, target + 1) if source < target else range(target, source)
+    return next((index for index in shifted if items[index][2]), None)
+
+
 def move_song(conn: sqlite3.Connection, source: int, target: int, draft: int | None = None) -> None:
     """Move one song. Its old and new neighbours get fresh seams, since those pairs are new."""
     items = _items(conn, draft)

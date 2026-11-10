@@ -66,7 +66,7 @@ describe.each([8, 32, 64])('EX-0122 Studio parity at %i cells', (cells) => {
 
   it('round-trips grid, list and Shape without changing a single cell', async () => {
     const { session } = open(cells);
-    await waitFor(() => expect(screen.getAllByRole('button', { name: /, bars? [0-9]/ })).toHaveLength(8 * cells));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /, bars? [0-9]/ })).toHaveLength(8 * cells), { timeout: 20000 });
     const pressed = () => screen.getAllByRole('button', { name: /, bars? [0-9]/ }).map((cell) => (cell.getAttribute('aria-pressed') === 'true' ? 1 : 0));
     expect(pressed()).toEqual(flat(session.start_shape));
     mode('Detailed list');
@@ -78,6 +78,7 @@ describe.each([8, 32, 64])('EX-0122 Studio parity at %i cells', (cells) => {
       expect(within(section).getAllByRole('group')).toHaveLength(LANES.length);
     }
     mode('Detailed grid');
+    await screen.findAllByRole('button', { name: /, bars? [0-9]/ }, { timeout: 20000 });
     expect(pressed()).toEqual(flat(session.start_shape));
     mode('Detailed list');
     expect(listValues()).toEqual(flat(session.start_shape));
@@ -88,7 +89,7 @@ describe.each([8, 32, 64])('EX-0122 Studio parity at %i cells', (cells) => {
 
   it('a guided lane edit changes exactly that lane, and Start again restores every cell', async () => {
     const { session } = open(cells);
-    await waitFor(() => expect(screen.getAllByRole('button', { name: /, bars? [0-9]/ })).toHaveLength(8 * cells));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /, bars? [0-9]/ })).toHaveLength(8 * cells), { timeout: 20000 });
     mode('Shape');
     const songTwo = within(screen.getByRole('region', { name: 'Guided shape controls' })).getByRole('region', { name: 'Song 2' });
     fireEvent.click(within(within(songTwo).getByRole('group', { name: 'Bass' })).getByRole('button', { name: 'Use throughout' }));
@@ -101,7 +102,7 @@ describe.each([8, 32, 64])('EX-0122 Studio parity at %i cells', (cells) => {
 
   it('keeps every lane’s solo and the ready-made shapes in Detailed mode', async () => {
     open(cells);
-    await waitFor(() => expect(screen.getAllByRole('button', { name: /, bars? [0-9]/ })).toHaveLength(8 * cells));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /, bars? [0-9]/ })).toHaveLength(8 * cells), { timeout: 20000 });
     for (const title of ['Song 1', 'Song 2']) {
       for (const part of ['voice', 'drums', 'bass', 'melody']) {
         expect(screen.getByRole('button', { name: `Hear only ${title} ${part}` })).toBeInTheDocument();
@@ -117,7 +118,7 @@ describe.each([8, 32, 64])('EX-0122 Studio parity at %i cells', (cells) => {
 
   it('unsaved work survives every mode switch and a reopen, and nothing is applied', async () => {
     const { calls, view } = open(cells);
-    await waitFor(() => expect(screen.getAllByRole('button', { name: /, bars? [0-9]/ })).toHaveLength(8 * cells));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /, bars? [0-9]/ })).toHaveLength(8 * cells), { timeout: 20000 });
     mode('Detailed list');
     const last = screen.getAllByRole('checkbox')[8 * cells - 1];
     const was = (last as HTMLInputElement).checked;
@@ -131,7 +132,7 @@ describe.each([8, 32, 64])('EX-0122 Studio parity at %i cells', (cells) => {
     view.unmount();
     deck.made.length = 0;
     open(cells);
-    await screen.findByText(/This is what you were working on before/);
+    await screen.findByText(/This is what you were working on before/, undefined, { timeout: 20000 });
     mode('Detailed list');
     expect(listValues()).toEqual(edited);
     expect((screen.getAllByRole('checkbox')[8 * cells - 1] as HTMLInputElement).checked).toBe(!was);

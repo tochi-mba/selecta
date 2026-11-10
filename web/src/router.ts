@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { changeScene } from './shell/sceneTransition';
 
 /** Real addresses for every page, so Back, Forward, reloading and sharing a link all do what you'd
  * expect. Nothing here touches playback: moving around never restarts the music. */
@@ -101,7 +102,8 @@ export function navigate(to: string | Route, options: { replace?: boolean } = {}
   rememberScroll();
   if (options.replace) window.history.replaceState({}, '', path);
   else window.history.pushState({}, '', path);
-  changed();
+  // the address is already right; only the page swap may cross-fade, and only when asked for
+  changeScene(changed);
 }
 
 /** Change what's in the address. Typing doesn't count as going anywhere, but a filter someone chose

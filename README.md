@@ -245,7 +245,7 @@ pairs and human ratings.
 
 The server binds to `127.0.0.1`, rejects foreign Host headers and exposes originals only through
 validated song IDs. Audio, model weights, stems, caches, databases and rendered mixes are ignored
-by Git. LRCLIB receives artist, title, album and duration during lyric lookup. Adding a music folder starts lookup automatically; the lyrics command can also start it. Audio files are never sent to LRCLIB.
+by Git. LRCLIB receives artist, title, album and duration during lyric lookup. Adding a music folder starts lookup automatically, and so do new songs that turn up in a folder already added; the lyrics command can also start it. Turning off the `lyrics.lookup` flag stops all of these. Audio files are never sent to LRCLIB.
 
 ## Licence
 

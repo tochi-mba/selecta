@@ -16,6 +16,9 @@
 .icon-words { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); vertical-align: bottom; }
 .request-results small:has(> .ui-icon) { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); }
 .report li:has(> .ui-icon) { display: flex; align-items: center; gap: var(--icon-gap-dense); }
+/* when the rail's "Request a song" wraps, its label box fills the button, so centred lines would drift
+   away from the icon; the lines start at the icon's gap instead */
+.nav-request .nav-label { text-align: start; }
 
 /* MP-0277-05: a counter badge reserves two tabular digits from its start edge, so 1 to 99 never moves the
    icon, the first digit or the control's width, the digits stay --icon-gap from the icon, and they sit on

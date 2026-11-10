@@ -14,7 +14,9 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
+from opentelemetry.trace import SpanKind
 
+from selecta.observability import tracing
 from selecta.scheduling.policy import WorkerCaps
 from selecta.work import provenance as provenance_rule
 from selecta.work.claims import Claim
@@ -212,7 +214,9 @@ class RemoteWorkerClient:
     def _request(self, method: str, path: str, *, json: Any = None) -> dict[str, Any]:
         self._refresh_if_needed()
         try:
-            response = self._api.request(method, path, json=json)
+            response = self._api.request(
+                method, path, json=json, headers=tracing.inject_headers()
+            )
         except httpx.HTTPError as error:
             raise TransientError(
                 "Worker gateway request failed before a response arrived."
@@ -375,6 +379,18 @@ class RemoteWorkerClient:
         }
 
     def download_input(self, context, selector: str | int, destination: Path | None = None) -> Path:
+        """Fetch a signed input, as a storage span in the job's trace (ADR-0410)."""
+        with tracing.job_span(
+            "storage.get", context.job.id, service="worker", kind=SpanKind.CLIENT,
+            **{"selecta.attempt_id": context.attempt_id},
+        ) as span:
+            path = self._download_input(context, selector, destination)
+            span.set_attribute("selecta.bytes", path.stat().st_size)
+            return path
+
+    def _download_input(
+        self, context, selector: str | int, destination: Path | None = None
+    ) -> Path:
         claim = self._claim(context.attempt_id, context.fencing_token)
         inputs = claim.input_urls
         if isinstance(selector, bool):
@@ -434,6 +450,29 @@ class RemoteWorkerClient:
         return target
 
     def publish_artifact(
+        self,
+        context,
+        kind: str,
+        input_hash: str,
+        source: Path,
+        name: str,
+        *,
+        provenance: Mapping[str, Any] | None = None,
+        protected: bool = False,
+    ) -> ArtifactOutput:
+        """Upload one output, as a storage span in the job's trace (ADR-0410)."""
+        with tracing.job_span(
+            "storage.put", context.job.id, service="worker", kind=SpanKind.CLIENT,
+            **{"selecta.attempt_id": context.attempt_id, "selecta.artifact_kind": kind},
+        ) as span:
+            made = self._publish_artifact(
+                context, kind, input_hash, source, name,
+                provenance=provenance, protected=protected,
+            )
+            span.set_attribute("selecta.bytes", made.size_bytes)
+            return made
+
+    def _publish_artifact(
         self,
         context,
         kind: str,

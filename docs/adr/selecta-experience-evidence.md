@@ -77,11 +77,11 @@
 | [EX-0127-03](adr-0127-export-job-and-frozen-revision.md) | Handle blocked/failed/stale jobs | Not started | No | - | - | - | - | Unassigned |
 | [EX-0127-04](adr-0127-export-job-and-frozen-revision.md) | Verify final FLAC identity | Not started | No | - | - | - | - | Unassigned |
 | [EX-0127-05](adr-0127-export-job-and-frozen-revision.md) | Keep accessible export parity | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-01](adr-0128-calm-workspace-and-operations.md) | Prototype issue-first overview | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-02](adr-0128-calm-workspace-and-operations.md) | Preserve all job/source/storage operations | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-03](adr-0128-calm-workspace-and-operations.md) | Audit truth of job state labels | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-04](adr-0128-calm-workspace-and-operations.md) | Specify privacy-safe diagnostics | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-05](adr-0128-calm-workspace-and-operations.md) | Verify accessible layout | Not started | No | - | - | - | - | Unassigned |
+| [EX-0128-01](adr-0128-calm-workspace-and-operations.md) | Prototype issue-first overview | Implemented | No | - | `web/src/views/Workshop.test.tsx` (2026-11-10) | - | Needs a person: uncoached recovery session | Unassigned |
+| [EX-0128-02](adr-0128-calm-workspace-and-operations.md) | Preserve all job/source/storage operations | Implemented | No | - | `web/src/views/Workshop.test.tsx` (watch, budget, diagnostics); scan and pause parity test missing | - | - | Unassigned |
+| [EX-0128-03](adr-0128-calm-workspace-and-operations.md) | Audit truth of job state labels | Implemented | Yes (automated, 2026-11-10) | - | `web/src/views/ex-0128-job-truth.test.tsx`, `web/src/views/Workshop.test.tsx` (15 passed) | - | - | Unassigned |
+| [EX-0128-04](adr-0128-calm-workspace-and-operations.md) | Specify privacy-safe diagnostics | Implemented | No | - | `web/src/views/Workshop.test.tsx` diagnostics case | - | Needs a person: manual privacy and network review | Unassigned |
+| [EX-0128-05](adr-0128-calm-workspace-and-operations.md) | Verify accessible layout | Implemented | No | - | `web/e2e/mp-0293-workspace-operations.e2e.ts` (not green on 2026-11-10) | - | Needs a person: both themes, 400% zoom, NVDA | Unassigned |
 | [EX-0129-01](adr-0129-blind-study-neutral-audio.md) | Audit all method leakage | Not started | No | - | - | - | - | Unassigned |
 | [EX-0129-02](adr-0129-blind-study-neutral-audio.md) | Design balanced A/B interface | Not started | No | - | - | - | - | Unassigned |
 | [EX-0129-03](adr-0129-blind-study-neutral-audio.md) | Separate listening, grading and save | Not started | No | - | - | - | - | Unassigned |

@@ -67,6 +67,8 @@ export type DraftInfo = {
   eta: Eta | null;
   to_render: number;
   missing: number;
+  /** The draft's songs in order, for its Mix Sleeve. An older server doesn't send it. */
+  song_ids?: number[];
 };
 
 export type DraftList = {
@@ -356,7 +358,7 @@ export type ExportJob = {
 /** What Selecta can say about a folder before reading it, from GET /api/folders/check. */
 export type FolderCheck = {
   ok: boolean;
-  kind: 'ok' | 'missing' | 'not_a_folder' | 'no_access' | 'already_added' | 'inside_added' | 'no_audio';
+  kind: 'ok' | 'missing' | 'invalid' | 'not_a_folder' | 'no_access' | 'already_added' | 'inside_added' | 'empty' | 'no_audio';
   reason: string;
   path: string;
   audio_files: number | null;

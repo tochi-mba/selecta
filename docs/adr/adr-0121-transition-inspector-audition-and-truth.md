@@ -1,8 +1,8 @@
 # ADR-0121 - Transition Inspector: intent, rendered reality and audition
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/5 new tasks).
-- **Independent verification:** Not verified (0/5).
+- **Implementation status:** Implemented (5/5 new tasks, 2026-11-10, uncommitted on `feat/finish-checklists`).
+- **Independent verification:** Automated verification 3/5 (EX-0121-02, -04, -05 on 2026-11-10); EX-0121-01 needs a person, EX-0121-03 needs its browser fault-injection E2E.
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P0 / Creator.
 - **Related ADRs:** ADR-0101, ADR-0093; does not silently supersede earlier decisions.
@@ -30,11 +30,15 @@ No new render-generation endpoint is authorized; audio previews must use one own
 
 ## New implementation tasks and evidence
 
-1. **EX-0121-01 - Design human-first status summary**. Acceptance: Requested vs actual rendered vs heard never conflated. Required verification: Real audio and loading-state comprehension. **Implementation: Not started; Verified: No.**
-2. **EX-0121-02 - Map all detailed controls**. Acceptance: No seam choice or explanation silently removed. Required verification: Options/cues parity and keyboard audit. **Implementation: Not started; Verified: No.**
-3. **EX-0121-03 - Specify failure and fallback behaviors**. Acceptance: Unrendered/failed transitions never appear as playable. Required verification: Fault-injection E2E. **Implementation: Not started; Verified: No.**
-4. **EX-0121-04 - Feasibility-check previous/new audition**. Acceptance: Decision names matching render identity or explicitly declines feature. Required verification: Engine review and focus collision tests. **Implementation: Not started; Verified: No.**
-5. **EX-0121-05 - Guard ratings and mutation scope**. Acceptance: Feedback and edit actions never attach to later seam. Required verification: Late response, reorder and preview races. **Implementation: Not started; Verified: No.**
+1. **EX-0121-01 - Design human-first status summary**. Acceptance: Requested vs actual rendered vs heard never conflated. Required verification: Real audio and loading-state comprehension. **Implementation: Implemented; Verified: No. Needs a person: real-audio and loading-state comprehension. Evidence: `web/src/views/ex0121SeamInspector.test.tsx`.**
+2. **EX-0121-02 - Map all detailed controls**. Acceptance: No seam choice or explanation silently removed. Required verification: Options/cues parity and keyboard audit. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: `web/src/views/ex0121SeamInspector.test.tsx`, `web/src/views/ufSeamInspector.test.tsx`.**
+3. **EX-0121-03 - Specify failure and fallback behaviors**. Acceptance: Unrendered/failed transitions never appear as playable. Required verification: Fault-injection E2E. **Implementation: Implemented; Verified: No (component fault injection passes in `web/src/views/ex0121SeamInspector.test.tsx`; browser E2E pending).**
+4. **EX-0121-04 - Feasibility-check previous/new audition**. Acceptance: Decision names matching render identity or explicitly declines feature. Required verification: Engine review and focus collision tests. **Implementation: Implemented (decision below); Verified: Yes (automated, 2026-11-10). Evidence: `web/src/audio/focus.test.tsx`, `web/src/views/ex0121SeamInspector.test.tsx`.**
+5. **EX-0121-05 - Guard ratings and mutation scope**. Acceptance: Feedback and edit actions never attach to later seam. Required verification: Late response, reorder and preview races. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: `web/src/views/ex0121SeamInspector.test.tsx`, `web/src/views/Mix.test.tsx`.**
+
+## EX-0121-04 audition feasibility decision (2026-11-10)
+
+Before/after A/B audition is **declined**. A seam render is addressed only by its current `state.key`; the mix carries no previous render key, and `GET /api/seams/{key}/preview` (`src/selecta/routes/edit.py`) serves exactly one key. Offering "previous" audio would mean keeping and exposing an older key, which is a new API and storage decision this ADR does not authorize. The single audition that exists is bound to the exact rendered identity: `AudioPreview` is keyed by `state.key` and its source is `/api/seams/<key>/preview`, so a clip from before a change cannot be mistaken for the current one, and it takes the one audio owner in `web/src/audio/focus.ts`.
 
 ## Adversarial cases and research
 
