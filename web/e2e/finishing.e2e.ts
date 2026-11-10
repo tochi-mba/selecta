@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -552,8 +552,9 @@ test('a saved file has the songs of the mix at the moment it was saved, in that 
     for (const id of songs) parts.push(await save_(`song-${id}.flac`, `/api/songs/${id}/audio`));
     const other = await save_('other.flac', '/api/songs/9/audio');
     const report = join(folder, 'report.json');
-    const python = process.env.SELECTA_PYTHON ?? 'uv run python';
-    execSync(`${python} ../tests/check_export_audio.py "${report}" "${exported}" ${parts.map((part) => `"${part}"`).join(' ')} --not "${other}"`, { stdio: 'inherit' });
+    // The program and its arguments go straight to the process, never through a shell.
+    const [command, ...prefix] = (process.env.SELECTA_PYTHON ?? 'uv run python').split(' ').filter(Boolean);
+    execFileSync(command, [...prefix, '../tests/check_export_audio.py', report, exported, ...parts, '--not', other], { stdio: 'inherit' });
     const measured = JSON.parse(readFileSync(report, 'utf-8'));
     console.log(JSON.stringify(measured));
     expect(measured.format).toBe('FLAC');

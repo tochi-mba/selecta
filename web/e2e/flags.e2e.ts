@@ -70,9 +70,14 @@ function offPages(on: (id: FlagId) => boolean): string[] {
   return off;
 }
 
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// A route template such as "GET /api/songs/{id}/audio": every literal character matches
+// itself, and each {placeholder} matches one path segment.
 const asPattern = (route: string) => {
   const [method, template] = route.split(' ');
-  return { method, path: new RegExp(`^${template.replace(/\{[^}]+\}/g, '[^/]+').replace(/\./g, '\\.')}$`) };
+  const literal = template.split(/\{[^}]+\}/).map(escapeRegExp).join('[^/]+');
+  return { method, path: new RegExp(`^${literal}$`) };
 };
 
 async function useFlags(request: APIRequestContext, flags: string): Promise<(id: FlagId) => boolean> {

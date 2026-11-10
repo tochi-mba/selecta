@@ -13,6 +13,7 @@ import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 OnText = Callable[[str], Awaitable[None]]
 
@@ -76,7 +77,8 @@ class AnthropicProvider:
         self.model = model
         self.max_tokens = max_tokens
         self.effort = effort or DEFAULT_EFFORT
-        self.default_host = not base_url or "api.anthropic.com" in base_url
+        # The host itself, not a substring: "https://other.example/api.anthropic.com" is not it.
+        self.default_host = not base_url or urlsplit(base_url).hostname == "api.anthropic.com"
         self.client = anthropic.AsyncAnthropic(
             api_key=api_key, base_url=None if self.default_host else base_url,
             max_retries=2, timeout=120.0,

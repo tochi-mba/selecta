@@ -125,7 +125,9 @@ def test_a_failure_detail_never_carries_a_signed_url():
     except TransientError as problem:
         detail = describe(problem)
     assert not any(part in detail for part in SIGNATURE_PARTS), detail
-    assert "cloudflarestorage.com" in detail  # still says where, just not how to get in
+    # Still says where, just not how to get in: the URL survives with its query replaced.
+    urls = re.findall(r"https://[^\s'\"]+", detail)
+    assert SIGNED.split("?")[0] + "?<redacted>" in urls
 
 
 def test_describe_scrubs_signed_urls_from_any_handler_error():
