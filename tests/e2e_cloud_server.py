@@ -256,7 +256,10 @@ def build(port: int):
     songs = {index: quiet_song(index) for index in range(6)}
 
     def account_of(user: str) -> dict:
-        answer = httpx.get(f"{base}/api/account", headers={"Authorization": f"Bearer e2e:{user}"})
+        # Legacy Rooms harnesses use bare tokens (e.g. "bob"), while the cloud
+        # account tests use e2e:<name>; they represent distinct test principals.
+        token = user if user in PEOPLE else f"e2e:{user}"
+        answer = httpx.get(f"{base}/api/account", headers={"Authorization": f"Bearer {token}"})
         answer.raise_for_status()
         return answer.json()
 

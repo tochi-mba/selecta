@@ -59,6 +59,23 @@ def has_any_file(root: Path, look_at: int = MOST_FILES_LOOKED_AT) -> bool:
 NOT_IN_A_PATH = set("<>|?*")
 
 
+def _local_volume_root(address: str) -> str | None:
+    """Only locally attached drives may be previewed; never network-mapped volumes."""
+    if os.name != "nt":
+        # Linux/macOS development and supported local installations: absolute paths.
+        return os.sep
+    drive, _ = os.path.splitdrive(address)
+    if len(drive) != 2 or drive[1] != ":" or not drive[0].isalpha():
+        return None
+    # Windows: fixed, removable, optical and RAM disks. Exclude DRIVE_REMOTE.
+    import ctypes
+
+    root = drive + "\\"
+    if ctypes.windll.kernel32.GetDriveTypeW(root) not in {2, 3, 5, 6}:
+        return None
+    return root
+
+
 def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
     """Would this folder work? This reads nothing into the library and changes nothing."""
     text = typed.strip().strip('"')
@@ -69,28 +86,29 @@ def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
         r"That isn't a full folder address. Start from the drive, like C:\Users\you\Music.",
         text,
     )
-    # A manually entered local folder may live on any drive, but never accept network
-    # shares, relative paths, or traversal components. Resolve symlinks before the
-    # first filesystem probe, so every subsequent operation uses a canonical path.
+    # Paths may be on any locally attached volume, including removable music drives.
+    # Reject remote/mapped drives *before* resolving links (which can initiate I/O).
     if (
         len(text) > 32767
         or NOT_IN_A_PATH & set(text)
         or any(ord(character) < 32 for character in text)
-        or text.startswith(("\\\\", "//"))
+        or text.startswith(("\\", "//"))
+        or not os.path.isabs(text)
+        or ".." in text.replace("\\", "/").split("/")
     ):
         return invalid
+    root = _local_volume_root(text)
+    if root is None:
+        return invalid
     try:
-        # The user deliberately selects an absolute path on a local drive. This
-        # endpoint is guarded against cross-site requests in routes/system.py,
-        # and the checks below reject relative/traversal/network paths before
-        # any directory enumeration. Confining to one directory would break
-        # legitimate folders on other drives.
-        # codeql[py/path-injection]
-        candidate = Path(text).expanduser()
-        if not candidate.is_absolute() or ".." in candidate.parts:
+        # Normalize symlinks before checking the trusted local-volume prefix.
+        # CodeQL recognizes this normalization + prefix guard, unlike a check
+        # performed only after constructing Path(untrusted_input).
+        canonical = os.path.normcase(os.path.realpath(text))
+        if not canonical.startswith(os.path.normcase(root)):
             return invalid
-        folder = candidate.resolve(strict=True)
-        if str(folder).startswith(("\\\\", "//")):
+        folder = Path(canonical).resolve(strict=True)
+        if str(folder).startswith(("\\", "//")):
             return invalid
     except (FileNotFoundError, NotADirectoryError):
         return _answer(
