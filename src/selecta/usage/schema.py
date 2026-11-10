@@ -12,6 +12,9 @@
 - `allowance_counters`: daily and monthly allowances, one row per workspace, kind and period
   (local day or month), so last period's count is still there to read. Rows of kind
   `returned:<id>` keep how much of one taking has been given back, so it comes back only once.
+- `rate_buckets`: platform-wide token buckets (`usage/rate_limit.py`), one row per outside
+  service Selecta must not call faster than agreed, such as LRCLIB. No workspace owns one: the
+  limit is shared by every account and every worker.
 
 `insert_ignore` and `upsert` hide the one place SQLite and PostgreSQL spell things differently.
 """
@@ -104,6 +107,16 @@ allowance_counters = sa.Table(
     sa.Column("resets_at", Epoch, nullable=False),
     sa.Column("updated_at", Epoch, nullable=False),
     sa.CheckConstraint("used >= 0", name="used_not_negative"),
+)
+
+
+rate_buckets = sa.Table(
+    "rate_buckets",
+    metadata,
+    sa.Column("name", sa.String(64), primary_key=True),
+    sa.Column("tokens", Amount, nullable=False),
+    sa.Column("updated_at", Epoch, nullable=False),
+    sa.CheckConstraint("tokens >= 0", name="tokens_not_negative"),
 )
 
 

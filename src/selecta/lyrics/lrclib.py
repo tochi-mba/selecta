@@ -5,6 +5,12 @@ stem splitting. It isn't good enough to cut on a word: that gets verified by ali
 
 Only artist, title, album and duration leave this machine. LRCLIB asks for one request at a time
 from identified clients, so this stays sequential and honours Retry-After.
+
+In cloud mode every request also takes a token from the platform-wide bucket `lrclib` in the
+database (`usage/rate_limit.py`), so all API instances, workers and accounts together stay under
+`SELECTA_LRCLIB_RATE_PER_S` (default one a second, burst `SELECTA_LRCLIB_BURST`, default 1). A
+cloud process with `SELECTA_DATABASE_URL` set installs it before its first lookup; local mode
+never touches it.
 """
 
 from __future__ import annotations
@@ -50,6 +56,7 @@ class LookupQueue:
         *,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
+        limiter=None,
     ) -> None:
         if spacing_s < 0:
             raise ValueError("lyrics request spacing cannot be negative")
@@ -58,6 +65,8 @@ class LookupQueue:
         self._sleep = sleep
         self._lock = threading.Lock()
         self._last_request: float | None = None
+        self.limiter = limiter
+        """A `usage.rate_limit.DbTokenBucket` shared across processes, or None."""
 
     def run(self, request: Callable[[], httpx.Response]) -> httpx.Response:
         with self._lock:
@@ -65,6 +74,8 @@ class LookupQueue:
                 wait = self.spacing_s - (self._clock() - self._last_request)
                 if wait > 0:
                     self._sleep(wait)
+            if self.limiter is not None:
+                self.limiter.acquire()
             self._last_request = self._clock()
             return request()
 
@@ -74,6 +85,32 @@ _cloud_lookup_queue = LookupQueue()
 
 def cloud_lookup_queue() -> LookupQueue:
     return _cloud_lookup_queue
+
+
+def global_limit(engine, *, rate_per_s: float | None = None, burst: float | None = None):
+    """The platform-wide LRCLIB bucket on `engine`, at the configured rate."""
+    import os
+
+    from selecta.usage.rate_limit import DbTokenBucket
+
+    if rate_per_s is None:
+        rate_per_s = float(os.environ.get("SELECTA_LRCLIB_RATE_PER_S", "1.0"))
+    if burst is None:
+        burst = float(os.environ.get("SELECTA_LRCLIB_BURST", "1"))
+    return DbTokenBucket(engine, "lrclib", rate_per_s, burst)
+
+
+def _ensure_global_limit() -> LookupQueue:
+    """In a cloud process with a database, put the shared bucket behind the queue once."""
+    import os
+
+    queue = _cloud_lookup_queue
+    url = os.environ.get("SELECTA_DATABASE_URL", "").strip()
+    if queue.limiter is None and url:
+        from selecta.persistence import make_engine
+
+        queue.limiter = global_limit(make_engine(url))
+    return queue
 
 
 def use_cloud_lookup_queue(queue: LookupQueue) -> None:
@@ -140,7 +177,7 @@ class LrcLib:
                 self._last_request = time.monotonic()
                 return self.client.get(f"{API}{path}", params=params)
 
-            response = cloud_lookup_queue().run(send) if cloud else send()
+            response = _ensure_global_limit().run(send) if cloud else send()
             if response.status_code != 429:
                 return response
             time.sleep(float(response.headers.get("Retry-After", "10")))

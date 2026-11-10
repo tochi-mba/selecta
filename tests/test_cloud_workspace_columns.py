@@ -41,6 +41,7 @@ GLOBAL_TABLES: dict[str, str] = {
     "emergency_controls": "platform controls that pause shared services or worker pools",
     "platform_alerts": "security and operations alerts delivered to platform owners",
     "worker_controls": "staff holds on workers in the shared platform fleet",
+    "rate_buckets": "platform-wide limits on outside services, shared by every workspace",
 }
 
 # Tables with a `workspace_id` that may be empty, because some rows belong to no workspace yet.
