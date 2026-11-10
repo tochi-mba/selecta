@@ -73,18 +73,19 @@ def test_no_tracked_file_holds_a_live_credential():
 
 
 def test_the_patterns_catch_real_shapes_and_spare_test_values():
+    # Samples are split in the source so this file passes its own check.
     fake_but_real_shaped = {
         "AKIA" + "Q" * 16: "AWS or R2-style access key id",
         "sk_live_" + "a1" * 12: "Stripe secret or restricted key",
         "whsec_" + "b2" * 16: "Stripe or WorkOS webhook secret",
         "ghp_" + "c3" * 18: "GitHub token",
         "sk-ant-api03-" + "d4" * 20: "Anthropic API key",
-        "-----BEGIN RSA PRIVATE KEY-----": "Private key block",
+        "-----BEGIN RSA " + "PRIVATE KEY-----": "Private key block",
         "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEyMyJ9." + "e5" * 12: "Signed JSON Web Token",
     }
     for text, name in fake_but_real_shaped.items():
         assert name in find_secrets(text), text
     assert find_secrets("AKIAIOSFODNN7EXAMPLE") == []
-    assert find_secrets("AKIAIOSFODNN7EXAMPLF") == ["AWS or R2-style access key id"]
+    assert find_secrets("AKIAIOSFODNN7" + "EXAMPLF") == ["AWS or R2-style access key id"]
     for harmless in ("sk_test_SECRETSTRIPE", "signed-token", "AKIDEXAMPLE", "whsec_test"):
         assert find_secrets(harmless) == [], harmless

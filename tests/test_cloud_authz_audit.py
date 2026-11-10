@@ -196,7 +196,8 @@ def test_a_key_that_only_contains_otp_inside_a_word_is_kept():
     assert scrub({"footprint": 3, "hotpath": "a"}) == {"footprint": 3, "hotpath": "a"}
 
 
-JWT = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAxIn0.c2lnbmF0dXJlLWJ5dGVz"
+# Built at run time so no token-shaped text is committed (tests/test_no_committed_secrets.py).
+JWT = ".".join(("eyJhbGciOiJSUzI1NiJ9", "eyJzdWIiOiJ1c2VyXzAxIn0", "c2lnbmF0dXJlLWJ5dGVz"))
 LONG_TOKEN = "9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c"
 
 
