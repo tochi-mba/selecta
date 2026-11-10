@@ -525,6 +525,17 @@ def test_two_hundred_reservations_for_the_last_gigabyte_never_oversubscribe(post
     assert usage(postgres_engine, "ws-race").used_bytes == 10 * GB
 
 
+def test_a_thousand_uploads_racing_for_the_last_gigabyte_never_oversubscribe(postgres_engine):
+    """SC-0398-03 at its stated size: 1,000 uploads at once for the last 1 GB."""
+    filled(postgres_engine, 9 * GB, workspace="ws-thousand")
+    found = race(postgres_engine, "ws-thousand", [2 * MB] * 1_000)
+    assert found.overlap >= 5
+    assert len(found.accepted) == 500
+    assert len(found.refused) == 500
+    assert_never_oversubscribed(postgres_engine, "ws-thousand", found.accepted, found.refused)
+    assert usage(postgres_engine, "ws-thousand").used_bytes == 10 * GB
+
+
 def test_uneven_reservations_for_the_last_gigabyte_never_oversubscribe(postgres_engine):
     filled(postgres_engine, 9 * GB, workspace="ws-uneven")
     sizes = [random.Random(n).randint(1, 40 * MB) for n in range(200)]

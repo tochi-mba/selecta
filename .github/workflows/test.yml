@@ -282,7 +282,9 @@ jobs:
     # the event-stream fallback, the cloud origin allowlist, Rooms, guests, displays and devices.
     name: Cloud E2E (Linux)
     needs: [lint, web]
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 can't install Edge's system packages on ubuntu-latest (26.04).
+    # Move to ubuntu-latest once a Playwright that supports it is in web/package.json.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
