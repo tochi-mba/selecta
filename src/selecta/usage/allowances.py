@@ -96,12 +96,14 @@ class Consumed:
 
 
 def zone(name: str | None) -> dt.tzinfo:
-    """The timezone called `name`, or UTC when it's missing or unknown."""
+    """The timezone called `name`, or UTC when it's missing or unknown. A name that's a folder
+    of zones ("Europe") or too long for the filesystem fails with an `OSError`, not a lookup
+    error, so that counts as unknown too."""
     if not name:
         return dt.UTC
     try:
         return ZoneInfo(name)
-    except (ZoneInfoNotFoundError, ValueError):
+    except (ZoneInfoNotFoundError, ValueError, OSError):
         return dt.UTC
 
 
@@ -192,7 +194,10 @@ def try_consume(
 def give_back(connection: Connection, consumed: Consumed, amount: float | None = None) -> None:
     """Return what a `try_consume` took, or part of it, when the work didn't happen (a Lucy turn
     that failed before answering, say). It goes back to the period it was taken from, even after
-    midnight."""
+    midnight. Giving back a negative or non-finite amount is refused: it would take more, or
+    wipe the count."""
+    if amount is not None and (not math.isfinite(amount) or amount < 0):
+        raise ValueError("You can only give back an amount of 0 or more.")
     if not consumed.ok:
         return
     allowance = consumed.allowance
