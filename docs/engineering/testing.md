@@ -39,6 +39,14 @@ To run the PostgreSQL half locally, point it at a disposable database:
 SELECTA_TEST_POSTGRES_URL=postgresql+psycopg://user:pass@localhost:5432/selecta_test .venv/Scripts/python.exe -m pytest tests/test_cloud_work.py -q
 ```
 
+No PostgreSQL or Docker? `pgserver` runs a real PostgreSQL 16 from a pip package, in its own throwaway environment. Start it in one terminal; it prints the URL to use (replace `postgresql://` with `postgresql+psycopg://`) and keeps running until you stop it:
+
+```bash
+uvx --python 3.12 --with pgserver python -c "import pgserver, time; s = pgserver.get_server('.pgdata', cleanup_mode=None); print(s.get_uri()); time.sleep(10**9)"
+```
+
+Each test run makes its own randomly named schema and drops it afterwards, so several runs can share one server. `.pgdata` is ignored by git.
+
 ## Rules for good tests here
 
 - **Name the rule** the test proves: `test_a_stale_fencing_token_cannot_publish`.

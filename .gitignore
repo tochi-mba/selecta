@@ -54,3 +54,6 @@ Thumbs.db
 .claude/
 .env
 .env.*
+
+# Local PostgreSQL for tests (docs/engineering/testing.md)
+.pgdata/
