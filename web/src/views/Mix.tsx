@@ -41,7 +41,9 @@ const MAX_INSPECTOR_WIDTH = 520;
 
 function savedInspectorWidth(): number {
   try {
-    const saved = Number(window.localStorage.getItem(INSPECTOR_WIDTH_KEY));
+    const raw = window.localStorage.getItem(INSPECTOR_WIDTH_KEY);
+    // nothing saved reads as 0 to Number(), which would clamp a first visit to the minimum
+    const saved = raw === null || raw.trim() === '' ? Number.NaN : Number(raw);
     return Number.isFinite(saved) ? Math.min(Math.max(saved, MIN_INSPECTOR_WIDTH), MAX_INSPECTOR_WIDTH) : 380;
   } catch {
     return 380;

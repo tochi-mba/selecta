@@ -129,6 +129,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     aka: ['stem', 'parts', 'separation', 'vocals', 'drums', 'bass', 'melody'],
     get plain() { return words().glossaryStems; },
     effect: 'Separating a pair takes a few minutes the first time. The parts are kept in Selecta’s own storage, which can be cleared and made again. Your files aren’t touched.',
+    reversible: 'Nothing to take back: clearing the parts only frees space, and they are separated again when needed.',
     related: ['studio-lane', 'priority'],
   },
   {
@@ -278,6 +279,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     aka: ['analysed', 'analysing', 'analyse'],
     get plain() { return words().glossaryAnalysis; },
     effect: 'Songs are analysed in the background. Priority songs go first.',
+    reversible: 'Analysis only reads your files. A tempo you correct in a song’s details can be put back to what was measured.',
     related: ['mix-ready', 'priority'],
   },
   {

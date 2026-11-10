@@ -88,7 +88,9 @@ def main() -> None:
     os.environ["SELECTA_HOME"] = str(home)
     settings = build(home)
     grow(settings, songs, in_mix)
-    app = create_app(settings, ROOT / "web" / "dist", prepare_links=False)
+    # SELECTA_E2E_DIST names another build folder under web/, as tests/e2e_server.py allows
+    dist = ROOT / "web" / os.environ.get("SELECTA_E2E_DIST", "dist")
+    app = create_app(settings, dist, prepare_links=False)
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
 

@@ -2,7 +2,7 @@ import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import { get, MixItem, post, SongRow, Status } from '../api';
 import { flagOn, useFlags } from '../flags';
 import { Action, Dialog, Problem } from '../ui/controls';
-import { EnergyHorizon } from '../ui/MusicObjects';
+import { EnergyHorizon, FeelDiagram } from '../ui/MusicObjects';
 import { SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
 
@@ -238,6 +238,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
           <option value="seamless">Smooth blends</option>
           <option value="punchy">Punchy changes</option>
         </select>
+        <FeelDiagram feel={mixLanguage} />
       </section>
       )}
 

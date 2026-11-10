@@ -11,7 +11,7 @@ import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
 import { buildSummary, MixSetup } from './MixSetup';
-import { VibeMotif } from '../ui/MusicObjects';
+import { LengthScale, VibeMotif } from '../ui/MusicObjects';
 import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
 import { ViewProps } from './shared';
@@ -202,6 +202,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                 About {option.label}
               </button>
             ))}
+            <LengthScale songs={songs} most={SET_LENGTHS[SET_LENGTHS.length - 1].songs} />
           </div>
           {shaping && <button aria-label="Customize" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>

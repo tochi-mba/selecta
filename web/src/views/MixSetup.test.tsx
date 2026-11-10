@@ -28,4 +28,20 @@ describe('five-stop energy arc input parity', () => {
     expect(numeric).toHaveValue(62);
   });
 
+  it('SF-0222-04 shows a preset as its exact five stops, and it can be put back to each mix’s arc', () => {
+    fakeBackend({ 'POST /steer': {} });
+    render(<MixSetup status={status()} mix={[]} refreshStatus={() => {}} notify={() => {}} onClose={() => {}} />);
+    const stops = ['start', 'early', 'middle', 'late', 'finish'].map((stop) => screen.getByRole('spinbutton', { name: `Energy arc ${stop} numeric value` }));
+    const preset = screen.getByRole('button', { name: 'Build to a peak' });
+    expect(preset).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(preset);
+    expect(preset).toHaveAttribute('aria-pressed', 'true');
+    expect(stops.map((input) => (input as HTMLInputElement).valueAsNumber)).toEqual([35, 50, 65, 85, 100]);
+    // an exact edit after a preset is the listener's own shape, no longer the preset
+    fireEvent.change(stops[0], { target: { value: '36' } });
+    expect(preset).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Use each mix’s arc' }));
+    expect(screen.getByRole('button', { name: 'Use each mix’s arc' })).toBeDisabled();
+    expect(stops.map((input) => (input as HTMLInputElement).valueAsNumber)).toEqual([62, 72, 100, 85, 68]);
+  });
 });

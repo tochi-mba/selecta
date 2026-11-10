@@ -207,3 +207,16 @@
   .draft-progress.draft-seams i.failed { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 4px); box-shadow: inset 0 0 0 1px CanvasText; }
   .draft-progress.draft-seams i.waiting, .draft-progress.draft-seams i.other { background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
 }
+
+/* CI-0169-05: how two songs overlap for each transition feel, as an illustration of the preference. */
+.feel-diagram { display: block; width: 96px; height: 38px; margin-top: var(--space-1); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.feel-diagram .feel-out { stroke: var(--motif); }
+.feel-diagram .feel-into { stroke: var(--text-soft); stroke-dasharray: 4 2; }
+/* CI-0168-04: the asked-for length as a share of the longest choice, never as minutes. */
+.length-scale { display: inline-block; align-self: center; width: 72px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-control); overflow: hidden; }
+.length-scale i { display: block; height: 100%; background: var(--motif); transition: width var(--motion-fast) var(--motion-ease); }
+@media (forced-colors: active) {
+  .feel-diagram .feel-out, .feel-diagram .feel-into { stroke: CanvasText; }
+  .length-scale { border: 1px solid CanvasText; }
+  .length-scale i { background: CanvasText; }
+}

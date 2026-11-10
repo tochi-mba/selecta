@@ -335,3 +335,26 @@ describe('audition audio-truth state', () => {
     expect(screen.getByText(/Now playing: The chords Selecta heard/)).toBeInTheDocument();
   });
 });
+
+// S3-0061-07: long and international lyrics stay whole and direction-safe, and a filter only shows its matches
+describe('word connections with real-world lyrics', () => {
+  const long = 'لا أستطيع أن أنام الليلة دون أن أسمع صوتك يغني من بعيد مرة أخرى';
+  const cjk = '今夜はずっと踊り続けよう、朝が来るまで止まらないで';
+  const link = (phrase: string, a: number) => ({ phrase, kind: 'x', a, b: a + 1, artist_a: 'فنان', title_a: `${phrase} A`, artist_b: '歌手', title_b: `${phrase} B`, line_a: `${phrase} ${phrase}`, line_b: phrase, moves: ['word_cut'], move: 'word_cut', state: { status: 'none', key: `k${a}` }, worked: true });
+  const props = () => ({ setMixData: vi.fn(), setView: vi.fn(), notify: vi.fn(), status: appStatus(), mix: [], tab: 'words' as const }) as unknown as Parameters<typeof Links>[0];
+
+  it('shows the whole phrase in its own direction, and a search shows only what matches', async () => {
+    const calls = fakeBackend({
+      'GET /links': (_body: unknown, url: string) => ({ links: url.includes('q=%E4%BB%8A') ? [link(cjk, 3)] : [link(long, 1), link(cjk, 3)], prepared: 2, preparing: 0 }),
+      'GET /drafts': { drafts: [] },
+    });
+    render(<Links {...props()} />);
+    const arabic = await screen.findByRole('heading', { name: `“${long}”` });
+    expect(arabic).toHaveAttribute('dir', 'auto');
+    expect(screen.getByRole('heading', { name: `“${cjk}”` })).toHaveAttribute('dir', 'auto');
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search shared words' }), { target: { value: '今' } });
+    await waitFor(() => expect(screen.queryByRole('heading', { name: `“${long}”` })).toBeNull(), { timeout: 2000 });
+    expect(screen.getByRole('heading', { name: `“${cjk}”` })).toBeInTheDocument();
+    expect(calls.some((call) => call.path.startsWith('/links?q=%E4%BB%8A'))).toBe(true);
+  });
+});

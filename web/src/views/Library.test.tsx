@@ -509,3 +509,26 @@ describe('Library music-first retrieval', () => {
     expect(screen.getByRole('button', { name: 'Add music' })).toBeEnabled();
   });
 });
+
+describe('SF-0226-05 paging keeps keyboard focus predictable', () => {
+  const many = (from: number, count: number) => Array.from({ length: count }, (_, index) => row(from + index, `Song ${from + index}`));
+
+  it('keeps focus on Show more while pages remain, then hands it to the first new song on the last page', async () => {
+    fakeBackend({
+      'GET /library': (_body: unknown, url: string) => (url.includes('%2C6%5D')
+        ? { songs: many(7, 2), total: 8, next: null }
+        : url.includes('after=')
+          ? { songs: many(4, 3), total: 8, next: '["song 6",6]' }
+          : { songs: many(1, 3), total: 8, next: '["song 3",3]' }),
+    });
+    show();
+    expect(await screen.findByText('Showing 3 of 8 songs.', {}, { timeout: 5000 })).toBeInTheDocument();
+    screen.getByRole('button', { name: 'Show more songs' }).focus();
+    await userEvent.keyboard('{Enter}');
+    expect(await screen.findByText('Song 6', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show more songs' })).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    expect(await screen.findByText('Song 8', {}, { timeout: 5000 })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Details for Song 7' })).toHaveFocus());
+  }, 30_000);
+});

@@ -887,3 +887,26 @@ describe('complete FLAC snapshot inspection', () => {
     expect(snapshot).toHaveTextContent('not a finished file yet');
   });
 });
+
+// S3-0058-07: a rating names the exact seam it is about, and comes back from the server after leaving
+describe('rating a transition', () => {
+  const rated = (rating: string) => seam('ready', 'seam-k1', { label: 'Blend', style: 'bass_swap_blend', a_source_start: 60, b_source_end: 30, preview_seam: 20, rating } as never);
+  const options = { moves: [], exits: [], entries: [], lengths: [], links: [], tempo_gap: 1, keys: ['8A', '8A'] };
+
+  it('posts to that seam alone, and shows the saved rating again after a remount', async () => {
+    const calls = fakeBackend({ 'GET /mix/1/options': options, 'POST /seams/seam-k1/rate': {} });
+    const refreshMix = vi.fn();
+    const first = render(<Harness start={songs(rated('good'))} refreshMix={refreshMix} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Hear it' }));
+    const thumbs = within(within(screen.getByRole('complementary', { name: 'This transition' })).getByRole('group', { name: 'Rate this seam' }));
+    expect(thumbs.getByRole('button', { name: 'Good' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(thumbs.getByRole('button', { name: 'Bad' }));
+    await waitFor(() => expect(refreshMix).toHaveBeenCalled());
+    expect(calls.filter((call) => call.method === 'POST').map((call) => [call.path, call.body])).toEqual([['/seams/seam-k1/rate', { rating: 'bad' }]]);
+    first.unmount();
+    render(<Harness start={songs(rated('bad'))} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Hear it' }));
+    const side = within(screen.getByRole('complementary', { name: 'This transition' }));
+    expect(within(side.getByRole('group', { name: 'Rate this seam' })).getByRole('button', { name: 'Bad' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});

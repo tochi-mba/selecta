@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportJob, MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, status as appStatus } from '../test/backend';
-import { EnergyThumb } from '../ui/MusicObjects';
+import { EnergyThumb, FeelDiagram, LengthScale } from '../ui/MusicObjects';
 import { SeamSegments } from './Drafts';
 import { ExportJobs, exportStage } from './ExportJobs';
 import { HarmonicDiscoveries, Links } from './Links';
@@ -143,5 +143,40 @@ describe('CI-0171-01 lyric confidence levels', () => {
     fakeBackend({ 'GET /songs/1': { ...base, ...more } });
     render(view());
     expect((await screen.findAllByText(said)).length).toBeGreaterThan(0);
+  });
+});
+
+describe('CI-0169-05 transition feel diagrams', () => {
+  it('draws smooth, punchy and each-mix-chooses differently, as decoration only', () => {
+    const drawn = ['seamless', 'punchy', 'balanced'].map((feel) => {
+      const { container, unmount } = render(<FeelDiagram feel={feel} />);
+      const svg = container.querySelector('svg') as SVGElement;
+      expect(svg).toHaveAttribute('aria-hidden', 'true');
+      expect(svg).toHaveAttribute('data-feel', feel);
+      const html = svg.innerHTML;
+      unmount();
+      return html;
+    });
+    expect(new Set(drawn).size).toBe(3);
+    const { container } = render(<FeelDiagram feel="something new" />);
+    expect(container.querySelector('svg')).toHaveAttribute('data-feel', 'balanced');
+    expect(container.textContent).toBe('');
+  });
+});
+
+describe('CI-0168-04 approximate-length graphic', () => {
+  it('scales with the songs asked for and never states minutes', () => {
+    const shares = [12, 24, 48].map((songs) => {
+      const { container, unmount } = render(<LengthScale songs={songs} most={48} />);
+      const scale = container.querySelector('.length-scale') as HTMLElement;
+      expect(scale).toHaveAttribute('aria-hidden', 'true');
+      expect(scale.textContent).toBe('');
+      const share = scale.getAttribute('data-share');
+      unmount();
+      return share;
+    });
+    expect(shares).toEqual(['0.25', '0.50', '1.00']);
+    const { container } = render(<LengthScale songs={Number.NaN} most={48} />);
+    expect(container.querySelector('.length-scale')).toHaveAttribute('data-share', '0.00');
   });
 });

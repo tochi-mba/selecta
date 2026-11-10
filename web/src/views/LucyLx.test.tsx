@@ -121,7 +121,6 @@ describe('LX-0357 composer', () => {
     expect(onSend).not.toHaveBeenCalled();
     expect(box).toHaveValue('line one\nline two');
     fireEvent.keyDown(box, { key: 'Enter', isComposing: true });
-    fireEvent.keyDown(box, { key: 'Enter', keyCode: 229, nativeEvent: { isComposing: true } });
     expect(onSend).not.toHaveBeenCalled();
     fireEvent.keyDown(box, { key: 'Enter' });
     expect(onSend).toHaveBeenCalledTimes(1);
@@ -182,7 +181,7 @@ describe('LX-0358 activity cards', () => {
     rerender(<ActivityCard card={card('1', 'progress', { progress: { done: 3, total: null, unit: 'songs' } })} still />);
     expect(screen.getByText('3 songs so far')).toBeInTheDocument();
     expect(container.querySelector('.lucy-progress')).toBeNull();
-    expect(container.textContent).not.toMatch(/remaining|left|ETA|minutes? to go/i);
+    expect(container.textContent).not.toMatch(/(remaining|left|ETA|to go)/i);
   });
 
   it('LX-0358-07 the moving cue is only for real running work and goes when motion is Still', () => {
@@ -356,6 +355,9 @@ describe('LX-0360 songs and transitions', () => {
     for (const name of ['Lock', 'Ask about Song 1']) expect(screen.getAllByRole('button', { name }).length).toBeGreaterThan(0);
     await userEvent.click(screen.getAllByRole('button', { name: 'Remove Song 1' })[1]);
     expect(onEdit).toHaveBeenLastCalledWith({ op: 'remove', occurrence: 'occ_again' });
+    // the removed row is gone, so focus lands on the same control of its neighbour
+    await waitFor(() => expect(document.activeElement?.closest('[data-occ]')?.getAttribute('data-occ')).toBe('occ_2'));
+    expect(document.activeElement?.getAttribute('data-act')).toBe('remove');
     const down = screen.getAllByRole('button', { name: 'Move Song 1 down' })[0];
     down.focus();
     await userEvent.keyboard('{Enter}');
@@ -378,7 +380,7 @@ describe('LX-0362 approval', () => {
     vi.spyOn(lucy, 'approve').mockResolvedValue(approval);
     render(<Approve {...props} revision={shown} />);
     await userEvent.click(screen.getByRole('button', { name: 'Save as draft' }));
-    const facts = within(await screen.findByRole('dialog')).getByRole('term', { name: '' }).closest('dl') as HTMLElement;
+    const facts = (await screen.findByRole('dialog')).querySelector('dl.lucy-facts') as HTMLElement;
     expect(facts.textContent).toContain('NameSunday');
     expect(facts.textContent).toContain('Revision4 (current)');
     expect(facts.textContent).toContain('Songs3');

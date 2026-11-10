@@ -192,6 +192,43 @@ export function EnergyHorizon({ values, source, onPointerDown, onPointerMove, on
   );
 }
 
+/** CI-0169-05: a small drawing of how two songs overlap for each transition feel. It illustrates the
+ * preference only: it is not a recording, a promise of any one transition, or a measure of how it sounds. */
+export function FeelDiagram({ feel }: { feel: string }) {
+  const known = feel === 'seamless' || feel === 'punchy' ? feel : 'balanced';
+  // outgoing song fades from its own line; the incoming one rises into it. Long overlap for smooth,
+  // a near-instant swap for punchy, and both shapes faintly for "each mix chooses".
+  const shapes = {
+    seamless: [{ out: 'M2 6 L30 6 L58 26', into: 'M30 26 L58 6 L78 6', faint: false }],
+    punchy: [{ out: 'M2 6 L42 6 L44 26', into: 'M42 26 L44 6 L78 6', faint: false }],
+    balanced: [
+      { out: 'M2 6 L30 6 L58 26', into: 'M30 26 L58 6 L78 6', faint: true },
+      { out: 'M2 6 L42 6 L44 26', into: 'M42 26 L44 6 L78 6', faint: true },
+    ],
+  }[known];
+  return (
+    <svg className={'feel-diagram ' + known} viewBox="0 0 80 32" aria-hidden="true" focusable="false" data-feel={known}>
+      {shapes.map((shape, index) => (
+        <g key={index} opacity={shape.faint ? 0.55 : 1}>
+          <path className="feel-out" d={shape.out} />
+          <path className="feel-into" d={shape.into} />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/** CI-0168-04: how long a mix is asked to be, drawn as a share of the longest choice. It scales with
+ * the number of songs asked for and never shows minutes, since real length depends on the transitions. */
+export function LengthScale({ songs, most }: { songs: number; most: number }) {
+  const share = most > 0 && Number.isFinite(songs) ? Math.max(0, Math.min(1, songs / most)) : 0;
+  return (
+    <span className="length-scale" aria-hidden="true" data-share={share.toFixed(2)}>
+      <i style={{ width: `${Math.round(share * 100)}%` }} />
+    </span>
+  );
+}
+
 /** A song's measured energy, or null when there isn't one. Nothing is ever filled in from its neighbours. */
 export function measuredEnergy(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;

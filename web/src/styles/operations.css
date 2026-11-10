@@ -5,6 +5,11 @@
 .link-status .status { white-space: normal; }
 .link-handoff b, .link-handoff span, .link-handoff q, .phrase { unicode-bidi: plaintext; overflow-wrap: anywhere; }
 .link-card > .row { row-gap: var(--space-2); }
+/* MP-0292-01: the kind of connection and the playing order sit above the pair, quiet but readable */
+.link-kind { margin: 0; font-size: var(--text-xs); font-weight: 650; color: var(--text-soft); }
+.link-order { display: inline-block; min-width: 3.2em; font-size: var(--text-xs); font-weight: 650; color: var(--text-soft); }
+.link-id { color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.link-destination { margin: 0; font-size: var(--text-xs); }
 .discovery { justify-items: stretch; }
 .discovery h3, .discovery .hint { overflow-wrap: anywhere; unicode-bidi: plaintext; }
 .discovery-now { margin: 0; font-size: var(--text-sm); color: var(--text-soft); }

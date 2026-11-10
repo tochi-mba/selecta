@@ -383,6 +383,28 @@ describe('Studio representation parity', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
     expect(await square('Song 1 voice, square 2')).toHaveAttribute('aria-pressed', 'false');
   });
+
+  it('keeps every square, solo and mode the same through Light, Dark and System (FP-0266-07)', async () => {
+    const { setPrefs } = await import('../state/prefs');
+    open();
+    fireEvent.click(await square('Song 1 voice, square 2'));
+    fireEvent.click(await square('Song 2 drums, square 8'));
+    const cells = () => screen.getAllByRole('button', { name: /, bars? [0-9]/i }).map((cell) => `${cell.getAttribute('aria-label')}=${cell.getAttribute('aria-pressed')}`);
+    const before = cells();
+    expect(before).toHaveLength(64);
+    for (const theme of ['light', 'dark', 'system'] as const) {
+      act(() => setPrefs({ theme }));
+      expect(cells()).toEqual(before);
+      fireEvent.click(screen.getByRole('button', { name: 'Detailed list' }));
+      const boxes = screen.getAllByRole('checkbox');
+      expect(boxes).toHaveLength(64);
+      expect(boxes[1]).not.toBeChecked();
+      fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+      expect(cells()).toEqual(before);
+    }
+    // the shape sent to the deck is the edited one, untouched by any theme change
+    expect(deck.made.at(-1)?.setShape).toHaveBeenCalled();
+  });
 });
 
 describe('Studio pointer painting', () => {

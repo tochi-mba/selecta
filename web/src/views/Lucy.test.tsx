@@ -205,4 +205,15 @@ describe('UF-0378 entry intent and conversation continuity', () => {
     expect(box).toHaveValue('half an idea');
     expect(calls.length).toBeGreaterThan(0);
   });
+  it('sends nothing to a remote provider until agreed, and always offers the built-in planner', async () => {
+    const remote = { ...status, provider: { ...status.provider, kind: 'anthropic', label: 'Anthropic', remote: true, consented: false, mode: 'full' } };
+    const calls = fakeBackend({ 'GET /lucy/status': remote, 'GET /lucy/conversations': { conversations: [] } });
+    render(<Lucy conversation={null} setMixData={vi.fn()} player={player} />);
+    const notice = await screen.findByRole('region', { name: /before lucy can start/i });
+    expect(within(notice).getByRole('button', { name: /use the built-in planner instead/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/needs your OK before it sends anything to Anthropic/).length).toBeGreaterThan(0);
+    const box = await screen.findByRole('textbox', { name: /message|describe|lucy/i });
+    await userEvent.type(box, 'a mix{Enter}');
+    expect(calls.some((call) => call.method === 'POST')).toBe(false);
+  });
 });

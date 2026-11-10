@@ -182,6 +182,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     try {
       const page = await get<LibraryPage>(url(cursor));
       if (mine !== asked.current) return;
+      // The last page removes "Show more songs". If it had focus, hand focus to the first song that
+      // just arrived, so a keyboard user carries on from where the new songs start (SF-0226-05).
+      const fromMore = !page.next && !!document.activeElement?.closest('.library-more');
+      const firstNew = page.songs.find((song) => !pageBySong.current.has(song.id));
       const pageIndex = pageCursors.current.length;
       pageCursors.current = [...pageCursors.current, cursor];
       for (const song of page.songs) {
@@ -198,6 +202,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       // just because the shareable URL now records this scroll depth.
       pagesJustAppended.current = newPageCount;
       setAddressQuery({ pages: String(newPageCount) });
+      if (fromMore && firstNew) {
+        window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-focus-key="song-details-${firstNew.id}"]`)?.focus());
+      }
     } catch {
       // Keep the successful pages and cursor intact so the same page can be retried.
       if (mine === asked.current) setPageProblem('Couldn’t load more songs. The recordings already shown are unchanged.');

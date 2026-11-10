@@ -227,9 +227,10 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         }}
       />
       {item && (
-        <article className="discovery">
+        <article className="discovery" data-pair={`${item.song_a}>${item.song_b}`}>
+          <p className="link-kind">Harmonic match, a suggestion to check by ear, not a verified match</p>
           <h3>
-            {item.title_a} <span className="soft">and</span> {item.title_b}
+            {item.title_a}{item.title_a === item.title_b && <small className="link-id"> (song {item.song_a})</small>} <span className="soft">and</span> {item.title_b}{item.title_a === item.title_b && <small className="link-id"> (song {item.song_b})</small>}
           </h3>
           <p className="hint">{item.artist_a} · {item.artist_b}</p>
           <button className="primary" disabled={getting} onClick={() => (listening ? (keepGoing.current = false, stop()) : void hear(item))}>
@@ -300,6 +301,10 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
   const busy = state.status === 'queued' || state.status === 'rendering';
   // what was asked for and what you'd really hear are kept apart, and neither says it sounds good
   const facts = seamFacts({ settings: { move }, state }, names);
+  const sameName = link.title_a === link.title_b;
+  const nameA = sameName ? `${link.title_a} (song ${link.a})` : link.title_a;
+  const nameB = sameName ? `${link.title_b} (song ${link.b})` : link.title_b;
+  const addId = `link-add-${link.a}-${link.b}-${link.phrase.replace(/\W+/g, '-')}`;
 
   useEffect(() => {
     if (!override || !['queued', 'rendering'].includes(override.status)) return;
@@ -342,13 +347,16 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
     <article className={`link-card ${state.status}`}>
       {/* CI-0176-01: each shared phrase, title and lyric line sets its own direction, so a right-to-left
           or mixed-script line stays whole and readable beside a left-to-right one */}
+      <p className="link-kind">Word connection, in playing order</p>
       <h2 className="phrase" dir="auto">“{link.phrase}”</h2>
-      <p className="link-handoff">
-        <b dir="auto">{link.title_a}</b> <span dir="auto">{link.artist_a}</span>
+      {/* MP-0292-01/06: which song ends the line and which opens the next is spelled out, and two songs
+          with the same name are told apart by their exact recording IDs */}
+      <p className="link-handoff" data-song={link.a}>
+        <small className="link-order">From</small> <b dir="auto">{link.title_a}</b>{sameName && <small className="link-id"> (song {link.a})</small>} <span dir="auto">{link.artist_a}</span>
         <q dir="auto">{link.line_a}</q>
       </p>
-      <p className="link-handoff">
-        <b dir="auto">{link.title_b}</b> <span dir="auto">{link.artist_b}</span>
+      <p className="link-handoff" data-song={link.b}>
+        <small className="link-order">Into</small> <b dir="auto">{link.title_b}</b>{sameName && <small className="link-id"> (song {link.b})</small>} <span dir="auto">{link.artist_b}</span>
         <q dir="auto">{link.line_b}</q>
       </p>
       <div className="chips" role="group" aria-label="Which move">
@@ -379,7 +387,7 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
             ))}
           </Menu>
         ) : (
-          <Action working="Adding…" run={() => onAdd(link, move, null)}>Add both to the mix</Action>
+          <Action working="Adding…" aria-describedby={addId} run={() => onAdd(link, move, null)}>Add both to the mix</Action>
         )}
         {flagOn('ratings') && state.status === 'ready' && (
           <span className="pair" role="group" aria-label="Rate this link">
@@ -388,9 +396,12 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
           </span>
         )}
       </div>
+      <p className="hint link-destination" id={addId}>
+        Adds {nameA}, then {nameB}, joined by this transition, both at once or neither. They go at the end of {flagOn('drafts') && drafts.length ? 'the mix you choose: your current mix or one draft' : 'your current mix'}, or beside whichever of the two is already there.
+      </p>
       {state.status === 'ready' && playing && (
         // keyed by what was rendered, so a clip from before a change can't be taken for this one
-        <AudioPreview key={state.key} autoPlay src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} label={`${link.title_a} into ${link.title_b}`} />
+        <AudioPreview key={state.key} autoPlay src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} label={`${nameA} into ${nameB}`} />
       )}
     </article>
   );
