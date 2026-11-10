@@ -1,7 +1,7 @@
 # ADR-0398 - Upload protocol with server-side completion and quota reservations
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/5 Implemented; 3/5 In progress; 2/5 Not started.
+- **Implementation:** 2/5 Implemented; 1/5 In progress; 2/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 3. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -34,8 +34,8 @@ Uploads resume after refresh, never oversubscribe storage, and reject bad files 
 
 ## Implementation checklist - 0/5 Implemented; 3/5 In progress; 0/5 independently Verified
 
-1. **SC-0398-01 - Session planning.** **Acceptance:** Batch planning of up to 500 files with reservations and duplicate flags. **Required verification:** Integration test. **Implementation:** In progress; tenant-scoped planning, reservations, duplicate detection and cancellation are exposed to the Cloud UI; production R2 and full browser coverage remain. **Independently Verified:** No.
-2. **SC-0398-02 - Server completion.** **Acceptance:** Oversize or mismatched uploads are aborted and reservations released. **Required verification:** Integration test with a lying client. **Implementation:** In progress; server-side part/size checks, metadata probe and original object hash/size verification are wired; hostile input sandbox and real R2 integration remain. **Independently Verified:** No.
+1. **SC-0398-01 - Session planning.** **Acceptance:** Batch planning of up to 500 files with reservations and duplicate flags. **Required verification:** Integration test. **Implementation:** Implemented; batches of up to 500 files are planned with quota reservations and duplicate flags; larger batches are refused. **Evidence:** `tests/test_cloud_uploads.py::test_a_batch_of_exactly_500_files_is_planned`, `tests/test_cloud_uploads.py::test_a_batch_of_more_than_500_files_is_refused`, `tests/test_cloud_upload_api.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
+2. **SC-0398-02 - Server completion.** **Acceptance:** Oversize or mismatched uploads are aborted and reservations released. **Required verification:** Integration test with a lying client. **Implementation:** Implemented; the server lists parts itself; oversize, mismatched or wrongly split uploads are aborted and their reservations released; expired sessions cannot complete. **Evidence:** `tests/test_cloud_uploads_completion.py::test_a_bad_upload_is_aborted_and_its_reservation_released`, `tests/test_cloud_uploads_completion.py::test_a_finished_object_of_the_wrong_size_is_aborted`, `tests/test_cloud_uploads_completion.py::test_property_completion_succeeds_exactly_when_the_r2_rules_hold_and_the_total_matches`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
 3. **SC-0398-03 - Quota race.** **Acceptance:** 1,000 concurrent uploads for the last 1 GB never exceed the limit. **Required verification:** Concurrency test. **Implementation:** Not started; **Independently Verified:** No.
 4. **SC-0398-04 - Validation sandbox.** **Acceptance:** Decode bombs, fake extensions and truncated files are rejected safely within limits. **Required verification:** Hostile-file test set. **Implementation:** Not started; **Independently Verified:** No.
 5. **SC-0398-05 - Resume.** **Acceptance:** A refreshed browser resumes from uploaded parts. **Required verification:** Playwright test. **Implementation:** In progress; the API returns existing parts and the browser can locate a live session by reselecting a matching SHA-256 file; Playwright refresh coverage remains. **Independently Verified:** No.
