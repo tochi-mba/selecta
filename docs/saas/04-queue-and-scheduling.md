@@ -18,7 +18,7 @@ This is where most of the engineering care goes. The rules below are written so 
 | Job type | Pool | Typical cost | Default lane | Depends on | Output |
 |---|---|---|---|---|---|
 | `ingest.validate` | cpu-light | 1–5 s | standard | upload complete | probe JSON, content hash, tags |
-| `play.proxy` | cpu-light | 3–10 s | inherits from the mix that needs it | validate | playback FLAC (system-managed, evictable). Created lazily when a song enters a mix revision or a preview, never for the whole library; skipped when the original is already lossless at the analysis sample rate ([§5.8](05-storage-uploads-playback.md#58-playback-in-the-cloud-a-real-design-problem)) |
+| `play.proxy` | cpu-light | 3–10 s | inherits from the mix that needs it | validate | playback FLAC (system-managed, evictable). Created lazily when a song enters a mix revision, a preview or a request (`work/proxies.py`), never for the whole library; skipped when the original is already lossless at the analysis sample rate ([§5.8](05-storage-uploads-playback.md#58-playback-in-the-cloud-a-real-design-problem)) |
 | `analyse.song` | cpu-heavy | ~0.15× duration + warm model | standard (interactive if user tapped "Analyse") | validate | features `.npz`, analysis row |
 | `lyrics.fetch` | cpu-light (network) | <1 s | standard | validate | lyrics row (subject to [§10.5](10-audio-engine-in-cloud.md#105-lyrics-in-cloud-mode-needs-a-decision)) |
 | `lyrics.align` | cpu-heavy | 10–40 s | standard | lyrics, analyse | alignment |

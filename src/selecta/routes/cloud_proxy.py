@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from collections.abc import Callable
 from typing import Any
@@ -21,7 +19,7 @@ from selecta.storage.ids import require_id
 from selecta.storage.keys import Bucket, original_key, validate_key, workspace_of
 from selecta.storage.objects import ObjectClient, R2Error, R2NotFound
 from selecta.storage.schema import assets
-from selecta.work import artifacts
+from selecta.work import artifacts, proxies
 from selecta.work.cloud_ports import CloudJobEntitlements
 from selecta.work.enqueue import JobSpec
 from selecta.work.model import TERMINAL
@@ -59,11 +57,7 @@ def install_routes(
                 raise HTTPException(409, detail={"code": "playback_metadata_unavailable"})
             # This is the worker's versioned PCM conversion identity. Before analysis exists,
             # use the original sample rate; a future analysis producer must pin its own rate.
-            provenance = {"source_sha256": source_hash, "sample_rate": rate,
-                          "proxy_version": 1, "codec": "flac", "bits": 24}
-            input_hash = hashlib.sha256(
-                json.dumps(provenance, sort_keys=True).encode()
-            ).hexdigest()
+            _, input_hash = proxies.identity(source_hash, rate)
             artifact = artifacts.find(conn, workspace_id, "playback", input_hash, db_now(conn))
             recent = conn.execute(select(jobs.c.id, jobs.c.state).where(
                 jobs.c.workspace_id == workspace_id, jobs.c.type == "play.proxy",

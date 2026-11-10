@@ -9,6 +9,9 @@
 - `lane_clock`: per (pool, lane) virtual time for choosing a lane, and the lane's floor for
   workspaces that start waiting again.
 - `artifacts`: the manifest of published outputs, keyed by a hash of their inputs.
+- `revision_artifacts`: which artifacts a mix revision uses, and whether that revision is frozen
+  (exported or kept). An artifact a frozen revision, or the revision playing now, uses is never
+  evicted (`storage/eviction.py`).
 - `outbox_events`: one row per state change, read by increasing id (at-least-once delivery).
 - `workers`: registered workers and their capabilities, which give a pool its slot count.
 - `leader_terms`: the maintenance leader's term number, which fences maintenance tasks.
@@ -228,6 +231,17 @@ artifacts = sa.Table(
     sa.UniqueConstraint("workspace_id", "kind", "input_hash"),
 )
 sa.Index("ix_artifacts_workspace_used", artifacts.c.workspace_id, artifacts.c.last_used_at)
+
+revision_artifacts = sa.Table(
+    "revision_artifacts",
+    metadata,
+    sa.Column("workspace_id", Id, primary_key=True),
+    sa.Column("revision_id", Id, primary_key=True),
+    sa.Column("artifact_id", Id, primary_key=True),
+    sa.Column("frozen", sa.Boolean, nullable=False, server_default=sa.false()),
+    sa.Column("created_at", Epoch, nullable=False),
+)
+sa.Index("ix_revision_artifacts_artifact", revision_artifacts.c.artifact_id)
 
 outbox_events = sa.Table(
     "outbox_events",
