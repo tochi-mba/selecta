@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from enum import StrEnum
 from types import MappingProxyType
 
@@ -135,6 +135,30 @@ class PolicyConfig:
     max_defer_s: float = 3_600.0
     max_result_bytes: int = 1_000_000
 
+    def __post_init__(self) -> None:
+        found = self.problems()
+        if found:
+            raise ValueError("This scheduling policy can't be used: " + "; ".join(found) + ".")
+
+    def problems(self) -> list[str]:
+        """What's wrong with these values, in words; empty when the policy is usable."""
+        found = []
+        for name in ("tier_weights", "lane_weights"):
+            for key, value in getattr(self, name).items():
+                if not isinstance(value, int | float) or not math.isfinite(value) or value <= 0:
+                    found.append(f"{name}[{key}] must be a positive number, not {value!r}")
+        tables = (self.tier_weights, self.lane_caps, self.speculative_budget_cpu_min)
+        if any(self.default_tier not in table for table in tables):
+            found.append(f"the default plan {self.default_tier!r} needs a weight, caps and budget")
+        if self.version < 1:
+            found.append(f"versions start at 1, not {self.version}")
+        for name in ("head_batch", "job_batch", "claim_rounds", "materialise_page"):
+            if getattr(self, name) < 1:
+                found.append(f"{name} must be at least 1")
+        if not 0 < self.heartbeat_s < self.lease_s:
+            found.append("a heartbeat must be positive and come more often than the lease ends")
+        return found
+
     def weight(self, tier: str | None) -> float:
         """An account's share of a lane, by plan. Unknown plans get the default plan's weight."""
         if tier in self.tier_weights:
@@ -174,8 +198,12 @@ class PolicyConfig:
         return int(self.queued_caps.get(job_type, self.default_queued_cap))
 
     def to_dict(self) -> dict:
-        """Plain JSON, for storing a version and showing it in the admin policy editor."""
-        return {key: _thaw(value) for key, value in asdict(self).items()}
+        """Plain JSON, for storing a version and showing it in the admin policy editor.
+
+        Read field by field: `dataclasses.asdict` deep-copies values, and the read-only mappings
+        here can't be copied that way.
+        """
+        return {item.name: _thaw(getattr(self, item.name)) for item in fields(self)}
 
     @classmethod
     def from_dict(cls, data: Mapping) -> PolicyConfig:
