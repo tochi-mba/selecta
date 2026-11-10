@@ -154,7 +154,21 @@ def register(
                     signed_out_at=None,
                 )
             )
-        others = [row for row in mine if row["id"] != this_id and row["signed_out_at"] is None]
+        # Count afresh rather than from `mine`: on PostgreSQL a sign-in that waited on the lock
+        # above read its rows before the one ahead of it committed, so `mine` can't include the
+        # device that one just added, and both would slip under the limit.
+        others = (
+            conn.execute(
+                sa.select(devices).where(
+                    devices.c.workspace_id == workspace_id,
+                    devices.c.user_id == user_id,
+                    devices.c.id != this_id,
+                    devices.c.signed_out_at.is_(None),
+                )
+            )
+            .mappings()
+            .all()
+        )
         signed_out = None
         if len(others) + 1 > MAX_SIGNED_IN_DEVICES:
             oldest = min(others, key=lambda row: (row["last_seen_at"], row["created_at"]))
