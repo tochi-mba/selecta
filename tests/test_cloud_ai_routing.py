@@ -368,6 +368,7 @@ BAD_DEPLOYMENTS = [
     ({"prices": Prices(1.0, 0.0)}, "prices"),
     ({"per_turn_cost_cap_usd": 0.0}, "cost cap"),
     ({"max_output_tokens": 0}, "cost cap"),
+    ({"max_output_tokens": 255}, "at least 256"),
     ({"max_tool_cycles": 0}, "at least 1"),
     ({"concurrency": 0}, "at least 1"),
 ]

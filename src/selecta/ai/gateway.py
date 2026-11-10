@@ -3,9 +3,10 @@
 `plan_turn` runs before a turn calls any model. In one transaction it takes a run slot for the
 account, routes the request (down, never up), counts the turn against the month's allowance,
 checks the account's monthly dollar ceiling, reserves the turn's worst case against the platform
-caps, and records the run with everything pinned. When an allowance is used up the turn steps
-down a class (a deep plan becomes a planning turn, and so on); when nothing paid is left, or no
-model is reachable, the built-in planner answers. Lucy gets smaller; it doesn't break.
+caps, and records the run with everything pinned. When an allowance is used up, or the class's
+model would pass the monthly dollar ceiling, the turn steps down a class (a deep plan becomes a
+planning turn, and so on); when nothing paid is left, or no model is reachable, the built-in
+planner answers. Lucy gets smaller; it doesn't break.
 
 `provider_settings_for` turns a plan into the provider and budget settings `selecta.lucy` already
 understands, with the key fetched from the deployment's secret reference, never from anything
@@ -47,6 +48,7 @@ from selecta.ai.routing import DEFAULT_NEEDS, AlwaysHealthy, HealthPort, NoRoute
 from selecta.ai.routing import choose as choose_route
 from selecta.ai.runs import Outcome, RunRecord, finish_run, get_run, running_before, start_run
 from selecta.ai.spend import (
+    CAP_TOLERANCE_USD,
     TIER_LIMITS,
     PlatformPolicy,
     SpendAlert,
@@ -201,21 +203,23 @@ def plan_turn(
     bucket: RequestClass | None = None
     reserved, spend_day, limited = 0.0, None, None
     alerts: list[SpendAlert] = []
-    tried: set[RequestClass] = set()
+    used_up: set[RequestClass] = set()
     for candidate in classes_from(requested):
         route = choose_route(deployments, routing, tier, candidate, workspace_id, health, needs)
         if route.deployment.is_builtin:
             chosen, limited = route, limited or "no_model"
             break
-        if bucket_for(tier, candidate) in tried:
+        bucket_here = bucket_for(tier, candidate)
+        if bucket_here in used_up:
             continue
-        tried.add(bucket_for(tier, candidate))
         limits = turn_limits(route.deployment, tier)
-        if spent + limits.max_cost_usd > tier_limits.monthly_cost_ceiling_usd:
-            limited = "spend"
-            break
+        ceiling = tier_limits.monthly_cost_ceiling_usd + CAP_TOLERANCE_USD
+        if spent + limits.max_cost_usd > ceiling:
+            limited = "spend"  # a smaller class's cheaper model may still fit
+            continue
         start = try_start_turn(conn, workspace_id, tier, candidate, month)
         if not start.admitted:
+            used_up.add(bucket_here)
             limited = "allowance"
             continue
         reservation = reserve(conn, limits.max_cost_usd, policy, now)

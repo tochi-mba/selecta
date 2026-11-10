@@ -148,6 +148,27 @@ def running_before(conn: Connection, started_before: float, limit: int = 100) ->
     return [RunRecord.from_row(row) for row in rows]
 
 
+def cache_hit_rates(
+    conn: Connection, started_from: float, started_before: float | None = None
+) -> dict[str, float]:
+    """Each tier's prompt-cache hit rate, the cost KPI from §9.3: cached input tokens over all
+    input tokens of the finished runs that started in the window. Tiers with no input are left
+    out rather than shown as 0%."""
+    window = [ai_runs.c.started_at >= started_from, ai_runs.c.outcome != Outcome.RUNNING.value]
+    if started_before is not None:
+        window.append(ai_runs.c.started_at < started_before)
+    rows = conn.execute(
+        sa.select(
+            ai_runs.c.tier,
+            sa.func.sum(ai_runs.c.cache_read_tokens),
+            sa.func.sum(ai_runs.c.tokens_in),
+        )
+        .where(*window)
+        .group_by(ai_runs.c.tier)
+    ).all()
+    return {tier: float(cached or 0) / float(total) for tier, cached, total in rows if total}
+
+
 def conversation_runs(conn: Connection, workspace_id: str, conversation_id: str) -> list[RunRecord]:
     rows = conn.execute(
         sa.select(ai_runs)

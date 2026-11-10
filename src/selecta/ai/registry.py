@@ -69,6 +69,7 @@ TIER_CAPABILITY = {
 }
 CAPABILITIES = frozenset({"streaming", "tools", "structured_output"})
 BUILTIN_ID = "builtin"
+MIN_OUTPUT_TOKENS = 256  # the lowest `max_output_tokens` `selecta.lucy.settings.LIMITS` accepts
 
 # Published list prices per million tokens (Oct 2026), for estimates and seeds only. Re-check
 # before launch; a deployment row carries its own prices, so changing them needs no code.
@@ -293,6 +294,10 @@ def validate_deployment(deployment: Deployment) -> None:
         raise RegistryError("A hosted deployment needs prices, or its spend can't be bounded.")
     if deployment.per_turn_cost_cap_usd <= 0 or deployment.max_output_tokens <= 0:
         raise RegistryError("A hosted deployment needs a per-turn cost cap and output limit.")
+    if deployment.max_output_tokens < MIN_OUTPUT_TOKENS:
+        # Lucy's settings never ask a provider for fewer, so a smaller limit would be raised
+        # on the way to the provider and the turn's cost estimate would be too low.
+        raise RegistryError(f"Lucy needs an output limit of at least {MIN_OUTPUT_TOKENS} tokens.")
     if deployment.max_tool_cycles < 1 or deployment.concurrency < 1:
         raise RegistryError("Tool cycles and concurrency must be at least 1.")
 
