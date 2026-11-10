@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
-from urllib.parse import quote
 
 import httpx
 import sqlalchemy as sa
@@ -37,11 +36,14 @@ from selecta.flags.rules import flag_previews, flag_rule_versions, user_flag_pre
 from selecta.identity.accounts import DeletionPlan
 from selecta.identity.deletion import DeletionEffects
 from selecta.identity.schema import (
+    privileged_sessions,
+    revoked_sessions,
     session_revocations,
     users,
     workspace_members,
     workspaces,
 )
+from selecta.identity.workos import WORKOS_API, WorkOSClient, WorkOSError, WorkOSNotFound
 from selecta.persistence import db_now, metadata, transaction
 from selecta.persistence.registry import load_all_tables
 from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets
@@ -108,39 +110,41 @@ class IdentityDeleter(Protocol):
     def delete_user(self, auth_subject: str) -> None: ...
 
 
-class HttpWorkOSUserDeleter:
-    """WorkOS User Management delete adapter; 404 is success for workflow retries."""
+class WorkOSUserDeleter:
+    """Delete the WorkOS user through the shared client. A 404 means it is already gone, which
+    is success: the step may be retried after WorkOS deleted the user but before we noted it."""
 
-    def __init__(
-        self,
-        api_key: str,
-        *,
-        api_base: str = "https://api.workos.com",
-        timeout: float = 20.0,
-    ) -> None:
-        if not api_key.strip():
-            raise ValueError("A WorkOS API key is required for account deletion.")
-        self.api_key = api_key
-        self.api_base = api_base.rstrip("/")
-        self.timeout = timeout
+    def __init__(self, client: WorkOSClient) -> None:
+        self.client = client
 
     def delete_user(self, auth_subject: str) -> None:
         if not auth_subject or len(auth_subject) > 255:
             raise DeletionEffectError("The WorkOS subject is invalid.")
         try:
-            with httpx.Client(base_url=self.api_base, timeout=self.timeout) as client:
-                response = client.delete(
-                    f"/user_management/users/{quote(auth_subject, safe='')}",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                )
-        except httpx.HTTPError as problem:
-            raise DeletionEffectError(
-                f"WorkOS user deletion could not be reached ({type(problem).__name__})."
-            ) from None
-        if response.status_code == 404 or 200 <= response.status_code < 300:
+            self.client.delete_user(auth_subject)
+        except WorkOSNotFound:
             return
-        raise DeletionEffectError(
-            f"WorkOS user deletion failed with HTTP {response.status_code}."
+        except WorkOSError as problem:
+            raise DeletionEffectError(
+                f"WorkOS user deletion failed ({type(problem).__name__})."
+            ) from None
+
+
+class HttpWorkOSUserDeleter(WorkOSUserDeleter):
+    """`WorkOSUserDeleter` with its own client, built from an API key (the maintenance CLI)."""
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        api_base: str = WORKOS_API,
+        timeout: float = 20.0,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        if not api_key.strip():
+            raise ValueError("A WorkOS API key is required for account deletion.")
+        super().__init__(
+            WorkOSClient(api_key, api_base=api_base, timeout=timeout, transport=transport)
         )
 
 
@@ -513,6 +517,11 @@ class AccountDeletionEffects(DeletionEffects):
             .values(resource_id=None)
         )
         conn.execute(session_revocations.delete().where(session_revocations.c.user_id == user_id))
+        # The user's WorkOS sessions die with the WorkOS user, so their ids need no keeping.
+        conn.execute(revoked_sessions.delete().where(revoked_sessions.c.user_id == user_id))
+        conn.execute(
+            privileged_sessions.delete().where(privileged_sessions.c.user_id == user_id)
+        )
 
         # Keep evidence that immediate access was requested, but unlink it from the account and
         # discard the IP hash, which is still personal data even though it is one-way.
