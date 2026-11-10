@@ -150,7 +150,17 @@ class WorkerRunner:
         return self.run_claim(claim)
 
     def run_claim(self, claim: Claim) -> RunResult:
-        """Start and execute one already-claimed attempt."""
+        """Start and execute one already-claimed attempt, in the job's trace (ADR-0410)."""
+        with tracing.job_span(
+            "worker.run", claim.job.id, service="worker",
+            **{"selecta.job_type": claim.job.type, "selecta.attempt_id": claim.attempt_id,
+               "selecta.pool": self.caps.pool},
+        ) as span:
+            result = self._run_claim(claim)
+            span.set_attribute("selecta.outcome", str(result.outcome))
+            return result
+
+    def _run_claim(self, claim: Claim) -> RunResult:
         job = claim.job
         try:
             job = self.store.start(claim.attempt_id, claim.fencing_token)

@@ -48,8 +48,8 @@ and `@media` preludes ignored).
 
 | Token | Base rule | Also refined in | Verdict |
 |---|---|---|---|
-| `.card` | `style.css` | `styles/polish.css` | intentional: `style.css` owns the card; polish adds name wrapping and the phone padding |
-| `.panel` | `style.css` | `styles/polish.css` | intentional: polish owns only the phone padding (24 to 16 px at 760 px), shared with `.card` |
+| `.card` | `style.css` | `styles/depth.css`, `styles/polish.css` | intentional: `style.css` owns the card; polish adds name wrapping and the phone padding; depth drops the seam diagram's own fill inside a card |
+| `.panel` | `style.css` | `styles/depth.css`, `styles/polish.css` | intentional: polish owns only the phone padding (24 to 16 px at 760 px), shared with `.card`; depth drops the seam diagram's own fill inside a panel |
 | `.row` | `style.css` | `styles/listening.css`, `styles/lucy.css`, `styles/operations.css`, `styles/polish.css` | intentional: `.row` is the layout helper; every refinement is scoped under its feature's container (`.hero .row`, `.lucy-approve .row`, `.link-card > .row`, `.start .row`) |
 | `.display` | `style.css` | `styles/listening.css`, `styles/lucy.css`, `styles/music-objects.css`, `styles/operations.css`, `styles/polish.css`, `styles/shell.css` | intentional: `style.css` owns the metrics (MP-0275-02); the others place it within a feature, and shell sets its text direction |
 | `.count` | `style.css` (`.song .count`) | `styles/icons.css`, `styles/polish.css`, `styles/shell.css` | was accidental (the badge inherited `grid-area: count`); now the grid rule is `.song .count`, badges are `.nav .count`, `.mini .count`, `.context-bar .count`, and polish only makes every count tabular |
