@@ -228,9 +228,10 @@ export function Mix(props: ViewProps) {
     const was = selected;
     setSelected(null);
     if (!was) return;
+    const quoted = (value: string) => value.replace(/["\\]/g, '\\$&');
     const selector = was.kind === 'seam'
-      ? `[data-seam="${CSS.escape(seamKeyOf(was.a, was.b))}"] .seam-name`
-      : `[data-song-key="${CSS.escape(was.key)}"] [data-handle]`;
+      ? `[data-seam="${quoted(seamKeyOf(was.a, was.b))}"] .seam-name`
+      : `[data-song-key="${quoted(was.key)}"] [data-handle]`;
     window.requestAnimationFrame(() => document.querySelector<HTMLElement>(selector)?.focus());
   };
 

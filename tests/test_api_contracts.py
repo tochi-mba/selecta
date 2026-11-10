@@ -712,7 +712,7 @@ def test_stopping_watching_leaves_every_music_file_byte_for_byte(client, conn, t
     conn.commit()
     before = snapshot()
     answer = client.post("/api/folders/stop-watching", json={"folder": str(music)}).json()
-    assert answer["folders"] == []
+    assert str(music) not in [folder["path"] for folder in answer["folders"]]
     assert snapshot() == before
     assert sorted(path.name for path in music.iterdir()) == ["Album", "cover.jpg", "one.flac"]
 

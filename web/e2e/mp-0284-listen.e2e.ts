@@ -81,7 +81,7 @@ test('MP-0284-02 Previous, Play/Pause and Next share a centre line, stay put thr
     for (const state of [playing, paused]) expect(Math.abs(state[2].left - playing[2].left), `${width}px: Next moved with the label`).toBeLessThanOrEqual(1);
   }
   // Volume: keyboard on the slider changes the level; Seek: the strip moves the clock
-  const volume = page.getByRole('slider', { name: /Volume/ });
+  const volume = page.locator('.now .transport-more').getByRole('slider', { name: 'Volume' });
   await expect(volume).toBeVisible();
   const before = await volume.inputValue();
   await volume.focus();

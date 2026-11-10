@@ -35,6 +35,7 @@ def read_everything(home: Path) -> dict:
         draft = client.get(f"/api/mix?draft={drafts[0]['id']}").json() if drafts else None
         song = client.get("/api/songs/3").json()
         jobs = client.get("/api/exports/jobs").json()["jobs"]
+        requests = client.get("/api/requests").json()["requests"]
         return {
             "code_from": str(Path(sys.modules["selecta"].__file__).parent.parent.parent),
             "report": {
@@ -46,6 +47,7 @@ def read_everything(home: Path) -> dict:
                 "draft_songs": [item["song_id"] for item in draft["mix"]] if draft else [],
                 "corrected_bpm": song.get("bpm"),
                 "export_jobs": [(job["id"], job["state"], job["name"]) for job in jobs],
+                "requests": sorted((row["id"], row["song_id"]) for row in requests),
             },
         }
 
@@ -66,6 +68,10 @@ def save_things(home: Path) -> None:
         client.post("/api/steer", json={"action": "mix_language", "value": "punchy"})
         client.post("/api/mix/1/seam", json={"move": "cut_on_one"}).raise_for_status()
         client.post("/api/songs/3/correct", json={"bpm": 238}).raise_for_status()
+        # a waiting request and a cancelled one: only the waiting one should ever come back
+        client.post("/api/requests", json={"song_id": 9}).raise_for_status()
+        gone = client.post("/api/requests", json={"song_id": 10}).json()["id"]
+        client.delete(f"/api/requests/{gone}").raise_for_status()
     # a job's record, as a finished export leaves it
     jobs = home / "exports" / "jobs"
     jobs.mkdir(parents=True, exist_ok=True)

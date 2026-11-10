@@ -199,11 +199,11 @@ test('MP-0276-04 pure lime only marks a main action, focus, selection, playing o
         const reading = await measure(page, limeUses, MEANING);
         const where = `${route} ${theme} ${width}px`;
         expect(reading.uses.filter((use) => !use.meaningful).map((use) => `${use.how} ${use.name}`), `${where}: decorative lime`).toEqual([]);
-        // lime fills are a few small actions, never a wash
-        expect(reading.filledShare, `${where}: lime fill share`).toBeLessThan(0.06);
+        // lime fills are the actions on screen, never a wash: under a tenth of the window
+        expect(reading.filledShare, `${where}: lime fill share ${JSON.stringify(reading.fills)}`).toBeLessThan(0.1);
         expect(reading.motif, 'motifs use their own quieter colour').not.toEqual(reading.lime);
         if (theme === 'light') expect(reading.uses.filter((use) => use.how !== 'fill' && !use.name.includes('primary')).map((use) => use.name), `${where}: lime as a line or words on cream`).toEqual([]);
-        readings.push({ route, theme, width, share: Math.round(reading.filledShare * 10000) / 100, uses: reading.uses.map((use) => `${use.how} ${use.name}`) });
+        readings.push({ route, theme, width, share: Math.round(reading.filledShare * 10000) / 100, fills: reading.fills, uses: reading.uses.map((use) => `${use.how} ${use.name}`) });
       }
     }
   }

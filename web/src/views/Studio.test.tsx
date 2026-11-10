@@ -473,7 +473,7 @@ describe('a studio with a stem missing', () => {
   it('marks that lane unavailable, ignores presses on it, and leaves the other lanes working', async () => {
     deck.lost = ['b_bass'];
     open();
-    const lost = await screen.findByRole('button', { name: /^Song 2 bass, bars? 1.*unavailable$/i });
+    const [lost] = await screen.findAllByRole('button', { name: /^Song 2 bass, bars? 1\D.*unavailable$/i });
     expect(lost).toHaveAttribute('aria-disabled', 'true');
     const before = lost.getAttribute('aria-pressed');
     fireEvent.click(lost);

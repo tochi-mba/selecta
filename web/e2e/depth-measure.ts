@@ -144,14 +144,19 @@ export function limeUses(allowed: string) {
   const isLime = (colour: Rgba) => colour[3] > 0.5 && k.same(colour, lime, 4);
   const uses: { name: string; how: string; meaningful: boolean }[] = [];
   let filled = 0;
+  const fills: { name: string; area: number }[] = [];
   for (const element of document.querySelectorAll('body *')) {
     if (!k.visible(element)) continue;
     const css = getComputedStyle(element);
     const how: string[] = [];
     if (isLime(k.rgba(css.backgroundColor))) {
       how.push('fill');
+      // only what is on screen counts: a share of the window a person actually sees
       const box = element.getBoundingClientRect();
-      filled += box.width * box.height;
+      const wide = Math.max(0, Math.min(box.right, innerWidth) - Math.max(box.left, 0));
+      const tall = Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, 0));
+      filled += wide * tall;
+      fills.push({ name: k.name(element), area: Math.round(wide * tall) });
     }
     const ownText = [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent!.trim());
     const drawn = element instanceof SVGElement;
@@ -163,7 +168,7 @@ export function limeUses(allowed: string) {
     if (!how.length) continue;
     uses.push({ name: k.name(element), how: [...new Set(how)].join('+'), meaningful: !!element.closest(allowed) });
   }
-  return { uses, filledShare: filled / (innerWidth * innerHeight), motif: k.token('--motif'), lime };
+  return { uses, fills, filledShare: filled / (innerWidth * innerHeight), motif: k.token('--motif'), lime };
 }
 
 /** An overlay's surface, edge and shadow against what it sits on. */

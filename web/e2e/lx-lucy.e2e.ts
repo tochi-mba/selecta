@@ -160,25 +160,35 @@ test('LX-0355-01, -03, -05 and LX-0356-01 panes split only when both stay readab
     return { width: node.getBoundingClientRect().width, limit };
   });
   expect(measure.width).toBeLessThanOrEqual(measure.limit + 1);
-  await page.setViewportSize({ width: 1200, height: 900 });
-  await expect(page.locator('main.lucy')).toHaveClass(/is-split/);
-  await expect(page.locator('.lucy-history-col')).toHaveCount(0);
-  seen = await widths();
-  expect(seen.chat).toBeGreaterThanOrEqual(320);
-  expect(seen.side).toBeGreaterThanOrEqual(340);
-  // the conversation list opens over the page, can be searched and closed, and never narrows a pane
-  await page.getByRole('button', { name: 'Conversations' }).click();
-  const sheet = page.getByRole('dialog', { name: 'Conversations' });
-  await expect(sheet).toBeVisible();
-  await sheet.getByRole('searchbox', { name: 'Search conversations' }).fill('LX e2e');
-  await expect(sheet.getByRole('link', { name: /LX e2e/ }).first()).toBeVisible();
-  expect(await widths()).toEqual(seen);
-  await page.keyboard.press('Escape');
-  await expect(sheet).toHaveCount(0);
-  await page.setViewportSize({ width: 900, height: 900 });
-  await expect(page.locator('main.lucy')).toHaveClass(/is-stacked/);
-  await expect(page.getByRole('tab', { name: 'Chat' })).toBeVisible();
-  expect(await stickingOut(page, 'Lucy at 900px')).toEqual([]);
+  // The rule is the page's own width (Lucy.tsx: split from 1100px, a history column from 1280px), so
+  // a wide rail or a zoomed page gets the stacked layout rather than two cramped panes.
+  for (const width of [1500, 1300, 1100, 900, 640]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.waitForTimeout(150);
+    const room = await page.locator('main.lucy').evaluate((node) => node.clientWidth);
+    const split = room >= 1100;
+    await expect(page.locator('main.lucy')).toHaveClass(split ? /is-split/ : /is-stacked/);
+    await expect(page.locator('.lucy-history-col')).toHaveCount(room >= 1280 ? 1 : 0);
+    seen = await widths();
+    if (split) {
+      expect(seen.chat, `chat at ${width}px`).toBeGreaterThanOrEqual(320);
+      expect(seen.side, `proposal at ${width}px`).toBeGreaterThanOrEqual(340);
+    } else {
+      await expect(page.getByRole('tab', { name: 'Chat' })).toBeVisible();
+    }
+    expect(await stickingOut(page, `Lucy at ${width}px`)).toEqual([]);
+    if (room < 1280 && width === 1100) {
+      // the conversation list opens over the page, can be searched and closed, and never narrows a pane
+      await page.getByRole('button', { name: 'Conversations', exact: true }).click();
+      const sheet = page.getByRole('dialog', { name: 'Conversations' });
+      await expect(sheet).toBeVisible();
+      await sheet.getByRole('searchbox', { name: 'Search conversations' }).fill('LX e2e');
+      await expect(sheet.getByRole('link', { name: /LX e2e/ }).first()).toBeVisible();
+      expect(await widths()).toEqual(seen);
+      await page.keyboard.press('Escape');
+      await expect(sheet).toHaveCount(0);
+    }
+  }
 });
 
 test('LX-0356-05 someone reading back up is not pulled down; a count of new messages appears instead', async ({ page, request }) => {
