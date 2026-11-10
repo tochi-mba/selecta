@@ -303,6 +303,24 @@ def test_a_refused_answer_is_replayed_too(engine, laptop, phone):
     assert again.replayed and _current(engine).state is PlayState.PLAYING
 
 
+def test_a_reused_key_with_the_same_command_but_different_args_is_a_conflict(engine, laptop, phone):
+    _playing(engine, laptop)
+    _send(engine, phone, "seek", {"offset_ms": 1000}, key="press-4")
+    with pytest.raises(session.IdempotencyConflict):
+        _send(engine, phone, "seek", {"offset_ms": 50_000}, key="press-4")
+    assert _current(engine).offset_ms == 1000, "the second press changed nothing"
+    again = _send(engine, phone, "seek", {"offset_ms": 1000}, key="press-4")
+    assert again.replayed, "the same press again is still a replay"
+
+
+def test_a_replay_matches_however_the_args_were_ordered(engine, laptop, phone):
+    _playing(engine, laptop)
+    mix = FakeMixControl(None)
+    first = _send(engine, phone, "reorder", {"a": 1, "b": [2, 3]}, key="press-5", mix=mix)
+    again = _send(engine, phone, "reorder", {"b": [2, 3], "a": 1}, key="press-5", mix=mix)
+    assert again.replayed and again.command_id == first.command_id
+
+
 def test_a_reused_key_with_a_different_command_is_a_conflict(engine, laptop, phone):
     _playing(engine, laptop)
     _send(engine, phone, "pause", key="press-3")

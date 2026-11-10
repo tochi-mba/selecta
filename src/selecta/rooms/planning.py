@@ -86,7 +86,12 @@ def queue_order(conn: Connection, room: Room, now: float) -> list[RoomRequest]:
 
 def pump(ctx: RoomContext, workspace_id: str, room_id: str, *, now: float | None = None) -> int:
     """Hand the next accepted requests to the planner, as far as the window and the render cap
-    allow. Returns how many were handed over."""
+    allow. Returns how many were handed over.
+
+    With no speaker online the music's paused, so requests wait here, in order, until one is
+    back (the regular sweep then hands them on)."""
+    if not ctx.speakers.speaker_online(workspace_id):
+        return 0
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         room = load_room(conn, workspace_id, room_id, lock=True)

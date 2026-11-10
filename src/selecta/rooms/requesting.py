@@ -288,7 +288,22 @@ def approve(
         now = resolve_now(conn, now)
         room = live_room(conn, workspace_id, room_id)
         target = load_request(conn, room, request_id)
-        if target.status in (RequestStatus.SENT, RequestStatus.UNFIT):
+        if target.status is RequestStatus.UNFIT:
+            # It stopped counting as waiting when it couldn't fit; taking it back must not put
+            # the guest or the room over their limits. It goes through the planner queue again,
+            # so the planner's window and the render cap hold too.
+            _check_reapproval(conn, room, target)
+            set_request(
+                conn,
+                target.id,
+                status=RequestStatus.ACCEPTED,
+                approved_at=now,
+                reason=None,
+                song_request_id=None,
+                submitted_at=None,
+            )
+            ctx.publish(conn, room, "room.request", {"request_id": target.id})
+        elif target.status is RequestStatus.SENT:
             set_request(
                 conn, target.id, status=RequestStatus.ACCEPTED, approved_at=now, reason=None
             )
@@ -297,6 +312,20 @@ def approve(
             raise RoomError(Refusal.NOT_ALLOWED)
     pump(ctx, workspace_id, room_id, now=now)
     return _reload(ctx, room, request_id)
+
+
+def _check_reapproval(conn: Connection, room: Room, target: RoomRequest) -> None:
+    pending = room_requests.c.status.in_([status.value for status in PENDING])
+    mine = _count(conn, room_requests.c.guest_id == target.guest_id, pending)
+    if mine >= room.settings.pending_per_guest:
+        raise RoomError(
+            Refusal.GUEST_PENDING_LIMIT,
+            "That guest already has as many requests waiting as the room allows.",
+        )
+    if _count(conn, room_requests.c.room_id == room.id, pending) >= room.settings.pending_per_room:
+        raise RoomError(
+            Refusal.ROOM_BUSY, "The room already has as many requests waiting as it allows."
+        )
 
 
 def pass_request(

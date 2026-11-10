@@ -197,3 +197,17 @@ def test_output_slots_are_signed_under_the_attempts_own_prefix(r2):
     gone = SimpleNamespace(job=lambda job_id: None)
     with pytest.raises(ValueError, match="no declared"):
         cloud_ports.signed_outputs(gone, attempt, ["f.npz"])
+
+
+# --- Local mode's flags ------------------------------------------------------------------------
+
+
+def test_local_jobs_follow_this_process_flags_and_an_unknown_flag_counts_as_on(monkeypatch):
+    from selecta import flags
+    from selecta.work.ports import ProcessFlags
+
+    gate = ProcessFlags()
+    assert gate.is_on("local", "core.analysis") is flags.on("core.analysis")
+    assert gate.is_on("local", "no.such.flag") is True
+    monkeypatch.setattr(flags, "on", lambda flag_id: False)
+    assert gate.is_on("local", "core.analysis") is False

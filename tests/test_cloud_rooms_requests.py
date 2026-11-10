@@ -381,6 +381,49 @@ def test_a_request_that_can_not_fit_waits_for_the_host_to_try_again(rooms, clock
     )
 
 
+def test_re_approving_an_unfit_request_is_refused_when_the_guest_has_their_limit_waiting(
+    rooms,
+):
+    opened, guest = _room(rooms)
+    asked = rooms.request(guest.guest_token, 5).request
+    rooms.record_outcome(HOST, asked.song_request_id, "unfit")
+    rooms.request(guest.guest_token, 6)
+    refusal = _refused(Refusal.GUEST_PENDING_LIMIT, rooms.approve, HOST, opened.room.id, asked.id)
+    assert "guest" in refusal.message.lower()
+    status = {row["id"]: row["status"] for row in request_rows(rooms.engine)}[asked.id]
+    assert status == "unfit"
+
+
+def test_re_approving_an_unfit_request_is_refused_when_the_room_is_full_of_requests(rooms):
+    opened, guest = _room(rooms, pending_per_room=2)
+    asked = rooms.request(guest.guest_token, 5).request
+    rooms.record_outcome(HOST, asked.song_request_id, "unfit")
+    for song in (6, 7):
+        rooms.request(rooms.join(opened.code, None).guest_token, song)
+    refusal = _refused(Refusal.ROOM_BUSY, rooms.approve, HOST, opened.room.id, asked.id)
+    assert "room" in refusal.message.lower()
+
+
+def test_a_re_approved_unfit_request_waits_its_turn_for_the_planner_window(rooms):
+    opened, guest = _room(rooms)
+    asked = rooms.request(guest.guest_token, 1).request
+    rooms.record_outcome(HOST, asked.song_request_id, "unfit")
+    others = [
+        rooms.request(rooms.join(opened.code, None).guest_token, s).request for s in (2, 3, 4)
+    ]
+
+    again = rooms.approve(HOST, opened.room.id, asked.id)
+
+    assert again.status is RequestStatus.ACCEPTED and again.song_request_id is None
+    held = [
+        r for r in request_rows(rooms.engine) if r["status"] == "accepted" and r["song_request_id"]
+    ]
+    assert len(held) == 3, "the planner never holds more than three"
+    play(rooms, others[0].song_request_id)
+    rows = {row["id"]: row for row in request_rows(rooms.engine)}
+    assert rows[asked.id]["song_request_id"] is not None, "handed over once a spot freed"
+
+
 def test_a_song_that_left_the_library_withdraws_its_request(rooms):
     _, guest = _room(rooms)
     asked = rooms.request(guest.guest_token, 5).request

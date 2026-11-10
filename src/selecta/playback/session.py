@@ -256,8 +256,10 @@ def submit_command(
             .mappings()
             .first()
         )
+        name, clean = commands.validate(command, args)
         if earlier is not None:
-            if earlier["command"] != command:
+            # A key belongs to exactly one press: the same command with the same arguments.
+            if earlier["command"] != name.value or earlier["args"] != clean:
                 raise IdempotencyConflict("That idempotency key was used for another command")
             return CommandResult(
                 CommandStatus(earlier["status"]),
@@ -266,7 +268,6 @@ def submit_command(
                 earlier["id"],
                 replayed=True,
             )
-        name, clean = commands.validate(command, args)
         if based_on_seq != session.seq:
             status = CommandStatus.STALE
         elif (

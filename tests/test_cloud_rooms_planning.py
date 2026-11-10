@@ -253,6 +253,33 @@ def test_the_render_cap_holds_at_sixty_an_hour(rooms, clock):
     assert rooms.renders_left(HOST, opened.room.id) == 57
 
 
+def test_requests_wait_while_no_speaker_is_online_and_go_in_order_when_one_returns(rooms, clock):
+    opened = rooms.open_room(HOST, "Party")
+    rooms.speakers.offline.add(HOST)
+    for song in range(1, 6):
+        rooms.request(rooms.join(opened.code, None).guest_token, song)
+        clock.advance(1)
+    assert rooms.planner.submitted == [], "the music's paused, so requests wait"
+    assert [r.song_id for r in rooms.accepted_order(HOST, opened.room.id)] == [1, 2, 3, 4, 5]
+    assert rooms.renders_left(HOST, opened.room.id) == 60
+
+    rooms.speakers.offline.discard(HOST)
+    rooms.expire_rooms()
+
+    assert rooms.planner.songs_submitted() == [1, 2, 3], "in order, within the window"
+    assert rooms.renders_left(HOST, opened.room.id) == 57
+
+
+def test_requests_waiting_for_a_speaker_still_respect_the_render_cap(rooms):
+    opened = rooms.open_room(HOST, "Party", {"renders_per_hour": 2})
+    rooms.speakers.offline.add(HOST)
+    for song in (1, 2, 3):
+        rooms.request(rooms.join(opened.code, None).guest_token, song)
+    rooms.speakers.offline.discard(HOST)
+    rooms.expire_rooms()
+    assert rooms.planner.songs_submitted() == [1, 2]
+
+
 def test_the_render_cap_is_the_plan_s_when_the_host_asks_for_more(rooms):
     rooms.plans.set(HOST, renders_per_hour=2)
     opened = rooms.open_room(HOST, "Party", {"renders_per_hour": 600})
