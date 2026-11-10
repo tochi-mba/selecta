@@ -1,7 +1,7 @@
 # ADR-0399 - Cloud playback with lossless playback proxies
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/4 Implemented; 1/4 In progress; 3/4 Not started.
+- **Implementation:** 3/4 Implemented; 0/4 In progress; 1/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 3. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -34,10 +34,10 @@ Cloud playback keeps transitions as tight as local playback, without the server 
 
 ## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0399-01 - Lazy proxy job.** **Acceptance:** Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0399-01 - Lazy proxy job.** **Acceptance:** Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. **Required verification:** Integration test. **Implementation:** Implemented; playback files are made only when a song enters a mix, preview or request, take that work's lane and urgency, and are evicted and remade under the derived budget. **Evidence:** `tests/test_cloud_playback_proxy_lazy.py` (7 tests), passing on SQLite and PostgreSQL. **Independently Verified:** No.
 2. **SC-0399-02 - Alignment.** **Acceptance:** Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. **Required verification:** Automated alignment check plus listening check. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0399-03 - Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** In progress; the Cloud library player refreshes a failed original-audio URL once and restores playback position and playing state; mix-player integration and live R2/Playwright verification remain. **Independently Verified:** No.
-4. **SC-0399-04 - Prefetch.** **Acceptance:** The next song and its transitions are buffered before they're needed. **Required verification:** Playwright timing test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0399-03 - Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** Implemented; a 403 on a signed URL mid-song fetches a fresh URL once and keeps the song, queue and position. **Evidence:** `web/e2e-cloud/playback.cloud.ts` 'an expired signed URL mid-song refreshes once, keeping the song, the queue and the place', passing in `pnpm e2e:cloud`. **Independently Verified:** No.
+4. **SC-0399-04 - Prefetch.** **Acceptance:** The next song and its transitions are buffered before they're needed. **Required verification:** Playwright timing test. **Implementation:** Implemented; the next song is downloaded while the current one plays and played from that copy. **Evidence:** `web/e2e-cloud/playback.cloud.ts` 'the next song is downloaded before the current one ends, and plays from that copy', passing in `pnpm e2e:cloud`. **Independently Verified:** No.
 
 ## Governance
 

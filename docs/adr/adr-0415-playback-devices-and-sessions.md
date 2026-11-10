@@ -1,7 +1,7 @@
 # ADR-0415 - Playback devices and one session per account
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 1/5 Implemented; 3/5 In progress; 1/5 Not started.
+- **Implementation:** 2/5 Implemented; 2/5 In progress; 1/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 6. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -34,7 +34,7 @@ No room ever hears two copies of the mix, any device can steer, and moving the m
 
 ## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0415-01 - Devices.** **Acceptance:** Registration, naming, list and sign-out work; the 11th device signs out the oldest. **Required verification:** Integration and Playwright tests. **Implementation:** In progress; the API integration suite covers the lifecycle and limit; the browser UI test remains. **Evidence:** `src/selecta/playback/api.py`; `tests/test_cloud_playback_api.py`. **Independently Verified:** No.
+1. **SC-0415-01 - Devices.** **Acceptance:** Registration, naming, list and sign-out work; the 11th device signs out the oldest. **Required verification:** Integration and Playwright tests. **Implementation:** Implemented; devices register, rename, list and sign out; the eleventh signs out the least recently used with a notice. **Evidence:** `tests/test_cloud_playback_devices.py`, `tests/test_cloud_playback_api.py` and `web/e2e-cloud/devices.cloud.ts` 'the eleventh device signs out the oldest with a notice, and sign-out works', passing. **Independently Verified:** No.
 2. **SC-0415-02 - Lease and remotes.** **Acceptance:** Commands from many remotes apply once and in order. **Required verification:** Concurrency test. **Implementation:** Implemented; commands from many remotes apply once and in order; stale `based_on_seq` and reused keys with different arguments are refused. **Evidence:** `tests/test_cloud_playback_races.py` (SQLite and PostgreSQL), `tests/test_cloud_playback_session.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
 3. **SC-0415-03 - Transfer.** **Acceptance:** 'Play here' moves playback with no double audio. **Required verification:** Playwright multi-context test plus real devices. **Implementation:** In progress; the server transfer is covered; browser multi-context and real-device audio evidence remain. **Evidence:** `tests/test_cloud_playback_api.py::test_play_here_moves_the_lease_and_names_the_old_speaker`. **Independently Verified:** No.
 4. **SC-0415-04 - Offline speaker.** **Acceptance:** A speaker that loses connection keeps playing; reconnect behaviour matches the rules. **Required verification:** Chaos test on real devices. **Implementation:** Not started; **Independently Verified:** No.

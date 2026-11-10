@@ -1,7 +1,7 @@
 # ADR-0401 - Authorization: staff roles, scopes and the audit log
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 3/5 Implemented; 0/5 In progress; 2/5 Not started.
+- **Implementation:** 4/5 Implemented; 0/5 In progress; 1/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 4. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -36,7 +36,7 @@ The owner sees everything operational, while a stolen session, stale tab or slip
 
 ## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0401-01 - Permission registry and checks.** **Acceptance:** Every admin route declares its permission; unknown permissions fail CI. **Required verification:** Unit tests. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0401-01 - Permission registry and checks.** **Acceptance:** Every admin route declares its permission; unknown permissions fail CI. **Required verification:** Unit tests. **Implementation:** Implemented; every admin read and command calls `authorize()` with a registered permission before saying whether a record exists (the sweep found and fixed ten routes that answered 404 first); unknown permissions raise at import and at check time. **Evidence:** `tests/test_cloud_admin_routes.py::test_every_admin_route_and_command_checks_a_registered_permission_first`, `tests/test_cloud_authz_roles.py` and `tests/test_cloud_authz_check.py::test_an_unknown_permission_raises_instead_of_denying`, passing on SQLite and PostgreSQL. **Independently Verified:** No.
 2. **SC-0401-02 - Scoped assignments.** **Acceptance:** Assignments respect scope and expiry; revocation takes effect immediately. **Required verification:** Integration tests. **Implementation:** Implemented; assignments respect scope and expiry; revocation takes effect at once and revokes the target's sessions; the last Owner is protected. **Evidence:** `tests/test_cloud_authz_assignments.py`, `tests/test_cloud_authz_check.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
 3. **SC-0401-03 - Delayed dangerous actions.** **Acceptance:** Listed actions wait 15 minutes, notify, can be cancelled and re-check authority. **Required verification:** Integration test. **Implementation:** Implemented; listed actions wait 15 minutes (or a second approver once there are two staff), notify, can be cancelled, expire, and re-check authority and the payload hash before running. **Evidence:** `tests/test_cloud_authz_delayed.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
 4. **SC-0401-04 - Audit log.** **Acceptance:** Sensitive allows and all admin denies are recorded; the app role cannot update or delete audit rows. **Required verification:** Database permission test. **Implementation:** Implemented; sensitive allows and every admin deny are recorded; on PostgreSQL the app role can insert audit rows but never update, delete or truncate them, and triggers stop even the owner. **Evidence:** `tests/test_cloud_authz_audit.py::test_the_app_role_can_insert_but_never_update_delete_or_truncate` (PostgreSQL), `tests/test_cloud_authz_check.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.

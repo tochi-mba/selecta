@@ -1,7 +1,7 @@
 # ADR-0407 - Real-time updates over server-sent events
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/4 Implemented; 1/4 In progress; 3/4 Not started.
+- **Implementation:** 3/4 Implemented; 0/4 In progress; 1/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 6. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -32,9 +32,9 @@ Pages update within a second of real changes, with far less load, and keep worki
 
 ## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0407-01 - Event stream.** **Acceptance:** Events arrive in order with ids; reconnect resumes without gaps. **Required verification:** Integration test. **Implementation:** In progress; `/api/events` emits ordered workspace job-outbox events, resumes from `Last-Event-ID`, and stops when the token expires or the client disconnects. Other event families and integration verification remain; **Independently Verified:** No.
-2. **SC-0407-02 - Fan-out.** **Acceptance:** An event raised on one instance reaches clients on every instance. **Required verification:** Multi-instance test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0407-03 - Fallback.** **Acceptance:** With the stream blocked, polling keeps pages correct. **Required verification:** Playwright test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0407-01 - Event stream.** **Acceptance:** Events arrive in order with ids; reconnect resumes without gaps. **Required verification:** Integration test. **Implementation:** Implemented; the stream sends each workspace's outbox events in commit order with their ids and resumes after `Last-Event-ID`; events carry a commit-order number stamped at commit (migration `7c1e9a4b2f30`), which fixed a real gap where a transaction holding a lower id committed after a reader had passed a higher one. **Evidence:** `tests/test_cloud_outbox_order.py` (in order with ids, resume without gaps, the late-commit case, 200 racing writers with a reader alongside), passing on SQLite and PostgreSQL. **Independently Verified:** No.
+2. **SC-0407-02 - Fan-out.** **Acceptance:** An event raised on one instance reaches clients on every instance. **Required verification:** Multi-instance test. **Implementation:** Implemented; outbox writes `pg_notify` on commit and every API instance listens, so an event committed on one instance reaches streams on every other at once, and never another workspace's. **Evidence:** `tests/test_cloud_fanout.py` (instance A to a stream on instance B in under a second; B never hears another workspace), passing on PostgreSQL. **Independently Verified:** No.
+3. **SC-0407-03 - Fallback.** **Acceptance:** With the stream blocked, polling keeps pages correct. **Required verification:** Playwright test. **Implementation:** Implemented; with the event stream blocked the Cloud site falls back to polling and stays correct. **Evidence:** `web/e2e-cloud/live.cloud.ts` 'with the event stream blocked, the page falls back to polling and stays correct', passing in `pnpm e2e:cloud`. **Independently Verified:** No.
 4. **SC-0407-04 - Load.** **Acceptance:** SSE connection counts meet the L3 targets. **Required verification:** k6 test. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
