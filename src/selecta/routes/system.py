@@ -117,7 +117,9 @@ def add_routes(app, ctx) -> None:
                     if target_song
                     else None
                 )
-                mark("Assembling status snapshot, seam memory and estimates")
+                mark("Reading the cached transition count without filesystem scans")
+                transitions_ready, transitions_indexing = store.remembered_count()
+                mark("Assembling queue, background jobs and estimates")
                 result = {
                     "counts": counts,
                     "steering": steering,
@@ -129,7 +131,8 @@ def add_routes(app, ctx) -> None:
                     "analysing": songs_in_line(conn),
                     "mix_rendering": jobs.mix_is_rendering(settings.home),
                     "mixes_in_line": len(mix.line_order(conn)),
-                    "transitions_ready": len(store.remembered().clean),
+                    "transitions_ready": transitions_ready,
+                    "transitions_indexing": transitions_indexing,
                     "api": {"version": API_VERSION, "features": API_FEATURES},
                     "flags": flags.snapshot(),
                     "eta": {
