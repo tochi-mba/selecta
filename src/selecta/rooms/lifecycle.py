@@ -73,7 +73,8 @@ _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 
 def clean_room_name(name: str | None) -> str:
-    text = _SPACES.sub(" ", _CONTROL.sub("", name or "")).strip()
+    # Whitespace first, so a tab or newline between words becomes a space, not nothing.
+    text = _CONTROL.sub("", _SPACES.sub(" ", name or "")).strip()
     if not text or len(text) > ROOM_NAME_MAX:
         raise RoomError(Refusal.INVALID_NAME)
     return text
