@@ -186,6 +186,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `account.identity` | **Account and sessions.** Read account settings and end sign-in sessions. **Core:** People must be able to view their account and sign out. |  |
+| `account.identity_sync` | **Account sync with WorkOS.** Accept signed WorkOS events that keep emails, revoked sessions and deleted accounts in step. **Core:** Revoked sessions, password resets and deleted users must reach Selecta at once. |  |
 | `account.labs` | **Labs.** Opt into preview features that your plan is allowed to use. |  |
 | `account.deletion` | **Account deletion.** Request account removal and revoke active sessions. **Core:** People must always be able to request deletion of their account. |  |
 | `account.data_export` | **Account data export.** Download a portable copy of available account data and original files. **Core:** People must be able to take a copy of their personal data. |  |

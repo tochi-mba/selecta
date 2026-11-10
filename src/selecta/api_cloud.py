@@ -3,6 +3,10 @@
 The local application remains in ``api.py``. This factory deliberately has no local library,
 render worker, song watcher, or filesystem mount. Cloud credentials and database access are
 configured explicitly; migrations run as a release command rather than at web-process startup.
+
+Identity (onboarding, signing out, deletion, WorkOS webhooks and admin entry) lives in
+``selecta.identity.routes``; the WorkOS API key and webhook secret are kept out of ``repr`` so
+they can't reach a log line through the settings object.
 """
 
 from __future__ import annotations
@@ -12,7 +16,7 @@ import json
 import os
 import time
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 from urllib.parse import urlsplit
 
@@ -20,12 +24,11 @@ import sqlalchemy as sa
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from selecta import flags
-from selecta.authz.errors import LastOwner
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
 from selecta.flags import guard as flag_guard
@@ -33,13 +36,15 @@ from selecta.flags import rules as flag_rules
 from selecta.flags import targeting
 from selecta.flags.matching import Context
 from selecta.flags.rules import RulesCache
-from selecta.identity import accounts
+from selecta.identity import routes as identity_routes
 from selecta.identity.tokens import (
     Claims,
     JwksUnavailable,
     TokenError,
+    TokenExpired,
     authkit_verifier,
 )
+from selecta.identity.workos import WorkOSClient
 from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
@@ -69,6 +74,12 @@ class CloudSettings:
     allowed_hosts: tuple[str, ...]
     allowed_origins: tuple[str, ...]
     workos_api_base: str = "https://api.workos.com"
+    workos_api_key: str = field(default="", repr=False)
+    workos_webhook_secret: str = field(default="", repr=False)
+    staff_organization_id: str = ""
+    # True for settings read from the environment: identity work that needs WorkOS then answers
+    # 503 when WorkOS isn't configured, instead of trusting token claims (see identity.routes).
+    require_workos: bool = False
 
     @classmethod
     def from_environment(cls) -> CloudSettings:
@@ -106,6 +117,10 @@ class CloudSettings:
             allowed_hosts=hosts,
             allowed_origins=origins,
             workos_api_base=os.environ.get("SELECTA_WORKOS_API_BASE", "https://api.workos.com"),
+            workos_api_key=os.environ.get("SELECTA_WORKOS_API_KEY", "").strip(),
+            workos_webhook_secret=os.environ.get("SELECTA_WORKOS_WEBHOOK_SECRET", "").strip(),
+            staff_organization_id=os.environ.get("SELECTA_STAFF_ORGANIZATION_ID", "").strip(),
+            require_workos=True,
         )
 
     def verifier(self) -> Verifier:
@@ -116,12 +131,14 @@ class CloudSettings:
             api_base=self.workos_api_base,
         )
 
+    def workos_client(self) -> WorkOSClient | None:
+        """The WorkOS User Management client, or None when no API key is configured."""
+        if not self.workos_api_key:
+            return None
+        return WorkOSClient(self.workos_api_key, api_base=self.workos_api_base)
 
-class OnboardingRequest(BaseModel):
-    age_confirmed: bool = Field(
-        description="The signed-in person confirms they meet the minimum account age."
-    )
-    timezone: str = "UTC"
+
+OnboardingRequest = identity_routes.OnboardingRequest
 
 
 class LabPreference(BaseModel):
@@ -157,6 +174,12 @@ def _bearer(request: Request, verifier: Verifier) -> Claims:
         )
     try:
         return verifier.verify(token.strip())
+    except TokenExpired as error:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "token_expired", "message": "Sign in again to continue."},
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from error
     except JwksUnavailable as error:
         raise HTTPException(
             status_code=503,
@@ -173,22 +196,8 @@ def _bearer(request: Request, verifier: Verifier) -> Claims:
         ) from error
 
 
-def _principal(engine: Engine, claims: Claims, workspace_id: str | None = None):
-    with transaction(engine) as conn:
-        try:
-            principal = accounts.resolve_principal(conn, claims, workspace_id)
-        except accounts.SessionRevoked as error:
-            raise HTTPException(status_code=401, detail={"code": "session_revoked"}) from error
-        except accounts.NotProvisioned as error:
-            raise HTTPException(
-                status_code=409,
-                detail={"code": "onboarding_required", "message": "Finish account setup first."},
-            ) from error
-        except accounts.AccountDeleted as error:
-            raise HTTPException(status_code=403, detail={"code": "account_deleted"}) from error
-        except accounts.NotAMember as error:
-            raise HTTPException(status_code=404, detail={"code": "workspace_not_found"}) from error
-        return principal
+# The per-request account check (§7A.3), shared with every package's routes as `principal_for`.
+_principal = identity_routes.principal_or_refusal
 
 
 def create_cloud_app(
@@ -196,17 +205,26 @@ def create_cloud_app(
     *,
     engine: Engine | None = None,
     verifier: Verifier | None = None,
+    workos: WorkOSClient | None = None,
 ) -> FastAPI:
-    """Create the cloud API without starting any local-mode threads or touching local music."""
+    """Create the cloud API without starting any local-mode threads or touching local music.
+
+    `workos` is the WorkOS User Management client; tests pass one over `httpx.MockTransport`.
+    Without one, a client is built from the settings' API key when there is one.
+    """
     settings = settings or CloudSettings.from_environment()
     plans.validate_catalogue()
     owns_engine = engine is None
     engine = engine or make_engine(settings.database_url)
     verifier = verifier or settings.verifier()
+    owns_workos = workos is None
+    workos = workos or settings.workos_client()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         yield
+        if owns_workos and workos is not None:
+            workos.close()
         if owns_engine:
             engine.dispose()
 
@@ -214,6 +232,7 @@ def create_cloud_app(
     app.state.runtime_mode = "cloud"
     app.state.database_engine = engine
     app.state.token_verifier = verifier
+    app.state.workos = workos
     rule_cache = RulesCache(engine, max_age=5.0)
     app.state.flag_rules = rule_cache
     flags.effective()
@@ -336,38 +355,6 @@ def create_cloud_app(
                 "X-Accel-Buffering": "no",
             },
         )
-
-    @app.post("/api/onboarding/complete", status_code=201)
-    def complete_onboarding(body: OnboardingRequest, claims: Claims = Depends(current_claims)):
-        if not claims.email or claims.email_verified is not True:
-            raise HTTPException(
-                status_code=403,
-                detail={"code": "verified_email_required", "message": "Verify your email first."},
-            )
-        if body.age_confirmed is not True:
-            raise HTTPException(
-                status_code=400,
-                detail={"code": "age_confirmation_required", "minimum_age": 13},
-            )
-        with transaction(engine) as conn:
-            try:
-                provisioned = accounts.provision(
-                    conn, claims, age_confirmed=True, timezone=body.timezone
-                )
-                free = plans.plan_for(plans.DEFAULT_PLAN)
-                quota.set_limit(conn, provisioned.workspace.id, free)
-            except accounts.AgeConfirmationRequired as error:
-                raise HTTPException(
-                    status_code=400, detail={"code": "age_confirmation_required"}
-                ) from error
-            except ValueError as error:
-                raise HTTPException(status_code=400, detail={"code": "invalid_timezone"}) from error
-        return {
-            "user_id": provisioned.user.id,
-            "workspace_id": provisioned.workspace.id,
-            "plan": "free",
-            "created": provisioned.created,
-        }
 
     @app.get("/api/account")
     def get_account(
@@ -504,37 +491,15 @@ def create_cloud_app(
                 ) from error
         return {"id": flag_id, "enabled": body.enabled}
 
-    @app.post("/api/account/sign-out-everywhere")
-    def sign_out_everywhere(claims: Claims = Depends(current_claims)):
-        principal = _principal(engine, claims)
-        with transaction(engine) as conn:
-            revoked_before = accounts.revoke_sessions(
-                conn, principal.user.id, actor_id=principal.user.id
-            )
-        return {"revoked_before": revoked_before, "message": "Other sessions will expire shortly."}
-
-    @app.delete("/api/account", status_code=202)
-    def delete_account(claims: Claims = Depends(current_claims)):
-        """Hide the account and enqueue its durable deletion workflow."""
-        principal = _principal(engine, claims)
-        try:
-            with transaction(engine) as conn:
-                plan = accounts.start_account_deletion(
-                    conn,
-                    principal.user.id,
-                    requested_by=principal.user.id,
-                    reason="account holder requested deletion",
-                )
-        except LastOwner as error:
-            raise HTTPException(
-                status_code=409, detail={"code": "last_owner", "message": str(error)}
-            ) from error
-        return {
-            "status": "deletion_queued",
-            "erase_after": plan.erase_after,
-            "backups_clear_by": plan.backups_clear_by,
-        }
-
+    identity_routes.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        workos=workos,
+        webhook_secret=settings.workos_webhook_secret,
+        staff_organization_id=settings.staff_organization_id,
+        require_workos=settings.require_workos,
+    )
     billing_api.install_routes(
         app,
         engine=engine,

@@ -41,12 +41,15 @@ PUBLIC = {
     ("GET", "/api/status"),
     ("GET", "/api/ready"),
     ("POST", "/api/webhooks/stripe"),
+    ("POST", "/api/webhooks/workos"),
 }
 # Routes that act only on the signed-in person, whatever workspace a request names.
 SELF_ONLY = {
     ("POST", "/api/onboarding/complete"),
     ("POST", "/api/account/sign-out-everywhere"),
     ("DELETE", "/api/account"),
+    # Staff only: starts the caller's own admin session and never reads a customer workspace.
+    ("POST", "/api/admin/session"),
 }
 # Every route that can reach a workspace's data, with a body valid enough to get past
 # validation, so the refusal we see comes from the workspace check and not from a 422.

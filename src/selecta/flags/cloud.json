@@ -9,6 +9,14 @@
       "modes": ["cloud"],
       "owner": "identity"
     },
+    "account.identity_sync": {
+      "label": "Account sync with WorkOS",
+      "about": "Accept signed WorkOS events that keep emails, revoked sessions and deleted accounts in step.",
+      "core": "Revoked sessions, password resets and deleted users must reach Selecta at once.",
+      "routes": ["POST /api/webhooks/workos"],
+      "modes": ["cloud"],
+      "owner": "identity"
+    },
     "account.labs": {
       "label": "Labs",
       "about": "Opt into preview features that your plan is allowed to use.",
@@ -150,6 +158,7 @@
     "admin.console": {
       "label": "Staff console",
       "about": "Show internal tools to authenticated staff with the required permission.",
+      "routes": ["POST /api/admin/session"],
       "modes": ["cloud"],
       "kind": "ops",
       "owner": "platform"
