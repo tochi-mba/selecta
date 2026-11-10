@@ -1,7 +1,7 @@
 # ADR-0393 - PostgreSQL system of record, Alembic migrations and workspace tenancy
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/5 Implemented; 1/5 In progress; 4/5 Not started.
+- **Implementation:** 1/5 Implemented; 1/5 In progress; 3/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 1. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -33,13 +33,13 @@ Local libraries upgrade in place with an automatic backup first; cloud data is i
 - An ORM with models everywhere (large rewrite, little gain).
 - Keeping SQLite in cloud (no concurrent writers across instances).
 
-## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
+## Implementation checklist - 1/5 Implemented; 0/5 independently Verified
 
 1. **SC-0393-01 - Alembic baseline.** **Acceptance:** Baseline migration reproduces today's schema on SQLite and Postgres. **Required verification:** Migration up/down test on both. **Implementation:** In progress; 50 SaaS tables are declared in four revisions and SQLite upgrade/compare/rollback coverage exists; PostgreSQL remains unverified. **Independently Verified:** No.
 2. **SC-0393-02 - workspace_id everywhere.** **Acceptance:** All tenant tables carry `workspace_id`; queries go through repositories that require it. **Required verification:** Static check plus cross-tenant suite. **Implementation:** Not started; **Independently Verified:** No.
 3. **SC-0393-03 - RLS policies.** **Acceptance:** Postgres policies deny rows from other workspaces even if a query forgets the filter. **Required verification:** Integration test with a deliberately unscoped query. **Implementation:** Not started; **Independently Verified:** No.
 4. **SC-0393-04 - Local upgrade with backup.** **Acceptance:** First start after upgrade backs up the SQLite file, then migrates. **Required verification:** Upgrade test from a copy of a real local database. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0393-05 - Lazy tables removed.** **Acceptance:** No module creates tables at runtime. **Required verification:** Grep check in CI. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0393-05 - Lazy tables removed.** **Acceptance:** No module creates tables at runtime. **Required verification:** Grep check in CI. **Implementation:** Implemented. **Evidence:** `tests/test_cloud_no_lazy_tables.py`; focused run: 7 passed. **Independently Verified:** No.
 
 ## Governance
 

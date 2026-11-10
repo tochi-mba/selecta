@@ -4,6 +4,19 @@
 
 **Status:** Accepted by the owner on 2026-11-09. Decisions are recorded as ADR-0391 to ADR-0416 (all Accepted); progress is tracked in the [implementation checklist](../adr/selecta-cloud-implementation-checklist.md). Local mode keeps every guarantee it has today.
 
+## Guarantees by runtime mode
+
+| Concern | Local mode | Cloud mode |
+|---|---|---|
+| Music and storage | Music stays on this PC; Selecta never uploads it. | Music is private to the account and workspace in tenant-isolated object storage. |
+| Network boundary | The app serves only the local loopback origin and needs no account. | Authenticated public APIs use explicit browser origins, short-lived access, and private signed object URLs. |
+| Processing | Analysis, rendering, lyrics, and Lucy use only the local adapters the user enables. | Remote work is fenced, metered, plan-bounded, and processed only by allowlisted workers and models. |
+| Product control | Existing local flags, privacy copy, folders, backups, and offline behavior remain unchanged. | Plan entitlements, server-side flags, deletion/retention, billing, and audit controls apply. |
+| User trust | No telemetry or cloud account is required; local files remain under the user's control. | Tenant isolation, honest status, export/deletion rights, bounded spending, and audited staff access are required. |
+
+The local contract remains owned by ADR-0025, ADR-0072, and ADR-0390. Cloud-specific guarantees
+are additive and are tracked by ADR-0391–0416; they do not relax the local contract.
+
 ---
 
 ## 0. Context

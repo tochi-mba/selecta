@@ -7,6 +7,10 @@ An auto DJ for your own music folder. Point it at a folder and it plays a set in
 
 It runs entirely on your PC. Your music never leaves your machine, and no audio is ever stored in this repo.
 
+This README describes **local mode**. The optional Selecta Cloud edition has a separate
+[mode-by-mode guarantee table](docs/saas/README.md#guarantees-by-runtime-mode); adding Cloud does
+not weaken local mode's privacy, storage, network, or user-control guarantees.
+
 **Status: early build.** You can build a mix, edit how every song hands over to the next, hear each seam, play the set and save it as a file. Whether it sounds good is still being judged by ear, reel by reel. See [docs/acceptance.md](docs/acceptance.md) for exactly what works and what doesn't.
 
 ## What makes it different

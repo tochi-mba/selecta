@@ -1,6 +1,6 @@
 # Selecta Cloud implementation checklist (ADR-0391 to ADR-0416)
 
-**Status:** 136 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 2 Implemented, 25 In progress, 109 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 136 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 7 Implemented, 25 In progress, 104 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 
@@ -9,8 +9,8 @@
 
 ## [ADR-0391 - Selecta Cloud becomes a goal; local-only guarantees are scoped to local mode](adr-0391-selecta-cloud-goal-and-local-guarantees.md)
 
-- [ ] **SC-0391-01 - Programme entry.** Acceptance: `docs/adr/README.md` lists the Selecta Cloud programme and states local guarantees are unchanged. Required verification: Doc review. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0391-02 - Guarantee list per mode.** Acceptance: A table of local-mode and cloud-mode guarantees exists and is linked from both READMEs. Required verification: Doc review. Implementation: Not started; Independently verified: No.
+- [x] **SC-0391-01 - Programme entry.** Acceptance: `docs/adr/README.md` lists the Selecta Cloud programme and states local guarantees are unchanged. Required verification: Doc review. Implementation: Implemented. Evidence: `docs/adr/README.md`; `docs/saas/README.md`. Independently verified: No.
+- [x] **SC-0391-02 - Guarantee list per mode.** Acceptance: A table of local-mode and cloud-mode guarantees exists and is linked from both READMEs. Required verification: Doc review. Implementation: Implemented. Evidence: `README.md`; `docs/adr/README.md`; `docs/saas/README.md#guarantees-by-runtime-mode`. Independently verified: No.
 - [ ] **SC-0391-03 - Local copy unchanged.** Acceptance: Local-mode user-facing text about privacy is unchanged by cloud work. Required verification: Playwright local-mode suite passes unchanged. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0391-04 - Mode-aware privacy test.** Acceptance: `web/e2e/pages.e2e.ts` keeps 'only talks to this computer' in local mode and checks an origin allowlist in cloud mode. Required verification: Both e2e modes in CI. Implementation: Not started; Independently verified: No.
 
@@ -28,7 +28,7 @@
 - [ ] **SC-0393-02 - workspace_id everywhere.** Acceptance: All tenant tables carry `workspace_id`; queries go through repositories that require it. Required verification: Static check plus cross-tenant suite. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0393-03 - RLS policies.** Acceptance: Postgres policies deny rows from other workspaces even if a query forgets the filter. Required verification: Integration test with a deliberately unscoped query. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0393-04 - Local upgrade with backup.** Acceptance: First start after upgrade backs up the SQLite file, then migrates. Required verification: Upgrade test from a copy of a real local database. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0393-05 - Lazy tables removed.** Acceptance: No module creates tables at runtime. Required verification: Grep check in CI. Implementation: Not started; Independently verified: No.
+- [x] **SC-0393-05 - Lazy tables removed.** Acceptance: No module creates tables at runtime. Required verification: Grep check in CI. Implementation: Implemented. Evidence: `tests/test_cloud_no_lazy_tables.py`; focused run: 7 passed. Independently verified: No.
 
 ## [ADR-0394 - Durable jobs with leases and fencing](adr-0394-durable-jobs-leases-and-fencing.md)
 
@@ -60,7 +60,7 @@
 
 ## [ADR-0397 - Object storage layout and artifact provenance on R2](adr-0397-object-storage-layout.md)
 
-- [ ] **SC-0397-01 - ArtifactStore interface.** Acceptance: Local and R2 implementations behind one interface used by workers. Required verification: Unit and integration tests. Implementation: Not started; Independently verified: No.
+- [x] **SC-0397-01 - ArtifactStore interface.** Acceptance: Local and R2 implementations behind one interface used by workers. Required verification: Unit and integration tests. Implementation: Implemented. Evidence: `src/selecta/storage/artifacts.py`; `src/selecta/workers/context.py`; `tests/test_cloud_worker_artifacts.py` (local and R2 unit tests plus real runner integration). Independently verified: No.
 - [ ] **SC-0397-02 - Content-addressed keys.** Acceptance: Seam and stem keys derive from content hashes scoped to the workspace. Required verification: Unit tests. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0397-03 - Provenance.** Acceptance: Every artifact row records inputs, versions and checksum. Required verification: Schema test. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0397-04 - Eviction with protection.** Acceptance: Budgets evict least-recent unprotected artifacts only. Required verification: Integration test. Implementation: Not started; Independently verified: No.
@@ -130,7 +130,7 @@
 
 - [ ] **SC-0405-01 - Register complete.** Acceptance: Every model and dependency in the worker images has a row. Required verification: Doc review against image contents. Implementation: Not started; Independently verified: No.
 - [ ] **SC-0405-02 - S-KEY replacement.** Acceptance: Chosen replacement meets the agreed accuracy threshold against S-KEY. Required verification: Benchmark report plus listening check. Implementation: Not started; Independently verified: No.
-- [ ] **SC-0405-03 - Model allowlist.** Acceptance: Cloud mode refuses to load an unlisted model. Required verification: Unit test. Implementation: Not started; Independently verified: No.
+- [x] **SC-0405-03 - Model allowlist.** Acceptance: Cloud mode refuses to load an unlisted model. Required verification: Unit test. Implementation: Implemented. Evidence: `src/selecta/modes/models.py`; `src/selecta/modes/model_allowlist.json`; `tests/test_cloud_model_allowlist.py`. Independently verified: No.
 - [ ] **SC-0405-04 - Legal review.** Acceptance: Rows marked Review are resolved by a lawyer before paid launch. Required verification: Written advice on file. Implementation: Not started; Independently verified: No.
 
 ## [ADR-0406 - Lyrics in cloud mode](adr-0406-lyrics-in-cloud-mode.md)
