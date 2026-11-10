@@ -139,7 +139,7 @@ __all__ = [
 
 IDLE_CHECK_SECONDS = 3.0
 
-MEMORY_SECONDS = 60.0
+MEMORY_SECONDS = 300.0
 STATUS_MEMORY_SECONDS = 300.0
 # Status polls never enumerate transition files; background refreshes are infrequent.
 
@@ -217,6 +217,7 @@ class SeamStore:
         self._memory_refresh: threading.Thread | None = None
         self._memory_refresh_started = float("-inf")
         self._memory_revision = 0
+        self._history_stamp: int | None = None
         self._records: dict[Path, tuple[tuple[int, int], dict]] = {}
         self._asked_by_requests: set[str] = set()
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
@@ -481,6 +482,13 @@ class SeamStore:
             self._requested = deque(item for item in self._requested if item[0].key not in gone)
             self._request_keys -= gone
 
+    def _current_history_stamp(self) -> int:
+        """An O(1) hint for updates from the separately running render worker."""
+        try:
+            return (self.settings.home / "seam-history").stat().st_mtime_ns
+        except OSError:
+            return 0
+
     def remembered_count(self) -> tuple[int, bool]:
         """Non-blocking status count; refresh transition history on one background thread.
 
@@ -490,7 +498,12 @@ class SeamStore:
         """
         now = time.monotonic()
         snapshot = self._remembered
-        if snapshot is None or now - snapshot[0] >= STATUS_MEMORY_SECONDS:
+        pending = (
+            snapshot is None
+            or now - snapshot[0] >= STATUS_MEMORY_SECONDS
+            or self._history_stamp != self._current_history_stamp()
+        )
+        if pending:
             with self._memory_refresh_lock:
                 thread = self._memory_refresh
                 if (
@@ -503,7 +516,6 @@ class SeamStore:
                     )
                     self._memory_refresh = thread
                     thread.start()
-        pending = snapshot is None or now - snapshot[0] >= STATUS_MEMORY_SECONDS
         return (len(snapshot[1].clean) if snapshot else 0, pending)
 
     def _refresh_memory(self) -> None:
@@ -520,14 +532,21 @@ class SeamStore:
         """Load complete seam history only when needed; serialize expensive scans."""
         snapshot = self._remembered
         now = time.monotonic()
-        if not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS:
+        if (
+            not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS
+            and self._history_stamp == self._current_history_stamp()
+        ):
             return snapshot[1]
         with self._memory_scan_lock:
             snapshot = self._remembered
             now = time.monotonic()
-            if not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS:
+            if (
+                not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS
+                and self._history_stamp == self._current_history_stamp()
+            ):
                 return snapshot[1]
             revision = self._memory_revision
+            history_before = self._current_history_stamp()
             scan_started = time.monotonic()
             last_report = scan_started
             dev = os.environ.get("SELECTA_DEV_STARTUP") == "1"
@@ -558,7 +577,13 @@ class SeamStore:
             self._records = records
             # Writes that arrived during the scan force another refresh, rather
             # than treating a potentially stale snapshot as recently valid.
-            stamp = time.monotonic() if revision == self._memory_revision else 0.0
+            history_after = self._current_history_stamp()
+            stamp = (
+                time.monotonic()
+                if revision == self._memory_revision and history_before == history_after
+                else 0.0
+            )
+            self._history_stamp = history_after
             self._remembered = (stamp, memory)
             if dev:
                 elapsed = time.monotonic() - scan_started
