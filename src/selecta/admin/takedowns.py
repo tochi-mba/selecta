@@ -125,7 +125,12 @@ def log_notice(conn: Connection, actor: Actor, *, workspace_id: str, asset_id: s
 
 
 def _pending(conn: Connection, actor: Actor, notice_id: str) -> Notice:
-    notice = _get(conn, notice_id)
+    try:
+        notice = _get(conn, notice_id)
+    except LookupError:
+        # Only staff who handle notices learn that this one doesn't exist.
+        authorize(conn, actor, "legal.takedowns.manage", ResourceRef("takedown_notice", notice_id))
+        raise
     authorize(conn, actor, "legal.takedowns.manage", _resource(notice.workspace_id, notice.id))
     if notice.status != "received":
         raise ValueError(f"The notice was already {notice.status}.")

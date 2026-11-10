@@ -82,10 +82,18 @@ def _job_resource(job: Job) -> ResourceRef:
     return ResourceRef("job", job.id, job.workspace_id)
 
 
-def _job(conn: Connection, job_id: str) -> Job:
+def _job(conn: Connection, actor: Actor, job_id: str, permission: str) -> Job:
+    """The job, authorized for `permission` on its workspace.
+
+    A missing job is authorized against the bare id first, so only staff who could act on any
+    workspace learn that it doesn't exist; everyone else gets the refusal they'd get for a real
+    job they can't touch.
+    """
     job = read_job(conn, job_id)
     if job is None:
+        authorize(conn, actor, permission, ResourceRef("job", job_id))
         raise UnknownJob(job_id)
+    authorize(conn, actor, permission, _job_resource(job))
     return job
 
 
@@ -97,8 +105,7 @@ def _lanes(conn: Connection) -> None:
 def retry_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) -> Job:
     reason = _need_reason(reason)
     _lanes(conn)
-    job = _job(conn, job_id)
-    authorize(conn, actor, "jobs.retry", _job_resource(job))
+    job = _job(conn, actor, job_id, "jobs.retry")
     again = retrying.retry(conn, job.workspace_id, job.id, db_now(conn))
     _audit(conn, actor, "admin.job.retry", _job_resource(job), reason, new_job_id=again.id,
            state_before=job.state)
@@ -108,8 +115,7 @@ def retry_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) -> Jo
 def cancel_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) -> Job:
     reason = _need_reason(reason)
     _lanes(conn)
-    job = _job(conn, job_id)
-    authorize(conn, actor, "jobs.cancel", _job_resource(job))
+    job = _job(conn, actor, job_id, "jobs.cancel")
     after = lifecycle.cancel(conn, job.workspace_id, job.id, db_now(conn))
     _audit(conn, actor, "admin.job.cancel", _job_resource(job), reason,
            state_before=job.state, state_after=after.state)
@@ -120,8 +126,7 @@ def quarantine_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) 
     """Hold a job out of line for inspection (`work.holds.hold_for_staff`)."""
     reason = _need_reason(reason)
     _lanes(conn)
-    job = _job(conn, job_id)
-    authorize(conn, actor, "jobs.cancel", _job_resource(job))
+    job = _job(conn, actor, job_id, "jobs.cancel")
     after = holds.hold_for_staff(conn, job.id, db_now(conn))
     _audit(conn, actor, "admin.job.quarantine", _job_resource(job), reason,
            state_before=job.state, state_after=after.state,
@@ -133,8 +138,7 @@ def release_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) -> 
     """Put a quarantined job back (`work.holds.release_staff_hold`)."""
     reason = _need_reason(reason)
     _lanes(conn)
-    job = _job(conn, job_id)
-    authorize(conn, actor, "jobs.retry", _job_resource(job))
+    job = _job(conn, actor, job_id, "jobs.retry")
     after = holds.release_staff_hold(conn, job.id, db_now(conn))
     _audit(conn, actor, "admin.job.release", _job_resource(job), reason,
            state_before=job.state, state_after=after.state)
@@ -239,6 +243,8 @@ def revoke_override(conn: Connection, actor: Actor, override_id: str, *, reason:
 
     workspace_id = conn.execute(sa.select(t.c.workspace_id).where(t.c.id == override_id)).scalar()
     if workspace_id is None:
+        authorize(conn, actor, "billing.overrides.create", ResourceRef("entitlement_override",
+                                                                       override_id))
         raise LookupError(f"There's no override {override_id!r}.")
     resource = ResourceRef("workspace", workspace_id, workspace_id)
     authorize(conn, actor, "billing.overrides.create", resource)
@@ -260,6 +266,9 @@ def propose_mass_override(
     unique = sorted(set(workspace_ids))
     if len(unique) < 2:
         raise ValueError("A mass override names at least two workspaces.")
+    # Checked before the workspaces are looked up, so they reveal nothing to anyone else.
+    authorize(conn, actor, delayed.RULES[delayed.ActionKind.MASS_ENTITLEMENT_OVERRIDE].propose,
+              ResourceRef("entitlement_overrides", None))
     for workspace_id in unique:
         _check_override(conn, workspace_id, plan_id, expires_at)
     return delayed.propose(
@@ -290,31 +299,36 @@ def execute_mass_override(conn: Connection, action: delayed.DangerousAction) -> 
 # --- accounts ----------------------------------------------------------------------------------
 
 
-def _account_resource(conn: Connection, user_id: str) -> ResourceRef:
+def _account_resource(
+    conn: Connection, actor: Actor, user_id: str, permission: str
+) -> ResourceRef:
+    """The account as a resource, authorized for `permission`; a missing one is authorized
+    against the bare id first, so only staff who may act on any account learn it's missing."""
     user = accounts.get_user(conn, user_id)
     if user is None:
+        authorize(conn, actor, permission, ResourceRef("user", user_id))
         raise LookupError(f"There's no account {user_id!r}.")
     workspace_id = conn.execute(
         sa.select(workspaces.c.id).where(
             workspaces.c.owner_user_id == user_id, workspaces.c.kind == "personal"
         )
     ).scalar()
-    return ResourceRef("user", user_id, workspace_id)
+    resource = ResourceRef("user", user_id, workspace_id)
+    authorize(conn, actor, permission, resource)
+    return resource
 
 
 def suspend_account(conn: Connection, actor: Actor, user_id: str, *, reason: str) -> dict:
     reason = _need_reason(reason)
     if user_id == actor.user_id:
         raise ValueError("Staff can't suspend their own account.")
-    resource = _account_resource(conn, user_id)
-    authorize(conn, actor, "accounts.suspend", resource)
+    _account_resource(conn, actor, user_id, "accounts.suspend")
     suspended_at = accounts.suspend(conn, user_id, actor_id=actor.user_id, reason=reason)
     return {"user_id": user_id, "suspended_at": suspended_at}
 
 
 def restore_account(conn: Connection, actor: Actor, user_id: str, *, reason: str) -> dict:
     reason = _need_reason(reason)
-    resource = _account_resource(conn, user_id)
-    authorize(conn, actor, "accounts.restore", resource)
+    _account_resource(conn, actor, user_id, "accounts.restore")
     accounts.lift_suspension(conn, user_id, actor_id=actor.user_id, reason=reason)
     return {"user_id": user_id, "suspended_at": None}

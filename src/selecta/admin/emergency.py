@@ -148,6 +148,9 @@ def propose_release(
 ) -> delayed.DangerousAction:
     """Queue turning a control off. It runs through `authz.delayed` (see the module notes)."""
     kind, target = checked(conn, control, target)
+    # Checked before the control's state, so only staff who may manage controls learn it here.
+    authorize(conn, actor, delayed.RULES[delayed.ActionKind.EMERGENCY_CONTROL_DISABLE].propose,
+              resource(kind, target))
     current = _row(conn, kind.value, target)
     if current is None or not current.engaged:
         raise ValueError(f"{kind.value} ({target}) isn't engaged.")

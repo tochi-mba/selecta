@@ -43,8 +43,8 @@ Step-by-step recipes for the changes people make most. Each ends with the checks
 1. Add the permission to `authz/permissions.py` with a description and danger level. Dangerous permissions need fresh MFA and are audited.
 2. Give it to roles in `authz/roles.py`. The registry validates itself at import, so a typo fails at once.
 3. If the action is dangerous enough to wait or need a second person, add an `ActionKind` and `ActionRule` in `authz/delayed.py`.
-4. In the route, call `authorize(conn, actor, "<permission>", resource)` before doing anything.
-5. **Check:** the authz tests, and the role tables in [§7.3](../saas/07-identity-rbac-admin.md#73-staff-rbac) and [§11B.9](../saas/11b-feature-flags.md) still match the code (update the docs in the same PR).
+4. In the route, call `authorize(conn, actor, "<permission>", resource)` before doing anything. When the resource needs looking up first (its workspace decides the scope), authorize against the bare id before answering "not found", so only staff who could act on it anywhere learn whether it exists. A new `/{command}` route goes in `COMMANDS` in `tests/test_cloud_admin_routes.py`.
+5. **Check:** the authz tests (`test_every_admin_route_and_command_checks_a_registered_permission_first` calls every admin route as staff holding no role), and the role tables in [§7.3](../saas/07-identity-rbac-admin.md#73-staff-rbac) and [§11B.9](../saas/11b-feature-flags.md) still match the code (update the docs in the same PR).
 
 ## Add a plan entitlement
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 
@@ -57,6 +58,7 @@ class AdminWorld:
     workspace_id: str
     customer_workspace_id: str
     store: JobStore
+    tokens: Tokens
 
 
 def _staff(conn, claims: Claims, role: str) -> tuple[str, str]:
@@ -105,6 +107,7 @@ def admin_world(cloud_engine):
             workspace_id=workspace_id,
             customer_workspace_id=customer.workspace.id,
             store=store,
+            tokens=tokens,
         )
 
 
@@ -231,3 +234,69 @@ def test_a_role_without_command_permission_is_denied_and_audited(admin_world):
             )
         ).all()
     assert denied == [("workers.drain", "deny")]
+
+
+# Every command each `/{command}` route accepts; a route missing here fails the test below.
+COMMANDS = {
+    "/api/admin/jobs/{job_id}/{command}": ("retry", "cancel", "quarantine", "release"),
+    "/api/admin/workers/{worker_id}/{command}": ("drain", "pause", "resume"),
+    "/api/admin/accounts/{user_id}/{command}": ("suspend", "restore"),
+    "/api/admin/actions/{action_id}/{command}": ("approve", "cancel"),
+    "/api/admin/emergency/{control}/{command}": ("engage", "release"),
+    "/api/admin/takedowns/{notice_id}/{command}": ("act", "reject"),
+}
+# One body that satisfies every admin request model, so validation never answers first.
+EVERY_FIELD = {
+    "reason": "permission sweep", "workspace_id": "w-none", "workspace_ids": ["w-1", "w-2"],
+    "plan_id": "standard", "expires_at": time.time() + 3600, "user_id": "u-none",
+    "role": "support", "version": 1, "on": True, "action": "kill_switch", "params": {},
+    "asset_id": "a-none", "complainant": "A label", "work": "A song", "payload_hash": "0" * 64,
+}
+# Routes any signed-in staff member may call: starting the admin session and reading who you are.
+SELF_ONLY = {"POST /api/admin/session", "GET /api/admin/me"}
+# The audit log refuses every change, to everyone, before any check.
+APPEND_ONLY = {"PATCH /api/admin/audit/{event_id}", "DELETE /api/admin/audit/{event_id}"}
+
+
+def _staff_without_roles(admin_world) -> dict[str, str]:
+    claims = admin_world.tokens.add("roleless", "staff-roleless", session_id="roleless-session")
+    with transaction(admin_world.engine) as conn:
+        accounts.provision(conn, claims, age_confirmed=True)
+        session = privileged.start(conn, claims, staff_organization_id="staff-org", lifetime=3600)
+    return {"Authorization": "Bearer roleless", "X-Admin-Session": session.id}
+
+
+def test_every_admin_route_and_command_checks_a_registered_permission_first(admin_world):
+    """SC-0401-01: a staff member holding no role is refused by every admin route and command,
+    each refusal naming a permission from the registry, and an id that doesn't exist reveals
+    nothing (the refusal comes before the lookup)."""
+    from selecta.authz import permissions
+
+    headers = _staff_without_roles(admin_world)
+    seen: dict[str, str] = {}
+    wrong: list[str] = []
+    for route in admin_world.http.app.routes:
+        if not isinstance(route, APIRoute) or not route.path.startswith("/api/admin/"):
+            continue
+        for method in sorted(route.methods - {"HEAD"}):
+            name = f"{method} {route.path}"
+            if name in SELF_ONLY | APPEND_ONLY:
+                continue
+            commands = COMMANDS.get(route.path, ("",))
+            assert "{command}" not in route.path or route.path in COMMANDS, name
+            for command in commands:
+                path = route.path.replace("{command}", command)
+                path = path.replace("{control}", "uploads.paused").replace("{flag_id}", "requests")
+                path = re.sub(r"\{\w+\}", "id-that-does-not-exist", path)
+                answer = admin_world.http.request(
+                    method, path, headers=headers, json=EVERY_FIELD,
+                    params={"reason": "permission sweep"},
+                )
+                detail = answer.json().get("detail", {})
+                if (answer.status_code, detail.get("code")) == (403, "forbidden"):
+                    seen[f"{method} {path}"] = detail["permission"]
+                else:
+                    wrong.append(f"{method} {path}: {answer.status_code} {detail}")
+    assert not wrong, "; ".join(wrong)
+    assert len(seen) > 30
+    assert set(seen.values()) <= permissions.all_names()

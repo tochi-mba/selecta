@@ -104,6 +104,9 @@ def account(conn: Connection, actor: Actor, user_id: str) -> dict[str, Any]:
     """One account's metadata (never its content), with overrides and restrictions."""
     user = accounts.get_user(conn, user_id)
     if user is None or user.deleted_at is not None:
+        # Authorized against the bare id first, so only staff who may read any account learn
+        # that this one doesn't exist.
+        authorize(conn, actor, "accounts.read_metadata", ResourceRef("user", user_id))
         raise LookupError("There's no such account.")
     workspace_id = conn.execute(sa.select(workspaces.c.id).where(
         workspaces.c.owner_user_id == user_id, workspaces.c.kind == "personal")).scalar()

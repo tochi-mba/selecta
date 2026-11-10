@@ -236,6 +236,8 @@ def rollback(conn: Connection, actor: Actor, version: int, *, reason: str,
     """Restore a flag's rules as they were at `version`: a new version, as broad as it is."""
     earlier = flag_rules.get_version(conn, version)
     if earlier is None:
+        # Only staff who may read the rule history learn which versions exist.
+        authorize(conn, actor, "flags.read", ResourceRef("flag_rules", str(version)))
         raise LookupError(f"There's no version {version} of the flag rules.")
     return change(conn, actor, earlier.flag_id, "set_rules",
                   {"rules": [rule.to_dict() for rule in earlier.rules]},

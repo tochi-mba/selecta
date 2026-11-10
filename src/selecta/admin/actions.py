@@ -20,6 +20,7 @@ from selecta.admin import commands, emergency, flags_admin
 from selecta.authz import assignments, delayed, grants
 from selecta.authz.check import Actor, authorize
 from selecta.authz.errors import ActionStateError, NotReady
+from selecta.authz.scopes import ResourceRef
 from selecta.persistence import transaction
 
 
@@ -59,13 +60,26 @@ def listing(conn: Connection, actor: Actor) -> list[dict[str, Any]]:
     return [action_json(action) for action in delayed.pending(conn)]
 
 
+def _known(conn: Connection, actor: Actor, action_id: str) -> None:
+    """A missing action is refused unless the actor may list actions anyway (which shows that it
+    isn't there), so its id reveals nothing to anyone else."""
+    try:
+        delayed.get(conn, action_id)
+    except delayed.ActionNotFound:
+        authorize(conn, actor, "platform.dashboard.read", ResourceRef("dangerous_action",
+                                                                     action_id))
+        raise
+
+
 def approve(conn: Connection, actor: Actor, action_id: str, payload_hash: str) -> dict:
+    _known(conn, actor, action_id)
     return action_json(delayed.approve(conn, actor, action_id, payload_hash=payload_hash))
 
 
 def cancel(conn: Connection, actor: Actor, action_id: str, *, reason: str) -> dict:
     if not reason or not reason.strip():
         raise ValueError("Say why the action is cancelled.")
+    _known(conn, actor, action_id)
     return action_json(delayed.cancel(conn, actor, action_id, reason=reason.strip()))
 
 
