@@ -45,7 +45,7 @@ Each flag can have an ordered list of rules, evaluated against a context; the fi
 
 **Off behaviour** (new registry field `when_off`): `drain` (running work finishes; nothing new starts) or `stop` (running work stops at its next safe checkpoint). Default `drain`.
 
-**Plan-locked behaviour** (new registry field `when_locked`): `hide` (today's "gone as if never built") or `teaser` (shown with a lock and the plan that includes it, e.g. "Rooms · Premium"). A feature switched off by a rule is always hidden, never teased.
+**Plan-locked behaviour** (new registry field `when_locked`): `hide` (today's "gone as if never built") or `teaser` (shown with a lock and the plan that includes it, e.g. "Rooms · Premium"). A feature that's off only because it needs plan-locked teasers is a teaser too, naming the plan that unlocks them all; one that needs a hidden feature is hidden. A feature switched off by a rule or kill switch is always hidden, never teased, and so is anything that needs it.
 
 ### 11B.4 Enforcement in the cloud
 

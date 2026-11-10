@@ -10,7 +10,8 @@
 - `storage_reservations`: bytes held for one upload session until it's accepted, given up or
   expires.
 - `allowance_counters`: daily and monthly allowances, one row per workspace, kind and period
-  (local day or month), so last period's count is still there to read.
+  (local day or month), so last period's count is still there to read. Rows of kind
+  `returned:<id>` keep how much of one taking has been given back, so it comes back only once.
 
 `insert_ignore` and `upsert` hide the one place SQLite and PostgreSQL spell things differently.
 """

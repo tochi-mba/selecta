@@ -17,6 +17,7 @@ from test_cloud_storage_fakes import FakeS3, Limits, Quota, r2_would_accept
 from selecta.persistence import transaction
 from selecta.storage.objects import GiB, MiB, ObjectHead, Part, R2Error, R2NotFound
 from selecta.storage.parts import MAX_PARTS, PART_SIZE, check_parts
+from selecta.storage.schema import upload_sessions
 from selecta.storage.uploads import (
     SESSION_TTL,
     FileSpec,
@@ -60,6 +61,16 @@ def complete(engine, uploads: Uploads, session_id: str):
 def status_of(engine, uploads: Uploads, session_id: str) -> Status:
     with transaction(engine, WS) as conn:
         return uploads.get(conn, session_id, workspace_id=WS).status
+
+
+def shift_expiry(engine, session_id: str, seconds: float) -> None:
+    """Move a session's expiry, so time passes on either database."""
+    with transaction(engine) as conn:
+        conn.execute(
+            sa.update(upload_sessions)
+            .where(upload_sessions.c.id == session_id)
+            .values(expires_at=upload_sessions.c.expires_at + seconds)
+        )
 
 
 def planned_sizes(size: int) -> list[int]:
@@ -168,10 +179,10 @@ def test_completing_twice_gives_the_same_outcome(cloud_engine, uploads, fake):
     assert first.error == second.error
 
 
-def test_an_expired_session_cannot_complete(cloud_engine, uploads, fake, quota, clock):
+def test_an_expired_session_cannot_complete(cloud_engine, uploads, fake, quota):
     session = start(cloud_engine, uploads, PART_SIZE)
     fake.upload_sizes(session.upload_id, [PART_SIZE])
-    clock.advance(SESSION_TTL)
+    shift_expiry(cloud_engine, session.id, -SESSION_TTL)
     outcome = complete(cloud_engine, uploads, session.id)
     assert outcome.status is Status.EXPIRED
     assert "expired" in outcome.error
@@ -183,10 +194,10 @@ def test_an_expired_session_cannot_complete(cloud_engine, uploads, fake, quota, 
     assert complete(cloud_engine, uploads, session.id).status is Status.EXPIRED
 
 
-def test_a_session_just_inside_its_two_days_still_completes(cloud_engine, uploads, fake, clock):
+def test_a_session_just_inside_its_two_days_still_completes(cloud_engine, uploads, fake):
     session = start(cloud_engine, uploads, PART_SIZE)
     fake.upload_sizes(session.upload_id, [PART_SIZE])
-    clock.advance(SESSION_TTL - 1)
+    shift_expiry(cloud_engine, session.id, -(SESSION_TTL - 600))
     assert complete(cloud_engine, uploads, session.id).status is Status.COMPLETED
 
 

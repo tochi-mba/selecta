@@ -101,6 +101,10 @@ test('a transition takes over exactly where it was planned, with no gap', async 
   await play(page);
   const { mix } = await (await request.get('/api/mix')).json();
   const seam = mix[1].seam.state;
+  // Playing schedules the transition and the next song ahead of time, once they've loaded. Wait for
+  // that to happen first, or it can land between counting and jumping, and the jump's own song, clip
+  // and next song would be read from the wrong place in the list.
+  await expect.poll(() => soundsStarted(page), { timeout: 30_000 }).toBe(3);
   // what's started from the jump on is this transition. The next one may get scheduled straight after
   const earlier = await soundsStarted(page);
   await page.getByRole('button', { name: 'Jump to the transition' }).click();

@@ -187,7 +187,7 @@ def test_a_file_without_a_whole_number_size_is_refused(cloud_engine, uploads, si
 
 
 def test_planning_reserves_bytes_and_starts_a_staging_multipart_upload(
-    cloud_engine, uploads, fake, quota, clock
+    cloud_engine, uploads, fake, quota
 ):
     session = one(cloud_engine, uploads, FileSpec("Music/01 Intro.MP3", 1234, "Audio/MPEG"))
     assert session.status is Status.UPLOADING
@@ -199,8 +199,8 @@ def test_planning_reserves_bytes_and_starts_a_staging_multipart_upload(
     assert session.declared_size == 1234
     assert session.display_name == "01 Intro.MP3"
     assert quota.reserved == {session.reservation_id: 1234}
-    assert session.created_at == clock.now
-    assert session.expires_at == clock.now + SESSION_TTL == clock.now + 2 * 24 * 3600
+    assert session.expires_at == session.created_at + SESSION_TTL
+    assert SESSION_TTL == 2 * 24 * 3600
     stored = call(cloud_engine, uploads.get, session.id)
     assert stored.status is Status.UPLOADING and stored.reservation_id == session.reservation_id
 
@@ -308,10 +308,10 @@ def test_planning_while_r2_is_down_leaves_the_session_planned_until_start(
     assert fake.count("create_multipart_upload") == 2
 
 
-def test_starting_an_expired_planned_upload_is_refused(cloud_engine, uploads, fake, clock):
+def test_starting_an_expired_planned_upload_is_refused(cloud_engine, uploads, fake):
     fake.fail_next("create_multipart_upload", R2Error("down", code="SlowDown"))
     session = one(cloud_engine, uploads, FileSpec("a.mp3", 100))
-    clock.advance(SESSION_TTL)
+    age(cloud_engine, session.id, SESSION_TTL)
     with pytest.raises(InvalidState, match="expired"):
         call(cloud_engine, uploads.start, session.id)
 
@@ -613,15 +613,29 @@ def test_cleanup_failures_in_r2_are_logged_without_urls_and_do_not_block(
 # -- expiry -----------------------------------------------------------------------------------
 
 
+def age(engine, session_id: str, seconds: float) -> None:
+    """Move a session's clock back by `seconds`, so time passes on either database."""
+    with transaction(engine) as conn:
+        conn.execute(
+            sa.update(upload_sessions)
+            .where(upload_sessions.c.id == session_id)
+            .values(
+                created_at=upload_sessions.c.created_at - seconds,
+                expires_at=upload_sessions.c.expires_at - seconds,
+            )
+        )
+
+
 def test_sessions_past_their_two_days_expire_and_release_their_bytes(
-    cloud_engine, uploads, fake, quota, clock
+    cloud_engine, uploads, fake, quota
 ):
     old = one(cloud_engine, uploads, FileSpec("old.mp3", 100))
-    clock.advance(SESSION_TTL - 10)
     young = one(cloud_engine, uploads, FileSpec("young.mp3", 100))
     done = completed(cloud_engine, uploads, fake, size=100)
     call(cloud_engine, uploads.accept, done.id, probe(100))
-    clock.advance(10)
+    age(cloud_engine, old.id, SESSION_TTL)
+    age(cloud_engine, young.id, SESSION_TTL - 600)
+    age(cloud_engine, done.id, SESSION_TTL * 2)
     with transaction(cloud_engine) as conn:
         assert uploads.expire_sessions(conn) == 1
     expired = call(cloud_engine, uploads.get, old.id)
@@ -632,26 +646,34 @@ def test_sessions_past_their_two_days_expire_and_release_their_bytes(
     assert call(cloud_engine, uploads.get, done.id).status is Status.ACCEPTED
 
 
-def test_expiry_runs_in_bounded_batches(cloud_engine, uploads, clock):
-    for n in range(5):
-        one(cloud_engine, uploads, FileSpec(f"{n}.mp3", 100))
-    clock.advance(SESSION_TTL)
+def test_expiry_runs_in_bounded_batches(cloud_engine, uploads):
+    sessions = [one(cloud_engine, uploads, FileSpec(f"{n}.mp3", 100)) for n in range(5)]
+    for session in sessions:
+        age(cloud_engine, session.id, SESSION_TTL)
     with transaction(cloud_engine) as conn:
         assert uploads.expire_sessions(conn, limit=3) == 3
+    latest = max(session.expires_at for session in sessions)
     with transaction(cloud_engine) as conn:
-        assert uploads.expire_sessions(conn, now=clock.now) == 2
+        assert uploads.expire_sessions(conn, now=latest) == 2
         assert uploads.expire_sessions(conn) == 0
 
 
-def test_a_completed_upload_gets_two_more_days_to_be_checked(cloud_engine, uploads, fake, clock):
+def test_expiry_can_be_asked_about_a_given_moment(cloud_engine, uploads):
     session = one(cloud_engine, uploads, FileSpec("a.mp3", 100))
-    clock.advance(SESSION_TTL - 1)
+    with transaction(cloud_engine) as conn:
+        assert uploads.expire_sessions(conn, now=session.expires_at - 1) == 0
+        assert uploads.expire_sessions(conn, now=session.expires_at) == 1
+
+
+def test_a_completed_upload_gets_two_more_days_to_be_checked(cloud_engine, uploads, fake):
+    session = one(cloud_engine, uploads, FileSpec("a.mp3", 100))
+    age(cloud_engine, session.id, SESSION_TTL - 600)
     send_as_planned(fake, session)
     done = call(cloud_engine, uploads.complete, session.id)
-    assert done.session.expires_at == clock.now + SESSION_TTL
-    clock.advance(10)
+    assert done.session.expires_at == done.session.updated_at + SESSION_TTL
+    assert done.session.expires_at > session.expires_at
     with transaction(cloud_engine) as conn:
-        assert uploads.expire_sessions(conn) == 0
+        assert uploads.expire_sessions(conn, now=session.expires_at + 600) == 0
 
 
 # -- display names and probes -----------------------------------------------------------------

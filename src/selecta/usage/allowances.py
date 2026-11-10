@@ -34,6 +34,8 @@ from selecta.usage.schema import allowance_counters, insert_ignore
 
 # Tiny slack so fractional amounts (CPU seconds) that add up exactly to the limit still fit.
 EPSILON = 1e-9
+# The kind of the counter row that keeps how much of one taking has been given back.
+RETURNED = "returned:"
 
 
 class Period(enum.StrEnum):
@@ -93,6 +95,8 @@ class Consumed:
     allowance: Allowance
     # What was taken: the amount asked for when `ok`, else 0.
     taken: float = 0.0
+    # Names this taking, so `give_back` returns it at most once. Set by `try_consume` when `ok`.
+    id: str | None = None
 
 
 def zone(name: str | None) -> dt.tzinfo:
@@ -158,6 +162,8 @@ def try_consume(
 ) -> Consumed:
     """Take `amount` from this period's allowance if it all fits, atomically. Nothing is taken
     when it doesn't fit, and `ok` is false."""
+    if kind.startswith(RETURNED):
+        raise ValueError(f"Allowance kinds can't start {RETURNED!r}; give_back keeps those.")
     if not math.isfinite(amount) or amount <= 0:
         raise ValueError("Consume an amount above 0.")
     _check_limit(limit)
@@ -188,30 +194,65 @@ def try_consume(
         return Consumed(False, Allowance(workspace_id, kind, which, key, used, limit, end))
     used += amount
     connection.execute(sa.update(allowance_counters).where(match).values(used=used, updated_at=now))
-    return Consumed(True, Allowance(workspace_id, kind, which, key, used, limit, end), amount)
+    allowance = Allowance(workspace_id, kind, which, key, used, limit, end)
+    return Consumed(True, allowance, amount, persistence.new_id())
 
 
 def give_back(connection: Connection, consumed: Consumed, amount: float | None = None) -> None:
     """Return what a `try_consume` took, or part of it, when the work didn't happen (a Lucy turn
     that failed before answering, say). It goes back to the period it was taken from, even after
     midnight. Giving back a negative or non-finite amount is refused: it would take more, or
-    wipe the count."""
+    wipe the count.
+
+    However often it's called, and from however many places at once, no more than was taken
+    ever comes back: what has come back so far is kept, per taking, in its own counter row
+    (kind `returned:<id>`, same workspace and period), locked before the allowance's own row."""
     if amount is not None and (not math.isfinite(amount) or amount < 0):
         raise ValueError("You can only give back an amount of 0 or more.")
     if not consumed.ok:
         return
+    if consumed.id is None:
+        raise ValueError("Only what try_consume took can be given back.")
     allowance = consumed.allowance
+    now = persistence.db_now(connection)
+    returned_kind = RETURNED + consumed.id
+    insert_ignore(
+        connection,
+        allowance_counters,
+        {
+            "workspace_id": allowance.workspace_id,
+            "kind": returned_kind,
+            "period_key": allowance.period_key,
+            "used": 0.0,
+            "period_start": now,
+            "resets_at": allowance.resets_at,
+            "updated_at": now,
+        },
+        keys=("workspace_id", "kind", "period_key"),
+    )
+    record = _key(allowance.workspace_id, returned_kind, allowance.period_key)
+    returned = connection.execute(
+        sa.select(allowance_counters.c.used).where(record).with_for_update()
+    ).scalar_one()
+    left = consumed.taken - float(returned)
+    back = left if amount is None else min(amount, left)
+    if back <= 0:
+        return
     match = _key(allowance.workspace_id, allowance.kind, allowance.period_key)
     held = connection.execute(
         sa.select(allowance_counters.c.used).where(match).with_for_update()
     ).scalar()
     if held is None:
         return
-    back = consumed.taken if amount is None else min(amount, consumed.taken)
     connection.execute(
         sa.update(allowance_counters)
         .where(match)
-        .values(used=max(0.0, float(held) - back), updated_at=persistence.db_now(connection))
+        .values(used=max(0.0, float(held) - back), updated_at=now)
+    )
+    connection.execute(
+        sa.update(allowance_counters)
+        .where(record)
+        .values(used=float(returned) + back, updated_at=now)
     )
 
 

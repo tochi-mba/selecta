@@ -340,8 +340,54 @@ def test_giving_back_goes_to_the_period_it_was_taken_from(sqlite_engine, clock):
 
 def test_giving_back_to_a_period_with_no_count_does_nothing(cloud_engine):
     nothing = a.Allowance(WS, "analysis_song", Period.DAY, "1999-01-01", 1, 3, 0)
-    give_back(cloud_engine, a.Consumed(True, nothing, 1))
+    give_back(cloud_engine, a.Consumed(True, nothing, 1, id="made-up"))
     assert left(cloud_engine).used == 0
+
+
+def test_giving_back_twice_returns_it_only_once(cloud_engine):
+    consume(cloud_engine, amount=1)
+    taken = consume(cloud_engine, amount=2)
+    assert taken.id is not None
+    give_back(cloud_engine, taken)
+    give_back(cloud_engine, taken)
+    assert left(cloud_engine).used == 1
+
+
+def test_partial_give_backs_never_add_up_to_more_than_was_taken(cloud_engine):
+    consume(cloud_engine, amount=1)
+    taken = consume(cloud_engine, amount=2)
+    give_back(cloud_engine, taken, 0.5)
+    give_back(cloud_engine, taken, 0.5)
+    assert left(cloud_engine).used == 2
+    give_back(cloud_engine, taken)
+    assert left(cloud_engine).used == 1
+    give_back(cloud_engine, taken, 5)
+    give_back(cloud_engine, taken)
+    assert left(cloud_engine).used == 1
+
+
+def test_giving_back_one_consumption_leaves_the_others_to_give_back(cloud_engine):
+    first = consume(cloud_engine, amount=1)
+    second = consume(cloud_engine, amount=1)
+    give_back(cloud_engine, first)
+    give_back(cloud_engine, first)
+    assert left(cloud_engine).used == 1
+    give_back(cloud_engine, second)
+    assert left(cloud_engine).used == 0
+    assert consume(cloud_engine, amount=3).ok
+
+
+def test_only_what_try_consume_took_can_be_given_back(cloud_engine):
+    consume(cloud_engine, amount=2)
+    made_up = a.Consumed(True, left(cloud_engine), 2)
+    with pytest.raises(ValueError, match="try_consume"):
+        give_back(cloud_engine, made_up)
+    assert left(cloud_engine).used == 2
+
+
+def test_an_allowance_kind_cannot_pose_as_a_give_back_record(cloud_engine):
+    with pytest.raises(ValueError, match="returned:"):
+        consume(cloud_engine, kind="returned:abc", period="day")
 
 
 # Many requests at once
@@ -368,3 +414,26 @@ def test_requests_at_once_never_take_more_than_the_allowance(cloud_engine):
     assert results.count(True) == 10
     found = left(cloud_engine, "lucy_turn.haiku", 10)
     assert (found.used, found.remaining) == (10, 0)
+
+
+def test_giving_back_one_consumption_from_many_places_at_once_returns_it_once(cloud_engine):
+    consume(cloud_engine, amount=1, limit=10)
+    taken = consume(cloud_engine, amount=3, limit=10)
+    errors: list[BaseException] = []
+    start = threading.Barrier(12)
+
+    def back(amount) -> None:
+        try:
+            start.wait()
+            give_back(cloud_engine, taken, amount)
+        except BaseException as error:  # noqa: BLE001
+            errors.append(error)
+
+    amounts = [None] * 6 + [0.5] * 6
+    threads = [threading.Thread(target=back, args=(amount,)) for amount in amounts]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert errors == []
+    assert left(cloud_engine, limit=10).used == 1

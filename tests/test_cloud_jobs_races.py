@@ -114,8 +114,20 @@ def within_fifteen_percent(store, owners: dict[str, str], first: int) -> None:
         assert abs(share / fair - 1.0) <= 0.15, f"{tier} got {share:.3f}, fair is {fair:.3f}"
 
 
+def wide(postgres_engine):
+    """The same schema with a connection for every claimer (the default pool holds 15)."""
+    from selecta.persistence import make_engine
+
+    with postgres_engine.connect() as connection:
+        path = connection.execute(sa.text("SHOW search_path")).scalar()
+    return make_engine(
+        postgres_engine.url.render_as_string(hide_password=False), pool_size=55, max_overflow=5,
+        connect_args={"options": f"-csearch_path={path}"},
+    )
+
+
 def test_fifty_postgres_threads_claim_a_thousand_jobs_each_once_and_fairly(postgres_engine):
-    store, owners = fill(postgres_engine, per_tier=3, total=1_000)
+    store, owners = fill(wide(postgres_engine), per_tier=3, total=1_000)
     claims, errors = race(store, threads=50, complete=False)
     assert errors == [], f"{len(errors)} claims failed, first: {errors[:1]!r}"
     claimed_once(store, claims, 1_000)
@@ -124,7 +136,7 @@ def test_fifty_postgres_threads_claim_a_thousand_jobs_each_once_and_fairly(postg
 
 
 def test_fifty_postgres_threads_claiming_and_completing_never_deadlock(postgres_engine):
-    store, _ = fill(postgres_engine, per_tier=5, total=600)
+    store, _ = fill(wide(postgres_engine), per_tier=5, total=600)
     claims, errors = race(store, threads=50, complete=True)
     assert errors == [], f"{len(errors)} calls failed, first: {errors[:1]!r}"
     claimed_once(store, claims, 600)
