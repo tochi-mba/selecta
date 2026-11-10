@@ -1,11 +1,14 @@
 import { useAuth } from '@workos-inc/authkit-react';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BLOCKED_MESSAGES, BlockedCode, blockedCode, refusalMessage, SUSPENDED_NOTICE } from './authConfig';
 import './cloud.css';
 
+// The staff console is its own bundle, loaded only when a staff member opens it.
+const AdminArea = lazy(() => import('../admin/AdminArea'));
+
 type Account = {
-  user: { id: string; email: string; email_verified: boolean; suspended?: boolean };
+  user: { id: string; email: string; email_verified: boolean; suspended?: boolean; staff?: boolean };
   workspace: { id: string; name: string; role: string };
   entitlement: { plan: string; plan_version: number; storage_limit_bytes: number; storage_used_bytes: number; storage_state: string };
   features: Record<string, boolean>;
@@ -18,6 +21,11 @@ type Page = 'home' | 'library' | 'uploads' | 'billing' | 'settings';
 type Asset = { id: string; name: string; size: number; sha256: string | null; format: string | null; duration_seconds: number | null; sample_rate: number | null; channels: number | null; created_at: number };
 const apiOrigin = (import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
 const consentVersion = import.meta.env.VITE_CHECKOUT_CONSENT_VERSION ?? '';
+
+/** Whether this account may see the staff console link: staff, with the console flag on. */
+export function showsAdmin(account: Account | null) {
+  return Boolean(account?.user.staff) && account?.features['admin.console'] !== false;
+}
 
 class CloudError extends Error {
   constructor(message: string, readonly status: number, readonly code?: string) { super(message); }
@@ -65,6 +73,7 @@ export function CloudApp() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [inAdmin, setInAdmin] = useState(() => window.location.pathname.startsWith('/admin'));
 
   const api = useCallback(async <T,>(path: string, init: RequestInit = {}, workspaceId?: string): Promise<T> => {
     const token = await getAccessToken();
@@ -228,6 +237,11 @@ export function CloudApp() {
   if (!user.emailVerified) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
   if (needsOnboarding) return <main className="cloud-onboarding"><span className="cloud-mark">S</span><p className="cloud-eyebrow">ONE QUICK CHECK</p><h1>Set up your Selecta workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
 
+  if (inAdmin && showsAdmin(account)) {
+    const leave = () => { setInAdmin(false); window.history.pushState({}, '', '/'); setPage('home'); };
+    return <Suspense fallback={<main className="cloud-runtime-message"><p>Opening the staff console…</p></main>}><AdminArea token={getAccessToken} onLeave={leave} origin={apiOrigin} /></Suspense>;
+  }
+
   const used = account?.entitlement.storage_used_bytes ?? 0;
   const limit = account?.entitlement.storage_limit_bytes ?? 0;
   const pct = limit ? Math.min(100, used / limit * 100) : 0;
@@ -242,7 +256,7 @@ export function CloudApp() {
           <button aria-current={page === 'billing' ? 'page' : undefined} onClick={() => choosePage('billing')}>Plan & billing</button>
           <button aria-current={page === 'settings' ? 'page' : undefined} onClick={() => choosePage('settings')}>Settings</button>
         </nav>
-        <div className="cloud-rail-bottom"><span>{user.email}</span><button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button><button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
+        <div className="cloud-rail-bottom">{showsAdmin(account) && <button onClick={() => { setInAdmin(true); window.history.pushState({}, '', '/admin'); }}>Staff console</button>}<span>{user.email}</span><button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button><button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
         <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{page === 'home' ? 'Your music workspace' : page === 'library' ? 'Your library' : page === 'uploads' ? 'Add music' : page === 'billing' ? 'Plan & billing' : 'Account settings'}</h1></div><span className="cloud-plan-chip">{account?.entitlement.plan ?? 'Free'} plan</span></header>
