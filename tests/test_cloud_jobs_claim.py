@@ -179,11 +179,13 @@ def test_a_queued_job_waits_while_its_flag_is_off_and_runs_when_it_returns(cloud
     store = make_store(cloud_engine, flags=feature_flags)
     queued = store.enqueue(JobSpec("w1", "analyse.song")).job
 
+    store.flag_resume_s = 0.0
     feature_flags.off.add(("w1", "core.analysis"))
     assert store.claim("cpu-heavy", worker()) is None
     with transaction(cloud_engine) as connection:
         held = connection.execute(sa.select(jobs).where(jobs.c.id == queued.id)).one()
-    assert held.state == "queued", "switching a flag off pauses queued work; it does not cancel it"
+    # core.analysis drains (ADR-0414): its queued work is set aside, never cancelled.
+    assert (held.state, held.error_class) == ("blocked", "flag_off")
 
     feature_flags.off.remove(("w1", "core.analysis"))
     claimed = store.claim("cpu-heavy", worker())

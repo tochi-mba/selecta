@@ -93,6 +93,9 @@ class JobStore:
         """Emergency controls and staff holds; the cloud passes `admin.state.DbWorkControls`."""
         self.rng = rng or random.Random()
         self.batch = batch
+        self.flag_resume_s = 5.0
+        """How often each pool's claims look for `flag_off` jobs whose flag is back on."""
+        self._flag_resume_at: dict[str, float] = {}
         self._wakers: list[Waker] = []
         self._workspaces: dict[str, str] = {}
         self._lock = threading.Lock()

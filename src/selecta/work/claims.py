@@ -17,6 +17,7 @@ can't push each other off the smallest V (see `heads.lock_lanes`).
 
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
@@ -27,7 +28,7 @@ from sqlalchemy.engine import Connection, Row
 from selecta.persistence import lock_rows, new_id
 from selecta.scheduling import policy
 from selecta.scheduling.policy import Lane, WorkerCaps
-from selecta.work import fleet, heads
+from selecta.work import flag_gates, fleet, heads
 from selecta.work.model import Job, JobState
 from selecta.work.ports import AccountStanding
 from selecta.work.schema import fair_heads, job_attempts, jobs
@@ -91,6 +92,7 @@ class ClaimSession:
             return None
         if self.store.controls.claim_block(self.connection, self.pool, self.caps.worker_id):
             return None
+        self._resume_switched_on()
         backlogged = heads.backlogged_lanes(self.connection, self.pool)
         if not backlogged:
             return None
@@ -140,6 +142,17 @@ class ClaimSession:
             flag_on=job is None or self._flag_on(head.workspace_id, job.flag_id),
             pool_paused=self.pool in self.config.paused_pools,
         )
+
+    def _resume_switched_on(self) -> None:
+        """Every `flag_resume_s`, put back in line this pool's jobs whose feature is on again."""
+        due = getattr(self.store, "_flag_resume_at", None)
+        if due is None:
+            return
+        moment = time.monotonic()
+        if moment < due.get(self.pool, float("-inf")):
+            return
+        due[self.pool] = moment + float(getattr(self.store, "flag_resume_s", 5.0))
+        flag_gates.resume(self.connection, self.pool, self._flag_on, self.now)
 
     def _speculative_ok(self) -> bool:
         seen_since = self.now - self.config.worker_ttl_s
@@ -201,6 +214,10 @@ class ClaimSession:
             key=lambda r: policy.job_key(r.urgency, r.needed_by, r.line_position, r.created_at)
         )
         for row in rows:
+            if not self._flag_on(head.workspace_id, row.flag_id):
+                # Its feature is off: drain blocks it, stop cancels it (`flag_gates`).
+                flag_gates.park(self.connection, Job.from_row(row), self.now)
+                continue
             context = self._context(head, standing, row)
             if policy.job_blocker(_candidate(row), self.caps, context) is None:
                 return self._dispatch(head, row, standing)
