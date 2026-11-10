@@ -51,6 +51,13 @@ Unchanged principle from today's design and worth restating: model output never 
 | Max rounds/steps/seconds, spend limit (USD) | User | **Hidden**; server policy |
 | Usage shown | - | Turns used this month, resets on date |
 
+Current implementation: `GET` and `PUT /api/account/lucy` (flag `account.lucy_settings`,
+`selecta.lucy.cloud_settings`) read and change only Use Lucy, the phases and the two sharing
+choices, stored per user under `lucy:` ids in the user preferences table. The answer adds the
+plan's tier ("Lucy Basic", "Lucy Standard", "Lucy Advanced") and this month's turn meter. A body
+naming a provider, model, key or budget is refused (422), and an unknown phase is refused by name.
+There is no Cloud memory or conversation history yet, so those rows of the table are not offered.
+
 Server-side, API keys move from plaintext `lucy-secrets.json` to the hosting platform's secret store in cloud mode (local mode keeps the file but should restrict its permissions).
 
 ### 9.6 Quality gate for model changes

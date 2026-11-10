@@ -45,7 +45,7 @@ Retention table published in the privacy notice: originals until deleted (or 12 
 
 Erasure leaves the audit log as written. `audit_events` is append-only (the app role may only insert, and triggers refuse updates even from the table owner), and its rows hold only random user, workspace and resource ids, never names, emails or content. Once the user row and the personal data are erased, those ids point at nothing and identify no one, so the rows stay for the two-year audit retention unchanged.
 
-`GET /api/account/export` downloads a ZIP with original files verified against their recorded size and SHA-256, account/profile and Labs settings, asset metadata and a manifest. `mixes.json` reports that mixes are unavailable because Cloud mix persistence is not implemented yet. Assembly currently uses temporary local disk synchronously, so this path is not yet sized for very large libraries.
+`GET /api/account/export` downloads a ZIP with original files verified against their recorded size and SHA-256, `settings.json` (account, workspace, plan, feature opt-outs, Lucy choices and signed-in devices), asset metadata and a manifest. `mixes.json` says mix revisions are unavailable because Cloud mix persistence is not implemented yet, and carries what Cloud does keep: the workspace's playback session (mix revision id, song index, offset and state). The Account page's "Download my data" button fetches it with the signed-in token and saves the ZIP. Assembly currently uses temporary local disk synchronously, so this path is not yet sized for very large libraries.
 
 ### 12.5 Open source and licensing of Selecta itself
 

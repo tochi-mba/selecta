@@ -68,6 +68,14 @@ Cloud web origin to `PUT` signed parts.
 
 Never delete music because of a plan change. When usage exceeds the plan: state `over_quota_read_only`: browse, play, make mixes from existing songs, download originals, delete songs: allowed. Upload, new exports, and other storage-growing actions: blocked with a clear "you're 35 GB over Free's 10 GB" banner and two buttons (manage storage, upgrade). If an account stays over quota for 12 months after a cancelled subscription, follow the published retention policy: emails at 30, 60 and 7 days before any deletion, an export link, then deletion via the normal workflow. The policy is in the terms from day one and never changed retroactively.
 
+Current implementation: `quota.set_limit` puts a workspace whose committed bytes exceed its new
+limit into `over_quota_read_only`. `POST /api/uploads/plan` then refuses each file with the overage
+named ("You're 35 GB over your plan's 10 GB. Free up space or upgrade to add more.") and makes no
+session or reservation, while listing, playback URLs, prepared playback files, the account export
+and deleting songs keep working, and no asset or object is removed by the plan change
+(`tests/test_cloud_over_quota.py`). `/api/account` reports `usage.storage.state` and
+`over_by_bytes`, and `usage.exports_month.blocked`, for the banner.
+
 ### 5.5 Deletion
 
 Deletion is a workflow, not a `DELETE`: mark tombstone (the song disappears and its quota is released immediately) → cancel jobs → remove from mixes per policy (old frozen revisions keep a "song deleted" placeholder rather than silently changing) → after a 30-day recovery window, delete objects in bounded batches, then the backup copy → confirm → audit. Tombstone creation and physical/backup completion append to a transactional mirror outbox. `selecta account-deletion-maintenance` advances account deletion steps, deletes the WorkOS identity before erasing the local user, and writes account-plan snapshots to a dedicated private R2 bucket; `selecta storage-maintenance` mirrors pending song/account/export tombstones before draining due physical deletions, and marks completion only after all R2 targets delete successfully. Both commands need scheduling. Support can restore a song within the window; after it, deletion is final. `selecta replay-deletions-after-restore` reapplies offsite storage/account records before restored traffic reopens; a restore drill remains required ([§12.4](12-security-privacy-legal.md#124-data-lifecycle)).

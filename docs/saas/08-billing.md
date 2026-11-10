@@ -34,6 +34,17 @@ so an expired override returns to the underlying plan even when Stripe has not c
 Production PostgreSQL
 and real Stripe test-mode runs remain to be verified.
 
+`GET /api/account` carries what the Plan & billing page needs: `entitlement.plan_label` and
+`snapshot_version`, `billing.consent_version` (the server's current checkout consent version, so
+the form sends exactly the version the server will check), `lucy.tier`, and `usage` with four
+meters read from the rows the server enforces with (`selecta.usage.meters`): storage used of the
+limit (with committed, reserved, over-by and state), songs analysed today, exports this month
+(with retention days and whether over-quota blocks them) and Lucy turns this month (per model
+class and summed; a fair-use class has no limit). Each allowance carries its `resets_at`, the
+account's own local midnight. Writing a new entitlement snapshot version emits an
+`entitlement.changed` outbox event in the same transaction, so a page waiting on a checkout hears
+the change over `/api/events`; re-confirming an unchanged snapshot emits nothing.
+
 Checkout creation enables Stripe automatic tax, requires a billing address, updates the stored
 Stripe customer address and permits tax-ID collection. Stripe's business address, registrations
 and product tax codes must be configured before paid launch. The UK-only beta restriction must be
