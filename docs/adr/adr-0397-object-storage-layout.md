@@ -1,7 +1,7 @@
 # ADR-0397 - Object storage layout and artifact provenance on R2
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 3/5 Implemented; 0/5 In progress; 2/5 Not started.
+- **Implementation:** 4/5 Implemented; 0/5 In progress; 1/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 3. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -36,7 +36,7 @@ Identical requests reuse finished work instantly; engine upgrades never invalida
 
 1. **SC-0397-01 - ArtifactStore interface.** **Acceptance:** Local and R2 implementations behind one interface used by workers. **Required verification:** Unit and integration tests. **Implementation:** Implemented. **Evidence:** `src/selecta/storage/artifacts.py`; `src/selecta/workers/context.py`; `tests/test_cloud_worker_artifacts.py` (local and R2 unit tests plus real runner integration). **Independently Verified:** No.
 2. **SC-0397-02 - Content-addressed keys.** **Acceptance:** Seam and stem keys derive from content hashes scoped to the workspace. **Required verification:** Unit tests. **Implementation:** Implemented; seam, stem and derived keys come from `input_hash` over content hashes, scoped to the workspace prefix. **Evidence:** `tests/test_cloud_storage_keys.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
-3. **SC-0397-03 - Provenance.** **Acceptance:** Every artifact row records inputs, versions and checksum. **Required verification:** Schema test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0397-03 - Provenance.** **Acceptance:** Every artifact row records inputs, versions and checksum. **Required verification:** Schema test. **Implementation:** Implemented; every artifact row has a SHA-256 `checksum` and a `provenance` naming its inputs (asset hashes or keys), versions (playback must name `proxy`, seams `analysis` and `render`), models where they apply and the settings hash, by one rule in `src/selecta/work/provenance.py` enforced at publish, upload, the collecting sink, `complete` (refused as `engine_bug`, nothing written) and invariant 5; both columns are NOT NULL (migration `a3f8d2c61b97`). **Evidence:** `tests/test_cloud_artifact_provenance.py` (schema test `test_checksum_and_provenance_are_not_null_in_the_database`, the validator cases and the migration round trip), plus the publish, gateway, remote-runner and invariant tests, passing on SQLite and PostgreSQL. **Independently Verified:** No.
 4. **SC-0397-04 - Eviction with protection.** **Acceptance:** Budgets evict least-recent unprotected artifacts only. **Required verification:** Integration test. **Implementation:** Implemented; derived artifacts over the workspace's budget go least recently used first, never protected or playing ones and never across workspaces. **Evidence:** `tests/test_cloud_storage_eviction.py` (7 tests), passing on SQLite and PostgreSQL. **Independently Verified:** No.
 5. **SC-0397-05 - Bucket lifecycle.** **Acceptance:** Staging multipart aborts after 1 day; exports expire per plan. **Required verification:** IaC review plus staging check. **Implementation:** Not started; **Independently Verified:** No.
 
