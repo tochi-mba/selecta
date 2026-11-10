@@ -140,7 +140,8 @@ __all__ = [
 IDLE_CHECK_SECONDS = 3.0
 
 MEMORY_SECONDS = 60.0
-# A poll must never enumerate thousands of transition files on the HTTP thread.
+STATUS_MEMORY_SECONDS = 300.0
+# Status polls never enumerate transition files; background refreshes are infrequent.
 
 """How far past its limit each forgiving check can go, in its own units."""
 
@@ -489,12 +490,12 @@ class SeamStore:
         """
         now = time.monotonic()
         snapshot = self._remembered
-        if snapshot is None or now - snapshot[0] >= MEMORY_SECONDS:
+        if snapshot is None or now - snapshot[0] >= STATUS_MEMORY_SECONDS:
             with self._memory_refresh_lock:
                 thread = self._memory_refresh
                 if (
                     (thread is None or not thread.is_alive())
-                    and now - self._memory_refresh_started >= MEMORY_SECONDS
+                    and now - self._memory_refresh_started >= STATUS_MEMORY_SECONDS
                 ):
                     self._memory_refresh_started = now
                     thread = threading.Thread(
@@ -502,7 +503,7 @@ class SeamStore:
                     )
                     self._memory_refresh = thread
                     thread.start()
-        pending = snapshot is None or now - snapshot[0] >= MEMORY_SECONDS
+        pending = snapshot is None or now - snapshot[0] >= STATUS_MEMORY_SECONDS
         return (len(snapshot[1].clean) if snapshot else 0, pending)
 
     def _refresh_memory(self) -> None:
