@@ -13,8 +13,8 @@ import os
 import shutil
 import sqlite3
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 DATABASE = "selecta.sqlite"
 MARKER = "gathered.json"
