@@ -140,6 +140,10 @@ test('mini-player and overlay geometry stay actionable on a narrow phone', async
   await opener.click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
+  // The panel slides up 8px as it appears (overlay-appear); measure where it comes to rest.
+  await dialog.evaluate((element) => Promise.all(
+    element.getAnimations({ subtree: true }).map((animation) => animation.finished),
+  ));
   const box = await dialog.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);
