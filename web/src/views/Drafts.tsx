@@ -39,8 +39,8 @@ function RenderLine({ inLine, current, onMove, onLeave }: {
             <b className="line-place">{nth(draft.place ?? 0)} in line</b>
             <span className="line-name">{draft.name}</span>
             <span className="line-buttons">
-              <button aria-label={`Move ${draft.name} up the line`} disabled={draft.place === 1} onClick={() => onMove(draft, -1)}><Icon name="up" /></button>
-              <button aria-label={`Move ${draft.name} down the line`} disabled={draft.place === inLine.length} onClick={() => onMove(draft, 1)}><Icon name="down" /></button>
+              <button aria-label={`Move ${draft.name} up the line`} title={`Move ${draft.name} up the line`} disabled={draft.place === 1} onClick={() => onMove(draft, -1)}><Icon name="up" /></button>
+              <button aria-label={`Move ${draft.name} down the line`} title={`Move ${draft.name} down the line`} disabled={draft.place === inLine.length} onClick={() => onMove(draft, 1)}><Icon name="down" /></button>
               <button aria-label={`Take ${draft.name} out of the line`} onClick={() => onLeave(draft)}>Out of line</button>
             </span>
           </li>
@@ -284,7 +284,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                     <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${draft.name}`} run={() => playDraft?.(draft.id)}>
                       Play
                     </Action>
-                    <Menu label={<><Icon name="more" /><span className="visually-hidden">More actions for {draft.name}</span></>}>
+                    <Menu title={`More actions for ${draft.name}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {draft.name}</span></>}>
                       <MenuItem aria-label={`Rename ${draft.name}`} onClick={() => setRenaming(draft.id)}>Rename</MenuItem>
                       <MenuItem aria-label={`Copy ${draft.name}`} onClick={() => void duplicate(draft)}>Copy</MenuItem>
                       {line && draft.place === null && draft.seams > 0 && draft.waiting > 0 && (

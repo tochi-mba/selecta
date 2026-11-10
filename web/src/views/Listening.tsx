@@ -152,7 +152,13 @@ export function Listening() {
         <Field label="Listening setup">
           {(field) => <input {...field} placeholder="For example, headphones in a quiet room" value={setup} onChange={(event) => setSetup(event.target.value)} required />}
         </Field>
-        <button disabled={loading || saving || !study.trim() || !listener.trim() || !setup.trim()} aria-busy={loading}>{loading ? 'Opening study…' : 'Open study'}</button>
+        <button disabled={loading || saving || !study.trim() || !listener.trim() || !setup.trim()} aria-busy={loading}>
+          {/* MP-0297-04: the busy label shares the idle label's cell, so the button keeps its width */}
+          <span className="action-labels">
+            <span aria-hidden={loading || undefined} style={{ visibility: loading ? 'hidden' : undefined }}>Open study</span>
+            <span aria-hidden={!loading || undefined} style={{ visibility: loading ? undefined : 'hidden' }}>Opening study…</span>
+          </span>
+        </button>
       </form>
       {error && <p className="warn" role="alert">{error}</p>}
       {trial && (

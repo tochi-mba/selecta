@@ -48,12 +48,14 @@ export function Action({
   );
 }
 
-export type StatusKind = 'planned' | 'queued' | 'working' | 'recovering' | 'ready' | 'warning' | 'blocked' | 'failed' | 'needs-action' | 'unavailable';
+export type StatusKind = 'planned' | 'queued' | 'working' | 'paused' | 'recovering' | 'ready' | 'warning' | 'blocked' | 'failed' | 'needs-action' | 'unavailable';
 
 const STATUS: Record<StatusKind, { words: string; mark: IconName }> = {
   planned: { words: 'Planned', mark: 'circle' },
   queued: { words: 'In line', mark: 'clock' },
   working: { words: 'Working on it', mark: 'half' },
+  // MP-0293-05: stopped on purpose, so it reads apart from waiting in line or never started
+  paused: { words: 'Paused', mark: 'pause' },
   recovering: { words: 'Recovering', mark: 'half' },
   ready: { words: 'Ready', mark: 'check' },
   warning: { words: 'Ready, with a warning', mark: 'warning' },
@@ -67,7 +69,7 @@ const STATUS: Record<StatusKind, { words: string; mark: IconName }> = {
 export function Status({ kind, children, title }: { kind: StatusKind; children?: ReactNode; title?: string }) {
   return (
     <span className={`status status-${kind}`} title={title}>
-      <Icon name={STATUS[kind].mark} width={14} height={14} />
+      <Icon name={STATUS[kind].mark} size="compact" />
       {children ?? STATUS[kind].words}
     </span>
   );
@@ -222,7 +224,7 @@ function Overlay({
       <div ref={panel} className="overlay-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
-          <button className="overlay-close" aria-label={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
+          <button className="overlay-close" aria-label={`Close ${title}`} title={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
         </header>
         <div className="overlay-body">{children}</div>
         {footer && <footer className="overlay-foot">{footer}</footer>}
@@ -251,7 +253,7 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
 }
 
 /** A small list of actions behind one button, usable with the keyboard. */
-export function Menu({ label, children, className }: { label: ReactNode; children: ReactNode; className?: string }) {
+export function Menu({ label, children, className, title }: { label: ReactNode; children: ReactNode; className?: string; title?: string }) {
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -314,7 +316,7 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
   };
   return (
     <div className={`menu ${className ?? ''}`} ref={holder} onKeyDown={keys}>
-      <button ref={opener} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
+      <button ref={opener} type="button" title={title} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
       {open && (
         // a press on anything inside closes it, because each item is the end of the job
         <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); if (opener.current?.isConnected) opener.current.focus(); else document.getElementById('content')?.focus({ preventScroll: true }); }}>{children}</div>

@@ -4,6 +4,7 @@ import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
+import { playLabel, SEAM_LABEL, songArtist, songTitle, transportClock } from '../audio/transportWords';
 import { orderOf } from '../state/readiness';
 import { Action, announce, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
 import { useShownTheme } from '../state/prefs';
@@ -12,7 +13,7 @@ import { Icon } from '../ui/Icon';
 import { useMediaQuery } from '../ui/useMediaQuery';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
-import { SongMotif } from '../ui/MusicObjects';
+import { seamFamily, SongMotif } from '../ui/MusicObjects';
 import { RequestsContext, RequestTag } from './Requests';
 import { frequencyLevels, paintFrequencyFrame, SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape } from './spectrumVisuals';
 import { ViewProps } from './shared';
@@ -193,7 +194,7 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}
       aria-valuenow={Math.round(safeTime)}
-      aria-valuetext={unavailable ? 'Duration unknown' : `${clock(safeTime)} of ${clock(duration)}`}
+      aria-valuetext={unavailable ? 'Duration unknown' : `${clock(safeTime)} of ${clock(duration)}, ${clock(duration - safeTime)} left`}
       aria-disabled={locked || undefined}
       aria-describedby={locked ? noteId : undefined}
       onPointerDown={beginSeek}
@@ -237,7 +238,7 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       {/* MP-0274-03: room for the longest reading this song can show, "duration / duration", so the clock
           never widens and nudges the separator when 9:59 becomes 10:00 */}
       <span className="time" style={{ minWidth: `${(unavailable ? 0 : clock(duration).length * 2) + 3}ch` }}>
-        {seekPreview === null ? clock(safeTime) : `Seek to ${clock(seekPreview)}`} / {unavailable ? 'unknown duration' : clock(duration)}
+        {seekPreview === null ? transportClock(safeTime) : `Seek to ${transportClock(seekPreview)}`} / {unavailable ? 'unknown duration' : transportClock(duration)}
       </span>
     </div>
     <p className="hint seek-note" id={noteId}>{unavailable ? unavailableWords : seekBlocked ? CANT_SEEK : ' '}</p>
@@ -304,6 +305,7 @@ function TransitionCountdown({
   ready,
   inSeam,
   switchAt,
+  phrase,
 }: {
   detail: SongDetail;
   time: number;
@@ -313,6 +315,8 @@ function TransitionCountdown({
   ready: boolean;
   inSeam: boolean;
   switchAt?: number;
+  /** The shared phrase, passed only when the rendered move really is a word hand-off on it (SF-0213-05). */
+  phrase?: string;
 }) {
   const beatsPerBar = detail.beats_per_bar ?? 4;
   if (!nextTitle) {
@@ -328,6 +332,7 @@ function TransitionCountdown({
         <div className="handoff-title"><span className="eyebrow">Transition in progress</span><b>{nextTitle}</b></div>
         {currentTitle && <p className="handoff-pair" dir="auto"><span>From <b>{currentTitle}</b></span><span>Into <b>{nextTitle}</b></span></p>}
         {switchAt !== undefined && switchAt > 0 && <div className="handoff-progress"><i style={{ width: `${progress * 100}%` }} /></div>}
+        {phrase && <p className="handoff-phrase" dir="auto">On the shared words “{phrase}”</p>}
         <span className="handoff-caption">The next song is entering</span>
       </section>
     );
@@ -707,6 +712,11 @@ export function Now(props: ViewProps) {
   };
 
   const seam = next?.seam?.state;
+  // SF-0213-05: a shared phrase is shown only for a finished word move that didn't fall back, so a
+  // planned or substituted transition never claims wordplay it doesn't have.
+  const provenPhrase = next?.seam && seam?.status === 'ready' && !seam.fell_back && seamFamily(seam.style) === 'words'
+    ? next.seam.settings.phrase || undefined
+    : undefined;
   const idle = now.phase === 'idle';
   const resumable = idle && now.songTime > 1;
   const names = status.moves ?? {};
@@ -714,7 +724,7 @@ export function Now(props: ViewProps) {
     now.phase === 'loading'
       ? 'Loading'
       : now.inSeam
-        ? `Mixing into ${next?.title ?? 'the next song'}`
+        ? `${SEAM_LABEL}, mixing into ${next?.title ?? 'the next song'}`
         : now.phase === 'paused'
           ? `Paused · ${mixName}`
           : mixName;
@@ -749,27 +759,19 @@ export function Now(props: ViewProps) {
         <div className="listen-main">
           <header className="listen-identity">
             <p className="eyebrow">{eyebrow}</p>
-            <TrackTitle title={item?.title ?? 'Untitled'} songId={item?.song_id} stage={stage} />
+            <TrackTitle title={songTitle(item)} songId={item?.song_id} stage={stage} />
             {item && <RequestTag item={item} />}
-            <p className="artist" dir="auto">{item?.artist ?? 'Unknown artist'}</p>
+            <p className="artist" dir="auto">{songArtist(item)}</p>
           </header>
 
           {!stage && (
             <>
               <div className="transport">
-                {withKey('Previous song (P)', <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>)}
+                {withKey('Previous song (P)', <button aria-label="Previous song" title={keys ? undefined : 'Previous song'} disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>)}
                 <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
-                  {now.phase === 'playing'
-                    ? 'Pause'
-                    : now.phase === 'loading'
-                      ? 'Loading…'
-                      : now.phase === 'paused'
-                        ? 'Resume'
-                        : resumable
-                          ? `Resume from ${clock(now.songTime)}`
-                          : 'Play'}
+                  {resumable ? `Resume from ${transportClock(now.songTime)}` : playLabel(now.phase)}
                 </button>
-                {withKey('Go straight to the next song (Shift+N)', <button aria-label="Next song" aria-keyshortcuts={keys ? 'Shift+N' : undefined} disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>)}
+                {withKey('Go straight to the next song (Shift+N)', <button aria-label="Next song" title={keys ? undefined : 'Next song'} aria-keyshortcuts={keys ? 'Shift+N' : undefined} disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>)}
               </div>
               <div className="transport-more">
                 {withKey('Shortcut: N', (
@@ -800,6 +802,7 @@ export function Now(props: ViewProps) {
               ready={now.nextReady}
               inSeam={now.inSeam}
               switchAt={seam?.switch_at}
+              phrase={on('listen.handoff_phrase') ? provenPhrase : undefined}
             />
           )}
 

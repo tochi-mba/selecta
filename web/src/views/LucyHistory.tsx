@@ -74,7 +74,7 @@ export function LucyHistory({ currentId, refreshKey, onPicked }: { currentId: st
     <nav className="lucy-history" aria-label="Conversations with Lucy">
       <div className="lucy-history-head">
         <h2>Conversations</h2>
-        <PageLink to="/mixes/lucy" className="button" onClick={onPicked}><Icon name="plus" width={16} height={16} /> New</PageLink>
+        <PageLink to="/mixes/lucy" className="button" onClick={onPicked}><Icon name="plus" size="toolbar" /> New</PageLink>
       </div>
       <SearchField label="Search conversations" value={query} onChange={setQuery} placeholder="Search" />
       <label className="choice lucy-archived-toggle">
@@ -107,7 +107,7 @@ export function LucyHistory({ currentId, refreshKey, onPicked }: { currentId: st
                       <b dir="auto">{title}</b>
                       <span className="hint">{whenWords(conversation.updated_at)}{conversation.branched_from ? ' · branched' : ''}{conversation.archived ? ' · archived' : ''}</span>
                     </PageLink>
-                    <Menu label={<><Icon name="more" /><span className="visually-hidden">More for {title}</span></>}>
+                    <Menu title={`More for ${title}`} label={<><Icon name="more" /><span className="visually-hidden">More for {title}</span></>}>
                       <button type="button" role="menuitem" onClick={() => setRenaming({ id: conversation.id, title: conversation.title })}>Rename</button>
                       <Action role="menuitem" run={() => archive(conversation)}>{conversation.archived ? 'Unarchive' : 'Archive'}</Action>
                       <button type="button" role="menuitem" className="destructive" onClick={() => setDeleting(conversation)}>Delete</button>

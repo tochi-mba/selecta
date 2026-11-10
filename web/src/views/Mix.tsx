@@ -11,7 +11,7 @@ import { Adder } from './Adder';
 import { RenameDraft } from './Drafts';
 import { AddGap, MoveHow, RowActions, SeamUnlessReplaced, SongInspector, SongLine } from './EditorRows';
 import { EditorHeader, MixSwitcher } from './EditorHeader';
-import { EditorMode, useEditorMode } from './editorMode';
+import { EDITOR_MODES, EditorMode, useEditorMode } from './editorMode';
 import { EditorStory, EnergyDisclosure, ViewSwitch } from './EditorStory';
 import { ExportPanel } from './ExportPanel';
 import { MixScope, useMixPath } from './mixScope';
@@ -690,6 +690,7 @@ export function Mix(props: ViewProps) {
         switcher={<MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} />}
         actions={actions}
         view={<ViewSwitch mode={mode} onChange={chooseMode} />}
+        viewName={EDITOR_MODES.find((option) => option.id === mode)?.label}
       />
       {renameForm}
       {deleteConfirmation}
@@ -777,7 +778,7 @@ export function Mix(props: ViewProps) {
               <aside ref={inspector} className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
                 <div className="inspector-head">
                   <h2>{seamInspector ? 'Transition' : 'Song'}</h2>
-                  <button aria-label="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
+                  <button aria-label="Close" title="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
                 </div>
                 {seamInspector || songInspector}
               </aside>

@@ -294,6 +294,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
         >
           <dl className="lucy-facts">
             <div><dt>Name</dt><dd dir="auto">{preflight.title || 'Untitled mix'}</dd></div>
+            {typeof revision.number === 'number' && <div><dt>Revision</dt><dd>{revision.number} (current)</dd></div>}
             <div><dt>Songs</dt><dd>{preflight.songs}</dd></div>
             <div><dt>Transitions ready</dt><dd>{preflight.ready} of {preflight.needed}</dd></div>
             <div><dt>Only transitions that are already ready</dt><dd>{preflight.ready_only ? 'Yes, this rule is on' : 'No'}</dd></div>

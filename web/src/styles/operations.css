@@ -25,7 +25,7 @@
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px);
   gap: var(--space-3);
   padding: var(--space-2) var(--space-hair);
-  border-bottom: 1px solid var(--border-strong);
+  border-bottom: var(--separator) solid var(--edge-decorative);
   color: var(--text-soft);
   font-size: var(--text-xs);
   font-weight: 650;
@@ -164,7 +164,7 @@
   margin: 0;
   padding: 0;
   flex: none;
-  accent-color: var(--accent);
+  accent-color: var(--selected);
   cursor: inherit;
 }
 .library-rows .library-batch-check:focus-within { outline: 2px solid var(--edge-focus); outline-offset: -2px; }

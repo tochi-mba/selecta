@@ -158,13 +158,13 @@
 .lucy-card-details summary { cursor: pointer; font-size: var(--text-sm); min-height: 32px; display: flex; align-items: center; }
 .lucy-card-details[open] summary { margin-bottom: var(--space-2); }
 .lucy-visual { display: grid; gap: var(--space-2); min-width: 0; }
-.lucy-indeterminate { display: block; height: 3px; overflow: hidden; border-radius: 2px; background: var(--border); }
+.lucy-indeterminate { display: block; height: 3px; overflow: hidden; border-radius: var(--radius-hair); background: var(--border); }
 .lucy-indeterminate i { display: block; width: 30%; height: 100%; background: var(--status-working); animation: lucy-slide 1.6s ease-in-out infinite; }
 @keyframes lucy-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 :root[data-motion='still'] .lucy-indeterminate { display: none; }
 @media (prefers-reduced-motion: reduce) { .lucy-indeterminate { display: none; } }
 .lucy-progress-line { display: flex; align-items: center; gap: var(--space-2); }
-.lucy-progress { display: block; flex: 1 1 120px; height: 4px; overflow: hidden; border-radius: 2px; background: var(--border); }
+.lucy-progress { display: block; flex: 1 1 120px; height: 4px; overflow: hidden; border-radius: var(--radius-hair); background: var(--border); }
 .lucy-progress i { display: block; height: 100%; background: var(--status-working); transition: width var(--motion-reveal) var(--motion-ease); }
 .lucy-filters { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; }
 .lucy-mini-list { display: grid; gap: var(--space-hair); margin: 0; padding-left: 1.4em; font-size: var(--text-sm); }
@@ -180,7 +180,7 @@
 .lucy-rule-list { list-style: none; display: grid; gap: var(--space-1); margin: 0; padding: 0; font-size: var(--text-sm); }
 .lucy-strength { margin-right: var(--space-1); font: 700 var(--text-xs) var(--mono); letter-spacing: .05em; text-transform: uppercase; }
 .lucy-seam-strip { display: flex; flex-wrap: wrap; gap: var(--grid-bar-gap); }
-.lucy-seam-strip i { width: 10px; height: 10px; border: 1px solid var(--border-strong); border-radius: 2px; }
+.lucy-seam-strip i { width: 10px; height: 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-hair); }
 .lucy-seam-strip i:is(.is-ready, .is-already_rendered) { background: var(--status-ready); border-color: var(--status-ready); }
 .lucy-seam-strip i:is(.is-rendering, .is-queued) { border-color: var(--status-working); }
 .lucy-seam-strip i.is-failed { background: var(--status-failed); border-color: var(--status-failed); }
@@ -301,7 +301,7 @@
 .lucy-diff p { margin: 0; }
 .lucy-energy { margin: 0; display: grid; gap: var(--space-1); }
 .lucy-energy-bars { display: flex; align-items: flex-end; gap: var(--grid-bar-gap); height: 48px; padding-bottom: 1px; border-bottom: 1px solid var(--border); }
-.lucy-energy-bars .bar { flex: 1 1 0; min-width: 3px; max-width: 18px; background: var(--text-soft); border-radius: 2px 2px 0 0; }
+.lucy-energy-bars .bar { flex: 1 1 0; min-width: 3px; max-width: 18px; background: var(--text-soft); border-radius: var(--radius-hair) var(--radius-hair) 0 0; }
 .lucy-energy-bars .bar.unknown { height: 40%; background: none; border: 1px dashed var(--border-strong); border-bottom: 0; }
 .lucy-energy-key { display: inline-block; width: 10px; height: 12px; margin-inline: var(--space-1) var(--space-hair); border: 1px dashed var(--border-strong); vertical-align: middle; }
 .lucy-approve { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
@@ -321,8 +321,8 @@
   background: var(--surface-raised);
 }
 .lucy-song.is-selected { box-shadow: 0 0 0 2px var(--selected); background: var(--surface-selected); }
-.lucy-song.is-locked { box-shadow: inset 3px 0 0 var(--text); }
-.lucy-song.is-selected.is-locked { box-shadow: 0 0 0 2px var(--selected), inset 3px 0 0 var(--text); }
+.lucy-song.is-locked { box-shadow: inset var(--marker) 0 0 var(--text); }
+.lucy-song.is-selected.is-locked { box-shadow: 0 0 0 2px var(--selected), inset var(--marker) 0 0 var(--text); }
 .lucy-song-n { font: var(--type-counter); color: var(--text-soft); padding-top: var(--space-hair); }
 .lucy-song-main { min-width: 0; }
 .lucy-song-main p { margin: 0; overflow-wrap: anywhere; }
@@ -368,7 +368,7 @@
   text-decoration: none;
 }
 .lucy-history-list li > a:hover { background: var(--surface-control); }
-.lucy-history-list li > a[aria-current='page'] { background: var(--surface-selected); box-shadow: inset 3px 0 0 var(--selected); }
+.lucy-history-list li > a[aria-current='page'] { background: var(--surface-selected); box-shadow: inset var(--marker) 0 0 var(--selected); }
 .lucy-history-list b { font-weight: 600; overflow-wrap: anywhere; }
 .lucy-history-list .hint { margin: 0; font-size: var(--text-xs); }
 .lucy-history-list .menu > button { display: inline-grid; place-items: center; min-width: var(--control-height); padding: var(--space-dense); background: none; }
@@ -406,13 +406,13 @@ dialog.lucy-dialog {
   max-height: calc(100dvh - 2 * var(--space-5));
   padding: 0;
   color: var(--text);
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
+  background: var(--surface-overlay);
+  border: 1px solid var(--edge-overlay);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-raised);
+  box-shadow: var(--shadow-overlay);
 }
 dialog.lucy-dialog[open] { display: flex; flex-direction: column; }
-dialog.lucy-dialog::backdrop { background: var(--surface-overlay); }
+dialog.lucy-dialog::backdrop { background: var(--surface-scrim); }
 dialog.lucy-dialog .overlay-body { display: grid; gap: var(--space-3); }
 dialog.lucy-dialog .overlay-body p { margin: 0; }
 

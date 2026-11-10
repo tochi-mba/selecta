@@ -1,7 +1,8 @@
 import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
-import { useCallback, useEffect, useState } from 'react';
-import { Folders, get, Jobs, post } from '../api';
+import { useEffect, useState } from 'react';
+import { Folders, get, post } from '../api';
+import { useJobsStatus } from '../state/jobs';
 import { analysisWords, estimateWords, etaRangeWords } from '../lib';
 import { useRoute, type WorkshopTab } from '../router';
 import { workspaceTabs } from '../shell/manifest';
@@ -9,7 +10,7 @@ import { PageLink } from '../shell/PageLink';
 import { ThemeChoices } from '../ui/ThemeChoice';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { ControlGallery } from '../ui/ControlGallery';
-import { Action, Status } from '../ui/controls';
+import { Action, Skeleton, Status } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { ExportJobs } from './ExportJobs';
 import { Listening } from './Listening';
@@ -65,9 +66,8 @@ function InterfaceChoices() {
 function Overview({ status }: { status: ViewProps['status'] }) {
   const { counts } = status;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
-  const [jobs, setJobs] = useState<Jobs | null>(null);
+  const { jobs, stale, unsupported } = useJobsStatus();
   const [folders, setFolders] = useState<Folders | null>(null);
-  const onJobs = useCallback((next: Jobs) => setJobs(next), []);
   useEffect(() => {
     let live = true;
     // a list it couldn't get just means nothing extra to report here, and Sources has its own warning
@@ -76,6 +76,11 @@ function Overview({ status }: { status: ViewProps['status'] }) {
   }, [status.scan.status]);
   return (
     <>
+      {/* MP-0293-01: what can be repaired comes before the passive counts. The placeholder holds its
+          place until the jobs answer arrives, so the metrics don't jump down under the reader. */}
+      {jobs
+        ? <NeedsYou jobs={jobs} readySongs={counts.ready ?? 0} folders={folders} />
+        : !stale && !unsupported && <section className="panel stack needs-you"><h2>What needs you</h2><Skeleton variant="metrics" lines={1} label="Checking what needs you" /></section>}
       <div className="metrics">
         <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
         <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
@@ -83,8 +88,7 @@ function Overview({ status }: { status: ViewProps['status'] }) {
         {flagOn('lyrics.lookup') && <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>}
         <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
       </div>
-      {jobs && <NeedsYou jobs={jobs} readySongs={counts.ready ?? 0} folders={folders} />}
-      <JobsPanel status={status} onJobs={onJobs} />
+      <JobsPanel status={status} />
       {flagOn('export') && <ExportJobs always />}
       <InterfaceChoices />
     </>
@@ -157,7 +161,8 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
         </>
       )}
       {tab === 'diagnostics' && <Diagnostics />}
-      {import.meta.env.DEV && tab === 'diagnostics' && <ControlGallery />}
+      {/* development builds, and test builds made with VITE_SELECTA_GALLERY=1 so the gallery can be measured (ADR-279) */}
+      {(import.meta.env.DEV || import.meta.env.VITE_SELECTA_GALLERY === '1') && tab === 'diagnostics' && <ControlGallery />}
     </main>
   );
 }

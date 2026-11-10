@@ -341,6 +341,7 @@ export function SeamInspector(props: {
       <div className="inspector-identity">
         <p className="inspector-pair"><SongMotif songId={previous.song_id} /><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <SongMotif songId={item.song_id} /><b>{item.title}</b></p>
         <p className="inspector-scope">
+          <span className="inspector-number">Transition {position}</span>
           <span>{scope === null ? 'In the current mix' : 'In a draft'}</span>
           {layers.version && <span>Version {layers.version}</span>}
         </p>
@@ -406,7 +407,7 @@ export function SeamInspector(props: {
                 <p className="hint">Measured on the finished audio. These can’t tell you how it sounds. Only you can.</p>
                 <ul>
                   {state.checks.map((check) => (
-                    <li key={check.name} className={check.passed ? 'ok' : 'bad'}><Icon name={check.passed ? 'check' : 'warning'} width={14} height={14} /> {check.text}</li>
+                    <li key={check.name} className={check.passed ? 'ok' : 'bad'}><Icon name={check.passed ? 'check' : 'warning'} size="compact" /> {check.text}</li>
                   ))}
                 </ul>
               </>

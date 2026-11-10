@@ -8,6 +8,7 @@ import { useUnseenActivity } from '../state/activity';
 import { jobAttention, useJobsStatus } from '../state/jobs';
 import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock } from '../audio/transportWords';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
 import { aboutOf, classicDestinations, describeRoute, DESTINATIONS, destinationOf, workspaceTabs } from './manifest';
@@ -15,12 +16,9 @@ import { PageLink } from './PageLink';
 
 export { PageLink };
 
-export function clock(seconds: number): string {
-  // A seek, loading transition or missing duration must never render NaN/Infinity
-  // into the fixed mini-player or alter the transport's layout.
-  const whole = Number.isFinite(seconds) ? Math.max(Math.floor(seconds), 0) : 0;
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
-}
+// A seek, loading transition or missing duration must never render NaN/Infinity
+// into the fixed mini-player or alter the transport's layout.
+export const clock = transportClock;
 
 export function VolumeControl({ player, now }: { player: SetPlayer; now: NowState }) {
   return (
@@ -29,6 +27,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
         className="icon"
         aria-label={now.volume === 0 ? 'Restore sound at 50 percent' : now.muted ? 'Unmute' : 'Mute'}
         aria-pressed={now.muted || now.volume === 0}
+        title={now.volume === 0 ? 'Restore sound at 50 percent' : now.muted ? 'Unmute' : 'Mute'}
         onClick={() => player.toggleMute()}
       >
         <Icon name={now.muted || now.volume === 0 ? 'muted' : 'volume'} />
@@ -55,14 +54,17 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { playe
   return (
     <aside className="mini" aria-label={now.inSeam ? 'Playing transition' : now.phase === 'paused' ? 'Paused playback' : now.phase === 'loading' ? 'Loading playback' : 'Now playing'}>
       <i className="mini-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-      <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : now.phase === 'loading' ? 'Loading song' : now.phase === 'paused' ? 'Resume' : 'Play'}>
+      <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} title={playLabel(now.phase)} aria-label={playLabel(now.phase)}>
         <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
       </button>
-      <PageLink to="/listen" className="mini-song" title={`${song.title || 'Untitled'} - ${song.artist || 'Unknown artist'}`}>
-        <b title={song.title} dir="auto">{song.title || 'Untitled'}</b>
-        <span title={song.artist} dir="auto">{song.artist || 'Unknown artist'} · {clock(now.songTime)} / {clock(now.duration)}{now.inSeam ? ' · Transition playing' : ''}</span>
+      <PageLink to="/listen" className="mini-song" title={`${songTitle(song)} - ${songArtist(song)}`}>
+        <b title={song.title} dir="auto">{songTitle(song)}</b>
+        <span title={song.artist} dir="auto">{songArtist(song)} · {timeLabel(now.songTime, now.duration)}{now.inSeam ? ` · ${SEAM_LABEL}` : ''}</span>
+        {/* UF-0373-08: an interrupted output, a lost device or a song that won't load is said here
+            too, so the reason the music stopped is visible on every page, not only on Listen */}
+        {now.notice && now.phase !== 'playing' && <span className="mini-notice" role="status">{now.notice}</span>}
       </PageLink>
-      <button className="mini-next" disabled={now.phase === 'loading' || !hasNext} onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
+      <button className="mini-next" disabled={now.phase === 'loading' || !hasNext} onClick={() => void player.next()} aria-label="Next song" title="Next song"><Icon name="next" /></button>
       {on('requests') && (
         <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
           Request<span className="count" aria-hidden={!waiting}>{waiting || '\u00a0'}</span>
@@ -102,7 +104,7 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
           </button>
         )}
         {on('requests') && (
-          <button className="context-button context-request" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
+          <button className="context-button context-request" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
             <Icon name="request" />{waiting ? <span className="count">{waiting}</span> : null}
           </button>
         )}

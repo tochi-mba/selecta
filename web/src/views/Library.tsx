@@ -34,6 +34,13 @@ const PAGE_SIZE = 100;
 // the server's own limit on one page, which keeps refreshing what's on screen cheap
 const MOST_REFRESHED = 200;
 
+/** LX-0341-02: a count from the server, or plainly "not known yet" when the server didn't say. */
+function Counter({ value, words }: { value: number | undefined; words: string }) {
+  return Number.isFinite(value)
+    ? <span><b>{(value as number).toLocaleString()}</b> {words}</span>
+    : <span>{words[0].toUpperCase() + words.slice(1)}: <b>not known yet</b></span>;
+}
+
 const pagesFrom = (text: string | null) => {
   const pages = Number(text);
   return Number.isInteger(pages) && pages > 1 ? Math.min(pages, 200) : 1;
@@ -324,7 +331,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     }
     return startFrom(song);
   };
-  const left = Math.max(status.counts.music - status.counts.analysed, 0);
+  // LX-0341-02: an unknown count stays unknown; it never turns into a made-up zero or NaN
+  const left = Number.isFinite(status.counts.music) && Number.isFinite(status.counts.analysed)
+    ? Math.max(status.counts.music - status.counts.analysed, 0) : 0;
   const analyseAll = async () => {
     await post('/analysis/start');
     refreshStatus();
@@ -414,10 +423,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       <header className="library-head">
         <h1 className="display small">Library</h1>
         <p className="library-summary">
-          {Number.isFinite(counts.ready) && <span><b>{counts.ready.toLocaleString()}</b> ready for mixes</span>}
-          <span><b>{counts.analysed.toLocaleString()}</b> analysed</span>
-          <span><b>{counts.music.toLocaleString()}</b> songs</span>
-          {!!counts.set_aside && <span><b>{counts.set_aside.toLocaleString()}</b> set aside</span>}
+          <Counter value={counts.ready} words="ready for mixes" />
+          <Counter value={counts.analysed} words="analysed" />
+          <Counter value={counts.music} words="songs" />
+          {/* LX-0341-07: an attention count opens exactly the songs it counts */}
+          {!!counts.set_aside && Number.isFinite(counts.set_aside) && (
+            <button type="button" className="link library-summary-link"
+              onClick={() => setAddressQuery({ show: 'set_aside', pages: null }, { push: true })}>
+              <b>{counts.set_aside.toLocaleString()}</b> set aside
+            </button>
+          )}
         </p>
         <p className="library-readiness-help">Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.</p>
       </header>
@@ -497,7 +512,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
       {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
-      {committedRows === null && !failed && <Skeleton variant="library" lines={6} label="Loading your songs" />}
+      {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" />}
       {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
@@ -542,7 +557,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               </div>
               <small className="facts song-columns">
                 <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
-                <span>{song.camelot ?? '–'}</span>
+                {/* LX-0344-03: an unknown key says so, rather than leaving a bare dash */}
+                <span>{song.camelot ?? (song.bpm !== null ? 'Key unknown' : 'No key yet')}</span>
                 <span>{clock(song.duration)}</span>
                 {on('lyrics.lookup') && song.lyric_status === 'synced' && <span>lyrics</span>}
               </small>
@@ -553,15 +569,15 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <div className="song-actions">
                 {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => requestStart(song)}>Start a mix</Action>}
                 {facts.canAnalyse && (
-                  <Action disabled={line.includes(song.id)} run={() => analyse(song)}>
-                    {analysingWords(line, song.id)}
+                  <Action disabled={line.includes(song.id)} working="Asking…" run={() => analyse(song)}>
+                    {song.readiness?.status === 'needs_attention' && !line.includes(song.id) ? 'Try analysing again' : analysingWords(line, song.id)}
                     {status.eta?.line[song.id] !== undefined && `, ${etaWords(status.eta.line[song.id])}`}
                   </Action>
                 )}
                 {((!facts.setAside && (on('library.priority') || on('library.never_play'))) || facts.canAdd) && (
-                  <Menu label={<><Icon name="more" /><span className="visually-hidden">More actions for {name}</span></>}>
-                    {facts.canAdd && <Action role="menuitem" disabled={already || searching} run={() => add(song)}>{already ? 'Already in current mix' : 'Add to current mix'}</Action>}
-                    {facts.canAdd && now.phase !== 'idle' && <Action role="menuitem" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next in current mix</Action>}
+                  <Menu title={`More actions for ${name}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {name}</span></>}>
+                    {facts.canAdd && <Action role="menuitem" disabled={already || searching} run={() => add(song)} title="Puts it at the end of the current mix. Nothing starts playing.">{already ? 'Already in current mix' : 'Add to current mix'}</Action>}
+                    {facts.canAdd && now.phase !== 'idle' && <Action role="menuitem" disabled={already || searching} run={() => add(song, now.position + 1)} title="Puts it straight after the song playing now. What's playing carries on.">Play next in current mix</Action>}
                     {!facts.setAside && on('library.priority') && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
                       {song.priority ? 'Priority: on' : 'Prioritize'}
                     </Action>}

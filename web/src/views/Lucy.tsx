@@ -294,7 +294,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
   const header = (
     <header className="lucy-head">
       <div className="lucy-title">
-        <Icon name="thread" width={28} height={28} className="lucy-mark" />
+        <Icon name="thread" size="hero" className="lucy-mark" />
         <div>
           <h1 className="display small">Lucy</h1>
           <p className="lede">Plan a mix together. Review its songs and transitions before approving a draft or choosing to play.</p>
@@ -304,7 +304,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
         {width >= HISTORY_AT
           ? <button type="button" aria-pressed={historyOpen} onClick={toggleHistory}>{historyOpen ? 'Hide conversations' : 'Show conversations'}</button>
           : <button type="button" aria-haspopup="dialog" onClick={() => setHistorySheet(true)}>Conversations</button>}
-        <button type="button" aria-haspopup="dialog" disabled={!status} onClick={() => setSettingsOpen(true)}><Icon name="settings" width={16} height={16} /> Settings</button>
+        <button type="button" aria-haspopup="dialog" disabled={!status} onClick={() => setSettingsOpen(true)}><Icon name="settings" size="toolbar" /> Settings</button>
       </div>
       {(shownScope || backTo) && (
         <div className="row wrap lucy-scope">
@@ -382,7 +382,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
           above={selection && (
             <div className="lucy-selection">
               <span className="lucy-chip">About: <span dir="auto">{selection.label}</span></span>
-              <button type="button" className="quiet" aria-label={`Stop asking about ${selection.label}`} onClick={() => setSelection(null)}><Icon name="close" width={16} height={16} /></button>
+              <button type="button" className="quiet" aria-label={`Stop asking about ${selection.label}`} title={`Stop asking about ${selection.label}`} onClick={() => setSelection(null)}><Icon name="close" size="toolbar" /></button>
             </div>
           )}
         />

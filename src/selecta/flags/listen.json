@@ -33,6 +33,12 @@
       "surfaces": ["listen"],
       "words": ["Beat countdown"]
     },
+    "listen.handoff_phrase": {
+      "label": "Shared words at the hand-off",
+      "about": "While a finished word transition plays, the countdown names the words the two songs share.",
+      "requires": ["listen.beat_countdown"],
+      "surfaces": ["listen"]
+    },
     "listen.steering": {
       "label": "Change the next song",
       "about": "Bigger, Calmer and Something else for whatever plays next.",

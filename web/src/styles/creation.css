@@ -19,8 +19,8 @@
   border-block: 1px solid var(--border);
   font-size: var(--text-sm);
 }
-.editor-scope.is-current { box-shadow: inset 3px 0 0 var(--playing); }
-.editor-scope.is-draft { box-shadow: inset 3px 0 0 var(--status-request); }
+.editor-scope.is-current { box-shadow: inset var(--marker) 0 0 var(--playing); }
+.editor-scope.is-draft { box-shadow: inset var(--marker) 0 0 var(--status-request); }
 .scope-badge { font-weight: 700; }
 .scope-words { color: var(--text-soft); overflow-wrap: anywhere; }
 .scope-revision { font: var(--type-counter); color: var(--text-soft); }
@@ -46,7 +46,7 @@
   cursor: default;
 }
 .timeline .song.selected { box-shadow: 0 0 0 2px var(--selected); background: var(--surface-selected); }
-.timeline .song.selected.playing { box-shadow: 0 0 0 2px var(--selected), inset 3px 0 0 var(--playing); }
+.timeline .song.selected.playing { box-shadow: 0 0 0 2px var(--selected), inset var(--marker) 0 0 var(--playing); }
 .timeline .song.over { box-shadow: 0 -3px 0 0 var(--selected); }
 .timeline .grip {
   display: inline-grid;
@@ -83,6 +83,8 @@
 .timeline .seam { cursor: default; }
 .timeline .seam.open { outline: none; border-left-color: var(--selected); background: var(--surface-selected); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
 .timeline .seam-actions button { min-height: var(--control-height); }
+/* MP-0288-03: Hear it leads the row, ahead of Good and Bad, with its play mark and a firmer edge */
+.timeline .seam-actions .seam-hear { font-weight: 600; color: var(--text); border-color: var(--text-soft); }
 .timeline .seam-name { min-height: var(--control-height); }
 
 /* somewhere real to press between two songs */
@@ -213,8 +215,8 @@
   content: '';
   position: absolute;
   inset: 30% 30%;
-  border-radius: 2px;
-  background: var(--bg);
+  border-radius: var(--radius-hair);
+  background: var(--surface-base);
 }
 .studio-lane.silenced .studio-cell, .studio-lane.silenced .studio-name { opacity: 0.45; }
 .studio-lane.lost .studio-cell { cursor: not-allowed; opacity: 0.35; background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--border) 4px 6px); }
@@ -314,8 +316,8 @@
   border-radius: var(--radius-sm);
 }
 .story-song.selected { background: var(--surface-selected); border-color: var(--selected); box-shadow: 0 0 0 1px var(--selected); }
-.story-song.playing { box-shadow: inset 3px 0 0 var(--playing); }
-.story-song.selected.playing { box-shadow: 0 0 0 1px var(--selected), inset 3px 0 0 var(--playing); }
+.story-song.playing { box-shadow: inset var(--marker) 0 0 var(--playing); }
+.story-song.selected.playing { box-shadow: 0 0 0 1px var(--selected), inset var(--marker) 0 0 var(--playing); }
 .story-number {
   display: grid;
   place-items: center;
@@ -385,7 +387,7 @@
   color: var(--text);
   font-weight: 700;
   border: 1px dashed var(--border-strong);
-  border-radius: 2px;
+  border-radius: var(--radius-hair);
   background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--border-strong) 55%, transparent) 4px 5px);
 }
 .energy-overview-playing {
@@ -420,10 +422,10 @@
   padding: var(--space-hair);
   vertical-align: middle;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-mark);
 }
 .energy-thumb > span { flex: 1 1 0; min-width: 1px; }
-.energy-thumb-bar { min-height: 2px; background: var(--text-soft); border-radius: 1px 1px 0 0; }
+.energy-thumb-bar { min-height: 2px; background: var(--text-soft); border-radius: var(--radius-hair) var(--radius-hair) 0 0; }
 .energy-thumb-unknown { align-self: stretch; background-image: repeating-linear-gradient(135deg, transparent 0 2px, var(--border-strong) 2px 3px); }
 
 @media (forced-colors: active) {

@@ -835,7 +835,7 @@ export function RequestsPanel() {
                     <b>{song.title ?? 'Untitled'}</b>
                     <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>
                   </span>
-                  <small>{already === 'Requested' ? <><Icon name="check" width={14} height={14} /> Requested</> : already || <><Icon name="plus" width={14} height={14} /> Request</>}</small>
+                  <small>{already === 'Requested' ? <><Icon name="check" size="compact" /> Requested</> : already || <><Icon name="plus" size="compact" /> Request</>}</small>
                 </button>
               </li>
             );

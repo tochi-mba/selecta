@@ -87,7 +87,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
             : <span className="seam-name">{name}</span>;
         })()}
         <div className="seam-actions">
-          {inspect && state.status === 'ready' && <button onClick={() => actions.current.hearSeam(rowKey)}>Hear it</button>}
+          {inspect && state.status === 'ready' && <button className="seam-hear" onClick={() => actions.current.hearSeam(rowKey)}><Icon name="play" size="compact" /> Hear it</button>}
           {(state.status === 'none' || state.status === 'failed') && (
             <Action working="Asking…" run={async () => {
               await post(at(`/mix/${item.position}/render${state.status === 'failed' ? '?retry=true' : ''}`), undefined, guard);
@@ -253,7 +253,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         </button>
         <span dir="auto" title={item.artist}>{item.artist}</span>
         <RequestTag item={item} />
-        {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" width={14} height={14} /> Locked</span>}
+        {playing && <span className="story-tag playing"><Icon name="play" size="compact" /> Playing now</span>}
+        {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" size="compact" /> Locked</span>}
       </div>
       <small className="facts">
         {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
@@ -262,6 +263,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         <button onClick={() => actions.current.play(item)} aria-label={`Play from ${item.title}`}><Icon name="play" /> Play</button>
         <Action
           aria-label={`Move ${item.title} up`}
+          title={`Move ${item.title} up`}
           data-move="up"
           disabled={item.position === 0}
           run={() => actions.current.move(item.position, item.position - 1, 'up')}
@@ -270,13 +272,14 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         </Action>
         <Action
           aria-label={`Move ${item.title} down`}
+          title={`Move ${item.title} down`}
           data-move="down"
           disabled={item.position === total - 1}
           run={() => actions.current.move(item.position, item.position + 1, 'down')}
         >
           <Icon name="down" />
         </Action>
-        <Menu className="song-more" label={<><Icon name="more" /><span className="visually-hidden">More for {item.title}</span></>}>
+        <Menu className="song-more" title={`More for ${item.title}`} label={<><Icon name="more" /><span className="visually-hidden">More for {item.title}</span></>}>
           {flagOn('editor.locks') && (
             <Action role="menuitem" title="A locked song stays right here when the mix is rebuilt" run={() => actions.current.lock(item)}>
               <Icon name="lock" /> {item.locked ? 'Unlock' : 'Lock'}
@@ -309,7 +312,7 @@ export function AddGap({ title, landsAt, onAdd }: { title: string; landsAt: numb
   return (
     <li className="add-gap">
       <button onClick={onAdd} aria-label={`Add a song after ${title}`} title={`Add a song here, as number ${landsAt}`}>
-        <Icon name="plus" width={16} height={16} /> Add a song <small aria-hidden="true">as number {landsAt}</small>
+        <Icon name="plus" size="toolbar" /> Add a song <small aria-hidden="true">as number {landsAt}</small>
       </button>
     </li>
   );

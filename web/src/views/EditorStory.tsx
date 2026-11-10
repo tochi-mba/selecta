@@ -55,7 +55,7 @@ export function EnergyDisclosure(props: { items: MixItem[]; selectedIndex: numbe
     <div className="energy-disclosure">
       <div className="energy-disclosure-bar">
         <button type="button" className="energy-disclosure-toggle" aria-expanded={open} aria-controls={panel} onClick={toggle}>
-          <Icon name={open ? 'up' : 'down'} width={16} height={16} /> Measured song energy
+          <Icon name={open ? 'up' : 'down'} size="toolbar" /> Measured song energy
         </button>
         {!open && <EnergyThumb values={items.map((item) => item.energy)} />}
       </div>
@@ -106,7 +106,7 @@ export function EditorStory(props: {
                   </p>
                   {words.detail && <p className="hint story-seam-detail">{words.detail}</p>}
                   <button type="button" className="story-edit" aria-label={`Edit this transition: ${previous.title} into ${item.title}`} onClick={() => onEditSeam(keys[index - 1], key)}>
-                    <Icon name="edit" width={16} height={16} /> Edit this transition
+                    <Icon name="edit" size="toolbar" /> Edit this transition
                   </button>
                 </div>
               )}
@@ -117,13 +117,13 @@ export function EditorStory(props: {
                   <p><span dir="auto">{item.artist}</span> · <span className="visually-hidden">length </span>{clock(item.duration)}</p>
                   {(playing || songSelected) && (
                     <p className="story-tags">
-                      {playing && <span className="story-tag playing"><Icon name="play" width={12} height={12} /> Playing now</span>}
+                      {playing && <span className="story-tag playing"><Icon name="play" size="compact" /> Playing now</span>}
                       {songSelected && <span className="story-tag">Selected</span>}
                     </p>
                   )}
                 </div>
                 <button type="button" className="story-edit" aria-label={`Edit this song: ${item.title}`} onClick={() => onEditSong(key)}>
-                  <Icon name="edit" width={16} height={16} /> Edit this song
+                  <Icon name="edit" size="toolbar" /> Edit this song
                 </button>
               </div>
             </li>

@@ -37,3 +37,40 @@ describe('palette shortcut focus ownership', () => {
     }
   });
 });
+
+function space(target: EventTarget) {
+  return shortcutFor({ key: ' ', code: 'Space', target, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false });
+}
+
+// S4-0110-02: Space belongs to the focused control, not to global playback.
+describe('Space ownership', () => {
+  it('leaves Space to a custom role=button reorder grip and its children', () => {
+    const grip = document.createElement('span');
+    grip.setAttribute('role', 'button');
+    grip.tabIndex = 0;
+    const glyph = document.createElement('svg');
+    grip.append(glyph);
+    document.body.append(grip);
+    try {
+      expect(space(grip)).toBeNull();
+      expect(space(glyph)).toBeNull();
+    } finally {
+      grip.remove();
+    }
+  });
+
+  it('leaves Space to real buttons, checkboxes, text and grids', () => {
+    const button = document.createElement('button');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    const grid = document.createElement('div');
+    grid.setAttribute('role', 'grid');
+    const cell = document.createElement('span');
+    grid.append(cell);
+    for (const target of [button, box, document.createElement('textarea'), cell]) expect(space(target)).toBeNull();
+  });
+
+  it('still plays or pauses when nothing focused needs the key', () => {
+    expect(space(document.body)).toBe('playPause');
+  });
+});

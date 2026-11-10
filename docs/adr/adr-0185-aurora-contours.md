@@ -31,8 +31,8 @@ Three overlapping sampled-frequency slices become filled and stroked contours. T
 - [x] Owner chose this design direction for PR #33; approval is a design decision, not test sign-off.
 - [x] Renderer and selectable preference have been authored in the PR branch.
 - [x] Source-level unit and browser test cases have been authored for this mode.
-- [ ] Automated build and tests green at the final code SHA.
-- [ ] Independent named-hardware, accessibility and real-audio review complete.
+- [x] Automated build and tests green at the final code SHA. **Evidence (2026-11-10):** run on the working tree over ad32af8 (renderer `web/src/views/spectrumVisuals.ts` unchanged since that commit): `pnpm exec vitest run src/views/spectrumEdgeCases.test.ts src/views/spectrumVisuals.test.ts` 98 passed, `src/views/Now.test.tsx` 27 passed ("chooses and remembers %s without creating or starting audio"), `vite build` green, and `e2e/creative-visualizers.e2e.ts` 4 passed in Edge, including "the visualizer style is chosen by keyboard and remembered across a reload" and "each horizontal mode paints measured audio, goes blank on pause and stops while hidden". The ADR's own edge cases are in `web/src/views/spectrumEdgeCases.test.ts` under "ADR-0185". Re-run if the renderer changes before merge.
+- [ ] Independent named-hardware, accessibility and real-audio review complete. **Needs a person:** an independent reviewer on named hardware with screen reader, high contrast, 400% zoom and measured low-power performance, recording the commit SHA.
 
 ## Rollback
 

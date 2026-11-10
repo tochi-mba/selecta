@@ -41,6 +41,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `listen.stage` | **Fullscreen lyrics.** Stage mode: the lyrics fill the screen. | `listen.lyrics` |
 | `listen.visualizers` | **Visualizers.** Fifteen spectrum styles that move with the music, with an intensity setting. |  |
 | `listen.beat_countdown` | **Beat countdown.** Counts the beats down to the next transition. |  |
+| `listen.handoff_phrase` | **Shared words at the hand-off.** While a finished word transition plays, the countdown names the words the two songs share. | `listen.beat_countdown` |
 | `listen.steering` | **Change the next song.** Bigger, Calmer and Something else for whatever plays next. |  |
 | `listen.why_transition` | **Why this transition?.** Explains the move chosen for the coming transition. |  |
 | `listen.media_keys` | **Media keys.** The computer's media keys and lock screen control playback. |  |

@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fakeBackend } from '../test/backend';
+import { fakeBackend, Reply } from '../test/backend';
 import Lucy from './Lucy';
 
 const conversation = {
@@ -167,4 +167,42 @@ describe('Lucy creation handoff and approval safety', () => {
     expect(screen.getByText(/This strict plan cannot be saved as ready-only yet/)).toBeInTheDocument();
   });
 
+});
+
+describe('UF-0378 entry intent and conversation continuity', () => {
+  it('keeps an exact draft and song-position scope from a deep link, without sending', async () => {
+    const calls = fakeBackend({
+      'GET /lucy/status': status,
+      'GET /lucy/conversations': { conversations: [] },
+      'POST /lucy/conversations': { ...conversation, id: 'cv_9', scope: { kind: 'draft', draft: 7, occurrence: 2 } },
+      'POST /lucy/conversations/cv_9/turns': { turn: { id: 'turn_9', seq: 1, status: 'queued' }, new: true, run: 'run_9' },
+    });
+    window.history.replaceState({}, '', '/mixes/lucy?scope=draft:7&occurrence=2&from=/mixes/drafts/7/edit');
+    render(<Lucy conversation={null} setMixData={vi.fn()} player={player} />);
+    expect((await screen.findAllByText(/Draft 7, song at position 3/)).length).toBeGreaterThan(0);
+    expect(calls.some((call) => call.method === 'POST')).toBe(false);
+    const box = await screen.findByRole('textbox', { name: /message|describe|lucy/i });
+    await userEvent.type(box, 'calmer here{Enter}');
+    await waitFor(() => expect(calls.some((call) => call.path === '/lucy/conversations/cv_9/turns')).toBe(true));
+    const made = calls.find((call) => call.method === 'POST' && call.path === '/lucy/conversations')?.body as Record<string, unknown>;
+    expect(made.scope).toEqual({ kind: 'draft', draft: 7, occurrence: 2 });
+  });
+
+  it('keeps a half-written message across a rerender and gives it back when the server does not answer', async () => {
+    const calls = backend();
+    const first = render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
+    await userEvent.type(await screen.findByRole('textbox', { name: /message|describe|lucy/i }), 'half an idea');
+    first.unmount();
+    render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
+    const box = await screen.findByRole('textbox', { name: /message|describe|lucy/i });
+    expect(box).toHaveValue('half an idea');
+    fakeBackend({
+      'GET /lucy/status': status,
+      'POST /lucy/conversations/cv_1/turns': new Reply(503, { detail: 'down' }),
+    });
+    await userEvent.type(box, '{Enter}');
+    expect(await screen.findByText(/may not have arrived/)).toBeInTheDocument();
+    expect(box).toHaveValue('half an idea');
+    expect(calls.length).toBeGreaterThan(0);
+  });
 });

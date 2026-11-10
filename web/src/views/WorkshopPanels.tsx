@@ -226,7 +226,7 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
             : jobs.analysis.running
               ? <Status kind={status.mix_rendering ? 'queued' : 'working'}>{status.mix_rendering ? 'Waiting while your mix renders' : `${jobs.analysis.left} to go`}</Status>
               : jobs.analysis.paused
-                ? <Status kind="planned">Paused, {jobs.analysis.left} to go</Status>
+                ? <Status kind="paused">Paused, {jobs.analysis.left} to go</Status>
                 : <Status kind="planned">{jobs.analysis.left} waiting</Status>}
         </li>
         {flagOn('render.spare_time') && <li>
@@ -439,7 +439,13 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
             />
           )}
         </Field>
-        <button disabled={!folder.trim() || reading} data-working={reading || undefined}>{reading ? 'Reading…' : 'Read folder'}</button>
+        {/* MP-0297-04: both labels share one cell, so Reading… never changes the button's width */}
+        <button disabled={!folder.trim() || reading} data-working={reading || undefined} aria-busy={reading || undefined}>
+          <span className="action-labels">
+            <span aria-hidden={reading || undefined} style={{ visibility: reading ? 'hidden' : undefined }}>Read folder</span>
+            <span aria-hidden={!reading || undefined} style={{ visibility: reading ? undefined : 'hidden' }}>Reading…</span>
+          </span>
+        </button>
         {scanning && <Action working="Stopping…" run={stopReading}>Stop reading</Action>}
       </form>
       {scanning && <p className="hint" role="status">Reading {status.scan.folder}. You can stop this and nothing already in your library changes.</p>}

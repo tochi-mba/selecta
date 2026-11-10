@@ -23,10 +23,23 @@
   --request: #6fd3ff;
 
   /* what things mean */
-  --surface: var(--bg);
+  /* Surface roles (MP-0276-01), from the page up. A background says which one it is, never which
+     palette colour it happens to be:
+       base     the page itself, under everything
+       raised   cards, panels, rows and text fields resting on the page (a field is a place to write)
+       control  buttons, chips, wells, meters and the current place in a list or the nav
+       panel    the frame that stays put: the rail, the phone tab bar and the docked inspector
+       overlay  dialogs, drawers, sheets, menus, popovers and tooltips, above everything; in Dark it
+                is lifted lighter than raised, because a shadow can't be seen on near-black
+       scrim    the dimmed page behind a dialog, drawer or sheet
+     Proof: web/e2e/mp-0276-surface-depth.e2e.ts and web/src/styles/surface-depth.test.ts. */
+  --surface-base: var(--bg);
+  --surface: var(--surface-base);
   --surface-raised: var(--panel);
   --surface-control: var(--panel-2);
-  --surface-overlay: color-mix(in srgb, var(--bg) 72%, transparent);
+  --surface-panel: var(--panel);
+  --surface-overlay: color-mix(in srgb, var(--ink) 6%, var(--panel));
+  --surface-scrim: color-mix(in srgb, var(--bg) 72%, transparent);
   --surface-selected: color-mix(in srgb, var(--accent) 12%, var(--panel));
   --border: var(--line);
   --border-strong: var(--soft);
@@ -36,6 +49,8 @@
   --edge-selected: var(--selected);
   --edge-error: var(--danger);
   --edge-focus: var(--focus);
+  /* an overlay's own edge: it has to be seen against the scrim in Dark, where its shadow can't */
+  --edge-overlay: color-mix(in srgb, var(--soft) 40%, var(--line));
   --text: var(--ink);
   --text-soft: var(--soft);
   --focus: var(--accent);
@@ -61,6 +76,14 @@
   --word-fill: transparent;
   --word-ink: var(--accent);
   --word-glow: color-mix(in srgb, var(--accent) 40%, transparent);
+  /* Lime is kept for what it means (MP-0276-04): the main action, focus, selection, playing and a job
+     at work. Everything else reaches it only through a role, never var(--accent) directly:
+       link    words that go somewhere
+       motif   artwork and charts: song motifs, mix signatures, seam bars, the energy arc. A quieter,
+               greyed lime, so a picture never shouts like a button
+     A frame round a working area (the Studio, the song adder) is --edge-interactive, not lime. */
+  --link: var(--accent);
+  --motif: color-mix(in srgb, var(--accent) 55%, var(--soft));
 
   /* type: the display face is the personality, and everything else stays out of its way */
   --display: 'Arial Black', 'Helvetica Neue', Impact, system-ui, sans-serif;
@@ -112,7 +135,16 @@
   --list-indent: 18px;    /* bulleted list text from its marker */
   --timeline-indent: 26px; /* a seam, gap or adder nests under its song by this much */
   --control-pad-block: 9px; /* (44px target - 24px line - 2px border) / 2 */
-  --icon-size: 20px;      /* ui/Icon.tsx default box */
+  --icon-size: 20px;      /* ui/Icon.tsx default box: the standard slot */
+  /* MP-0277-02: the icon slots, kept equal to ICON_SLOTS in ui/Icon.tsx. Each slot has its own stroke
+     (in 24-grid units) so every glyph draws a line about 1.4px wide on screen (MP-0277-04). */
+  --icon-compact: 14px;   /* a mark in a status, badge, tag or small text */
+  --icon-toolbar: 16px;   /* a secondary in-panel button with small words */
+  --icon-hero: 28px;      /* a page's own mark beside its title */
+  --icon-stroke-compact: 2.4;
+  --icon-stroke-toolbar: 2.1;
+  --icon-stroke: 1.7;
+  --icon-stroke-hero: 1.2;
   --icon-gap: var(--space-2);     /* icon to its own label (MP-0273-02) */
   --icon-gap-dense: var(--space-1); /* reviewed dense controls: status marks, badges, counts */
   --field-gap: var(--space-1);    /* label, control, help and error inside one field */
@@ -125,10 +157,28 @@
   --grid-beat-gap: 3px;   /* Studio lane cells, beat pips, seam bars, seam diagrams */
   --grid-bar-gap: 2px;    /* energy bars and seam strips */
   --grid-cell-gap: 1px;   /* the smallest energy thumbnail */
+  /* Corners and lines by role (MP-0276-03). Every border-radius in the app's stylesheets is one of
+     these, 0, 50% or inherit (web/src/styles/surface-depth.test.ts):
+       --radius        cards, panels, rows, dialogs and sheets
+       --radius-sm     buttons, fields, menus, popovers, tooltips and small wells
+       --radius-pill   pills, badges, chips and round icon buttons
+       --radius-mark   tiny marks: kbd keys, Studio cells, chord cells, seam lanes, thumbnails
+       --radius-hair   musical bars and the current lyric word, which only round off a pixel or two
+     Lines: a decorative separator is --separator thick in --edge-decorative; a state marker (playing,
+     selected, a request, attention) is a --marker bar; focus is a ring at least 2px. A separator is
+     always thinner and quieter than any state it sits beside (MP-0276-07). */
   --radius: 10px;
   --radius-sm: 8px;
   --radius-pill: 99px;
+  --radius-mark: 4px;
+  --radius-hair: 2px;
+  --separator: 1px;
+  --marker: 3px;
+  /* Depth (MP-0276-06). Raised is the hover lift of a card; overlay is anything floating above the
+     page. Both stay gentle: soft, short shadows, and in Dark the lift comes from a lighter surface
+     and --edge-overlay rather than from a darker shadow nobody can see. */
   --shadow-raised: 0 6px 24px rgb(0 0 0 / 35%);
+  --shadow-overlay: 0 1px 2px rgb(0 0 0 / 30%), 0 12px 32px rgb(0 0 0 / 40%);
   --gutter: clamp(16px, 3vw, 40px);
   --page-gutter: var(--gutter);
   --content-reading: 880px;
@@ -212,6 +262,8 @@
     --word-ink: #14140a;
     --word-glow: transparent;
     --shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
+    --shadow-overlay: 0 1px 2px rgb(40 34 20 / 10%), 0 12px 32px rgb(40 34 20 / 16%);
+    --surface-overlay: var(--panel);
   }
 }
 
@@ -236,6 +288,8 @@
   --word-ink: #14140a;
   --word-glow: transparent;
   --shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
+  --shadow-overlay: 0 1px 2px rgb(40 34 20 / 10%), 0 12px 32px rgb(40 34 20 / 16%);
+  --surface-overlay: var(--panel);
 }
 
 .density[data-density='compact'], :root[data-density='compact'] .density {

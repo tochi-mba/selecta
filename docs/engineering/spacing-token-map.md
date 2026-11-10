@@ -34,6 +34,8 @@ Owner: ADR-0273 (MP-0273-01 to -08). Geometry proof: `web/e2e/spacing-rhythm.e2e
 | `--timeline-indent` | 26px | A seam, gap or adder nests under its song in the editor |
 | `--control-pad-block` | 9px | Vertical padding that makes a 24px line plus a 1px border a 44px target |
 | `--icon-size` | 20px | `ui/Icon.tsx` default box, used to clear a leading search icon |
+| `--icon-compact`, `--icon-toolbar`, `--icon-hero` | 14px, 16px, 28px | The other icon slots (ADR-0277, `docs/engineering/icon-inventory.md`); `--icon-size` is the standard slot |
+| `--icon-stroke-compact`, `--icon-stroke-toolbar`, `--icon-stroke`, `--icon-stroke-hero` | 2.4, 2.1, 1.7, 1.2 | Stroke per icon slot, about 1.4px on screen at every slot (MP-0277-04); not spacing |
 | `--icon-gap` | `--space-2` (8px) | An icon to its own words (MP-0273-02) |
 | `--icon-gap-dense` | `--space-1` (4px) | Reviewed dense controls, listed below |
 | `--field-gap` | `--space-1` (4px) | Label, control, help and error inside one field (MP-0273-03) |

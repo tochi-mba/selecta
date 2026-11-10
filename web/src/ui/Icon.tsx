@@ -46,8 +46,30 @@ const paths = {
 } as const;
 
 export type IconName = keyof typeof paths;
+export const ICON_NAMES = Object.keys(paths) as IconName[];
 
-/** Local vectors share a 24px grid; the containing control supplies its accessible name. */
-export function Icon({ name, ...props }: { name: IconName } & SVGProps<SVGSVGElement>) {
-  return <svg {...props} className={`ui-icon ${props.className ?? ''}`} viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={paths[name]} /></svg>;
+/**
+ * MP-0277-02: the four icon slots. Every icon is drawn on the same 24px grid and shown at one of these
+ * boxes; the CSS tokens in styles/tokens.css (--icon-compact, --icon-toolbar, --icon-size, --icon-hero)
+ * hold the same numbers, and styles/icon-geometry.test.ts keeps the two in step.
+ *   compact   14  a mark inside a status, badge, tag or a line of small text
+ *   toolbar   16  a secondary in-panel button with small words
+ *   standard  20  navigation, the context bar, transport and every icon-only button
+ *   hero      28  a page's own mark beside its title
+ */
+export const ICON_SLOTS = { compact: 14, toolbar: 16, standard: 20, hero: 28 } as const;
+export type IconSize = keyof typeof ICON_SLOTS;
+
+/**
+ * MP-0277-04: the stroke is set per slot so every slot draws a line about 1.4px wide on screen
+ * (stroke x box / 24): 2.4 x 14, 2.1 x 16, 1.7 x 20 and 1.2 x 28. A 14px glyph no longer looks
+ * hairline next to a 20px one, and a 28px mark no longer looks bold.
+ */
+export const ICON_STROKES: Record<IconSize, number> = { compact: 2.4, toolbar: 2.1, standard: 1.7, hero: 1.2 };
+
+/** Local vectors share a 24px grid; the containing control supplies its accessible name. Inventory:
+ * docs/engineering/icon-inventory.md (MP-0277-01). */
+export function Icon({ name, size = 'standard', className, ...props }: { name: IconName; size?: IconSize } & Omit<SVGProps<SVGSVGElement>, 'width' | 'height' | 'strokeWidth' | 'viewBox'>) {
+  const box = ICON_SLOTS[size];
+  return <svg {...props} className={className ? `ui-icon ${className}` : 'ui-icon'} data-icon={name} data-size={size} viewBox="0 0 24 24" width={box} height={box} fill="none" stroke="currentColor" strokeWidth={ICON_STROKES[size]} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={paths[name]} /></svg>;
 }

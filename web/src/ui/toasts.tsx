@@ -171,7 +171,7 @@ function ToastRow({ toast }: { toast: Toast }) {
           title={canUndo(toast.activity) ? undefined : 'Undo the newer change first; this stays in Activity'}
         >{undoing ? 'Undoing…' : 'Undo'}</button>
       )}
-      <button className="toast-close" aria-label="Dismiss" onClick={() => { restoreFocus(); dismissToast(toast.id); }}><Icon name="close" /></button>
+      <button className="toast-close" aria-label="Dismiss" title="Dismiss" onClick={() => { restoreFocus(); dismissToast(toast.id); }}><Icon name="close" /></button>
     </div>
   );
 }

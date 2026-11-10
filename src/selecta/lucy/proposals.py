@@ -323,6 +323,10 @@ def diff(before: dict | None, after: dict) -> dict:
             rules_changed.append({"id": rule["id"], "status": "added"})
         elif old is not None and old.get("status") != rule.get("status"):
             rules_changed.append({"id": rule["id"], "status": rule.get("status")})
+    old_ready = {pair for pair, seam in old_pairs.items() if _verified_ready(seam)}
+    new_ready = {
+        (seam["a_occ"], seam["b_occ"]) for seam in after.get("seams", []) if _verified_ready(seam)
+    }
     return {
         "songs": statuses,
         "removed": [
@@ -340,7 +344,21 @@ def diff(before: dict | None, after: dict) -> dict:
         },
         "seams_changed": seams_changed,
         "rules_changed": rules_changed,
+        # LX-0361-03: what the change does to verified transitions, by directed occurrence pair,
+        # as each revision recorded it. A pair only counts when its clip was verified ready.
+        "readiness": {
+            "before": {"ready": len(old_ready), "needed": max(0, len(old_songs) - 1)},
+            "after": {"ready": len(new_ready), "needed": max(0, len(new_songs) - 1)},
+            "kept": len(old_ready & new_ready),
+            "lost": len(old_ready - new_ready),
+            "gained": len(new_ready - old_ready),
+        },
     }
+
+
+def _verified_ready(seam: dict) -> bool:
+    ready = seam.get("ready") or {}
+    return bool(ready.get("verified")) and ready.get("status") in ("ready", "already_rendered")
 
 
 def summary_text(change: dict) -> str:

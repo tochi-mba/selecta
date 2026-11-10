@@ -178,6 +178,13 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <p className="eyebrow">Quick Play · {firstMix ? 'Your library is ready' : 'Tap and play'}</p>
         <h2 id="mix-quick-title" className="mix-path-label">Listen now, shape later</h2>
         <h3 className="display">{hero?.name ?? 'Selecta’s pick'}</h3>
+        {/* MP-0283-01: what the pick can draw on sits between its name and its description, on the same edge as Play */}
+        {hero && hero.songs > 0 && (
+          <p className="vibe-card-facts mix-quick-facts">
+            <span>{hero.songs} matching songs</span>
+            <span>About {length(hero.seconds)} of matching source songs</span>
+          </p>
+        )}
         <p className="lede">{hero?.blurb ?? 'The strongest run it can find through your library.'}</p>
         <div className="row wrap">
           <Action
@@ -261,7 +268,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                       <h3>{card.name}</h3>
                       {card.tempo && <span className="vibe-tempo">{card.tempo[0]}–{card.tempo[1]} BPM</span>}
                     </div>
-                    {card.family && <p className="vibe-scope"><Icon name="circle" /> Stays within {card.family}</p>}
+                    {card.family && <p className="vibe-scope"><Icon name="circle" size="compact" /> Stays within {card.family}</p>}
                     <p className="vibe-card-summary">{card.blurb}</p>
                     <div className="vibe-card-facts" aria-label={`${card.songs} matching songs, about ${length(card.seconds)} of matching source audio`}>
                       <span>{card.songs} matching songs</span>
@@ -323,7 +330,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </section>
       )}
 
-      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} onClose={() => setCustomizing(false)} />}
+      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} songs={songs} onSongs={setSongs} onClose={() => setCustomizing(false)} />}
       {confirming && (
         <Dialog
           title={`Replace ${mixName}?`}
