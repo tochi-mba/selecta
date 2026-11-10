@@ -19,14 +19,31 @@ not weaken local mode's privacy, storage, network, or user-control guarantees.
 - **It gets more than one take.** A live DJ gets one shot. Selecta renders a transition, measures the result, and repairs what failed before you ever hear it.
 - **It explains itself, but only when asked.** The plan stays visible and the machine stays quiet.
 
-## Setup
+## Quick start (local development)
 
-You'll need [uv](https://docs.astral.sh/uv/), [pnpm](https://pnpm.io/) and [ffmpeg](https://ffmpeg.org/) on your PATH.
+You only need **one command** to start the Python API and hot-reloading website. From the repo root,
+install [uv](https://docs.astral.sh/uv/), [Node.js 22.12+](https://nodejs.org/),
+[pnpm](https://pnpm.io/), and [ffmpeg](https://ffmpeg.org/download.html) (needed to analyse
+or play music). The launcher installs the project's Python and web dependencies and reports
+what it is doing:
+
+```text
+Windows Command Prompt: dev.cmd
+Windows PowerShell:      .\dev.cmd
+macOS/Linux:             uv run python -x dev.cmd
+```
+
+The launcher opens the site when ready, prints its local URL, and streams server and website logs
+as you develop. It checks the Python API **and** the website's proxy before announcing success.
+Use `dev.cmd --check` for a startup smoke test, or `dev.cmd doctor` for prerequisites and
+troubleshooting. See [Working on Selecta](#working-on-selecta) below for all options.
+
+To run a production-style local build without hot reloading, use the underlying commands:
 
 ```bash
 uv sync
 cd web
-pnpm install
+pnpm install --frozen-lockfile
 pnpm build
 cd ..
 uv run selecta web
