@@ -149,21 +149,42 @@ def test_an_event_committed_on_instance_a_reaches_a_stream_on_instance_b_at_once
 
 
 def test_a_stream_on_b_never_hears_another_workspaces_event(engines, instance_b):
+    """Another workspace's event, then one of B's own: B's stream hears only its own.
+
+    The outbox delivers in commit order, so had the first leaked it would arrive before the second.
+    Waiting for B's own event (rather than for any bytes) keeps the test fast and never leans on
+    the keep-alive, which can take as long as the client's timeout.
+    """
     _, base = instance_b
-    onboard(engines[0])
+    workspace = onboard(engines[0])
+    heard: list[str] = []
+    connected = threading.Event()
+
+    def stream() -> None:
+        with httpx.Client(base_url=base, timeout=30) as client:
+            with client.stream(
+                "GET", "/api/events", headers={"Authorization": f"Bearer {TOKEN}"}
+            ) as response:
+                assert response.status_code == 200
+                connected.set()
+                for line in response.iter_lines():
+                    if line.startswith("data: "):
+                        heard.append(json.loads(line[6:])["topic"])
+                        if heard[-1] == "fanout.mine":
+                            return
+
+    reader = threading.Thread(target=stream, daemon=True)
+    reader.start()
+    assert connected.wait(10)
+    time.sleep(0.5)  # B has read what was there and is now waiting
     with transaction(engines[0], "someone-else") as connection:
         outbox.emit(connection, "fanout.secret", "someone-else", {}, db_now(connection))
-    with httpx.Client(base_url=base, timeout=30) as client:
-        with client.stream(
-            "GET", "/api/events", headers={"Authorization": f"Bearer {TOKEN}"}
-        ) as response:
-            started = time.monotonic()
-            text = ""
-            for chunk in response.iter_text():
-                text += chunk
-                if time.monotonic() - started > 1.0:
-                    break
-    assert "fanout.secret" not in text
+    with transaction(engines[0], workspace) as connection:
+        outbox.emit(connection, "fanout.mine", workspace, {}, db_now(connection))
+    wait_until(lambda: "fanout.mine" in heard)
+    reader.join(10)
+
+    assert "fanout.secret" not in heard
 
 
 # --- flag rules ---------------------------------------------------------------------------------
