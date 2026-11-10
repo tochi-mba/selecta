@@ -1358,7 +1358,7 @@ requires-dist = [
     { name = "pedalboard", specifier = ">=0.9.26" },
     { name = "psutil", specifier = ">=6" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.8" },
-    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.9" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.15.1" },
     { name = "pyloudnorm", specifier = ">=0.2.0" },
     { name = "rich", specifier = ">=13" },
     { name = "scipy", specifier = ">=1.14" },
