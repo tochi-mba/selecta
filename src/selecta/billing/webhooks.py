@@ -103,7 +103,8 @@ def verify_signature(
     now = time.time() if now is None else now
     if abs(now - signed_at) > tolerance:
         raise SignatureError("Stripe-Signature timestamp is outside the tolerance.")
-    keys = [secrets] if isinstance(secrets, str) else [key for key in secrets if key]
+    # An empty secret is a key anyone can sign with, so it never counts as configured.
+    keys = [key for key in ([secrets] if isinstance(secrets, str) else secrets) if key]
     if not keys:
         raise SignatureError("No webhook signing secret is configured.")
     signed = timestamp.encode() + b"." + payload
@@ -424,7 +425,7 @@ class HttpStripeClient:
             raise StripeUnavailable("Stripe returned an invalid response.")
         try:
             parsed = httpx.URL(value)
-        except (TypeError, ValueError) as problem:
+        except (TypeError, ValueError, httpx.InvalidURL) as problem:  # not a ValueError
             raise StripeUnavailable("Stripe returned an invalid response.") from problem
         if parsed.scheme != "https" or not parsed.host:
             raise StripeUnavailable("Stripe returned an invalid response.")

@@ -41,6 +41,7 @@ class StripeReconcileResult:
     unmatched: int
     quota_limits_updated: int
     audit_entries: int = 0
+    unknown_prices: int = 0
 
 
 def drain_stripe_events(
@@ -140,12 +141,26 @@ def reconcile_stripe_billing(
                 resource_id=subscription_id,
                 reason="Stripe subscription could not be associated with a workspace",
             )
+        # A price missing from the map grants Free to someone Stripe charges: nothing here can
+        # fix that, so it is recorded as a failure for staff to act on.
+        for item in report.unknown_prices:
+            audit.record(
+                connection,
+                action="billing.reconciliation.unknown_price",
+                result=audit.AuditResult.FAILURE,
+                resource_type="stripe_subscription",
+                resource_id=item.subscription_id,
+                workspace_id=item.workspace_id,
+                reason="Stripe subscription price is not in the price map",
+                metadata={"price_id": item.stripe},
+            )
     return StripeReconcileResult(
         checked=report.checked,
         changed=len(report.items),
         unmatched=len(report.unmatched),
         quota_limits_updated=len(affected),
-        audit_entries=len(report.items) + len(report.unmatched),
+        audit_entries=len(report.items) + len(report.unmatched) + len(report.unknown_prices),
+        unknown_prices=len(report.unknown_prices),
     )
 
 

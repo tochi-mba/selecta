@@ -19,7 +19,9 @@ read beside the snapshot and is labelled as an override, so it never looks like 
 
 The price map (price id -> plan, plan version, interval) comes from configuration: the JSON in
 `SELECTA_STRIPE_PRICES`, for example `{"price_123": {"plan": "standard", "version": 1,
-"interval": "month"}}`. A price that isn't in it grants nothing and shows up as drift.
+"interval": "month"}}`. A price that isn't in it grants nothing: each decision that meets one
+logs a `billing.unknown_price` warning (the alert), and reconciliation lists it in
+`DriftReport.unknown_prices` for the audit log and the admin Billing page.
 """
 
 from __future__ import annotations
@@ -27,6 +29,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import math
 import os
 from collections.abc import Iterable, Mapping
@@ -44,6 +47,8 @@ from selecta.billing.schema import (
     subscriptions,
 )
 from selecta.persistence import db_now, new_id
+
+log = logging.getLogger(__name__)
 
 PLAN_IDS = ("free", "standard", "premium")
 PLAN_RANK = {plan: rank for rank, plan in enumerate(PLAN_IDS)}
@@ -92,8 +97,12 @@ PriceMap = Mapping[str, PricePlan]
 
 
 def parse_price_map(data: Mapping[str, Any]) -> dict[str, PricePlan]:
+    if not isinstance(data, Mapping):
+        raise ValueError("The price map must be a JSON object of price ids.")
     plans: dict[str, PricePlan] = {}
     for price_id, entry in data.items():
+        if not isinstance(entry, Mapping):
+            raise ValueError(f"Price {price_id} needs an object with its plan.")
         plan_id = entry.get("plan") or entry.get("plan_id")
         if plan_id not in PAID_PLANS:
             raise ValueError(f"Price {price_id} names {plan_id!r}; only paid plans have prices.")
@@ -383,6 +392,13 @@ def decide_workspace(
             row["raw"], price_map, now, past_due_since=row["past_due_since"],
             dispute_lost=row["dispute_lost_at"] is not None,
         )
+        if decision.reason == "unknown_price":
+            # A paying customer is getting Free: someone must add the price to the map.
+            log.warning(
+                "billing.unknown_price: subscription %s has price %s, which isn't in the "
+                "price map, so it grants Free",
+                row["stripe_subscription_id"], row["price_id"],
+            )
         latest = latest or decision
         if decision.plan_id != "free" and (best is None or _better(decision, best)):
             best = decision
@@ -542,6 +558,9 @@ class DriftReport:
     unmatched: list[str] = field(default_factory=list)
     """Stripe subscriptions no workspace could be found for."""
     snapshots_changed: int = 0
+    unknown_prices: list[DriftItem] = field(default_factory=list)
+    """Live subscriptions whose price isn't in the price map, so they grant Free. Nothing is
+    corrected for these; staff must add the price."""
 
 
 def _paid_workspaces(conn: Connection) -> list[str]:
@@ -584,6 +603,10 @@ def reconcile_all(
             report.unmatched.append(sub_id)
             continue
         change = upsert_subscription(conn, workspace_id, sub, now, price_map=price_map)
+        if snapshot_from_subscription(sub, price_map, now).reason == "unknown_price":
+            report.unknown_prices.append(DriftItem(
+                workspace_id, sub_id, "price_id", None, plan_for(sub, price_map)[0]
+            ))
         report.items.extend(
             DriftItem(workspace_id, sub_id, name, ours, theirs)
             for name, (ours, theirs) in change.diff.items()

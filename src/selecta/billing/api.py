@@ -102,6 +102,13 @@ def install_routes(
         consent_version = os.environ.get("SELECTA_CHECKOUT_CONSENT_VERSION", "").strip()
         if not consent_version or not hmac.compare_digest(body.consent_version, consent_version):
             raise HTTPException(status_code=409, detail={"code": "consent_version_changed"})
+        # Stripe's redirect URLs are built from an allowlisted browser Origin, checked before
+        # anything is sent to Stripe so an untrusted page can't create customers.
+        origin = next(
+            (item for item in allowed_origins if request.headers.get("origin") == item), None
+        )
+        if origin is None:
+            raise HTTPException(status_code=400, detail={"code": "untrusted_origin"})
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         prices = _checkout_prices()
         price_id = next(
@@ -142,13 +149,6 @@ def install_routes(
                             created_at=db_now(conn),
                         )
                     )
-                origin = next(
-                    (item for item in allowed_origins if request.headers.get("origin") == item),
-                    None,
-                )
-                if origin is None:
-                    # Require an allowlisted browser Origin for Stripe's redirect URLs.
-                    raise HTTPException(status_code=400, detail={"code": "untrusted_origin"})
                 success_url = (
                     origin + "/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}"
                 )
