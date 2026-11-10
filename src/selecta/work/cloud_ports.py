@@ -86,7 +86,6 @@ class CloudJobFlags:
                 plan_gated=plans.plan_gated_flags(),
                 user_prefs=user_preferences(conn, owner.id),
                 now=now,
-                lock_plans=plans.unlocking_plans(),
             )
             return decision.on
 
