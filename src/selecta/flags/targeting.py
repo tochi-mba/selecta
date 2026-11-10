@@ -206,18 +206,21 @@ class _Evaluator:
         return True, "switched on, which only counts for beta features"
 
     def teasable(self, flag_id: str) -> bool:
-        """Locked by the plan alone: a rule would leave it on and what it needs is on or locked
-        too. A feature a rule switched off is hidden, never teased."""
+        """A `teaser` flag locked by the plan alone. A feature a rule switched off is hidden,
+        never teased, and so is one that needs such a feature."""
+        return self.flag(flag_id).when_locked == "teaser" and self.unlockable(flag_id, ())
+
+    def unlockable(self, flag_id: str, path: tuple[str, ...]) -> bool:
+        """Off only because the plan leaves it out: a rule would leave it on, and everything it
+        needs is on or unlockable too, all the way down. A needed flag is checked through its own
+        rules, since a plan lock decides before the rules do and would hide a kill switch."""
         flag = self.flag(flag_id)
-        if flag.when_locked != "teaser" or self.decide(flag_id).reason != PLAN_LOCKED:
-            return False
-        if not self.rule_verdict(flag)[0].on:
+        if self.decide(flag_id).reason != PLAN_LOCKED or not self.rule_verdict(flag)[0].on:
             return False
         for need in flag.requires:
-            if need not in self.registry:
+            if need not in self.registry or need in path or need == flag_id:
                 return False
-            decided = self.decide(need)
-            if not decided.on and decided.reason != PLAN_LOCKED:
+            if not self.decide(need).on and not self.unlockable(need, (*path, flag_id)):
                 return False
         return True
 
