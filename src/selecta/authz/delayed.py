@@ -246,13 +246,20 @@ def pending(conn: Connection) -> list[DangerousAction]:
 
 
 def due(conn: Connection, now: float | None = None) -> list[DangerousAction]:
-    """Pending, unexpired actions that may run now: approved, or single-operator and delayed."""
+    """Pending, unexpired actions that may run now: approved, or single-operator and delayed.
+
+    Once two people could approve, an unapproved action isn't due however long it waited, the same
+    rule `execute()` applies, so a runner never picks up an action it will be refused.
+    """
     now = db_now(conn) if now is None else now
     t = dangerous_actions
-    ready = sa.or_(
-        t.c.approver_id.is_not(None),
-        sa.and_(t.c.two_person.is_(False), t.c.execute_after <= now),
-    )
+    if two_person_mode(conn, now):
+        ready = t.c.approver_id.is_not(None)
+    else:
+        ready = sa.or_(
+            t.c.approver_id.is_not(None),
+            sa.and_(t.c.two_person.is_(False), t.c.execute_after <= now),
+        )
     query = (
         sa.select(t)
         .where(t.c.status == ActionStatus.PENDING.value, t.c.expires_at > now, ready)
