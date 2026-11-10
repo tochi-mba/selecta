@@ -121,6 +121,38 @@ def test_a_rules_params_cannot_be_changed_after_it_is_made():
         rule.params["on"] = False  # type: ignore[index]
 
 
+def test_a_rules_nested_params_are_frozen_too():
+    ids = ["user-1"]
+    rule = Rule("users", {"ids": ids, "on": True})
+    ids.append("user-2")
+    assert rule.params["ids"] == ("user-1",)
+    assert rule.to_dict()["params"]["ids"] == ["user-1"]
+    assert says(rule, ctx(user_id="user-2")) is None
+    with pytest.raises(AttributeError):
+        rule.params["ids"].append("user-3")  # type: ignore[attr-defined]
+
+
+def test_nested_mappings_and_sets_in_params_are_frozen_and_read_back_as_plain_values():
+    rule = Rule("kill_switch", {"note": "x", "extra": {"by": ["ops"], "tags": {"a"}}})
+    assert rule.problems == ("a kill_switch rule doesn't take extra",)
+    extra = rule.params["extra"]
+    with pytest.raises(TypeError):
+        extra["by"] = []  # type: ignore[index]
+    assert extra["by"] == ("ops",)
+    assert extra["tags"] == frozenset({"a"})
+    plain = rule.to_dict()["params"]["extra"]
+    assert plain == {"by": ["ops"], "tags": ["a"]}
+    plain["by"].append("dev")
+    assert rule.params["extra"]["by"] == ("ops",)
+
+
+def test_a_rule_made_from_lists_equals_the_same_rule_made_from_tuples():
+    from_lists = Rule("segment", {"plans": ["free", "standard"], "countries": ["GB"]})
+    from_tuples = Rule("segment", {"plans": ("free", "standard"), "countries": ("GB",)})
+    assert from_lists == from_tuples
+    assert Rule.from_dict(from_tuples.to_dict()) == from_lists
+
+
 # Kill switch
 
 

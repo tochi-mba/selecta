@@ -256,7 +256,7 @@ def _write(
                         "flag_id": flag_id,
                         "position": position,
                         "kind": rule.kind,
-                        "params": dict(rule.params),
+                        "params": rule.to_dict()["params"],
                         "enabled": rule.enabled,
                         "version": version,
                         "updated_at": now,

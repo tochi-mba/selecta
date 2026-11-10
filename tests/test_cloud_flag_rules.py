@@ -145,7 +145,7 @@ def test_a_long_list_rule_is_stored_and_read_back_whole(cloud_engine):
     ids = [f"user-{n}" for n in range(MAX_IDS)]
     with transaction(cloud_engine) as conn:
         save(conn, "plain", [Rule("users", {"ids": ids, "on": True})])
-        assert store.current_rules(conn, "plain")[0].params["ids"] == ids
+        assert store.current_rules(conn, "plain")[0].params["ids"] == tuple(ids)
 
 
 @pytest.mark.parametrize(("author", "reason"), [("", "why"), ("me", "  "), (" ", "")])

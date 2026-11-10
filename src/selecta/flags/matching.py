@@ -81,9 +81,31 @@ _ALLOWED = {
 }
 
 
+def _frozen(value: Any) -> Any:
+    """A deep read-only copy, so a rule can't change after it's checked: lists and tuples become
+    tuples, mappings read-only mappings and sets frozensets."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _frozen(item) for key, item in value.items()})
+    if isinstance(value, list | tuple):
+        return tuple(_frozen(item) for item in value)
+    if isinstance(value, set | frozenset):
+        return frozenset(_frozen(item) for item in value)
+    return value
+
+
+def _thawed(value: Any) -> Any:
+    """`_frozen` undone, as plain JSON values: tuples and frozensets become lists."""
+    if isinstance(value, Mapping):
+        return {key: _thawed(item) for key, item in value.items()}
+    if isinstance(value, tuple | frozenset):
+        return [_thawed(item) for item in value]
+    return value
+
+
 @dataclass(frozen=True)
 class Rule:
-    """One targeting rule. `params` by kind (every kind also takes a free-text `note`):
+    """One targeting rule, frozen all the way down. `params` by kind (every kind also takes a
+    free-text `note`):
 
     - `kill_switch`: nothing. Off for everyone, now.
     - `users` / `workspaces`: `ids`, and `on` (default false): these accounts get `on`.
@@ -102,11 +124,11 @@ class Rule:
     matcher: Matcher | None = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        params = dict(self.params)
+        params = _frozen(dict(self.params))
         found, matcher = _compile(self.kind, params)
         if not isinstance(self.enabled, bool):
             found.append("enabled should be true or false")
-        object.__setattr__(self, "params", MappingProxyType(params))
+        object.__setattr__(self, "params", params)
         object.__setattr__(self, "problems", tuple(found))
         object.__setattr__(self, "matcher", None if found else matcher)
 
@@ -119,7 +141,8 @@ class Rule:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {"kind": self.kind, "params": dict(self.params), "enabled": self.enabled}
+        """The rule as plain JSON values, a fresh copy each time."""
+        return {"kind": self.kind, "params": _thawed(self.params), "enabled": self.enabled}
 
 
 @dataclass(frozen=True)
