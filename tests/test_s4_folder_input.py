@@ -8,8 +8,10 @@ exactly as typed so the box can keep it.
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 
 from selecta import db
+from selecta.api import create_app
 from selecta.config import Settings
 from selecta.library.folder_check import check_folder
 
@@ -75,3 +77,32 @@ def test_absolute_traversal_does_not_escape_the_user_selected_folder(conn, tmp_p
     (music / "song.mp3").write_bytes(b"x")
     answer = check_folder(conn, str(music / ".." / "Music"))
     assert answer["kind"] == "invalid"
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"origin": "https://malicious.example"},
+        {"sec-fetch-site": "cross-site"},
+        {"sec-fetch-site": "same-site"},
+        {"host": "malicious.example"},
+    ],
+)
+def test_a_webpage_from_elsewhere_cannot_inspect_local_folders(tmp_path, headers):
+    music = tmp_path / "Private music"
+    music.mkdir()
+    (music / "recording.flac").write_bytes(b"some audio")
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    response = client.get("/api/folders/check", params={"path": str(music)}, headers=headers)
+    assert response.status_code == 403
+
+
+def test_the_local_browser_can_explicitly_preview_a_folder(tmp_path):
+    music = tmp_path / "Selected music"
+    music.mkdir()
+    (music / "recording.flac").write_bytes(b"some audio")
+    client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
+    response = client.get("/api/folders/check", params={"path": str(music)})
+    assert response.status_code == 200
+    assert response.json()["kind"] == "ok"
+    assert response.json()["audio_files"] == 1
