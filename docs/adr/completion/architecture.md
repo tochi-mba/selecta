@@ -21,7 +21,8 @@
 
 `ui/*` and `state/*` never import from `views/*`; `views/*` import `ui`, `state`, `api`, `lib`;
 `App.tsx` wires views into the shell. Music objects (`ui/MusicObjects.tsx`) take plain data and
-never fetch. The 1,000-line limit (`tests/test_file_length.py`) keeps each module reviewable.
+never fetch. `web/src/importBoundaries.test.ts` fails a shared module that imports a view, and any
+direct `fetch('/api/...')` outside `api.ts` other than the listed byte streams. The 1,000-line limit (`tests/test_file_length.py`) keeps each module reviewable.
 
 ## Reversible rollout
 

@@ -35,6 +35,20 @@ Every non-happy state answers what is happening, what remains safe, and what the
 7. **LX-0352-07 - Announce asynchronous changes.** **Acceptance:** Status regions avoid noisy repeated screen-reader messages. **Required verification:** Live-region frequency AT test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **LX-0352-08 - Review all state screenshots.** **Acceptance:** Human comparison verifies legibility across themes, density and 320px. **Required verification:** Named reviewer/device/fixture evidence. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
+## State catalogue (LX-0352-01, 2026-11-10)
+
+| State | What shows | Fixture / test |
+|---|---|---|
+| Empty library | "Your library is empty", Add music | `LibraryLx.test.tsx` "an empty library, an empty filter and a search with no match have different next actions"; `Library.test.tsx` "offers an actual next step for a library without source music" |
+| First run, nothing ready | "No songs are ready for mixes yet", Show all songs, no Start a mix | `LibraryLx.test.tsx` "a partly scanned library offers no playable action and explains readiness", "queued songs on first run cannot start a mix" |
+| Loading | Placeholder shaped like the list or the cards, "Loading your songs" | `LibraryLx.test.tsx` "the loading placeholder takes the shape of the chosen layout"; `lx-library.e2e.ts` LX-0352-02 |
+| Refreshing (new search) | "Updating results…", list `aria-busy`, old results never committed | `Library.test.tsx` "only the newest search counts, however the answers arrive"; `LibraryLx.test.tsx` LX-0342-05 |
+| Stale (refresh failed) | Rows kept, "may be out of date", Retry loading, selection and batch held | `lx-library.e2e.ts` LX-0352-04 |
+| Offline (first load failed) | "Couldn’t load your library. Your songs are fine.", Try again | `Library.test.tsx` "not being able to load isn’t the same as having no songs" |
+| Filtered, no match | "Nothing matches", the active constraints, Clear search / Show all songs | `LibraryLx.test.tsx` (as above); `lx-library.e2e.ts` LX-0342-03 |
+| Deep link missing or unreachable | Says which, Try again, Dismiss | `Library.test.tsx` "never opens another song if a deep-link ID is missing, and can retry" |
+| Recovery | Retry keeps address, sort, filter and scroll | `lx-library.e2e.ts` LX-0352-05 |
+
 ## Evidence and release boundaries
 
 Compare baseline and candidate at the same route, data, theme, viewport, scroll, player and revision state. Record screenshots and measured DOM geometry where pertinent, plus tests for keyboard, touch, 320px, 200/400% zoom, Light/Dark/System, forced colours, Still/reduced motion, long and RTL/CJK names, offline, stale, cancelled, failed and multitab conditions. Use actual local audio and independent listening review for playback-affecting changes; screenshots or green CI alone do not prove musical quality or user comprehension.

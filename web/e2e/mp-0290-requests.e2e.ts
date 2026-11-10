@@ -200,6 +200,11 @@ test('MP-0290-05 Use this, Don’t use a bridge and Add to mix anyway each say w
   await drawer.locator('.request-row[data-stage="approve"]').first().getByRole('button', { name: 'See other bridges' }).click();
   const use = drawer.getByRole('button', { name: 'Use this' }).first();
   await expect(use).toBeVisible();
+  // its route diagram: one arrow between each pair, the bridge before the request, as they would play
+  const diagram = drawer.locator('.bridge-options .music-route.compact').first();
+  await expect(diagram.locator('.music-route-arrow')).toHaveCount(1);
+  await expect(diagram).toHaveAttribute('aria-label', `Proposed route - nothing added. ${bridge.title} → ${all[4].title}`);
+  expect(await diagram.locator('.music-route-icons > span').evaluateAll((spans) => spans.map((span) => span.className))).toEqual(['bridge', 'wanted']);
   await described(use, /^Adds one extra song with .+\. They join together once every transition is ready, and none of them plays before that\.$/);
   await drawer.getByRole('button', { name: 'Close', exact: true }).filter({ hasText: 'Close' }).last().click();
   // a bridge already agreed to can be turned down, and that says nothing extra joins

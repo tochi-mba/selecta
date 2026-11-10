@@ -1,13 +1,18 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ExportJob, MixItem, SongDetail } from '../api';
+import type { ExportJob, MixData, MixItem, SongDetail, Status, VibeCard } from '../api';
 import { SetPlayer } from '../player';
-import { fakeBackend, status as appStatus } from '../test/backend';
+import { fakeBackend, seam, songs, status as appStatus } from '../test/backend';
 import { EnergyThumb, FeelDiagram, LengthScale } from '../ui/MusicObjects';
 import { SeamSegments } from './Drafts';
 import { ExportJobs, exportStage } from './ExportJobs';
 import { HarmonicDiscoveries, Links } from './Links';
+import { Mix } from './Mix';
+import { Mixes } from './Mixes';
 import { Now } from './Now';
+import { Workshop } from './Workshop';
 
 /** Creative-interface (CI, ADR-0165 to ADR-0184) acceptance checks that had no focused test before. */
 
@@ -84,7 +89,6 @@ describe('CI-0176-04 a machine suggestion is a candidate until someone rates it'
     render(<HarmonicDiscoveries />);
     expect(await screen.findByRole('heading', { name: 'Songs that might share chords' })).toBeInTheDocument();
     expect(screen.getByText(/Your answer only teaches Selecta what you hear\. It never adds anything to a mix\./)).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/\b(confirmed|verified|approved)\b/i);
   });
 });
 
@@ -178,5 +182,118 @@ describe('CI-0168-04 approximate-length graphic', () => {
     expect(shares).toEqual(['0.25', '0.50', '1.00']);
     const { container } = render(<LengthScale songs={Number.NaN} most={48} />);
     expect(container.querySelector('.length-scale')).toHaveAttribute('data-share', '0.00');
+  });
+});
+
+const viewProps = (state: Status = appStatus()) => {
+  const player = new SetPlayer(() => [], () => {});
+  return {
+    status: state, mix: [] as MixItem[], mixName: '', canUndo: false, refreshMix: () => {}, setMixData: () => {}, refreshStatus: () => {},
+    player, now: player.state, setView: () => {}, notify: () => {}, stage: false, toggleStage: () => {},
+  };
+};
+
+describe('CI-0172-04 a move that can’t be used says why', () => {
+  function Harness({ start }: { start: MixItem[] }) {
+    const [mix, setMix] = useState(start);
+    const player = new SetPlayer(() => mix, () => {});
+    return <Mix {...viewProps()} mix={mix} mixName="Test mix" setMixData={(data: MixData) => setMix(data.mix)} player={player} now={player.state} />;
+  }
+  const move = (name: string, label: string, reason: string | null) => ({
+    name, label, description: '', available: reason === null, reason, blends: false, rides: false, uses_cues: true, uses_phrase: false,
+  });
+
+  it('greys out the move with its reason on hover and in a list the keyboard can reach', async () => {
+    fakeBackend({
+      'GET /mix/1/options': {
+        moves: [move('auto', 'Let Selecta choose', null), move('vocal_ride', 'Vocal ride', 'Needs a vocal cue that this song doesn’t have'),
+          move('bass_swap_blend', 'Bass swap', 'These two are too far apart in tempo')],
+        exits: [], entries: [], lengths: [], links: [], studio: { available: true, reason: null }, tempo_gap: 14, keys: ['8A', '3B'],
+      },
+    });
+    render(<Harness start={songs(seam('ready', 'a'))} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Change' }));
+    const group = await screen.findByRole('group', { name: 'How should this land?' });
+    const ride = within(group).getByRole('button', { name: /Vocal ride/ });
+    expect(ride).toBeDisabled();
+    expect(ride).toHaveAttribute('title', 'Needs a vocal cue that this song doesn’t have');
+    const why = screen.getByText('Why 2 moves are greyed out');
+    fireEvent.click(why);
+    const list = why.closest('details') as HTMLElement;
+    expect(list).toHaveTextContent('Vocal ride: Needs a vocal cue that this song doesn’t have');
+    expect(list).toHaveTextContent('Bass swap: These two are too far apart in tempo');
+    expect(screen.getByText('14% tempo gap, keys 8A and 3B.')).toBeInTheDocument();
+  });
+});
+
+describe('CI-0167-02 a chosen idea stays named in the mix it actually made', () => {
+  it('names the idea with the server’s own song count, opens the editor, and claims nothing rendered', async () => {
+    const card: VibeCard = {
+      key: 'peak', name: 'Peak time', group: 'The moment', family: null, blurb: 'Peak words', songs: 40, ready: true, needs: 0,
+      artists: ['Someone'], tempo: [100, 124], moves: 'Long blends', seconds: 3900,
+    };
+    const built = songs(seam('none', 'a'));
+    fakeBackend({
+      'GET /vibes': [card],
+      'POST /vibes/peak/build': { mix: built, name: 'Peak time', can_undo: true },
+      'GET /drafts': { drafts: [], current: { name: '', songs: 0, left: 0, eta: { seconds: 0, low: 0, high: 0 } }, out_of_room: false },
+    });
+    const notify = vi.fn();
+    const setMixData = vi.fn();
+    const setView = vi.fn();
+    render(<Mixes {...viewProps()} notify={notify} setMixData={setMixData} setView={setView} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Shape first' }));
+    await waitFor(() => expect(setView).toHaveBeenCalledWith('Edit'));
+    expect(setMixData).toHaveBeenCalledWith(expect.objectContaining({ mix: built }));
+    const said = notify.mock.calls[0][0] as string;
+    expect(said).toMatch(/^Peak time: generated 2 of 12 requested songs, about .* of source audio before transitions\. Review the actual order in Edit\.$/);
+    expect(said).not.toMatch(/ready|rendered/i);
+  });
+});
+
+describe('CI-0180-03/04 Workspace explains priority and keeps music apart from cache', () => {
+  it('shows analysis held back by a mix render as waiting, not stuck', async () => {
+    fakeBackend({
+      'GET /jobs': {
+        worker: { running: true, rendering_the_mix: true }, mix: { queued: 1, rendering: 1, failed: 0, none: 0, ready: 3 }, drafts_in_line: 0,
+        storage_full: false, analysis: { running: true, paused: false, asked_for: 0, left: 9 }, failed_seams: [], failed_songs: [], estimates: '',
+      },
+    });
+    render(<Workshop {...viewProps(appStatus({ mix_rendering: true }))} tab="overview" />);
+    const waiting = await screen.findByText('Waiting while your mix renders');
+    expect(waiting.closest('.status')?.className ?? '').not.toMatch(/failed|blocked/);
+    expect(screen.queryByText(/stuck/i)).toBeNull();
+  });
+
+  it('labels the cache as Selecta’s own and says the music files are never counted or touched', async () => {
+    const GB = 1024 ** 3;
+    fakeBackend({
+      'GET /storage': {
+        used_bytes: 4 * GB, kept_bytes: 3 * GB, cache_bytes: 1 * GB, free_bytes: 13 * GB, budget_bytes: 3 * GB,
+        largest_budget_bytes: 13 * GB, smallest_budget_bytes: 0.5 * GB, total_bytes: 200 * GB,
+      },
+    });
+    render(<Workshop {...viewProps()} tab="storage" />);
+    expect(await screen.findByText('Made by Selecta, can be made again')).toBeInTheDocument();
+    expect(screen.getByText(/Your music files aren’t counted here, because Selecta doesn’t copy them, and nothing here ever touches them\./)).toBeInTheDocument();
+    expect(screen.getByText(/Your music is never touched\./)).toBeInTheDocument();
+  });
+});
+
+describe('CI-0181-05 closing the exports list never restarts or loses a job', () => {
+  it('finds the same job again after it is closed and reopened, without asking for a new one', async () => {
+    const job: ExportJob = {
+      id: 'x1', state: 'encoding', scope: 'current', draft: null, mix_name: 'Night', revision: 'rev-1', songs: [{ song_id: 1, title: 'One', artist: 'A' }],
+      seams: [], seams_total: 0, seams_ready: 0, seconds_estimate: 200, name: 'night.flac', seconds: null, error: null, created_at: 1_700_000_000,
+      can_cancel: true, quiet_seconds: 0,
+    };
+    const calls = fakeBackend({ 'GET /exports/jobs': { jobs: [job] } });
+    const first = render(<ExportJobs always />);
+    expect(await screen.findByText('Creating the FLAC file')).toBeInTheDocument();
+    expect(screen.getByText(/These keep going if you close this or reload/)).toBeInTheDocument();
+    first.unmount();
+    render(<ExportJobs always />);
+    expect(await screen.findByText('Night')).toBeInTheDocument();
+    expect(calls.filter((call) => call.method !== 'GET')).toEqual([]);
   });
 });

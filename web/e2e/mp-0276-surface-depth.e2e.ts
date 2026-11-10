@@ -63,7 +63,7 @@ for (const theme of THEMES) {
     for (const width of WIDTHS) {
       await open(page, '/mixes', width);
       const mixes = await measure(page, surfaceRoles, {
-        base: 'body', raised: '.vibe-card, .card', control: 'main button:not(.primary):not([aria-pressed="true"]):not(.quiet):not(.link)', panel: 'nav.nav',
+        base: 'body', raised: '.vibe-card, .card, .carry-on, .panel, .hero', control: 'main button:not(.primary):not([aria-pressed="true"]):not(.quiet):not(.link)', panel: 'nav.nav',
       });
       const { roles } = mixes;
       const where = `/mixes ${theme} ${width}px`;
@@ -163,8 +163,11 @@ for (const theme of THEMES) {
       await page.getByRole('button', { name: /^Details for / }).first().click();
       await expect(page.getByRole('dialog')).toBeVisible();
       const dialog = await measure(page, overlayDepth, ['.overlay-panel', true] as const);
-      // a phone sheet rounds only its top corners, which start at the radius too
-      expect(dialog!.radius, `dialog ${width}px`).toBe('10px');
+      // a centred dialog and a phone sheet's top corners take the card radius; a drawer that runs the
+      // full height of a wider window is square, since it is joined to the window's edge
+      const kind = await page.locator('.overlay').first().getAttribute('class');
+      const square = /overlay-(drawer|sheet)/.test(kind ?? '') && width > 760;
+      expect(dialog!.radius, `${kind} ${width}px`).toBe(square ? '0px' : '10px');
       await page.keyboard.press('Escape');
     }
     // line weights: separators 1px, state markers 3px, focus 2px or more (measured in MP-0276-07);

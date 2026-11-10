@@ -35,6 +35,17 @@ A listener narrows to ready songs quickly while an expert refines an exact music
 7. **LX-0343-07 - Design zero-result recovery.** **Acceptance:** Explain active constraints and offer reversible clear/reset without dropping song identity. **Required verification:** Empty + combinations usability test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **LX-0343-08 - Validate musical refinement.** **Acceptance:** Expert tasks get faster without degrading ordinary search or creating hidden required steps. **Required verification:** Timed novice/expert search study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
+## Advanced filter capability matrix (LX-0343-04, 2026-11-10)
+
+| Filter | Source data | API capability | Shipped |
+|---|---|---|---|
+| Tempo range | `analysis.bpm` or a correction; unknown until analysed | None: `/api/library` takes `q`, `state`, `sort`, `limit`, `after` only | No |
+| Key | `analysis.camelot` or a correction; unknown until analysed | None | No |
+| Duration | `songs.duration` | None | No |
+| Artist | `songs.artist`, already searchable | Search only | No separate filter |
+
+No advanced panel ships until a source/API capability is approved. `web/src/views/LibraryLx.test.tsx` "only the supported filters and a plain search box are shown" keeps it that way.
+
 ## Evidence and release boundaries
 
 Compare baseline and candidate at the same route, data, theme, viewport, scroll, player and revision state. Record screenshots and measured DOM geometry where pertinent, plus tests for keyboard, touch, 320px, 200/400% zoom, Light/Dark/System, forced colours, Still/reduced motion, long and RTL/CJK names, offline, stale, cancelled, failed and multitab conditions. Use actual local audio and independent listening review for playback-affecting changes; screenshots or green CI alone do not prove musical quality or user comprehension.

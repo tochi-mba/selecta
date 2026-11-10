@@ -87,7 +87,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
             : <span className="seam-name">{name}</span>;
         })()}
         <div className="seam-actions">
-          {inspect && state.status === 'ready' && <button className="seam-hear" onClick={() => actions.current.hearSeam(rowKey)}><Icon name="play" size="compact" /> Hear it</button>}
+          {inspect && state.status === 'ready' && <button className="seam-hear" aria-description={`Plays only the transition from ${previous.title} into ${item.title}`} onClick={() => actions.current.hearSeam(rowKey)}><Icon name="play" size="compact" /> Hear it</button>}
           {(state.status === 'none' || state.status === 'failed') && (
             <Action working="Asking…" run={async () => {
               await post(at(`/mix/${item.position}/render${state.status === 'failed' ? '?retry=true' : ''}`), undefined, guard);

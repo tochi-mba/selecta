@@ -16,7 +16,9 @@ from selecta.library.folder_check import check_folder
 
 @pytest.fixture
 def conn(tmp_path):
-    connection = db.connect(Settings(tmp_path / "home").db_path)
+    home = tmp_path / "home"
+    home.mkdir()
+    connection = db.connect(Settings(home).db_path)
     yield connection
     connection.close()
 

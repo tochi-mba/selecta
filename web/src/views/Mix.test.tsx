@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExportJob, MixData, MixItem, Status } from '../api';
 import { SetPlayer } from '../player';
-import { fakeBackend, seam, songs, status } from '../test/backend';
+import { fakeBackend, Reply, seam, songs, status } from '../test/backend';
 import { Adder } from './Adder';
 import { refreshExports, resetExports } from './exportStore';
 import { ExportPanel } from './ExportPanel';
@@ -908,5 +908,23 @@ describe('rating a transition', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Hear it' }));
     const side = within(screen.getByRole('complementary', { name: 'This transition' }));
     expect(within(side.getByRole('group', { name: 'Rate this seam' })).getByRole('button', { name: 'Bad' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+// S3-0058-03 and -09: an exact cue the server refuses is marked invalid on the control, with the reason
+describe('an exact cue that cannot be used', () => {
+  it('marks both cue fields invalid, says why, and keeps the server’s choice', async () => {
+    const options = { moves: [{ name: 'bass_swap_blend', label: 'Blend', description: '', available: true, reason: null }], exits: [{ bar: 32, time: 64, kind: 'phrase' }], entries: [{ bar: 8, time: 16, kind: 'phrase' }], lengths: [], links: [], tempo_gap: 1, keys: ['8A', '8A'] };
+    fakeBackend({ 'GET /mix/1/options': options, 'POST /mix/1/seam': new Reply(422, { detail: 'That cue is too late for this pair.' }) });
+    render(<Harness start={songs(seam('ready', 'a', { label: 'Blend', style: 'bass_swap_blend', a_source_start: 60, b_source_end: 30, preview_seam: 20 }))} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Hear it' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Change' }));
+    const leave = await screen.findByLabelText(/Leave .* at/);
+    expect(leave).not.toHaveAttribute('aria-invalid');
+    fireEvent.change(leave, { target: { value: '32' } });
+    await waitFor(() => expect(leave).toHaveAttribute('aria-invalid', 'true'));
+    const reason = document.getElementById(leave.getAttribute('aria-describedby')!);
+    expect(reason).toHaveTextContent('That cue is too late for this pair.');
+    expect(leave).toHaveValue('');
   });
 });

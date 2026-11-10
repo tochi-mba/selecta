@@ -11,41 +11,53 @@
   "groups": {
     "0198": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
-        "04",
         "05",
-        "06",
-        "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [
+        "02",
+        "04",
+        "06",
+        "07"
+      ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "04",
+        "06",
+        "07"
+      ]
     },
     "0199": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
         "05",
-        "06",
         "07",
         "08"
       ],
+      "in_progress": [
+        "02"
+      ],
+      "not_started": [
+        "06"
+      ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "06"
+      ]
     },
     "0200": {
       "decision": "Accepted",
@@ -64,167 +76,219 @@
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ]
     },
     "0201": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
-        "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "02",
+        "03",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "03",
+        "08"
+      ]
     },
     "0202": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
+        "06"
+      ],
+      "in_progress": [],
+      "not_started": [
         "05",
-        "06",
         "07",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "05",
+        "07",
+        "08"
+      ]
     },
     "0203": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
-        "04",
         "05",
         "06",
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [
+        "04"
+      ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "04"
+      ]
     },
     "0204": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
-        "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "02",
+        "03",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "03",
+        "08"
+      ]
     },
     "0205": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
-        "06",
+        "06"
+      ],
+      "in_progress": [],
+      "not_started": [
         "07",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "07",
+        "08"
+      ]
     },
     "0206": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
-        "03",
-        "04",
-        "05",
         "06",
-        "07",
         "08"
       ],
+      "in_progress": [
+        "04"
+      ],
+      "not_started": [
+        "03",
+        "05",
+        "07"
+      ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "05",
+        "07"
+      ]
     },
     "0207": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
+        "06"
+      ],
+      "in_progress": [
+        "07"
+      ],
+      "not_started": [
         "04",
         "05",
-        "06",
-        "07",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "04",
+        "05",
+        "08"
+      ]
     },
     "0208": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
         "05",
-        "06",
-        "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [
+        "02",
+        "06",
+        "07"
+      ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "06"
+      ]
     },
     "0209": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
         "05",
@@ -232,105 +296,143 @@
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [
+        "02"
+      ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02"
+      ]
     },
     "0210": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
-        "01",
+      "implemented": [
         "02",
         "03",
         "04",
         "05",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "01",
         "06",
-        "07",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "06",
+        "08"
+      ]
     },
     "0211": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
         "05",
-        "06",
+        "06"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "02",
         "07",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "07",
+        "08"
+      ]
     },
     "0212": {
       "decision": "Accepted",
-      "implemented": [],
+      "implemented": [
+        "01",
+        "04",
+        "05"
+      ],
       "in_progress": [],
       "not_started": [
-        "01",
         "02",
         "03",
-        "04",
-        "05",
         "06",
         "07",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "03",
+        "06",
+        "07",
+        "08"
+      ]
     },
     "0213": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
         "05",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "02",
         "06",
-        "07",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "06",
+        "08"
+      ]
     },
     "0214": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
-        "06",
+        "06"
+      ],
+      "in_progress": [],
+      "not_started": [
         "07",
         "08"
       ],
       "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
+      "owner": "Flow checklist agent (Claude)",
+      "implementation_pr": "feat/finish-checklists, 2026-11-10",
+      "implementation_sha": null,
+      "needs_a_person": [
+        "07",
+        "08"
+      ]
     },
     "0215": {
       "decision": "Accepted",

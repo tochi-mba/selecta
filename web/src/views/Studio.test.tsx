@@ -6,6 +6,7 @@ import { Shape } from '../studio';
 import { Studio } from './Studio';
 
 const deck = vi.hoisted(() => ({
+  lost: undefined as string[] | undefined,
   made: [] as { shape: unknown; setShape: ReturnType<typeof vi.fn>; play: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn>; solo: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn>; load: ReturnType<typeof vi.fn>; onCell: (cell: number) => void }[],
 }));
 
@@ -20,7 +21,7 @@ vi.mock('../studio', async (actual) => {
       stop = vi.fn();
       solo = vi.fn();
       close = vi.fn();
-      load = vi.fn(async () => {});
+      load = vi.fn(async () => deck.lost);
       onCell: (cell: number) => void = () => {};
       constructor(_seconds: number, _cells: number, shape: unknown) {
         this.shape = shape;
@@ -459,4 +460,27 @@ describe('Studio pointer painting', () => {
     }
   });
 
+});
+
+// S3-0059-07: a stem that couldn't be loaded is named unavailable and can't be edited, while the rest still works
+describe('a studio with a stem missing', () => {
+  afterEach(() => {
+    deck.lost = undefined;
+    deck.made.length = 0;
+    window.localStorage.removeItem('selecta.studio.abc');
+  });
+
+  it('marks that lane unavailable, ignores presses on it, and leaves the other lanes working', async () => {
+    deck.lost = ['b_bass'];
+    open();
+    const lost = await screen.findByRole('button', { name: /^Song 2 bass, bars? 1.*unavailable$/i });
+    expect(lost).toHaveAttribute('aria-disabled', 'true');
+    const before = lost.getAttribute('aria-pressed');
+    fireEvent.click(lost);
+    expect(lost).toHaveAttribute('aria-pressed', before);
+    const voice = await square('Song 1 voice, square 1');
+    expect(voice).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(voice);
+    expect(voice).toHaveAttribute('aria-pressed', 'false');
+  });
 });

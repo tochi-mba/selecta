@@ -694,6 +694,29 @@ def test_stopping_watching_touches_nothing_else(client, conn, tmp_path):
     assert client.get("/api/library", params={"state": "all"}).json()["total"] == before
 
 
+def test_stopping_watching_leaves_every_music_file_byte_for_byte(client, conn, tmp_path):
+    """S4-0106-09: a filesystem snapshot before and after shows Stop watching deletes nothing."""
+    music = tmp_path / "Music"
+    (music / "Album").mkdir(parents=True)
+    for name, data in {"one.flac": b"fLaC-one", "Album/two.mp3": b"ID3-two", "cover.jpg": b"jpg"}.items():
+        (music / name).write_bytes(data)
+
+    def snapshot():
+        return {
+            path.relative_to(music).as_posix(): (path.read_bytes(), path.stat().st_mtime_ns)
+            for path in sorted(music.rglob("*"))
+            if path.is_file()
+        }
+
+    db.set_preference(conn, "library_folders", [str(music)])
+    conn.commit()
+    before = snapshot()
+    answer = client.post("/api/folders/stop-watching", json={"folder": str(music)}).json()
+    assert answer["folders"] == []
+    assert snapshot() == before
+    assert sorted(path.name for path in music.iterdir()) == ["Album", "cover.jpg", "one.flac"]
+
+
 # ---- real addresses
 
 

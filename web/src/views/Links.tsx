@@ -228,7 +228,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
       />
       {item && (
         <article className="discovery" data-pair={`${item.song_a}>${item.song_b}`}>
-          <p className="link-kind">Harmonic match, a suggestion to check by ear, not a verified match</p>
+          <p className="link-kind">Chord match, a suggestion to check by ear, not a verified match</p>
           <h3>
             {item.title_a}{item.title_a === item.title_b && <small className="link-id"> (song {item.song_a})</small>} <span className="soft">and</span> {item.title_b}{item.title_a === item.title_b && <small className="link-id"> (song {item.song_b})</small>}
           </h3>

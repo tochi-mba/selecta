@@ -267,7 +267,6 @@ test('MP-0284-08 moving around and changing what is shown never restarts the mus
   await page.getByRole('button', { name: 'Focused visuals' }).click();
   await page.getByRole('button', { name: 'Standard visuals' }).click();
   for (const route of ['/library', '/mixes', '/mix/current/edit', '/listen']) {
-    await page.getByRole('navigation', { name: 'Main' }).getByRole('link').first().isVisible();
     await page.evaluate((path) => { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }, route);
     await expect(page.locator('main#main')).toBeVisible();
   }

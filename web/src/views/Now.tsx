@@ -35,16 +35,30 @@ function TrackTitle({ title, songId, stage }: { title: string; songId?: number; 
       const maximum = Math.max(minimum, Math.min(stage ? 40 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095))));
       let low = minimum;
       let high = maximum;
-      // A three-line budget keeps a long featured credit from burying the
-      // playback controls. Longer titles stay whole at the floor, on more lines.
+      node.style.paddingBlockStart = '';
+      // GP-0248-02: the large song motif sits on the first line and can be taller than it. It isn't a
+      // line of text, so it must not count against the line budget and drive every title to the floor.
+      const motif = node.querySelector('.song-motif')?.getBoundingClientRect().height ?? 0;
+      const line = (size: number) => size * (Number.parseFloat(getComputedStyle(node).lineHeight) / size || 1.08);
+      // GP-0248-03/05: on Listen the title owns a fixed slot, two lines at the largest size, so a
+      // three-line title is set smaller instead of dominating, and Play/Pause and the seek bar stay in
+      // the same place as songs change. Stage keeps its three-line budget. Titles too long for the
+      // slot at the floor stay whole and simply take more room.
+      node.style.fontSize = `${maximum}px`;
+      const slot = stage ? null : line(maximum) * 2 + Math.max(0, motif - line(maximum));
       for (let index = 0; index < 9; index += 1) {
         const size = (low + high) / 2;
         node.style.fontSize = `${size}px`;
         const height = node.getBoundingClientRect().height;
-        if (height <= size * 3.4 || !height) low = size;
+        const fits = slot === null ? height - Math.max(0, motif - line(size)) <= size * 3.4 : height <= slot + 0.5;
+        if (fits || !height) low = size;
         else high = size;
       }
       node.style.fontSize = `${low}px`;
+      if (slot !== null) {
+        const used = node.getBoundingClientRect().height;
+        if (used && used < slot) node.style.paddingBlockStart = `${slot - used}px`;
+      }
     };
     fit();
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;

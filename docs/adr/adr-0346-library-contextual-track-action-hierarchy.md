@@ -35,6 +35,23 @@ A person knows which action starts/replaces playback, which edits a mix and whic
 7. **LX-0346-07 - Guard async duplicates.** **Acceptance:** Repeated actions cannot commit twice or visually claim success before the server responds. **Required verification:** Race and duplicate-submit E2E. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **LX-0346-08 - Validate novice meaning.** **Acceptance:** Participants correctly predict the result of each action before performing it. **Required verification:** Pre-action comprehension study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
+## Readiness-to-action map (LX-0346-01, 2026-11-10)
+
+From `trackReadiness` in `web/src/state/readiness.ts`, the single source for every Library row, card and sheet. Primary is the visible row action; secondary actions sit under **More actions**.
+
+| Canonical status | Primary | Secondary |
+|---|---|---|
+| `mix_ready` | Start a mix | Add to current mix, Play next (while playing), Prioritize, Never play |
+| `analysed_incomplete` | none | Add to current mix, Play next (while playing), Prioritize, Never play |
+| `queued`, `processing` | Analyse now / Waiting, N ahead / Analysing… | Prioritize, Never play |
+| `needs_attention` | Try analysing again | Prioritize, Never play |
+| `excluded` | none | Prioritize, Never: on (to undo) |
+| `missing` | none | Prioritize, Never play |
+| `set_aside` | none | none (This is music in the sheet) |
+| unknown | none, shown as "State unknown" | Add only if it has a tempo |
+
+Proved by `web/src/views/LibraryLx.test.tsx` "readiness decides the actions, in both layouts".
+
 ## Evidence and release boundaries
 
 Compare baseline and candidate at the same route, data, theme, viewport, scroll, player and revision state. Record screenshots and measured DOM geometry where pertinent, plus tests for keyboard, touch, 320px, 200/400% zoom, Light/Dark/System, forced colours, Still/reduced motion, long and RTL/CJK names, offline, stale, cancelled, failed and multitab conditions. Use actual local audio and independent listening review for playback-affecting changes; screenshots or green CI alone do not prove musical quality or user comprehension.

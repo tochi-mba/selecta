@@ -93,10 +93,27 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     songs: { id: number; title: string; artist: string; priority: boolean; never: boolean }[];
   } | null>(null);
   const visibleSelected = useMemo(() => (committedRows ?? []).filter((song) => selectedIdSet.has(song.id)), [committedRows, selectedIdSet]);
-  const toggleBatch = (id: number) => setBatchSelection((before) => {
-    const ids = before.identity === selectionIdentity ? before.ids : [];
-    return { identity: selectionIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : ids.length >= 200 ? ids : [...ids, id] };
-  });
+  // GP-0258-03: Shift with a checkbox selects every loaded recording between the last one chosen and
+  // this one, in the order shown, never past the 200 limit. The anchor is read outside the updater.
+  const lastToggled = useRef<number | null>(null);
+  const toggleBatch = (id: number, range = false) => {
+    const anchor = lastToggled.current;
+    lastToggled.current = id;
+    const order = (committedRows ?? []).map((song) => song.id);
+    const from = anchor === null ? -1 : order.indexOf(anchor);
+    const to = order.indexOf(id);
+    setBatchSelection((before) => {
+      const ids = before.identity === selectionIdentity ? before.ids : [];
+      if (range && from >= 0 && to >= 0 && from !== to) {
+        const next = [...ids];
+        for (const songId of order.slice(Math.min(from, to), Math.max(from, to) + 1)) {
+          if (!next.includes(songId) && next.length < 200) next.push(songId);
+        }
+        return { identity: selectionIdentity, ids: next };
+      }
+      return { identity: selectionIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : ids.length >= 200 ? ids : [...ids, id] };
+    });
+  };
   const askBatch = (action: BatchAction) => {
     if (!visibleSelected.length || searching || failed) return;
     setConfirmBatch({
@@ -123,7 +140,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     setConfirmBatch(null);
     setBatchSelection({ identity: selectionIdentity, ids: [] });
     window.requestAnimationFrame(() => selectionEntryRef.current?.focus());
-    notify(`Updated ${wanted.songs.length} precisely selected recordings.`);
+    // GP-0258-07: Undo is offered only for songs this batch really changed, and puts back exactly
+    // those. The server refuses it whole if any of them has changed again since.
+    const priority = wanted.action === 'prioritize' || wanted.action === 'deprioritize';
+    const target = wanted.action === 'prioritize' || wanted.action === 'never';
+    const changedSongs = wanted.songs.filter((song) => (priority ? song.priority : song.never) !== target);
+    const inverse = { prioritize: 'deprioritize', deprioritize: 'prioritize', never: 'allow', allow: 'never' }[wanted.action];
+    notify(`Updated ${wanted.songs.length} precisely selected recordings.`, changedSongs.length ? async () => {
+      await post('/library/batch', { action: inverse, entries: changedSongs.map((song) => ({ id: song.id, expected: target })) });
+      await load();
+    } : undefined);
     await load();
   };
 
@@ -489,7 +515,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               identity: selectionIdentity,
               ids: committedRows.slice(0, 200).map((song) => song.id),
             })}>Select up to 200 loaded songs</button>
-            {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually.</span>}
+            {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually. Shift selects a range.</span>}
           </div>
           {visibleSelected.length > 0 && (
             <div className="library-batch-actions" aria-label="Actions for selected loaded recordings">
@@ -559,7 +585,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                 {batch && filter !== 'set_aside' && <label className="library-batch-check">
                   <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
                     checked={selectedIdSet.has(song.id)} disabled={searching || failed || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
-                    onChange={() => toggleBatch(song.id)} />
+                    onChange={(event) => toggleBatch(song.id, (event.nativeEvent as MouseEvent).shiftKey === true)} />
                 </label>}
                 <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`} data-focus-key={`song-details-${song.id}`}>
                   <SongMotif songId={song.id} /><b dir="auto" title={title}>{title}</b>

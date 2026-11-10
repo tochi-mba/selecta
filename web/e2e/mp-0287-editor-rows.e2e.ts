@@ -218,7 +218,7 @@ test('MP-0287-08 a 100-song mix opens quickly, keeps focus on a moved song and n
   await expect.poll(async () => (await audioClock(page))[0] ?? 0).toBeGreaterThan(0.2);
   const started = await page.evaluate(() => window.audioSpy.started.length);
   const began = Date.now();
-  await page.getByRole('link', { name: /Edit/ }).first().click().catch(() => page.goto('/mix/current/edit'));
+  await page.evaluate(() => { window.history.pushState({}, '', '/mix/current/edit'); window.dispatchEvent(new PopStateEvent('popstate')); });
   await expect(page.locator('.timeline > .song')).toHaveCount(100);
   const opened = Date.now() - began;
   expect(opened, 'opening 100 songs').toBeLessThan(5000);

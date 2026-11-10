@@ -151,6 +151,9 @@ export function Mix(props: ViewProps) {
 
   const resizeInspector = (next: number) => {
     const safe = Math.min(Math.max(Math.round(next), MIN_INSPECTOR_WIDTH), MAX_INSPECTOR_WIDTH);
+    // GP-0250-05: a narrower timeline rewraps its rows, so the selected song or transition is
+    // brought back into view (nearest edge, focus untouched) after the resize lays out.
+    reveal.current = reveal.current ?? 'scroll';
     setInspectorWidth(safe);
     try { window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(safe)); } catch { /* it remains in memory */ }
   };
@@ -219,6 +222,17 @@ export function Mix(props: ViewProps) {
     target?.focus();
     target?.scrollIntoView?.({ block: 'nearest' });
   }, [order]);
+
+  // UF-0381-08: closing the side inspector hands focus back to the exact row it was opened from.
+  const closeInspector = () => {
+    const was = selected;
+    setSelected(null);
+    if (!was) return;
+    const selector = was.kind === 'seam'
+      ? `[data-seam="${CSS.escape(seamKeyOf(was.a, was.b))}"] .seam-name`
+      : `[data-song-key="${CSS.escape(was.key)}"] [data-handle]`;
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>(selector)?.focus());
+  };
 
   const selectSeamAt = (index: number) => {
     setGone('');
@@ -780,7 +794,7 @@ export function Mix(props: ViewProps) {
               <aside ref={inspector} className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
                 <div className="inspector-head">
                   <h2>{seamInspector ? 'Transition' : 'Song'}</h2>
-                  <button aria-label="Close" title="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
+                  <button aria-label="Close" title="Close" onClick={closeInspector}><Icon name="close" /></button>
                 </div>
                 {seamInspector || songInspector}
               </aside>

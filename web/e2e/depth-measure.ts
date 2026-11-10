@@ -85,7 +85,8 @@ export function surfaceRoles(samples: Record<string, string>) {
   const roles = Object.fromEntries(['--surface-base', '--surface-raised', '--surface-control', '--surface-panel', '--surface-overlay', '--surface-scrim']
     .map((role) => [role, k.token(role)]));
   const painted = Object.fromEntries(Object.entries(samples).map(([label, selector]) => {
-    const element = [...document.querySelectorAll(selector)].find(k.visible);
+    // the first one that paints at all: a quiet or icon button paints nothing of its own
+    const element = [...document.querySelectorAll(selector)].find((node) => k.visible(node) && k.rgba(getComputedStyle(node).backgroundColor)[3] > 0);
     return [label, element ? k.rgba(getComputedStyle(element).backgroundColor) : null];
   }));
   return { roles, painted };
