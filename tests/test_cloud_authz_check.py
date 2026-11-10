@@ -458,7 +458,8 @@ def test_staff_holding_counts_distinct_live_platform_wide_holders(db):
     delete_user(db, deleted)
     support = staff(db, StaffRole.SUPPORT, Scope.workspace("w1"))
     assert staff_holding(db, "security.roles.assign") == {owner, admin}
-    assert support in staff_holding(db, "flags.read", now) | {support}
+    # Support holds flags.read, but only in one workspace, so it isn't counted.
+    assert staff_holding(db, "flags.read", now) == {owner, admin}
     assert support not in staff_holding(db, "flags.read")
 
 
