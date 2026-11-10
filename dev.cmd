@@ -283,6 +283,14 @@ def probe(url: str, kind: str) -> Probe:
         if payload != {"service": "selecta-local", "status": "ok"}:
             return Probe(False, f"HTTP 200 but wrong health response: {body[:120]!r}")
         return Probe(True, "Selecta local health returned HTTP 200")
+    if kind == "ready":
+        try:
+            payload = json.loads(body)
+        except ValueError:
+            return Probe(False, "HTTP 200 but local database readiness is not JSON")
+        if payload != {"service": "selecta-local", "status": "ready"}:
+            return Probe(False, f"Wrong local database readiness: {body[:120]!r}")
+        return Probe(True, "local database schema responds")
     if kind == "status":
         return (
             Probe(True, "local library status returned HTTP 200")
@@ -319,16 +327,15 @@ def wait_until_ready(
     *,
     timeout: float = STARTING_SECONDS,
 ) -> None:
-    """Verify API HTTP health, site, Vite proxy, and the actual library status."""
+    """Verify API HTTP health, site, proxy and lightweight SQLite readiness."""
     api_health = f"http://127.0.0.1:{api_port}/api/health"
-    api_status = f"http://127.0.0.1:{api_port}/api/status"
+    api_ready = f"http://127.0.0.1:{api_port}/api/ready"
     site_url = f"http://127.0.0.1:{site_port}/"
     proxy_health = f"{site_url}api/health"
     start_time = time.monotonic()
     deadline = start_time + timeout
     last_report = start_time - REPORT_SECONDS
-    last_status_check = start_time - REPORT_SECONDS
-    status_result = Probe(False, "waiting for API HTTP health")
+    ready_result = Probe(False, "waiting for API HTTP health")
     announced: set[str] = set()
     last_results: dict[str, Probe] = {}
     while time.monotonic() < deadline:
@@ -341,10 +348,9 @@ def wait_until_ready(
             else Probe(False, "waiting for API and website")
         )
         now = time.monotonic()
-        if health.ok and now - last_status_check >= REPORT_SECONDS:
-            status_result = probe(api_status, "status")
-            last_status_check = now
-        results = {"API": health, "SITE": site, "PROXY": proxy, "DATA": status_result}
+        if health.ok:
+            ready_result = probe(api_ready, "ready")
+        results = {"API": health, "SITE": site, "PROXY": proxy, "DATA": ready_result}
         last_results = results
         for name, result in results.items():
             if result.ok and name not in announced:
@@ -366,14 +372,14 @@ def wait_until_ready(
                         "Check [API] [BOOT] for imports or legacy migration; "
                         "the process may still be initializing.",
                     )
-                elif not status_result.ok:
+                elif not ready_result.ok:
                     say(
                         "HINT",
-                        "API HTTP health is OK but library status is not. "
-                        "Check data-folder permissions, SQLite locks and API logs.",
+                        "API HTTP health is OK but SQLite readiness is not. "
+                        "Check the database initialization stage in [API] logs.",
                     )
             last_report = now
-        time.sleep(0.5)
+        time.sleep(1.5)
     missing = ", ".join(name for name, result in last_results.items() if not result.ok)
     details = "; ".join(f"{name}: {r.detail}" for name, r in last_results.items() if not r.ok)
     raise StartupError(
@@ -458,6 +464,7 @@ def run(options: argparse.Namespace) -> int:
                         "--host", "127.0.0.1", "--port", str(api_port),
                         "--reload", "--reload-dir", str(ROOT / "src" / "selecta"),
                         "--log-level", "debug" if options.verbose else "info",
+                        *([] if options.verbose else ["--no-access-log"]),
                     ],
                     ROOT,
                     local_env,
@@ -484,7 +491,20 @@ def run(options: argparse.Namespace) -> int:
         say("READY", f"Local development is up after {time.monotonic() - started_at:.1f}s.")
         say("READY", f"Website (hot reload): {site_url}")
         say("READY", f"API (Python reload):  {api_url}")
-        say("READY", f"API through Vite:     {site_url}api/status")
+        say("READY", f"API through Vite:     {site_url}api/ready")
+        say("CHECK", "Testing the full library summary once (may need warm-up)...")
+        summary = probe(f"{api_url}api/status", "status")
+        if summary.ok:
+            say("OK", "Library summary responds.")
+        else:
+            say("WARNING", f"Library summary is slow or unavailable: {summary.detail}")
+            say(
+                "HINT",
+                "The API, website and database are ready. Inspect [STATUS] stage logs "
+                "for the slow query, or use --isolated to compare an empty library.",
+            )
+            if options.check:
+                raise StartupError("Full-library /api/status smoke test failed; see the details above.")
         if options.check:
             say("PASS", "Smoke test passed. Stopping the services started by this script.")
             return 0
