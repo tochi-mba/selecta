@@ -41,7 +41,9 @@ import sys
 import tempfile
 import threading
 import time
+from html import escape
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).parent))
@@ -85,6 +87,15 @@ PRICES = {
     "price_premium_month": {"plan": "premium", "version": 1, "interval": "month"},
     "price_premium_year": {"plan": "premium", "version": 1, "interval": "year"},
 }
+
+
+
+def same_server(url: str) -> str:
+    """Only the path and query of a return URL, so the fake Stripe pages can only send the
+    browser back to this server (the app gives https URLs; this server speaks http)."""
+    parts = urlsplit(url)
+    path = "/" + parts.path.lstrip("/\\")
+    return path + (f"?{parts.query}" if parts.query else "")
 
 
 def wav(seconds: float, *, tone: float = 220.0, rate: int = 44_100) -> bytes:
@@ -411,7 +422,7 @@ def build(port: int):
                 quota.set_limit(conn, workspace_id, plan_for(price["plan"]))
 
         threading.Timer(state["checkout_delay"], webhook).start()
-        target = fields["success_url"].replace("{CHECKOUT_SESSION_ID}", session_id)
+        target = same_server(fields["success_url"].replace("{CHECKOUT_SESSION_ID}", session_id))
         return RedirectResponse(target, status_code=303)
 
     @app.get("/fake-stripe/portal", response_class=HTMLResponse)
@@ -419,7 +430,7 @@ def build(port: int):
         return (
             "<!doctype html><html lang=en><meta charset=utf-8><title>Test portal</title>"
             "<main><h1>Test billing portal</h1>"
-            f"<a href='{back.replace('https://', 'http://', 1)}'>Return to Selecta</a></main>"
+            f"<a href=\"{escape(same_server(back))}\">Return to Selecta</a></main>"
         )
 
     # -- Rooms audio and pages -----------------------------------------------------------------
@@ -451,10 +462,15 @@ def build(port: int):
     def site(path: str):
         if path.startswith(("api/", "test/", "fake-", "e2e/")):
             return Response(status_code=404)
-        candidate = (DIST / path).resolve()
-        if path and candidate.is_file() and DIST.resolve() in candidate.parents:
+        root = DIST.resolve()
+        candidate = (root / path).resolve()
+        try:
+            candidate.relative_to(root)  # nothing outside the built site, however it is spelled
+        except ValueError:
+            return Response(status_code=404)
+        if path and candidate.is_file():
             return FileResponse(candidate)
-        return FileResponse(DIST / "index.html", headers={"Cache-Control": "no-store"})
+        return FileResponse(root / "index.html", headers={"Cache-Control": "no-store"})
 
     return app
 
