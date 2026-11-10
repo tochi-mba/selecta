@@ -57,7 +57,7 @@
     "lyrics.lookup": {
       "label": "Lyric lookup",
       "about": "Line-synced lyrics from LRCLIB. Only artist, title, album and duration are sent.",
-      "surfaces": ["library", "workshop", "overlay.song_details"],
+      "surfaces": ["library", "workshop", "overlay.song_details", "overlay.glossary"],
       "words": ["LRCLIB", "with timed lyrics"],
       "cli": ["lyrics"]
     },
