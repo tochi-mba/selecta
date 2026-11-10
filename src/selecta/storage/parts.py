@@ -54,10 +54,12 @@ def check_parts(parts: Sequence[Part], declared_size: int, part_size: int) -> st
     if sorted(set(numbers)) != list(range(1, len(numbers) + 1)):
         return "Some parts of the file are missing."
     total = sum(part.size for part in parts)
-    if total > declared_size or len(parts) > plan.part_count:
+    if total > declared_size:
         return "More data arrived than the file's declared size."
-    if len(parts) < plan.part_count or total < declared_size:
+    if total < declared_size:
         return "Less data arrived than the file's declared size."
+    # The total matches, so a wrong part count can only come from a wrong split: equal parts of
+    # `part_size` then force the last one to be the planned remainder (or larger, if too few).
     ordered = sorted(parts, key=lambda part: part.number)
     for part in ordered[:-1]:
         if part.size != part_size:
