@@ -298,11 +298,14 @@ def validate_deployment(deployment: Deployment) -> None:
 
 
 def load_deployments(conn: Connection) -> dict[str, Deployment]:
-    """Every deployment by id. The built-in planner is always there and always active."""
+    """Every deployment by id. The built-in planner is always there, always active and open to
+    every tier, whatever a stored row for it says, so the last fallback can't be edited away."""
     rows = conn.execute(sa.select(model_deployments)).mappings().all()
     found = {row["id"]: _from_row(row) for row in rows}
     builtin = found.get(BUILTIN_ID, BUILTIN)
-    found[BUILTIN_ID] = replace(builtin, status=DeploymentStatus.ACTIVE, rollout_percent=100)
+    found[BUILTIN_ID] = replace(
+        builtin, status=DeploymentStatus.ACTIVE, rollout_percent=100, min_tier=Tier.FREE
+    )
     return found
 
 
