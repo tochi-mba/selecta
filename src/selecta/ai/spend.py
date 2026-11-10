@@ -208,6 +208,7 @@ class CircuitBreaker:
         self._open = False
         self._opened_at = 0.0
         self._probing = False
+        self._probe_at = 0.0
 
     @property
     def state(self) -> BreakerState:
@@ -217,11 +218,16 @@ class CircuitBreaker:
             return BreakerState.HALF_OPEN
         return BreakerState.OPEN
 
+    def _probe_free(self) -> bool:
+        """No probe out, or the last one never reported within a cooldown (its caller died),
+        so a lost probe can't keep the breaker shut for good."""
+        return not self._probing or self.clock() - self._probe_at >= self.cooldown_seconds
+
     def available(self) -> bool:
         """Whether a call could go through now, without using up the half-open probe."""
         state = self.state
         return state is BreakerState.CLOSED or (
-            state is BreakerState.HALF_OPEN and not self._probing
+            state is BreakerState.HALF_OPEN and self._probe_free()
         )
 
     def allow(self) -> bool:
@@ -229,8 +235,9 @@ class CircuitBreaker:
         state = self.state
         if state is BreakerState.CLOSED:
             return True
-        if state is BreakerState.HALF_OPEN and not self._probing:
+        if state is BreakerState.HALF_OPEN and self._probe_free():
             self._probing = True
+            self._probe_at = self.clock()
             return True
         return False
 
@@ -385,6 +392,11 @@ class PlatformTotals:
     month_reserved_usd: float
 
 
+# Dollars are doubles, so three $0.10 turns add up to a hair over $0.30. Caps compare with this
+# much slack (a billionth of a dollar) so a turn ending exactly at a cap is admitted.
+CAP_TOLERANCE_USD = 1e-9
+
+
 def day_key(epoch: float) -> str:
     """The UTC day, "2026-11-09". Platform spend follows the provider's invoices, not accounts."""
     return dt.datetime.fromtimestamp(epoch, dt.UTC).strftime("%Y-%m-%d")
@@ -465,7 +477,8 @@ def reserve(
         sa.update(ai_spend_daily)
         .where(
             ai_spend_daily.c.day == day,
-            ai_spend_daily.c.spent_usd + ai_spend_daily.c.reserved_usd + amount <= cap,
+            ai_spend_daily.c.spent_usd + ai_spend_daily.c.reserved_usd + amount
+            <= cap + CAP_TOLERANCE_USD,
         )
         .values(reserved_usd=ai_spend_daily.c.reserved_usd + amount, updated_at=now)
     )
