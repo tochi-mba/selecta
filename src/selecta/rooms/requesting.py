@@ -64,9 +64,7 @@ class RequestOutcome:
     already_queued: bool = False  # it was already waiting and nothing changed
 
 
-def search(
-    ctx: RoomContext, guest_token: str, query: str, limit: int = 20
-) -> list[SongSummary]:
+def search(ctx: RoomContext, guest_token: str, query: str, limit: int = 20) -> list[SongSummary]:
     """Requestable songs matching what the guest typed: title, artist and length only."""
     ref = resolve_guest(ctx, guest_token)
     with transaction(ctx.engine, ref.workspace_id) as conn:
@@ -123,9 +121,7 @@ def _ask_again(
     return RequestOutcome(load_request(conn, room, existing.id), became_vote=True)
 
 
-def _check_song(
-    conn: Connection, ctx: RoomContext, room: Room, song_id: int, now: float
-) -> None:
+def _check_song(conn: Connection, ctx: RoomContext, room: Room, song_id: int, now: float) -> None:
     crate = room.settings.crate
     if crate is not None and song_id not in crate:
         raise RoomError(Refusal.NOT_REQUESTABLE)
@@ -167,9 +163,7 @@ def _check_limits(conn: Connection, room: Room, guest: Guest, now: float) -> Non
     ).one()
     if recent[0] >= settings.requests_per_guest_per_hour:
         raise RoomError(Refusal.GUEST_HOURLY_LIMIT, retry_after_s=recent[1] + HOUR - now)
-    in_room = _count(
-        conn, room_requests.c.room_id == room.id, room_requests.c.status.in_(pending)
-    )
+    in_room = _count(conn, room_requests.c.room_id == room.id, room_requests.c.status.in_(pending))
     if in_room >= settings.pending_per_room:
         raise RoomError(Refusal.ROOM_BUSY)
 
@@ -336,75 +330,90 @@ def record_outcome(
     *,
     now: float | None = None,
 ) -> RoomRequest | None:
-    """What the planner did with a room request. None if it isn't a room request."""
+    """What the planner did with a room request. None if it isn't a room request.
+
+    The planner keeps one request per waiting song, so an ended room's request and a new room's
+    request for the same song can share it; the outcome applies to each of them. The newest is
+    returned."""
     outcome = Outcome(outcome)
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        row = (
-            conn.execute(
+        targets = [
+            request_from_row(row)
+            for row in conn.execute(
                 sa.select(room_requests)
                 .where(
                     room_requests.c.workspace_id == workspace_id,
                     room_requests.c.song_request_id == str(song_request_id),
                     room_requests.c.status.in_([status.value for status in WAITING]),
                 )
-                .order_by(room_requests.c.created_at.desc())
-            )
-            .mappings()
-            .first()
-        )
-        if row is None:
+                .order_by(room_requests.c.created_at.desc(), room_requests.c.id.desc())
+            ).mappings()
+        ]
+        if not targets:
             return None
-        target = request_from_row(row)
-        room = load_room(conn, workspace_id, target.room_id, lock=True)
-        if outcome is Outcome.PLAYED:
-            set_request(conn, target.id, status=RequestStatus.PLAYED, resolved_at=now)
-        elif outcome is Outcome.UNFIT and target.status is RequestStatus.ACCEPTED:
-            set_request(conn, target.id, status=RequestStatus.UNFIT)
-        elif outcome is Outcome.SONG_GONE:
-            set_request(
-                conn,
-                target.id,
-                status=RequestStatus.WITHDRAWN,
-                reason="song_gone",
-                resolved_at=now,
-            )
-        ctx.publish(conn, room, "room.request", {"request_id": target.id})
-        done = load_request(conn, room, target.id)
-    if room.live:
-        pump(ctx, workspace_id, room.id, now=now)
-    return done
+        done: list[RoomRequest] = []
+        live: dict[str, None] = {}
+        for target in targets:
+            room = load_room(conn, workspace_id, target.room_id, lock=True)
+            if outcome is Outcome.PLAYED:
+                set_request(conn, target.id, status=RequestStatus.PLAYED, resolved_at=now)
+            elif outcome is Outcome.UNFIT and target.status is RequestStatus.ACCEPTED:
+                set_request(conn, target.id, status=RequestStatus.UNFIT)
+            elif outcome is Outcome.SONG_GONE:
+                set_request(
+                    conn,
+                    target.id,
+                    status=RequestStatus.WITHDRAWN,
+                    reason="song_gone",
+                    resolved_at=now,
+                )
+            ctx.publish(conn, room, "room.request", {"request_id": target.id})
+            done.append(load_request(conn, room, target.id))
+            if room.live:
+                live[room.id] = None
+    for room_id in live:
+        pump(ctx, workspace_id, room_id, now=now)
+    return done[0]
 
 
 def song_removed(
     ctx: RoomContext, workspace_id: str, song_id: int, *, now: float | None = None
 ) -> list[RoomRequest]:
-    """The host deleted or set aside a song: waiting requests for it are withdrawn, saying why."""
+    """The host deleted or set aside a song: waiting requests for it are withdrawn, saying why,
+    in every room that still has one (an ended room's request may still be with the planner)."""
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        row = conn.execute(
-            sa.select(room_requests.c.room_id).where(
-                room_requests.c.workspace_id == workspace_id,
-                room_requests.c.song_id == song_id,
-                room_requests.c.status.in_([status.value for status in WAITING]),
+        room_ids = sorted(
+            set(
+                conn.execute(
+                    sa.select(room_requests.c.room_id).where(
+                        room_requests.c.workspace_id == workspace_id,
+                        room_requests.c.song_id == song_id,
+                        room_requests.c.status.in_([status.value for status in WAITING]),
+                    )
+                ).scalars()
             )
-        ).first()
-        if row is None:
-            return []
-        room = load_room(conn, workspace_id, row.room_id, lock=True)
-        affected = room_requests_where(conn, room, WAITING, song_id=song_id)
-        for target in affected:
-            set_request(
-                conn,
-                target.id,
-                status=RequestStatus.WITHDRAWN,
-                reason="song_gone",
-                resolved_at=now,
-            )
-            ctx.publish(conn, room, "room.request", {"request_id": target.id})
+        )
+        affected: list[RoomRequest] = []
+        live: list[str] = []
+        for room_id in room_ids:
+            room = load_room(conn, workspace_id, room_id, lock=True)
+            for target in room_requests_where(conn, room, WAITING, song_id=song_id):
+                set_request(
+                    conn,
+                    target.id,
+                    status=RequestStatus.WITHDRAWN,
+                    reason="song_gone",
+                    resolved_at=now,
+                )
+                ctx.publish(conn, room, "room.request", {"request_id": target.id})
+                affected.append(target)
+            if room.live:
+                live.append(room.id)
     withdraw_from_planner(ctx, workspace_id, [target.song_request_id for target in affected])
-    if room.live:
-        pump(ctx, workspace_id, room.id, now=now)
+    for room_id in live:
+        pump(ctx, workspace_id, room_id, now=now)
     return affected
 
 
