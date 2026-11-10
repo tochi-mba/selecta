@@ -106,3 +106,19 @@ def test_the_local_browser_can_explicitly_preview_a_folder(tmp_path):
     assert response.status_code == 200
     assert response.json()["kind"] == "ok"
     assert response.json()["audio_files"] == 1
+
+
+@pytest.mark.parametrize(
+    "typed",
+    [
+        "/tmp/music\\nprivate",
+        "/tmp/music\\rprivate",
+        "/tmp/music\\tprivate",
+        "/tmp/music\\x00private",
+        "/tmp/" + "a" * 32768,
+    ],
+)
+def test_control_characters_and_oversized_paths_are_rejected(conn, typed):
+    answer = check_folder(conn, typed)
+    assert answer["kind"] == "invalid"
+    assert answer["ok"] is False
