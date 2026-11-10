@@ -16,7 +16,7 @@ import httpx
 import pytest
 import sqlalchemy as sa
 
-from selecta.ai import allowance, gateway, registry
+from selecta.ai import allowance, gateway, registry, runs
 from selecta.ai.gateway import (
     GatewayError,
     ProviderSettings,
@@ -603,3 +603,18 @@ def test_every_run_row_records_its_pinned_versions(engine):
     assert (row["routing_version"], row["prompt_version"], row["tool_schema_version"]) == (
         1, "prompt-1", "tools-1"
     )
+
+
+def test_a_run_started_without_a_lease_or_reservation_settles_cleanly(engine):
+    with transaction(engine) as conn:
+        run_id = runs.start_run(
+            conn, workspace_id="w", deployment=DEFAULTS["haiku-low"], routing_version=1,
+            prompt_version="p", tool_schema_version="t", tier=Tier.FREE, request_class=E,
+            requested_class=E, usage_month="2026-11",
+        )
+        summary = finish_turn(conn, run_id, outcome=Outcome.COMPLETED, tokens_in=100,
+                              policy=POLICY)
+        totals = platform_totals(conn)
+
+    assert summary.outcome is Outcome.COMPLETED and summary.alerts == ()
+    assert totals.day_spent_usd == 0.0  # nothing was reserved, so nothing to reconcile

@@ -10,6 +10,7 @@ import datetime as dt
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 import sqlalchemy as sa
@@ -18,7 +19,7 @@ from selecta.ai import allowance, registry
 from selecta.ai.allowance import ALLOWANCES, month_key, month_resets_at, try_start_turn
 from selecta.ai.registry import DEFAULT_DEPLOYMENTS, Prices, RegistryError, RequestClass, Tier
 from selecta.ai.routing import resolve
-from selecta.ai.schema import ai_concurrency, ai_spend_daily, ai_usage
+from selecta.ai.schema import ai_concurrency, ai_spend_daily, ai_usage, insert_ignore
 from selecta.ai.spend import (
     BreakerState,
     CircuitBreaker,
@@ -589,3 +590,10 @@ def test_emergency_disable_stops_new_runs_on_a_deployment_at_once(cloud_engine):
     assert before.deployment.id == "opus-high"
     assert after.deployment.id == "sonnet-medium"
     assert after.skipped == (("opus-high", "disabled"),)
+
+
+def test_insert_ignore_refuses_a_database_it_was_not_written_for():
+    other = SimpleNamespace(dialect=SimpleNamespace(name="mysql"))
+
+    with pytest.raises(RuntimeError, match="Unsupported database: mysql"):
+        insert_ignore(other, ai_usage, {}, ["id"])

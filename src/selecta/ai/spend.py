@@ -435,7 +435,11 @@ def _crossed(percent: float, thresholds: tuple[int, ...]) -> int:
 
 
 def _alerts(conn: Connection, day: str, policy: PlatformPolicy) -> tuple[SpendAlert, ...]:
-    """Raise each alert threshold once: daily ones once a day, monthly ones once a month."""
+    """Raise each alert threshold once: daily ones once a day, monthly ones once a month.
+
+    Both callers have just updated `day`'s row in this transaction, so they hold its row lock:
+    no other server can raise the same level between the read below and the write.
+    """
     other, other_level = _other_days(conn, day)
     row = conn.execute(
         sa.select(ai_spend_daily).where(ai_spend_daily.c.day == day)
@@ -453,13 +457,12 @@ def _alerts(conn: Connection, day: str, policy: PlatformPolicy) -> tuple[SpendAl
         level = _crossed(total / cap * 100.0, policy.alert_percents)
         if level <= already:
             continue
-        result = conn.execute(
+        conn.execute(
             sa.update(ai_spend_daily)
             .where(ai_spend_daily.c.day == day, ai_spend_daily.c[column] < level)
             .values({column: level})
         )
-        if result.rowcount == 1:
-            alerts.append(SpendAlert(scope, level, round(total, 6), cap, day))
+        alerts.append(SpendAlert(scope, level, round(total, 6), cap, day))
     return tuple(alerts)
 
 
