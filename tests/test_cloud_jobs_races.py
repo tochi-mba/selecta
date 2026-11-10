@@ -114,20 +114,24 @@ def within_fifteen_percent(store, owners: dict[str, str], first: int) -> None:
         assert abs(share / fair - 1.0) <= 0.15, f"{tier} got {share:.3f}, fair is {fair:.3f}"
 
 
+@pytest.fixture
 def wide(postgres_engine):
-    """The same schema with a connection for every claimer (the default pool holds 15)."""
+    """The same schema with a connection for every claimer (the default pool holds 15),
+    closed afterwards so the server's client limit is free for the next test."""
     from selecta.persistence import make_engine
 
     with postgres_engine.connect() as connection:
         path = connection.execute(sa.text("SHOW search_path")).scalar()
-    return make_engine(
+    engine = make_engine(
         postgres_engine.url.render_as_string(hide_password=False), pool_size=55, max_overflow=5,
         connect_args={"options": f"-csearch_path={path}"},
     )
+    yield engine
+    engine.dispose()
 
 
-def test_fifty_postgres_threads_claim_a_thousand_jobs_each_once_and_fairly(postgres_engine):
-    store, owners = fill(wide(postgres_engine), per_tier=3, total=1_000)
+def test_fifty_postgres_threads_claim_a_thousand_jobs_each_once_and_fairly(wide):
+    store, owners = fill(wide, per_tier=3, total=1_000)
     claims, errors = race(store, threads=50, complete=False)
     assert errors == [], f"{len(errors)} claims failed, first: {errors[:1]!r}"
     claimed_once(store, claims, 1_000)
@@ -135,8 +139,8 @@ def test_fifty_postgres_threads_claim_a_thousand_jobs_each_once_and_fairly(postg
     within_fifteen_percent(store, owners, first=450)
 
 
-def test_fifty_postgres_threads_claiming_and_completing_never_deadlock(postgres_engine):
-    store, _ = fill(wide(postgres_engine), per_tier=5, total=600)
+def test_fifty_postgres_threads_claiming_and_completing_never_deadlock(wide):
+    store, _ = fill(wide, per_tier=5, total=600)
     claims, errors = race(store, threads=50, complete=True)
     assert errors == [], f"{len(errors)} calls failed, first: {errors[:1]!r}"
     claimed_once(store, claims, 600)
@@ -229,8 +233,8 @@ def mixed_load(store, rounds: int = 40) -> tuple[list, int]:
     return errors, operations[0]
 
 
-def test_claims_completions_releasing_dependents_and_enqueues_never_deadlock(postgres_engine):
-    store = make_store(wide(postgres_engine))
+def test_claims_completions_releasing_dependents_and_enqueues_never_deadlock(wide):
+    store = make_store(wide)
     errors, operations = mixed_load(store)
     deadlocks = [e for e in errors if "40P01" in repr(e) or "deadlock" in repr(e).lower()]
     assert deadlocks == [], f"{len(deadlocks)} deadlocks in {operations} operations"
