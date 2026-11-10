@@ -458,18 +458,26 @@ def build(port: int):
 
     # -- the built site -----------------------------------------------------------------------
 
+    def built_files() -> dict[str, Path]:
+        """Every file of the built site by its URL path, listed once (the build runs first)."""
+        if not built_cache:
+            built_cache.update({
+                file.relative_to(DIST).as_posix(): file
+                for file in DIST.rglob("*") if file.is_file()
+            })
+        return built_cache
+
+    built_cache: dict[str, Path] = {}
+
     @app.get("/{path:path}", include_in_schema=False)
     def site(path: str):
         if path.startswith(("api/", "test/", "fake-", "e2e/")):
             return Response(status_code=404)
-        root = os.path.realpath(DIST)
-        # Nothing outside the built site, however the path is spelled.
-        candidate = os.path.realpath(os.path.normpath(os.path.join(root, path)))
-        if candidate != root and not candidate.startswith(root + os.sep):
-            return Response(status_code=404)
-        if os.path.isfile(candidate):
-            return FileResponse(candidate)
-        return FileResponse(os.path.join(root, "index.html"), headers={"Cache-Control": "no-store"})
+        # The request only ever picks from the files the build made; it never becomes a path.
+        built = built_files()
+        if path in built:
+            return FileResponse(built[path])
+        return FileResponse(DIST / "index.html", headers={"Cache-Control": "no-store"})
 
     return app
 
