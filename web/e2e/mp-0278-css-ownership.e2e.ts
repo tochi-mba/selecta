@@ -116,7 +116,7 @@ test('MP-0278-05 Library and Requests classes style nothing outside their own vi
 test('MP-0278-07 audio, API, data, routing and stored preferences are what they were', async ({ page, request }) => {
   await spyOnAudio(page);
   // what the source says may be stored, and the preference fields it knows
-  const sources = tsxFiles(SRC).concat(join(SRC, 'state', 'prefs.ts'), join(SRC, 'player.ts')).map((file) => readFileSync(file, 'utf8')).join('\n')
+  const sources = tsxFiles(SRC).concat(join(SRC, 'state', 'prefs.ts'), join(SRC, 'player.ts'), join(SRC, 'lib.ts')).map((file) => readFileSync(file, 'utf8')).join('\n')
     + readdirSync(join(SRC, 'state')).map((file) => readFileSync(join(SRC, 'state', file), 'utf8')).join('\n');
   const knownKeys = new Set([...sources.matchAll(/'(selecta\.[\w.-]+)'/g)].map((match) => match[1]));
   const prefsSource = readFileSync(join(SRC, 'state', 'prefs.ts'), 'utf8');

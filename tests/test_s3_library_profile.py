@@ -1,9 +1,9 @@
 """S3-0062-07: a 20,000-song library paged while background analysis keeps writing results.
 
-The profile pages the whole library twice through the real /api/library handler (called directly, so
-the test client's per-request thread hand-off on a shared machine isn't what gets measured), once idle and once
-while a second connection saves analysis rows as fast as it can (db.save_analysis, the same write and
-commit the analysis pipeline makes per song). It prints both profiles so the run log carries the
+The profile pages the whole library twice through the real /api/library handler (called
+directly, so the test client's per-request thread hand-off on a shared machine isn't what gets
+measured), once idle and once while a second connection saves analysis rows as fast as it can
+(db.save_analysis, the same write and commit the analysis pipeline makes per song). It prints both profiles so the run log carries the
 numbers, and holds the budget that decides whether any optimisation is needed: every song reachable
 exactly once, no page over a second and the slow pages at most a few times the idle ones.
 """

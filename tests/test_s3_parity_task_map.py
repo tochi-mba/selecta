@@ -1,9 +1,9 @@
 """S3-0047-02: every unverified T and P task is mapped to the S3 decisions that own it.
 
-docs/adr/selecta-3-parity-matrix.md 'Unverified T and P tasks -> S3 decisions' lists each older section
-with its unchecked task IDs and S3 ADRs. A task that is still unchecked must appear in the row for its
-own section, every S3 link must point at a real S3 ADR (0047 to 0077), and the mapping claims nothing
-complete (no checkboxes, no 'Verified').
+docs/adr/selecta-3-parity-matrix.md 'Unverified T and P tasks -> S3 decisions' lists each older
+section with its unchecked task IDs and S3 ADRs. A task that is still unchecked must appear in the
+row for its own section, every S3 link must point at a real S3 ADR (0047 to 0077), and the mapping
+claims nothing complete (no checkboxes, no 'Verified').
 """
 
 from __future__ import annotations
