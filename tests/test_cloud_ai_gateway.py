@@ -265,12 +265,59 @@ def test_an_outage_of_every_model_degrades_to_the_planner_and_costs_no_turn(engi
     assert summary.cost_usd == 0.0 and leases(engine) == 0
 
 
-def test_a_fallback_model_serves_the_turn_and_counts_its_class(engine):
+def test_a_deep_plan_served_by_sonnet_uses_a_planning_turn_not_a_deep_plan(engine):
     turn = plan(engine, tier=Tier.PREMIUM, request_class=D, health=Health({"opus-high"}))
+    with transaction(engine) as conn:
+        run = get_run(conn, turn.run_id)
 
     assert turn.deployment.id == "sonnet-medium" and turn.fallback_used
-    assert turn.allowance_class is D
+    assert (turn.requested_class, turn.request_class, turn.allowance_class) == (D, P, E)
+    assert (run.requested_class, run.request_class, run.allowance_class) == (D, P, E)
+    assert turns_used(engine, "w", D) == 0 and turns_used(engine, "w", E) == 1
     assert turn.limits.max_cost_usd == pytest.approx(0.15)
+    assert turn.limited is None
+
+
+def test_a_planning_turn_served_by_haiku_uses_an_everyday_turn(engine):
+    turn = plan(engine, tier=Tier.STANDARD, request_class=P, health=Health({"sonnet-medium"}))
+
+    assert turn.deployment.id == "haiku-medium"
+    assert (turn.requested_class, turn.request_class, turn.allowance_class) == (P, E, E)
+    assert turns_used(engine, "w", P) == 0 and turns_used(engine, "w", E) == 1
+
+
+def test_a_fallback_with_no_smaller_class_of_its_own_counts_as_the_class_asked_for(engine):
+    backup = replace(DEFAULTS["opus-high"], id="opus-backup", fallback_id="sonnet-medium")
+    with transaction(engine) as conn:
+        registry.save_deployment(conn, backup)
+        registry.save_deployment(conn, replace(DEFAULTS["opus-high"], fallback_id="opus-backup"))
+
+    turn = plan(engine, tier=Tier.PREMIUM, request_class=D, health=Health({"opus-high"}))
+
+    assert turn.deployment.id == "opus-backup" and turn.fallback_used
+    assert (turn.request_class, turn.allowance_class) == (D, D)
+
+
+def test_when_the_served_class_has_no_turns_left_the_turn_steps_down(engine, monkeypatch):
+    monkeypatch.setitem(allowance.ALLOWANCES, Tier.PREMIUM, {E: 0, D: 25, Q: 1000})
+
+    turn = plan(engine, tier=Tier.PREMIUM, request_class=D, health=Health({"opus-high"}))
+
+    # Sonnet would have served it as planning, which counts as everyday: none left, so Haiku.
+    assert turn.deployment.id == "haiku-low"
+    assert (turn.request_class, turn.allowance_class, turn.limited) == (Q, Q, "allowance")
+    assert turns_used(engine, "w", D) == 0
+
+
+def test_a_turn_the_built_in_planner_answers_uses_no_model_allowance(engine):
+    turn = plan(engine, tier=Tier.STANDARD, request_class=P,
+                health=Health({"sonnet-medium", "haiku-medium"}))
+    with transaction(engine) as conn:
+        run = get_run(conn, turn.run_id)
+
+    assert turn.is_builtin and turn.allowance_class is None
+    assert (run.requested_class, run.allowance_class) == (P, None)
+    assert turns_used(engine, "w", P) == 0 and turns_used(engine, "w", E) == 0
 
 
 def test_no_route_when_a_turn_needs_what_even_the_planner_lacks(engine, monkeypatch):
@@ -530,6 +577,7 @@ def test_an_openai_compatible_provider_from_the_settings_streams_through_a_fake_
     assert str(seen[0].url) == "https://llm.example/v1/chat/completions"
     assert seen[0].headers["Authorization"] == "Bearer vault-open-key"
     assert sent["model"] == "open-model-1" and sent["max_tokens"] == 1_000
+    assert "reasoning_effort" not in sent  # this deployment names no effort
 
 
 def test_a_local_host_needs_no_key_and_is_not_remote(engine):
@@ -618,3 +666,115 @@ def test_a_run_started_without_a_lease_or_reservation_settles_cleanly(engine):
 
     assert summary.outcome is Outcome.COMPLETED and summary.alerts == ()
     assert totals.day_spent_usd == 0.0  # nothing was reserved, so nothing to reconcile
+
+
+# Effort reaches the model ----------------------------------------------------------------------
+
+ANTHROPIC_STREAM = [
+    ("message_start", {"type": "message_start", "message": {
+        "id": "msg_1", "type": "message", "role": "assistant", "model": "claude-haiku-5-5",
+        "content": [], "stop_reason": None, "stop_sequence": None,
+        "usage": {"input_tokens": 10, "output_tokens": 1}}}),
+    ("content_block_start", {"type": "content_block_start", "index": 0,
+                             "content_block": {"type": "text", "text": ""}}),
+    ("content_block_delta", {"type": "content_block_delta", "index": 0,
+                             "delta": {"type": "text_delta", "text": "Hi"}}),
+    ("content_block_stop", {"type": "content_block_stop", "index": 0}),
+    ("message_delta", {"type": "message_delta",
+                       "delta": {"stop_reason": "end_turn", "stop_sequence": None},
+                       "usage": {"output_tokens": 2}}),
+    ("message_stop", {"type": "message_stop"}),
+]
+
+
+def anthropic_request(provider: lucy_providers.AnthropicProvider) -> dict:
+    """Run one turn through a fake Anthropic API and return the JSON body the SDK sent.
+
+    The Anthropic SDK ships its own fork of httpx (`httpx2`), so its mock transport is used."""
+    httpx2 = pytest.importorskip("httpx2")
+    body = "".join(f"event: {name}\ndata: {json.dumps(data)}\n\n"
+                   for name, data in ANTHROPIC_STREAM).encode()
+    seen = []
+
+    def api(request):
+        seen.append(request)
+        return httpx2.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+    provider.client = provider.client.with_options(
+        http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(api)))
+
+    async def on_text(text: str) -> None:
+        pass
+
+    result = asyncio.run(provider.turn(["system"], [provider.user("hi")], [], on_text))
+    assert result.text == "Hi" and (result.tokens_in, result.tokens_out) == (10, 2)
+    assert str(seen[0].url) == "https://api.anthropic.com/v1/messages"
+    return json.loads(seen[0].content)
+
+
+def test_frees_low_effort_reaches_the_anthropic_request(engine):
+    settings = provider_settings_for(plan(engine, tier=Tier.FREE, request_class=E), Vault())
+
+    sent = anthropic_request(lucy_providers.AnthropicProvider(**settings.provider_args()))
+
+    assert settings.provider_args()["effort"] == "low"
+    assert sent["output_config"] == {"effort": "low"}
+    assert sent["model"] == "claude-haiku-5-5" and sent["max_tokens"] == 2_000
+
+
+def test_premiums_deep_plan_sends_high_effort(engine):
+    settings = provider_settings_for(plan(engine, tier=Tier.PREMIUM, request_class=D), Vault())
+
+    sent = anthropic_request(lucy_providers.AnthropicProvider(**settings.provider_args()))
+
+    assert sent["output_config"] == {"effort": "high"} and sent["model"] == "claude-opus-5-5"
+
+
+def test_a_local_mode_anthropic_provider_built_the_old_way_still_sends_medium():
+    local = lucy_providers.AnthropicProvider("byo-key", "claude-sonnet-5-5", None, 4_000)
+    unnamed = lucy_providers.AnthropicProvider("byo-key", "claude-sonnet-5-5", None, 4_000,
+                                               effort=None)
+
+    assert anthropic_request(local)["output_config"] == {"effort": "medium"}
+    assert unnamed.effort == lucy_providers.DEFAULT_EFFORT == "medium"
+
+
+def openai_request(provider: lucy_providers.OpenAICompatibleProvider, monkeypatch) -> dict:
+    seen: list[httpx.Request] = []
+
+    def host(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, content=b"data: [DONE]\n\n",
+                              headers={"Content-Type": "text/event-stream"})
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient",
+                        lambda **options: real_client(transport=httpx.MockTransport(host),
+                                                      **options))
+
+    async def on_text(text: str) -> None:
+        pass
+
+    asyncio.run(provider.turn(["system"], [provider.user("hi")], [], on_text))
+    return json.loads(seen[0].content)
+
+
+def test_frees_low_effort_reaches_an_openai_compatible_request(engine, monkeypatch):
+    install(engine, openai_host(effort="low"))
+    turn = plan(engine, tier=Tier.FREE, request_class=Q)
+    settings = provider_settings_for(turn, Vault({"vault:open-host": "vault-open-key"}))
+
+    sent = openai_request(lucy_providers.OpenAICompatibleProvider(**settings.provider_args()),
+                          monkeypatch)
+
+    assert sent["reasoning_effort"] == "low" and sent["model"] == "open-model-1"
+
+
+def test_a_local_mode_openai_provider_built_the_old_way_sends_what_it_always_sent(monkeypatch):
+    local = lucy_providers.OpenAICompatibleProvider(None, "llama3", "http://localhost:11434/v1",
+                                                    4_000)
+
+    sent = openai_request(local, monkeypatch)
+
+    assert "reasoning_effort" not in sent
+    assert set(sent) == {"model", "stream", "stream_options", "max_tokens", "messages", "tools"}

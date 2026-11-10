@@ -597,3 +597,15 @@ def test_insert_ignore_refuses_a_database_it_was_not_written_for():
 
     with pytest.raises(RuntimeError, match="Unsupported database: mysql"):
         insert_ignore(other, ai_usage, {}, ["id"])
+
+
+def test_insert_ignore_says_whether_it_inserted_on_both_databases(cloud_engine):
+    row = {"id": "u1", "workspace_id": "w", "month": "2026-11", "request_class": "everyday",
+           "turns": 0, "tokens_in": 0, "tokens_out": 0, "cache_read_tokens": 0,
+           "cost_usd": 0.0, "updated_at": 1.0}
+    with transaction(cloud_engine) as conn:
+        first = insert_ignore(conn, ai_usage, row, ["workspace_id", "month", "request_class"])
+        again = insert_ignore(conn, ai_usage, {**row, "id": "u2"},
+                              ["workspace_id", "month", "request_class"])
+
+    assert (first, again) == (True, False)

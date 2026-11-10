@@ -380,3 +380,15 @@ def test_reaping_uses_attempt_rows_only_for_live_attempts(store):
     with transaction(store.engine) as connection:
         connection.execute(job_attempts.update().values(lease_expires_at=0.0))
     assert store.reap_expired() == []
+
+
+def test_drift_is_logged_even_with_no_alert_wired_and_a_loop_never_started_stops(sqlite_engine):
+    store = make_store(sqlite_engine)
+    loop = MaintenanceLoop(store, Leadership(sqlite_engine), Schedule())
+    with transaction(store.engine) as connection:
+        connection.execute(fair_heads.insert().values(
+            pool="gpu", lane="standard", workspace_id="ghost", queued_count=1, updated_at=0.0
+        ))
+    assert [d.workspace_id for d in loop.run_once(moment=0.0)["reconciled"]] == ["ghost"]
+    loop.stop()
+    assert loop.leadership.term is None

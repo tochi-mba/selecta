@@ -13,6 +13,7 @@ from functools import lru_cache
 _SPACES = re.compile(r"\s+")
 _PUNCTUATION = re.compile(r"[^\w]+", re.UNICODE)
 _CREDITS = re.compile(r"\b(?:feat(?:uring)?|ft)\b", re.IGNORECASE)
+_ENDS_IN_A_SYMBOL = re.compile(r"[^\w\s]\s*$", re.UNICODE)
 
 
 @lru_cache(maxsize=32768)
@@ -37,13 +38,25 @@ def relevance(query: str, song_id: int, artist: str | None, title: str | None) -
         return 10
     if needle == creator:
         return 20
-    if name.startswith(needle + " ") or name.startswith(needle):
+    # Punctuation is ignored so "ac dc" finds "AC/DC", but a symbol typed straight after the
+    # last word still ends that word: "100%" means the whole word "100", not "1000".
+    whole_word = bool(_ENDS_IN_A_SYMBOL.search(query))
+
+    def starts(text: str) -> bool:
+        return text == needle or text.startswith(needle + " ") or (
+            not whole_word and text.startswith(needle)
+        )
+
+    def contains(text: str) -> bool:
+        return f" {needle} " in f" {text} " or (not whole_word and needle in text)
+
+    if starts(name):
         return 30
-    if needle in name:
+    if contains(name):
         return 35
-    if creator.startswith(needle):
+    if starts(creator):
         return 40
-    if needle in creator:
+    if contains(creator):
         return 45
     # Multi-token queries must match all tokens, avoiding broad single-word
     # matches that bury a version or feature credit under unrelated recordings.

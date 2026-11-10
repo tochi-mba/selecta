@@ -6,7 +6,9 @@ checks the account's monthly dollar ceiling, reserves the turn's worst case agai
 caps, and records the run with everything pinned. When an allowance is used up, or the class's
 model would pass the monthly dollar ceiling, the turn steps down a class (a deep plan becomes a
 planning turn, and so on); when nothing paid is left, or no model is reachable, the built-in
-planner answers. Lucy gets smaller; it doesn't break.
+planner answers. Lucy gets smaller; it doesn't break. A turn uses the allowance of the class that
+served it: a fallback to a smaller class's model counts as that class, the run records both the
+class asked for and the class served, and a turn the built-in planner answers uses none.
 
 `provider_settings_for` turns a plan into the provider and budget settings `selecta.lucy` already
 understands, with the key fetched from the deployment's secret reference, never from anything
@@ -20,7 +22,7 @@ import copy
 import os
 import time
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -40,6 +42,7 @@ from selecta.ai.registry import (
     Deployment,
     Provider,
     RequestClass,
+    RoutingVersion,
     Tier,
     active_routing,
     load_deployments,
@@ -142,8 +145,9 @@ class ProviderSettings:
         return config
 
     def provider_args(self) -> dict[str, Any]:
-        """Keyword arguments for `AnthropicProvider` / `OpenAICompatibleProvider`; empty for
-        the built-in planner, which needs no provider."""
+        """Keyword arguments for `AnthropicProvider` / `OpenAICompatibleProvider`, including the
+        deployment's effort (Free's Haiku runs at "low"); empty for the built-in planner, which
+        needs no provider."""
         if self.provider["kind"] == Provider.BUILTIN.value:
             return {}
         return {
@@ -151,6 +155,7 @@ class ProviderSettings:
             "model": self.provider["model"],
             "base_url": self.provider["base_url"],
             "max_tokens": self.budgets["max_output_tokens"],
+            "effort": self.effort,
         }
 
 
@@ -171,6 +176,19 @@ def _builtin_route(
     if not builtin.has(needs):
         raise NoRoute(f"The built-in planner lacks {sorted(needs - builtin.capabilities)}.")
     return RoutedDeployment(builtin, version, tier, request_class, first_choice, True)
+
+
+def _served_class(
+    routing: RoutingVersion, tier: Tier, routed_for: RequestClass, route: RoutedDeployment
+) -> RequestClass:
+    """The class whose allowance a turn uses: the one it was routed for, or, when a fallback
+    answered, the largest smaller class the routing map serves with that model. So a Premium deep
+    plan that falls back from Opus to Sonnet counts as a planning turn, not a deep plan."""
+    if route.fallback_used:
+        for smaller in classes_from(routed_for)[1:]:
+            if route.deployment.id in routing.candidates(tier, smaller):
+                return smaller
+    return routed_for
 
 
 def plan_turn(
@@ -209,7 +227,8 @@ def plan_turn(
         if route.deployment.is_builtin:
             chosen, limited = route, limited or "no_model"
             break
-        bucket_here = bucket_for(tier, candidate)
+        served = _served_class(routing, tier, candidate, route)
+        bucket_here = bucket_for(tier, served)
         if bucket_here in used_up:
             continue
         limits = turn_limits(route.deployment, tier)
@@ -217,7 +236,7 @@ def plan_turn(
         if spent + limits.max_cost_usd > ceiling:
             limited = "spend"  # a smaller class's cheaper model may still fit
             continue
-        start = try_start_turn(conn, workspace_id, tier, candidate, month)
+        start = try_start_turn(conn, workspace_id, tier, served, month)
         if not start.admitted:
             used_up.add(bucket_here)
             limited = "allowance"
@@ -228,7 +247,7 @@ def plan_turn(
             refund_turn(conn, workspace_id, month, start.bucket)
             limited = "platform"
             break
-        chosen, bucket = route, start.bucket
+        chosen, bucket = replace(route, request_class=served), start.bucket
         reserved, spend_day = reservation.amount_usd, reservation.day
         break
     if chosen is None:

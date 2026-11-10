@@ -224,7 +224,12 @@ def world(tmp_path, monkeypatch):
 
 
 def _auth(token: str, workspace_id: str | None = None) -> dict[str, str]:
-    headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": new_id()}
+    # Origin as the app sends it, so origin checks pass and the workspace check decides.
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Idempotency-Key": new_id(),
+        "Origin": "https://app.test",
+    }
     if workspace_id:
         headers["X-Workspace-ID"] = workspace_id
     return headers

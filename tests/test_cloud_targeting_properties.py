@@ -236,19 +236,69 @@ def test_a_teased_feature_is_one_the_plan_alone_keeps_off(world):
     assert_teasers_unlock(guest_safe(world))
 
 
-@given(worlds(mode="cloud"))
-def test_a_teaser_is_never_shown_when_an_upgrade_would_not_switch_the_feature_on(world):
-    # Every flag a teaser and locked: the rules on what each one needs decide the teasers.
+# Unlocking plans, cheapest first.
+RANKED = ("standard", "premium")
+
+
+def closure(flag_id: str, registry: dict[str, Flag]) -> set[str]:
+    """The flag and everything it needs, directly or through others."""
+    found, todo = set(), [flag_id]
+    while todo:
+        current = todo.pop()
+        if current in found or current not in registry:
+            continue
+        found.add(current)
+        todo.extend(registry[current].requires)
+    return found
+
+
+@st.composite
+def teaser_worlds(draw) -> dict:
+    """A world where every flag is a teaser and each gated flag has an unlocking plan that
+    includes the gated flags it needs, as `plans.problems()` insists."""
+    world = guest_safe(draw(worlds(mode="cloud")))
     registry = {
         flag_id: Flag(**{**flag.__dict__, "when_locked": "teaser"})
         for flag_id, flag in world["registry"].items()
     }
-    locked = guest_safe(world) | {
-        "registry": registry,
-        "plan_gated": frozenset(registry),
-        "entitled": frozenset(),
+    gated = sorted(world["plan_gated"])
+    base = {flag_id: draw(st.sampled_from(RANKED)) for flag_id in gated}
+    lock_plans = {
+        flag_id: max((base[g] for g in closure(flag_id, registry) if g in base), key=RANKED.index)
+        for flag_id in gated
     }
-    assert_teasers_unlock(locked)
+    prefs = dict.fromkeys(registry, True)
+    return world | {"registry": registry, "user_prefs": prefs, "lock_plans": lock_plans}
+
+
+def decided(world: dict, *, up_to: str | None = None, everything: bool = False) -> t.Decisions:
+    """Decisions as they are, or after upgrading to every plan up to `up_to`, or to them all."""
+    settings = dict(world)
+    ctx, lock_plans = settings.pop("ctx"), settings.pop("lock_plans")
+    if everything or up_to is not None:
+        limit = len(RANKED) if everything else RANKED.index(up_to) + 1
+        bought = {f for f, plan in lock_plans.items() if RANKED.index(plan) < limit}
+        settings["entitled"] = settings["entitled"] | bought
+    return t.decide_all(ctx, lock_plans=lock_plans, **settings)
+
+
+@given(teaser_worlds())
+def test_a_locked_feature_is_a_teaser_exactly_when_an_upgrade_would_switch_it_on(world):
+    found = decided(world)
+    upgraded = decided(world, everything=True)
+    for flag_id in world["registry"]:
+        unlocks = not found.on(flag_id) and upgraded.on(flag_id)
+        assert (flag_id in found.locks) is unlocks, flag_id
+
+
+@given(teaser_worlds())
+def test_a_teaser_names_the_cheapest_plan_that_switches_it_on(world):
+    found = decided(world)
+    for flag_id, plan in found.locks.items():
+        assert decided(world, up_to=plan).on(flag_id), (flag_id, plan)
+        cheaper = RANKED[: RANKED.index(plan)]
+        if cheaper:
+            assert not decided(world, up_to=cheaper[-1]).on(flag_id), (flag_id, plan)
 
 
 def assert_teasers_unlock(world: dict) -> None:
@@ -257,8 +307,12 @@ def assert_teasers_unlock(world: dict) -> None:
     upgraded = every(world, entitled=world["entitled"] | world["plan_gated"])
     for flag_id in found.locks:
         flag = world["registry"][flag_id]
-        assert flag.when_locked == "teaser"
-        assert found.decisions[flag_id].reason == t.PLAN_LOCKED
+        reason = found.decisions[flag_id].reason
+        if reason == t.PLAN_LOCKED:
+            assert flag.when_locked == "teaser"
+        else:
+            # Off only through what it needs, so a teaser like what it needs.
+            assert reason.startswith(t.NEEDS)
         assert upgraded.on(flag_id), flag_id
 
 

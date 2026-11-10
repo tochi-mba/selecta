@@ -167,7 +167,17 @@ function Overlay({
     const first = [...(panel.current?.querySelectorAll<HTMLElement>('[data-autofocus]') ?? [])]
       .find((node) => canFocusInOverlay(node, panel.current)) ?? panel.current;
     first?.focus();
+    // A control that goes away once it has done its job, like "Use what was measured" after it has,
+    // would leave focus on nothing, where Escape and Tab no longer reach this overlay. Focus comes back
+    // to the overlay itself instead, as it does when a notice's own button goes.
+    const own = panel.current;
+    const lost = new MutationObserver(() => {
+      const at = document.activeElement;
+      if ((!at || at === document.body) && own?.isConnected && overlayStack[overlayStack.length - 1] === mine) own.focus({ preventScroll: true });
+    });
+    if (own) lost.observe(own, { childList: true, subtree: true });
     return () => {
+      lost.disconnect();
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
       if (mine) {
         const at = overlayStack.indexOf(mine);

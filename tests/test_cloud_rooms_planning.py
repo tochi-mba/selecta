@@ -174,7 +174,7 @@ def test_a_real_room_s_queue_is_fair_whatever_order_the_host_approves_in(
 ):
     follow_clock(monkeypatch, clock)
     rooms = make_rooms(cloud_engine)
-    workspace = f"ws-{new_id()}"
+    workspace = new_id()
     opened = rooms.open_room(
         workspace,
         "Party",

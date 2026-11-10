@@ -28,6 +28,10 @@ PRICES_PER_MILLION = {
 
 FALLBACK_MODELS = {"claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5"}
 
+DEFAULT_EFFORT = "medium"
+"""Anthropic's effort when nobody chose one: what local mode (bring your own key) always sends.
+In the cloud each model deployment names its own (ADR-0404), passed in as `effort`."""
+
 
 class ProviderError(Exception):
     def __init__(self, message: str, code: str, recoverable: bool) -> None:
@@ -65,11 +69,13 @@ def cost_estimate(model: str, tokens_in: int, tokens_out: int) -> float | None:
 class AnthropicProvider:
     name = "anthropic"
 
-    def __init__(self, api_key: str, model: str, base_url: str | None, max_tokens: int) -> None:
+    def __init__(self, api_key: str, model: str, base_url: str | None, max_tokens: int,
+                 effort: str | None = DEFAULT_EFFORT) -> None:
         import anthropic
 
         self.model = model
         self.max_tokens = max_tokens
+        self.effort = effort or DEFAULT_EFFORT
         self.default_host = not base_url or "api.anthropic.com" in base_url
         self.client = anthropic.AsyncAnthropic(
             api_key=api_key, base_url=None if self.default_host else base_url,
@@ -111,7 +117,7 @@ class AnthropicProvider:
                 messages=messages,
                 tools=tools,
                 thinking={"type": "adaptive"},
-                output_config={"effort": "medium"},
+                output_config={"effort": self.effort},
                 **extra,
             ) as stream:
                 async for event in stream:
@@ -159,9 +165,13 @@ class OpenAICompatibleProvider:
 
     name = "openai"
 
-    def __init__(self, api_key: str | None, model: str, base_url: str, max_tokens: int) -> None:
+    def __init__(self, api_key: str | None, model: str, base_url: str, max_tokens: int,
+                 effort: str | None = None) -> None:
         self.model = model
         self.max_tokens = max_tokens
+        # Sent as `reasoning_effort` only when chosen: many compatible hosts and older models
+        # refuse the field, so local mode keeps sending exactly what it always has.
+        self.effort = effort
         self.base_url = base_url.rstrip("/")
         self.headers = {"Content-Type": "application/json"}
         if api_key:
@@ -192,6 +202,8 @@ class OpenAICompatibleProvider:
             "messages": [{"role": "system", "content": "\n\n".join(system)}, *messages],
             "tools": tools,
         }
+        if self.effort:
+            body["reasoning_effort"] = self.effort
         text: list[str] = []
         calls: dict[int, dict] = {}
         result = TurnResult()

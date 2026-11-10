@@ -86,6 +86,15 @@ RULE_ON = "rule_on"
 PREVIEW = "preview"
 
 
+def _plan_rank(plan_id: str) -> tuple[int, str]:
+    """Cheapest first, for naming the plan that unlocks several features at once. A plan the
+    catalogue doesn't know ranks below every real one."""
+    try:
+        return plan_catalogue.plan_for(plan_id).rank, plan_id
+    except plan_catalogue.UnknownPlan:
+        return -1, plan_id
+
+
 class Layer(enum.StrEnum):
     CORE = "core"
     BUILD = "build"
@@ -129,6 +138,7 @@ class _Evaluator:
         self.registry = flags.registry() if registry is None else registry
         self.local = ctx.mode == "local"
         self.decided: dict[str, Decision] = {}
+        self.teasers: dict[str, str | None] = {}
 
     def flag(self, flag_id: str) -> flags.Flag:
         if flag_id not in self.registry:
@@ -205,17 +215,44 @@ class _Evaluator:
             return True, "no choice made"
         return True, "switched on, which only counts for beta features"
 
-    def teasable(self, flag_id: str) -> bool:
-        """A `teaser` flag locked by the plan alone. A feature a rule switched off is hidden,
-        never teased, and so is one that needs such a feature."""
-        return self.flag(flag_id).when_locked == "teaser" and self.unlockable(flag_id, ())
+    def teaser(self, flag_id: str, lock_plans: Mapping[str, str]) -> str | None:
+        """The plan a locked feature names as a teaser, or None when it's on or hidden.
+
+        A feature its own plan gate locks is a teaser when its `when_locked` says so and it has
+        an unlocking plan. A feature that's off only because it needs locked features is a
+        teaser when every one of those is, naming the dearest of their plans, the one that
+        unlocks them all. Either way it must be unlockable: a feature a rule or kill switch
+        switched off is hidden, never teased, and so is anything that needs one."""
+        if flag_id not in self.teasers:
+            self.teasers[flag_id] = self._teaser(flag_id, lock_plans)
+        return self.teasers[flag_id]
+
+    def _teaser(self, flag_id: str, lock_plans: Mapping[str, str]) -> str | None:
+        flag = self.flag(flag_id)
+        decided = self.decide(flag_id)
+        if decided.on or not self.unlockable(flag_id, ()):
+            return None
+        if decided.reason == PLAN_LOCKED:
+            return lock_plans.get(flag_id) if flag.when_locked == "teaser" else None
+        # Off through what it needs: unlockable, so at least one need is off and none is missing.
+        named = [
+            self.teaser(need, lock_plans) for need in flag.requires if not self.decide(need).on
+        ]
+        if None in named:
+            return None
+        return max(named, key=_plan_rank)
 
     def unlockable(self, flag_id: str, path: tuple[str, ...]) -> bool:
-        """Off only because the plan leaves it out: a rule would leave it on, and everything it
-        needs is on or unlockable too, all the way down. A needed flag is checked through its own
-        rules, since a plan lock decides before the rules do and would hide a kill switch."""
+        """Off only because the plan leaves it, or something it needs, out: its own layers and a
+        rule would leave it on, and everything it needs is on or unlockable too, all the way
+        down. A needed flag is checked through its own rules, since a plan lock decides before
+        the rules do and would hide a kill switch."""
         flag = self.flag(flag_id)
-        if self.decide(flag_id).reason != PLAN_LOCKED or not self.rule_verdict(flag)[0].on:
+        reason = self.decide(flag_id).reason
+        if reason == PLAN_LOCKED:
+            if not self.rule_verdict(flag)[0].on:
+                return False
+        elif not (reason.startswith(NEEDS) and self.layers(flag).on):
             return False
         for need in flag.requires:
             if need not in self.registry or need in path or need == flag_id:
@@ -260,7 +297,8 @@ def decide(
 @dataclass(frozen=True)
 class Decisions:
     """Every flag decided for one context, plus teasers: `locks` maps a plan-locked flag whose
-    `when_locked` is `teaser` to the cheapest plan that includes it."""
+    `when_locked` is `teaser`, or a feature that only needs such flags, to the plan that unlocks
+    it (`_Evaluator.teaser`)."""
 
     version: int
     decisions: Mapping[str, Decision]
@@ -305,8 +343,9 @@ def decide_all(
         if ctx.is_guest and flag.scope != "guest":
             continue
         decisions[flag_id] = evaluator.decide(flag_id)
-        if flag_id in lock_plans and evaluator.teasable(flag_id):
-            locks[flag_id] = lock_plans[flag_id]
+        plan = evaluator.teaser(flag_id, lock_plans)
+        if plan is not None:
+            locks[flag_id] = plan
     return Decisions(
         evaluator.snapshot.version, MappingProxyType(decisions), MappingProxyType(locks)
     )

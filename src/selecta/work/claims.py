@@ -1,6 +1,7 @@
 """The claim: which job a free worker slot gets next, decided in one short transaction (§4A.6).
 
-1. Pick the lane by lane virtual time (deadline-boosted playback seams go first of all).
+1. Lock the pool's lane clocks (a tiny table) and pick the lane by lane virtual time;
+   deadline-boosted playback seams go first of all.
 2. Read the top K workspace heads for (pool, lane) by V, `FOR UPDATE SKIP LOCKED`.
 3. Apply the eligibility policy in Python and take the first eligible head.
 4. Lock that workspace's best job `FOR UPDATE SKIP LOCKED`, in the in-account order.
@@ -9,8 +10,9 @@
 
 When every head in a round is ineligible the claim reads the next K, for a bounded number of
 rounds, then tries the next lane. The decisions themselves are `selecta.scheduling.policy`
-functions, shared with the simulator. The lane clock is read without a lock and updated last,
-so claimers queue on that one row only for the final statement.
+functions, shared with the simulator. Claims in one pool queue on the lane clocks for their
+whole (short) transaction, so no claim ever holds a head while waiting, and concurrent claimers
+can't push each other off the smallest V (see `heads.lock_lanes`).
 """
 
 from __future__ import annotations
@@ -90,12 +92,12 @@ class ClaimSession:
         backlogged = heads.backlogged_lanes(self.connection, self.pool)
         if not backlogged:
             return None
+        vtimes = heads.lock_lanes(self.connection, self.pool)
         if Lane.INTERACTIVE in backlogged:
             boosted = self._try_boost()
             if boosted is not None:
                 return boosted
         speculative_ok = Lane.SPECULATIVE in backlogged and self._speculative_ok()
-        vtimes = heads.lane_vtimes(self.connection, self.pool)
         for lane in policy.choose_lanes(vtimes, backlogged, speculative_ok):
             claimed = self._try_lane(lane)
             if claimed is not None:

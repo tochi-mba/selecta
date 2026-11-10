@@ -353,14 +353,29 @@ const TERM_FLAGS: Record<string, Gate> = {
 
 const termOn = (entry: GlossaryTerm) => !TERM_FLAGS[entry.id] || gateOpen(TERM_FLAGS[entry.id]);
 
-/** The terms this build has. */
+/** How a term reads in a build without a feature it mentions. The term itself stays, because what
+ * it explains is still true, but it says nothing about the feature that's gone. */
+const TERM_WITHOUT: Record<string, { gate: Gate; reads: Partial<GlossaryTerm> }[]> = {
+  'local-only': [{
+    gate: { flag: 'lyrics.lookup' },
+    reads: {
+      aka: ['privacy', 'online', 'offline', 'cloud'],
+      plain: 'Your music, analysis, mixes, ratings and renders stay on this PC. There’s no account and no cloud. The audio itself never leaves this PC, and nothing about your music is sent anywhere.',
+    },
+  }],
+};
+
+const asBuilt = (entry: GlossaryTerm): GlossaryTerm =>
+  (TERM_WITHOUT[entry.id] ?? []).reduce((term, { gate, reads }) => (gateOpen(gate) ? term : { ...term, ...reads }), entry);
+
+/** The terms this build has, as this build says them. */
 export function glossaryOn(): GlossaryTerm[] {
-  return GLOSSARY.filter(termOn);
+  return GLOSSARY.filter(termOn).map(asBuilt);
 }
 
 export function glossaryTerm(id: string): GlossaryTerm | undefined {
   const entry = BY_ID.get(id);
-  return entry && termOn(entry) ? entry : undefined;
+  return entry && termOn(entry) ? asBuilt(entry) : undefined;
 }
 
 /** Case and accents don't matter, so “cafe” finds “café” and curly quotes match straight ones. */

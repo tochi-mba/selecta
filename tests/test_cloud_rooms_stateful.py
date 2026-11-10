@@ -28,7 +28,7 @@ def test_random_parties_keep_every_room_rule(sqlite_engine, clock, monkeypatch):
     class Party(RuleBasedStateMachine):
         def __init__(self) -> None:
             super().__init__()
-            self.host = f"ws-{new_id()}"
+            self.host = new_id()
             self.rooms = make_rooms(engine)
             self.room_id: str | None = None
             self.code: str | None = None

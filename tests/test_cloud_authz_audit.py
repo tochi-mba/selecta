@@ -7,6 +7,7 @@ the append-only grants and triggers exist only on PostgreSQL, so those tests use
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import secrets
 from datetime import date, datetime
@@ -24,8 +25,13 @@ from selecta.authz.check import authorize
 from selecta.authz.errors import Forbidden, SelfApproval
 from selecta.authz.roles import StaffRole
 from selecta.authz.schema import audit_events
-from selecta.identity.schema import users
-from selecta.persistence import db_now, new_id
+from selecta.identity import accounts
+from selecta.identity.deletion_effects import AccountDeletionEffects
+from selecta.identity.schema import users, workspaces
+from selecta.identity.tokens import Claims
+from selecta.persistence import db_now, new_id, transaction
+from selecta.storage.deletion import DeletionKind, tombstone
+from selecta.storage.schema import deletions
 
 db = kit.db
 
@@ -65,6 +71,17 @@ SIGNED = "https://media.r2.example/a.flac?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz
         "privateKey",
         "lyrics",
         "song_lyrics",
+        "auth_header",
+        "Auth-Header",
+        "AUTHORIZATION",
+        "Set-Cookie",
+        "otp",
+        "OTP",
+        "mfa_otp",
+        "otp_code",
+        "PASSWORD",
+        "session_token",
+        "Session_Token",
     ],
 )
 def test_values_under_secret_looking_keys_are_redacted(key):
@@ -173,6 +190,75 @@ def test_record_keeps_no_metadata_when_none_is_given(db):
 def test_record_refuses_an_unknown_result(db):
     with pytest.raises(ValueError):
         audit.record(db, action="a.b", result="maybe")
+
+
+def test_a_key_that_only_contains_otp_inside_a_word_is_kept():
+    assert scrub({"footprint": 3, "hotpath": "a"}) == {"footprint": 3, "hotpath": "a"}
+
+
+JWT = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAxIn0.c2lnbmF0dXJlLWJ5dGVz"
+LONG_TOKEN = "9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c"
+
+
+@pytest.mark.parametrize(
+    ("text", "gone"),
+    [
+        (f"fetch failed for {SIGNED}", ("X-Amz-Signature", "beef", "AWS4-HMAC")),
+        ("Authorization: Bearer abc.def-123", ("abc.def-123",)),
+        ("retry with bearer s3cr3tvalue", ("s3cr3tvalue",)),
+        (f"see https://cdn.example/files/{LONG_TOKEN}/a.flac", (LONG_TOKEN,)),
+        (f"token {JWT} expired", (JWT, "eyJzdWIiOiJ1c2VyXzAxIn0")),
+        ("stripe said no to sk_live_51Habc123XYZ", ("sk_live_51Habc123XYZ",)),
+        ("whsec_abc123def456 did not verify", ("whsec_abc123def456",)),
+        (f"api answered {LONG_TOKEN}", (LONG_TOKEN,)),
+        ("login with password=hunter2 failed", ("hunter2",)),
+        ('config {"session_token": "abc123"}', ("abc123",)),
+        ("otp: 123456 was wrong", ("123456",)),
+        ("cookie=sid%3D99; Path=/", ("sid%3D99",)),
+        ("Set-Cookie: sid=99", ("sid=99",)),
+        ("auth_header=xyz789", ("xyz789",)),
+    ],
+)
+def test_free_text_loses_signed_queries_bearer_tokens_and_token_shaped_strings(text, gone):
+    scrubbed = audit.scrub_text(text)
+    for part in gone:
+        assert part not in scrubbed, (part, scrubbed)
+    assert audit.scrub_text(scrubbed) == scrubbed  # scrubbing twice changes nothing more
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "no role grants this at this scope",
+        "the proposer no longer holds queues.policy.approve",
+        "ActionNotFound: no live user 01a1c2cb-7677-783f-803a-a1e809bb4ae6",
+        "customer reports a click at 1:32 on sub_1NxYz",
+        "see https://selecta.example/admin/jobs/01a1c2cb-7677-783f-803a-a1e809bb4ae6",
+        "footprint: 3 tracks, token bucket refilled",
+        "the_proposer_no_longer_holds_the_permission_needed",
+        "the bearer of this grant",
+    ],
+)
+def test_ordinary_free_text_is_kept(text):
+    assert audit.scrub_text(text) == text
+
+
+def test_scrubbing_free_text_keeps_the_url_without_its_query():
+    assert audit.scrub_text(f"see {SIGNED}") == "see https://media.r2.example/a.flac?<redacted>"
+    assert audit.scrub_text(None) is None
+
+
+def test_record_scrubs_the_free_text_reason(db):
+    audit.record(
+        db,
+        action="support.diagnostics.read",
+        result="success",
+        reason=f"sent {SIGNED} with Bearer abc123 and password=hunter2 for the click",
+    )
+    (row,) = audit_rows(db)
+    for part in ("X-Amz-Signature", "abc123", "hunter2"):
+        assert part not in row["reason"]
+    assert row["reason"].endswith("for the click")
 
 
 def test_on_sqlite_a_durable_record_shares_the_callers_transaction(sqlite_engine):
@@ -376,3 +462,89 @@ def test_rows_past_two_years_may_be_deleted_by_the_owner(append_only):
         assert deleted.rowcount == 1
     with engine.connect() as conn:
         assert len(audit_rows(conn)) == 1
+
+
+# Account erasure leaves the audit log as it is
+
+
+class FakeIdentity:
+    """Stands in for WorkOS: records which identities were deleted."""
+
+    def __init__(self) -> None:
+        self.deleted: list[str] = []
+
+    def delete_user(self, auth_subject: str) -> None:
+        self.deleted.append(auth_subject)
+
+
+def account_ready_to_erase(engine):
+    """A deleted account past its recovery period with its objects purged, and audit rows about
+    it as actor, as resource and in its workspace. Returns the plan, user id and workspace id."""
+    with transaction(engine) as conn:
+        now = db_now(conn)
+        made = accounts.provision(
+            conn, Claims(f"erase-{new_id()}", now, now + 600), age_confirmed=True
+        )
+        user_id, workspace_id = made.user.id, made.workspace.id
+        audit.record(
+            conn,
+            action="account.export",
+            result="success",
+            actor_id=user_id,
+            resource_type="user",
+            resource_id=user_id,
+            workspace_id=workspace_id,
+        )
+        plan = accounts.start_account_deletion(conn, user_id)
+    with transaction(engine, workspace_id) as conn:
+        tombstone(conn, workspace_id, DeletionKind.ACCOUNT, workspace_id)
+        conn.execute(
+            deletions.update()
+            .where(deletions.c.workspace_id == workspace_id)
+            .values(physical_done_at=db_now(conn))
+        )
+    return dataclasses.replace(plan, erase_after=plan.deleted_at - 1), user_id, workspace_id
+
+
+def erase(engine, plan) -> FakeIdentity:
+    identity = FakeIdentity()
+    effects = AccountDeletionEffects(
+        engine, job_store=None, stripe=None, objects=None, price_map=None, identity=identity
+    )
+    effects.delete_workspace_rows(plan, "erase-test")
+    effects.erase_user(plan, "erase-test")
+    return identity
+
+
+def test_account_erasure_leaves_audit_rows_exactly_as_written(cloud_engine):
+    # The rows keep the random user, workspace and resource ids. Once the user row and personal
+    # data are gone, those ids point at nothing and identify no one.
+    plan, user_id, workspace_id = account_ready_to_erase(cloud_engine)
+    with cloud_engine.connect() as conn:
+        before = {row["id"]: dict(row) for row in audit_rows(conn)}
+    assert any(row["actor_id"] == user_id for row in before.values())
+    assert any(row["workspace_id"] == workspace_id for row in before.values())
+
+    identity = erase(cloud_engine, plan)
+
+    assert len(identity.deleted) == 1
+    with cloud_engine.connect() as conn:
+        after = {row["id"]: dict(row) for row in audit_rows(conn)}
+        assert conn.execute(sa.select(users.c.id).where(users.c.id == user_id)).first() is None
+        gone = sa.select(workspaces.c.id).where(workspaces.c.id == workspace_id)
+        assert conn.execute(gone).first() is None
+    assert {key: after[key] for key in before} == before
+
+
+def test_account_erasure_succeeds_with_the_audit_log_append_only(append_only):
+    engine, _, _ = append_only
+    plan, user_id, _ = account_ready_to_erase(engine)
+    with engine.connect() as conn:
+        written = len(audit_rows(conn, actor_id=user_id))
+    assert written >= 2
+
+    erase(engine, plan)
+
+    with engine.connect() as conn:
+        assert conn.execute(sa.select(users.c.id).where(users.c.id == user_id)).first() is None
+        assert len(audit_rows(conn, actor_id=user_id)) == written

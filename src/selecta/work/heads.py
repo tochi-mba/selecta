@@ -5,7 +5,8 @@ functions here before its transaction commits, so the heads can't drift by desig
 in `selecta.work.upkeep` recomputes them from `jobs` every minute anyway.
 
 Lock order, which keeps PostgreSQL free of deadlocks: a job row, then its head, then the lane
-clock. The claim takes heads with `SKIP LOCKED` (it never waits on one) and the lane clock last.
+clock. The claim is the exception: it takes the pool's lane clocks first (`lock_lanes`), then
+heads and jobs with `SKIP LOCKED`, so it never waits once it holds anything.
 """
 
 from __future__ import annotations
@@ -93,6 +94,25 @@ def backlogged_lanes(connection: Connection, pool: str) -> set[str]:
         if connection.execute(probe).first() is not None:
             found.add(str(lane))
     return found
+
+
+def lock_lanes(connection: Connection, pool: str) -> dict[str, float]:
+    """Step 1 of a claim: hold the pool's lane clocks (a tiny table) and read their V.
+
+    Every claim ends by charging a lane clock, so claims in one pool queue on these rows anyway.
+    Taking them first, in a fixed order, means a claim never holds a workspace head while it
+    waits: otherwise concurrent claimers each sit on a head and the next one skips them, so the
+    smallest V loses its turn and shares drift towards round robin. It also means a transaction
+    that holds a clock and then waits for a head can never be waiting on a claim.
+    """
+    rows = connection.execute(
+        locked(
+            sa.select(lane_clock.c.lane, lane_clock.c.vtime)
+            .where(lane_clock.c.pool == pool)
+            .order_by(lane_clock.c.lane)
+        )
+    )
+    return {row.lane: row.vtime for row in rows}
 
 
 def lane_vtimes(connection: Connection, pool: str) -> dict[str, float]:

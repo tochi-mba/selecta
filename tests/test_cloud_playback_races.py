@@ -64,7 +64,7 @@ def _two_take_overs(engine, *, rounds: int, someone_playing: bool) -> None:
 
 
 def _two_take_overs_once(engine, someone_playing: bool) -> None:
-    workspace = f"ws-{new_id()}"
+    workspace = new_id()
     pair = [_device(engine, workspace, "Laptop"), _device(engine, workspace, "Phone")]
     before = None
     start = 0
@@ -106,7 +106,7 @@ def test_two_simultaneous_take_overs_queue_up_on_sqlite(sqlite_engine, someone_p
 
 
 def _three_press_play(engine) -> None:
-    workspace = f"ws-{new_id()}"
+    workspace = new_id()
     trio = [_device(engine, workspace, name) for name in ("Laptop", "Phone", "Tablet")]
 
     results = _race(3, lambda index: session.take_over(engine, workspace, trio[index].id))
@@ -140,7 +140,7 @@ def test_three_devices_pressing_play_in_the_same_second_leave_one_speaker_on_sql
 
 
 def _many_remotes_skip(engine, *, remotes: int, presses: int) -> None:
-    workspace = f"ws-{new_id()}"
+    workspace = new_id()
     speaker = _device(engine, workspace, "Speaker")
     start = session.take_over(engine, workspace, speaker.id).session
     pads = [_device(engine, workspace, f"Remote {n}") for n in range(remotes)]
@@ -192,7 +192,7 @@ def test_many_remotes_pressing_at_once_lose_and_double_nothing_on_sqlite(sqlite_
 
 
 def _same_press_twice(engine) -> None:
-    workspace = f"ws-{new_id()}"
+    workspace = new_id()
     speaker = _device(engine, workspace, "Speaker")
     seq = session.take_over(engine, workspace, speaker.id).session.seq
     remote = _device(engine, workspace, "Remote")
@@ -221,7 +221,7 @@ def test_one_press_sent_twice_at_once_is_applied_once_on_sqlite(sqlite_engine):
 
 
 def _sign_ins_at_once(engine, *, already: int, at_once: int) -> None:
-    workspace = f"ws-{new_id()}"
+    workspace = new_id()
     for number in range(already):
         _device(engine, workspace, f"Old {number}")
 
@@ -305,7 +305,7 @@ def test_random_device_actions_keep_every_playback_invariant(sqlite_engine, cloc
     class Playback(RuleBasedStateMachine):
         def __init__(self) -> None:
             super().__init__()
-            self.workspace = f"ws-{new_id()}"
+            self.workspace = new_id()
             self.ids: list[str] = []
             self.highest_seq = 0
             self.key = 0

@@ -287,3 +287,52 @@ def test_retrying_a_blocked_workflow_after_its_work_succeeded_by_another_route(s
     store.retry("w1", workflow.id)
     run_to_success(store)
     assert store.job(workflow.id).state == JobState.SUCCEEDED
+
+
+def test_a_job_failed_with_a_dependency_error_queues_again_when_retried(store):
+    job, blocked = failed_once(store, ErrorClass.DEPENDENCY)
+    assert blocked.state == JobState.BLOCKED
+    again = store.retry("w1", job.id)
+    assert (again.id, again.state, again.error_class) == (job.id, JobState.QUEUED, None)
+    assert drift(store) == []
+
+
+def test_a_retried_job_whose_prerequisite_still_failed_starts_blocked(store):
+    analysis = store.enqueue(JobSpec("w1", "analyse.song")).job
+    seam = store.enqueue(JobSpec("w1", "seam.render", depends_on=(analysis.id,))).job
+    store.cancel("w1", seam.id)
+    store.cancel("w1", analysis.id)
+    assert store.retry("w1", seam.id).state == JobState.BLOCKED
+
+
+def test_unblocking_a_workflow_whose_work_all_succeeded_finishes_it(store):
+    """The contract of `retrying.unblock` for a workflow left blocked with nothing unfinished."""
+    import sqlalchemy as sa
+
+    from selecta.persistence import transaction
+    from selecta.work.schema import jobs as job_table
+
+    seam = store.enqueue(JobSpec("w1", "seam.render")).job
+    workflow = store.enqueue(JobSpec("w1", "mix.prepare", depends_on=(seam.id,))).job
+    after = store.enqueue(JobSpec("w1", "export.render", depends_on=(workflow.id,))).job
+    run_to_success(store)
+    assert store.job(workflow.id).state == JobState.SUCCEEDED
+    with transaction(store.engine) as connection:
+        connection.execute(
+            sa.update(job_table).where(job_table.c.id.in_([workflow.id, after.id])).values(
+                state="blocked", finished_at=None
+            )
+        )
+    store.retry("w1", workflow.id)
+    assert store.job(workflow.id).state == JobState.SUCCEEDED
+    assert store.job(after.id).state == JobState.QUEUED
+
+
+def test_jobs_and_attempts_say_whether_they_are_finished_or_live(store):
+    job, claim = store.enqueue(JobSpec("w1", "analyse.song")).job, None
+    claim = store.claim("cpu-heavy", worker())
+    assert store.job(job.id).terminal is False
+    assert store.attempt(claim.attempt_id).live is True
+    store.complete(claim.attempt_id, claim.fencing_token)
+    assert store.job(job.id).terminal is True
+    assert store.attempt(claim.attempt_id).live is False

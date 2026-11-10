@@ -1,13 +1,16 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, ReactNode, Suspense, useEffect, useState } from 'react';
 import { App } from './App';
 
 const CloudRoot = lazy(() => import('./cloud/CloudRoot').then((module) => ({ default: module.CloudRoot })));
 
 type Mode = 'loading' | 'local' | 'cloud' | 'unavailable';
 const apiOrigin = (import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
+/** The same pace the app itself checks the server at once it's running. */
+export const RETRY_MS = 4000;
 
 export function RuntimeApp() {
   const [mode, setMode] = useState<Mode>('loading');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let current = true;
@@ -19,10 +22,24 @@ export function RuntimeApp() {
       })
       .catch(() => { if (current) setMode('unavailable'); });
     return () => { current = false; };
-  }, []);
+  }, [attempt]);
+
+  // A server that can't be reached has usually not started yet, or is restarting. Keep asking, so
+  // the page picks up by itself the moment it's back, rather than waiting for a reload.
+  useEffect(() => {
+    if (mode !== 'unavailable') return;
+    const wait = window.setTimeout(() => setAttempt((count) => count + 1), RETRY_MS);
+    return () => window.clearTimeout(wait);
+  }, [mode, attempt]);
 
   if (mode === 'loading') return <RuntimeMessage title="Starting Selecta" detail="Connecting to your Selecta service…" />;
-  if (mode === 'unavailable') return <RuntimeMessage title="Selecta is offline" detail="Check your connection and try again." />;
+  if (mode === 'unavailable') {
+    return (
+      <RuntimeMessage title="Can’t reach Selecta." detail="It may have stopped running. Start it again, and this page will pick up by itself.">
+        <button className="primary" onClick={() => setAttempt((count) => count + 1)}>Try now</button>
+      </RuntimeMessage>
+    );
+  }
   if (mode === 'local') return <App />;
 
   const clientId = import.meta.env.VITE_WORKOS_CLIENT_ID;
@@ -32,6 +49,6 @@ export function RuntimeApp() {
   return <Suspense fallback={<RuntimeMessage title="Starting Selecta Cloud" detail="Preparing your workspace…" />}><CloudRoot clientId={clientId} /></Suspense>;
 }
 
-function RuntimeMessage({ title, detail }: { title: string; detail: string }) {
-  return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>{title}</h1><p>{detail}</p></main>;
+function RuntimeMessage({ title, detail, children }: { title: string; detail: string; children?: ReactNode }) {
+  return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>{title}</h1><p>{detail}</p>{children}</main>;
 }

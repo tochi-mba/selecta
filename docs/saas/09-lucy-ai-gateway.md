@@ -32,6 +32,8 @@ Each deployment record: provider, model id, secret reference, capabilities (stre
 | Per provider | concurrency limit, circuit breaker on errors/429s |
 | Platform | daily and monthly spend alarms, hard admission cap, emergency disable per deployment |
 
+A turn uses the allowance of the class that actually served it: a deep plan that falls back from Opus to Sonnet counts as a planning turn, the run records both the class requested and the class served, and a turn the built-in planner answers uses no model allowance.
+
 Prompt caching (already used in `providers.py`) keeps repeated system prompts and library context cheap; the gateway tracks cache-hit rate per tier as a cost KPI.
 
 ### 9.4 Safety of tool use

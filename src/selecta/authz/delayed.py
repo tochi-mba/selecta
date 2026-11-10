@@ -581,7 +581,8 @@ def execute(
         with conn.begin_nested():
             result = executor(conn, action)
     except Exception as exc:  # the executor's own work rolled back with the savepoint
-        note = f"{type(exc).__name__}: {exc}"
+        # Errors often carry request URLs and headers, so the note is scrubbed like an audit row.
+        note = audit.scrub_text(f"{type(exc).__name__}: {exc}")
         action = _finish(conn, action, ActionStatus.FAILED, note, executed_by)
         _audit(conn, action, "failed", audit.AuditResult.FAILURE, executed_by, note)
         notifier.notify(conn, "failed", action)

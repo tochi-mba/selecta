@@ -6,8 +6,10 @@ own, so the row survives when the refused request rolls back. (SQLite allows one
 so there it writes in the caller's transaction; staff only exist in the cloud.)
 
 Audit rows never hold secrets, prompts, audio or signed URLs. `record()` redacts metadata values
-whose key looks like one (token, secret, password, signature, prompt, ...) and any value that looks
-like a signed URL, rather than trusting every caller to remember.
+whose key looks like one (token, secret, password, otp, cookie, signature, prompt, ...) and any
+value that looks like a signed URL, rather than trusting every caller to remember. Free text (the
+`reason`, and the error notes of failed delayed actions) goes through `scrub_text()`: URLs lose
+their query strings, and bearer tokens, `secret=value` pairs and token-shaped strings are redacted.
 
 In the cloud, `APPEND_ONLY_SQL` makes the app's database role insert-only on `audit_events`, and
 triggers refuse updates, truncation, and deletion of rows younger than the two-year retention, even
@@ -29,15 +31,32 @@ from sqlalchemy.engine import Connection
 
 from selecta.authz.schema import audit_events
 from selecta.persistence import db_now, is_postgres, new_id
+from selecta.workers.context import scrub_urls
 
 RETENTION_SECONDS = 2 * 365 * 24 * 3600
 REDACTED = "[redacted]"
 
-_SECRET_KEY = re.compile(
-    r"(token|secret|passw|api[_-]?key|authori[sz]ation|cookie|signature|signed[_-]?url|"
-    r"prompt|credential|private[_-]?key|lyrics)",
+# Words that make a key (or the name before `=` in free text) hold a credential. `otp` only as a
+# word of its own, so `footprint` stays.
+_CREDENTIAL_WORDS = (
+    r"token|secret|passw|api[_-]?key|authori[sz]ation|auth[_-]?header|cookie|signature|"
+    r"signed[_-]?url|credential|private[_-]?key|(?<![a-z])otp(?![a-z])"
+)
+_SECRET_KEY = re.compile(rf"({_CREDENTIAL_WORDS}|prompt|lyrics)", re.IGNORECASE)
+
+# Free text. A bearer token has a digit or a symbol in it, so "the bearer of" stays.
+_BEARER = re.compile(r"\b(bearer)\s+(?=[A-Za-z]*[0-9._~+/=-])[A-Za-z0-9._~+/=-]{4,}", re.I)
+_SECRET_ASSIGNMENT = re.compile(
+    rf"(?<![\w-])([\w-]*?(?:{_CREDENTIAL_WORDS})[\w-]*)([\"']?\s*[=:]\s*)"
+    r"(\"[^\"]*\"|'[^']*'|[^\s,;]+)",
     re.IGNORECASE,
 )
+_JWT = re.compile(r"\beyJ[\w-]+\.[\w-]+\.[\w-]*")
+_KNOWN_SECRET = re.compile(r"\b(?:(?:sk|rk)_(?:live|test)_|whsec_)\w+")
+_LONG_RUN = re.compile(r"(?<![A-Za-z0-9+/_=-])[A-Za-z0-9+/_=-]{32,}")
+_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
+_URL_REDACTED = "?<redacted>"  # what `scrub_urls` leaves in place of a query string
+_HOLD = "\ue000"  # a private-use character, never in real text
 _SIGNED_URL = re.compile(r"[?&](x-amz-signature|signature|sig|token|x-amz-credential)=", re.I)
 _ROLE_NAME = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 
@@ -64,6 +83,40 @@ def scrub(value: Any, key: str = "") -> Any:
     if value is None or isinstance(value, bool | int | float | str):
         return value
     return str(value)
+
+
+def _assignment(match: re.Match[str]) -> str:
+    if match.group(3).startswith(REDACTED):
+        return match.group(0)
+    return f"{match.group(1)}{match.group(2)}{REDACTED}"
+
+
+def _token_shaped(match: re.Match[str]) -> str:
+    # A path is judged one segment at a time, so ids in it stay and a token in it goes.
+    return "/".join(_redact_token(part) for part in match.group(0).split("/"))
+
+
+def _redact_token(run: str) -> str:
+    if len(run) < 32 or _UUID.fullmatch(run):
+        return run
+    if any(c.isdigit() for c in run) and any(c.isalpha() for c in run):
+        return REDACTED
+    return run
+
+
+def scrub_text(text: str | None) -> str | None:
+    """Free text with signed URL queries, bearer tokens and token-shaped strings removed.
+
+    Scrubbing twice gives the same text as scrubbing once.
+    """
+    if text is None:
+        return None
+    text = scrub_urls(text.replace(_URL_REDACTED, _HOLD)).replace(_HOLD, _URL_REDACTED)
+    text = _BEARER.sub(rf"\1 {REDACTED}", text)
+    text = _JWT.sub(REDACTED, text)
+    text = _KNOWN_SECRET.sub(REDACTED, text)
+    text = _SECRET_ASSIGNMENT.sub(_assignment, text)
+    return _LONG_RUN.sub(_token_shaped, text)
 
 
 def record(
@@ -94,7 +147,7 @@ def record(
             resource_id=resource_id,
             workspace_id=workspace_id,
             result=AuditResult(result).value,
-            reason=reason,
+            reason=scrub_text(reason),
             request_id=request_id,
             approval_id=approval_id,
             policy_version_before=policy_version_before,

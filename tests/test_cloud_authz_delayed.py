@@ -618,6 +618,24 @@ def test_an_executor_that_raises_fails_while_the_status_and_audit_rows_commit(cl
         assert audit_rows(conn, action="executor.half_done") == []
 
 
+def test_a_failed_actions_error_note_keeps_no_secrets(db):
+    # Libraries put whole request URLs and headers in their errors.
+    first, second = two_operators(db)
+    action = propose_as(db, first)
+    approve_as(db, second, action)
+    signed = "https://r2.example/o/a.flac?X-Amz-Credential=AKIDSECRET&X-Amz-Signature=5ec7e7"
+
+    def leak(conn, action):
+        raise RuntimeError(f"GET {signed} failed; sent Authorization: Bearer tok3n-value")
+
+    note = delayed.execute(db, action.id, leak).action.note
+    (row,) = audit_rows(db, action="dangerous_action.failed")
+    for text in (note, delayed.get(db, action.id).note, row["reason"]):
+        for secret in ("AKIDSECRET", "5ec7e7", "tok3n-value"):
+            assert secret not in text, text
+        assert text.startswith("RuntimeError: GET https://r2.example/o/a.flac?<redacted> failed")
+
+
 # Flag rules (`flags.rules.broad`) and emergency controls
 
 

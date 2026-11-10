@@ -118,7 +118,8 @@ def insert_ignore(
     """Insert one row unless one with the same `conflict` columns exists. True when inserted.
 
     `ON CONFLICT DO NOTHING` on both engines, so a duplicate never aborts a PostgreSQL
-    transaction the way a caught IntegrityError would.
+    transaction the way a caught IntegrityError would. Whether a row went in is read from
+    `RETURNING`, not the row count: psycopg reports -1 for this statement under SQLAlchemy 2.1.
     """
     if conn.dialect.name == "postgresql":
         statement = postgresql.insert(table)
@@ -126,5 +127,9 @@ def insert_ignore(
         statement = sqlite.insert(table)
     else:
         raise RuntimeError(f"Unsupported database: {conn.dialect.name}")
-    statement = statement.values(**values).on_conflict_do_nothing(index_elements=list(conflict))
-    return conn.execute(statement).rowcount == 1
+    statement = (
+        statement.values(**values)
+        .on_conflict_do_nothing(index_elements=list(conflict))
+        .returning(*table.primary_key.columns)
+    )
+    return conn.execute(statement).first() is not None

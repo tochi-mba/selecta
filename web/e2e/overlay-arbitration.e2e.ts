@@ -1,7 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import { resetMix } from './helpers';
 
 test.beforeEach(async ({ request }) => resetMix(request));
+
+/** Puts a real notice on screen, through the app's own way of saying something failed: anything that
+ * fails without being caught is shown as a problem notice. Notices only exist while there is one to
+ * show, so without this there would be nothing for the dialog or the keyboard to be measured against.
+ * A problem is the most insistent notice there is, so if it stays under a dialog and out of the
+ * keyboard's way, every other kind does too. */
+async function showNotice(page: Page) {
+  await page.evaluate(() => {
+    window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise: Promise.resolve(), reason: new Error('Something to notice.') }));
+  });
+  await expect(page.locator('.toasts')).toHaveCount(1);
+  await expect(page.locator('.toast-row').filter({ hasText: 'Something to notice.' })).toBeVisible();
+}
 
 for (const viewport of [
   { width: 320, height: 568 },
@@ -18,6 +31,7 @@ for (const viewport of [
     const save = dialog.getByRole('button', { name: 'Done shaping' });
     await save.scrollIntoViewIfNeeded();
     await expect(save).toBeInViewport();
+    await showNotice(page);
     const occlusion = await page.evaluate(() => {
       const overlay = document.querySelector<HTMLElement>('.overlay');
       const notices = document.querySelector<HTMLElement>('.toasts');
@@ -50,6 +64,7 @@ test('software keyboard makes notification chrome yield without removing notices
   await expect(play).toHaveText('Pause', { timeout: 30_000 });
   await page.getByRole('link', { name: 'Library' }).first().click();
   await expect(page.locator('.mini')).toBeVisible();
+  await showNotice(page);
   await page.evaluate(() => { document.documentElement.dataset.keyboard = 'open'; });
   await expect(page.locator('.mini')).toBeHidden();
   await expect(page.locator('.toasts')).toHaveCSS('visibility', 'hidden');

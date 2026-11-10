@@ -8,6 +8,12 @@ and storage tombstones are idempotent.
 Physical object removal happens in storage maintenance after the 30-day recovery window. Workspace
 rows and the user row are removed only after that purge is recorded. The off-database deletion
 ledger is an injected port because its write-once bucket and credentials are deployment-owned.
+
+Erasure never changes `audit_events`. The log is append-only (`authz.audit.APPEND_ONLY_SQL`: the
+app role may only insert, and triggers refuse updates even from the table owner), so rewriting it
+would fail. It doesn't need to: audit rows hold only random user, workspace and resource ids,
+never names, emails or content. Once the user row and the personal data are gone, those ids point
+at nothing and identify no one, and the rows expire with the two-year audit retention.
 """
 
 from __future__ import annotations
@@ -21,7 +27,6 @@ from sqlalchemy.engine import Engine
 
 from selecta.authz.schema import (
     access_grants,
-    audit_events,
     dangerous_actions,
     role_assignments,
 )
@@ -61,12 +66,12 @@ ANONYMIZED_LABEL = "deleted-account"
 PRESERVED_WORKSPACE_TABLES = frozenset(
     {
         "deletions",  # tombstones must survive a restore after the workspace rows are gone
-        "audit_events",  # retained for the audit retention period, with subject links removed
+        "audit_events",  # append-only and kept; its ids identify no one after erasure
         "dangerous_actions",  # retained as an action record, with user/workspace links removed
         "checkout_consents",  # legal consent evidence; the person and IP hash are anonymized
     }
 )
-PRESERVED_USER_LINKS = frozenset({"account_deletion_workflows"})
+PRESERVED_USER_LINKS = frozenset({"account_deletion_workflows", "audit_events"})
 USER_REFERENCE_COLUMNS = (
     "user_id",
     "owner_user_id",
@@ -365,11 +370,6 @@ class AccountDeletionEffects(DeletionEffects):
                     .values(workspace_id=None)
                 )
                 conn.execute(
-                    audit_events.update()
-                    .where(audit_events.c.workspace_id == workspace_id)
-                    .values(workspace_id=None)
-                )
-                conn.execute(
                     workspaces.delete().where(
                         workspaces.c.id == workspace_id,
                         workspaces.c.owner_user_id == plan.user_id,
@@ -494,28 +494,6 @@ class AccountDeletionEffects(DeletionEffects):
             .values(resource_id=None)
         )
 
-        conn.execute(
-            audit_events.update()
-            .where(audit_events.c.actor_id == user_id)
-            .values(
-                actor_id=None,
-                resource_id=sa.case(
-                    (
-                        sa.and_(
-                            audit_events.c.resource_type == "user",
-                            audit_events.c.resource_id == user_id,
-                        ),
-                        None,
-                    ),
-                    else_=audit_events.c.resource_id,
-                ),
-            )
-        )
-        conn.execute(
-            audit_events.update()
-            .where(audit_events.c.resource_id == user_id)
-            .values(resource_id=None)
-        )
         conn.execute(session_revocations.delete().where(session_revocations.c.user_id == user_id))
         # The user's WorkOS sessions die with the WorkOS user, so their ids need no keeping.
         conn.execute(revoked_sessions.delete().where(revoked_sessions.c.user_id == user_id))

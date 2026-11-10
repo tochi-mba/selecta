@@ -452,6 +452,81 @@ def test_teasers_default_to_the_plan_catalogue():
     assert "deep" not in found.locks
 
 
+# Features that need a locked feature
+
+PARTY = make("party", requires=("rooms",))
+AFTERPARTY = make("afterparty", requires=("party",))
+BIG_SCREEN = make("big_screen", requires=("rooms.display",))
+COMBO = make("combo", requires=("rooms", "deep"))
+SOLO = make("solo", requires=("deep",))
+NEEDY = REGISTRY | {f.id: f for f in (PARTY, AFTERPARTY, BIG_SCREEN, COMBO, SOLO)}
+
+
+def needy_locks(ctx: Context = FREE, **overrides) -> dict[str, str]:
+    settings = options(ctx, registry=NEEDY, build_states=build(registry=NEEDY)) | overrides
+    return dict(t.decide_all(ctx, lock_plans=LOCKS, **settings).locks)
+
+
+def test_a_feature_that_needs_a_locked_teaser_is_a_teaser_naming_the_same_plan():
+    locks = needy_locks(FREE)
+    assert locks["party"] == "premium"
+    assert locks["afterparty"] == "premium"
+    assert locks["solo"] == "standard"
+    assert needy_locks(PREMIUM) == {}
+
+
+def test_a_feature_that_needs_locked_teasers_on_several_plans_names_the_dearest():
+    assert needy_locks(FREE)["combo"] == "premium"
+    # On Standard only Rooms is still locked.
+    locks = needy_locks(STANDARD)
+    assert locks["combo"] == "premium"
+    assert "solo" not in locks
+
+
+def test_a_feature_that_needs_a_hidden_locked_feature_is_hidden():
+    assert "big_screen" not in needy_locks(FREE)
+
+
+def test_a_feature_that_needs_a_killed_feature_or_is_killed_itself_is_hidden_never_teased():
+    assert not {"party", "afterparty", "combo"} & set(needy_locks(rules=rules(rooms=[KILL])))
+    locks = needy_locks(rules=rules(party=[KILL]))
+    assert "party" not in locks
+    assert "afterparty" not in locks
+    assert "rooms" in locks
+    off_for_free = Rule("segment", {"plans": ["free"]})
+    assert "afterparty" not in needy_locks(rules=rules(afterparty=[off_for_free]))
+
+
+def test_a_feature_that_needs_a_locked_teaser_and_something_switched_off_is_hidden():
+    both = make("both", requires=("rooms", "plain"))
+    registry = NEEDY | {"both": both}
+    locks = needy_locks(registry=registry, build_states=build("-plain", registry=registry))
+    assert "both" not in locks
+    assert "rooms" in locks
+
+
+def test_a_feature_that_needs_a_locked_teaser_is_never_teased_in_local_mode():
+    assert needy_locks(LOCAL) == {}
+
+
+def test_a_teaser_on_an_unknown_plan_ranks_below_every_real_plan():
+    a = make("a", modes=("cloud",), when_locked="teaser")
+    b = make("b", modes=("cloud",), when_locked="teaser")
+    both = make("both", requires=("a", "b"))
+    only_a = make("only_a", requires=("a",))
+    registry = {flag.id: flag for flag in (a, b, both, only_a)}
+    found = t.decide_all(
+        FREE,
+        build_states=build(registry=registry),
+        rules={},
+        entitled=(),
+        plan_gated={"a", "b"},
+        registry=registry,
+        lock_plans={"a": "gold", "b": "premium"},
+    )
+    assert dict(found.locks) == {"a": "gold", "b": "premium", "both": "premium", "only_a": "gold"}
+
+
 # Everything at once
 
 
