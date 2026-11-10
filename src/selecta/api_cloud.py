@@ -55,6 +55,7 @@ from selecta.identity.tokens import (
 from selecta.identity.workos import WorkOSClient
 from selecta.lucy import cloud_settings as lucy_cloud_settings
 from selecta.persistence import db_now, make_engine, transaction
+from selecta.persistence.listen import PgListener
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
 from selecta.rooms import wiring as rooms_wiring
@@ -65,6 +66,7 @@ from selecta.routes import cloud_proxy as cloud_proxy_routes
 from selecta.storage import api as storage_api
 from selecta.storage import playback_api as playback_api
 from selecta.usage import meters, quota
+from selecta.work.fanout import OutboxFanout
 from selecta.work.schema import outbox_events
 
 
@@ -265,9 +267,16 @@ def create_cloud_app(
     owns_workos = workos is None
     workos = workos or settings.workos_client()
 
+    # One LISTEN connection per instance wakes event streams and reloads flag rules the moment
+    # another instance commits (ADR-0407, ADR-0414). None on SQLite, which keeps polling.
+    listener = PgListener.for_engine(engine)
+    fanout = OutboxFanout(listener)
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        fanout.start()
         yield
+        fanout.stop()
         if owns_workos and workos is not None:
             workos.close()
         if owns_engine:
@@ -280,6 +289,9 @@ def create_cloud_app(
     app.state.workos = workos
     rule_cache = RulesCache(engine, max_age=5.0)
     app.state.flag_rules = rule_cache
+    app.state.event_fanout = fanout
+    if listener is not None:
+        rule_cache.listen(listener)
     flags.effective()
     flag_guard.install(app, strict=True)
     emergency_cache = EmergencyCache(engine)
@@ -386,6 +398,7 @@ def create_cloud_app(
             while time.monotonic() < deadline and time.time() < claims.expires_at:
                 if await request.is_disconnected():
                     break
+                waiter = fanout.arm()
                 batch = await asyncio.to_thread(fetch, cursor)
                 for row in batch:
                     cursor = row["id"]
@@ -402,7 +415,10 @@ def create_cloud_app(
                 if now - heartbeat_at >= 20:
                     yield ": keep-alive\n\n"
                     heartbeat_at = now
-                await asyncio.sleep(0.5 if batch else 2.0)
+                if len(batch) >= 100:
+                    await fanout.wait(waiter, 0)
+                else:
+                    await fanout.wait(waiter, fanout.poll_s())
 
         return StreamingResponse(
             frames(),

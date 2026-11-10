@@ -17,8 +17,10 @@ a rule, so it can't reach past the build, the mode or the plan, and a kill switc
 
 These functions take a connection inside `persistence.transaction(engine)`, so a rule change and
 its audit record can be written in one transaction. `RulesCache` keeps the snapshot each process
-decides with; a Postgres NOTIFY will call `refresh_if_newer` when it's wired up, and
-`refresh_if_stale` bounds how old a snapshot can get without one.
+decides with. On PostgreSQL every change sends `pg_notify('selecta_flag_rules', version)` in its
+transaction, so `RulesCache.listen` hears it on every API instance and the worker gateway as soon
+as it commits and reloads at once; `refresh_if_stale` bounds how old a snapshot can get if a
+notification is lost (5 s in both services, the kill-switch target).
 """
 
 from __future__ import annotations
@@ -51,6 +53,7 @@ FLAP_CHANGES = 3
 FLAP_WINDOW = 10 * 60
 # Serialises version numbers on PostgreSQL. SQLite's BEGIN IMMEDIATE already does.
 _VERSION_LOCK = 0x53454C4543544146
+CHANNEL = "selecta_flag_rules"
 
 flag_rules = sa.Table(
     "flag_rules",
@@ -277,6 +280,12 @@ def _write(
             created_at=now,
         )
     )
+    if persistence.is_postgres(conn):
+        # Delivered on commit only, so no instance reloads for a change that rolled back.
+        conn.execute(
+            sa.text("SELECT pg_notify(:channel, :version)"),
+            {"channel": CHANNEL, "version": str(version)},
+        )
     said = warnings(before, rules, int(recent)) if replace_rules else []
     return Saved(version, flag_id, rules, tuple(said))
 
@@ -588,6 +597,19 @@ class RulesCache:
                 self._snapshot = load_snapshot(connection)
             self._checked_at = self._clock()
             return True
+
+    def listen(self, listener) -> None:
+        """Reload whenever `listener` (a `persistence.listen.PgListener`) hears a rule change,
+        and check once after each (re)connect, since changes made while away weren't heard."""
+
+        def heard(payload: str | None) -> None:
+            try:
+                version = int(payload) if payload is not None else None
+            except ValueError:
+                version = None
+            self.refresh_if_newer(version)
+
+        listener.subscribe(CHANNEL, heard)
 
     def refresh_if_stale(self, connection: Connection | None = None) -> bool:
         if self._snapshot is not None and self._clock() - self._checked_at < self._max_age:

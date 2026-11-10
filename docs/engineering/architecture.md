@@ -53,7 +53,7 @@ Packages talk across boundaries through small **ports** (Python `Protocol`s in e
 4. **Authentication**: the bearer token is checked by `identity.tokens` (RS256, issuer, expiry, JWKS), then the session and account checks in [§7A.3](../saas/07a-authentication.md#7a3-what-the-server-checks-on-every-request).
 5. **Authorization**: customer routes check the workspace role; staff routes call `authz.check.authorize()`, which denies by default and audits.
 6. **Work**: inside `persistence.transaction(engine, workspace_id)`, which also sets row-level security on PostgreSQL. Anything slow becomes a job.
-7. **Response**, and an outbox event that reaches open pages over `/api/events` (SSE).
+7. **Response**, and an outbox event that reaches open pages over `/api/events` (SSE). On PostgreSQL each instance keeps one `PgListener` (`persistence/listen.py`): the outbox's `NOTIFY` wakes the streams open on every instance, and the flag rules' `NOTIFY` reloads each instance's and the gateway's rules cache, as soon as the writer commits.
 
 ## A job, start to finish
 

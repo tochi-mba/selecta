@@ -17,6 +17,7 @@ from selecta.admin.state import DbWorkControls
 from selecta.billing.plans import validate_catalogue
 from selecta.flags.rules import RulesCache
 from selecta.persistence import make_engine
+from selecta.persistence.listen import PgListener
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
 from selecta.work import cloud_ports, gateway_api
@@ -54,17 +55,26 @@ def create_gateway_app(*, engine: Engine | None = None) -> FastAPI:
     owns_engine = engine is None
     engine = engine or make_engine(database_url, pool_pre_ping=True)
 
+    rules = RulesCache(engine, max_age=5.0)
+    # Rule changes reach the gateway's claim checks on commit, not on the next 5 s check.
+    listener = PgListener.for_engine(engine)
+    if listener is not None:
+        rules.listen(listener)
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        if listener is not None:
+            listener.start()
         yield
+        if listener is not None:
+            listener.stop()
         if owns_engine:
             engine.dispose()
 
     app = FastAPI(title="Selecta Worker Gateway", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.database_engine = engine
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(allowed_hosts))
-
-    rules = RulesCache(engine, max_age=5.0)
+    app.state.flag_rules = rules
     store = JobStore(
         engine,
         entitlements=cloud_ports.CloudJobEntitlements(engine),

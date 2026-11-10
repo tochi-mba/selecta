@@ -39,7 +39,7 @@ The music-first app stays recognisable: same five destinations, same design toke
 
 ### 11.3 Real-time updates
 
-Replace most polling with **one SSE stream per signed-in tab** (`/api/events`): job state changes, upload status, entitlement changes, Lucy events. Heartbeat comments every 20 s (Cloudflare idle limits), resume with `Last-Event-ID`, fan-out across API instances via Postgres `LISTEN/NOTIFY` from the outbox, on one direct (non-pooled) connection per instance, catching up by event id after any gap. Existing `useVisiblePoll` stays as the fallback when SSE drops.
+Replace most polling with **one SSE stream per signed-in tab** (`/api/events`): job state changes, upload status, entitlement changes, Lucy events. Heartbeat comments every 20 s (Cloudflare idle limits), resume with `Last-Event-ID`, fan-out across API instances via Postgres `LISTEN/NOTIFY` from the outbox, on one direct (non-pooled) connection per instance, catching up by event id after any gap. Existing `useVisiblePoll` stays as the fallback when SSE drops. **Today:** each API instance's `OutboxFanout` (`work/fanout.py`) listens on `selecta_outbox` through one direct connection and wakes every open stream on that instance when any instance commits an event; a stream arms its wake-up before it reads, then reads only its workspace's rows from its cursor. While listening a stream re-polls only every 15 s as a backstop; without notifications (SQLite, or while the listener reconnects) it polls every 2 s. `tests/test_cloud_fanout.py` commits on one instance's engine and times the event reaching a stream served by another over HTTP.
 
 ### 11.4 Honest status language
 
