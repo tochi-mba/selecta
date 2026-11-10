@@ -78,3 +78,7 @@ The browser runner uses a 20-second action timeout for ordinary clicks and
 inputs. This prevents a renamed or missing element from consuming the entire
 five-minute test budget, while explicit audio/render waits retain their longer
 timeouts, the real Edge browser and the same behavioural assertions.
+
+## Dependabot auto-merge
+
+`dependabot-auto-merge.yml` turns on auto-merge for Dependabot's patch and minor updates, so they merge themselves once the required `verify` check passes. Major updates are left for the owner to review and merge by hand. The repository setting "Allow auto-merge" must stay on for this to work.
