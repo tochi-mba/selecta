@@ -256,7 +256,10 @@ class SeamStore:
             # Internal writes must be reflected immediately, independent of the
             # longer cache TTL used to avoid expensive Windows disk walks.
             self._memory_revision += 1
-            self._remembered = None
+            # Keep a usable last-known count while refreshing stale history.
+            if self._remembered is not None:
+                self._remembered = (0.0, self._remembered[1])
+            self._memory_refresh_started = float("-inf")
         finally:
             temporary.unlink(missing_ok=True)
 
@@ -499,7 +502,8 @@ class SeamStore:
                     )
                     self._memory_refresh = thread
                     thread.start()
-        return (len(snapshot[1].clean) if snapshot else 0, snapshot is None)
+        pending = snapshot is None or now - snapshot[0] >= MEMORY_SECONDS
+        return (len(snapshot[1].clean) if snapshot else 0, pending)
 
     def _refresh_memory(self) -> None:
         try:
