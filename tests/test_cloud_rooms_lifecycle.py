@@ -130,13 +130,17 @@ def test_a_room_opened_by_someone_else_a_moment_earlier_is_reported_as_already_o
 ):
     rooms.open_room(HOST, "First tab")
     real = lifecycle.current_room_row
-    looks = iter([None])  # the first look missed it, as a racing request would
+    looks: list[str] = []
 
     def missed_once(conn, workspace_id):
-        return next(looks, None) or real(conn, workspace_id)
+        looks.append(workspace_id)
+        if len(looks) == 1:
+            return None  # the first look missed it, as a racing request would
+        return real(conn, workspace_id)
 
     monkeypatch.setattr(lifecycle, "current_room_row", missed_once)
     _refused(Refusal.ALREADY_OPEN, rooms.open_room, HOST, "Second tab")
+    assert len(looks) == 2, "refused after the insert met the open room, not before"
 
 
 def test_two_rooms_opened_at_once_leave_one_open_on_postgres(postgres_engine):
