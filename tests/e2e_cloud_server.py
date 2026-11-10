@@ -399,10 +399,10 @@ def build(port: int):
         plan = PRICES[fields["price_id"]]["plan"]
         return (
             "<!doctype html><html lang=en><meta charset=utf-8><title>Test checkout</title>"
-            f"<main><h1>Test checkout: {plan}</h1>"
-            f"<form method=post action='/fake-stripe/checkout/{session_id}/pay'>"
+            f"<main><h1>Test checkout: {escape(plan)}</h1>"
+            f"<form method=post action=\"/fake-stripe/checkout/{escape(session_id)}/pay\">"
             "<button>Pay</button></form>"
-            f"<a href='{fields['cancel_url']}'>Cancel</a></main>"
+            f"<a href=\"{escape(same_server(fields['cancel_url']))}\">Cancel</a></main>"
         )
 
     @app.post("/fake-stripe/checkout/{session_id}/pay")
@@ -462,15 +462,14 @@ def build(port: int):
     def site(path: str):
         if path.startswith(("api/", "test/", "fake-", "e2e/")):
             return Response(status_code=404)
-        root = DIST.resolve()
-        candidate = (root / path).resolve()
-        try:
-            candidate.relative_to(root)  # nothing outside the built site, however it is spelled
-        except ValueError:
+        root = os.path.realpath(DIST)
+        # Nothing outside the built site, however the path is spelled.
+        candidate = os.path.realpath(os.path.normpath(os.path.join(root, path)))
+        if candidate != root and not candidate.startswith(root + os.sep):
             return Response(status_code=404)
-        if path and candidate.is_file():
+        if os.path.isfile(candidate):
             return FileResponse(candidate)
-        return FileResponse(root / "index.html", headers={"Cache-Control": "no-store"})
+        return FileResponse(os.path.join(root, "index.html"), headers={"Cache-Control": "no-store"})
 
     return app
 
