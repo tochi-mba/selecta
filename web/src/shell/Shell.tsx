@@ -95,7 +95,7 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
       </nav>
       <div className="context-actions">
         {palette && on('app.command_palette') && (
-          <button className="context-button palette-button" onClick={onCommands} aria-label="Search and commands: Search Ctrl K" title="Search and commands (Ctrl K)">
+          <button className="context-button palette-button" onClick={onCommands} title="Search and commands (Ctrl K)">
             <Icon name="search" /><span className="context-label">Search</span><kbd className="context-label">Ctrl K</kbd>
           </button>
         )}

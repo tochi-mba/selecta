@@ -354,7 +354,7 @@ describe('a feeling kept as a draft', () => {
         toggleStage={() => {}}
       />,
     );
-    fireEvent.click(await screen.findByRole('button', { name: /^Save Peak time as a draft/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save draft for Peak time' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     expect(calls.find((call) => call.method === 'POST')?.path).toContain('as_draft=true');
     expect(setMixData).not.toHaveBeenCalled();
@@ -446,7 +446,7 @@ describe('compact Explore comparison and optional detail', () => {
     expect(article.getByText('40 matching songs')).toBeVisible();
     expect(article.getByRole('button', { name: 'Play' })).toBeVisible();
     expect(article.getByRole('button', { name: 'Shape first' })).toBeVisible();
-    expect(article.getByRole('button', { name: /^Save Peak time as a draft/ })).toBeVisible();
+    expect(article.getByRole('button', { name: 'Save draft for Peak time' })).toBeVisible();
     const disclosure = article.getByText('Why Peak time? More details').closest('details');
     expect(disclosure).not.toHaveAttribute('open');
     fireEvent.click(article.getByText('Why Peak time? More details'));

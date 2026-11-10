@@ -270,7 +270,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                     <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
                       <Action className="primary" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
                       {on('editor') && <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
-                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building} working="Saving…" aria-label={`Save ${card.name} as a draft (Save draft)`} run={() => keepAsDraft(card.key)}>Save draft</Action>}
+                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft<span className="visually-hidden"> for {card.name}</span></Action>}
                     </div>
                     <details className="vibe-card-detail">
                       <summary>Why {card.name}? More details</summary>

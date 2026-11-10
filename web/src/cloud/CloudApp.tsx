@@ -192,7 +192,7 @@ export function CloudApp() {
   return (
     <div className="cloud-shell" data-stream={stream}>
       <aside className="cloud-rail">
-        <button className="cloud-brand" aria-label="Selecta Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>Selecta{' '}<span className="cloud-brand-sub">CLOUD</span></span></button>
+        <button className="cloud-brand" title="Return to Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>Selecta{' '}<span className="cloud-brand-sub">CLOUD</span></span></button>
         <nav aria-label="Cloud workspace">
           {(Object.keys(LABELS) as Page[]).filter((target) => pageShown(account, target)).map((target) => (
             <button key={target} aria-current={shown === target ? 'page' : undefined} onClick={() => choosePage(target)}>{LABELS[target]}</button>
