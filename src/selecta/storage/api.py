@@ -19,6 +19,7 @@ from selecta.billing import plans, stripe_sync
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
 from selecta.storage.artifacts import Buckets
+from selecta.storage.ids import require_id
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.storage.ports import (
     DuplicatePort,
@@ -43,6 +44,8 @@ from selecta.storage.uploads import (
     UploadSession,
 )
 from selecta.usage import quota
+
+UPLOAD_NOT_FOUND = {"code": "upload_not_found"}
 
 
 class UploadFileInput(BaseModel):
@@ -221,7 +224,7 @@ def install_routes(
 
     def map_error(error: Exception) -> HTTPException:
         if isinstance(error, SessionNotFound):
-            return HTTPException(status_code=404, detail={"code": "upload_not_found"})
+            return HTTPException(status_code=404, detail=dict(UPLOAD_NOT_FOUND))
         if isinstance(error, (InvalidState, ValueError)):
             return HTTPException(
                 status_code=400, detail={"code": "invalid_upload", "message": str(error)}
@@ -280,6 +283,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),
     ):
+        require_id(session_id, UPLOAD_NOT_FOUND)
         workspace_id = workspace(request, claims)
         try:
             with service() as (uploads, _client):
@@ -304,6 +308,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),
     ):
+        require_id(session_id, UPLOAD_NOT_FOUND)
         workspace_id = workspace(request, claims)
         try:
             with service() as (uploads, _client):
@@ -322,6 +327,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),
     ):
+        require_id(session_id, UPLOAD_NOT_FOUND)
         workspace_id = workspace(request, claims)
         try:
             with service() as (uploads, client):
@@ -361,6 +367,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),
     ):
+        require_id(session_id, UPLOAD_NOT_FOUND)
         workspace_id = workspace(request, claims)
         try:
             with service() as (uploads, _client):

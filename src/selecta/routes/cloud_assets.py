@@ -16,6 +16,7 @@ from sqlalchemy.engine import Connection, Engine
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
 from selecta.storage.deletion import DeletionKind, tombstone
+from selecta.storage.ids import require_id
 from selecta.storage.schema import assets, upload_sessions
 from selecta.usage import quota
 
@@ -141,6 +142,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
+        require_id(asset_id, {"code": "asset_not_found"})
         workspace_id = workspace(request, claims)
         query = (
             select(
@@ -182,6 +184,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
+        require_id(asset_id, {"code": "asset_not_found"})
         workspace_id = workspace(request, claims)
         with transaction(engine, workspace_id) as conn:
             try:

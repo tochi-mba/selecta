@@ -16,6 +16,7 @@ from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 from selecta.scheduling.policy import Lane
 from selecta.storage.artifacts import Buckets
+from selecta.storage.ids import require_id
 from selecta.storage.keys import Bucket, original_key, validate_key, workspace_of
 from selecta.storage.objects import ObjectClient, R2Error, R2NotFound
 from selecta.storage.schema import assets
@@ -35,6 +36,7 @@ def install_routes(
     store = JobStore(engine, entitlements=CloudJobEntitlements(engine))
 
     def prepare(asset_id: str, request: Request, claims: Claims, *, submit: bool):
+        require_id(asset_id, {"code": "asset_not_found"})
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         workspace_id = principal.workspace.id
         with transaction(engine, workspace_id) as conn:

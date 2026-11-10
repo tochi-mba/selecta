@@ -237,16 +237,17 @@ def test_a_workspace_gets_a_url_for_its_own_derived_file(client, fake):
 
 
 @pytest.mark.parametrize("key", ["../etc/passwd", "w/ws-a/a/../../x", "/" + DERIVED, "x" * 600])
-def test_an_invalid_derived_key_is_refused(client, fake, key):
+def test_an_invalid_derived_key_looks_like_another_accounts_key(client, fake, key):
     response = client.post("/api/storage/derived-playback-url", json={"key": key})
-    assert response.status_code in (400, 422)
+    assert response.status_code == 404
+    assert response.json()["detail"] == {"code": "artifact_not_found"}
     assert fake.calls == []
 
 
-def test_a_derived_key_that_is_not_a_selecta_key_is_a_400(client):
+def test_a_derived_key_that_is_not_a_selecta_key_is_not_found(client):
     response = client.post("/api/storage/derived-playback-url", json={"key": "a/b"})
-    assert response.status_code == 400
-    assert response.json()["detail"]["code"] == "invalid_artifact_key"
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "artifact_not_found"
 
 
 def test_another_workspaces_derived_file_is_not_found_without_asking_r2(client, fake):
@@ -292,3 +293,10 @@ def test_a_client_without_close_is_fine(cloud_engine):
     with TestClient(app) as test_client:
         response = test_client.post("/api/storage/derived-playback-url", json={"key": DERIVED})
     assert response.status_code == 200
+
+
+def test_a_workspace_id_that_cannot_form_a_key_is_not_found(client, fake, song):
+    response = client.get(f"/api/assets/{song}/playback-url", headers={"X-Workspace-ID": "bad ws"})
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "asset_not_found"
+    assert fake.count("presign_get") == 0

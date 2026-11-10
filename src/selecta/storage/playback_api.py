@@ -14,13 +14,18 @@ from sqlalchemy.engine import Engine
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
 from selecta.storage.artifacts import DEFAULT_BUCKETS, MAX_URL_TTL, Buckets
+from selecta.storage.ids import require_id
 from selecta.storage.keys import Bucket, UnsafeKey, original_key, validate_key, workspace_of
 from selecta.storage.objects import ObjectClient, R2Error, R2NotFound
 from selecta.storage.schema import assets, upload_sessions
 
+ASSET_NOT_FOUND = {"code": "asset_not_found"}
+ARTIFACT_NOT_FOUND = {"code": "artifact_not_found"}
+
 
 class DerivedUrlRequest(BaseModel):
-    key: str = Field(min_length=1, max_length=512)
+    # Checked by the route, so a malformed key gets the same 404 as another account's key.
+    key: str
     ttl: int = Field(default=300, ge=1, le=MAX_URL_TTL)
 
 
@@ -69,6 +74,7 @@ def install_routes(
         ttl: int = Query(default=300, ge=1, le=MAX_URL_TTL),
         download: bool = False,
     ) -> dict[str, Any]:
+        require_id(asset_id, ASSET_NOT_FOUND)
         workspace_id = workspace(request, claims)
         query = (
             select(
@@ -144,14 +150,15 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims)
         try:
             bucket = validate_key(body.key)
         except UnsafeKey:
-            raise HTTPException(status_code=400, detail={"code": "invalid_artifact_key"}) from None
+            # A malformed key looks exactly like a key that isn't the caller's.
+            raise HTTPException(status_code=404, detail=ARTIFACT_NOT_FOUND) from None
+        workspace_id = workspace(request, claims)
         if bucket is not Bucket.DERIVED or workspace_of(body.key) != workspace_id:
             # Don't reveal whether another tenant's key exists.
-            raise HTTPException(status_code=404, detail={"code": "artifact_not_found"})
+            raise HTTPException(status_code=404, detail=ARTIFACT_NOT_FOUND)
         try:
             with client_context() as client:
                 client.head_object(buckets.name(bucket), body.key)
