@@ -11,19 +11,36 @@ import secrets
 from collections.abc import Collection
 
 ADJECTIVES = (
-    "Amber", "Azure", "Blue", "Brave", "Breezy", "Bright", "Calm", "Cheerful", "Clever", "Coral",
-    "Cosmic", "Crimson", "Daring", "Dreamy", "Eager", "Electric", "Emerald", "Gentle", "Golden",
-    "Green", "Happy", "Indigo", "Jolly", "Lively", "Lucky", "Lunar", "Mellow", "Merry", "Misty",
-    "Nimble", "Plucky", "Quiet", "Rapid", "Scarlet", "Silver", "Sleepy", "Snowy", "Starry",
-    "Sunny", "Swift", "Teal", "Velvet", "Violet", "Witty", "Zesty",
+    "Adorable", "Agile", "Amber", "Azure", "Beaming", "Blissful", "Blue",
+    "Bold", "Bouncy", "Brave", "Breezy", "Bright", "Bubbly", "Calm",
+    "Charming", "Cheerful", "Clever", "Coral", "Cosmic", "Cozy", "Creative",
+    "Curious", "Daring", "Dazzling", "Dreamy", "Eager", "Elegant",
+    "Emerald", "Enchanting", "Energetic", "Fancy", "Fluffy", "Friendly",
+    "Frosty", "Gentle", "Glowing", "Golden", "Graceful", "Green",
+    "Happy", "Indigo", "Jolly", "Joyful", "Kind", "Lively", "Lucky",
+    "Lunar", "Magical", "Majestic", "Mellow", "Merry", "Misty",
+    "Nimble", "Noble", "Peaceful", "Playful", "Plucky", "Quiet",
+    "Radiant", "Rapid", "Rosy", "Royal", "Scarlet", "Serene",
+    "Shimmering", "Silver", "Sleepy", "Snowy", "Sparkly", "Starry",
+    "Sunny", "Swift", "Teal", "Velvet", "Vibrant", "Violet",
+    "Whimsical", "Witty", "Zesty",
 )  # fmt: skip
 
 ANIMALS = (
-    "Badger", "Bear", "Beaver", "Bison", "Crane", "Dolphin", "Eagle", "Falcon", "Finch", "Fox",
-    "Gecko", "Hedgehog", "Heron", "Kingfisher", "Koala", "Lark", "Lemur", "Lion", "Llama",
-    "Lynx", "Moose", "Narwhal", "Newt", "Octopus", "Otter", "Owl", "Panda", "Parrot", "Penguin",
-    "Puffin", "Quail", "Rabbit", "Raven", "Robin", "Seal", "Sparrow", "Squirrel", "Swan",
-    "Tiger", "Toucan", "Turtle", "Walrus", "Wombat", "Wren", "Zebra",
+    "Alpaca", "Axolotl", "Badger", "Bear", "Beaver", "Bee",
+    "Bison", "Bluebird", "Bumblebee", "Butterfly", "Camel",
+    "Canary", "Capybara", "Cat", "Chameleon", "Chipmunk",
+    "Crane", "Deer", "Dolphin", "Dove", "Dragonfly", "Duck",
+    "Eagle", "Elephant", "Falcon", "Fawn", "Ferret", "Finch",
+    "Firefly", "Flamingo", "Fox", "Frog", "Gazelle", "Gecko",
+    "Giraffe", "Hamster", "Hare", "Hedgehog", "Heron",
+    "Hummingbird", "Jaguar", "Kangaroo", "Kingfisher",
+    "Koala", "Lark", "Lemur", "Lion", "Llama", "Lynx",
+    "Meerkat", "Moose", "Narwhal", "Newt", "Octopus",
+    "Otter", "Owl", "Panda", "Parrot", "Peacock", "Penguin",
+    "Puffin", "Quail", "Quokka", "Rabbit", "Raven", "Robin",
+    "Seal", "Sparrow", "Squirrel", "Swan", "Tiger", "Toucan",
+    "Turtle", "Walrus", "Wombat", "Wren", "Zebra",
 )  # fmt: skip
 
 _ADJECTIVES = frozenset(ADJECTIVES)
