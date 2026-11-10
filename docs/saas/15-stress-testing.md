@@ -105,7 +105,7 @@ Every run ends with a **reconciliation audit**: stuck jobs, unreleased reservati
 | When | What |
 |---|---|
 | Every PR | Unit, simulator (fixed seeds + a random seed), state-machine properties, migration check, file-length rule |
-| Merge to `main` | Linux integration (Postgres, MinIO), worker image smoke, Playwright on both modes |
+| Merge to `main` | Linux integration (Postgres, an S3 server such as SeaweedFS), worker image smoke, Playwright on both modes |
 | Nightly (staging) | L1–L2 load, lease races, chaos subset, reconciliation audit |
 | Weekly | L3 + catastrophe subset, real-audio benchmark, cost report |
 | Before releases | Full ladder to L4, security suite, DR drill, Lucy evaluation |

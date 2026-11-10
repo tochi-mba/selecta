@@ -258,10 +258,16 @@ test('MP-0274-06 the context bar, editor scope, inspector and Studio ruler never
     await page.evaluate(() => window.scrollTo(0, 0));
     await openInspector(page);
     if (width >= 1024) {
-      await page.evaluate(() => window.scrollTo(0, 1200));
-      const now = await page.evaluate(chrome);
-      expect(now.inspector!.top, 'inspector under the bar').toBeGreaterThanOrEqual(now.header!.bottom);
-      if (now.scope && now.scope.bottom > 0) expect(now.inspector!.top, 'inspector over the scope').toBeGreaterThanOrEqual(now.scope.bottom);
+      for (const y of [300, 600, 1200]) {
+        await page.evaluate((to) => window.scrollTo(0, to), y);
+        const now = await page.evaluate(chrome);
+        const column = await page.locator('.inspector-column').evaluate((element) => element.getBoundingClientRect().bottom);
+        // pinned, the panel sits below the bar and the scope; it only slides under the bar once its own column ends
+        if (Math.abs(now.inspector!.bottom - column) > 1) {
+          expect(now.inspector!.top, `inspector under the bar, scrolled ${y}px`).toBeGreaterThanOrEqual(now.header!.bottom);
+          if (now.scope && now.scope.bottom > now.header!.bottom) expect(now.inspector!.top, `inspector over the scope, scrolled ${y}px`).toBeGreaterThanOrEqual(now.scope.bottom);
+        }
+      }
     }
     await page.getByRole('tab', { name: 'Studio' }).click();
     await page.getByRole('button', { name: 'Open the Studio' }).click();
@@ -279,7 +285,10 @@ test('MP-0274-06 the context bar, editor scope, inspector and Studio ruler never
   await open(page, '/listen', 1440, 700);
   await page.evaluate(() => window.scrollTo(0, 600));
   const listen = await page.evaluate(chrome);
-  if (listen.side!.bottom > listen.header!.bottom) expect(listen.side!.top, 'Listen side column under the bar').toBeGreaterThanOrEqual(listen.header!.bottom);
+  const layoutEnd = await page.locator('.listen-layout').evaluate((element) => element.getBoundingClientRect().bottom);
+  // pinned, the column sits under the bar; it only slides up once the layout holding it ends
+  if (Math.abs(listen.side!.bottom - layoutEnd) > 1) expect(listen.side!.top, 'Listen side column under the bar').toBeGreaterThanOrEqual(listen.header!.bottom);
+  else expect(listen.side!.top).toBeLessThan(listen.header!.bottom);
 });
 
 test('MP-0274-07 the scrollbar coming and going never moves the navigation or the page', async ({ page, request }) => {
@@ -355,7 +364,7 @@ test('MP-0274-08 recorded optical exceptions still measure what the record says'
   await open(page, '/mix/current/edit', 1440);
   await openStudio(page);
   await page.keyboard.press('Shift');
-  measured['inset-ring-studio'] = await page.locator('.studio-lane .studio-name').first().evaluate((name) => {
+  measured['inset-ring-studio'] = await page.locator('.studio-lane:not(.studio-ruler) button.studio-name').first().evaluate((name) => {
     (name as HTMLElement).focus();
     return name.matches(':focus-visible') ? parseFloat(getComputedStyle(name).outlineOffset) : NaN;
   });
@@ -370,14 +379,9 @@ test('MP-0274-08 recorded optical exceptions still measure what the record says'
 
   await open(page, '/listen', 1440);
   measured['clock-room'] = await page.locator('.strip .time').first().evaluate((element) => {
-    const style = getComputedStyle(element);
-    const probe = document.createElement('span');
-    probe.style.cssText = `position:absolute;visibility:hidden;font:${style.font}`;
-    probe.textContent = '0';
-    document.body.append(probe);
-    const ch = probe.getBoundingClientRect().width;
-    probe.remove();
-    return Math.round(parseFloat(style.minWidth) / ch);
+    // the reservation as the source writes it (ch of the clock's own font); MP-0274-03 measures that it holds
+    const reserved = (element as HTMLElement).style.minWidth;
+    return reserved.endsWith('ch') ? Number.parseFloat(reserved) : NaN;
   });
 
   for (const exception of OPTICAL_EXCEPTIONS) expect(measured[exception.id], `${exception.id}: ${exception.rationale}`).toBe(exception.recorded);

@@ -36,7 +36,7 @@
 ### 13.3 CI/CD changes
 
 - Keep the Windows jobs (local mode is a Windows app).
-- Add **Linux jobs** for cloud mode: Postgres service container, MinIO, worker image build, integration tests, scheduler simulator, migration up/down check.
+- Add **Linux jobs** for cloud mode: Postgres service container, an S3 server (SeaweedFS; MinIO no longer publishes images), worker image build, integration tests, scheduler simulator, migration up/down check.
 - Build and push images on `main`; deploy to staging automatically; deploy to prod by approval; Modal deploys from the same commit.
 - The file-length rule continues to apply to all new code and docs.
 

@@ -1,8 +1,9 @@
-"""The R2 object-storage adapter against a real S3 server (MinIO), not a scripted transport
+"""The R2 object-storage adapter against a real S3 server, not a scripted transport
 (SC-0411-03, test plan 18.15).
 
 Runs when `SELECTA_TEST_S3_ENDPOINT` is set (always in the Linux `cloud` CI job, which starts
-MinIO beside PostgreSQL); skips otherwise. `SELECTA_TEST_S3_ACCESS_KEY` and
+an S3-compatible server, SeaweedFS, beside PostgreSQL); skips otherwise. Any server that checks
+SigV4 and accepts R2's `auto` region will do. `SELECTA_TEST_S3_ACCESS_KEY` and
 `SELECTA_TEST_S3_SECRET_KEY` are the server's credentials. Each run makes its own bucket and
 empties and removes it afterwards.
 
@@ -36,7 +37,7 @@ def storage() -> Iterator[tuple[R2Client, str]]:
     if not endpoint:
         pytest.skip(f"No S3 server configured ({ENDPOINT_ENV})")
     credentials = Credentials(os.environ.get(ACCESS_ENV, ""), os.environ.get(SECRET_ENV, ""))
-    client = R2Client("minio", credentials, endpoint=endpoint, timeout=30.0)
+    client = R2Client("s3-test", credentials, endpoint=endpoint, timeout=30.0)
     bucket = f"selecta-test-{secrets.token_hex(6)}"
     # R2Client never makes buckets (they're provisioned), so the test does it the S3 way.
     client._send("PUT", bucket, None, operation="CreateBucket", content_length=0)

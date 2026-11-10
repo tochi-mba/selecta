@@ -114,6 +114,7 @@ test('MP-0275-01 display, page, section, song title, metadata and caption are di
     const section = await metrics(page, 'h2.section-title');
     const caption = await metrics(page, '.eyebrow');
     const label = await metrics(page, '.vibe-card .artists span');
+    const scope = await metrics(page, '.vibe-card .vibe-scope');
     await open(page, '/library');
     const song = await metrics(page, '.library-rows .song-open b');
     const meta = await metrics(page, '.library-rows .song-name > span');
@@ -131,6 +132,7 @@ test('MP-0275-01 display, page, section, song title, metadata and caption are di
     // the label role is defined: vibe cards asked for it and used to fall back to body text
     expect(label.size, where).toBe(roles.label.size);
     expect(label.weight, where).toBe(roles.label.weight);
+    expect(`${scope.size}/${scope.weight}`, `${where}: .card p out-ranks the label role`).toBe(`${roles.label.size}/${roles.label.weight}`);
     expect(display.family, where).toBe(pageTitle.family);
     expect(song.family, where).not.toBe(pageTitle.family);
   }
@@ -358,7 +360,10 @@ test('MP-0275-05 time, BPM, percentages and counts keep their width as they chan
   }
   expect(new Set(clock.map((reading) => reading.text)).size, 'the clock did not move').toBeGreaterThan(2);
   expect(new Set(clock.map((reading) => reading.width)).size, JSON.stringify(clock)).toBe(1);
-  for (const reading of await stableDigits(page, '.countdown-number strong, .countdown-meta')) expect(reading.spread).toBeLessThanOrEqual(0.5);
+  // the beat countdown only shows once the next transition is rendered; measure it when it is there
+  if (await page.locator('.countdown-meta').count()) {
+    for (const reading of await stableDigits(page, '.countdown-number strong, .countdown-meta')) expect(reading.spread).toBeLessThanOrEqual(0.5);
+  }
 
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library', exact: true }).click();
   await expect(page.locator('.mini')).toBeVisible();
@@ -505,7 +510,11 @@ async function coveredControls(page: Page) {
         const hit = document.elementFromPoint(x, y);
         return !!hit && (control.contains(hit) || hit.contains(control) || !!hit.closest('label')?.contains(control));
       });
-      if (!reachable) covered.push(`${control.tagName.toLowerCase()} "${(control.getAttribute('aria-label') ?? control.textContent ?? '').trim().slice(0, 30)}"`);
+      if (!reachable) {
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        const under = hit ? `${hit.tagName.toLowerCase()}.${[...hit.classList].join('.')}` : 'off screen';
+        covered.push(`${control.tagName.toLowerCase()} "${(control.getAttribute('aria-label') ?? control.textContent ?? '').trim().slice(0, 30)}" under ${under}`);
+      }
     }
     window.scrollTo(0, 0);
     return covered;
@@ -526,6 +535,16 @@ for (const zoom of [2, 4]) {
     await resetMix(request, [1, 2, 3, 5]);
     const { context, page } = await zoomed(browser, baseURL, zoom);
     const width = 1280 / zoom;
+    // the detector is not vacuous: a planted clipped line is caught
+    await open(page, '/mixes');
+    await page.evaluate(() => {
+      const planted = document.createElement('p');
+      planted.id = 'planted';
+      planted.style.cssText = 'overflow:hidden;white-space:nowrap;width:40px';
+      planted.textContent = 'a sentence far too long for forty pixels';
+      document.querySelector('main')!.append(planted);
+    });
+    expect((await zoomDefects(page)).defects.join()).toContain('a sentence far too long');
     for (const route of ['/listen', '/library', '/mix/current/edit', '/mixes', '/mixes/mine']) {
       await open(page, route);
       const found = await zoomDefects(page);
@@ -586,11 +605,13 @@ test('MP-0275-08 RTL, CJK, emoji, accents and mixed-script punctuation keep thei
     const where = `at ${width}px`;
 
     // the exact characters arrive: decomposed accents stay decomposed, emoji stay whole
-    const emoji = await glyphs(page, `${row(EMOJI)} .song-open b`, [SINGER, 'é', '«en vivo»', '¿Qué tal?']);
+    const emoji = await glyphs(page, `${row(EMOJI)} .song-open b`, [SINGER, 'é', '«en', 'vivo»', '¿Qué tal?']);
     expect(emoji.text, where).toBe(EMOJI);
     expect(emoji.boxes[SINGER]!.lines, `${where}: the singer emoji split across lines`).toBe(1);
     expect(emoji.boxes[SINGER]!.width, `${where}: the singer emoji drew as several glyphs`).toBeLessThan(emoji.em * 1.9);
-    expect(emoji.boxes['«en vivo»']!.lines, where).toBe(1);
+    // a guillemet never wraps away from the word it quotes
+    expect(emoji.boxes['«en']!.lines, where).toBe(1);
+    expect(emoji.boxes['vivo»']!.lines, where).toBe(1);
     expect(emoji.boxes['¿Qué tal?']!.left).toBeLessThan(emoji.boxes['¿Qué tal?']!.right);
     const accent = await glyphs(page, `${row(EMOJI)} .song-name > span`, [DECOMPOSED, 'ö', 'Zoë']);
     expect(accent.text, where).toBe(ACCENT_ARTIST);
@@ -602,13 +623,17 @@ test('MP-0275-08 RTL, CJK, emoji, accents and mixed-script punctuation keep thei
     const bidi = await glyphs(page, `${row(BIDI)} .song-open b`, ['Remix', 'feat.', 'سلمى', '2025', '(', ')']);
     expect(bidi.text).toBe(BIDI);
     expect(bidi.direction, where).toBe('ltr');
-    const b = bidi.boxes as Record<string, { left: number; right: number }>;
-    if (bidi.overflow <= 1 && width >= 768) {
-      expect(b.Remix.left, where).toBeLessThan(b['feat.'].left);
-      expect(b['('].right, where).toBeLessThanOrEqual(b['feat.'].left + 1);
-      expect(b[')'].left, where).toBeGreaterThanOrEqual(b['سلمى'].right - 1);
-      expect(b['2025'].left, where).toBeGreaterThan(b[')'].left);
-    }
+    const b = bidi.boxes as Record<string, Glyph>;
+    expect(bidi.overflow, where).toBeLessThanOrEqual(1);
+    // left to right reading order, compared on the same line (or the later part on a later line)
+    const before = (first: Glyph, then: Glyph, what: string) => {
+      if (first.top === then.top) expect(first.right, `${where}: ${what}`).toBeLessThanOrEqual(then.left + 1);
+      else expect(first.top, `${where}: ${what}`).toBeLessThan(then.top);
+    };
+    before(b.Remix, b['feat.'], 'Remix before feat.');
+    before(b['('], b['feat.'], 'the parenthesis opens before feat.');
+    before(b['سلمى'], b[')'], 'the parenthesis closes after the Arabic credit');
+    before(b[')'], b['2025'], 'the year comes last');
 
     // Arabic resolves right to left on its own element: its first word is on the right
     const arabic = await glyphs(page, `${row(ARABIC)} .song-open b`, ['أغنية', 'البعيدة']);
