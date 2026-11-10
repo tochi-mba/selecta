@@ -62,18 +62,26 @@ def postgres_migrated(url: str) -> tuple[Engine, str]:
     """A fresh schema on the test server, migrated to head. Returns the engine and schema name.
 
     The schema is owned by a role made for this run that is not a superuser, and every
-    connection acts as it. Superusers skip row-level security even when a table forces it, so
+    connection logs in as it. Superusers skip row-level security even when a table forces it, so
     without this the suite would never meet the workspace policies the app runs under. The role
-    may create roles, for tests that check grants, and can switch into the roles it creates.
+    may create roles, for tests that check grants, and can switch into the roles it creates;
+    since every backend is its own, it can also end them (`pg_terminate_backend`).
     """
     schema = f"t_{secrets.token_hex(6)}"
-    owner = owner_role(schema)
+    owner, password = owner_role(schema), secrets.token_hex(16)
     admin = sa.create_engine(url)
     with admin.begin() as connection:
-        connection.execute(sa.text(f"CREATE ROLE {owner} NOLOGIN NOSUPERUSER CREATEROLE"))
+        connection.execute(
+            sa.text(f"CREATE ROLE {owner} LOGIN NOSUPERUSER NOBYPASSRLS CREATEROLE PASSWORD "
+                    f"'{password}'")
+        )
         connection.execute(sa.text(f'CREATE SCHEMA "{schema}" AUTHORIZATION {owner}'))
     admin.dispose()
-    engine = make_engine(url, connect_args={"options": connection_options(schema)})
+    as_owner = sa.engine.make_url(url).set(username=owner, password=password)
+    engine = make_engine(
+        as_owner.render_as_string(hide_password=False),
+        connect_args={"options": connection_options(schema)},
+    )
     migrate.upgrade(engine)
     return engine, schema
 
@@ -84,15 +92,14 @@ def owner_role(schema: str) -> str:
 
 
 def connection_options(schema: str) -> str:
-    """Startup options that put a connection in the run's schema, acting as the run's owner."""
-    return (
-        f"-csearch_path={schema} -crole={owner_role(schema)} "
-        "-ccreaterole_self_grant=set,inherit"
-    )
+    """Startup options that put a connection in the run's schema, able to act as the roles it
+    creates."""
+    return f"-csearch_path={schema} -ccreaterole_self_grant=set,inherit"
 
 
 def sibling_engine(engine: Engine, **options) -> Engine:
-    """Another engine on the same test database, schema and role, with its own pool options."""
+    """Another engine on the same test database, schema and login role, with its own pool
+    options."""
     if engine.dialect.name != "postgresql":
         return engine
     with engine.connect() as connection:
@@ -107,6 +114,11 @@ def sibling_engine(engine: Engine, **options) -> Engine:
 def drop_postgres_schema(url: str, schema: str) -> None:
     admin = sa.create_engine(url)
     with admin.begin() as connection:
+        # The run's own connections may still be open in another engine's pool.
+        connection.execute(
+            sa.text("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = :r"),
+            {"r": owner_role(schema)},
+        )
         connection.execute(sa.text(f'DROP SCHEMA "{schema}" CASCADE'))
         connection.execute(sa.text(f"DROP OWNED BY {owner_role(schema)}"))
         connection.execute(sa.text(f"DROP ROLE {owner_role(schema)}"))

@@ -6,8 +6,18 @@
 
 - **SQLAlchemy Core + Alembic**, one schema definition targeting both SQLite (local) and Postgres (cloud). Raw SQL in routes is migrated module by module to repository functions; dialect differences (JSON, upsert, placeholders) live in one place.
 - **Every tenant-owned table gets `workspace_id`**. In local mode it is always the single local workspace, so local behaviour doesn't change.
-- **Postgres Row-Level Security** on tenant tables as defence in depth: the API sets `SET LOCAL app.workspace_id` per transaction from the verified session; the app role has no `BYPASSRLS`; admin and maintenance use separate roles and code paths.
+- **Postgres Row-Level Security** on tenant tables as defence in depth (see 6.1.1).
 - **Large arrays stay out of Postgres**: per-song features remain `.npz` objects in R2; Postgres holds summaries and pointers.
+
+#### 6.1.1 Row-level security as built
+
+- **Which tables.** Every table on the shared metadata with a `workspace_id` column has row-level security enabled and forced, with one policy, `workspace_isolation`, for reads and writes alike (migrations `b7e3c91f0a24` and `c5f08d3a71e2`). Global tables (people, staff, providers' webhook inboxes, platform configuration, the worker fleet) have none; each is named with its reason in `tests/test_cloud_workspace_columns.py`. Four tables allow an empty `workspace_id` for platform rows (`audit_events`, `dangerous_actions`, `display_pairings`, `outbox_events`).
+- **The rule.** `persistence.transaction(engine, workspace_id)` sets `app.workspace_id` for that transaction only (`set_config(..., true)`, safe through a transaction-mode pooler). While it is set, a row is visible, and can be written, only if its `workspace_id` equals it. So a query that forgets `WHERE workspace_id = ...` still sees only its own workspace, an unfiltered `UPDATE` or `DELETE` touches only its own rows, and inserting or moving a row into another workspace fails with `42501`. Rows with an empty `workspace_id` are invisible to a workspace transaction.
+- **One read-only exception: `fair_heads`.** The scheduler's index (per pool, lane and workspace: a virtual time and queue counters, no customer content) has a second policy, `scheduler_reads_across_workspaces`, for `SELECT` only. Enqueueing places a workspace's work relative to the smallest active virtual time, and admission sums the pool's backlog, inside that workspace's transaction and under the lane locks; moving those reads to a separate transaction would lose the fairness guarantees. Writes to `fair_heads` stay held to the workspace. `tests/test_cloud_rls.py` fails if any other extra policy appears.
+- **System transactions.** A transaction that names no workspace (`transaction(engine)`, or a plain connection) leaves the setting empty, and the policy lets it through. This is how maintenance, the scheduler's claims, webhooks, sign-in and staff tools cross workspaces today; they all run through the same database role as the API. `transaction(engine, "")` is refused, so an empty id can never widen a workspace transaction into a system one.
+- **Roles.** No role needs `BYPASSRLS`, and none is given it. `FORCE ROW LEVEL SECURITY` makes the policy bind the table owner too, so the migration role, the app role and the test suite all run under one rule. The audit table additionally has its own append-only grants (`authz.audit.append_only_sql`).
+- **The limit, on purpose.** The database guarantees isolation for workspace transactions, not for system ones: code that should have named a workspace and didn't is caught by the repository functions' filters and the tenant isolation matrix, not by the database. Splitting system work onto a separate role, with the app role refused rows outside a named workspace, needs the API's cross-workspace paths (sign-in, webhooks, onboarding) moved behind that role first; it is not built.
+- **Tests.** `tests/test_cloud_rls.py` proves the rule on PostgreSQL with deliberately unfiltered queries, and fails when a new tenant table lacks the policy. The PostgreSQL test fixture connects as a schema owner that is neither a superuser nor `BYPASSRLS` (superusers skip every policy, forced or not), so the whole cloud suite runs with the policies in force.
 
 ### 6.2 Tables by domain
 
@@ -30,7 +40,11 @@
 
 ### 6.3 Migration of existing local data
 
-Local users keep their SQLite file; Alembic upgrades it in place (with an automatic backup first, reusing `backup.py`). A one-way "move my local library to Selecta Cloud" tool is a later feature (it would upload files through the normal pipeline, not copy databases).
+Local users keep their SQLite file; Alembic upgrades it in place (with an automatic backup first, reusing `backup.py`).
+
+**Not built yet.** The local app does not run the shared migrations today: its start-up keeps the original hand-made SQLite schema (`db.connect`, `lucy/schema.py` and the other local tables), and `selecta db upgrade` refuses anything but PostgreSQL. So there is nothing yet to back up before. Wiring the migrations into local start would add the shared tables and an `alembic_version` table to every local library file, so it waits for the local modules to move onto the shared schema, and the backup-then-migrate step lands with it.
+
+A one-way "move my local library to Selecta Cloud" tool is a later feature (it would upload files through the normal pipeline, not copy databases).
 
 ---
 

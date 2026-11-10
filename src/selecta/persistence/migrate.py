@@ -1,10 +1,12 @@
-"""Run and check schema migrations from code, so the local app can upgrade itself at start.
+"""Run and check schema migrations from code.
 
-`upgrade(engine)` brings a database to the newest schema. The local app calls it at start (after
-backing up the SQLite file); the cloud runs it as a release step before new code starts
-("expand, deploy, contract"). `pending_changes(engine)` lists differences between the tables the
-code declares and the newest migration, so CI can fail when someone changes a table without
-writing a migration. `revision(message)` writes a new migration from those differences.
+`upgrade(engine)` brings a database to the newest schema. The cloud runs it as a release step
+before new code starts ("expand, deploy, contract"). The local app does not call it yet: it still
+builds its original SQLite tables itself, and the planned backup-then-migrate start-up waits for
+those tables to move onto the shared schema (docs/saas/06-data-model.md, 6.3).
+`pending_changes(engine)` lists differences between the tables the code declares and the newest
+migration, so CI can fail when someone changes a table without writing a migration.
+`revision(message)` writes a new migration from those differences.
 """
 
 from __future__ import annotations

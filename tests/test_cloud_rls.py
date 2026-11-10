@@ -24,6 +24,8 @@ from selecta.usage.schema import usage_ledger
 
 INSUFFICIENT_PRIVILEGE = "42501"
 POLICY = "workspace_isolation"
+# The one exception, read-only, for the scheduler's index (migration c5f08d3a71e2).
+EXTRA_POLICIES = {("fair_heads", "scheduler_reads_across_workspaces", "SELECT", "true")}
 
 
 def ledger_row(workspace: str, ref: str) -> dict:
@@ -158,6 +160,47 @@ def test_every_tenant_table_has_forced_row_level_security_and_the_workspace_poli
             assert "workspace_id" in clause and "app.workspace_id" in clause, name
     # Global tables stay readable to every transaction.
     assert not any(flags[name][0] for name in flags if name not in tables)
+
+
+def test_the_only_policy_beyond_workspace_isolation_is_the_scheduler_read(postgres_engine):
+    with postgres_engine.connect() as conn:
+        extra = {
+            tuple(row)
+            for row in conn.execute(
+                sa.text(
+                    "SELECT tablename, policyname, cmd, qual FROM pg_policies "
+                    "WHERE schemaname = current_schema() AND policyname <> :policy"
+                ),
+                {"policy": POLICY},
+            )
+        }
+    assert extra == EXTRA_POLICIES
+
+
+def head_row(workspace: str) -> dict:
+    return {"pool": "cpu", "lane": "standard", "workspace_id": workspace, "updated_at": 1.0}
+
+
+def test_the_scheduler_index_is_readable_across_workspaces_but_writable_only_for_your_own(
+    postgres_engine,
+):
+    """Enqueue and admission compare a workspace with the whole pool inside its transaction, so
+    `fair_heads` reads cross workspaces; every write is still held to the workspace."""
+    from selecta.work.schema import fair_heads
+
+    a, b = new_id(), new_id()
+    with transaction(postgres_engine) as conn:
+        conn.execute(sa.insert(fair_heads), [head_row(b)])
+    with transaction(postgres_engine, a) as conn:
+        assert set(conn.execute(sa.select(fair_heads.c.workspace_id)).scalars()) == {b}
+        assert conn.execute(sa.update(fair_heads).values(vtime=5.0)).rowcount == 0
+        assert conn.execute(sa.delete(fair_heads)).rowcount == 0
+    with pytest.raises(sa.exc.ProgrammingError) as refused:
+        with transaction(postgres_engine, a) as conn:
+            conn.execute(sa.insert(fair_heads), [{**head_row(b), "lane": "batch"}])
+    assert sqlstate(refused.value) == INSUFFICIENT_PRIVILEGE
+    with transaction(postgres_engine) as conn:
+        assert conn.execute(sa.select(fair_heads.c.vtime)).scalars().all() == [0.0]
 
 
 def test_the_suite_runs_as_a_role_that_row_level_security_binds(postgres_engine):
