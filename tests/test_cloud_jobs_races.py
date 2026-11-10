@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from collections import Counter
 
 import pytest
@@ -19,6 +20,7 @@ from test_cloud_jobs_support import UNLIMITED, Plans, drift, make_store, worker
 from selecta.audit.invariants import assert_clean
 from selecta.persistence import transaction
 from selecta.work.enqueue import JobSpec
+from selecta.work.model import TERMINAL
 from selecta.work.schema import job_attempts, jobs, outbox_events
 
 TIERS = {"free": 1.0, "standard": 3.0, "premium": 6.0}
@@ -178,6 +180,8 @@ def mixed_load(store, rounds: int = 40) -> tuple[list, int]:
     enqueuing.set()
     plans = Plans(caps=UNLIMITED)
     store.entitlements = plans
+    # generous, so a slow runner still drains; a real stuck job shows up in the states assert
+    deadline = time.monotonic() + 300.0
 
     def count() -> None:
         with lock:
@@ -200,18 +204,27 @@ def mixed_load(store, rounds: int = 40) -> tuple[list, int]:
         except Exception as problem:  # noqa: BLE001 - reported by the test
             errors.append(problem)
 
+    def settled() -> bool:
+        """Nothing left to run: every job has finished, so no completion can release another.
+        Counting empty claims is not enough, because a heavy completion can release a light
+        dependent after every light worker has already given up (and the other way round)."""
+        with transaction(store.engine) as connection:
+            live = connection.execute(
+                sa.select(sa.func.count()).where(jobs.c.state.not_in(sorted(TERMINAL)))
+            ).scalar_one()
+        return live == 0
+
     def runner(pool: str, number: int) -> None:
         caps = worker(pool, worker_id=f"{pool}-{number}", slots=1_000)
-        empty = 0
         try:
-            while empty < 20 or enqueuing.is_set():
+            while time.monotonic() < deadline:
                 claim = store.claim(pool, caps)
                 count()
                 if claim is None:
-                    empty += 1
+                    if not enqueuing.is_set() and settled():
+                        return
                     threading.Event().wait(0.01)
                     continue
-                empty = 0
                 store.complete(claim.attempt_id, claim.fencing_token, cost_s=COST)
                 count()
         except Exception as problem:  # noqa: BLE001 - reported by the test

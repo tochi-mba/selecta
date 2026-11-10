@@ -114,7 +114,13 @@ def test_stop_interrupts_the_stream_and_keeps_the_partial_reply(lucy):
     use(lucy, [{"chunks": ["word "] * 200, "delay": 0.02}])
     cid = new_conversation(lucy)
     lucy.post(f"/api/lucy/conversations/{cid}/turns", json={"client_id": "a", "text": "talk"})
-    time.sleep(0.5)
+    # stop only once some words have streamed, however slow the runner is
+    deadline = time.monotonic() + 20
+    while time.monotonic() < deadline:
+        said = [m for m in snapshot(lucy, cid)["messages"] if m["role"] == "assistant"]
+        if said and said[-1]["content"]:
+            break
+        time.sleep(0.05)
     assert lucy.post(f"/api/lucy/conversations/{cid}/stop").json()["stopped"]
     agent.RUNNER.wait(30)
     snap = snapshot(lucy, cid)
