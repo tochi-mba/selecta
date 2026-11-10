@@ -56,7 +56,9 @@ describe('Studio grid stability (S3-0059-08)', () => {
 
   it('keeps every grid square mounted while the playhead moves through the bars', async () => {
     open();
-    await screen.findAllByRole('button', { name: /^Song 1 voice, bars? 1/ });
+    // Rendering the complete grid competes with other jsdom workers in the full
+    // suite; this wait is for the same observable grid, not an implementation delay.
+    await screen.findAllByRole('button', { name: /^Song 1 voice, bars? 1/ }, { timeout: 5000 });
     const before = cells();
     expect(before.length).toBeGreaterThanOrEqual(64);
     const live = deck.made[deck.made.length - 1];

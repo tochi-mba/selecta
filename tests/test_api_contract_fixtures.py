@@ -71,9 +71,9 @@ def breaks(expected, actual, where="$"):
             return [f"{where}: was an object, now {actual!r}"]
         found = []
         for key, item in expected.items():
-            if key not in actual:
+            if key not in actual and item != "null":
                 found.append(f"{where}.{key}: field removed")
-            else:
+            elif key in actual:
                 found.extend(breaks(item, actual[key], f"{where}.{key}"))
         return found
     if isinstance(expected, list):

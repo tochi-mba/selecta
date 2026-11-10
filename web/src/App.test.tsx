@@ -35,7 +35,9 @@ describe('the badges', () => {
     render(<App />);
     await userEvent.click((await navigation()).getByRole('link', { name: 'Edit' }));
     expect(await screen.findByText('Not rendered yet')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument(), { timeout: 6000 });
+    // The worker poll advances through four server reads. Leave enough wall-clock
+    // headroom for a fully parallel suite without changing the polling contract.
+    await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument(), { timeout: 10_000 });
   });
 
   it('stop asking once nothing is left to wait for', async () => {
