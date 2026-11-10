@@ -55,3 +55,17 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: loads models, so skipped unless --slow is given")
+    config.addinivalue_line(
+        "markers",
+        "invariants_off(reason): the test breaks a §15.2 invariant on purpose, so the cloud "
+        "engine fixtures don't check them after it (tests/cloud_db.py)",
+    )
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo):
+    """Keep each test's own result on it, so fixture teardown can tell whether it passed."""
+    outcome = yield
+    report = outcome.get_result()
+    if report.when == "call":
+        item.selecta_call_report = report

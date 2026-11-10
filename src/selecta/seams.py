@@ -34,6 +34,16 @@ from selecta.planner.choose import choose_transition
 from selecta.planner.memory import RULES_VERSION, SeamMemory
 from selecta.planner.wordreel import CannotTrust, modes_for, ride_lines
 from selecta.render.engine import Rendered, SongCache, in_context
+from selecta.scheduling.policy import (
+    LATER,
+    LINE,
+    MIX,
+    PREPARING,
+    REQUEST,
+    URGENT,
+    Lane,
+    from_rank,
+)
 from selecta.seam_kinds import (
     CHECK_WORDS,
     MOVES,
@@ -136,8 +146,14 @@ MEMORY_SECONDS = 5.0
 MIX_CHECK_SECONDS = 2.0
 
 # who goes first: what's about to be heard, a song someone asked for once whatever plays before it
-# is done, the rest of the mix, mixes in the render line, other requests, then spare time
-URGENT, REQUEST, MIX, LINE, LATER, PREPARING = range(6)
+# is done, the rest of the mix, mixes in the render line, other requests, then spare time. The ranks
+# are the scheduling policy's own (ADR-0395, docs/saas/04-queue-and-scheduling.md 4A.5), so local
+# mode and the cloud agree on each rank's lane and urgency.
+
+
+def _spare_time(rank: int) -> bool:
+    """Is work at this rank speculative? Spare-time renders run without the render priority."""
+    return from_rank(rank)[0] == Lane.SPECULATIVE
 
 
 def _unlink_after_readers(path: Path) -> None:
@@ -612,8 +628,8 @@ class SeamStore:
         while True:
             request = self._next_job()
             self._running_is_stale = False
-            jobs.set_render_priority(self._running_rank != PREPARING)
-            jobs.mark_mix_rendering(self.settings.home, self._running_rank != PREPARING)
+            jobs.set_render_priority(not _spare_time(self._running_rank))
+            jobs.mark_mix_rendering(self.settings.home, not _spare_time(self._running_rank))
             self._sign_renewed_at = time.monotonic()
             self._mark_rendering(request)
             self.memory = self.remembered(fresh=True)

@@ -34,6 +34,7 @@ from selecta.work import (
     heads,
     lifecycle,
     outbox,
+    plans,
     retrying,
     upkeep,
 )
@@ -254,6 +255,53 @@ class JobStore:
             )
         ).scalar()
         return float(ended or 0.0) + float(running or 0.0)
+
+    # --- plans: bulk work, materialised lazily (`selecta.work.plans`) ---
+
+    def submit_plan(self, spec: plans.PlanSpec) -> plans.Plan:
+        """Accept many items of one job type as one row, and make the first page of jobs."""
+        with self._tx(spec.workspace_id) as (connection, now):
+            plan, created = plans.submit(connection, spec, now)
+        if created:
+            self.materialise_plan(plan.workspace_id, plan.id)
+        return self.plan(plan.workspace_id, plan.id)
+
+    def plan(self, workspace_id: str, plan_id: str) -> plans.Plan:
+        with transaction(self.engine, workspace_id) as connection:
+            return plans.read(connection, workspace_id, plan_id)
+
+    def materialise_plan(
+        self, workspace_id: str, plan_id: str, fence: TermFence | None = None
+    ) -> int:
+        """Make the plan's next page into jobs if the last one has drained. Returns how many."""
+        with self._tx(workspace_id, fence) as (connection, _now):
+            plan = plans.read(connection, workspace_id, plan_id)
+            wanted = plans.page_size(connection, self.config, plan)
+        made = 0
+        while made < wanted:
+            with self._tx(workspace_id, fence, heads_first=True) as (connection, now):
+                step = plans.write_chunk(
+                    connection, plan_id, plan.materialised + made,
+                    min(plans.CHUNK, wanted - made), now,
+                )
+            if step == 0:
+                break
+            made += step
+        return made
+
+    def materialise_plans(self, fence: TermFence | None = None, limit: int = 1_000) -> int:
+        """The maintenance task: the next page of every open plan whose last page drained."""
+        with self._tx(None, fence) as (connection, _now):
+            due = plans.due(connection, limit)
+        return sum(self.materialise_plan(workspace, plan_id, fence) for workspace, plan_id in due)
+
+    def cancel_plan(self, workspace_id: str, plan_id: str) -> plans.Plan:
+        """Stop the plan and cancel the jobs it has made that haven't finished."""
+        with self._tx(workspace_id, heads_first=True) as (connection, now):
+            plan = plans.cancel(connection, workspace_id, plan_id, now)
+            for job_id in plans.live_children(connection, plan_id):
+                lifecycle.cancel(connection, workspace_id, job_id, now)
+        return plan
 
     # --- workers ---
 

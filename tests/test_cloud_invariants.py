@@ -1,11 +1,13 @@
 """The invariant checker (SC-0411-01, docs/saas/15-stress-testing.md §15.2).
 
 A clean history passes; then each check is shown to catch a violation planted straight into the
-tables, on SQLite and PostgreSQL.
+tables, on SQLite and PostgreSQL. The last tests show the cloud engine fixtures run the checker
+after every test that uses them (`tests/cloud_db.py`), which is how it runs in CI.
 """
 
 from __future__ import annotations
 
+import cloud_db
 import pytest
 from test_cloud_jobs_support import made_provenance, make_store, output, run_to_success, worker
 
@@ -19,6 +21,7 @@ from selecta.work.enqueue import JobSpec
 from selecta.work.schema import artifacts, fair_heads, job_attempts, job_dependencies, jobs
 
 HASH = "a" * 64
+pytestmark = pytest.mark.invariants_off("each test plants a violation to prove a check finds it")
 
 
 @pytest.fixture
@@ -193,3 +196,35 @@ def test_a_broken_run_raises_with_every_violation_named(store):
         invariants.assert_clean(store.engine)
     assert set(invariants.NOT_CHECKED) == {8, 10}
     assert set(invariants.NAMES) | set(invariants.NOT_CHECKED) == set(range(1, 11))
+
+
+# --- After every test (tests/cloud_db.py) -------------------------------------------------------
+
+
+class _Node:
+    def __init__(self, passed: bool, marked: bool = False) -> None:
+        self.selecta_call_report = type("Report", (), {"passed": passed})()
+        self.marked = marked
+
+    def get_closest_marker(self, name: str):
+        return object() if self.marked and name == cloud_db.INVARIANTS_OFF else None
+
+
+class _Request:
+    def __init__(self, node: _Node) -> None:
+        self.node = node
+
+
+def test_the_engine_fixtures_fail_a_passing_test_that_left_a_violation(store):
+    cloud_db.check_invariants(_Request(_Node(passed=True)), store.engine)
+    run_to_success(store_with_job(store))
+    sql(store, jobs.update().values(finished_at=None))
+    with pytest.raises(pytest.fail.Exception, match="invariant 9"):
+        cloud_db.check_invariants(_Request(_Node(passed=True)), store.engine)
+    cloud_db.check_invariants(_Request(_Node(passed=False)), store.engine)
+    cloud_db.check_invariants(_Request(_Node(passed=True, marked=True)), store.engine)
+
+
+def store_with_job(store):
+    store.enqueue(JobSpec("w1", "analyse.song"))
+    return store

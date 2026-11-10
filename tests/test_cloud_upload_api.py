@@ -15,6 +15,7 @@ from selecta.billing.plans import plan_for
 from selecta.identity.tokens import Claims
 from selecta.persistence import make_engine, metadata, transaction
 from selecta.storage import api as upload_api
+from selecta.storage import audio_check
 from selecta.storage.api import install_routes
 from selecta.storage.objects import ObjectHead, Part, R2Error
 from selecta.storage.ports import QuotaExceeded
@@ -236,7 +237,7 @@ def test_the_probe_refuses_a_file_that_is_not_audio_whatever_its_name(tmp_path):
         upload_api._probe_audio(plain)
     disguised = tmp_path / "song.mp3"
     disguised.write_text("<html>not audio</html>")
-    with pytest.raises((ValueError, upload_api.mutagen.MutagenError)):
+    with pytest.raises(ValueError, match="isn't a supported audio format"):
         upload_api._probe_audio(disguised)
 
 
@@ -254,16 +255,14 @@ def test_a_disguised_non_audio_upload_is_rejected_by_the_real_probe(cloud_engine
         assert conn.execute(sa.select(sa.func.count()).select_from(assets_table)).scalar() == 0
 
 
-@pytest.mark.parametrize("mime", [["audio/x-ape"], [], None])
-def test_the_probe_refuses_formats_cloud_does_not_take(tmp_path, monkeypatch, mime):
+@pytest.mark.parametrize("kind", ["MonkeysAudio", "WavPack", "ASF"])
+def test_the_probe_refuses_formats_cloud_does_not_take(tmp_path, monkeypatch, kind):
     path = tmp_path / "x.bin"
     path.write_bytes(b"abc")
-    found = SimpleNamespace(info=SimpleNamespace(length=1.0, sample_rate=1, channels=1))
-    if mime is not None:
-        found.mime = mime
-    monkeypatch.setattr(upload_api.mutagen, "File", lambda *_a, **_k: found)
-    with pytest.raises(ValueError, match="isn't supported for Cloud uploads"):
-        upload_api._probe_audio(path)
+    found = type(kind, (), {"info": SimpleNamespace(length=1.0, sample_rate=1, channels=1)})()
+    monkeypatch.setattr("mutagen.File", lambda *_a, **_k: found)
+    with pytest.raises(audio_check.Rejected, match="isn't supported for Cloud uploads"):
+        audio_check._header(str(path), "mp3")
 
 
 @pytest.mark.parametrize("missing", R2_ENV)

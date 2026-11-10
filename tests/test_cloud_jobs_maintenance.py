@@ -314,14 +314,14 @@ def test_the_loop_runs_each_task_when_it_falls_due(sqlite_engine, clock):
         ))
     done = loop.run_once(moment=0.0)
     assert done["reaped"] == [claim.attempt_id]
-    assert done["retried"] == 0 and done["preempted"] == []
+    assert done["retried"] == 0 and done["preempted"] == [] and done["materialised"] == 0
     assert [d.workspace_id for d in done["reconciled"]] == ["ghost"]
     assert differences == done["reconciled"]
     assert "rebased" in done and done["pruned"] == 0
     assert loop.run_once(moment=1.0) == {}
-    assert set(loop.run_once(moment=5.0)) == {"reaped", "retried", "preempted"}
+    assert set(loop.run_once(moment=5.0)) == {"reaped", "retried", "preempted", "materialised"}
     assert set(loop.run_once(moment=3_600.0)) == {
-        "reaped", "retried", "preempted", "reconciled", "rebased", "pruned"
+        "reaped", "retried", "preempted", "materialised", "reconciled", "rebased", "pruned"
     }
 
 

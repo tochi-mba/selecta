@@ -94,7 +94,7 @@ Worked example, one pool of 20 identical slots, 60 s jobs, all backlogged:
 
 **Admission control** (to stay healthy under overload):
 - Per-workspace caps on queued jobs per type (e.g. 50,000 analysis jobs; 2,000 seam jobs) beyond which new work is accepted as *planned* but materialised in batches.
-- Workflows materialise children lazily (a 20,000-song import creates analysis jobs in pages of 500 as earlier pages drain).
+- Workflows materialise children lazily (a 20,000-song import creates analysis jobs in pages of 500 as earlier pages drain). Implemented as job plans (`work/plans.py`, table `job_plans`): bulk work is accepted as one row and the maintenance loop makes the next page once the last has half drained, so a ten-million-item request writes one row and 500 jobs up front.
 - Speculative work draws from a daily CPU-minute budget per tier; when empty, nothing speculative is created.
 - Global overload: when estimated backlog drain time for a pool exceeds a threshold, standard work for Free is deferred (accepted, shown as "waiting for capacity") before anything is refused; interactive work is never deferred by admission control.
 - Accepted work is durable; under overload the system slows down and says so; it never silently drops.

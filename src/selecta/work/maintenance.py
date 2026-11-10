@@ -174,6 +174,8 @@ class Schedule:
     actions_s: float = 15.0
     """How often due dangerous actions run (`due_actions`), well inside their 15-minute delay."""
     preempt_s: float = 5.0
+    materialise_s: float = 5.0
+    """How often open job plans get their next page once the last has drained (`work/plans.py`)."""
     pools: tuple[str, ...] = ()
     """Pools to check for preemption each tick. Empty: leave preemption to the runners."""
     last: dict[str, float] = field(default_factory=dict)
@@ -269,6 +271,8 @@ class MaintenanceLoop:
         try:
             step("reaped", self.schedule.reap_s, reap)
             step("preempted", self.schedule.preempt_s, preempt)
+            step("materialised", self.schedule.materialise_s,
+                 lambda: self.store.materialise_plans(fence))
             step("reconciled", self.schedule.reconcile_s, reconcile)
             step("rebased", self.schedule.rebase_s, lambda: self.store.rebase_vtimes(fence))
             step("pruned", self.schedule.prune_s, lambda: self.store.prune_outbox(fence=fence))

@@ -9,6 +9,11 @@ Use them by name in any test (they're registered in `conftest.py`):
 - `sqlite_engine` / `postgres_engine`: one database only, for tests that need SQLite's
   single-writer behaviour or PostgreSQL's row locks, `SKIP LOCKED`, `LISTEN/NOTIFY`, advisory
   locks or row-level security. `postgres_engine` skips when no PostgreSQL is configured.
+- After every test, each of these engines is checked against the invariants of
+  docs/saas/15-stress-testing.md §15.2 (`selecta.audit.invariants`, SC-0411-01): a test that
+  passes but leaves a lost job, a stale publish, cross-tenant rows, quota or plan overruns,
+  mismatched artifacts, duplicate effects or drifted counters fails. A test that breaks one on
+  purpose (to prove a check or a repair) says so with `@pytest.mark.invariants_off("why")`.
 - `clock`: freezes database time on SQLite (`selecta.persistence.db_now`) and moves it with
   `clock.advance(seconds)`. PostgreSQL uses its own clock, so tests that need time to pass there
   use short durations instead.
@@ -126,44 +131,70 @@ def drop_postgres_schema(url: str, schema: str) -> None:
 
 
 ENGINE_KINDS = ["sqlite", "postgres"]
+INVARIANTS_OFF = "invariants_off"
+
+
+def check_invariants(request: pytest.FixtureRequest, engine: Engine) -> None:
+    """Fail the test if it left the database breaking an invariant (§15.2, SC-0411-01).
+
+    Skipped when the test is marked `invariants_off` or has already failed (its own failure is
+    the one to read)."""
+    from selecta.audit import invariants
+
+    node = request.node
+    if node.get_closest_marker(INVARIANTS_OFF) is not None:
+        return
+    report = getattr(node, "selecta_call_report", None)
+    if report is None or not report.passed:
+        return
+    try:
+        invariants.assert_clean(engine)
+    except invariants.InvariantBroken as broken:
+        pytest.fail(
+            "The test passed but left the database breaking the invariants of "
+            f"docs/saas/15-stress-testing.md §15.2:\n{broken}",
+            pytrace=False,
+        )
+
+
+def _checked_postgres(request: pytest.FixtureRequest) -> Iterator[Engine]:
+    url = postgres_url()
+    if url is None:
+        pytest.skip(f"PostgreSQL not configured ({POSTGRES_ENV})")
+    engine, schema = postgres_migrated(url)
+    try:
+        yield engine
+        check_invariants(request, engine)
+    finally:
+        engine.dispose()
+        drop_postgres_schema(url, schema)
+
+
+def _checked_sqlite(request: pytest.FixtureRequest, path: Path) -> Iterator[Engine]:
+    engine = sqlite_migrated(path)
+    try:
+        yield engine
+        check_invariants(request, engine)
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture(params=ENGINE_KINDS)
 def cloud_engine(request, tmp_path) -> Iterator[Engine]:
     if request.param == "sqlite":
-        engine = sqlite_migrated(tmp_path / "cloud.sqlite")
-        yield engine
-        engine.dispose()
-        return
-    url = postgres_url()
-    if url is None:
-        pytest.skip(f"PostgreSQL not configured ({POSTGRES_ENV})")
-    engine, schema = postgres_migrated(url)
-    try:
-        yield engine
-    finally:
-        engine.dispose()
-        drop_postgres_schema(url, schema)
+        yield from _checked_sqlite(request, tmp_path / "cloud.sqlite")
+    else:
+        yield from _checked_postgres(request)
 
 
 @pytest.fixture
-def sqlite_engine(tmp_path) -> Iterator[Engine]:
-    engine = sqlite_migrated(tmp_path / "cloud.sqlite")
-    yield engine
-    engine.dispose()
+def sqlite_engine(request, tmp_path) -> Iterator[Engine]:
+    yield from _checked_sqlite(request, tmp_path / "cloud.sqlite")
 
 
 @pytest.fixture
-def postgres_engine() -> Iterator[Engine]:
-    url = postgres_url()
-    if url is None:
-        pytest.skip(f"PostgreSQL not configured ({POSTGRES_ENV})")
-    engine, schema = postgres_migrated(url)
-    try:
-        yield engine
-    finally:
-        engine.dispose()
-        drop_postgres_schema(url, schema)
+def postgres_engine(request) -> Iterator[Engine]:
+    yield from _checked_postgres(request)
 
 
 class Clock:

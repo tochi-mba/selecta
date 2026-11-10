@@ -9,7 +9,6 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-import mutagen
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -20,6 +19,7 @@ from selecta.billing import plans, stripe_sync
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
 from selecta.storage.artifacts import Buckets
+from selecta.storage.audio_check import Rejected
 from selecta.storage.ids import require_id
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.storage.ports import (
@@ -31,7 +31,8 @@ from selecta.storage.ports import (
 from selecta.storage.ports import (
     QuotaExceeded as UploadQuotaExceeded,
 )
-from selecta.storage.r2 import R2Client, file_sha256
+from selecta.storage.r2 import R2Client
+from selecta.storage.sandbox import probe_in_sandbox
 from selecta.storage.schema import assets, upload_sessions
 from selecta.storage.uploads import (
     BatchTooLarge,
@@ -47,6 +48,7 @@ from selecta.storage.uploads import (
 from selecta.usage import quota
 
 UPLOAD_NOT_FOUND = {"code": "upload_not_found"}
+GENERIC_REJECTION = "The uploaded file could not be safely read as supported audio."
 
 
 class UploadFileInput(BaseModel):
@@ -126,32 +128,9 @@ def _planned_json(result: PlannedFile) -> dict[str, Any]:
 
 
 def _probe_audio(path: Path) -> Probe:
-    """Read a bounded metadata probe and a content hash; tags and extensions are not trusted."""
-    actual_size, digest = file_sha256(path)
-    audio = mutagen.File(path, easy=True)
-    if audio is None or audio.info is None:
-        raise ValueError("This file isn't a supported audio format.")
-    info = audio.info
-    mime_values = getattr(audio, "mime", ()) or ()
-    mime = str(mime_values[0]).lower() if mime_values else ""
-    formats = {
-        "audio/mpeg": "mp3",
-        "audio/flac": "flac",
-        "audio/wav": "wav",
-        "audio/x-wav": "wav",
-        "audio/aiff": "aiff",
-        "audio/x-aiff": "aiff",
-        "audio/mp4": "m4a",
-        "audio/aac": "aac",
-        "audio/ogg": "ogg",
-    }
-    audio_format = formats.get(mime)
-    if audio_format is None:
-        raise ValueError("This file's audio format isn't supported for Cloud uploads.")
-    duration = float(getattr(info, "length", 0.0) or 0.0)
-    sample_rate = int(getattr(info, "sample_rate", 0) or 0)
-    channels = int(getattr(info, "channels", 0) or 0)
-    return Probe(audio_format, duration, sample_rate, channels, digest, actual_size)
+    """Validate a staged upload in the sandbox (`storage.sandbox`): content sniffing, header
+    caps, a full bounded decode, in a child process with hard limits. Raises `Rejected`."""
+    return probe_in_sandbox(path)
 
 
 def _r2_client() -> R2Client:
@@ -355,15 +334,17 @@ def install_routes(
                     client.get_object(uploads.buckets.staging, session.staging_key, staged_path)
                     try:
                         audio_probe = probe(staged_path)
-                    except Exception:
+                    except Exception as error:
+                        # A sandbox refusal carries its own code and words; anything else
+                        # the probe raised is a generic refusal, never a 500.
+                        rejected = isinstance(error, Rejected)
+                        reason = str(error) if rejected else GENERIC_REJECTION
                         with transaction(engine, workspace_id) as conn:
                             outcome = uploads.reject(
-                                conn,
-                                session_id,
-                                "The uploaded file could not be safely read as supported audio.",
-                                workspace_id=workspace_id,
+                                conn, session_id, reason, workspace_id=workspace_id
                             )
-                        return _outcome_json(outcome)
+                        code = error.code if rejected else "unreadable_audio"
+                        return _outcome_json(outcome, rejection_code=code)
                     with transaction(engine, workspace_id) as conn:
                         outcome = uploads.accept(
                             conn,
@@ -392,13 +373,16 @@ def install_routes(
         return _outcome_json(outcome)
 
 
-def _outcome_json(outcome: Outcome) -> dict[str, Any]:
-    return {
+def _outcome_json(outcome: Outcome, *, rejection_code: str | None = None) -> dict[str, Any]:
+    answer = {
         "upload": _session_json(outcome.session),
         "asset_id": outcome.asset_id,
         "status": outcome.status.value,
         "error": outcome.error,
     }
+    if rejection_code is not None and outcome.status.value == "rejected":
+        answer["rejection_code"] = rejection_code
+    return answer
 
 
 __all__ = ["install_routes"]

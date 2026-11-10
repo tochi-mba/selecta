@@ -389,7 +389,8 @@ def inherited(
 # --- Today's ranks (seams.py) ------------------------------------------------------------------
 
 URGENT, REQUEST, MIX, LINE, LATER, PREPARING = range(6)
-"""The seam worker's ranks, in `selecta.seams`, copied so this module doesn't import it."""
+"""The local seam worker's ranks. `selecta.seams` imports them from here, so local mode and the
+cloud claim share one mapping (§4A.5); this module imports nothing of the local app."""
 
 RANKS: Mapping[int, tuple[Lane, int]] = MappingProxyType(
     {
