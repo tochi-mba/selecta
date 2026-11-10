@@ -142,7 +142,10 @@ describe('LX-0346-07 a repeated press commits once and claims nothing early', ()
     expect(calls.filter((call) => call.includes('/library/batch'))).toHaveLength(1);
     expect(notify).not.toHaveBeenCalled();
     answer(new Response(JSON.stringify({ updated: 1 }), { status: 200 }));
-    await waitFor(() => expect(notify).toHaveBeenCalledWith('Updated 1 precisely selected recordings.'));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith(
+      'Updated 1 precisely selected recordings.',
+      expect.any(Function),
+    ));
   });
 });
 

@@ -763,6 +763,11 @@ export class SetPlayer {
     const gone = livePosition < 0;
     if (liveMix[position]?.song_id !== item.song_id || (gone ? position < current.position : position <= livePosition)) {
       this.ending = false;
+      // The mix can be compacted while the fallback audio is loading (for
+      // example when the song that is still sounding is removed). Re-evaluate
+      // the successor immediately instead of waiting for the interval tick;
+      // otherwise the old position can consume the whole end-of-song window.
+      this.tick();
       return;
     }
     // Rendering can finish while the fallback song downloads. Let the next tick

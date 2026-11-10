@@ -77,10 +77,8 @@ describe('T0167 removing the song that is playing', () => {
     player = new SetPlayer(() => mix, () => {});
     await player.playFrom(1, 99);
     mix = without(full, 1);
-    console.log('DBG before', JSON.stringify(player.state), (player as any).ending, (player as any).songTime());
     tick(player);
     await settle();
-    console.log('DBG after', JSON.stringify(player.state), (player as any).ending);
     expect(playingSong(player)).toBe(3);
   });
 });
