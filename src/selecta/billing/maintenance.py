@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
+from selecta.admin import state as emergency_state
 from selecta.authz import audit
 from selecta.billing import plans, stripe_sync
 from selecta.billing.stripe_sync import PriceMap, StripeClient
@@ -65,6 +66,8 @@ def drain_stripe_events(
 
     with transaction(engine) as connection:
         event_ids = pending_events(connection, limit=limit, max_attempts=max_attempts)
+        if emergency_state.load(connection).billing_safe_mode:
+            event_ids = []  # billing safe mode holds stored events until it ends
 
     counts = {
         "selected": len(event_ids), "processed": 0, "failed": 0, "busy": 0,

@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from selecta.admin.state import DbWorkControls
 from selecta.billing.plans import validate_catalogue
 from selecta.flags.rules import RulesCache
 from selecta.persistence import make_engine
@@ -69,6 +70,7 @@ def create_gateway_app(*, engine: Engine | None = None) -> FastAPI:
         entitlements=cloud_ports.CloudJobEntitlements(engine),
         flags=cloud_ports.CloudJobFlags(engine, rules),
         verifier=cloud_ports.R2OutputVerifier(),
+        controls=DbWorkControls(),
     )
     app.state.job_store = store
     gateway_api.install_routes(

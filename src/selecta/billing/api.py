@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
+from selecta.admin import state as emergency_state
 from selecta.billing import plans, stripe_sync
 from selecta.billing.schema import checkout_consents, stripe_customers
 from selecta.billing.stripe_sync import PricePlan, parse_price_map
@@ -251,8 +252,13 @@ def install_routes(
             ) from error
         with transaction(engine) as conn:
             stored = store_event(conn, event)
+            held = emergency_state.load(conn).billing_safe_mode
         if stored.status == "ignored" or stored.status == "processed":
             return {"received": True, "duplicate": not stored.stored, "status": stored.status}
+        if held:
+            # Billing safe mode: the event is stored and maintenance applies it once safe mode
+            # ends, so Stripe never needs to resend it.
+            return {"received": True, "duplicate": not stored.stored, "status": "held"}
         price_map = _checkout_prices()
         with transaction(engine) as conn:
             result = process_event(

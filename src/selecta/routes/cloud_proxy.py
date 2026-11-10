@@ -12,6 +12,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
+from selecta.admin.state import DbWorkControls
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 from selecta.scheduling.policy import Lane
@@ -33,7 +34,9 @@ def install_routes(
     principal_for: Callable[..., Any], object_client_factory: Callable[[], ObjectClient],
     buckets: Buckets,
 ) -> None:
-    store = JobStore(engine, entitlements=CloudJobEntitlements(engine))
+    store = JobStore(
+        engine, entitlements=CloudJobEntitlements(engine), controls=DbWorkControls()
+    )
 
     def prepare(asset_id: str, request: Request, claims: Claims, *, submit: bool):
         require_id(asset_id, {"code": "asset_not_found"})

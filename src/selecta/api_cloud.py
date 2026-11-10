@@ -33,6 +33,7 @@ from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from selecta import flags
+from selecta.admin import guard as admin_guard
 from selecta.admin import routes as admin_routes
 from selecta.admin import routes_controls as admin_control_routes
 from selecta.admin.state import EmergencyCache
@@ -281,6 +282,9 @@ def create_cloud_app(
     app.state.flag_rules = rule_cache
     flags.effective()
     flag_guard.install(app, strict=True)
+    emergency_cache = EmergencyCache(engine)
+    app.state.emergency_controls = emergency_cache
+    admin_guard.install(app, emergency_cache)
     app.add_middleware(RequestMethodMiddleware)
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
@@ -440,6 +444,8 @@ def create_cloud_app(
                 "email": principal.user.email,
                 "email_verified": principal.user.email_verified,
                 "suspended": principal.user.suspended_at is not None,
+                # Staff see a link to the admin console; the console itself checks everything.
+                "staff": principal.is_staff,
                 "timezone": principal.user.timezone,
             },
             "workspace": {
@@ -613,8 +619,6 @@ def create_cloud_app(
         rules=rule_cache, allowed_origins=settings.allowed_origins, ports=room_ports,
     )
 
-    emergency_cache = EmergencyCache(engine)
-    app.state.emergency_controls = emergency_cache
     admin_routes.install_routes(
         app,
         engine=engine,

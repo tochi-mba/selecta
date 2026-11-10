@@ -39,6 +39,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 from starlette.concurrency import run_in_threadpool
 
+from selecta.admin import state as emergency_state
 from selecta.authz.errors import LastOwner
 from selecta.billing import plans
 from selecta.identity import accounts, privileged, sessions, workos_events, workos_signature
@@ -170,6 +171,16 @@ def install_routes(
         with transaction(engine) as conn:
             if accounts.is_revoked(conn, claims):
                 raise refusal(accounts.SessionRevoked("this session was signed out"))
+            if (
+                emergency_state.load(conn).signups_disabled
+                and accounts.user_by_subject(conn, claims.subject) is None
+            ):
+                # The `signups.disabled` emergency control: existing accounts still finish.
+                raise HTTPException(
+                    status_code=403,
+                    detail={"code": "signups_closed",
+                            "message": "New accounts are paused for a short while."},
+                )
             try:
                 provisioned = accounts.provision(
                     conn, claims, age_confirmed=True, timezone=body.timezone, identity=identity

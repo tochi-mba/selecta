@@ -38,6 +38,7 @@ Everything lives in `src/selecta/`. The audio engine predates the cloud work and
 | `billing/` | Plan catalogue, Stripe client, webhooks, entitlement snapshots | ADR-0402, ADR-0403 |
 | `identity/` | AuthKit tokens, users, workspaces, sessions, account deletion | ADR-0400, ADR-0412 |
 | `authz/` | Permissions, staff roles, scopes, delayed dangerous actions, the audit log | ADR-0401 |
+| `admin/` | The admin console API: audited commands, read models with freshness, emergency controls, the Flags page service, takedowns, platform alerts | ADR-0408, ADR-0410, ADR-0413 |
 | `ai/` | The Lucy gateway: model routing per plan, allowances, spend guards, pinned runs | ADR-0404 |
 | `playback/` | Devices and the one playback session per account | ADR-0415 |
 | `rooms/` | Rooms: codes, guests, requests, votes, moderation, display pairing | ADR-0416 |

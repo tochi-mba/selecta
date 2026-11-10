@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.engine import Connection, Engine
 
+from selecta.admin import state as emergency_state
 from selecta.billing import plans, stripe_sync
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
@@ -222,6 +223,17 @@ def install_routes(
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         return principal.workspace.id
 
+    def refuse_if_restricted(workspace_id: str) -> None:
+        """Staff suspended this workspace's uploads (the repeat-infringer policy, §12.3)."""
+        with transaction(engine, workspace_id) as conn:
+            restricted = emergency_state.uploads_restricted(conn, workspace_id)
+        if restricted:
+            raise HTTPException(
+                status_code=403,
+                detail={"code": "uploads_restricted",
+                        "message": "Uploads are suspended for this account."},
+            )
+
     def map_error(error: Exception) -> HTTPException:
         if isinstance(error, SessionNotFound):
             return HTTPException(status_code=404, detail=dict(UPLOAD_NOT_FOUND))
@@ -242,6 +254,7 @@ def install_routes(
         claims: Claims = Depends(current_claims),
     ):
         workspace_id = workspace(request, claims)
+        refuse_if_restricted(workspace_id)
         try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
@@ -310,6 +323,7 @@ def install_routes(
     ):
         require_id(session_id, UPLOAD_NOT_FOUND)
         workspace_id = workspace(request, claims)
+        refuse_if_restricted(workspace_id)
         try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:

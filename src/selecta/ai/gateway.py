@@ -28,6 +28,7 @@ from urllib.parse import urlsplit
 
 from sqlalchemy.engine import Connection
 
+from selecta.admin import state as emergency_state
 from selecta.ai.allowance import (
     bucket_for,
     classes_from,
@@ -40,6 +41,7 @@ from selecta.ai.allowance import (
 from selecta.ai.registry import (
     BUILTIN_ID,
     Deployment,
+    DeploymentStatus,
     Provider,
     RequestClass,
     RoutingVersion,
@@ -204,6 +206,9 @@ def plan_turn(
     health = health or AlwaysHealthy()
     policy = policy or PlatformPolicy.from_env()
     now = db_now(conn)
+    controls = emergency_state.load(conn)
+    if controls.lucy_disabled:
+        raise TurnRefused("lucy_disabled", "Lucy is paused for a short while.")
     month = month_key(now, timezone)
     tier_limits = TIER_LIMITS[tier]
     run_id = new_id()
@@ -215,6 +220,11 @@ def plan_turn(
         raise TurnRefused("busy", "Lucy is still answering your last message.")
 
     deployments = load_deployments(conn)
+    for deployment_id in controls.disabled_deployments() & set(deployments) - {BUILTIN_ID}:
+        # The `lucy.deployment_disabled` emergency control: routing falls back past it.
+        deployments[deployment_id] = replace(
+            deployments[deployment_id], status=DeploymentStatus.DISABLED
+        )
     routing = active_routing(conn)
     spent = month_cost(conn, workspace_id, month)
     chosen: RoutedDeployment | None = None
