@@ -192,3 +192,28 @@ def test_local_api_health_route_is_lightweight(tmp_path):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json() == {"service": "selecta-local", "status": "ok"}
+
+
+def test_isolated_mode_skips_reusing_the_personal_data(launcher, monkeypatch):
+    started = []
+    monkeypatch.setattr(launcher, "require_pnpm", lambda: "pnpm")
+    monkeypatch.setattr(launcher, "install_site_tools", lambda _pnpm: None)
+    monkeypatch.setattr(launcher.shutil, "which", lambda _name: "ffmpeg")
+    monkeypatch.setattr(launcher, "free_port", lambda port: port)
+    monkeypatch.setattr(
+        launcher, "start_service",
+        lambda name, command, cwd, env: (
+            started.append((name, env))
+            or launcher.Service(name, SimpleNamespace(pid=24, poll=lambda: None))
+        ),
+    )
+    monkeypatch.setattr(launcher, "wait_until_ready", lambda *_a, **_kw: None)
+    monkeypatch.setattr(launcher, "stop", lambda _s: None)
+    options = argparse.Namespace(
+        api_port=8733, site_port=5173, reuse_server=False,
+        no_browser=True, check=True, verbose=False, startup_timeout=1, isolated=True,
+    )
+    assert launcher.run(options) == 0
+    env = started[0][1]
+    assert env["SELECTA_HOME"] == str(ROOT / ".cache" / "selecta-dev")
+    assert env["SELECTA_DEV_ISOLATED"] == "1"

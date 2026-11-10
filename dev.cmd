@@ -130,7 +130,18 @@ def doctor() -> int:
 def install_site_tools(pnpm: str) -> None:
     """pnpm install is incremental and verifies package.json against the lockfile."""
     command = [pnpm, "install", "--frozen-lockfile", "--prefer-offline"]
-    say("INSTALL", "Checking website dependencies (pnpm install --frozen-lockfile)...")
+    installed = WEB / "node_modules" / ".modules.yaml"
+    vite_bin = WEB / "node_modules" / ".bin" / ("vite.cmd" if os.name == "nt" else "vite")
+    lock = WEB / "pnpm-lock.yaml"
+    manifest = WEB / "package.json"
+    if (
+        installed.exists()
+        and vite_bin.exists()
+        and installed.stat().st_mtime >= max(lock.stat().st_mtime, manifest.stat().st_mtime)
+    ):
+        say("CACHE", "Website dependencies unchanged; skipping pnpm install.")
+        return
+    say("INSTALL", "Installing website dependencies (pnpm --frozen-lockfile)...")
     result = subprocess.run(command, cwd=WEB, check=False)
     if result.returncode:
         raise StartupError(
@@ -251,10 +262,15 @@ def probe(url: str, kind: str) -> Probe:
     request = urllib.request.Request(url, headers={"Accept": "application/json, text/html"})
     try:
         with _LOCAL_HTTP.open(request, timeout=1.5) as response:
-            body = response.read(8192).decode("utf-8", "replace")
+            limit = 2 * 1024 * 1024 if kind == "status" else 8192
+            data = response.read(limit + 1)
+            if len(data) > limit:
+                return Probe(False, f"{kind} response exceeds {limit} bytes")
+            body = data.decode("utf-8", "replace")
             status = response.status
     except urllib.error.HTTPError as error:
-        return Probe(False, f"HTTP {error.code} at {url}")
+        details = error.read(160).decode("utf-8", "replace").replace("\n", " ")
+        return Probe(False, f"HTTP {error.code} at {url}; {details[:160]}")
     except (OSError, urllib.error.URLError, ValueError) as error:
         return Probe(False, f"{type(error).__name__}: {error}")
     if status != 200:
@@ -343,18 +359,19 @@ def wait_until_ready(
                     say("WAIT", f"  {name}: {result.detail}")
             for service in services:
                 say("PROC", f"  {format_service_state(service, now)}")
-            if not health.ok:
-                say(
-                    "HINT",
-                    "If API modules are still loading, see the [BOOT] output. "
-                    "If migration is running, leave it uninterrupted; no data is deleted.",
-                )
-            elif not status_result.ok:
-                say(
-                    "HINT",
-                    "The HTTP server is alive but /api/status is not ready. "
-                    "Check the data-folder permissions, SQLite locks and API logs.",
-                )
+            if int(now - start_time) % 30 < REPORT_SECONDS:
+                if not health.ok:
+                    say(
+                        "HINT",
+                        "Check [API] [BOOT] for imports or legacy migration; "
+                        "the process may still be initializing.",
+                    )
+                elif not status_result.ok:
+                    say(
+                        "HINT",
+                        "API HTTP health is OK but library status is not. "
+                        "Check data-folder permissions, SQLite locks and API logs.",
+                    )
             last_report = now
         time.sleep(0.5)
     missing = ", ".join(name for name, result in last_results.items() if not result.ok)
@@ -404,8 +421,12 @@ def run(options: argparse.Namespace) -> int:
                 "ffmpeg is missing: the site can start, but music analysis/playback will not work. "
                 "Install it from https://ffmpeg.org/download.html",
             )
-        home = data_home()
+        if options.isolated and options.reuse_server:
+            raise StartupError("--isolated and --reuse-server cannot be used together.")
+        home = ROOT / ".cache" / "selecta-dev" if options.isolated else data_home()
         say("INFO", f"Data folder: {home}")
+        if options.isolated:
+            say("INFO", "Isolated mode: no personal library or legacy migration is touched.")
         # Pin the resolved path: the Python server runs from ROOT even if the
         # launcher was invoked from a different current working directory.
         local_env = {
@@ -413,6 +434,7 @@ def run(options: argparse.Namespace) -> int:
             "SELECTA_MODE": "local",
             "SELECTA_HOME": str(home),
             "SELECTA_DEV_STARTUP": "1",
+            "SELECTA_DEV_ISOLATED": "1" if options.isolated else "0",
         }
         phase(2, 4, "Preparing browser dependencies")
         install_site_tools(pnpm)
@@ -479,7 +501,16 @@ def run(options: argparse.Namespace) -> int:
         while True:
             check_exits(services)
             if time.monotonic() - last_heartbeat >= HEARTBEAT_SECONDS:
-                say("RUNNING", f"API and site processes alive; site: {site_url}")
+                api_state = probe(f"{api_url}api/health", "health")
+                proxy_state = probe(f"{site_url}api/health", "health")
+                if api_state.ok and proxy_state.ok:
+                    say("RUNNING", f"API and website proxy healthy; site: {site_url}")
+                else:
+                    say(
+                        "WARNING",
+                        f"Runtime health failure: API={api_state.detail}; "
+                        f"proxy={proxy_state.detail}. Check the live service logs above.",
+                    )
                 last_heartbeat = time.monotonic()
             time.sleep(1)
     except KeyboardInterrupt:
@@ -546,6 +577,10 @@ def main() -> int:
         help="maximum seconds to wait for all API/site/proxy/data health checks",
     )
     parser.add_argument("--verbose", action="store_true", help="show detailed Uvicorn logs")
+    parser.add_argument(
+        "--isolated", action="store_true",
+        help="use a separate development-only library, without legacy data migration",
+    )
     options = parser.parse_args()
     if options.startup_timeout <= 0:
         parser.error("--startup-timeout must be positive")

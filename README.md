@@ -121,6 +121,9 @@ The existing server is never stopped when this launcher exits.
 | `dev.cmd doctor` | Show Python, uv, Node, pnpm, ffmpeg, local mode and data configuration |
 | `dev.cmd --api-port 8740 --site-port 5180` | Request different starting ports |
 | `dev.cmd --reuse-server` | Explicitly reuse an existing API on port 8733 |
+| `dev.cmd --isolated` | Use a separate development-only library without touching your existing library or migrating legacy data |
+| `dev.cmd --verbose` | Show detailed Uvicorn logs |
+| `dev.cmd --startup-timeout 300` | Allow more time for first startup or slow data migration |
 | `dev.cmd test` | Run local lint, Python, TypeScript, web unit/build and Edge browser checks |
 
 For non-Windows systems, replace the `dev.cmd` prefix with `uv run python -x dev.cmd`.

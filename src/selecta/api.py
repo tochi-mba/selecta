@@ -270,11 +270,14 @@ def serve() -> FastAPI:
             print(f"[BOOT] {message}", flush=True)
 
     settings = load_settings()
-    progress("Checking existing Selecta data and prior installation folders...")
-    if trace:
-        gather_if_needed(settings.home, progress=progress)
+    if trace and os.environ.get("SELECTA_DEV_ISOLATED") == "1":
+        progress("Isolated development data: skipping legacy folder migration.")
     else:
-        gather_if_needed(settings.home)
+        progress("Checking existing Selecta data and prior installation folders...")
+        if trace:
+            gather_if_needed(settings.home, progress=progress)
+        else:
+            gather_if_needed(settings.home)
     progress(f"Data check finished after {time.monotonic() - started:.1f}s.")
     progress("Preparing routes, SQLite connections and background workers...")
     application = create_app(settings=settings, prepare_links=True)
