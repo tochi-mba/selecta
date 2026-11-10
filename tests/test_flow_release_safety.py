@@ -14,7 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from mix_helpers import ANALYSIS_VERSION
 
-from selecta import db, flags
+from selecta import db, flags, mix
 from selecta.api import create_app
 from selecta.config import Settings
 
@@ -74,8 +74,11 @@ def test_switching_every_optional_feature_off_and_back_changes_no_stored_music_o
     client = TestClient(create_app(home, home.home / "no-web"), headers={"host": "127.0.0.1"})
     made = client.post("/api/drafts", json={"name": "Saturday"}).json()
     draft = made.get("id") or client.get("/api/drafts").json()["drafts"][0]["id"]
-    for song_id in (4, 5):
-        client.post(f"/api/mix/songs?draft={draft}", json={"song_id": song_id}).raise_for_status()
+    # Persist the mix directly: the synthetic fixture audio is intentionally
+    # not decodable, and this test is about feature rollback, not decoding.
+    with db.connect(home.db_path) as conn:
+        for song_id in (4, 5):
+            mix.add_song(conn, song_id, draft=draft)
     client.post("/api/requests", json={"song_id": 6}).raise_for_status()
     before = _snapshot(client, home)
     assert before["draft_songs"] == [4, 5] and before["requests"]

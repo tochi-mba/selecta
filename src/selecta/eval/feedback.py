@@ -117,6 +117,13 @@ def _bucket_gap(gap: float) -> str:
 def patterns(rated: list[Rated]) -> dict[str, dict[str, tuple[int, int]]]:
     """Good and bad counts for each thing worth comparing. It reports, and never fills a gap."""
     tables: dict[str, dict[str, list[int]]] = defaultdict(lambda: defaultdict(lambda: [0, 0]))
+    # Preserve the response contract even before any ratings exist: categories can
+    # have no rows, but old clients still expect all category keys.
+    for category in (
+        "move", "key distance", "beat grid", "audit",
+        "overlap length", "overlap tempo gap", "phrase roll tempo gap",
+    ):
+        tables[category]
 
     def note(table: str, row: str, item: Rated) -> None:
         tables[table][row][0 if item.good else 1] += 1

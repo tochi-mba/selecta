@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictInt
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE
@@ -111,7 +111,7 @@ class FreshFiles(StaticFiles):
 
 class SteerRequest(BaseModel):
     action: str
-    value: str | int | list[int] | None = None
+    value: str | int | list[StrictInt] | None = None
 
 
 class StorageRequest(BaseModel):

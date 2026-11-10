@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from mix_helpers import _song_row, _vibe_library
 
-from selecta import db
+from selecta import db, mix
 from selecta.api import create_app
 from selecta.config import Settings
 from selecta.planner.vibes import BY_KEY, build_vibe
@@ -76,7 +76,9 @@ def test_an_invalid_destination_is_refused_and_the_saved_one_stays(home, tmp_pat
 
 def test_a_destination_that_has_left_the_library_stops_the_build_with_a_reason(home, tmp_path):
     client = _app(home, tmp_path)
-    client.post("/api/mix/songs", json={"song_id": 1})
+    # This test concerns stale steering, not audio-file decoding in the add API.
+    with db.connect(home.db_path) as conn:
+        mix.add_song(conn, 1)
     client.post("/api/steer", json={"action": "take_me_to", "value": 999})
     from unittest import mock
 

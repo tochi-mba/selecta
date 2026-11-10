@@ -23,7 +23,7 @@ def test_folder_preflight_keeps_existing_library_unchanged(tmp_path):
     music.mkdir()
     conn = db.connect(settings.db_path)
     try:
-        assert check_folder(conn, str(music))["kind"] == "no_audio"
+        assert check_folder(conn, str(music))["kind"] == "empty"
         (music / "song.flac").write_bytes(b"not decoded during preflight")
         answer = check_folder(conn, str(music))
         assert answer["ok"] is True

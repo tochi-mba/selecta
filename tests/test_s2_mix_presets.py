@@ -10,6 +10,7 @@ from selecta.planner.vibes import (
     VIBES,
     build_vibe,
     candidate_vibes,
+    describe,
     eligible,
     resolve_vibe,
 )
@@ -19,9 +20,9 @@ def _order(client) -> list[int]:  # noqa: F811
     return [item["song_id"] for item in client.get("/api/mix").json()["mix"]]
 
 
-def test_all_sixteen_presets_exist_and_each_resolves_by_its_own_key():
-    assert len(VIBES) == 16
-    assert len({vibe.key for vibe in VIBES}) == 16
+def test_all_current_presets_have_unique_keys_and_are_resolvable():
+    assert len(VIBES) == 26
+    assert len({vibe.key for vibe in VIBES}) == len(VIBES)
     for vibe in VIBES:
         resolved = resolve_vibe(vibe.key)
         assert resolved is not None and resolved.key == vibe.key
@@ -34,8 +35,15 @@ def test_every_preset_builds_only_from_its_own_songs_or_is_honestly_unavailable(
     assert vibe is not None
     fitting = {song.id for song in eligible(vibe, songs, traits)}
     if len(fitting) < MIN_SONGS:
-        # Not offered: the card would be a lie, and the route refuses it (see the sparse test).
-        assert key not in {card.key for card in candidate_vibes(songs, traits)}
+        # A preview may show a disabled idea, but must honestly disclose how
+        # many more eligible songs it needs instead of claiming it can play.
+        card = describe(vibe, songs, traits)
+        assert card["ready"] is False
+        assert card["songs"] == len(fitting)
+        assert card["needs"] == MIN_SONGS - len(fitting)
+        for offered in candidate_vibes(songs, traits):
+            if offered.key == key:
+                assert describe(offered, songs, traits)["ready"] is False
         return
     planned, seams = build_vibe(vibe, songs, traits, {}, MIN_SONGS, seed=1)
     ids = [item.song.id for item in planned]
@@ -103,11 +111,16 @@ def test_a_second_click_on_a_changed_mix_is_refused_without_replacing_it(
         "selecta.planner.vibes.build_vibe",
         lambda *_args, **_kwargs: ([Planned(2), Planned(1)], {}),
     )
-    first = client.post("/api/vibes/pick/build", headers={"x-mix-order": "1"})
+    original_order = ",".join(str(song) for song in _order(client))
+    first = client.post(
+        "/api/vibes/pick/build", headers={"x-mix-order": original_order}
+    )
     assert first.status_code == 200, first.text
     assert _order(client) == [2, 1]
     # The second click still carries the order seen before the first one landed.
-    second = client.post("/api/vibes/pick/build", headers={"x-mix-order": "1"})
+    second = client.post(
+        "/api/vibes/pick/build", headers={"x-mix-order": original_order}
+    )
     assert second.status_code == 409
     assert second.json()["code"] == "mix_changed"
     assert _order(client) == [2, 1]
