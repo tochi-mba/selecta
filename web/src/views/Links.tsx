@@ -1,5 +1,5 @@
 import { flagOn } from '../flags';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
@@ -154,8 +154,10 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audition, following?.id]);
 
-  // a new pair starts by itself once someone's listening
-  useEffect(() => {
+  // Clear the previous pair before the new controls can be clicked.
+  // A passive effect can run after the listener presses Hear on the newly
+  // displayed pair and accidentally clear its pending request.
+  useLayoutEffect(() => {
     setGetting(false);
     setAudition(null);
     stop();
