@@ -22,7 +22,7 @@ function listen(mix: MixItem[], nextReady: boolean) {
 
 describe('Up Next only promises what is ready', () => {
   it('a transition still being made is planned, with what happens if it is late', async () => {
-    listen(songs(seam('pending', 'a')), false);
+    listen(songs(seam('rendering', 'a')), false);
     const next = screen.getByText('Up Next').closest('section')!;
     expect(within(next).getByText(/It hasn’t been made yet, so what plays can still change/)).toBeInTheDocument();
     expect(within(next).getByText(/this song plays on and the next one fades in/)).toBeInTheDocument();

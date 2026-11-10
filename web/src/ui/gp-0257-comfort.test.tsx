@@ -9,7 +9,7 @@ import { clearToasts, setToastsQuiet, showProblem, showToast, Toaster } from './
 /** GP-0257: a long session stays calm. Routine news is said once, in Activity if not on screen;
  * problems and anything with an Undo always reach the listener. */
 
-const SRC = join(__dirname, '..');
+const SRC = join(process.cwd(), 'src');
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);

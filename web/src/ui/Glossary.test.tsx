@@ -9,7 +9,7 @@ import { GLOSSARY, glossaryTerm, searchGlossary } from './glossaryTerms';
 
 /** GP-0256: contextual music terms. Words only: reading them never plays, changes or saves. */
 
-const SRC = join(__dirname, '..');
+const SRC = join(process.cwd(), 'src');
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);

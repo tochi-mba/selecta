@@ -74,7 +74,7 @@ describe('blind listening study, start to finish', () => {
     const gate = new Promise<void>((resolve) => { release = resolve; });
     const calls = fakeBackend({ 'GET /listening': [{ id: 't1' }, { id: 't2' }], 'POST /listening/t1/response': {} });
     const fetcher = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
-    const answer = fetcher.getMockImplementation()!;
+    const answer = fetcher.getMockImplementation() as typeof fetch;
     fetcher.mockImplementation(async (url: string, init?: RequestInit) => {
       if (init?.method === 'POST') await gate;
       return answer(url, init);

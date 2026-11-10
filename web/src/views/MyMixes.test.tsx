@@ -29,7 +29,8 @@ function show(stored: unknown, server: { list: DraftList; order: number[] | 'gon
   const props = { openDraft: vi.fn(), playDraft: vi.fn(async () => {}), setView: vi.fn(), notify: vi.fn() };
   render(
     <MyMixes mix={[]} mixName="Current" now={player.state} player={player} canUndo={false}
-      refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}} status={undefined as never} {...props} />,
+      refreshMix={() => {}} setMixData={() => {}} refreshStatus={() => {}} status={undefined as never}
+      stage={false} toggleStage={() => {}} {...props} />,
   );
   return { calls, togglePause, playFrom, ...props };
 }

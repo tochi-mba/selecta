@@ -62,7 +62,7 @@ describe('the playing bar on a phone (SC-0415-05)', () => {
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
       expect(request).toHaveBeenCalledWith('screen');
     } finally {
-      delete (navigator as Navigator & { wakeLock?: unknown }).wakeLock;
+      Reflect.deleteProperty(navigator, 'wakeLock');
     }
   });
 });

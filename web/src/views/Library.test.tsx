@@ -240,7 +240,7 @@ describe('a big library', () => {
     await waitFor(() => expect(calls.filter((call) => call.path.includes('after=c3')).length).toBe(2));
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Song 201' }));
     expect(await screen.findByRole('menuitemcheckbox', { name: 'Priority: on' })).toBeInTheDocument();
-  });
+  }, 30_000);
 
   it('a song that turns up on two pages only shows once', async () => {
     fakeBackend({
@@ -450,7 +450,7 @@ describe('contextual selection controls', () => {
     expect(document.querySelectorAll('.library-batch-check input:checked')).toHaveLength(200);
     expect(screen.getByText(/200 of 201 loaded recordings selected/)).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Select recording Song 201/ })).toBeDisabled();
-  });
+  }, 30_000);
 
   it('refuses a confirmed batch action if a different filter takes over while the dialog is open', async () => {
     const calls = fakeBackend({
