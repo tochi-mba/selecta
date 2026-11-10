@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
 import re
 import threading
+import time
 from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
@@ -65,6 +67,11 @@ def create_app(
             raise
 
     app = FastAPI(title="Selecta", docs_url="/api/docs")
+
+    @app.get("/api/health", include_in_schema=False)
+    def health() -> dict[str, str]:
+        """A cheap local readiness probe: no SQLite, models, cache or render work."""
+        return {"service": "selecta-local", "status": "ok"}
 
     store = SeamStore(settings)
 
@@ -255,5 +262,21 @@ def serve() -> FastAPI:
 
     from selecta.homes import gather_if_needed
 
-    gather_if_needed(load_settings().home)
-    return create_app(prepare_links=True)
+    trace = os.environ.get("SELECTA_DEV_STARTUP") == "1"
+    started = time.monotonic()
+
+    def progress(message: str) -> None:
+        if trace:
+            print(f"[BOOT] {message}", flush=True)
+
+    settings = load_settings()
+    progress("Checking existing Selecta data and prior installation folders...")
+    if trace:
+        gather_if_needed(settings.home, progress=progress)
+    else:
+        gather_if_needed(settings.home)
+    progress(f"Data check finished after {time.monotonic() - started:.1f}s.")
+    progress("Preparing routes, SQLite connections and background workers...")
+    application = create_app(settings=settings, prepare_links=True)
+    progress(f"API factory completed after {time.monotonic() - started:.1f}s.")
+    return application
