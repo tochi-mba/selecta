@@ -81,7 +81,7 @@ def test_a_person_can_overrule_the_filter_and_it_survives_a_rescan(tmp_path):
 
 def test_same_song_in_two_folders_keeps_one_copy(tmp_path):
     root = tmp_path / "music"
-    _song(root / "Chart A" / "a.flac", "Big Song (Radio Edit)", artist="Star feat. Guest")
+    _song(root / "Chart A" / "a.flac", "Big Song (Official Audio)", artist="Star feat. Guest")
     _song(root / "Chart B" / "b.flac", "Big Song", artist="Star")
     _song(root / "Chart B" / "c.flac", "Big Song", artist="Star", seconds=200.0)
 
@@ -94,7 +94,11 @@ def test_same_song_in_two_folders_keeps_one_copy(tmp_path):
 
 def test_identity_ignores_noise_but_not_the_song():
     base = identity("Star", "Big Song")
-    assert identity("Star feat. Guest", "Big Song (Remastered 2011)") == base
+    assert identity("Star feat. Guest", "Big Song (Official Audio)") == base
+    assert identity("Star", "Big Song [Lyric Video]") == base
+    # Since 2e6a045 a different edition is a different recording, never a duplicate.
+    for edition in ("Remastered 2011", "Radio Edit", "Live", "Club Mix"):
+        assert identity("Star", f"Big Song ({edition})") != base
     assert identity("STAR & Friend", "Big Song - feat. Someone") != ""
     assert identity("Star", "Another Song") != base
 
