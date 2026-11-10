@@ -27,7 +27,7 @@ ADJECTIVES = (
 )  # fmt: skip
 
 ANIMALS = (
-    "Alpaca", "Axolotl", "Badger", "Bear", "Beaver", "Bee",
+    "Alpaca", "Axolotl", "Badger", "Bear", "Bee",
     "Bison", "Bluebird", "Bumblebee", "Butterfly", "Camel",
     "Canary", "Capybara", "Cat", "Chameleon", "Chipmunk",
     "Crane", "Deer", "Dolphin", "Dove", "Dragonfly", "Duck",
