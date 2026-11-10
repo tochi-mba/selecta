@@ -11,7 +11,7 @@ describe('Download my data', () => {
   it('fetches the export with the signed-in token and saves it as a ZIP', async () => {
     const clicked: string[] = [];
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function click(this: HTMLAnchorElement) { clicked.push(`${this.download} ${this.href}`); });
-    const fetchSpy = vi.fn(async () => new Response(new Blob(['PK zip']), { status: 200, headers: { 'content-type': 'application/zip' } }));
+    const fetchSpy = vi.fn(async () => new Response(new TextEncoder().encode('PK zip'), { status: 200, headers: { 'content-type': 'application/zip' } }));
     const size = await downloadExport('tok', 'ws-1', fetchSpy as unknown as typeof fetch);
     expect(size).toBeGreaterThan(0);
     const [url, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
@@ -23,7 +23,7 @@ describe('Download my data', () => {
 
   it('says what the archive holds once it has downloaded', async () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(new Blob(['zip']), { status: 200 })));
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(new TextEncoder().encode('zip'), { status: 200 })));
     render(<AccountData token={async () => 'tok'} workspaceId="ws-1" />);
     await userEvent.click(screen.getByRole('button', { name: 'Download my data' }));
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('original files, settings.json and mixes.json'));

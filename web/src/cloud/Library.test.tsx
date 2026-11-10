@@ -43,7 +43,7 @@ async function listenTo(name: string) {
 describe('Cloud library playback', () => {
   it('plays a run from the chosen song and buffers the next one once this one plays', async () => {
     const { api } = fakeApi();
-    const fetchSpy = vi.fn(async () => new Response(new Blob(['audio']), { status: 200 }));
+    const fetchSpy = vi.fn(async () => new Response(new TextEncoder().encode('audio'), { status: 200 }));
     vi.stubGlobal('fetch', fetchSpy);
     render(<LibraryPanel api={api} workspaceId="ws" setError={() => {}} refreshAccount={async () => {}} go={() => {}} />);
     await listenTo('First Song');
