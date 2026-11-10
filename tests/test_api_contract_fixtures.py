@@ -43,7 +43,7 @@ READS = [
     "/api/memory/ratings",
     "/api/links",
     "/api/vibes",
-    "/api/listening",
+    "/api/listening?study=contract",
 ]
 
 
