@@ -250,3 +250,159 @@ def test_the_child_answers_one_json_line(tmp_path):
     path = GOOD["wav"](tmp_path / "song.wav")
     answer = run_child(path, DEFAULT_LIMITS)
     assert json.loads(json.dumps(answer))["format"] == "wav"
+
+
+# -- the child's checks, run in this process (so coverage sees them) ------------------------------
+
+
+@pytest.mark.parametrize("name", list(HOSTILE))
+def test_each_hostile_file_is_refused_by_the_checks_themselves(tmp_path, name):
+    build, code = HOSTILE[name]
+    path = build(tmp_path / "upload.bin")
+    with pytest.raises(Rejected) as refused:
+        audio_check.inspect(str(path), DEFAULT_LIMITS)
+    assert refused.value.code == code
+
+
+@pytest.mark.parametrize("fmt", list(GOOD))
+def test_the_checks_keep_real_files(tmp_path, fmt):
+    found = audio_check.inspect(str(GOOD[fmt](tmp_path / "song.bin")), DEFAULT_LIMITS)
+    assert found["format"] == fmt and found["duration_s"] == pytest.approx(3.0, abs=0.1)
+
+
+@pytest.mark.skipif(not has_ffmpeg(), reason="needs ffmpeg to make and decode AAC")
+def test_the_checks_decode_m4a_with_ffmpeg(tmp_path):
+    found = audio_check.inspect(str(m4a(tmp_path / "song.m4a")), DEFAULT_LIMITS)
+    assert found["format"] == "m4a" and found["duration_s"] == pytest.approx(3.0, abs=0.2)
+
+
+def test_without_ffmpeg_an_m4a_cannot_be_checked(tmp_path, monkeypatch):
+    def missing(*_args, **_kwargs):
+        raise FileNotFoundError("ffmpeg")
+
+    monkeypatch.setattr(audio_check.subprocess, "Popen", missing)
+    budget = audio_check._Budget(1000, 3.0, 44_100, 1, DEFAULT_LIMITS)
+    with pytest.raises(Rejected) as refused:
+        audio_check._decode_ffmpeg(str(tmp_path / "song.m4a"), budget)
+    assert refused.value.code == "validation_failed"
+
+
+def test_a_file_over_the_size_cap_is_refused_unread(tmp_path):
+    path = GOOD["wav"](tmp_path / "song.wav")
+    with pytest.raises(Rejected) as refused:
+        audio_check.inspect(str(path), Limits(max_file_bytes=1024))
+    assert refused.value.code == "file_too_large"
+    with pytest.raises(Rejected) as refused:
+        probe_in_sandbox(path, Limits(max_file_bytes=1024))
+    assert refused.value.code == "file_too_large"
+
+
+def test_a_slow_decode_stops_at_the_deadline(tmp_path):
+    path = GOOD["flac"](tmp_path / "song.flac")
+    budget = audio_check._Budget(path.stat().st_size, 3.0, 44_100, 2, Limits(timeout_s=-1.0))
+    with pytest.raises(Rejected) as refused:
+        audio_check._decode_soundfile(str(path), budget)
+    assert refused.value.code == "validation_timeout"
+
+
+def test_a_decoder_that_disagrees_with_the_header_is_a_mismatch(tmp_path):
+    path = GOOD["wav"](tmp_path / "song.wav")
+    budget = audio_check._Budget(path.stat().st_size, 3.0, 48_000, 1, DEFAULT_LIMITS)
+    with pytest.raises(Rejected) as refused:
+        audio_check._decode_soundfile(str(path), budget)
+    assert refused.value.code == "format_mismatch"
+
+
+def test_a_reader_of_another_format_is_a_mismatch(tmp_path, monkeypatch):
+    found = type("FLAC", (), {"info": object()})()
+    monkeypatch.setattr("mutagen.File", lambda *_a, **_k: found)
+    with pytest.raises(Rejected) as refused:
+        audio_check._header(str(tmp_path / "x"), "mp3")
+    assert refused.value.code == "format_mismatch"
+
+
+def test_header_numbers_that_are_not_numbers_are_a_bad_header(tmp_path, monkeypatch):
+    info = type("Info", (), {"length": "forever", "sample_rate": 1, "channels": 1})()
+    found = type("MP3", (), {"info": info})()
+    monkeypatch.setattr("mutagen.File", lambda *_a, **_k: found)
+    with pytest.raises(Rejected) as refused:
+        audio_check._header(str(tmp_path / "x"), "mp3")
+    assert refused.value.code == "bad_header"
+
+
+@pytest.mark.parametrize(
+    ("head", "code"),
+    [
+        (b"RIFF\0\0\0\0WAVEjunk\4\0\0\0abcd", "corrupt"),  # no data chunk at all
+        (b"RIFF\0\0\0\0WAVEdata\4\0\0\0abcd", "bad_header"),  # data before any format
+    ],
+)
+def test_a_wav_without_its_chunks_is_refused(head, code):
+    with pytest.raises(Rejected) as refused:
+        audio_check._check_wav_claim(head, len(head), DEFAULT_LIMITS)
+    assert refused.value.code == code
+
+
+def test_an_infinite_length_is_a_bad_header():
+    with pytest.raises(Rejected) as refused:
+        audio_check._check_header("ogg", 100, float("inf"), 44_100, 2, 0, DEFAULT_LIMITS)
+    assert refused.value.code == "bad_header"
+
+
+def _main(monkeypatch, request: str) -> dict:
+    import io
+
+    out = io.StringIO()
+    monkeypatch.setattr(sys, "stdin", io.StringIO(request))
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(audio_check, "apply_limits", lambda _limits: {"RLIMIT_AS": 1})
+    assert audio_check.main() == 0
+    return json.loads(out.getvalue())
+
+
+def test_the_child_entry_point_answers_in_json(tmp_path, monkeypatch):
+    good = GOOD["wav"](tmp_path / "song.wav")
+    answer = _main(monkeypatch, json.dumps({"path": str(good), "limits": {"timeout_s": 30}}))
+    assert answer["ok"] is True and answer["format"] == "wav" and answer["rlimits"]
+    bad = HOSTILE["text renamed .flac"][0](tmp_path / "bad")
+    answer = _main(monkeypatch, json.dumps({"path": str(bad)}))
+    assert answer == {"ok": False, "code": "not_audio"}
+    assert _main(monkeypatch, "not json") == {"ok": False, "code": "corrupt"}
+
+
+def test_the_child_entry_point_turns_running_out_of_memory_into_a_refusal(tmp_path, monkeypatch):
+    def balloon(_path, _limits):
+        raise MemoryError
+
+    monkeypatch.setattr(audio_check, "inspect", balloon)
+    answer = _main(monkeypatch, json.dumps({"path": "x"}))
+    assert answer == {"ok": False, "code": "validation_failed"}
+
+
+def test_apply_limits_sets_every_cap_within_the_hard_limits(monkeypatch):
+    import types
+
+    calls: dict[int, tuple[int, int]] = {}
+    fake = types.SimpleNamespace(
+        RLIM_INFINITY=-1,
+        RLIMIT_AS=1,
+        RLIMIT_CPU=2,
+        RLIMIT_FSIZE=3,
+        RLIMIT_NOFILE=4,
+        getrlimit=lambda which: (0, 32 if which == 4 else -1),
+        setrlimit=lambda which, pair: calls.__setitem__(which, pair),
+    )
+    monkeypatch.setitem(sys.modules, "resource", fake)
+    applied = audio_check.apply_limits(Limits(timeout_s=10, memory_bytes=1 << 30))
+    assert applied == {
+        "RLIMIT_AS": 1 << 30,
+        "RLIMIT_CPU": 11,
+        "RLIMIT_FSIZE": 0,
+        "RLIMIT_NOFILE": 32,  # never above the hard limit already set
+    }
+    assert calls[1] == (1 << 30, 1 << 30) and 5 not in calls  # no RLIMIT_CORE on this fake
+
+
+def test_apply_limits_does_nothing_where_there_are_no_resource_limits(monkeypatch):
+    monkeypatch.setitem(sys.modules, "resource", None)
+    assert audio_check.apply_limits(DEFAULT_LIMITS) == {}
