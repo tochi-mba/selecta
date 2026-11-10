@@ -2,4 +2,3 @@ test-results/
 playwright-report/
 verify-tmp/
 dist-cloud-e2e/
-dist-rooms-e2e/

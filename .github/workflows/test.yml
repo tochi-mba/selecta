@@ -276,12 +276,71 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  cloud-browser:
+    # Every cloud browser test in Edge against the one cloud test server (tests/e2e_cloud_server.py):
+    # meters, over quota, checkout consent, upload resume, signed URL refresh, prefetch, export,
+    # the event-stream fallback, the cloud origin allowlist, Rooms, guests, displays and devices.
+    name: Cloud E2E (Linux)
+    needs: [lint, web]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: selecta
+          POSTGRES_PASSWORD: selecta
+          POSTGRES_DB: selecta_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U selecta -d selecta_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      CI: "true"
+      SELECTA_TEST_POSTGRES_URL: postgresql+psycopg://selecta:selecta@localhost:5432/selecta_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - name: Install Edge for Playwright
+        run: pnpm exec playwright install --with-deps msedge
+        working-directory: web
+      - name: Cloud browser tests, in Edge, muted
+        run: pnpm e2e:cloud
+        working-directory: web
+      - name: Keep failed cloud browser artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cloud-browser-test-results
+          path: web/test-results/cloud
+          if-no-files-found: ignore
+          retention-days: 7
+
   verify:
     # A canceled, missing or failing shard cannot yield a green verification.
     # Combined Python coverage, not a partial shard, must meet the original 70%.
     name: verify
     if: ${{ always() }}
-    needs: [workflows, lint, checklist-evidence, python, cloud, web, browser, flags]
+    needs: [workflows, lint, checklist-evidence, python, cloud, web, browser, flags, cloud-browser]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -295,8 +354,9 @@ jobs:
           BROWSER_RESULT: ${{ needs.browser.result }}
           FLAGS_RESULT: ${{ needs.flags.result }}
           CLOUD_RESULT: ${{ needs.cloud.result }}
+          CLOUD_BROWSER_RESULT: ${{ needs.cloud-browser.result }}
         run: |
-          echo "Workflows: $WORKFLOWS_RESULT; Lint: $LINT_RESULT; Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT"
+          echo "Workflows: $WORKFLOWS_RESULT; Lint: $LINT_RESULT; Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT; Cloud E2E: $CLOUD_BROWSER_RESULT"
           test "$WORKFLOWS_RESULT" = success
           test "$LINT_RESULT" = success
           test "$EVIDENCE_RESULT" = success
@@ -305,6 +365,7 @@ jobs:
           test "$BROWSER_RESULT" = success
           test "$FLAGS_RESULT" = success
           test "$CLOUD_RESULT" = success
+          test "$CLOUD_BROWSER_RESULT" = success
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false

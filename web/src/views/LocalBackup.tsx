@@ -1,5 +1,6 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { Action, Dialog } from '../ui/controls';
+import { words } from '../copy';
 
 type Preview = {
   token: string;
@@ -90,7 +91,7 @@ export function LocalBackup() {
         body: chosen,
       });
       setStatus((current) => ({ pending_restart: true, rollback_available: current?.rollback_available ?? false }));
-      setNotice('Restore prepared, not yet applied. Restart Selecta to activate it. Your current data is unchanged until then; the previous database is kept as a rollback copy.');
+      setNotice(words().restorePrepared);
       setChosen(null); setPreview(null);
     } catch (error) {
       setIssue((error as Error).message);

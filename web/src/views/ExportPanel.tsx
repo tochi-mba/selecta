@@ -8,6 +8,7 @@ import { mixReadiness } from '../state/readiness';
 import { cancelExport, isExportActive, startExport, useExports } from './exportStore';
 import { exportStage } from './ExportJobs';
 import { MixScope, useMixPath } from './mixScope';
+import { words } from '../copy';
 
 /** Is this job a file of the mix exactly as it is now? */
 function sameVersion(job: ExportJob, mix: MixItem[]): boolean {
@@ -69,7 +70,7 @@ export function ExportPanel(props: {
       // request is a new operation; only uncertain connection errors reuse it.
       if (error instanceof ApiError && error.status >= 400 && error.status < 500) operation.current = null;
       if (error instanceof ApiError && error.status === 404 && error.code === '') {
-        setProblem(error.message === 'Not Found' ? 'This running copy of Selecta can’t do this yet. Restart Selecta, then try again.' : error.message);
+        setProblem(error.message === 'Not Found' ? words().exportNeedsRestart : error.message);
       } else {
         setProblem((error as Error).message);
       }
@@ -124,7 +125,7 @@ export function ExportPanel(props: {
       )}
       {blocked && <p className="warn" role="alert">A transition would cut off the previous song before its handoff finishes. Adjust the transition timing in the editor before exporting this mix.</p>}
       {problem && <p className="warn" role="alert">{problem}</p>}
-      {unsupported && !problem && <p className="warn">This running copy of Selecta can’t do this yet. Restart Selecta, then try again.</p>}
+      {unsupported && !problem && <p className="warn">{words().exportNeedsRestart}</p>}
       {mine?.error && <p className="warn" role="alert">{mine.error}</p>}
       {changedSince && (
         <p className="hint" role="status">

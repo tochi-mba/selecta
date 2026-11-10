@@ -1,7 +1,7 @@
 .room-panel { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line, #3a362c); border-radius: 14px; background: var(--surface, #1c1a15); }
 .room-panel h2, .room-panel h3 { margin: 0; }
 .room-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
-.room-status, .room-muted, .room-code-label { color: var(--muted, #b9b4a6); }
+.room-status, .room-muted, .room-code-label { color: var(--text-soft); }
 .room-plan { font-size: 0.75em; border: 1px solid currentColor; border-radius: 999px; padding: 2px 8px; margin-left: 6px; }
 .room-share { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
 .room-qr { width: 180px; max-width: 100%; background: #fff; border-radius: 10px; padding: 6px; }

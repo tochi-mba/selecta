@@ -16,6 +16,7 @@ import { Listening } from './Listening';
 import { LocalBackup } from './LocalBackup';
 import { ViewProps } from './shared';
 import { Diagnostics, FoldersPanel, JobsPanel, MemoryPanel, NeedsYou, StoragePanel } from './WorkshopPanels';
+import { words } from '../copy';
 
 /** How this looks and behaves in this browser. Nothing here touches music, mixes or the server, so
  * any of it can be switched back, including the older navigation if the new one ever gets in the way. */
@@ -125,7 +126,7 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
                 : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
           </p>
           {estimates && estimateWords(status.eta?.accuracy) && <p className="hint">{estimateWords(status.eta?.accuracy)}</p>}
-          {estimates && <p className="hint">Times are estimates, from how long this PC has been taking. They’re never a promise.</p>}
+          {estimates && <p className="hint">{words().workshopEstimates}</p>}
           {flagOn('render.spare_time') && (
             <p className="hint">
               With nothing else to do, Selecta tries out the best transitions across your library, so they’re ready when you want them.

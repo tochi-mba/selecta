@@ -4,6 +4,7 @@ import { post, Status } from '../api';
 import { analysisWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Status as StatusMark } from '../ui/controls';
+import { words } from '../copy';
 
 /** Getting from nothing to a first mix takes three steps. Which one you're on comes from what the
  * server says is true, so it can't claim more than has happened. */
@@ -81,7 +82,7 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
       <details className="setup-explain">
         <summary>What’s happening to my songs?</summary>
         <dl>
-          <div><dt>Audio analysis</dt><dd>Measures each song’s tempo, key, beats and sections, on this PC. {left > 0 ? analysisWords(status.eta?.analysis) : ''}</dd></div>
+          <div><dt>Audio analysis</dt><dd>{words().setupAnalysis} {left > 0 ? analysisWords(status.eta?.analysis) : ''}</dd></div>
           {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>Artist, title, album and duration are sent to LRCLIB to find timed lyrics. Your audio stays here.</dd></div>}
           {flagOn('stems') && <div><dt>Stems</dt><dd>Separating voice, drums, bass and melody only happens later, for the transitions that need it.</dd></div>}
         </dl>

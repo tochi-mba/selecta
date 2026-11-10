@@ -15,6 +15,7 @@ import { VibeMotif } from '../ui/MusicObjects';
 import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
 import { ViewProps } from './shared';
+import { words } from '../copy';
 
 const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 
@@ -147,7 +148,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <h1 className="display">Checking your song readiness.</h1>
         <p className="lede">
           This running Selecta server hasn’t reported how many songs have the cues needed for mixes.
-          Restart Selecta to refresh this status. Audio analysis is complete for {counts.analysed};
+          {' '}{words().mixesRestartToRefresh} Audio analysis is complete for {counts.analysed};
           {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'}
         </p>
         <div className="row">

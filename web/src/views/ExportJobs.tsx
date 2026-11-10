@@ -4,6 +4,7 @@ import { length } from '../lib';
 import { LinkIfThere } from '../shell/PageLink';
 import { Action, Skeleton, Status, StatusKind } from '../ui/controls';
 import { cancelExport, isExportActive, refreshExports, useExports } from './exportStore';
+import { words } from '../copy';
 
 const STATES: Record<ExportJobState, { kind: StatusKind; words: string }> = {
   preparing: { kind: 'working', words: 'Preparing transitions' },
@@ -82,7 +83,7 @@ export function ExportJobs({ always = false }: { always?: boolean }) {
   const { jobs, stale, unsupported } = useExports();
   const [shown, setShown] = useState(12);
   if (unsupported) {
-    return always ? <section className="panel stack"><h2>Exports</h2><p className="hint">This running copy of Selecta doesn’t keep track of exports. Restart Selecta to get them.</p></section> : null;
+    return always ? <section className="panel stack"><h2>Exports</h2><p className="hint">{words().exportsNeedRestart}</p></section> : null;
   }
   if (!jobs) {
     if (!always) return null;

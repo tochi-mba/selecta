@@ -4,6 +4,7 @@ import { navigate } from '../router';
 import { openGlossary } from '../state/glossaryRequests';
 import { setPrefs, Theme, Motion } from '../state/prefs';
 import { aboutOf, DESTINATIONS, exploreTabs, workspaceTabs } from './manifest';
+import { words } from '../copy';
 
 /** What the command palette can do. It's a shortcut to things that already have an ordinary way to do
  * them, and nothing here deletes anything or replaces what's playing. Anything that would only opens
@@ -78,7 +79,7 @@ export function buildCommands(context: CommandContext): Command[] {
     { id: 'glossary', label: 'Music terms (glossary)', group: 'Do', keywords: 'help glossary words meaning definitions explain what is', flag: 'app.glossary', run: () => openGlossary() },
     ...(['light', 'dark', 'system'] as Theme[]).map((theme): Command => ({
       id: `theme-${theme}`,
-      label: theme === 'system' ? 'Theme: match this computer' : `Theme: ${theme}`,
+      label: theme === 'system' ? words().themeCommand : `Theme: ${theme}`,
       group: 'Do',
       keywords: 'appearance colour color mode',
       flag: 'app.theme_choice',

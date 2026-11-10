@@ -194,6 +194,8 @@ test('addresses that go nowhere say so, and API mistakes aren’t dressed up as 
   expect((await request.get('/assets/nope.js')).status()).toBe(404);
 });
 
+// Local mode: nothing leaves this computer. The Cloud site's version of this check, that it talks
+// only to its allowlisted origins, is in e2e-cloud/live.cloud.ts (`pnpm e2e:cloud`).
 test('the page only ever talks to this computer', async ({ page }) => {
   const elsewhere: string[] = [];
   page.on('request', (sent) => {

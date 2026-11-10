@@ -1,5 +1,6 @@
 import { lazy, ReactNode, Suspense, useEffect, useState } from 'react';
 import { App } from './App';
+import { setCopyMode } from './copy';
 
 const CloudRoot = lazy(() => import('./cloud/CloudRoot').then((module) => ({ default: module.CloudRoot })));
 
@@ -18,7 +19,11 @@ export function RuntimeApp() {
       .then(async (response) => {
         if (!response.ok) throw new Error('Selecta API is unavailable.');
         const status = await response.json() as { mode?: string };
-        if (current) setMode(status.mode === 'cloud' ? 'cloud' : 'local');
+        if (!current) return;
+        const next = status.mode === 'cloud' ? 'cloud' : 'local';
+        // Words like "this PC" follow the server's mode before anything is drawn (src/copy.ts).
+        setCopyMode(next);
+        setMode(next);
       })
       .catch(() => { if (current) setMode('unavailable'); });
     return () => { current = false; };
