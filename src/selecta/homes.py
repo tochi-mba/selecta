@@ -14,6 +14,7 @@ import shutil
 import sqlite3
 import time
 from pathlib import Path
+from typing import Callable
 
 DATABASE = "selecta.sqlite"
 MARKER = "gathered.json"
@@ -177,11 +178,21 @@ def _bring_record(source: Path, target: Path) -> None:
         target.write_text(json.dumps(mine), "utf-8")
 
 
-def _gather_files(target: Path, source: Path) -> None:
+def _gather_files(
+    target: Path, source: Path, progress: Callable[[str], None] | None = None
+) -> None:
     for folder in FOLDERS:
+        if progress:
+            progress(f"Checking legacy {folder} files...")
+        count = 0
+        last_report = time.monotonic()
         for path in (source / folder).rglob("*"):
             if path.is_file():
                 _bring_file(path, target / folder / path.relative_to(source / folder))
+                count += 1
+                if progress and time.monotonic() - last_report >= 10:
+                    progress(f"Legacy {folder}: examined {count} files (still working).")
+                    last_report = time.monotonic()
     for path in (source / "seam-history").glob("*.json"):
         _bring_record(path, target / "seam-history" / path.name)
     for folder in (source / "renders" / "seams").glob("*"):
@@ -204,14 +215,21 @@ def _gather_files(target: Path, source: Path) -> None:
         _bring_file(storage, target / "storage.json")
 
 
-def gather(target: Path, sources: list[Path] | None = None) -> list[Path]:
-    """Bring every older folder's data into this one, adding only what's missing. It can run again
-    safely, which picks up anything a copy of Selecta still running elsewhere has saved since."""
+def gather(
+    target: Path,
+    sources: list[Path] | None = None,
+    progress: Callable[[str], None] | None = None,
+) -> list[Path]:
+    """Merge older local data, optionally reporting long operations during development."""
     sources = old_homes(target) if sources is None else sources
     target.mkdir(parents=True, exist_ok=True)
-    for source in sources:
+    for index, source in enumerate(sources, 1):
+        if progress:
+            progress(f"Legacy source {index}/{len(sources)}: merging database from {source}")
         _gather_database(target, source)
-        _gather_files(target, source)
+        if progress:
+            progress(f"Legacy source {index}/{len(sources)}: database merged; checking files...")
+        _gather_files(target, source, progress=progress)
     if sources:
         (target / MARKER).write_text(
             json.dumps({"sources": [str(home) for home in sources], "at": time.time()}), "utf-8"
@@ -229,13 +247,25 @@ def _changed_at(home: Path) -> float:
     return latest
 
 
-def gather_if_needed(target: Path) -> list[Path]:
-    """On starting up, bring in anything an older folder has that this one hasn't seen."""
+def gather_if_needed(
+    target: Path, progress: Callable[[str], None] | None = None
+) -> list[Path]:
+    """On startup merge legacy local data, with optional developer progress reports."""
+    if progress:
+        progress("Searching old per-app folders for previous libraries...")
     sources = old_homes(target)
     if not sources:
+        if progress:
+            progress("No legacy libraries need migration.")
         return []
+    if progress:
+        progress(f"Found {len(sources)} legacy data folder(s); checking their timestamps.")
     try:
         seen = (target / MARKER).stat().st_mtime
     except OSError:
-        return gather(target, sources)
-    return gather(target, sources) if any(_changed_at(h) > seen for h in sources) else []
+        return gather(target, sources, progress=progress)
+    if any(_changed_at(h) > seen for h in sources):
+        return gather(target, sources, progress=progress)
+    if progress:
+        progress("Legacy data already up to date.")
+    return []
