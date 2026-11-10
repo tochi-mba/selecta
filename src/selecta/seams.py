@@ -214,6 +214,7 @@ class SeamStore:
         self._memory_scan_lock = threading.Lock()
         self._memory_refresh_lock = threading.Lock()
         self._memory_refresh: threading.Thread | None = None
+        self._memory_refresh_started = float("-inf")
         self._memory_revision = 0
         self._records: dict[Path, tuple[tuple[int, int], dict]] = {}
         self._asked_by_requests: set[str] = set()
@@ -488,7 +489,11 @@ class SeamStore:
         if snapshot is None or now - snapshot[0] >= MEMORY_SECONDS:
             with self._memory_refresh_lock:
                 thread = self._memory_refresh
-                if thread is None or not thread.is_alive():
+                if (
+                    (thread is None or not thread.is_alive())
+                    and now - self._memory_refresh_started >= MEMORY_SECONDS
+                ):
+                    self._memory_refresh_started = now
                     thread = threading.Thread(
                         target=self._refresh_memory, name="selecta-transition-memory", daemon=True
                     )
@@ -518,6 +523,11 @@ class SeamStore:
             if not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS:
                 return snapshot[1]
             revision = self._memory_revision
+            scan_started = time.monotonic()
+            last_report = scan_started
+            dev = os.environ.get("SELECTA_DEV_STARTUP") == "1"
+            if dev:
+                print("[MEMORY] Indexing saved transitions in the background...", flush=True)
             states: dict[str, dict] = {}
             records: dict[Path, tuple[tuple[int, int], dict]] = {}
             histories = (self.settings.home / "seam-history").glob("*.json")
@@ -535,12 +545,23 @@ class SeamStore:
                     continue
                 records[meta] = (stamp, state)
                 states.setdefault(state.get("key", str(meta)), state)
+                if dev and time.monotonic() - last_report >= 10:
+                    elapsed = time.monotonic() - scan_started
+                    print(f"[MEMORY] Indexed {len(records)} files in {elapsed:.0f}s...", flush=True)
+                    last_report = time.monotonic()
             memory = SeamMemory.from_states(states.values())
             self._records = records
             # Writes that arrived during the scan force another refresh, rather
             # than treating a potentially stale snapshot as recently valid.
             stamp = time.monotonic() if revision == self._memory_revision else 0.0
             self._remembered = (stamp, memory)
+            if dev:
+                elapsed = time.monotonic() - scan_started
+                print(
+                    f"[MEMORY] Indexed {len(records)} files; {len(memory.clean)} clean "
+                    f"transitions in {elapsed:.1f}s.",
+                    flush=True,
+                )
             return memory
 
     def forget_unfinished(self) -> None:
