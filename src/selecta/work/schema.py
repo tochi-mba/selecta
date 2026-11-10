@@ -251,7 +251,12 @@ outbox_events = sa.Table(
     sa.Column("workspace_id", Id, index=True),
     sa.Column("payload", JSON, nullable=False),
     sa.Column("created_at", Epoch, nullable=False, index=True),
+    # Commit order, stamped as the writing transaction commits (migration 7c1e9a4b2f30). Readers
+    # walk `seq`, not `id`: ids are handed out at insert, so a late commit could be skipped.
+    sa.Column("seq", EventId),
 )
+sa.Index("ix_outbox_events_workspace_seq", outbox_events.c.workspace_id, outbox_events.c.seq)
+sa.Index("ix_outbox_events_seq", outbox_events.c.seq, unique=True)
 
 workers = sa.Table(
     "workers",

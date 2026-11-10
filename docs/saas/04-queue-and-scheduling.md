@@ -153,7 +153,7 @@ Indexes keep this fast with millions of rows: a partial index on `jobs (pool, wo
 
 **The maintenance leader** holds a session-level advisory lock on its own direct connection (session locks also don't survive a transaction-mode pooler). If that connection drops, the lock is released and a standby can take over while the old process may still be finishing a task, so every maintenance task is idempotent and records the leader's term number; a task started under an older term stops when it sees a newer one.
 
-**Outbox delivery.** Each state change inserts an `outbox_events` row and calls `pg_notify` in the same transaction (Postgres delivers notifications only on commit). Listeners read events by increasing id, so a missed notification is caught up on the next read; consumers dedupe by event id (at-least-once delivery). Outbox rows are kept 7 days, partitioned by day.
+**Outbox delivery.** Each state change inserts an `outbox_events` row and calls `pg_notify` in the same transaction (Postgres delivers notifications only on commit). Listeners read events by increasing `seq`, a commit-order number stamped as each transaction commits (a deferred trigger under a short advisory lock on PostgreSQL; the id itself on SQLite, which has one writer), never by id: ids are handed out at insert, so a transaction holding a lower id can commit after a reader has passed a higher one (`tests/test_cloud_outbox_order.py`). A missed notification is caught up on the next read; consumers dedupe by event id (at-least-once delivery). Outbox rows are kept 7 days, partitioned by day.
 
 ### 4A.7 Retries and error classes
 

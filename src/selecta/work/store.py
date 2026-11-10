@@ -435,9 +435,9 @@ class JobStore:
         with transaction(self.engine) as connection:
             return lifecycle.read_attempt(connection, attempt_id)
 
-    def events_after(self, after_id: int, limit: int = 500) -> list[outbox.OutboxEvent]:
+    def events_after(self, after_seq: int, limit: int = 500) -> list[outbox.OutboxEvent]:
         with transaction(self.engine) as connection:
-            return outbox.read_after(connection, after_id, limit)
+            return outbox.read_after(connection, after_seq, limit)
 
     def find_artifact(
         self, workspace_id: str, kind: str, input_hash: str, *, touch: bool = True

@@ -381,14 +381,16 @@ def create_cloud_app(
         def fetch(cursor: int):
             with transaction(engine, workspace_id) as connection:
                 rows = connection.execute(
+                    # Walk commit order (`seq`), so an event whose transaction committed after a
+                    # later one's is never skipped; the SSE id is that `seq`.
                     sa.select(
-                        outbox_events.c.id,
+                        outbox_events.c.seq.label("id"),
                         outbox_events.c.topic,
                         outbox_events.c.payload,
                     )
                     .where(outbox_events.c.workspace_id == workspace_id)
-                    .where(outbox_events.c.id > cursor)
-                    .order_by(outbox_events.c.id)
+                    .where(outbox_events.c.seq > cursor)
+                    .order_by(outbox_events.c.seq)
                     .limit(100)
                 )
                 return [dict(row._mapping) for row in rows]

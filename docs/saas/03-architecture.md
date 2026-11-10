@@ -50,9 +50,11 @@ images and end-to-end job handlers remain outstanding.
 audio only through attempt-scoped signed URLs. Cloud job handlers and pinned worker images remain
 to be built, so the transport cannot yet process real mixes end to end.
 
-Cloud also exposes a workspace-scoped `/api/events` stream for ordered durable job-outbox updates;
-clients can resume with `Last-Event-ID`. It currently polls the outbox and has not yet been
-connected to the Cloud UI or expanded to uploads, entitlements and playback events.
+Cloud also exposes a workspace-scoped `/api/events` stream of durable outbox events in commit
+order; clients resume with `Last-Event-ID`. Each instance wakes on PostgreSQL `LISTEN/NOTIFY`
+(`work/fanout.py`) and falls back to polling, and the Cloud site falls back to polling when the
+stream is blocked (`web/src/cloud/events.ts`). Event ids are commit-order numbers (`seq`, below),
+so a reconnect never skips an event that committed late.
 
 Account deletion now has a `DELETE /api/account` route and durable, leased workflow. Its effect
 adapter cancels jobs and Stripe subscriptions, deletes the WorkOS identity after the recovery
