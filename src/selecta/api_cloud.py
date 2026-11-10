@@ -39,9 +39,9 @@ from selecta.admin import routes_controls as admin_control_routes
 from selecta.admin.state import EmergencyCache
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
+from selecta.flags import cloud_gate, targeting
 from selecta.flags import guard as flag_guard
 from selecta.flags import rules as flag_rules
-from selecta.flags import targeting
 from selecta.flags.matching import Context
 from selecta.flags.rules import RulesCache
 from selecta.identity import routes as identity_routes
@@ -292,7 +292,49 @@ def create_cloud_app(
     app.state.event_fanout = fanout
     if listener is not None:
         rule_cache.listen(listener)
+        # After the cache has reloaded (callbacks run in order), wake every event stream so each
+        # tells its page `flags.changed` at once (ADR-0414: kill switch within 5 s).
+        listener.subscribe(flag_rules.CHANNEL, fanout.notify)
     flags.effective()
+
+    # Per account (ADR-0414 §11B.4): a route whose feature a rule, kill switch or plan has
+    # switched off for this account is refused as the site's list says, 403 `flag_off` or
+    # `plan_required`, so the API and the page always agree. Added before the build guard, which
+    # therefore runs first and refuses a build-off feature without touching the database. Core,
+    # staff and admin features can't be targeted, and a request that isn't a signed-in account
+    # (a guest, a webhook, sign-up) goes on to its handler, which answers it as before. Rooms and
+    # playback gate each route themselves (`cloud_gate.require` in `rooms/api_host.py` and
+    # `playback/api.py`), on purpose leaving some reads open, such as a downgraded host's room.
+    self_gated = ("rooms", "devices")
+
+    @app.middleware("http")
+    async def account_feature_flags(request: Request, call_next):
+        if not request.url.path.startswith("/api/") or not request.headers.get("authorization"):
+            return await call_next(request)
+        flag_id = flag_guard.owner_of(request.app, request.scope)
+        flag = flags.registry().get(flag_id) if flag_id else None
+        if (flag is None or flag.core or flag_rules.is_untargetable(flag_id)
+                or flag_id.split(".")[0] in self_gated):
+            return await call_next(request)
+
+        def check() -> None:
+            principal = _principal(
+                engine,
+                _bearer(request, verifier),
+                request.headers.get("x-workspace-id"),
+                allow_suspended=True,
+            )
+            with transaction(engine, principal.workspace.id) as conn:
+                cloud_gate.require(conn, principal, flag_id, rule_cache)
+
+        try:
+            await asyncio.to_thread(check)
+        except HTTPException as refused:
+            detail = refused.detail if isinstance(refused.detail, dict) else {}
+            if refused.status_code == 403 and detail.get("code") in {"flag_off", "plan_required"}:
+                return JSONResponse({"detail": detail}, status_code=403)
+        return await call_next(request)
+
     flag_guard.install(app, strict=True)
     emergency_cache = EmergencyCache(engine)
     app.state.emergency_controls = emergency_cache
@@ -393,17 +435,27 @@ def create_cloud_app(
                     .order_by(outbox_events.c.seq)
                     .limit(100)
                 )
-                return [dict(row._mapping) for row in rows]
+                batch = [dict(row._mapping) for row in rows]
+            # The rules version too, so the stream can say when this page's flags may have changed.
+            return batch, rule_snapshot().version
 
         async def frames():
             cursor = after
             heartbeat_at = time.monotonic()
             deadline = time.monotonic() + 600
+            rules_seen: int | None = None
             while time.monotonic() < deadline and time.time() < claims.expires_at:
                 if await request.is_disconnected():
                     break
                 waiter = fanout.arm()
-                batch = await asyncio.to_thread(fetch, cursor)
+                batch, rules_version = await asyncio.to_thread(fetch, cursor)
+                if rules_seen is not None and rules_version != rules_seen:
+                    # The flag rules changed: the page asks /api/account for its own decisions.
+                    # No id, so it never moves the replay cursor, and no rules: they stay here.
+                    changed = {"topic": "flags.changed", "payload": {"version": rules_version}}
+                    data = json.dumps(changed, separators=(",", ":"))
+                    yield f"event: selecta\ndata: {data}\n\n"
+                rules_seen = rules_version
                 for row in batch:
                     cursor = row["id"]
                     frame = {

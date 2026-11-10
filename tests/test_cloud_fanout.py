@@ -187,6 +187,48 @@ def test_a_stream_on_b_never_hears_another_workspaces_event(engines, instance_b)
     assert "fanout.secret" not in heard
 
 
+
+def test_a_rule_change_on_instance_a_tells_a_stream_on_instance_b_flags_changed_at_once(
+    engines, instance_b
+):
+    """SC-0414-05: decisions reach the site over SSE. The frame says only that the rules moved
+    (with their version, never the rules), carries no id so it never moves the replay cursor, and
+    arrives by notification, well inside the fallback poll."""
+    _app_b, base = instance_b
+    onboard(engines[0])
+    heard: list[tuple[float, str]] = []
+    connected = threading.Event()
+
+    def stream() -> None:
+        with httpx.Client(base_url=base, timeout=30) as client:
+            with client.stream(
+                "GET", "/api/events", headers={"Authorization": f"Bearer {TOKEN}"}
+            ) as response:
+                assert response.status_code == 200
+                connected.set()
+                for line in response.iter_lines():
+                    heard.append((time.monotonic(), line))
+                    if line.startswith("data: ") and "flags.changed" in line:
+                        return
+
+    reader = threading.Thread(target=stream, daemon=True)
+    reader.start()
+    assert connected.wait(10)
+    time.sleep(0.5)  # B has read its first batch and is waiting
+    version = change(engines[0], [Rule(RuleKind.USERS, {"ids": ["someone"], "on": False})])
+    sent = time.monotonic()
+    wait_until(lambda: any("flags.changed" in line for _, line in heard))
+    reader.join(10)
+
+    arrived, line = next((t, x) for t, x in heard if "flags.changed" in x)
+    assert arrived - sent < 1.0 < POLLING_S
+    assert json.loads(line[6:]) == {"topic": "flags.changed", "payload": {"version": version}}
+    lines = [x for _, x in heard]
+    at = lines.index(line)
+    start = max(i for i in range(at) if lines[i] == "") + 1 if "" in lines[:at] else 0
+    assert lines[start:at] == ["event: selecta"], "no id: it must not move the replay cursor"
+    assert "someone" not in line
+
 # --- flag rules ---------------------------------------------------------------------------------
 
 

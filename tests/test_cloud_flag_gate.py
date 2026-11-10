@@ -5,11 +5,14 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from cloud_party import CAROL, auth
+from cloud_party import ALICE, CAROL, auth
 from fastapi import HTTPException
 from fastapi.routing import APIRoute
 
 from selecta.flags import cloud_gate, targeting
+from selecta.flags import rules as flag_rules
+from selecta.flags.matching import Rule, RuleKind
+from selecta.persistence import transaction
 from selecta.work.catalogue import CATALOGUE
 
 pytest_plugins = ("cloud_party",)
@@ -89,3 +92,38 @@ def test_an_allowed_decision_returns_without_an_error(monkeypatch):
     )
 
     assert cloud_gate.require(None, SimpleNamespace(), "rooms", None) is None
+
+
+def _rules(party, flag_id: str, rules) -> None:
+    with transaction(party.engine) as conn:
+        flag_rules.save(conn, flag_id, rules, author="tests", reason="account gate test")
+    party.app.state.flag_rules.invalidate()
+
+
+def test_a_kill_switch_refuses_every_routes_feature_for_every_account(party):
+    """SC-0414-03/05: the API agrees with the page. A rule or kill switch that switches a feature
+    off for an account refuses that feature's routes for it, not only the build's flags; found
+    by the admin Flags page browser test, where Labs stayed reachable under a kill switch."""
+    assert party.client.get("/api/account/labs", headers=auth(ALICE)).status_code == 200
+    _rules(party, "account.labs", [Rule(RuleKind.KILL_SWITCH, {})])
+    for token in (ALICE, CAROL):
+        answer = party.client.get("/api/account/labs", headers=auth(token))
+        assert answer.status_code == 403
+        assert answer.json()["detail"]["code"] == "flag_off"
+    _rules(party, "account.labs", [])
+    assert party.client.get("/api/account/labs", headers=auth(CAROL)).status_code == 200
+
+
+def test_a_rule_for_one_account_refuses_only_that_account(party):
+    carol = party.client.get("/api/account", headers=auth(CAROL)).json()["user"]["id"]
+    _rules(party, "cloud.uploads", [Rule(RuleKind.USERS, {"ids": [carol], "on": False})])
+    refused = party.client.get("/api/uploads", headers=auth(CAROL))
+    assert refused.status_code == 403
+    assert refused.json()["detail"] == {
+        "code": "flag_off",
+        "message": "Cloud uploads isn't available on this account right now.",
+        "flag": "cloud.uploads",
+    }
+    assert party.client.get("/api/uploads", headers=auth(ALICE)).status_code == 200
+    # Core features can't be targeted, so the account page always answers.
+    assert party.client.get("/api/account", headers=auth(CAROL)).status_code == 200
