@@ -35,7 +35,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 
 | Flag | What it is | Needs |
 |---|---|---|
-| `listen.lyrics` | **Lyrics.** Line-synced lyrics on the Listen page, following the music. | `lyrics.lookup` |
+| `listen.lyrics` | **Lyrics.** Line-synced lyrics on the Listen page, following the music. | `lyrics.display` |
 | `listen.word_focus` | **Current-word focus.** The word being sung right now is picked out in the lyrics. | `listen.lyrics` |
 | `listen.stage` | **Fullscreen lyrics.** Stage mode: the lyrics fill the screen. | `listen.lyrics` |
 | `listen.visualizers` | **Visualizers.** Fifteen spectrum styles that move with the music, with an intensity setting. |  |
@@ -124,7 +124,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 
 | Flag | What it is | Needs |
 |---|---|---|
-| `discover.word_links` | **Word connections.** Lyric links between songs, where a word in one hands off to the same word in the next. | `lyrics.lookup` |
+| `discover.word_links` | **Word connections.** Lyric links between songs, where a word in one hands off to the same word in the next. | `lyrics.display` |
 | `discover.harmonic` | **Harmonic matches.** Songs that might share chords, with an audition in four steps. |  |
 
 ## Library
@@ -140,6 +140,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `library.relink` | **Re-link a moved folder.** Point Selecta at a folder that moved, with a preview first. | `library.folders` |
 | `library.folder_watching` | **Watching for new songs.** Songs added to a music folder come in by themselves within about a minute. |  |
 | `lyrics.lookup` | **Lyric lookup.** Line-synced lyrics from LRCLIB. Only artist, title, album and duration are sent. |  |
+| `lyrics.display` | **Lyric display.** Shows lyric text in listening and discovery views where its use is permitted. | `lyrics.lookup` |
 | `lyrics.word_timing` | **Word timing.** When each sung word lands, for moves that hand over on a word. | `lyrics.lookup` |
 | `analysis.time_estimates` | **Time estimates.** How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds. |  |
 
