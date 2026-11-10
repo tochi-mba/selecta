@@ -1,0 +1,23 @@
+# Turns on auto-merge for Dependabot's patch and minor updates. The PR still merges only once
+# the required `verify` check on main passes. Major updates are left for the owner to merge by
+# hand, because they can change behaviour the tests don't cover.
+name: Dependabot auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'tochi-mba/selecta'
+    runs-on: ubuntu-24.04
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      - if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

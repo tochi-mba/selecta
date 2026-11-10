@@ -95,3 +95,7 @@ the cause (a missing wait on real state, a shared fixture, a timing assumption);
 never raise a timeout, loosen an assertion or refresh a screenshot baseline just
 to pass. A screenshot baseline changes only with an intended, reviewed visual
 change named in the pull request.
+
+## Dependabot auto-merge
+
+`dependabot-auto-merge.yml` turns on auto-merge for Dependabot's patch and minor updates, so they merge themselves once the required `verify` check passes. Major updates are left for the owner to review and merge by hand. The repository setting "Allow auto-merge" must stay on for this to work.
