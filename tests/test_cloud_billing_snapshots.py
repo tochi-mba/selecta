@@ -113,10 +113,12 @@ def test_the_grace_counts_from_the_failed_invoice_when_stripe_expands_it():
     from_finalized = decide(subscription(status="past_due", latest_invoice=finalized))
     from_created = decide(subscription(status="past_due", latest_invoice=created_only))
     unexpanded = decide(subscription(status="past_due", latest_invoice="in_1"))
+    undated = decide(subscription(status="past_due", latest_invoice={"status_transitions": {}}))
 
     assert from_finalized.valid_until == NOW + 5 * DAY
     assert from_created.valid_until == NOW + 5 * DAY
     assert unexpanded.valid_until == NOW + 7 * DAY  # no invoice to read: the grace starts now
+    assert undated.valid_until == NOW + 7 * DAY
 
 
 def test_past_due_at_exactly_seven_days_minus_and_plus_one_second_in_the_store(cloud_engine):
@@ -585,3 +587,28 @@ def test_reconciliation_uses_database_time_by_default(sqlite_engine, clock):
         effective = effective_entitlement(conn, "w1")
 
     assert snapshot.verified_at == NOW and effective.plan_id == "standard"
+
+
+def test_a_second_reconciliation_finds_nothing_left_to_fix(cloud_engine):
+    stripe = FakeStripe()
+    stripe.put(subscription(status="past_due", period_end=END))
+    stripe.put(subscription("sub_2", workspace="w2", customer="cus_2", period_end=END))
+    with transaction(cloud_engine) as conn:
+        first = reconcile_all(conn, stripe, PRICE_MAP, NOW)
+    with transaction(cloud_engine) as conn:
+        second = reconcile_all(conn, stripe, PRICE_MAP, NOW + 60)
+        verified = current_snapshot(conn, "w2").verified_at
+
+    assert first.snapshots_changed == 2 and first.items
+    assert (second.checked, second.items, second.snapshots_changed) == (2, [], 0)
+    assert verified == NOW + 60  # Stripe confirmed it, so it stays verified
+
+
+def test_insert_ignore_refuses_a_database_it_was_not_written_for():
+    from types import SimpleNamespace
+
+    from selecta.billing.schema import insert_ignore
+
+    with pytest.raises(RuntimeError, match="Unsupported database: oracle"):
+        insert_ignore(SimpleNamespace(dialect=SimpleNamespace(name="oracle")), subscriptions,
+                      {}, ["id"])

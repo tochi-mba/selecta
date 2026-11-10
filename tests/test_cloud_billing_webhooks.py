@@ -350,6 +350,20 @@ def test_an_event_without_a_subscription_re_fetches_the_customers_subscriptions(
     assert stripe.calls == [("list_subscriptions", "cus_1")]
 
 
+def test_a_workspace_with_two_subscriptions_is_recomputed_once_per_event(cloud_engine):
+    stripe = FakeStripe()
+    stripe.put(subscription("sub_a", workspace="w1"))
+    stripe.put(subscription("sub_b", workspace="w1", price="price_premium_month"))
+
+    result = deliver(cloud_engine, stripe, event(
+        "evt_both", "invoice.paid", {"object": "invoice", "customer": "cus_1"}))
+    with transaction(cloud_engine) as conn:
+        snapshot = current_snapshot(conn, "w1")
+
+    assert result.workspaces == ("w1",)
+    assert (snapshot.version, snapshot.plan_id) == (1, "premium")
+
+
 def test_a_refund_finds_the_customer_through_the_charge(cloud_engine):
     stripe = FakeStripe()
     stripe.put(subscription())
