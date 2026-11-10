@@ -131,3 +131,55 @@ def test_an_unknown_flag_drains_rather_than_stops():
     assert flag_gates.when_off("no.such.flag") == flag_gates.DRAIN
     assert flag_gates.when_off(None) == flag_gates.DRAIN
     assert flag_gates.when_off(FLAG) == "drain"
+
+
+# --- running work -------------------------------------------------------------------------------
+
+
+def running(store, gate, *, flag_off_after_start: bool):
+    """Run one job whose handler works until stopped, switching the flag off once it runs."""
+    import threading
+
+    from selecta import jobs as engine_jobs
+    from selecta.workers.runner import WorkerRunner
+
+    started = threading.Event()
+    rounds = {"n": 0}
+
+    def work(current, ctx):
+        started.set()
+        for _ in range(2_000):
+            engine_jobs.check_in()
+            rounds["n"] += 1
+            if rounds["n"] == 200 and not flag_off_after_start:
+                return {"done": True}
+            threading.Event().wait(0.005)
+        raise AssertionError("never stopped")
+
+    job = store.enqueue(JobSpec("w1", "analyse.song")).job
+    runner = WorkerRunner(store, worker(), {"analyse.song": work}, heartbeat_s=0.02, idle_s=0.01)
+    outcome = {}
+    thread = threading.Thread(target=lambda: outcome.update(result=runner.run_once()))
+    thread.start()
+    assert started.wait(10)
+    gate.off.add(("w1", FLAG))
+    thread.join(30)
+    return job, outcome["result"]
+
+
+def test_a_stopping_feature_stops_its_running_job_at_the_next_check_in(store, gate, stops):
+    job, result = running(store, gate, flag_off_after_start=True)
+    assert (result.outcome, result.state) == ("cancelled", "cancelled")
+    assert row(store, job.id).state == "cancelled"
+    with transaction(store.engine) as connection:
+        from selecta.work.schema import job_attempts
+
+        reason = connection.execute(sa.select(job_attempts.c.cancel_reason)).scalar_one()
+    assert reason == "flag_off"
+    assert drift(store) == []
+
+
+def test_a_draining_feature_lets_its_running_job_finish(store, gate):
+    job, result = running(store, gate, flag_off_after_start=False)
+    assert result.outcome == "succeeded"
+    assert row(store, job.id).state == "succeeded"

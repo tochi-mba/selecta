@@ -29,6 +29,7 @@ from selecta.work import (
     artifacts,
     claims,
     enqueue,
+    flag_gates,
     fleet,
     heads,
     lifecycle,
@@ -98,6 +99,7 @@ class JobStore:
         self._flag_resume_at: dict[str, float] = {}
         self._wakers: list[Waker] = []
         self._workspaces: dict[str, str] = {}
+        self._stops: dict[str, tuple[str, str] | None] = {}
         self._lock = threading.Lock()
         self._lanes_ready = False
 
@@ -173,6 +175,7 @@ class JobStore:
     def _forget(self, attempt_id: str) -> None:
         with self._lock:
             self._workspaces.pop(attempt_id, None)
+            self._stops.pop(attempt_id, None)
 
     # --- producers ---
 
@@ -281,8 +284,35 @@ class JobStore:
             return lifecycle.start(connection, attempt_id, token, now)
 
     def heartbeat(self, attempt_id: str, token: int) -> Heartbeat:
-        with self._tx(self._workspace_of(attempt_id)) as (connection, now):
+        workspace_id = self._workspace_of(attempt_id)
+        stop = self._stop_flag(attempt_id)
+        # Asked before the transaction: a cloud flag check opens one of its own.
+        halt = stop is not None and not self.flags.is_on(workspace_id, stop[1])
+        with self._tx(workspace_id) as (connection, now):
+            if halt:
+                flag_gates.stop_running(connection, stop[0], now)
             return lifecycle.heartbeat(connection, attempt_id, token, now, self.config.lease_s)
+
+    def _stop_flag(self, attempt_id: str) -> tuple[str, str] | None:
+        """(job id, flag id) when the attempt's job belongs to a `when_off: stop` flag, so its
+        heartbeat must check the flag; None for every other job. Read once per attempt."""
+        with self._lock:
+            if attempt_id in self._stops:
+                return self._stops[attempt_id]
+        with transaction(self.engine) as connection:
+            row = connection.execute(
+                sa.select(jobs.c.id, jobs.c.flag_id)
+                .select_from(job_attempts.join(jobs, jobs.c.id == job_attempts.c.job_id))
+                .where(job_attempts.c.id == attempt_id)
+            ).first()
+        found = None
+        if row is not None and row.flag_id and flag_gates.when_off(row.flag_id) == flag_gates.STOP:
+            found = (row.id, row.flag_id)
+        with self._lock:
+            if len(self._stops) > 10_000:
+                self._stops.clear()
+            self._stops[attempt_id] = found
+        return found
 
     def progress(
         self, attempt_id: str, token: int, done: float, total: float | None = None
