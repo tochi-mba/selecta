@@ -18,6 +18,31 @@ With coverage for the package you changed:
 
 Web: `pnpm test` (Vitest), `pnpm e2e` (Playwright on Edge, muted), `pnpm e2e:flags` (every page with each flag off).
 
+### Cloud browser tests
+
+`pnpm e2e:cloud` (from `web/`) runs every cloud browser test, `web/e2e-cloud/*.cloud.ts`, in one
+Playwright project (`playwright.cloud.config.ts`) against one server on port 8812 (set
+`SELECTA_CLOUD_E2E_PORT` to move it; never 8733, a running Selecta, or 8799, the local test
+server). It first builds the web app into `web/dist-cloud-e2e` with `vite.cloud-e2e.config.ts`:
+the real Cloud site, the Rooms guest page and display, and the test-only `cloud-harness.html`,
+with AuthKit swapped for `web/e2e-cloud/fakeAuthKit.tsx`. Then it starts
+`tests/e2e_cloud_server.py`, the production Cloud API over a fresh schema and non-superuser role
+on the test PostgreSQL when `SELECTA_TEST_POSTGRES_URL` is set (as CI does; use it locally too,
+since on SQLite every tab's event stream contends for the one write lock), else a fresh migrated
+SQLite file, with these stand-ins:
+
+- sign-in: `e2e:<name>` signs in the listener `<name>` (each Cloud-site test makes its own, so
+  tests never share a workspace); the bare tokens `alice` and `bob` (Premium) and `carol` (Free)
+  are the Rooms and devices tests' people, made at start-up; no WorkOS;
+- object storage: the in-memory R2 from the storage tests behind real `/fake-r2/...` URLs, which
+  can be expired (403) and can fail chosen upload parts;
+- Stripe: a fake Checkout and portal whose "payment" writes the entitlement snapshot after a delay;
+- Rooms: a synthetic song library and planner, and quiet audio at `/e2e/audio/{index}.wav`.
+
+Test controls are under `/test/...` and never exist outside this server. On Windows, if `uv` isn't
+on `PATH`, set `SELECTA_PYTHON` to the full path of the virtualenv's `python.exe`. CI runs the
+suite on Linux in the `Cloud E2E` job.
+
 Tests marked `slow` load audio models and are skipped unless you pass `--slow`.
 
 ## Cloud tests: both databases
@@ -69,6 +94,7 @@ Four workflows live in `.github/workflows/`. `test.yml` runs on every pull reque
 | Cloud / PostgreSQL (Linux) | Cloud tests on SQLite and PostgreSQL, branch coverage, the coverage gate | Lint |
 | Python shards (Windows) | Every test on SQLite, 70% repository coverage | Lint |
 | Edge E2E and Flags (Windows) | Playwright on Edge, and the flag reflow sweep | Lint, Web |
+| Cloud E2E (Linux) | Every cloud browser test, on Edge, against the one cloud test server (`pnpm e2e:cloud`) | Lint, Web |
 
 | Workflow | When | Runs |
 - **End job and race scenarios with the invariant checker:** `selecta.audit.invariants.assert_clean(engine)` checks the database-readable invariants of [§15.2](../saas/15-stress-testing.md) (no lost jobs, no stale publish, no cross-tenant rows, quota, artifacts, duplicates, entitlements, consistent heads) and names every violation.

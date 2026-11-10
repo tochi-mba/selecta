@@ -23,7 +23,8 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
   pickLabel?: (row: T) => string;
 }) {
   return (
-    <div className="data-table-wrap">
+    // Focusable and named, so a keyboard user can scroll a wide table sideways on a phone.
+    <div className="data-table-wrap" role="region" aria-label={`${caption} table`} tabIndex={0}>
       <table className="data-table">
         <caption>{caption}</caption>
         <thead>
