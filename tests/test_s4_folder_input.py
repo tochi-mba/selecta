@@ -60,3 +60,18 @@ def test_a_missing_folder_hands_back_what_was_typed(conn, tmp_path):
     assert answer["kind"] == "missing"
     assert answer["path"] == typed
     assert "plug it in" in answer["reason"]
+
+
+@pytest.mark.parametrize("typed", ["relative/music", "../music", "\\\\server\\share\\music", "//server/share/music"])
+def test_relative_traversal_and_network_addresses_are_not_scanned(conn, typed):
+    answer = check_folder(conn, typed)
+    assert answer["kind"] == "invalid"
+    assert answer["ok"] is False
+
+
+def test_absolute_traversal_does_not_escape_the_user_selected_folder(conn, tmp_path):
+    music = tmp_path / "Music"
+    music.mkdir()
+    (music / "song.mp3").write_bytes(b"x")
+    answer = check_folder(conn, str(music / ".." / "Music"))
+    assert answer["kind"] == "invalid"

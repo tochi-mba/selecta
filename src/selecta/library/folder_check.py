@@ -69,26 +69,31 @@ def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
         r"That isn't a full folder address. Start from the drive, like C:\Users\you\Music.",
         text,
     )
-    if NOT_IN_A_PATH & set(text) or "\0" in text:
+    # A manually entered local folder may live on any drive, but never accept network
+    # shares, relative paths, or traversal components. Resolve symlinks before the
+    # first filesystem probe, so every subsequent operation uses a canonical path.
+    if NOT_IN_A_PATH & set(text) or "\0" in text or text.startswith(("\\\\", "//")):
         return invalid
     try:
-        folder = Path(text).expanduser()
-        if not folder.is_absolute():
+        candidate = Path(text).expanduser()
+        if not candidate.is_absolute() or ".." in candidate.parts:
             return invalid
-        exists = folder.exists()
-    except (OSError, RuntimeError, ValueError):
-        folder, exists = Path(text), False
-    if not exists:
+        folder = candidate.resolve(strict=True)
+        if str(folder).startswith(("\\\\", "//")):
+            return invalid
+    except (FileNotFoundError, NotADirectoryError):
         return _answer(
             "missing",
             "That folder doesn't exist on this PC. If it's on a drive that isn't plugged in, "
             "plug it in and try again.",
             text,
         )
+    except (OSError, RuntimeError, ValueError):
+        return _answer("no_access", "Selecta isn't allowed to read that folder on this PC.", text)
     if not folder.is_dir():
         return _answer("not_a_folder", "That's a file, not a folder. Use the folder it's in.", text)
-    # a shortcut or link counts as wherever it really leads
-    resolved = folder.resolve()
+    # A shortcut or link counts as wherever it really leads; folder is already resolved.
+    resolved = folder
     shown = str(resolved)
     try:
         with os.scandir(resolved) as entries:
