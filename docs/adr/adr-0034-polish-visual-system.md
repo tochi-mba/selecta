@@ -1,7 +1,7 @@
 # ADR-0034: Precise visual foundations, typography and coherent iconography
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
+- **Implementation status:** In progress: 9/10 tasks Implemented with evidence on 2026-11-10 (P0011-P0018, P0020); P0019 needs an independent contrast and font audit. See [the polish evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 1 - Visual foundations and language
@@ -54,6 +54,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
+| 2026-11-10 | Accepted | In progress (9/10) | Reconciled against current code; P0011-P0018, P0020 ticked with tests run that day; independent verification still pending |
 
 ## References
 

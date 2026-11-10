@@ -109,6 +109,7 @@ def test_one_trace_follows_a_job_from_api_to_worker_to_storage(spans, stack, mon
     names = {(span.name, span.attributes.get("selecta.service")) for span in in_trace}
     assert {
         ("job.enqueue", "api"),
+        ("job.wait", "gateway"),
         ("job.claim", "gateway"),
         ("worker.run", "worker"),
         ("storage.get", "worker"),
@@ -117,6 +118,9 @@ def test_one_trace_follows_a_job_from_api_to_worker_to_storage(spans, stack, mon
     } <= names
     job_spans = [span for span in in_trace if span.name.startswith(("job.", "worker.", "storage."))]
     assert all(span.attributes[tracing.JOB_ID] == job_id for span in job_spans)
+
+    wait = next(span for span in in_trace if span.name == "job.wait")
+    assert wait.attributes["selecta.lane"] and wait.end_time >= wait.start_time
 
     by_id = {span.context.span_id: span for span in in_trace}
     run = next(span for span in in_trace if span.name == "worker.run")
@@ -146,6 +150,21 @@ def test_the_api_request_that_made_a_job_is_linked_from_its_enqueue_span(spans, 
 def test_job_ids_are_span_attributes_and_never_span_names(spans, stack, monkeypatch):
     job_id = run_one_job(stack, monkeypatch)
     assert all(job_id not in span.name for span in spans.get_finished_spans())
+
+
+def test_a_server_error_marks_the_request_span_as_an_error(spans):
+    app = FastAPI()
+    tracing.install(app, "api")
+
+    @app.get("/api/broken")
+    def broken():
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=503)
+
+    assert TestClient(app).get("/api/broken").status_code == 503
+    (span,) = spans.get_finished_spans()
+    assert span.name == "GET /api/broken" and not span.status.is_ok
 
 
 def test_turning_the_tracing_flag_off_records_nothing(spans, stack, monkeypatch):

@@ -10,10 +10,14 @@ import { resetMix } from './helpers';
 const SHORT = 'Home';
 const LONG = 'The Long Way Home Through The City Lights At Night (Extended Club Mix) feat. Somebody Famous';
 const MEDIUM = 'Midnight Harbour Lights (Radio Edit)';
+const EMOJI = 'Sunrise 🌅🎶 Over The Bay 👩🏽‍🎤 (Sunrise 🌅 Club Edit) 🇯🇵';
+const MIXED = 'Night Drive לילה ארוך (Extended) עם חברים';
 const NAMES: Record<number, { title: string; artist: string }> = {
   1: { title: SHORT, artist: 'Short Artist' },
   2: { title: LONG, artist: 'An Ensemble With A Long Name' },
   3: { title: MEDIUM, artist: 'Velvet Static' },
+  9: { title: EMOJI, artist: 'Ñandú & Zoë 🎧' },
+  10: { title: MIXED, artist: 'Duo מעורב' },
 };
 
 async function useNames(page: Page) {
@@ -152,3 +156,64 @@ test('GP-0249-02/03 the transport stays fixed while display panels open, close a
   await page.locator('details.dj-controls > summary').click();
   expect((await geometry(page)).play).toEqual(start.play);
 });
+
+// GP-0248-06: song 5 is Hebrew, 6 Arabic and 7 Japanese in the made-up library; 9 and 10 are renamed above
+for (const [id, script] of [[5, 'rtl'], [6, 'rtl'], [7, 'ltr'], [9, 'ltr'], [10, 'ltr']] as const) {
+  test(`GP-0248-06 song ${id} keeps its whole title, its direction and its slot`, async ({ page, request }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await resetMix(request, [id, 4, 3]);
+    await page.goto('/listen');
+    const heading = page.locator('.listen-identity .track-title');
+    await expect(heading).not.toBeEmpty();
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(150);
+    const shown = await heading.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const frame = element.closest('.listen-identity')!.getBoundingClientRect();
+      const css = getComputedStyle(element);
+      return {
+        text: element.textContent ?? '', rtl: element.matches(':dir(rtl)'), size: Number.parseFloat(css.fontSize),
+        inside: box.left >= frame.left - 1 && box.right <= frame.right + 1, clipped: element.scrollWidth > element.clientWidth + 1,
+        ellipsis: css.textOverflow === 'ellipsis' || css.webkitLineClamp !== 'none',
+      };
+    });
+    if (NAMES[id]) expect(shown.text).toBe(NAMES[id].title);
+    expect(shown.rtl, 'the title takes its direction from its own words').toBe(script === 'rtl');
+    expect(shown.inside, JSON.stringify(shown)).toBe(true);
+    expect(shown.clipped).toBe(false);
+    expect(shown.ellipsis).toBe(false);
+    expect(shown.size).toBeGreaterThanOrEqual(24);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
+
+// GP-0248-04/07: 320px wide (the width 400% zoom gives a 1280px window), and short landscape screens
+for (const [width, height] of [[320, 640], [320, 256], [1024, 480], [640, 360]] as const) {
+  test(`GP-0248-04/07 at ${width}x${height} the whole title and artist stay readable and the transport reachable`, async ({ page, request }) => {
+    await page.setViewportSize({ width, height });
+    await resetMix(request, [2, 4, 5]);
+    await listen(page, LONG);
+    const identity = await page.locator('.listen-identity').evaluate((element) => {
+      const parts = ['.track-title', '.artist'].map((selector) => {
+        const node = element.querySelector(selector) as HTMLElement;
+        const css = getComputedStyle(node);
+        return { text: node.textContent ?? '', clipped: node.scrollWidth > node.clientWidth + 1, hidden: css.visibility === 'hidden' || css.display === 'none', ellipsis: css.textOverflow === 'ellipsis' || css.webkitLineClamp !== 'none' };
+      });
+      return { parts, name: element.querySelector('.track-title')!.textContent };
+    });
+    expect(identity.parts[0].text).toBe(LONG);
+    expect(identity.parts[1].text).toContain('An Ensemble With A Long Name');
+    for (const part of identity.parts) {
+      expect(part.clipped, JSON.stringify(part)).toBe(false);
+      expect(part.hidden).toBe(false);
+      expect(part.ellipsis).toBe(false);
+    }
+    // the screen reader reads the same complete title as its heading
+    await expect(page.getByRole('heading', { level: 1, name: LONG })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no sideways scrolling').toBe(true);
+    const play = page.locator('.now .transport .primary');
+    await play.scrollIntoViewIfNeeded();
+    await expect(play).toBeInViewport();
+    await expect(page.getByRole('slider', { name: 'Where in the song' })).toBeAttached();
+  });
+}

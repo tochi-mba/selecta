@@ -13,7 +13,7 @@
 
 **Invariants:** Preserve the whole current app and warm colour identity. No lost source music or drafts, no wrong current/draft mutation, no unintended audio silence/late seam, no unapproved/partial bridge joins, no inaccessible essential action, no invalid exported audio, no unsafe localhost access.
 
-**Initial task count:** 279 tasks across 14 delivery phases, covering all 32 ADRs. **Completed so far: 178.**
+**Initial task count:** 279 tasks across 14 delivery phases, covering all 32 ADRs. **Completed so far: 207.**
 
 **Related docs:** [ADR index](https://github.com/tochi-mba/selecta/tree/main/docs/adr) · [feature parity](https://github.com/tochi-mba/selecta/blob/main/docs/adr/feature-parity.md) · [test matrix](https://github.com/tochi-mba/selecta/blob/main/docs/adr/test-coverage-matrix.md) · [acceptance ledger](https://github.com/tochi-mba/selecta/blob/main/docs/acceptance.md)
 
@@ -25,9 +25,9 @@
 - [x] T0002 - Inventory every existing feature and expose each in the new Listen/Mixes/Library/Discover/Workshop structure.
 - [ ] T0003 - Record current user journeys for casual listening, live requesting, mix creation and expert seam editing.
 - [ ] T0004 - Verify the existing acceptance ledger against actual code and flag historical limits rather than copying speculative claims.
-- [ ] T0005 - Agree with reviewers which features are in scope, non-goals and blocked-by-backend capabilities.
+- [ ] T0005 - Agree with reviewers which features are in scope, non-goals and blocked-by-backend capabilities. **Needs a person:** agree in-scope features, non-goals and backend-blocked capabilities with a named reviewer and record it. ADR-0001 itself was accepted in #37 on 2026-11-08, but no reviewer scope record exists (checked 2026-11-10).
 - [x] T0006 - Document hard invariants for no lost user data, no wrong-mix edits, no unauthorized bridge and no audio interruption.
-- [ ] T0007 - Approve ADR-0001 or document any explicitly superseding decision.
+- [x] T0007 - Approve ADR-0001 or document any explicitly superseding decision. **Evidence (2026-11-10):** The owner accepted ADR-0001 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Baseline and test architecture - [ADR-0029](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0029-testing-and-quality.md)
 
@@ -40,15 +40,15 @@
 - [ ] T0014 - Set up accessible component tests, visual-regression baseline and real Web Audio browser smoke tests.
 - [x] T0015 - Record manual listening procedure and blind A/B benchmark separate from renderer assertions.
 - [x] T0016 - Document how changed DOM text/selectors can be updated without removing behavioural coverage.
-- [ ] T0017 - Approve ADR-0029 quality gates and record owners for every parity row.
+- [ ] T0017 - Approve ADR-0029 quality gates and record owners for every parity row. **Needs a person:** ADR-0029 was accepted in #37 on 2026-11-08; the owner still has to name a person owning each `feature-parity.md` row (rows name owning ADRs, not people) (checked 2026-11-10).
 
 ### Migration strategy - [ADR-0030](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0030-migration-and-release.md)
 
-- [ ] T0018 - Approve phase ordering, code ownership and component-by-component migration boundaries.
+- [ ] T0018 - Approve phase ordering, code ownership and component-by-component migration boundaries. **Needs a person:** ADR-0030 (accepted in #37) fixes phase order and migration boundaries; the owner still has to record code ownership (checked 2026-11-10).
 - [x] T0019 - Define a feature/route fallback strategy for phases that cannot launch atomically.
 - [x] T0020 - Record compatibility and rollback requirements for every additive backend/API change.
-- [ ] T0021 - Agree the status update protocol: proposed/accepted decision separate from not-started/in-progress/implemented/verified execution.
-- [ ] T0022 - Approve ADR-0030 release governance; keep user music and durable data untouched.
+- [x] T0021 - Agree the status update protocol: proposed/accepted decision separate from not-started/in-progress/implemented/verified execution. **Evidence (2026-11-10):** The protocol (decision status separate from not-started/in-progress/implemented/verified) is ADR-0030's governance rule and `docs/adr/README.md`; the owner accepted ADR-0030 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`). Re-checked 2026-11-10.
+- [x] T0022 - Approve ADR-0030 release governance; keep user music and durable data untouched. **Evidence (2026-11-10):** The owner accepted ADR-0030 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. The data invariant (source music, drafts, ratings and preferences survive) is ADR-0030's own compatibility rule.
 
 
 ## Phase 01 - Design system, interaction primitives and accessibility
@@ -61,7 +61,7 @@
 - [ ] T0026 - Implement scoped feature styles or CSS modules; remove accidental global cross-feature selectors.
 - [x] T0027 - Build visual examples for default, hover, focus, disabled, loading, selected, warning and error states.
 - [ ] T0028 - Verify both themes, long text, fallback fonts, reduced motion and accessible contrasts.
-- [ ] T0029 - Approve ADR-0003 and document visual exceptions.
+- [ ] T0029 - Approve ADR-0003 and document visual exceptions. **Needs a person:** ADR-0003 was accepted in #37 on 2026-11-08; the owner has to write down which visual exceptions are allowed, since none are documented (checked 2026-11-10).
 
 ### Accessible shared components and feedback - [ADR-0004](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0004-interaction-primitives-and-notifications.md)
 
@@ -72,18 +72,18 @@
 - [x] T0034 - Implement persistent/conflict-free notifications; multiple toasts must not erase actionable Undo.
 - [x] T0035 - Ensure retry/cancel and partial success are expressed accurately, not optimistically marked completed.
 - [x] T0036 - Test Escape, focus, touch targets, screen-reader names, toast collisions and destructive recovery.
-- [ ] T0037 - Approve ADR-0004 interaction and notification contracts.
+- [x] T0037 - Approve ADR-0004 interaction and notification contracts. **Evidence (2026-11-10):** The owner accepted ADR-0004 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Accessibility foundation - [ADR-0023](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0023-accessibility.md)
 
-- [ ] T0038 - Agree WCAG 2.2 AA target, supported browser/assistive-tech matrix and documented exceptions.
+- [ ] T0038 - Agree WCAG 2.2 AA target, supported browser/assistive-tech matrix and documented exceptions. **Needs a person:** ADR-0023 (accepted in #37) states the WCAG 2.2 AA target; the owner still has to agree the browser and assistive-technology matrix and documented exceptions (checked 2026-11-10).
 - [x] T0039 - Preserve or map existing global keyboard shortcuts and prevent them inside editable text.
 - [x] T0040 - Define keyboard-equivalent actions for every drag/reorder and every waveform or grid operation.
 - [x] T0041 - Implement screen-reader-friendly live status announcements without noisy high-frequency narration.
 - [x] T0042 - Ensure visible focus is never obscured by sticky navigation or sheets.
 - [ ] T0043 - Audit form validation, meaningful errors, non-colour state and reduced motion.
-- [ ] T0044 - Run keyboard-only, NVDA/VoiceOver and 200/400% zoom journeys; log fixes with evidence.
-- [ ] T0045 - Approve ADR-0023 accessibility standards.
+- [ ] T0044 - Run keyboard-only, NVDA/VoiceOver and 200/400% zoom journeys; log fixes with evidence. **Needs a person:** keyboard and zoomed layouts are tested automatically; NVDA and VoiceOver journeys need a person with those screen readers (checked 2026-11-10).
+- [x] T0045 - Approve ADR-0023 accessibility standards. **Evidence (2026-11-10):** The owner accepted ADR-0023 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 02 - Navigation, responsiveness and PWA
@@ -97,7 +97,7 @@
 - [x] T0050 - Handle deleted/missing resources with explicit recovery; never switch silently to another mix.
 - [x] T0051 - Configure SPA path fallback without masking `/api` errors or asset 404 responses.
 - [x] T0052 - Verify playback and previews survive supported navigation and do not duplicate media instances.
-- [ ] T0053 - Approve ADR-0002 routing rules.
+- [x] T0053 - Approve ADR-0002 routing rules. **Evidence (2026-11-10):** The owner accepted ADR-0002 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Responsive complex workspaces - [ADR-0024](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0024-responsive-workspaces.md)
 
@@ -106,17 +106,17 @@
 - [x] T0056 - Specify desktop editor timeline+inspector and mobile timeline+sheet behaviour.
 - [x] T0057 - Specify desktop Studio 64-cell grid and mobile lane navigation without lost cells.
 - [x] T0058 - Specify responsive Library list/table and long/unicode/RTL song metadata treatment.
-- [ ] T0059 - Test virtual keyboard, touch/drag alternatives, landscape, 200/400% zoom and embedded scrolling.
-- [ ] T0060 - Approve ADR-0024 with recorded narrow-viewport evidence.
+- [ ] T0059 - Test virtual keyboard, touch/drag alternatives, landscape, 200/400% zoom and embedded scrolling. **Needs a person:** landscape, zoom-equivalent widths and touch alternatives are tested in the browser; a real on-screen keyboard needs a person on a phone or tablet (checked 2026-11-10).
+- [ ] T0060 - Approve ADR-0024 with recorded narrow-viewport evidence. **Needs a person:** ADR-0024 was accepted in #37 on 2026-11-08; the narrow-viewport evidence it asks for has to be recorded against a SHA by a reviewer (checked 2026-11-10).
 
 ### Installed PWA and browser support - [ADR-0031](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0031-pwa-and-browsers.md)
 
-- [ ] T0061 - Verify existing manifest, icons and Chrome/Edge install path before route migration.
-- [ ] T0062 - Preserve standalone launch/reload/deep links while requiring the local server.
+- [ ] T0061 - Verify existing manifest, icons and Chrome/Edge install path before route migration. **Needs a person:** `web/e2e/pages.e2e.ts` checks the manifest and icons; installing the app in Chrome and Edge needs a person (checked 2026-11-10).
+- [ ] T0062 - Preserve standalone launch/reload/deep links while requiring the local server. **Needs a person:** deep links and reloads work in a tab; launching it as an installed app needs a person to install it (checked 2026-11-10).
 - [x] T0063 - Feature-detect Media Session, fullscreen, AudioContext, clipboard and native folder integrations.
 - [x] T0064 - Audit service worker/static caching so API errors and private audio are never mishandled.
-- [ ] T0065 - Test Chrome/Edge installed mode and documented Firefox/Safari fallbacks.
-- [ ] T0066 - Approve ADR-0031 support matrix.
+- [ ] T0065 - Test Chrome/Edge installed mode and documented Firefox/Safari fallbacks. **Needs a person:** install it in Chrome and Edge and try the Firefox and Safari fallbacks on real browsers; only Edge was run so far (checked 2026-11-10).
+- [x] T0066 - Approve ADR-0031 support matrix. **Evidence (2026-11-10):** The owner accepted ADR-0031 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 03 - State, backend contracts, security and resilience
@@ -130,7 +130,7 @@
 - [x] T0071 - Add optimistic request reconciliation keyed by operation ID and backend confirmation.
 - [x] T0072 - Implement server revision or conflict tokens for mix/seam/request/settings mutations where required.
 - [x] T0073 - Test rapid clicking, concurrent tabs, stale polling, double submit, retry and lost connection.
-- [ ] T0074 - Approve ADR-0005 state rules.
+- [x] T0074 - Approve ADR-0005 state rules. **Evidence (2026-11-10):** The owner accepted ADR-0005 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Additive backend API evolution - [ADR-0026](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0026-api-compatibility.md)
 
@@ -142,7 +142,7 @@
 - [x] T0080 - Add target-scoped, atomic linked-pair insertion and bridge insertion contracts.
 - [x] T0081 - Expose actual renderer/planner explanations and progress, not client-invented percentages.
 - [x] T0082 - Test old/new payloads, unknown fields, validation, conflict, atomic rollback and repeated requests.
-- [ ] T0083 - Approve ADR-0026 schema compatibility plan.
+- [x] T0083 - Approve ADR-0026 schema compatibility plan. **Evidence (2026-11-10):** The owner accepted ADR-0026 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Local-first security - [ADR-0025](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0025-local-privacy.md)
 
@@ -153,7 +153,7 @@
 - [x] T0088 - Protect original files from any storage eviction, folder remove or cache reset operation.
 - [x] T0089 - Redact private paths and song metadata from default diagnostic output.
 - [x] T0090 - Re-run security and network-request audits after integrating all new routes.
-- [ ] T0091 - Approve ADR-0025.
+- [x] T0091 - Approve ADR-0025. **Evidence (2026-11-10):** The owner accepted ADR-0025 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Resilience and multi-tab ownership - [ADR-0028](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0028-recovery-and-multitab.md)
 
@@ -163,7 +163,7 @@
 - [x] T0095 - Implement active audio owner/takeover policy across multiple app tabs/windows.
 - [ ] T0096 - Show conflicts rather than silently overwriting newer mix, cue, request or setting state.
 - [ ] T0097 - Test backend stop/restart during edit, request, export and storage update; test tab sleep/wake.
-- [ ] T0098 - Approve ADR-0028 reliability policy.
+- [x] T0098 - Approve ADR-0028 reliability policy. **Evidence (2026-11-10):** The owner accepted ADR-0028 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 04 - Playback, listening, lyrics and explanations
@@ -177,7 +177,7 @@
 - [x] T0103 - Implement OS Media Session Play/Pause/Next/Previous/Seek only where semantics are correct and APIs supported.
 - [x] T0104 - Honor audible commit boundary for already scheduled/live seams.
 - [ ] T0105 - Test pause/seek/Next during seam, repeat keys, end-of-mix, suspend/resume, decoding errors and gapless continuity.
-- [ ] T0106 - Approve ADR-0006 audio semantics.
+- [x] T0106 - Approve ADR-0006 audio semantics. **Evidence (2026-11-10):** The owner accepted ADR-0006 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Cross-feature audio focus - [ADR-0007](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0007-audio-focus-ownership.md)
 
@@ -187,7 +187,7 @@
 - [x] T0110 - Cancel/release preview on close, unmount or stale render revision.
 - [x] T0111 - Ensure Stage and preview UI state reflect the actual active audio session.
 - [ ] T0112 - Test A/B non-overlap, rapid preview switch, failed load, suspended context and multi-tab ownership.
-- [ ] T0113 - Approve ADR-0007.
+- [x] T0113 - Approve ADR-0007. **Evidence (2026-11-10):** The owner accepted ADR-0007 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Listen experience - [ADR-0008](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0008-listen-screen.md)
 
@@ -199,7 +199,7 @@
 - [x] T0119 - Keep pending requests comprehensible without appearing queued to play prematurely.
 - [x] T0120 - Ensure animation does not repeatedly rerender the entire React tree.
 - [ ] T0121 - Test no next song, long metadata, failed seam, mobile and reduced motion.
-- [ ] T0122 - Approve ADR-0008.
+- [x] T0122 - Approve ADR-0008. **Evidence (2026-11-10):** The owner accepted ADR-0008 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Lyrics and Stage - [ADR-0009](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0009-lyrics-and-stage.md)
 
@@ -209,7 +209,7 @@
 - [x] T0126 - Keep fullscreen enter/exit and browser denial recovery without losing transport.
 - [x] T0127 - Make lyric layout readable under zoom, long/RTL lines and reduced motion.
 - [ ] T0128 - Test word/line timing regressions and route changes while fullscreen.
-- [ ] T0129 - Approve ADR-0009.
+- [x] T0129 - Approve ADR-0009. **Evidence (2026-11-10):** The owner accepted ADR-0009 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Explanations and feedback - [ADR-0027](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0027-explanations-and-feedback.md)
 
@@ -218,8 +218,8 @@
 - [x] T0132 - Keep Good/Bad seam ratings effortless and tied to the exact ordered pair/style.
 - [x] T0133 - Show why an energy curve, requested song or chosen seam could not be achieved.
 - [x] T0134 - Do not overclaim word alignment, chord correctness or transition sound quality.
-- [ ] T0135 - Test explanatory fallback, missing backend factors, stale rating and screen-reader announcements.
-- [ ] T0136 - Approve ADR-0027.
+- [ ] T0135 - Test explanatory fallback, missing backend factors, stale rating and screen-reader announcements. **Needs a person:** fallback, missing factors and stale ratings are tested; the screen-reader announcements need NVDA or VoiceOver run by a person (checked 2026-11-10).
+- [x] T0136 - Approve ADR-0027. **Evidence (2026-11-10):** The owner accepted ADR-0027 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 05 - Mix creation and steering
@@ -233,7 +233,7 @@
 - [x] T0141 - Explain mix-ready eligibility and reasons a preset is unavailable.
 - [x] T0142 - Explicitly distinguish Replace current and Save as draft before committing.
 - [ ] T0143 - Test every preset, sparse library, failed build, double click and playback preservation.
-- [ ] T0144 - Approve ADR-0010.
+- [x] T0144 - Approve ADR-0010. **Evidence (2026-11-10):** The owner accepted ADR-0010 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Energy arc and setting scope - [ADR-0011](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0011-steering-and-energy.md)
 
@@ -244,7 +244,7 @@
 - [x] T0149 - Preserve song destination search/clear and explain unreachable endpoint constraints.
 - [x] T0150 - Protect last slider user intent from stale async responses and optimistic rollback errors.
 - [ ] T0151 - Test extreme curve, reset, rapid input, invalid target and persisted settings.
-- [ ] T0152 - Approve ADR-0011.
+- [x] T0152 - Approve ADR-0011. **Evidence (2026-11-10):** The owner accepted ADR-0011 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 06 - Drafts, mix editing, seam inspection and export
@@ -258,7 +258,7 @@
 - [x] T0157 - Explain storage-blocked rendering and link to Workshop.
 - [x] T0158 - Ensure all project actions use stable IDs and survive reload/route navigation.
 - [x] T0159 - Test queue competition, duplicate names, missing draft, deletion/undo, storage limit and swap.
-- [ ] T0160 - Approve ADR-0012.
+- [x] T0160 - Approve ADR-0012. **Evidence (2026-11-10):** The owner accepted ADR-0012 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Edit timeline and scoped actions - [ADR-0013](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0013-edit-timeline.md)
 
@@ -269,7 +269,7 @@
 - [x] T0165 - Use stable seam/song IDs and current/draft scope on every mutation.
 - [x] T0166 - Protect playing audio commitment boundary and rollback rejected reorders.
 - [ ] T0167 - Test wrong-scope, locked moves, request ghost state, song removed while playing, reorder/poll race.
-- [ ] T0168 - Approve ADR-0013.
+- [x] T0168 - Approve ADR-0013. **Evidence (2026-11-10):** The owner accepted ADR-0013 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Seam inspector and render truth - [ADR-0014](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0014-seam-inspector.md)
 
@@ -280,7 +280,7 @@
 - [x] T0173 - Key render request/results and previews to seam identity + revision, rejecting stale outcomes.
 - [x] T0174 - Keep advanced audit accessible without overwhelming main timeline.
 - [ ] T0175 - Test fast style switching, late render, malformed cue, failed fallback and rating correct seam.
-- [ ] T0176 - Approve ADR-0014.
+- [x] T0176 - Approve ADR-0014. **Evidence (2026-11-10):** The owner accepted ADR-0014 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### FLAC export - [ADR-0022](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0022-flac-export.md)
 
@@ -289,7 +289,7 @@
 - [x] T0179 - Keep FLAC export and final download link once artifact is confirmed ready.
 - [x] T0180 - Define immutable export snapshot or invalidation when a mix changes mid-export.
 - [ ] T0181 - Test partial seam, disk full, failed render, retry, stale URL and playable FLAC decode.
-- [ ] T0182 - Approve ADR-0022.
+- [x] T0182 - Approve ADR-0022. **Evidence (2026-11-10):** The owner accepted ADR-0022 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 07 - Live song requests and bridge transactions
@@ -321,7 +321,7 @@
 - [x] T0199 - Track local dirty candidate separately from committed seam shape; recover when navigating.
 - [x] T0200 - Commit Use this to exact seam revision and retain shape on render failure.
 - [ ] T0201 - Test every cell, rapid toggling, all presets, incomplete stems, AI success/failure, undo and A/B audio.
-- [ ] T0202 - Approve ADR-0016.
+- [x] T0202 - Approve ADR-0016. **Evidence (2026-11-10):** The owner accepted ADR-0016 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 09 - Library, overrides and Discover
@@ -335,7 +335,7 @@
 - [x] T0207 - Preserve Priority, Never play, Add, Play next and Start mix context actions.
 - [x] T0208 - Handle background scan arrivals and status changes without wrong-row identity or dropped focus.
 - [x] T0209 - Test 20k library, duplicate names, Unicode, missing files, search races and failed analysis.
-- [ ] T0210 - Approve ADR-0017.
+- [x] T0210 - Approve ADR-0017. **Evidence (2026-11-10):** The owner accepted ADR-0017 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Metadata corrections and local sources - [ADR-0018](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0018-library-corrections-and-folders.md)
 
@@ -346,7 +346,7 @@
 - [x] T0215 - Improve watched folder list, scan progress, unavailable folder and typed path fallback.
 - [ ] T0216 - Use native folder picker only with safe host-local path binding; no insecure browser access.
 - [ ] T0217 - Test half/double BPM, invalid key, worker race, moved source, Unicode paths and malicious input.
-- [ ] T0218 - Approve ADR-0018.
+- [x] T0218 - Approve ADR-0018. **Evidence (2026-11-10):** The owner accepted ADR-0018 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Word and harmonic Discover - [ADR-0019](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0019-discover-words-and-harmony.md)
 
@@ -357,7 +357,7 @@
 - [x] T0223 - Add atomic pair insertion and explicit current/draft destination when backend supports it.
 - [x] T0224 - Prevent partial insertion and audio conflicts across discovery previews.
 - [ ] T0225 - Test missing lyric timing, same word many times, failed render, stage skip and duplicate songs.
-- [ ] T0226 - Approve ADR-0019.
+- [x] T0226 - Approve ADR-0019. **Evidence (2026-11-10):** The owner accepted ADR-0019 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 10 - Workshop, listening research and diagnostics
@@ -371,7 +371,7 @@
 - [x] T0231 - Preserve source watchers, priority processing and live storage budget control.
 - [x] T0232 - Use revision-aware storage writes and reconcile slider to confirmed value.
 - [ ] T0233 - Test low disk, old cache metadata, paused worker, render contention, missing source and stale write.
-- [ ] T0234 - Approve ADR-0020.
+- [x] T0234 - Approve ADR-0020. **Evidence (2026-11-10):** The owner accepted ADR-0020 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Blind listening studies - [ADR-0021](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0021-blind-listening.md)
 
@@ -382,7 +382,7 @@
 - [x] T0239 - Keep failed response submission recoverable and prevent duplicate stored trial responses.
 - [x] T0240 - Do not change musical study protocol/meaning without a separate versioned ADR.
 - [ ] T0241 - Test missing clip, partial trial, refresh, keyboard, double submit and final completion.
-- [ ] T0242 - Approve ADR-0021.
+- [x] T0242 - Approve ADR-0021. **Evidence (2026-11-10):** The owner accepted ADR-0021 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Local diagnostics and operation tracing - [ADR-0032](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0032-diagnostics-and-operations.md)
 
@@ -392,7 +392,7 @@
 - [x] T0246 - Redact source filesystem paths and song metadata in default diagnostics.
 - [x] T0247 - Ensure diagnostics add minimal CPU cost and no remote telemetry.
 - [ ] T0248 - Test redaction, worker restart, slow status, storage block and operation correlation.
-- [ ] T0249 - Approve ADR-0032.
+- [x] T0249 - Approve ADR-0032. **Evidence (2026-11-10):** The owner accepted ADR-0032 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
 ## Phase 11 - Cross-feature integration
@@ -402,7 +402,7 @@
 - [x] T0250 - Complete current-vs-draft isolation sequence while listening, requesting, editing and undoing.
 - [ ] T0251 - Complete two simultaneous requests competing for a slot, bridge approval and stale cancellation replay.
 - [ ] T0252 - Complete manual cue change while a previous render finishes and fallback plays; verify intended/actual difference.
-- [ ] T0253 - Complete Studio local audition → pause main playback → navigate → commit exact seam → render failure recovery.
+- [ ] T0253 - Complete Studio local audition → pause main playback → navigate → commit exact seam → render failure recovery. **Needs a person:** needs real stems on the owner's machine and someone listening to the committed seam (checked 2026-11-10).
 - [x] T0254 - Complete export of a draft while switching/reordering other mixes; verify snapshot and FLAC bytes.
 - [ ] T0255 - Complete metadata override while background analysis finishes and the library watch detects new files.
 - [ ] T0256 - Complete backend restart during mutation, reconnect/retry and two-tab active playback takeover.
@@ -419,10 +419,10 @@
 - [ ] T0261 - Run deterministic real Web Audio tests for seek, late seam, fallback, preview focus and exact media key behaviour.
 - [ ] T0262 - Run visual regression for dark/light, 320px–4K, safe areas, reduced motion and high zoom.
 - [ ] T0263 - Complete keyboard-only workflows for request, Mixes, Edit, Studio, Library, export and study.
-- [ ] T0264 - Complete NVDA, VoiceOver and applicable mobile assistive-technology testing against WCAG 2.2 AA.
+- [ ] T0264 - Complete NVDA, VoiceOver and applicable mobile assistive-technology testing against WCAG 2.2 AA. **Needs a person:** NVDA, VoiceOver and mobile assistive-technology sessions run by a person (checked 2026-11-10).
 - [ ] T0265 - Profile >20k Library, >100-song Edit, 64-cell Studio and concurrent render under constrained CPU/storage.
-- [ ] T0266 - Conduct user task tests for casual listener, creator and expert editor without guided help.
-- [ ] T0267 - Conduct actual listener blind comparisons; document subjective audio quality separately from render pass.
+- [ ] T0266 - Conduct user task tests for casual listener, creator and expert editor without guided help. **Needs a person:** unguided task tests with a casual listener, a creator and an expert editor (checked 2026-11-10).
+- [ ] T0267 - Conduct actual listener blind comparisons; document subjective audio quality separately from render pass. **Needs a person:** blind comparisons with real listeners, following `docs/listening-procedure.md` (checked 2026-11-10).
 - [x] T0268 - Verify local networking/origin/security and no private telemetry or original-file deletion.
 - [ ] T0269 - Audit every ADR acceptance criterion and link concrete CI/QA proof before marking Verified.
 - [x] T0270 - Update ADR decision/implementation status history, the ADR index, parity matrix and roadmap with merged implementation PR links.
@@ -435,9 +435,9 @@
 - [x] T0271 - Back up and restore representative existing mixes, drafts, ratings, settings, metadata and caches.
 - [x] T0272 - Verify forward migration and backward compatibility with pre-overhaul local server/client where required.
 - [ ] T0273 - Rehearse rollback of frontend routing and any schema changes without losing files or ratings.
-- [ ] T0274 - Confirm a newly installed PWA, a normal browser tab and an existing upgraded installation.
+- [ ] T0274 - Confirm a newly installed PWA, a normal browser tab and an existing upgraded installation. **Needs a person:** install the PWA fresh, use a normal tab and upgrade an existing installation (checked 2026-11-10).
 - [ ] T0275 - Resolve all critical data-integrity, audio continuity, bridge atomicity, accessibility, export and privacy blockers.
 - [ ] T0276 - Run Windows CI plus browser/audio/a11y gates on release candidate commit.
-- [ ] T0277 - Record final human listening evidence and explicitly accepted remaining noncritical limitations.
+- [ ] T0277 - Record final human listening evidence and explicitly accepted remaining noncritical limitations. **Needs a person:** the owner's own listening evidence and sign-off on remaining noncritical limitations (checked 2026-11-10).
 - [ ] T0278 - Verify every checklist item has a linked implementing PR and evidence; do not infer completion from docs.
-- [ ] T0279 - Merge/close this tracking PR only after the programme's delivery is actually complete; keep it open otherwise.
+- [ ] T0279 - Merge/close this tracking PR only after the programme's delivery is actually complete; keep it open otherwise. **Needs a person:** the owner merges or closes the tracking PR once delivery is complete (checked 2026-11-10).

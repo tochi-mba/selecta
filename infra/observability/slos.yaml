@@ -1,0 +1,41 @@
+# Selecta Cloud beta SLOs (ADR-0410, docs/saas/14-operations.md). The source of truth for the
+# generated burn-rate alerts and dashboards in infra/observability/generated/
+# (`python -m selecta.observability.slo_rules --write`; tests/test_cloud_slos.py keeps them in
+# step). SLIs come from OpenTelemetry span metrics (Grafana Cloud's metrics generator, with
+# `selecta_lane` as an extra dimension) or from `selecta_*` metrics where named. Labels are low
+# cardinality: never a user, workspace or job id.
+window_days: 28
+slos:
+  - id: api_availability
+    name: API availability
+    objective: 0.995
+    runbook: docs/operations/slo-api-availability.md
+    good: sum(rate(traces_spanmetrics_calls_total{service="selecta-api", span_kind="SPAN_KIND_SERVER", status_code!="STATUS_CODE_ERROR"}[{{window}}]))
+    total: sum(rate(traces_spanmetrics_calls_total{service="selecta-api", span_kind="SPAN_KIND_SERVER"}[{{window}}]))
+  - id: api_routine_latency
+    name: Routine API p95 under 300 ms
+    objective: 0.95
+    runbook: docs/operations/slo-api-latency.md
+    # Uploads, the event stream and Lucy streams are excluded (docs/saas/15-stress-testing.md).
+    good: sum(rate(traces_spanmetrics_latency_bucket{service="selecta-api", span_kind="SPAN_KIND_SERVER", span_name!~".*(/events|/uploads|/lucy).*", le="0.3"}[{{window}}]))
+    total: sum(rate(traces_spanmetrics_latency_count{service="selecta-api", span_kind="SPAN_KIND_SERVER", span_name!~".*(/events|/uploads|/lucy).*"}[{{window}}]))
+  - id: seam_start_latency
+    name: Interactive seam start p95 under 10 s
+    objective: 0.95
+    runbook: docs/operations/slo-seam-start.md
+    # `job.wait` spans run from queued to claimed; the interactive lane only.
+    good: sum(rate(traces_spanmetrics_latency_bucket{service="selecta-gateway", span_name="job.wait", selecta_lane="interactive", le="10"}[{{window}}]))
+    total: sum(rate(traces_spanmetrics_latency_count{service="selecta-gateway", span_name="job.wait", selecta_lane="interactive"}[{{window}}]))
+  - id: accepted_jobs_kept
+    name: Zero lost accepted jobs
+    objective: 0.99999
+    runbook: docs/operations/slo-lost-jobs.md
+    # A lost job is one the invariant audit finds accepted but with no live or finished state.
+    good: sum(rate(traces_spanmetrics_calls_total{service="selecta-api", span_name="job.enqueue"}[{{window}}])) - sum(rate(selecta_invariant_violations_total{invariant="accepted_job_lost"}[{{window}}]))
+    total: sum(rate(traces_spanmetrics_calls_total{service="selecta-api", span_name="job.enqueue"}[{{window}}]))
+  - id: webhook_entitlement_latency
+    name: Webhook to entitlement p95 under 60 s
+    objective: 0.95
+    runbook: docs/operations/slo-webhook-entitlement.md
+    good: sum(rate(selecta_webhook_to_entitlement_seconds_bucket{le="60"}[{{window}}]))
+    total: sum(rate(selecta_webhook_to_entitlement_seconds_count[{{window}}]))

@@ -92,3 +92,25 @@ def test_crosswalk_lists_every_ci_task_once_and_matches_the_checklist():
     for task, disposition, _note in rows:
         assert disposition in {"existing", "built", "open", "person"}, task
         assert (task in ticked) == (disposition in {"existing", "built"}), task
+
+
+# CI-0182-01: every animation the stylesheets run has a data owner, states and an interruption rule.
+MATRIX = ROOT / "docs/adr/selecta-creative-interface-interaction-matrix.md"
+
+
+def test_every_keyframe_animation_has_an_owner_states_and_interruption_rule():
+    import re
+
+    rows = _table_rows(MATRIX.read_text(encoding="utf-8"), "| Animation | Source | Data owner |")
+    named = {}
+    for animation, source, owner, states, interruption in rows:
+        assert len(owner) > 15 and len(states) > 3 and len(interruption) > 20, animation
+        path = source.strip("`")
+        assert (ROOT / path).is_file(), f"{animation}: {path} is missing"
+        named[animation.strip("`")] = path
+    sheets = [*(ROOT / "web/src").glob("*.css"), *(ROOT / "web/src/styles").glob("*.css")]
+    keyframes = {name for sheet in sheets for name in re.findall(r"@keyframes\s+([\w-]+)", sheet.read_text(encoding="utf-8"))}
+    assert len(keyframes) >= 10
+    assert keyframes - set(named) == set(), "keyframes with no owner row"
+    for clock_mark in ("Hand-over progress width", "Spectrum canvas", "Lyric focus"):
+        assert clock_mark in named

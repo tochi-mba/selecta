@@ -145,8 +145,8 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0181-05 | built | Built or given a focused test on 2026-11-10 |
 | CI-0181-06 | built | Built or given a focused test on 2026-11-10 |
 | CI-0181-07 | existing | Met by earlier code; tests named on the checklist line |
-| CI-0182-01 | open | In progress: docs/adr/selecta-creative-interface-interaction-matrix.md lists interactions with data authority, reduced-motion equivalent and guard, but it has not been reconciled against every animation in the stylesheets |
-| CI-0182-02 | open | In progress: --motion-fast, --motion-slow and --motion-ease exist in web/src/styles/tokens.css, but some animations still use literal durations (style.css pending-flow and request-pulse, shell.css skeleton-breathe, lucy.css lucy-slide) |
+| CI-0182-01 | built | animation ownership table in the interaction matrix; test_every_keyframe_animation_has_an_owner_states_and_interruption_rule |
+| CI-0182-02 | existing | six semantic motion tokens; loops and the clock-bound width are documented exceptions (web/src/styles/motion-tokens.test.ts) |
 | CI-0182-03 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0182-04 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0182-05 | person | Needs a person: writing and comprehension review of the musical glossary (web/src/ui/glossaryTerms.ts) |

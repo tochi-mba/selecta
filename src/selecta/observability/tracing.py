@@ -29,6 +29,8 @@ from opentelemetry.trace import (
     NonRecordingSpan,
     SpanContext,
     SpanKind,
+    Status,
+    StatusCode,
     TraceFlags,
 )
 
@@ -164,6 +166,8 @@ class TracingMiddleware:
             async def send_traced(message):
                 if message["type"] == "http.response.start":
                     span.set_attribute("http.response.status_code", message["status"])
+                    if message["status"] >= 500:
+                        span.set_status(Status(StatusCode.ERROR))
                 await send(message)
 
             try:

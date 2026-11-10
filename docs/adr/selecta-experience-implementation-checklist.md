@@ -98,28 +98,28 @@
 
 **Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
 
-- [ ] **EX-0123-01 - Design song row information hierarchy.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0123-01 - Design song row information hierarchy.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 title/artist, readiness and one primary action per row in `web/src/views/Library.tsx`, with duplicate recording IDs and long/missing tags covered by `web/src/views/Library.test.tsx` "makes duplicate recording IDs visible" and `web/e2e/lx-library.e2e.ts` LX-0340-05 and LX-0348-01; owner: Unassigned.** Needs a person: named both-theme responsive visual review of the song rows.
 - [ ] **EX-0123-02 - Crosswalk all existing row actions.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0123-03 - Preserve URL and deep paging.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0123-04 - Polish song details and corrections.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0123-05 - Measure 20k responsiveness.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0123-05 - Measure 20k responsiveness.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 one server page per request and focus kept while paging a 20,000-song fixture in `web/src/views/LibraryLx.test.tsx` LX-0345-07 and `web/e2e/mp-0291-library.e2e.ts` MP-0291-07; owner: Unassigned.** Needs a person: frame-time and DOM profile on the owner's real hardware with a 20k library.
 
 ## [ADR-124 - Requests: truthful lifecycle and explicit bridge consent](adr-0124-requests-lifecycle-and-bridge-consent.md)
 
 **Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
 
 - [ ] **EX-0124-01 - Define canonical user-facing lifecycle.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0124-02 - Redesign pending requests panel.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0124-02 - Redesign pending requests panel.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 `requestWords` in `web/src/views/Requests.tsx` separates Requested/waiting (no play time) from Ready for an opening; `web/src/views/ex0124Requests.test.tsx`; owner: Unassigned.** Needs a person: listener comprehension test of likely versus merely asked.
 - [ ] **EX-0124-03 - Specify bridge consent presentation.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0124-04 - Verify atomic/duplicate safeguards.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0124-05 - Test audible handover and preview focus.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0124-05 - Test audible handover and preview focus.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 single audio owner in `web/src/audio/focus.ts`; request transition previews pause the mix in `web/src/views/Requests.test.tsx` "one that's ready plays straight away and pauses the mix"; owner: Unassigned.** Needs a person: real-music request-join listening test for overlap or transport interruption.
 
 ## [ADR-125 - Musical discovery as clear word and harmonic audition flows](adr-0125-musical-discovery-audition-workflows.md)
 
 **Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
 
 - [ ] **EX-0125-01 - Redesign word pair context.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0125-02 - Design four-stage harmonic audition.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0125-02 - Design four-stage harmonic audition.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 chords, song A, song B, then both, in `web/src/views/Links.tsx`, covered by `web/src/views/Links.test.tsx` "plays what it detected in one press" and `web/e2e/mp-0292-discovery.e2e.ts` MP-0292-03; owner: Unassigned.** Needs a person: real-audio listening and uncoached comprehension of the comparison order and purpose.
 - [ ] **EX-0125-03 - Maintain preview focus.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0125-04 - Guard feedback binding.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0125-05 - Verify safe add-to-mix flow.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
@@ -128,11 +128,11 @@
 
 **Phase:** Listener · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
 
-- [ ] **EX-0126-01 - Improve local path guidance.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0126-01 - Improve local path guidance.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 folder help and per-reason advice in `web/src/views/Start.tsx`, covered by `web/src/views/polishPhase03Start.test.tsx` P0044/P0045; owner: Unassigned.** Needs a person: first-use and invalid-path comprehension test with a new user.
 - [ ] **EX-0126-02 - Clarify readiness and first mix.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0126-03 - Specify failure/recovery states.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0126-04 - Audit current network/privacy copy.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0126-05 - Enforce excluded platform scope.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0126-05 - Enforce excluded platform scope.** **Implementation: Superseded in part; Verified: No; PR/SHA: -; evidence: 2026-11-10 source check found no desktop packaging dependency (no electron/tauri/pyinstaller in `web/package.json` or `pyproject.toml`) and no native folder picker (`showDirectoryPicker`/`webkitdirectory` absent from `web/src`); owner: Unassigned.** Superseded by ADR-0391: Selecta Cloud (a SaaS) is now an accepted goal, so the "no SaaS feature" exclusion no longer holds; the desktop-packaging and native-picker exclusions still hold.
 
 ## [ADR-127 - Export: truthful frozen revision, job lifecycle and file delivery](adr-0127-export-job-and-frozen-revision.md)
 
@@ -166,53 +166,53 @@
 
 ## [ADR-130 - Warm editorial design language, independent themes and CSS ownership](adr-0130-brand-tokens-and-css-ownership.md)
 
-**Phase:** Foundation · **Priority:** P0 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
+**Phase:** Foundation · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 5/5 Implemented (2026-11-10) · **Verified:** 0/5; 2 need a person only, 3 also need a green rerun.
 
-- [ ] **EX-0130-01 - Approve semantic color and type contracts.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0130-02 - Design song-focused compositions.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0130-03 - Audit and assign CSS ownership.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0130-04 - Specify all interactive component states.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0130-05 - Test real-content resilience.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0130-01 - Approve semantic color and type contracts.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: semantic tokens in `web/src/styles/tokens.css` (one source, `docs/engineering/css-ownership.md`); contrast measured by `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` MP-0298-05; owner: Unassigned.** Needs a person: owner approval of the colour and type contracts against screenshots and the control gallery.
+- [ ] **EX-0130-02 - Design song-focused compositions.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: later Listen/Library/Lucy compositions (ADR-0249, ADR-0368 programme) own the current hierarchy; owner: Unassigned.** Needs a person: a cross-route human visual critique that title, artist and musical intent outrank tool chrome.
+- [ ] **EX-0130-03 - Audit and assign CSS ownership.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: selector and load-order map in `docs/engineering/css-ownership.md` and `docs/adr/completion/css-ownership.md`, guarded by `web/src/styles/css-ownership.test.ts`, `web/src/styles/mp-css-register.test.ts` and `web/src/styles/uf-cascade.test.ts` (a new overlap, sheet or `!important` fails the build); owner: Unassigned.** Needs a person: review of before/after captures; the repo has no approved screenshot baseline to diff against.
+- [ ] **EX-0130-04 - Specify all interactive component states.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: `web/src/ui/ControlGallery.tsx` with `web/e2e/mp-0279-component-gallery.e2e.ts`; owner: Unassigned.** Open: MP-0279-02 to -07 failed their focus and alignment assertions on the shared-laptop run of 2026-11-10 (build with VITE_SELECTA_GALLERY=1, port 9062), so the scan is not green today. Needs a person: review of the gallery fixture in both themes.
+- [ ] **EX-0130-05 - Test real-content resilience.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: awkward/long names from `SELECTA_E2E_STRESS=1` in `tests/e2e_server.py`; 320px and zoom checks in `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` and `web/e2e/mp-0279-component-gallery.e2e.ts` MP-0279-06; owner: Unassigned.** Open: MP-0298-02 (200/400% zoom) and MP-0279-06 failed on the 2026-11-10 shared run. Needs a person: RTL and system-font screenshot review.
 
 ## [ADR-131 - Shared component contracts, honest async states and scoped recovery](adr-0131-component-states-and-scoped-recovery.md)
 
 **Phase:** Foundation · **Priority:** P0 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
 
-- [ ] **EX-0131-01 - Write interaction state matrix.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0131-02 - Validate overlay and focus behavior.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0131-03 - Protect async consistency.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0131-04 - Improve loading/empty/error feedback.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0131-01 - Write interaction state matrix.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: role, keyboard and state matrix for every shared component in `docs/adr/completion/components.md`, rendered by `web/src/ui/ControlGallery.tsx` and measured by `web/e2e/mp-0279-component-gallery.e2e.ts`; owner: Unassigned.** Open: MP-0279-02 to -07 failed on the 2026-11-10 shared-laptop run, so the automated gallery check is not green today; the ADR's manual check also needs a person.
+- [ ] **EX-0131-02 - Validate overlay and focus behavior.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: `Dialog`/`Drawer`/`Sheet` trap, Escape-top-only and focus return per `docs/adr/completion/components.md`; `web/src/ui/controls.test.tsx` focus-restore cases; owner: Unassigned.** Needs a person: APG keyboard pass and NVDA session on nested overlays.
+- [ ] **EX-0131-03 - Protect async consistency.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: `x-mix-order` and `x-operation-id` guards in `src/selecta/api.py`; unit cases `web/src/views/Mix.test.tsx` 'stop and catch up if the mix has moved on' and `web/src/ui/paletteStale.test.tsx`; owner: Unassigned.** Open: the race, two-tab and slow-network E2E the ADR requires has not been written or run.
+- [ ] **EX-0131-04 - Improve loading/empty/error feedback.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: `web/src/state/workState.test.ts` (loading, refreshing, stale and failed kept apart), `web/src/ui/skeletonHonesty.test.tsx` (real retry after ten seconds); owner: Unassigned.** Open: the deterministic visual fixtures (`web/e2e/mp-0297-loading-and-recovery.e2e.ts`, owned by ADR-0297) were not run by this section.
 - [ ] **EX-0131-05 - Preserve scoped Undo and recovery.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
 
 ## [ADR-132 - Responsive compositions, WCAG 2.2 AA and purposeful motion](adr-0132-responsive-accessibility-and-purposeful-motion.md)
 
 **Phase:** Quality · **Priority:** P0 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
 
-- [ ] **EX-0132-01 - Review mobile/zoom layouts.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0132-01 - Review mobile/zoom layouts.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` MP-0298-01 (320 to 3840px, short landscape) and -02 (200/400% zoom); software keyboard in `web/e2e/mp-0295-overlays-and-toasts.e2e.ts` MP-0295-07 and `web/e2e/overlay-arbitration.e2e.ts`; owner: Unassigned.** Open: MP-0298-02 and MP-0295-07 failed on the 2026-11-10 shared-laptop run; needs a green rerun.
 - [ ] **EX-0132-02 - Ensure non-drag equivalents.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0132-03 - Audit composite ARIA behavior.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0132-03 - Audit composite ARIA behavior.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: composite widgets and their keyboard models listed in `docs/adr/completion/components.md`; owner: Unassigned.** Needs a person: APG pattern testing and an NVDA session for every composite widget.
 - [ ] **EX-0132-04 - Specify reduced-motion fidelity.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0132-05 - Conduct named human AT acceptance.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0132-05 - Conduct named human AT acceptance.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Needs a person: recorded NVDA/Edge (and any available AT) sessions completing the essential listener, creator and expert tasks.
 
 ## [ADR-133 - Uncoached user research, real performance and release evidence](adr-0133-user-research-performance-and-release-evidence.md)
 
-**Phase:** Quality · **Priority:** P0 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
+**Phase:** Quality · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 0/5 Implemented, 3 In progress, 2 Not started (2026-11-10) · **Verified:** 0/5; all five need a person.
 
-- [ ] **EX-0133-01 - Define and run baseline UX tasks.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0133-02 - Establish approved visual baselines.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0133-03 - Benchmark meaningful scale.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0133-04 - Verify real audio and assistive access.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0133-05 - Conduct exact-head release and rollback.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [ ] **EX-0133-01 - Define and run baseline UX tasks.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Needs a person: consented, uncoached participant sessions that separate observed errors from design hypotheses.
+- [ ] **EX-0133-02 - Establish approved visual baselines.** **Implementation: In progress (2026-11-10); Verified: No; PR/SHA: -; evidence: capture specs `web/e2e/visual.e2e.ts` and `web/e2e/mp-baseline.mp.ts` record candidates for review, not approved baselines; owner: Unassigned.** Needs a person: a named reviewer approving every key state, theme and browser capture.
+- [ ] **EX-0133-03 - Benchmark meaningful scale.** **Implementation: In progress (2026-11-10); Verified: No; PR/SHA: -; evidence: harness `tests/scale_server.py`; no 20k/100-song/64-cell profile recorded; owner: Unassigned.** Needs a person: run the profile on named, recorded hardware and listen for audio continuity.
+- [ ] **EX-0133-04 - Verify real audio and assistive access.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Needs a person: human listening of seams, Stage, previews and export, plus NVDA/AT sign-off.
+- [ ] **EX-0133-05 - Conduct exact-head release and rollback.** **Implementation: In progress (2026-11-10); Verified: No; PR/SHA: -; evidence: `tests/rollback_check.py` harness exists; no exact-head run recorded; owner: Unassigned.** Needs a person: owner GO decision record after CI and old-new-old restoration at an exact SHA.
 
 ## [ADR-134 - Web-first product boundary for a possible future SaaS](adr-0134-web-first-future-saas-boundary.md)
 
-**Phase:** Scope · **Priority:** P0 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
+**Phase:** Scope · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 2/5 Implemented, 1 Not started, 2 Superseded by ADR-0391 (2026-11-10) · **Verified:** 1/5.
 
-- [ ] **EX-0134-01 - Record current platform truth.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0134-02 - Review proposed UX for desktop coupling.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0134-03 - Preserve folder setup until separate decision.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0134-04 - Audit excluded implementation scope.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
-- [ ] **EX-0134-05 - Define future SaaS decision gate.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
+- [x] **EX-0134-01 - Record current platform truth.** **Implementation: Implemented; Verified: Yes (crosscheck, 2026-11-10); PR/SHA: -; evidence: README/API/privacy crosscheck on 2026-11-10: `README.md` lines 10-12 say it describes local mode and link the separate Selecta Cloud guarantee table `docs/saas/README.md` 'Guarantees by runtime mode'; API modes split in `src/selecta/modes/` (ADR-0392); local privacy wording pinned by `web/src/localPrivacyCopy.test.ts` (5 passed with `pnpm exec vitest run` on 2026-11-10); the optional-SaaS half is now ADR-0391's accepted Cloud programme rather than a future possibility; owner: Unassigned.**
+- [ ] **EX-0134-02 - Review proposed UX for desktop coupling.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Needs a person: a design review confirming no new desktop-only assumption (ADR-0392 now requires each surface to work in both runtime modes).
+- [ ] **EX-0134-03 - Preserve folder setup until separate decision.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: typed-path onboarding, missing/refused/no-audio folder recovery and restart in `web/e2e/mp-0282-onboarding.e2e.ts` MP-0282-01/02/06/08; owner: Unassigned.** Open: rerun pending on the shared laptop.
+- [ ] **EX-0134-04 - Audit excluded implementation scope.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Superseded by ADR-0391: the owner made Selecta Cloud a goal on 2026-11-09, so accounts (ADR-0400) and cloud dependencies (ADR-0393, ADR-0397) are now in scope; packaging stays out of scope in local mode.
+- [ ] **EX-0134-05 - Define future SaaS decision gate.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Superseded by ADR-0391: the gate fired when the owner requested SaaS on 2026-11-09; the separate platform/security plan is `docs/saas/` with ADR-0391 to ADR-0416.
 
 ## Maintenance and release discipline
 

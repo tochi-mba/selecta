@@ -68,8 +68,8 @@ def test_the_human_register_names_only_packages_the_machine_register_has():
     for line in table.splitlines():
         if line.startswith("| ") and "---" not in line and not line.startswith("| Package"):
             first = line.strip("|").split("|")[0].strip()
-            named |= {part.strip() for part in first.split(",") if part.strip()}
-    named -= {"Rubber Band (via pedalboard)"}
+            named |= {part.split("(")[0].strip() for part in first.split(",") if part.strip()}
+    named -= {"Rubber Band"}
     assert named and sorted(named - set(licence_register.load()["packages"])) == []
     assert "licence_register.json" in DOC.read_text("utf-8")
 

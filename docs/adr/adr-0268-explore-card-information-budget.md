@@ -36,6 +36,31 @@ At rest, each eligible mix card foregrounds its idea, short differentiator and o
 7. **FP-0268-07 - Handle long and missing metadata.** **Acceptance:** Card actions stay visible and reachable with real long/RTL strings, absent artist metadata and both themes. **Required verification:** 320px, 1440px and 400% matched screenshots **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **FP-0268-08 - Validate faster, accurate comparisons.** **Acceptance:** Time to choose, success at identifying eligible option and accuracy of promised outcomes improve or stay stable; no increase in false beliefs. **Required verification:** Pre/post uncoached listener and DJ study, exact SHA/reviewer **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
+## Explore card copy inventory (FP-0268-01, 2026-11-10)
+
+Source: `web/src/views/Mixes.tsx` (the `article.vibe-card` block); data: `VibeCard` in `web/src/api.ts`. Proven by
+`web/src/views/fp-0268-explore-cards.test.tsx` with a full card and a sparse one (no tempo, no artists, no basis).
+
+| Element | Source field | Class | Where it shows |
+|---|---|---|---|
+| Name (`h3`) | `name` | decision-critical | always |
+| Tempo range "N-M BPM" | `tempo` | decision-critical when known | only when the server measured it |
+| Family scope "Stays within X" | `family` | decision-critical (eligibility) | only for a family-limited idea |
+| One-line summary | `blurb` | decision-critical | always |
+| "N matching songs" | `songs` | comparison fact | always, same wording on every card |
+| "About T of matching source songs" | `seconds` | comparison fact (approximate, says "About") | always, same wording on every card |
+| Disclosure "Why X? More details" | - | entry to detail | always, a native `details`/`summary` (pointer, touch, keyboard) |
+| Artists drawn from | `artists` | detail | inside the disclosure; "your mix-ready songs" when none are known |
+| How it moves | `moves` | detail | inside the disclosure |
+| Measured basis | `basis` | detail; never claimed without a basis | inside the disclosure, only when the server sent one |
+| Planning caveat and consequences | - | qualifier | once for the section, visible ("planning preferences, not previews"); per card inside the disclosure |
+| Use this feeling with Lucy | - | advanced action | inside the disclosure, behind the `lucy` flag |
+| Play | - | primary action (filled) | always |
+| Shape first | - | contextual action (quiet) | behind the `editor` flag |
+| Save draft | - | contextual action (quiet) | behind the `drafts` flag |
+
+Unavailable ideas are not cards: they are listed under "Needs more mix-ready songs" with how many more they need.
+
 ## Safety, negatives and evidence requirements
 
 **Area-specific negatives:** all choices ineligible; one eligible; partly analysed library; unavailable candidate facts; generated vs ungenerated; missing artist; Unicode/RTL/very long titles; mobile 320px; 400% zoom; disclosure keyboard focus.

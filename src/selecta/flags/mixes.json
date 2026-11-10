@@ -61,6 +61,12 @@
       "requires": ["mixes.shaping", "stems"],
       "surfaces": ["overlay.shaping"],
       "words": ["Stem-assisted moves"]
+    },
+    "mixes.shaping.remember_length": {
+      "label": "Remember mix length",
+      "about": "The chosen length (30 min, 1 hour or 2 hours) is kept in this browser for the next visit, like the other shaping choices.",
+      "requires": ["mixes.shaping"],
+      "surfaces": ["mixes"]
     }
   }
 }

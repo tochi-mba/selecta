@@ -1,0 +1,74 @@
+{
+  "//": "R2 bucket lifecycle rules as code (ADR-0397 SC-0397-05, docs/saas/05-storage-uploads-playback.md 5.1), in OpenTofu JSON syntax for the Cloudflare provider. Staging: abort incomplete multipart uploads after 1 day, delete objects after 2. Exports: delete after 90 days, the longest plan's retention; R2 lifecycle rules match by prefix only, so the shorter Free (7 days) and Plus (30 days) retention needs an app-side export sweep (not built: Cloud exports have no table yet) and this rule is the backstop. Originals and derived artifacts never expire by rule (deletion and eviction are app workflows). tests/test_cloud_r2_lifecycle.py checks these numbers against the plan catalogue.",
+  "variable": {
+    "cloudflare_account_id": {"type": "string"},
+    "bucket_originals": {"type": "string", "default": "sel-originals"},
+    "bucket_derived": {"type": "string", "default": "sel-derived"},
+    "bucket_exports": {"type": "string", "default": "sel-exports"},
+    "bucket_staging": {"type": "string", "default": "sel-staging"}
+  },
+  "resource": {
+    "cloudflare_r2_bucket_lifecycle": {
+      "originals": {
+        "account_id": "${var.cloudflare_account_id}",
+        "bucket_name": "${var.bucket_originals}",
+        "rules": [
+          {
+            "id": "abort-stale-multipart",
+            "enabled": true,
+            "conditions": {"prefix": ""},
+            "abort_multipart_uploads_transition": {"condition": {"type": "Age", "max_age": 86400}}
+          }
+        ]
+      },
+      "derived": {
+        "account_id": "${var.cloudflare_account_id}",
+        "bucket_name": "${var.bucket_derived}",
+        "rules": [
+          {
+            "id": "abort-stale-multipart",
+            "enabled": true,
+            "conditions": {"prefix": ""},
+            "abort_multipart_uploads_transition": {"condition": {"type": "Age", "max_age": 86400}}
+          }
+        ]
+      },
+      "exports": {
+        "account_id": "${var.cloudflare_account_id}",
+        "bucket_name": "${var.bucket_exports}",
+        "rules": [
+          {
+            "id": "abort-stale-multipart",
+            "enabled": true,
+            "conditions": {"prefix": ""},
+            "abort_multipart_uploads_transition": {"condition": {"type": "Age", "max_age": 86400}}
+          },
+          {
+            "id": "expire-exports-after-longest-plan",
+            "enabled": true,
+            "conditions": {"prefix": "w/"},
+            "delete_objects_transition": {"condition": {"type": "Age", "max_age": 7776000}}
+          }
+        ]
+      },
+      "staging": {
+        "account_id": "${var.cloudflare_account_id}",
+        "bucket_name": "${var.bucket_staging}",
+        "rules": [
+          {
+            "id": "abort-multipart-after-1-day",
+            "enabled": true,
+            "conditions": {"prefix": "s/"},
+            "abort_multipart_uploads_transition": {"condition": {"type": "Age", "max_age": 86400}}
+          },
+          {
+            "id": "delete-staged-after-2-days",
+            "enabled": true,
+            "conditions": {"prefix": "s/"},
+            "delete_objects_transition": {"condition": {"type": "Age", "max_age": 172800}}
+          }
+        ]
+      }
+    }
+  }
+}

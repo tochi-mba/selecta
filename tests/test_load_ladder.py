@@ -159,3 +159,14 @@ def test_a_scaled_down_l1_passes_the_thresholds_locally(tmp_path, monkeypatch):
     assert report.requests >= 10 * 9
     assert report.cross_tenant_successes == 0 and report.duplicate_results == 0
     assert ladder.evaluate(report) == []
+
+
+def test_the_rooms_k6_script_uses_the_real_code_alphabet_and_has_pass_fail_thresholds():
+    from selecta.rooms.codes import ALPHABET
+
+    script = (ROOT / "tests" / "load" / "k6" / "rooms.js").read_text(encoding="utf-8")
+    assert f"const ALPHABET = '{ALPHABET}';" in script
+    for metric in ("room_join_duration", "room_join_failed", "room_vote_duration",
+                   "room_vote_failed", "brute_force_rooms_found"):
+        assert f"{metric}: [" in script, metric
+    assert "iterations: 1000, maxDuration: '10s'" in script and "rate: 10000, timeUnit: '1m'" in script

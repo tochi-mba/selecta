@@ -2,6 +2,7 @@ import { flagOn } from '../flags';
 import { useEffect, useRef, useState } from 'react';
 import { LibrarySong, post } from '../api';
 import { clock } from '../lib';
+import { capabilities } from '../state/capabilities';
 import { trackReadiness } from '../state/readiness';
 import { Action, Sheet, Status } from '../ui/controls';
 import { Field } from '../ui/primitives';
@@ -123,6 +124,13 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       {facts.reason && <p className="hint">{facts.reason}</p>}
       {nextStep(song.readiness?.status) && <p className="hint song-next-step">{nextStep(song.readiness?.status)}</p>}
+      {flagOn('library.capability_readiness') && (
+        <dl className="song-facts song-capabilities" aria-label="What it’s ready for">
+          {capabilities(song, { lyrics: flagOn('lyrics.lookup') }).map((item) => (
+            <div key={item.name}><dt>{item.name}</dt><dd><Status kind={item.kind}>{item.words}</Status></dd></div>
+          ))}
+        </dl>
+      )}
       <dl className="song-facts">
         <div><dt>Length</dt><dd>{clock(song.duration)}</dd></div>
         <div><dt>Tempo in use</dt><dd>{song.bpm ? `${Math.round(song.bpm)} BPM` : 'Not measured yet'}{song.override_bpm ? ' (your correction)' : ''}</dd></div>

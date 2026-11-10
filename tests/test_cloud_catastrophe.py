@@ -19,6 +19,7 @@ The full-size L6 (L3 load plus these failures) needs staging; see `tests/load/`.
 
 from __future__ import annotations
 
+import dataclasses
 import random
 import threading
 from collections import Counter
@@ -58,18 +59,19 @@ def world(sqlite_engine):
     built.http.__exit__(None, None, None)
 
 
-def _fresh_staff_sessions(world) -> None:
+def _fresh_staff_sessions(world, now: float) -> None:
     """Hours of database time passed in the drill; the operators sign in to the admin again."""
     tokens = Tokens()  # the same people as make_world's, by subject and WorkOS session
     with transaction(world.engine) as conn:
         for name in list(world.sessions):
-            world.sessions[name] = privileged.start(conn, tokens.add(name),
+            fresh = dataclasses.replace(tokens.add(name), issued_at=now, expires_at=now + 3000)
+            world.sessions[name] = privileged.start(conn, fresh,
                                                     staff_organization_id="staff-org").id
 
 
-def _engage_together(world, control: str, target: str) -> list[int]:
+def _engage_together(world, control: str, target: str, now: float) -> list[int]:
     """Two operators press the same emergency control at the same moment."""
-    _fresh_staff_sessions(world)
+    _fresh_staff_sessions(world, now)
     barrier = threading.Barrier(2)
     codes: list[int] = []
 
@@ -130,7 +132,7 @@ def test_every_worker_dies_while_users_keep_working_and_two_operators_race_a_dra
         loop.run_once(moment=clock.now)
 
     # Two operators drain the workers at the same moment: one control, both told it's on.
-    codes = _engage_together(world, "workers.drained", "*")
+    codes = _engage_together(world, "workers.drained", "*", clock.now)
     assert codes == [200, 200], codes
     with world.engine.connect() as conn:
         assert state.load(conn).on("workers.drained", "*")

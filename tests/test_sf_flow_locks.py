@@ -56,9 +56,10 @@ def test_moving_the_locked_song_itself_is_a_choice_and_keeps_its_lock(tmp_path):
 def test_the_same_guard_protects_a_draft(tmp_path):
     client = _client_with_locked_middle(tmp_path)
     draft = client.post("/api/drafts", json={"name": "Locked draft"}).json()["id"]
-    for song_id in (1, 2, 3):
-        client.post(f"/api/mix/songs?draft={draft}", json={"song_id": song_id})
-    client.post(f"/api/mix/1/lock?draft={draft}")
+    conn = db.connect(Settings(tmp_path).db_path)
+    mix.write_order(conn, [(1, None, 0), (2, None, 0), (3, None, 0)], draft)
+    conn.close()
+    assert client.post(f"/api/mix/1/lock?draft={draft}").status_code == 200
     answer = client.post(f"/api/mix/move?draft={draft}", json={"source": 0, "target": 2})
     assert answer.status_code == 409
     items = client.get(f"/api/mix?draft={draft}").json()["mix"]

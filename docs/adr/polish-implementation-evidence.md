@@ -2,7 +2,7 @@
 
 - **Programme implementation status:** PR #23 merged (`84b8b5cbadf7204bf526e8932124b5c4890e2c44`); original per-task evidence remains unreconciled and independently unverified.
 - **Date:** 2026-11-06
-- **Tasks completed:** 0 / 143
+- **Tasks completed:** 43 / 143
 - **Runtime verification:** none claimed by this planning PR.
 
 ## Evidence boundary
@@ -15,10 +15,10 @@ Documentation/link/file-length checks on this PR validate the plan's structure o
 
 | ADR | Task range | Implementation | Evidence |
 |---|---|---|---|
-| [ADR-0033](adr-0033-polish-baseline-and-governance.md) | P0001–P0010 | Not started | No implementation or runtime verification |
-| [ADR-0034](adr-0034-polish-visual-system.md) | P0011–P0020 | Not started | No implementation or runtime verification |
-| [ADR-0035](adr-0035-polish-components-and-feedback.md) | P0021–P0031 | Not started | No implementation or runtime verification |
-| [ADR-0036](adr-0036-polish-loading-and-skeletons.md) | P0032–P0043 | Not started | No implementation or runtime verification |
+| [ADR-0033](adr-0033-polish-baseline-and-governance.md) | P0001–P0010 | In progress (5/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0034](adr-0034-polish-visual-system.md) | P0011–P0020 | In progress (9/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0035](adr-0035-polish-components-and-feedback.md) | P0021–P0031 | In progress (8/11) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0036](adr-0036-polish-loading-and-skeletons.md) | P0032–P0043 | In progress (3/12) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0037](adr-0037-polish-onboarding-and-readiness.md) | P0044–P0051 | Not started | No implementation or runtime verification |
 | [ADR-0038](adr-0038-polish-mixes-and-drafts.md) | P0052–P0060 | Not started | No implementation or runtime verification |
 | [ADR-0039](adr-0039-polish-listen-and-shell.md) | P0061–P0069 | Not started | No implementation or runtime verification |
@@ -26,7 +26,7 @@ Documentation/link/file-length checks on this PR validate the plan's structure o
 | [ADR-0041](adr-0041-polish-stem-studio.md) | P0080–P0088 | Not started | No implementation or runtime verification |
 | [ADR-0042](adr-0042-polish-requests-and-discovery.md) | P0089–P0099 | Not started | No implementation or runtime verification |
 | [ADR-0043](adr-0043-polish-library-and-workshop.md) | P0100–P0111 | Not started | No implementation or runtime verification |
-| [ADR-0044](adr-0044-polish-language-and-motion.md) | P0112–P0120 | Not started | No implementation or runtime verification |
+| [ADR-0044](adr-0044-polish-language-and-motion.md) | P0112–P0120 | Implemented (9/9) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0045](adr-0045-polish-responsive-accessibility.md) | P0121–P0131 | Not started | No implementation or runtime verification |
 | [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | Not started | No implementation or runtime verification |
 
@@ -135,3 +135,21 @@ Implementing history: PR #23 (`84b8b5c`) plus later programmes (Unified finish U
 | P0008 | Implemented | Decision vs implementation status separated in all 14 ADRs | `test_polish_governance.py` P0008 | - |
 | P0009 | Open (in progress) | Entries for this section exist | - | Other sections' entries |
 | P0010 | Open (Needs a person) | Automated invariant suites exist | - | Owner release disposition |
+
+Addendum to ADR-0035 (2026-11-10): P0022 stays open (MP-0279-02/03/04/06/07 failed in a shared-machine Playwright run of `web/e2e/mp-0279-component-gallery.e2e.ts` against `dist-saas-p1`, port 9042; MP-0279-01 and -05 passed). P0029 Implemented: `toastsCoalesce.test.tsx`, `gp-0257-comfort.test.tsx`, `toastPriority.test.tsx`, `polish-loading.test.tsx` passed.
+
+## ADR-0036 task evidence (reconciled 2026-11-10, uncommitted working tree)
+
+Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-gallery.e2e.ts e2e/mp-0297-loading-and-recovery.e2e.ts --output test-results-saas-p1` with `SELECTA_E2E_DIST=dist-saas-p1`, `SELECTA_E2E_PORT=9042`: 3 passed, 9 failed (MP-0297-04 passed; MP-0297-01/02/03/05 failed while other agents were changing Library and the gallery spec). Failed measurements are not counted as evidence.
+
+| Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
+|---|---|---|---|---|
+| P0032-P0034, P0036 | Open (built, not proven) | Content-shaped variants exist and are used | MP-0297-01 failed | Green geometry measurement |
+| P0035 | Open (partly built) | Inspector skeleton only; no Edit timeline consumer | - | Timeline skeleton in Edit |
+| P0037 | Open (partly proven) | Request identity and refresh rules | `async.test.tsx` passed; MP-0297-03 failed | Green end-to-end refresh check |
+| P0038 | Open | 120ms reveal delay chosen | - | Measured flicker study |
+| P0039 | Implemented | Theme-aware, bounded, reduced-motion-still, hidden bars, one announcement | `skeletonHonesty.test.tsx` 2/2 | - |
+| P0040 | Implemented | Real stages and honest wait words, no fabricated percentages | `workState.test.ts`, `jobs.test.ts`, `lib.test.ts` | - |
+| P0041 | Implemented | Slow and failed retrieval are honest with Retry, incl. Listen details and inspector checks | `pnpm exec vitest run src/views/polish-loading.test.tsx`: 3/3 | - |
+| P0042 | Open (partly proven) | Stale/out-of-order/failed refresh and de-duplicated announcements | `async.test.tsx`, `gp-0257-comfort.test.tsx` | Delayed/partial/retried flash tests |
+| P0043 | Open | Layout stability not measured green | MP-0297-01/03 failed | Green measurement |

@@ -521,6 +521,11 @@
       "status": "review",
       "licence": "LGPL-2.1-or-later, or GPL-2.0-or-later when built with GPL parts",
       "note": "The worker image installs Debian's ffmpeg package (GPL build); record the exact build and configure flags per image."
+    },
+    "libsndfile1": {
+      "licence": "LGPL-2.1-or-later",
+      "note": "Debian package, dynamically linked by soundfile.",
+      "status": "allowed"
     }
   }
 }

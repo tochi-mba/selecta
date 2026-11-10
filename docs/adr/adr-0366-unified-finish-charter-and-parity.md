@@ -33,6 +33,50 @@ Users complete the named journey with clear action consequences, predictable con
 7. **UF-0366-07 - Prioritise by critical risk.** **Acceptance:** Sequence correctness and comprehension ahead of animation and pixel-only polish. **Required verification:** Owner-approved dependency graph. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **UF-0366-08 - Approve unified charter.** **Acceptance:** Record named owner, date, rationale and any rejected proposed decisions. **Required verification:** Independent design decision audit. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
+## Baseline, owners, journeys, invariants and exclusions (recorded 2026-11-10)
+
+**Source baseline (UF-0366-01).** UF was planned against `main` `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08). The implementing candidate is branch `feat/finish-checklists` on top of local `main` `405cf7ff06a4d4cb79fc7c9e0c02c25767219730`; the coordinator pins the final SHA when it commits. The starting UI state is: a fresh profile opens `/` on Make a Mix (browse tab), theme follows the system until chosen, comfortable density, motion follows the OS, every flag at its default in `src/selecta/flags/*.json`, no mix playing. The capture manifest is `web/e2e/paired-theme.e2e.ts` (matched Light/Dark states per route and viewport) and `web/e2e/visual.e2e.ts`. The route inventory below is checked against `web/src/router.ts` by `web/src/ufBaseline.test.ts`.
+
+| Address | Page | Notes |
+|---|---|---|
+| `/` | mixes (browse) | default landing |
+| `/mixes` | mixes (browse) | Make a Mix |
+| `/mixes/mine` | mixes (mine) | My Mixes |
+| `/mixes/lucy` | lucy | new conversation |
+| `/mixes/lucy/<id>` | lucy | one conversation by id |
+| `/mixes/drafts/<id>/edit` | edit | a draft by id |
+| `/mix/current/edit` | edit | the current mix |
+| `/listen` | listen | Listen |
+| `/library` | library | Library |
+| `/discover` | discover (words) | also `/discover/words` |
+| `/discover/harmonic` | discover (harmonic) | |
+| `/workshop` | workshop (overview) | Workspace |
+| `/workshop/<tab>` | workshop | analysis, storage, sources, learning, diagnostics |
+| `/listening` | listening | listening study |
+| anything else | missing | a not-found page, never reinterpreted |
+
+Older addresses kept as aliases: `/make`, `/make-a-mix`, `/explore`, `/explore/mixes`, `/explore/words`, `/explore/harmonic`, `/my-mixes`, `/workspace`, `/workspace/<tab>`, `/studies`.
+
+**Old programme owners (UF-0366-02).** The per-ADR crosswalk of earlier owner ADRs, source touchpoints and the exact UF boundary is [selecta-unified-finish-overlap-and-parity.md](selecta-unified-finish-overlap-and-parity.md) (foundational T/P/S3/S31/S4/EX/MI/CI, Flow SF, gap/final/micro-polish GP/FP/MP, Lucy LU and Library LX).
+
+**Gap classification (UF-0366-03).** Each UF task in ADR-0366 to ADR-0377 is classified on its own line in the [checklist](selecta-unified-finish-implementation-checklist.md): a task credited to an earlier owner's test is *already satisfied* (its Evidence names that test), a task with a new UF test is a *refinement*, a task that only a person can close is *verification only* (marked "Needs a person"), and LX-owned design work is *duplicate* and left to LX (see ADR-0376 and ADR-0377).
+
+**Critical journeys (UF-0366-04).** [completion/journeys.md](completion/journeys.md) registers the first-run listener (folder, readiness, first play), live requester, mix creator, expert editor, scenes and returning user, with what can go wrong, the recovery and the automated test that walks each step.
+
+**Preservation invariants (UF-0366-05) and their tests.**
+
+| Invariant | Test that protects it |
+|---|---|
+| Local original audio is never changed | `tests/test_api_contracts.py::test_stopping_watching_leaves_every_music_file_byte_for_byte`, `tests/test_library_lx.py::test_reset_restores_the_measurement_and_leaves_the_file` |
+| One player | `web/e2e/listen.e2e.ts` "only one tab plays at a time", `web/src/audio/focusEdges.test.tsx`, `web/e2e/mp-0281-mini-player.e2e.ts` MP-0281-07 |
+| Exact IDs | `web/src/player.test.ts` "keeps the later occurrence when the same recording appears twice", `web/e2e/lx-library.e2e.ts` LX-0340-05 duplicate titles |
+| Scoped Undo | `web/src/shell/Shell.test.tsx` "undoes the mix it was about, even after moving to another page", `web/src/ui/CommandPalette.test.tsx` |
+| Consent | `web/e2e/mp-0290-requests.e2e.ts` MP-0290-04, `web/src/views/Lucy.test.tsx` remote provider consent |
+| Eight-lane Studio | `web/src/views/gp-0261-studio.test.tsx` GP-0261-07 (eight lanes of 64 cells) |
+| Decodable FLAC export | `tests/test_export_validation.py::test_complete_export_is_decoded_frame_by_frame` |
+
+**Exclusions (UF-0366-06).** This programme does not rewrite the audio engine, upload music, add accounts, add telemetry or add a native bridge to the local app. Cloud work is its own programme (ADR-0391 to ADR-0416, `selecta-cloud-implementation-checklist.md`) behind its own flags and approval; nothing in ADR-0366 to ADR-0377 adds a network destination.
+
 ## Verification and release boundaries
 
 Compare baseline/candidate at the same route, viewport, theme, density, fixture, current player/revision and scroll. Test Light/Dark/System/forced-colours, 320–3840px, short landscape, 200/400% zoom, keyboard/touch/AT and reduced motion where relevant. Synthetic muted browser tests and screenshots alone do not prove real-audio quality, independent accessibility acceptance or user comprehension.

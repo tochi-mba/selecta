@@ -6,6 +6,7 @@ import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { exploreTabs } from '../shell/manifest';
+import { LinkIfThere } from '../shell/PageLink';
 import { operationId } from '../state/async';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
@@ -68,12 +69,16 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   // new pairs turn up in spare time; a hidden tab doesn't ask, and asks at once when it's back
   useVisiblePoll(loadDiscoveries, 15000);
 
+  // A background refresh can bring new pairs in ahead of the one being looked at; that one stays put
+  // until it's answered or skipped, so nobody loses their place (P0099).
+  const pairShowing = useRef<number | undefined>(undefined);
+  const shownBefore = pairShowing.current !== undefined && !skipped.includes(pairShowing.current) ? pairShowing.current : undefined;
   const waiting = items
     .filter((item) => item.status === 'new')
-    .sort((a, b) => Number(skipped.includes(a.id)) - Number(skipped.includes(b.id)));
+    .sort((a, b) => Number(skipped.includes(a.id)) - Number(skipped.includes(b.id))
+      || Number(b.id === shownBefore) - Number(a.id === shownBefore));
   const answered = items.filter((item) => item.status !== 'new');
   const item = waiting[0];
-  const pairShowing = useRef(item?.id);
   pairShowing.current = item?.id;
   const following = waiting[1];
 
@@ -185,7 +190,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 
   if (!loaded && !error) return <Skeleton variant="pairs" lines={1} label="Finding harmonic discoveries" />;
   if (!loaded && error) return <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
-  if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed.</p>;
+  // UF-0384-06: nothing found yet points at what would find more, rather than a dead end
+  if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed. <LinkIfThere to="/workshop">See analysis progress</LinkIfThere></p>;
   const listening = step !== null || requestedStep !== null;
   return (
     <section className="next-up discoveries">
@@ -488,7 +494,11 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
         notify(`Added “${link.phrase}” to your mix.`, true);
         if (flagOn('editor')) setView('Edit');
       } else {
-        notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`);
+        // Undo takes back this addition in that draft only, and only while the draft is as it was left.
+        const left = orderOf(answer.mix);
+        notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`, async () => {
+          await post<MixData>(`/mix/undo?draft=${draft}`, undefined, { 'x-mix-order': left });
+        });
       }
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) pairOperations.current.delete(identity);
@@ -531,7 +541,10 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
           {failed && data !== null && <p className="warn" role="status">Can’t check for new ones right now, so what’s shown may be out of date.</p>}
           {data === null && !failed && <Skeleton variant="pairs" lines={4} label="Searching your lyrics" />}
           {data?.links.length === 0 && (
-            <p className="lede">{query ? `No links on “${query}” yet.` : 'No links yet. Analysing more songs will find more.'}</p>
+            <p className="lede">
+              {query ? `No links on “${query}” yet. ` : 'No links yet. Analysing more songs will find more. '}
+              {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
+            </p>
           )}
           <div className="link-grid">{worked.map(card)}</div>
           {didnt.length > 0 && (

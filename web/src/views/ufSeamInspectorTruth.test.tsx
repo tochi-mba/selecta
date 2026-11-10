@@ -94,12 +94,14 @@ describe('UF-0381-06 checks and ratings never claim proof of sound quality', () 
 
 describe('UF-0381-07 Studio opens for the exact transition', () => {
   it('opens a Studio workspace named for the directed pair it was opened from', async () => {
-    fakeBackend({ 'GET /mix/2/options': options });
+    const calls = fakeBackend({ 'GET /mix/2/options': options });
     const [previous, item] = repeated();
     show(item, previous, 'studio');
     await userEvent.click(await screen.findByRole('button', { name: 'Open the Studio' }));
     const workspace = await screen.findByRole('dialog', { name: 'Song 2 into Song 1' });
     expect(workspace).toBeInTheDocument();
-    expect(within(workspace).getByText(/Previewing pauses the main mix/)).toBeInTheDocument();
+    // the Studio session is asked for this exact transition position, never the first time the song appeared
+    await waitFor(() => expect(calls.some((call) => call.method === 'POST' && call.path === '/mix/2/studio')).toBe(true));
+    expect(calls.some((call) => call.path === '/mix/0/studio' || call.path === '/mix/1/studio')).toBe(false);
   });
 });
