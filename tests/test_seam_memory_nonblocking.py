@@ -87,7 +87,15 @@ def test_internal_history_writes_invalidate_the_cached_snapshot(tmp_path):
     assert store.remembered(fresh=True).clean == set()
     assert store._remembered is not None
     store._remember(_saved_transition(tmp_path))
-    assert store._remembered is None
+    assert store._remembered is not None
+    assert store._remembered[0] == 0.0
+    count, pending = store.remembered_count()
+    assert count == 0  # last-known count, not a blocking disk scan
+    assert pending is True
+    worker = store._memory_refresh
+    assert worker is not None
+    worker.join(timeout=5)
+    assert not worker.is_alive()
     assert len(store.remembered().clean) == 1
 
 
