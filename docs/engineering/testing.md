@@ -71,6 +71,7 @@ Four workflows live in `.github/workflows/`. `test.yml` runs on every pull reque
 | Edge E2E and Flags (Windows) | Playwright on Edge, and the flag reflow sweep | Lint, Web |
 
 | Workflow | When | Runs |
+- **End job and race scenarios with the invariant checker:** `selecta.audit.invariants.assert_clean(engine)` checks the database-readable invariants of [§15.2](../saas/15-stress-testing.md) (no lost jobs, no stale publish, no cross-tenant rows, quota, artifacts, duplicates, entitlements, consistent heads) and names every violation.
 |---|---|---|
 | `nightly.yml` | Every night; Sundays; by hand | `pip-audit` and `pnpm audit` nightly; the cloud tests with Hypothesis at 5,000 examples on PostgreSQL on Sundays |
 | `codeql.yml` | Pull requests and pushes to `main` | CodeQL security queries over Python and TypeScript |

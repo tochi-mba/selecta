@@ -16,6 +16,7 @@ import pytest
 import sqlalchemy as sa
 from test_cloud_jobs_support import UNLIMITED, Plans, drift, make_store, worker
 
+from selecta.audit.invariants import assert_clean
 from selecta.persistence import transaction
 from selecta.work.enqueue import JobSpec
 from selecta.work.schema import job_attempts, jobs, outbox_events
@@ -132,6 +133,7 @@ def test_fifty_postgres_threads_claim_a_thousand_jobs_each_once_and_fairly(wide)
     claimed_once(store, claims, 1_000)
     # Premium accounts run dry after about 111 / 0.2 = 555 claims; measure while all wait.
     within_fifteen_percent(store, owners, first=450)
+    assert_clean(store.engine)
 
 
 def test_fifty_postgres_threads_claiming_and_completing_never_deadlock(wide):
@@ -139,6 +141,7 @@ def test_fifty_postgres_threads_claiming_and_completing_never_deadlock(wide):
     claims, errors = race(store, threads=50, complete=True)
     assert errors == [], f"{len(errors)} calls failed, first: {errors[:1]!r}"
     claimed_once(store, claims, 600)
+    assert_clean(store.engine)
 
 
 def test_eight_sqlite_threads_are_serialised_without_lock_errors_and_claim_each_job_once(
@@ -152,6 +155,7 @@ def test_eight_sqlite_threads_are_serialised_without_lock_errors_and_claim_each_
         states = set(connection.execute(sa.select(jobs.c.state)).scalars())
     assert states == {"succeeded"}
     within_fifteen_percent(store, owners, first=120)
+    assert_clean(store.engine)
 
 
 @pytest.mark.parametrize("threads", [2])
@@ -160,6 +164,7 @@ def test_two_threads_racing_for_one_job_leave_one_winner(cloud_engine, threads):
     store.enqueue(JobSpec("w1", "analyse.song"))
     claims, errors = race(store, threads=threads, complete=False)
     assert errors == [] and len(claims) == 1
+    assert_clean(store.engine)
 
 
 def mixed_load(store, rounds: int = 40) -> tuple[list, int]:
@@ -239,6 +244,7 @@ def test_claims_completions_releasing_dependents_and_enqueues_never_deadlock(wid
         states = Counter(connection.execute(sa.select(jobs.c.state)).scalars())
     assert states == {"succeeded": 400}
     assert drift(store) == []
+    assert_clean(store.engine)
 
 
 def test_the_same_mixed_load_on_sqlite_finishes_every_job(sqlite_engine):
@@ -249,3 +255,4 @@ def test_the_same_mixed_load_on_sqlite_finishes_every_job(sqlite_engine):
         states = Counter(connection.execute(sa.select(jobs.c.state)).scalars())
     assert states == {"succeeded": 80}
     assert drift(store) == []
+    assert_clean(store.engine)

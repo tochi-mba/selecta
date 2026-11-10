@@ -23,6 +23,7 @@ import random
 import shutil
 import tempfile
 from collections import defaultdict
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -38,6 +39,7 @@ from hypothesis.stateful import (
 )
 from test_cloud_jobs_support import Outputs, Plans, make_store, output
 
+from selecta.audit import invariants
 from selecta.persistence import make_engine, migrate, transaction
 from selecta.scheduling.policy import WorkerCaps
 from selecta.work import upkeep
@@ -102,7 +104,10 @@ class JobLifecycle(RuleBasedStateMachine):
         self.terminal: dict[str, Job] = {}
 
     def teardown(self) -> None:
-        self.engine.dispose()
+        try:
+            invariants.assert_clean(self.engine, accepted=self.workspace_of)
+        finally:
+            self.engine.dispose()
         shutil.rmtree(self.folder, ignore_errors=True)
 
     # --- producers ---
@@ -195,7 +200,9 @@ class JobLifecycle(RuleBasedStateMachine):
           stale=st.sampled_from([0, 0, 0, 1]))
     def complete(self, data, input_hash, reject, stale):
         claim = self._claim(data)
-        outputs = [output(input_hash)] if input_hash else []
+        key = (f"w/{claim.job.workspace_id}/analysis/{input_hash}/attempts/"
+               f"{claim.attempt_id}/features.npz")
+        outputs = [replace(output(input_hash), keys=[key])] if input_hash else []
         try:
             self.store.complete(claim.attempt_id, claim.fencing_token + stale,
                                 result={"reject": reject}, artifacts=outputs)
