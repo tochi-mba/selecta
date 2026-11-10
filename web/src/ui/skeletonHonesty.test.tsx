@@ -1,8 +1,12 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import polish from '../styles/polish.css?raw';
-import shell from '../styles/shell.css?raw';
 import { Skeleton } from './Skeleton';
+
+// Vitest hands CSS ?raw imports back empty, so the sheets are read from disk (as spacing-tokens.test.ts does).
+const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
+const fs = node.getBuiltinModule('node:fs') as { readFileSync(path: string, encoding: 'utf8'): string };
+const polish = fs.readFileSync(`${node.cwd()}/src/styles/polish.css`, 'utf8');
+const shell = fs.readFileSync(`${node.cwd()}/src/styles/shell.css`, 'utf8');
 
 /** UF-0371-02: a placeholder is for content whose shape isn't known yet, and it never shimmers forever.
  * It breathes a few times at most, not at all with reduced motion, and after a long wait it says what

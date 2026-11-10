@@ -1,7 +1,7 @@
 # ADR-0099: My Mixes current-vs-draft clarity, safe activation and render queue
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/10 implemented)
+- **Implementation status:** 8/10 Implemented, 2 In progress (per-task source and test reconciliation 2026-11-10)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -29,18 +29,18 @@ Make the current mix a separate featured region, drafts a discoverable project c
 - Queue displays work order rather than pretending to be playlist.
 - Activation warns of current audio effect using the shared replacement policy and exact preservation contract.
 
-## Detailed implementation work - all Not started
+## Detailed implementation work
 
-1. **S4-0099-01 - Redesign current mix overview and actions.** Acceptance: User can identify actual playing mix and its readiness. Required verification: Active/paused/empty card screenshots. **Implementation: Not started; Verified: No.**
-2. **S4-0099-02 - Redesign saved-draft list with stable identity and status.** Acceptance: Same-name drafts remain disambiguated and editable. Required verification: Duplicate title and multi-draft fixture. **Implementation: Not started; Verified: No.**
-3. **S4-0099-03 - Preserve create, copy, rename, delete and Undo contracts.** Acceptance: No lost work or wrong draft operations. Required verification: CRUD and sequence tests. **Implementation: Not started; Verified: No.**
-4. **S4-0099-04 - Clarify Edit versus Play/Make current behaviour.** Acceptance: Draft editing does not affect live player; activation does only as contracted. Required verification: Play A/edit B task script. **Implementation: Not started; Verified: No.**
-5. **S4-0099-05 - Redesign activation consequence and recovery flow.** Acceptance: Failed activation preserves prior current mix and audio. Required verification: Server error, pause/play and multi-tab activation tests. **Implementation: Not started; Verified: No.**
-6. **S4-0099-06 - Separate rendering queue and progress from saved collection.** Acceptance: Queued, working and finished have truthful distinctions. Required verification: Reorder/remove queue and background completion tests. **Implementation: Not started; Verified: No.**
-7. **S4-0099-07 - Ensure draft render readiness is detailed, not binary.** Acceptance: 8/11 prepared is distinct from saved status. Required verification: Partial/failed seam fixtures. **Implementation: Not started; Verified: No.**
-8. **S4-0099-08 - Preserve user position through draft mutation and navigation.** Acceptance: Selection/focus not redirected to another card. Required verification: Rename/delete/reorder focus tests. **Implementation: Not started; Verified: No.**
-9. **S4-0099-09 - Support long lists, search or sort where supported.** Acceptance: No phantom backend capabilities or lost deep link. Required verification: Long draft dataset and URL restoration. **Implementation: Not started; Verified: No.**
-10. **S4-0099-10 - Review destructive confirmation and scope-aware Undo.** Acceptance: Deleting a draft cannot undo current-mix action. Required verification: Multiple deletion and intervening edit tests. **Implementation: Not started; Verified: No.**
+1. **S4-0099-01 - Redesign current mix overview and actions.** Acceptance: User can identify actual playing mix and its readiness. Required verification: Active/paused/empty card screenshots. **Implementation: Implemented (2026-11-10). Evidence: `web/src/views/CurrentMix.test.tsx` 'tracks the exact returned song order'; `web/src/App.test.tsx` 'being sent to Edit from another page means the mix that's playing', run 2026-11-10. Verified: No. Needs a person: active/paused/empty card screenshot review.**
+2. **S4-0099-02 - Redesign saved-draft list with stable identity and status.** Acceptance: Same-name drafts remain disambiguated and editable. Required verification: Duplicate title and multi-draft fixture. **Implementation: Implemented (2026-11-10). Evidence: `web/src/views/Drafts.test.tsx` 'renders a bounded first page and reveals more without losing exact identities'; `tests/test_drafts.py::test_names_can_not_be_mistaken_for_each_other`, `::test_renaming_to_a_name_in_use_gets_a_number`, run 2026-11-10. Verified: No.**
+3. **S4-0099-03 - Preserve create, copy, rename, delete and Undo contracts.** Acceptance: No lost work or wrong draft operations. Required verification: CRUD and sequence tests. **Implementation: Implemented (2026-11-10). Evidence: `web/src/views/Drafts.test.tsx` delete confirm/Undo, copy, rename tests; `tests/test_drafts.py` create/copy/rename/delete/take-back tests, run 2026-11-10. Verified: No.**
+4. **S4-0099-04 - Clarify Edit versus Play/Make current behaviour.** Acceptance: Draft editing does not affect live player; activation does only as contracted. Required verification: Play A/edit B task script. **Implementation: Implemented (2026-11-10). Evidence: `web/src/views/Mix.test.tsx` 'is plainly a draft, and says what's playing isn't affected', 'has no buttons that would change the current mix'; `web/e2e/integration.e2e.ts` 'editing a draft while the current mix plays', run 2026-11-10. Verified: No.**
+5. **S4-0099-05 - Redesign activation consequence and recovery flow.** Acceptance: Failed activation preserves prior current mix and audio. Required verification: Server error, pause/play and multi-tab activation tests. **Implementation: In progress (2026-11-10). Evidence: `tests/test_drafts.py::test_playing_can_be_undone_completely`; `web/src/App.test.tsx` cancel keeps playback; a server error during activation is not yet fault-tested. Verified: No.**
+6. **S4-0099-06 - Separate rendering queue and progress from saved collection.** Acceptance: Queued, working and finished have truthful distinctions. Required verification: Reorder/remove queue and background completion tests. **Implementation: Implemented (2026-11-10). Evidence: `web/src/views/Drafts.test.tsx` render-line move, remove, storage-stop and ordering tests; `tests/test_drafts.py` line tests, run 2026-11-10. Verified: No.**
+7. **S4-0099-07 - Ensure draft render readiness is detailed, not binary.** Acceptance: 8/11 prepared is distinct from saved status. Required verification: Partial/failed seam fixtures. **Implementation: Implemented (2026-11-10). Evidence: `web/src/views/Drafts.test.tsx` 'says where each draft has got to', 'is honest about seams that could not be made'; `tests/test_drafts.py::test_the_list_says_where_each_draft_has_got_to`, run 2026-11-10. Verified: No.**
+8. **S4-0099-08 - Preserve user position through draft mutation and navigation.** Acceptance: Selection/focus not redirected to another card. Required verification: Rename/delete/reorder focus tests. **Implementation: In progress (2026-11-10). Evidence: `web/src/ui/controls.test.tsx` 'restores focus to the active page after a confirmed Undo removes its button'; rename/delete/reorder focus on My Mixes not yet asserted. Verified: No.**
+9. **S4-0099-09 - Support long lists, search or sort where supported.** Acceptance: No phantom backend capabilities or lost deep link. Required verification: Long draft dataset and URL restoration. **Implementation: Implemented (2026-11-10). Evidence: `web/src/views/Drafts.test.tsx` bounded first page with Show more; no search or sort is offered, so none is claimed, run 2026-11-10. Verified: No.**
+10. **S4-0099-10 - Review destructive confirmation and scope-aware Undo.** Acceptance: Deleting a draft cannot undo current-mix action. Required verification: Multiple deletion and intervening edit tests. **Implementation: Implemented (2026-11-10). Evidence: `web/src/views/Drafts.test.tsx` 'confirms before deleting, preserves the draft on cancel and supports Undo'; `web/src/shell/Shell.test.tsx` 'undoes the mix it was about'; `tests/test_drafts.py::test_undo_in_a_draft_only_undoes_that_draft`, run 2026-11-10. Verified: No.**
 
 ## Required negative cases and regression strategy
 
@@ -69,6 +69,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | 8/10 Implemented, 2 In progress | Not verified | Per-task source and test reconciliation; each task names the automated checks run on 2026-11-10 and any check that needs a person |
 
 ## Related documents
 

@@ -1,7 +1,7 @@
 # ADR-0104: Lyric-word connections, harmonic four-stage auditions and version-bound feedback
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/10 implemented)
+- **Implementation status:** In progress (9/10 implemented, 1 in progress; source reconciliation 2026-11-10, branch feat/finish-checklists)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -29,18 +29,18 @@ Present the musical relationship first-shared lyric phrase or harmonic compariso
 - Harmonic stage order is detected chords → song A → song B → both together, with replay/stop and stage identity.
 - Verdicts teach discovery models but do not automatically add songs to a mix.
 
-## Detailed implementation work - all Not started
+## Detailed implementation work
 
-1. **S4-0104-01 - Redesign word-connection result card hierarchy.** Acceptance: Shared phrase and exact two tracks precede technical controls. Required verification: Multiple/zero/weak matches snapshots. **Implementation: Not started; Verified: No.**
-2. **S4-0104-02 - Preserve pair previews and actual rendered transition context.** Acceptance: Preview-ready is different from render requested. Required verification: Slow/failed/mismatched render tests. **Implementation: Not started; Verified: No.**
-3. **S4-0104-03 - Preserve word-pair add-to-mix/draft and placement.** Acceptance: Both tracks and transition join according to existing atomic contract. Required verification: Pair insertion, duplicate ID, wrong-scope tests. **Implementation: Not started; Verified: No.**
-4. **S4-0104-04 - Preserve move change, Good/Bad rating and feedback key.** Acceptance: Rating applies only to corresponding audible version. Required verification: Change move during rating race. **Implementation: Not started; Verified: No.**
-5. **S4-0104-05 - Rebuild harmonic stage progress and audition controls.** Acceptance: Four stages remain in order, with replay and safe Stop. Required verification: Audition stage timing and individual replay tests. **Implementation: Not started; Verified: No.**
-6. **S4-0104-06 - Use text/time indicators beyond colour-only chord strip.** Acceptance: Current stage/chord information discernible at zoom and via AT. Required verification: Contrast, NVDA and keyboard tests. **Implementation: Not started; Verified: No.**
-7. **S4-0104-07 - Preserve Yes/No/Skip semantics and record saves.** Acceptance: No double submission or wrong pair rating. Required verification: Rapid skip/rate/reload/error tests. **Implementation: Not started; Verified: No.**
-8. **S4-0104-08 - Handle missing or failed audio with truthful recovery.** Acceptance: Cannot claim audio heard when clip unavailable. Required verification: Missing clip, delayed preparation tests. **Implementation: Not started; Verified: No.**
-9. **S4-0104-09 - Keep main playback isolated during audition.** Acceptance: No simultaneous owner or surprise resumption. Required verification: Preview ownership switching with Listen/Studio. **Implementation: Not started; Verified: No.**
-10. **S4-0104-10 - Document learning-versus-playlist outcomes in labels.** Acceptance: Users understand feedback does not automatically alter mix. Required verification: Unassisted task question and content review. **Implementation: Not started; Verified: No.**
+1. **S4-0104-01 - Redesign word-connection result card hierarchy.** Acceptance: Shared phrase and exact two tracks precede technical controls. Required verification: Multiple/zero/weak matches snapshots. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/views/Links.tsx LinkCard puts the phrase and both songs before the move controls; Links.test.tsx 'shows the whole phrase in its own direction', 'says there's nothing yet when there is nothing to show'. Needs a person: multiple/zero/weak snapshot review.
+2. **S4-0104-02 - Preserve pair previews and actual rendered transition context.** Acceptance: Preview-ready is different from render requested. Required verification: Slow/failed/mismatched render tests. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.tsx seamFacts keeps asked and heard apart ('You asked for X. What you'd hear is Y.'); new web/src/views/LinksRating.test.tsx shows a new render reads as Rendering; no dedicated slow/failed/mismatched word-render test yet. Needs a person: review once the render fixtures exist.
+3. **S4-0104-03 - Preserve word-pair add-to-mix/draft and placement.** Acceptance: Both tracks and transition join according to existing atomic contract. Required verification: Pair insertion, duplicate ID, wrong-scope tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.test.tsx 'goes in as one thing, so half of it can't be left behind', 'can go in a draft instead, and leaves what's playing alone'. Needs a person: independent review.
+4. **S4-0104-04 - Preserve move change, Good/Bad rating and feedback key.** Acceptance: Rating applies only to corresponding audible version. Required verification: Change move during rating race. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.tsx rate() posts to the heard key and ignores a stale answer; new LinksRating.test.tsx 'sends the rating for the heard key, and the late answer does not replace the new move'. Needs a person: independent review.
+5. **S4-0104-05 - Rebuild harmonic stage progress and audition controls.** Acceptance: Four stages remain in order, with replay and safe Stop. Required verification: Audition stage timing and individual replay tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.test.tsx 'plays what it detected in one press: the chords, each song, then both', 'lets you jump to any step', 'stopping really stops'; tests/test_hearing.py 'an_audition_has_every_step_in_time_with_the_first_song'. Needs a person: audible stage timing check.
+6. **S4-0104-06 - Use text/time indicators beyond colour-only chord strip.** Acceptance: Current stage/chord information discernible at zoom and via AT. Required verification: Contrast, NVDA and keyboard tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.test.tsx 'shows the chords it read and lights the one being played'; test_hearing.py 'an_audition_says_which_chord_is_on_which_bar'. Needs a person: contrast and NVDA review.
+7. **S4-0104-07 - Preserve Yes/No/Skip semantics and record saves.** Acceptance: No double submission or wrong pair rating. Required verification: Rapid skip/rate/reload/error tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.test.tsx 'answering moves straight on', 'skipping puts a pair at the back without answering it', 'keeps focus on the answer while it saves', 'keeps answers out of the way, and they can be changed'. Needs a person: independent review.
+8. **S4-0104-08 - Handle missing or failed audio with truthful recovery.** Acceptance: Cannot claim audio heard when clip unavailable. Required verification: Missing clip, delayed preparation tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.test.tsx 'says so when a pair cannot be played, and you can still answer', 'never plays an obsolete prepared audition after the user skips that pair'. Needs a person: independent review.
+9. **S4-0104-09 - Keep main playback isolated during audition.** Acceptance: No simultaneous owner or surprise resumption. Required verification: Preview ownership switching with Listen/Studio. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.test.tsx 'pauses the mix when it starts playing', 'stopping really stops, and answering afterwards does not start it again'; focus.test.tsx. Needs a person: audible owner switching with Listen and Studio.
+10. **S4-0104-10 - Document learning-versus-playlist outcomes in labels.** Acceptance: Users understand feedback does not automatically alter mix. Required verification: Unassisted task question and content review. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Links.tsx copy 'Your answer only teaches Selecta what you hear. It never adds anything to a mix.'. Needs a person: unassisted comprehension question.
 
 ## Required negative cases and regression strategy
 
@@ -69,6 +69,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (9/10) | Not verified | Source reconciliation against current code with focused tests run 2026-11-10; every task still needs independent verification |
 
 ## Related documents
 

@@ -47,5 +47,5 @@ Preserve original local music; intentional Pause and one audio owner; disclosed 
 
 - **Depends on:** ADR-0149/0179/0119; ADR-0198/0199 and cross-cutting UI foundation.
 - **Next:** owner decision → prototypes → source-level implementation PR → regression tests → independent visual, access, audio and device evidence → release gate.
-- **Now:** Accepted; 0/8 Implemented; 0/8 independently Verified; no implementing PR/SHA.
+- **Now:** Accepted; 5/8 Implemented (2026-11-10); 0/8 independently Verified; no implementing PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

@@ -928,3 +928,17 @@ describe('an exact cue that cannot be used', () => {
     expect(leave).toHaveValue('');
   });
 });
+
+// S3-0057-05: Jump to first problem opens the failed transition itself, ready to change
+describe('jumping to a problem', () => {
+  it('opens the first transition that failed, on Change, and names that pair', async () => {
+    const options = { moves: [{ name: 'bass_swap_blend', label: 'Blend', description: '', available: true, reason: null }], exits: [], entries: [], lengths: [], links: [], tempo_gap: 1, keys: ['8A', '8A'] };
+    fakeBackend({ 'GET /mix/1/options': options, 'GET /mix/2/options': options });
+    render(<Harness start={songs(seam('ready', 'a', { a_source_start: 60, b_source_end: 30 }), seam('failed', 'b', { error: 'No safe vocal runway.' }))} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Jump to first problem' }));
+    const side = within(await screen.findByRole('complementary', { name: 'This transition' }));
+    expect(side.getByText('Transition 2')).toBeInTheDocument();
+    expect(document.querySelector('.inspector-pair')).toHaveTextContent(/Song 2 .*into Song 3/);
+    expect(side.getByRole('tab', { name: 'Change' })).toHaveAttribute('aria-selected', 'true');
+  });
+});

@@ -1,7 +1,7 @@
 # ADR-0107: Workspace operations, background analysis, watched sources, storage and diagnostics
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/10 implemented)
+- **Implementation status:** In progress (8/10 implemented, 2 in progress; source reconciliation 2026-11-10, branch feat/finish-checklists)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -29,18 +29,18 @@ Reorder Workspace around Needs attention → Ongoing work → Library health →
 - Cache usage and budget show regenerated data versus persistent source audio; settings must not imply original files are removed.
 - Copy diagnostics should redact sensitive local paths per verified backend contract.
 
-## Detailed implementation work - all Not started
+## Detailed implementation work
 
-1. **S4-0107-01 - Redesign Workspace overview with attention hierarchy.** Acceptance: Actual blockers distinguish from harmless background activity. Required verification: Storage full, no-ready-songs, offline fixtures. **Implementation: Not started; Verified: No.**
-2. **S4-0107-02 - Preserve analysis start/pause/progress and deprioritization.** Acceptance: Processing state is accurate while user listens. Required verification: Paused/playing/restart/poll cases. **Implementation: Not started; Verified: No.**
-3. **S4-0107-03 - Preserve folder source watch/unwatch and recovery.** Acceptance: Missing drive shown separately from stopped watch. Required verification: Permission, disconnect, rescan and original-file tests. **Implementation: Not started; Verified: No.**
-4. **S4-0107-04 - Rebuild storage budget/meter and meaning labels.** Acceptance: Cache is not confused with durable data or originals. Required verification: Slider min/max/save failed/rapid changes. **Implementation: Not started; Verified: No.**
-5. **S4-0107-05 - Preserve background render jobs, priorities and queue.** Acceptance: Job accepted distinct from complete; queue actions correct. Required verification: Failure, cancel and duplicate mutation tests. **Implementation: Not started; Verified: No.**
-6. **S4-0107-06 - Clarify learning feedback and locate blind study.** Acceptance: Ratings and formal A/B trials remain separate. Required verification: Task findability and study context tests. **Implementation: Not started; Verified: No.**
-7. **S4-0107-07 - Preserve diagnostics operations with privacy-safe copying.** Acceptance: Copied data contains only declared safe fields. Required verification: Actual payload inspection and path-redaction tests. **Implementation: Not started; Verified: No.**
-8. **S4-0107-08 - Expose global critical health attention without header clutter.** Acceptance: Blockers visible outside Workspace with direct route. Required verification: Mobile More and accessible indicator tests. **Implementation: Not started; Verified: No.**
-9. **S4-0107-09 - Harden offline/recovery and old-server capability detection.** Acceptance: Failure to fetch not represented as zero cache usage. Required verification: Backend restart, unsupported API tests. **Implementation: Not started; Verified: No.**
-10. **S4-0107-10 - Measure quiet background polling impact on UI/audio.** Acceptance: No excessive refreshes or animation stutter. Required verification: Performance trace during analysis and render. **Implementation: Not started; Verified: No.**
+1. **S4-0107-01 - Redesign Workspace overview with attention hierarchy.** Acceptance: Actual blockers distinguish from harmless background activity. Required verification: Storage full, no-ready-songs, offline fixtures. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/views/Workshop.tsx and WorkshopPanels.tsx order ready, running, stuck, needs you; Workshop.test.tsx 'say what's really happening, including what's failed', 'say when the storage limit has stopped things'. Needs a person: storage-full/offline screenshot review.
+2. **S4-0107-02 - Preserve analysis start/pause/progress and deprioritization.** Acceptance: Processing state is accurate while user listens. Required verification: Paused/playing/restart/poll cases. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: WorkshopPanels.tsx paused analysis state and Carry on; Workshop.test.tsx 'says what Selecta does with nothing else to do, and how far it has got'; web/src/state/jobs.test.ts 'counts actual failures and a paused queue'. Needs a person: independent review.
+3. **S4-0107-03 - Preserve folder source watch/unwatch and recovery.** Acceptance: Missing drive shown separately from stopped watch. Required verification: Permission, disconnect, rescan and original-file tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Workshop.test.tsx 'show folders, and whether each can be found'; tests/test_folder_relink.py; tests/test_api_contracts.py 'folders_say_whether_they_can_be_found'. Needs a person: real permission/disconnect check.
+4. **S4-0107-04 - Rebuild storage budget/meter and meaning labels.** Acceptance: Cache is not confused with durable data or originals. Required verification: Slider min/max/save failed/rapid changes. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Workshop.test.tsx 'explains what's used in plain words', 'show the slider what was really saved', 'explains when protected priority stems exceed the selected limit'. Needs a person: independent review.
+5. **S4-0107-05 - Preserve background render jobs, priorities and queue.** Acceptance: Job accepted distinct from complete; queue actions correct. Required verification: Failure, cancel and duplicate mutation tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: tests/test_drafts.py render-line priority tests; tests/test_operation_identity.py; web/src/views/ExportJobs.tsx accepted vs complete. Needs a person: independent review.
+6. **S4-0107-06 - Clarify learning feedback and locate blind study.** Acceptance: Ratings and formal A/B trials remain separate. Required verification: Task findability and study context tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Workshop.tsx keeps the Listening study on its own route apart from ratings; Workshop.test.tsx 'each link to their own address'. Needs a person: task findability check.
+7. **S4-0107-07 - Preserve diagnostics operations with privacy-safe copying.** Acceptance: Copied data contains only declared safe fields. Required verification: Actual payload inspection and path-redaction tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: tests/test_api_contracts.py 'diagnostics_have_no_paths_or_song_names'; Workshop.test.tsx 'show diagnostics with nothing personal in them, ready to copy'. Needs a person: actual payload inspection by a person.
+8. **S4-0107-08 - Expose global critical health attention without header clutter.** Acceptance: Blockers visible outside Workspace with direct route. Required verification: Mobile More and accessible indicator tests. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/shell/Shell.tsx health-attention link to /workshop with a count; no unit test of the indicator yet. Needs a person: mobile More and accessible indicator review.
+9. **S4-0107-09 - Harden offline/recovery and old-server capability detection.** Acceptance: Failure to fetch not represented as zero cache usage. Required verification: Backend restart, unsupported API tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Workshop.test.tsx 'say when they can't find out, rather than saying nothing's happening'; jobs.test.ts 'never crashes the app for an incomplete status from a different server version'; flows.e2e.ts 'it says so, keeps what's on screen, and recovers by itself'. Needs a person: backend restart check.
+10. **S4-0107-10 - Measure quiet background polling impact on UI/audio.** Acceptance: No excessive refreshes or animation stutter. Required verification: Performance trace during analysis and render. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/ui/useVisiblePoll.test.tsx keeps polling off hidden pages; no performance trace. Needs a person: performance trace during analysis and render.
 
 ## Required negative cases and regression strategy
 
@@ -69,6 +69,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (8/10) | Not verified | Source reconciliation against current code with focused tests run 2026-11-10; every task still needs independent verification |
 
 ## Related documents
 

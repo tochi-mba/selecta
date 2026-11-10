@@ -225,3 +225,28 @@ def test_two_submissions_racing_on_one_key_make_one_plan(sqlite_engine, monkeypa
     monkeypatch.setattr(plans, "_open_twin", lambda connection, spec: None)
     with pytest.raises(sa.exc.IntegrityError):
         store.submit_plan(PlanSpec("w1", "analyse.song", 900, idempotency_key="k"))
+
+
+def test_row_level_security_keeps_a_plan_inside_its_workspace(postgres_engine):
+    """A query that forgets its workspace filter still sees and changes only its own plans."""
+    store = make_store(postgres_engine)
+    mine = store.submit_plan(PlanSpec("w1", "analyse.song", 2))
+    theirs = store.submit_plan(PlanSpec("w2", "analyse.song", 2))
+    with transaction(postgres_engine, "w1") as connection:
+        seen = connection.execute(sa.select(job_plans.c.id)).scalars().all()
+        changed = connection.execute(
+            sa.update(job_plans).values(state="cancelled")
+        ).rowcount
+    assert seen == [mine.id] and changed == 1
+    with pytest.raises(sa.exc.DBAPIError):
+        with transaction(postgres_engine, "w1") as connection:
+            connection.execute(
+                sa.insert(job_plans).values(
+                    id="forged", workspace_id="w2", type="analyse.song", lane="standard",
+                    urgency=0, input_ref={}, total=1, state="open", created_at=0.0,
+                    updated_at=0.0,
+                )
+            )
+    with transaction(postgres_engine, "w2") as connection:
+        assert connection.execute(sa.select(job_plans.c.state)).scalars().all() == ["open"]
+    assert theirs.state == "open"

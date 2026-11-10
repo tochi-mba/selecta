@@ -1,7 +1,7 @@
 # ADR-0111: Frontend module boundaries, CSS performance, 20k/100-song scale and local-first privacy
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/10 implemented)
+- **Implementation status:** In progress (7/10 implemented, 3 in progress; source reconciliation 2026-11-10, branch feat/finish-checklists)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -29,18 +29,18 @@ Refactor UI around shell, feature composition, domain controllers and reusable p
 - Lazy load specialist routes only after measuring bundle tradeoffs; avoid network dependencies for visual polish.
 - Version UI preferences and test migration; retain old routes and backend feature detection rather than assumed fields.
 
-## Detailed implementation work - all Not started
+## Detailed implementation work
 
-1. **S4-0111-01 - Document component/domain ownership and import boundaries.** Acceptance: App.tsx complexity reduced incrementally without duplicated stores. Required verification: Dependency diagram and tests. **Implementation: Not started; Verified: No.**
-2. **S4-0111-02 - Separate persistent player state from route composition.** Acceptance: Theme/route/overlay re-render cannot stop playback. Required verification: Transport continuity E2E. **Implementation: Not started; Verified: No.**
-3. **S4-0111-03 - Inventory API responses and version compatibility.** Acceptance: Missing fields produce honest unsupported states, not fake success. Required verification: Old-server feature detection and contract tests. **Implementation: Not started; Verified: No.**
-4. **S4-0111-04 - Audit CSS layering and component specificity regressions.** Acceptance: No expensive blanket override cascade or unrelated changes. Required verification: Stylelint/static check and visual diffs. **Implementation: Not started; Verified: No.**
-5. **S4-0111-05 - Profile 20k Library search/filter/deep refresh.** Acceptance: Input responsiveness and memory meet measured budget. Required verification: Hardware/version controlled performance traces. **Implementation: Not started; Verified: No.**
-6. **S4-0111-06 - Profile 100-song Editor reorder/selection/scroll.** Acceptance: No long main-thread stall or focus loss. Required verification: Performance and keyboard task under workload. **Implementation: Not started; Verified: No.**
-7. **S4-0111-07 - Profile full 64-cell Studio and simultaneous analysis/render.** Acceptance: Cell toggle and preview respond smoothly without audio dropout. Required verification: Real-machine memory/frame/audio trace. **Implementation: Not started; Verified: No.**
-8. **S4-0111-08 - Control fast lyric/visualizer updates and hidden work.** Acceptance: No global per-frame React rerender, reduced motion supported. Required verification: Profiler, offscreen and animation testing. **Implementation: Not started; Verified: No.**
-9. **S4-0111-09 - Preserve browser preference and local recovery migration.** Acceptance: Invalid/blocked storage cannot crash or erase durable backend data. Required verification: Malformed values, quota, rollback test. **Implementation: Not started; Verified: No.**
-10. **S4-0111-10 - Audit local-first privacy, diagnostics and added asset requests.** Acceptance: No new remote tracking/artwork or original-file write without separate review. Required verification: Network activity/redaction/Host-Origin security tests. **Implementation: Not started; Verified: No.**
+1. **S4-0111-01 - Document component/domain ownership and import boundaries.** Acceptance: App.tsx complexity reduced incrementally without duplicated stores. Required verification: Dependency diagram and tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: docs/adr/completion/architecture.md; new web/src/importBoundaries.test.ts. Needs a person: independent review.
+2. **S4-0111-02 - Separate persistent player state from route composition.** Acceptance: Theme/route/overlay re-render cannot stop playback. Required verification: Transport continuity E2E. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/player.ts outside React; listen.e2e.ts 'moving around the app leaves the music alone'; finishing.e2e.ts 'changing the theme while playing starts nothing again'. Needs a person: independent review.
+3. **S4-0111-03 - Inventory API responses and version compatibility.** Acceptance: Missing fields produce honest unsupported states, not fake success. Required verification: Old-server feature detection and contract tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: jobs.test.ts 'never crashes the app for an incomplete status from a different server version'; ExportJobs.tsx unsupported state; tests/test_api_contracts.py 'status_says_what_this_server_can_do'. Needs a person: independent review.
+4. **S4-0111-04 - Audit CSS layering and component specificity regressions.** Acceptance: No expensive blanket override cascade or unrelated changes. Required verification: Stylelint/static check and visual diffs. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: docs/adr/completion/css-ownership.md; web/src/styles/css-ownership.test.ts, spacing-tokens.test.ts, typography.test.ts. Needs a person: visual diff review.
+5. **S4-0111-05 - Profile 20k Library search/filter/deep refresh.** Acceptance: Input responsiveness and memory meet measured budget. Required verification: Hardware/version controlled performance traces. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: test_library_edges.py 'twenty_thousand_songs_are_all_reachable_and_a_page_stays_quick'; docs/adr/completion/performance.md budgets. Needs a person: hardware-controlled performance traces.
+6. **S4-0111-06 - Profile 100-song Editor reorder/selection/scroll.** Acceptance: No long main-thread stall or focus loss. Required verification: Performance and keyboard task under workload. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: integration.e2e.ts 'a hundred quick looks at a page never lose what's on it'; tests/scale_server.py. Needs a person: 100-song performance and keyboard trace.
+7. **S4-0111-07 - Profile full 64-cell Studio and simultaneous analysis/render.** Acceptance: Cell toggle and preview respond smoothly without audio dropout. Required verification: Real-machine memory/frame/audio trace. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: Studio.test.tsx renders the full 64-cell grid. Needs a person: real-machine memory, frame and audio trace.
+8. **S4-0111-08 - Control fast lyric/visualizer updates and hidden work.** Acceptance: No global per-frame React rerender, reduced motion supported. Required verification: Profiler, offscreen and animation testing. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: useReducedMotion.test.tsx; web/src/views/spectrumVisuals.test.ts; finishing.e2e.ts 'the song is said once, and the clock never is'. Needs a person: profiler review.
+9. **S4-0111-09 - Preserve browser preference and local recovery migration.** Acceptance: Invalid/blocked storage cannot crash or erase durable backend data. Required verification: Malformed values, quota, rollback test. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/state/prefs.ts; new web/src/state/prefs.test.ts 'browser preferences survive bad storage'; StudioSafety.test.tsx blocked-storage case; tests/test_local_upgrade.py, tests/test_upgrade.py. Needs a person: rollback exercise.
+10. **S4-0111-10 - Audit local-first privacy, diagnostics and added asset requests.** Acceptance: No new remote tracking/artwork or original-file write without separate review. Required verification: Network activity/redaction/Host-Origin security tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: pages.e2e.ts 'the page only ever talks to this computer'; tests/test_api_contracts.py 'other_hosts_get_nothing', 'other_sites_can_not_change_anything'; tests/test_product.py 'api_refuses_changes_requested_by_another_website'; web/src/localPrivacyCopy.test.ts. Needs a person: separate security review.
 
 ## Required negative cases and regression strategy
 
@@ -69,6 +69,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (7/10) | Not verified | Source reconciliation against current code with focused tests run 2026-11-10; every task still needs independent verification |
 
 ## Related documents
 

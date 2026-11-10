@@ -444,6 +444,18 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     }
     return duplicates;
   }, [rows]);
+  // LX-0340-05: a title shared by different artists names the artist in every button, so no two
+  // buttons for different recordings ever read the same to a screen reader
+  const sharedTitles = useMemo(() => {
+    const seen = new Set<string>();
+    const shared = new Set<string>();
+    for (const song of rows ?? []) {
+      const title = song.title ?? 'Untitled';
+      if (seen.has(title)) shared.add(title);
+      seen.add(title);
+    }
+    return shared;
+  }, [rows]);
   const { counts } = status;
   const compact = preferences.density === 'compact';
   const on = useFlags();
@@ -579,6 +591,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           const title = song.title ?? 'Untitled';
           const duplicate = duplicateIds.has(song.id);
           const name = duplicate ? `${title} (song ${song.id})` : title;
+          const spoken = duplicate || !sharedTitles.has(title) ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
           return (
             <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''} ${selectedIdSet.has(song.id) ? 'selected' : ''}`}>
               <div className="song-name">
@@ -587,7 +600,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                     checked={selectedIdSet.has(song.id)} disabled={searching || failed || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
                     onChange={(event) => toggleBatch(song.id, (event.nativeEvent as MouseEvent).shiftKey === true)} />
                 </label>}
-                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`} data-focus-key={`song-details-${song.id}`}>
+                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
                   <SongMotif songId={song.id} /><b dir="auto" title={title}>{title}</b>
                 </button>
                 <span dir="auto" title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
@@ -614,7 +627,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                   </Action>
                 )}
                 {((!facts.setAside && (on('library.priority') || on('library.never_play'))) || facts.canAdd) && (
-                  <Menu title={`More actions for ${name}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {name}</span></>}>
+                  <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
                     {facts.canAdd && <Action role="menuitem" disabled={already || searching} run={() => add(song)} title="Puts it at the end of the current mix. Nothing starts playing.">{already ? 'Already in current mix' : 'Add to current mix'}</Action>}
                     {facts.canAdd && now.phase !== 'idle' && <Action role="menuitem" disabled={already || searching} run={() => add(song, now.position + 1)} title="Puts it straight after the song playing now. What's playing carries on.">Play next in current mix</Action>}
                     {!facts.setAside && on('library.priority') && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">

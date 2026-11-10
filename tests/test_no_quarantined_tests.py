@@ -42,4 +42,5 @@ def test_the_guard_recognises_what_it_forbids() -> None:
     assert DECLARED_SKIP.search("test.describe.skip(\"later\", () => {})")
     assert FIXME.search("test.fixme(true, 'quarantined')")
     # a conditional runtime skip that explains a missing prerequisite stays allowed
-    assert not DECLARED_SKIP.search("test.skip(true, `run the whole MP spec first: ${file}.json is missing`);")
+    runtime = "test.skip(true, `run the whole MP spec first: ${file}.json is missing`);"
+    assert not DECLARED_SKIP.search(runtime)

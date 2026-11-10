@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections import Counter
 from difflib import SequenceMatcher
 from functools import lru_cache
 
@@ -21,7 +22,7 @@ _UNDECOMPOSED = str.maketrans(
 )
 
 
-@lru_cache(maxsize=32768)
+@lru_cache(maxsize=131072)
 def normalize_music(text: str) -> str:
     """Case- and accent-insensitive comparison, not a display transformation."""
     decomposed = unicodedata.normalize("NFKD", text.casefold()).translate(_UNDECOMPOSED)
@@ -30,12 +31,18 @@ def normalize_music(text: str) -> str:
     return _SPACES.sub(" ", _PUNCTUATION.sub(" ", _CREDITS.sub("feat", plain))).strip()
 
 
+@lru_cache(maxsize=64)
+def _letters(needle: str) -> Counter:
+    return Counter(needle)
+
+
 def relevance(query: str, song_id: int, artist: str | None, title: str | None) -> int | None:
     """Smaller is better. Return None rather than guessing at weak matches."""
     needle = normalize_music(query)
     if not needle:
         return 100
-    if needle == str(song_id):
+    # A recording ID is all digits; "100%" means the word 100, not recording 100.
+    if query.strip().isdigit() and needle == str(song_id):
         return 0
     name = normalize_music(title or "")
     creator = normalize_music(artist or "")
@@ -75,11 +82,18 @@ def relevance(query: str, song_id: int, artist: str | None, title: str | None) -
         return None
     candidates = [name, creator]
     candidates.extend(token for token in tokens if abs(len(token) - len(needle)) <= 2)
-    best = max(
-        (SequenceMatcher(None, needle, candidate, autojunk=False).ratio()
-         for candidate in candidates if candidate and abs(len(candidate) - len(needle)) <= 3),
-        default=0.0,
-    )
+    best = 0.0
+    letters = _letters(needle)
+    for candidate in candidates:
+        if not candidate or abs(len(candidate) - len(needle)) > 3:
+            continue
+        # GP-0251-08: twice the shared letters over both lengths is an upper bound on ratio(), so
+        # the full comparison only runs for names that could pass. Same results, far less work on
+        # 20,000 songs.
+        shared = sum((Counter(candidate) & letters).values())
+        if 2 * shared < 0.84 * (len(needle) + len(candidate)):
+            continue
+        best = max(best, SequenceMatcher(None, needle, candidate, autojunk=False).ratio())
     if best >= 0.84:
         return 60 + int((1.0 - best) * 100)
     return None

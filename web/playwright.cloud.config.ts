@@ -11,6 +11,8 @@ import { defineConfig } from '@playwright/test';
 //   pnpm e2e:cloud
 const python = process.env.SELECTA_PYTHON ?? 'uv run python';
 const port = process.env.SELECTA_CLOUD_E2E_PORT ?? '8812';
+// SELECTA_CLOUD_E2E_DIST builds into, and serves, another folder so parallel runs never share one.
+const dist = process.env.SELECTA_CLOUD_E2E_DIST ?? 'dist-cloud-e2e';
 
 export default defineConfig({
   testDir: './e2e-cloud',
@@ -32,7 +34,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: `pnpm exec vite build -c vite.cloud-e2e.config.ts --logLevel warn && pnpm exec vite build -c vite.cloud-e2e-authkit.config.ts --logLevel warn && ${python} ../tests/e2e_cloud_server.py ${port}`,
+    command: `pnpm exec vite build -c vite.cloud-e2e.config.ts --outDir ${dist} --logLevel warn && pnpm exec vite build -c vite.cloud-e2e-authkit.config.ts --outDir ${dist}-authkit --logLevel warn && ${python} ../tests/e2e_cloud_server.py ${port}`,
     url: `http://127.0.0.1:${port}/api/status`,
     reuseExistingServer: false,
     timeout: 240_000,

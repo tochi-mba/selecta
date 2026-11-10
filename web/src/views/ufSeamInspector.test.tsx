@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -83,5 +83,12 @@ describe('UF-0381 Seam Inspector', () => {
     expect(document.activeElement).toBe(tabs[tabs.length - 1]);
     await userEvent.keyboard('{Home}');
     expect(within(side).getByRole('tab', { name: 'Listen' })).toHaveAttribute('aria-selected', 'true');
+  });
+  it('gives focus back to the exact transition it was opened from when closed', async () => {
+    const side = await open();
+    await userEvent.click(within(side).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('complementary', { name: 'This transition' })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toHaveClass('seam-name'));
+    expect(document.activeElement?.closest('[data-seam]')).not.toBeNull();
   });
 });

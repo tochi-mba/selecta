@@ -75,7 +75,8 @@ export function labelGaps() {
     let node = icon.nextSibling;
     const rects: DOMRect[] = [];
     while (node) {
-      const hidden = node instanceof HTMLElement && (node.classList.contains('visually-hidden') || !node.getBoundingClientRect().width);
+      // hidden, or clipped to a 1px box for screen readers (the collapsed rail's labels)
+      const hidden = node instanceof HTMLElement && (node.classList.contains('visually-hidden') || node.getBoundingClientRect().width <= 1 || getComputedStyle(node).position === 'absolute');
       if (!hidden && (node.textContent ?? '').trim()) {
         const range = document.createRange();
         range.selectNodeContents(node);

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeBackend } from '../test/backend';
 import Lucy from './Lucy';
+import { LucySettings } from './LucySettings';
 
 // Selecta Library + Lucy programme (LX): the whole Lucy page, for the readiness gate (LX-0353-05,
 // LX-0363-07), exact scope across panes (LX-0355-06, LX-0357-02), unsent words per conversation
@@ -158,5 +159,29 @@ describe('LX-0363-05 recovery when Selecta can’t be reached', () => {
     await userEvent.type(await box(), 'still here');
     expect(await box()).toHaveValue('still here');
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+  });
+});
+
+describe('LX-0363-06 provider facts before anything is sent', () => {
+  const remote = status({ privacy: { share_lyrics: false, share_history: false, data_classes: [
+    { id: 'request', label: 'What you type to Lucy', sent: true },
+    { id: 'tags', label: 'Song titles, artists, tempo and key', sent: true },
+    { id: 'audio', label: 'Your audio files', sent: false },
+  ] } }, { kind: 'openai', label: 'My service', remote: true, consented: false, mode: 'full' });
+
+  it('a remote service waits for consent, and the page says exactly what would go to it', async () => {
+    backend(remote);
+    render(<Lucy conversation={null} setMixData={vi.fn()} player={player} />);
+    expect(await screen.findByText('Lucy needs your OK before it sends anything to My service.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    expect(screen.getByRole('region', { name: 'Before Lucy can start' }).textContent).toContain('Nothing is sent until you agree to exactly what would be sent.');
+  });
+
+  it('settings list what is sent and what never is, beside an unticked agreement', () => {
+    render(<LucySettings status={remote as never} onSaved={vi.fn()} />);
+    const consent = document.querySelector('.lucy-consent') as HTMLElement;
+    expect(within(consent).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['What you type to Lucy', 'Song titles, artists, tempo and key']);
+    expect(consent.textContent).toContain('Never sent: Your audio files.');
+    expect(within(consent).getByRole('checkbox', { name: /I agree to send exactly this to/ })).not.toBeChecked();
   });
 });

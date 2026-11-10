@@ -235,16 +235,35 @@ test('LX-0355-07 and LX-0364-05 on a phone the player and nav never cover the co
     expect(await covers(target)).toBe(0);
     expect(await reachable(target)).toBe(true);
   }
-  // WCAG 2.2 AA target size (24 px) everywhere; the documented exceptions are inline text links
-  const small = await page.evaluate(() => {
+  // WCAG 2.2 AA target size (24 px) on Lucy's chat and proposal, Make a Mix and the Library. The
+  // documented exceptions are inline text links inside sentences (WCAG's inline exception).
+  const tooSmall = () => page.evaluate(() => {
     const out: string[] = [];
+    let under44 = 0;
     for (const node of document.querySelectorAll<HTMLElement>('main button, main a, main [role="tab"], main input, main summary')) {
       const rect = node.getBoundingClientRect();
       if (!rect.width || !rect.height || node.closest('[hidden]') || node.matches('.lucy-link, p a, dd a')) continue;
       if (rect.width < 24 || rect.height < 24) out.push(`${node.tagName.toLowerCase()} "${(node.getAttribute('aria-label') ?? node.textContent ?? '').trim().slice(0, 30)}" ${Math.round(rect.width)}x${Math.round(rect.height)}`);
+      if (rect.height < 44) under44 += 1;
     }
-    return out;
+    return { out, under44 };
   });
-  expect(small).toEqual([]);
+  const sizes: Record<string, number> = {};
+  for (const [where, open] of [['Lucy, your mix', async () => {}], ['Lucy, chat', () => page.getByRole('tab', { name: 'Chat' }).click()]] as const) {
+    await open();
+    const seen = await tooSmall();
+    expect(seen.out, where).toEqual([]);
+    sizes[where] = seen.under44;
+  }
+  for (const address of ['/mixes', '/library']) {
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: address === '/mixes' ? 'Make a Mix' : 'Library', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`${address}$`));
+    await expect(page.locator('main h1').first()).toBeVisible();
+    const seen = await tooSmall();
+    expect(seen.out, address).toEqual([]);
+    sizes[address] = seen.under44;
+  }
+  test.info().annotations.push({ type: 'controls under 44px tall (allowed, at least 24px)', description: JSON.stringify(sizes) });
+  await page.goto(`/mixes/lucy/${id}`);
   expect(await stickingOut(page, 'Lucy at 375px')).toEqual([]);
 });

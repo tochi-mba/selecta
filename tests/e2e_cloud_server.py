@@ -77,15 +77,17 @@ from selecta.billing import stripe_sync  # noqa: E402
 from selecta.billing.plans import plan_for  # noqa: E402
 from selecta.identity.tokens import BadSignature, Claims  # noqa: E402
 from selecta.persistence import db_now, make_engine, migrate, transaction  # noqa: E402
+from selecta.playback.schema import playback_sessions  # noqa: E402
 from selecta.rooms.cloud_ports import RoomPorts  # noqa: E402
 from selecta.storage import api as storage_api  # noqa: E402
 from selecta.usage import allowances, quota  # noqa: E402
 from selecta.work import outbox  # noqa: E402
 
-DIST = ROOT / "web" / "dist-cloud-e2e"
+# SELECTA_CLOUD_E2E_DIST names another build folder, so parallel runs never share one.
+DIST = ROOT / "web" / os.environ.get("SELECTA_CLOUD_E2E_DIST", "dist-cloud-e2e")
 # The same site with the real AuthKit library, served at http://localhost:<port> for the sign-in
 # redirect test (e2e_cloud_authkit.py).
-DIST_AUTHKIT = ROOT / "web" / "dist-cloud-e2e-authkit"
+DIST_AUTHKIT = DIST.with_name(DIST.name + "-authkit")
 # The Rooms and devices tests' people, by bearer token: True is on Premium.
 PEOPLE = {"alice": True, "bob": True, "carol": False}
 CONSENT = "terms-e2e-2026-11"
@@ -343,6 +345,18 @@ def build(port: int):
         with objects.lock:
             objects.expired_through = next(objects.serial)
         return {"expired_through": objects.expired_through}
+
+    @app.post("/test/expire-lease")
+    def expire_lease(body: dict = Body(default={})):  # noqa: B008
+        """Let `user`'s speaker lease lapse now, as 20 s without a heartbeat would (SC-0415-04)."""
+        workspace_id = workspace_of(str(body["user"]))
+        with transaction(engine, workspace_id) as conn:
+            conn.execute(
+                playback_sessions.update()
+                .where(playback_sessions.c.workspace_id == workspace_id)
+                .values(lease_expires_at=db_now(conn) - 1)
+            )
+        return {"ok": True}
 
     @app.post("/test/r2/fail-parts")
     def fail_parts(body: dict = Body(default={})):  # noqa: B008

@@ -73,11 +73,15 @@ def shape(engine: Engine) -> dict:
             found["@rls"] = sorted(
                 tuple(row)
                 for row in connection.execute(
+                    # Alembic's own version table survives a full downgrade by design, just as
+                    # the table loop above skips it; every other table's RLS state is compared
                     sa.text(
                         "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity "
                         "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-                        "WHERE n.nspname = current_schema() AND c.relkind = 'r'"
-                    )
+                        "WHERE n.nspname = current_schema() AND c.relkind = 'r' "
+                        "AND c.relname <> :version"
+                    ),
+                    {"version": VERSION_TABLE},
                 )
             )
             found["@sequences"] = sorted(

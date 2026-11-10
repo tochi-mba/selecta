@@ -64,7 +64,9 @@ test('LX-0340-03 one reading order: heading, search, filters, count, results, in
   expect(seen).toEqual([...seen].sort((a, b) => a - b));
   expect(new Set(seen)).toEqual(new Set([0, 1, 2, 3]));
   const outline = await page.locator('main').ariaSnapshot();
-  const places = ['heading "Library" [level=1]', 'searchbox "Search your library"', 'group "Filter Library recordings"', 'status', 'list'].map((part) => outline.indexOf(part));
+  const lines = outline.split('\n');
+  const places = [/- heading "Library" \[level=1\]/, /- searchbox "Search your library"/, /- group "Filter Library recordings"/, /- status:? .*songs/, /- list\b/]
+    .map((pattern) => lines.findIndex((line) => pattern.test(line)));
   expect(places.every((place) => place >= 0)).toBe(true);
   expect(places).toEqual([...places].sort((a, b) => a - b));
 });
@@ -75,22 +77,22 @@ test('LX-0340-05 LX-0344-01 LX-0345-03 duplicate titles stay bound to their reco
   for (const layout of ['List view', 'Card view'] as const) {
     await useLayout(page, layout);
     for (const [id, artist] of [[10, 'Hal Greene'], [11, 'Iris Vale']] as const) {
-      const row = rows(page).filter({ has: page.getByRole('button', { name: `Details for Same Name (song ${id})` }) });
+      // same title, different artist: every control names the artist, and the checkbox the ID
+      const row = rows(page).filter({ has: page.getByRole('button', { name: `Details for Same Name by ${artist}` }) });
       await expect(row).toHaveCount(1);
-      await expect(row.getByText(`Recording ${id}`)).toBeVisible();
       await expect(row.getByText(artist)).toBeVisible();
-      await expect(row.getByRole('checkbox')).toHaveAccessibleName(`Select recording Same Name (song ${id}) by ${artist}, ID ${id}`);
-      // title, artist and the recording badge never sit on top of each other
+      await expect(row.getByRole('button', { name: `More actions for Same Name by ${artist}` })).toHaveCount(1);
+      await expect(row.getByRole('checkbox')).toHaveAccessibleName(`Select recording Same Name by ${artist}, ID ${id}`);
+      // title and artist never sit on top of each other
       const title = await box(row.locator('.song-open b'));
       const by = await box(row.getByText(artist));
-      const badge = await box(row.getByText(`Recording ${id}`));
-      expect(overlap(title, by) + overlap(title, badge) + overlap(by, badge)).toBe(0);
+      expect(overlap(title, by)).toBe(0);
     }
     // reorder, then the same button still opens the same recording
     for (const sort of ['artist', 'recent', 'tempo', 'title']) {
       await page.getByRole('combobox', { name: 'Sort by' }).selectOption(sort);
       await expect(page).toHaveURL(sort === 'title' ? /\/library$/ : new RegExp(`sort=${sort}`));
-      await page.getByRole('button', { name: 'Details for Same Name (song 11)' }).click();
+      await page.getByRole('button', { name: 'Details for Same Name by Iris Vale' }).click();
       const sheet = page.getByRole('dialog', { name: 'Same Name' });
       await expect(sheet.getByText('Recording ID 11')).toBeVisible();
       await expect(sheet.getByText('Iris Vale')).toBeVisible();
@@ -175,7 +177,7 @@ test('LX-0341-05 LX-0344-07 LX-0350-04 LX-0350-05 a background change keeps numb
   await openLibrary(page);
   expect(await page.locator('.library-summary b').first().evaluate((node) => getComputedStyle(node).fontVariantNumeric)).toContain('tabular-nums');
   expect(await page.locator('.song-columns span').first().evaluate((node) => getComputedStyle(node).fontVariantNumeric)).toContain('tabular-nums');
-  const target = page.getByRole('button', { name: 'Details for Same Name (song 11)' });
+  const target = page.getByRole('button', { name: 'Details for Same Name by Iris Vale' });
   await target.scrollIntoViewIfNeeded();
   await target.focus();
   const scrolled = await page.evaluate(() => window.scrollY);
@@ -307,8 +309,9 @@ test('LX-0346-06 LX-0349-05 the More menu works by keyboard and touch, and Never
   const context = await browser.newContext({ hasTouch: true, viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   await openLibrary(page);
-  const row = rows(page).filter({ hasText: 'Paper Moon' });
-  const more = page.getByRole('button', { name: 'More actions for Paper Moon' });
+  // Last Call is not in the current mix, so Add is the first live item
+  const row = rows(page).filter({ hasText: 'Last Call' });
+  const more = page.getByRole('button', { name: 'More actions for Last Call' });
   await more.focus();
   await page.keyboard.press('Enter');
   const menu = page.getByRole('menu');
@@ -329,18 +332,18 @@ test('LX-0346-06 LX-0349-05 the More menu works by keyboard and touch, and Never
   await page.getByRole('menuitemcheckbox', { name: 'Never: on' }).tap();
   await expect(row.getByText('Ready for mixes')).toBeVisible();
   // set aside is a different state with its own way back
-  await page.getByRole('button', { name: 'Details for Paper Moon' }).click();
+  await page.getByRole('button', { name: 'Details for Last Call' }).click();
   await page.getByRole('button', { name: 'This isn’t music' }).click();
   await page.keyboard.press('Escape');
   await expect(row).toHaveCount(0);
   await page.getByRole('button', { name: 'Set aside', exact: true }).click();
-  await page.getByRole('button', { name: 'Details for Paper Moon' }).click();
+  await page.getByRole('button', { name: 'Details for Last Call' }).click();
   await expect(page.getByRole('dialog').getByText('Set aside', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'This is music' }).click();
   await page.getByRole('button', { name: 'Let Selecta decide' }).click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Everything' }).click();
-  await expect(rows(page).filter({ hasText: 'Paper Moon' }).getByText('Ready for mixes')).toBeVisible();
+  await expect(rows(page).filter({ hasText: 'Last Call' }).getByText('Ready for mixes')).toBeVisible();
   await context.close();
 });
 

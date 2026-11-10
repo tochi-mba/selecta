@@ -1,6 +1,6 @@
 # CSS ownership, collisions and breakpoints
 
-Guarded by `web/src/styles/css-ownership.test.ts` (ADR-278): every stylesheet, every repeated
+Guarded by `web/src/styles/mp-css-register.test.ts` (ADR-278): every stylesheet, every repeated
 selector and every width or height breakpoint below must match the source, so a new file, a new
 overlap or a new breakpoint fails the test until it is given an owner here.
 
@@ -128,4 +128,4 @@ Every pull request that changes a stylesheet fills in the "CSS changes" section 
 3. **Visual evidence:** the geometry test, screenshot or measurement file that shows it, named by path.
 
 A new breakpoint, a new stylesheet or a new overlap on one of the seven tokens above also updates this
-file, which `css-ownership.test.ts` enforces.
+file, which `mp-css-register.test.ts` enforces.

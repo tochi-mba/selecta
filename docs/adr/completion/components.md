@@ -2,8 +2,11 @@
 
 Shared parts live in `web/src/ui/controls.tsx`, `web/src/ui/primitives.tsx`, `web/src/ui/toasts.tsx`,
 `web/src/ui/Skeleton.tsx` and `web/src/ui/MusicObjects.tsx`. The development-only gallery
-(`web/src/ui/ControlGallery.tsx`, shown in Workspace › Diagnostics when `import.meta.env.DEV`)
-renders each state in both themes.
+(`web/src/ui/ControlGallery.tsx`, shown in Workspace › Diagnostics when `import.meta.env.DEV`, or in a
+test build made with `VITE_SELECTA_GALLERY=1`) renders each state in both themes. ADR-279 measures it in
+`web/e2e/mp-0279-component-gallery.e2e.ts`: actions, fields (a `Field` with hint and error), tabs, a
+menu, every status kind, every skeleton variant, a dialog, a drawer, a problem with Retry and an empty
+state.
 
 ## Contracts
 

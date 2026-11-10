@@ -5,7 +5,7 @@ import { PAGES, resetMix, spyOnAudio } from './helpers';
 
 /**
  * ADR-278 CSS ownership, in the browser. The static register (owners, repeated selectors, breakpoints and
- * review rules) is web/src/styles/css-ownership.test.ts; this spec proves Library and Requests styling
+ * review rules) is web/src/styles/mp-css-register.test.ts; this spec proves Library and Requests styling
  * stays in its own view (MP-0278-05) and that the CSS work left audio, API, data, routing and stored
  * preferences alone (MP-0278-07).
  */

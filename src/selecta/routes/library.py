@@ -368,11 +368,15 @@ def add_routes(app, ctx) -> None:
             # Keep explicit sort choices and cursor pagination intact.
             ranking = "music_relevance(s.id,s.artist,s.title)"
             if q:
-                conn.create_function(
-                    "music_relevance", 3,
-                    lambda song_id, artist, title: relevance(q, song_id, artist, title),
-                    deterministic=True,
-                )
+                # GP-0251-08: the count and the page ask about the same songs, so each is scored once.
+                scores: dict[int, int | None] = {}
+
+                def score(song_id: int, artist: str | None, title: str | None) -> int | None:
+                    if song_id not in scores:
+                        scores[song_id] = relevance(q, song_id, artist, title)
+                    return scores[song_id]
+
+                conn.create_function("music_relevance", 3, score, deterministic=True)
                 conditions = [f"{ranking} IS NOT NULL", "s.duplicate_of IS NULL"]
                 if sort == "title":
                     order = ranking

@@ -6,7 +6,8 @@ import { Studio } from './Studio';
 
 /** GP-0261-07: the Studio at its largest, 64 cells in each of the eight lanes (512 squares).
  * Painting stays consistent, the grid stays one tab stop with keyboard reach to every corner,
- * and Start again puts the whole grid back. Audio is a stand-in; nothing is rendered. */
+ * and Start again puts the whole grid back. Audio is a stand-in; nothing is rendered. jsdom is not a
+ * timing instrument, so responsiveness on real hardware is left to the browser check in the ADR. */
 
 const deck = vi.hoisted(() => ({ made: [] as { setShape: ReturnType<typeof vi.fn> }[] }));
 vi.mock('../studio', async (actual) => {
@@ -74,7 +75,6 @@ describe('GP-0261-07 a 64-cell Studio', () => {
     const prior = document.elementFromPoint;
     let under: Element = lane[0];
     Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => under });
-    const started = performance.now();
     try {
       fireEvent.pointerDown(lane[0], { pointerId: 7, pointerType: 'mouse', isPrimary: true, button: 0, clientX: 1, clientY: 1 });
       for (const cell of [...lane.slice(1), ...lane.slice(0, 8).reverse()]) {
@@ -85,12 +85,10 @@ describe('GP-0261-07 a 64-cell Studio', () => {
     } finally {
       Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: prior });
     }
-    const elapsed = performance.now() - started;
     // every square the stroke touched took the first square's new value, once, including revisits
     expect(lane.map((cell) => cell.getAttribute('aria-pressed'))).toEqual(row(0).map(() => 'false'));
     // the other seven lanes are untouched
     expect(cells().filter((cell) => /^Song 1 drums,/.test(cell.getAttribute('aria-label')!)).every((cell) => cell.getAttribute('aria-pressed') === 'true')).toBe(true);
-    expect(elapsed).toBeLessThan(5000);
     fireEvent.click(screen.getByRole('button', { name: 'Start again' }));
     expect(lane.every((cell) => cell.getAttribute('aria-pressed') === 'true')).toBe(true);
   });

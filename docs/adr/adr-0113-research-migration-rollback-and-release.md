@@ -1,7 +1,7 @@
 # ADR-0113: User research, phased migration, evidence ledger, rollback and explicit go/no-go
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/10 implemented)
+- **Implementation status:** In progress (2/10 implemented, 5 in progress; source reconciliation 2026-11-10, branch feat/finish-checklists)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -29,18 +29,18 @@ Use reversible, feature-flagged, staged implementation PRs and a strict evidence
 - Decision Accepted, implementation Implemented and verification Verified require different recorded artifacts.
 - PR merge of this plan only publishes Proposed decisions and Not started tasks.
 
-## Detailed implementation work - all Not started
+## Detailed implementation work
 
-1. **S4-0113-01 - Approve baseline, explicit feature parity and release-owner responsibilities.** Acceptance: Every invariant/test has named owner and no inherited status guesses. Required verification: Recorded baseline signature and task mapping. **Implementation: Not started; Verified: No.**
-2. **S4-0113-02 - Conduct initial qualitative listener/creator/expert tasks.** Acceptance: Observed findings logged with no fabricated usability success. Required verification: Participant tasks and reproducible notes. **Implementation: Not started; Verified: No.**
-3. **S4-0113-03 - Approve dark/light visual design and content hierarchy separately.** Acceptance: Both themes independently inspected across devices and states. Required verification: Reviewed screenshot sets and contrast report. **Implementation: Not started; Verified: No.**
-4. **S4-0113-04 - Sequence implementing PRs behind reversible dev feature flag.** Acceptance: Each PR isolated, roll-backable and names S4 task IDs. Required verification: Feature flag and route compatibility smoke. **Implementation: Not started; Verified: No.**
-5. **S4-0113-05 - Define operational migration for preferences and local working copies.** Acceptance: No lost drafts, corrections, ratings, settings or Studio recoveries. Required verification: Old→new→old fixture migration tests. **Implementation: Not started; Verified: No.**
-6. **S4-0113-06 - Review new dependencies, backend needs and PWA compatibility separately.** Acceptance: No unapproved engine/data/network change hidden in UI work. Required verification: API/dependency/security PR checklist. **Implementation: Not started; Verified: No.**
-7. **S4-0113-07 - Require critical cross-feature and real audio acceptance.** Acceptance: Playback, requests, revisions and FLAC verified end-to-end. Required verification: Windows/Edge and decodable export session. **Implementation: Not started; Verified: No.**
-8. **S4-0113-08 - Require WCAG/human AT, viewport and performance evidence.** Acceptance: No inaccessible core workflow and measured scale regression. Required verification: NVDA/Edge and recorded profiler results. **Implementation: Not started; Verified: No.**
-9. **S4-0113-09 - Reconcile P0/P1/P2 defects and acceptance exceptions.** Acceptance: P0 blocks; P1 owner risk approval documented; P2 disposition. Required verification: Issue register, exact SHA and owner signoff. **Implementation: Not started; Verified: No.**
-10. **S4-0113-10 - Prepare exact-head release report and demonstrate rollback.** Acceptance: Final verdict explicitly GO/NO-GO with linked proof. Required verification: Release runbook and rollback exercise. **Implementation: Not started; Verified: No.**
+1. **S4-0113-01 - Approve baseline, explicit feature parity and release-owner responsibilities.** Acceptance: Every invariant/test has named owner and no inherited status guesses. Required verification: Recorded baseline signature and task mapping. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: docs/adr/completion/baseline.md. Needs a person: owner approval of baseline and release-owner responsibilities.
+2. **S4-0113-02 - Conduct initial qualitative listener/creator/expert tasks.** Acceptance: Observed findings logged with no fabricated usability success. Required verification: Participant tasks and reproducible notes. **Implementation: Not started (2026-11-10); Verified: No.** Evidence: not a code task. Needs a person: participant listener/creator/expert sessions.
+3. **S4-0113-03 - Approve dark/light visual design and content hierarchy separately.** Acceptance: Both themes independently inspected across devices and states. Required verification: Reviewed screenshot sets and contrast report. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: web/e2e/paired-theme.e2e.ts and docs/adr/completion/visual-evidence.md capture both themes. Needs a person: owner design approval of both themes.
+4. **S4-0113-04 - Sequence implementing PRs behind reversible dev feature flag.** Acceptance: Each PR isolated, roll-backable and names S4 task IDs. Required verification: Feature flag and route compatibility smoke. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: src/selecta/flags/*.json, tests/test_flags.py, web/e2e/flags.e2e.ts sweep, docs/flags.md. Needs a person: independent review.
+5. **S4-0113-05 - Define operational migration for preferences and local working copies.** Acceptance: No lost drafts, corrections, ratings, settings or Studio recoveries. Required verification: Old→new→old fixture migration tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: tests/test_upgrade.py, tests/test_local_upgrade.py, tests/test_recovery.py; prefs.test.ts and StudioSafety.test.tsx recovery cases. Needs a person: old to new to old exercise on a real home.
+6. **S4-0113-06 - Review new dependencies, backend needs and PWA compatibility separately.** Acceptance: No unapproved engine/data/network change hidden in UI work. Required verification: API/dependency/security PR checklist. **Implementation: Not started (2026-11-10); Verified: No.** Evidence: not a code task. Needs a person: owner API/dependency/security review.
+7. **S4-0113-07 - Require critical cross-feature and real audio acceptance.** Acceptance: Playback, requests, revisions and FLAC verified end-to-end. Required verification: Windows/Edge and decodable export session. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: listen.e2e.ts real audio; flows.e2e.ts 'saving a mix as an audio file makes a real FLAC'. Needs a person: Windows/Edge real audio session.
+8. **S4-0113-08 - Require WCAG/human AT, viewport and performance evidence.** Acceptance: No inaccessible core workflow and measured scale regression. Required verification: NVDA/Edge and recorded profiler results. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: pages.e2e.ts axe and reflow. Needs a person: NVDA/Edge and recorded profiler results.
+9. **S4-0113-09 - Reconcile P0/P1/P2 defects and acceptance exceptions.** Acceptance: P0 blocks; P1 owner risk approval documented; P2 disposition. Required verification: Issue register, exact SHA and owner signoff. **Implementation: Not started (2026-11-10); Verified: No.** Evidence: not a code task. Needs a person: issue register, exact SHA and owner sign-off.
+10. **S4-0113-10 - Prepare exact-head release report and demonstrate rollback.** Acceptance: Final verdict explicitly GO/NO-GO with linked proof. Required verification: Release runbook and rollback exercise. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: tests/rollback_check.py, tests/test_local_backup.py. Needs a person: release report and rollback exercise.
 
 ## Required negative cases and regression strategy
 
@@ -69,6 +69,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (2/10) | Not verified | Source reconciliation against current code with focused tests run 2026-11-10; every task still needs independent verification |
 
 ## Related documents
 

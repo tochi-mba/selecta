@@ -47,5 +47,5 @@ Preserve single audio owner, intentional Pause, original media and local privacy
 
 - **Depends on:** ADR-0150/0173/0100 and new foundation ADR-0198/0199, plus shared visual system.
 - **Next:** owner decision → prototype/critique → targeted implementation PR with tests → independent human/AT/real-audio/performance evidence → GO/NO-GO.
-- **Now:** Accepted, 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
+- **Now:** Accepted, 3/8 Implemented (2026-11-10), 0/8 independently Verified; no implementation PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

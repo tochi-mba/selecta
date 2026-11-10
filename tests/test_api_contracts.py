@@ -698,7 +698,8 @@ def test_stopping_watching_leaves_every_music_file_byte_for_byte(client, conn, t
     """S4-0106-09: a filesystem snapshot before and after shows Stop watching deletes nothing."""
     music = tmp_path / "Music"
     (music / "Album").mkdir(parents=True)
-    for name, data in {"one.flac": b"fLaC-one", "Album/two.mp3": b"ID3-two", "cover.jpg": b"jpg"}.items():
+    files = {"one.flac": b"fLaC-one", "Album/two.mp3": b"ID3-two", "cover.jpg": b"jpg"}
+    for name, data in files.items():
         (music / name).write_bytes(data)
 
     def snapshot():
