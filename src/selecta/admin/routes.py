@@ -11,7 +11,6 @@ Nothing here edits a row directly. The emergency controls, flags and takedown ro
 `admin.routes_controls`, so neither file grows past a few hundred lines.
 """
 
-from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Annotated, Any

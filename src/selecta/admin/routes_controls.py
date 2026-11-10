@@ -6,7 +6,6 @@ process's caches at once, so the change is visible on the next request here; oth
 see it within their cache's age (two seconds for controls, five for flag rules).
 """
 
-from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Annotated, Any

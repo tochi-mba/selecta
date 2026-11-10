@@ -68,7 +68,7 @@ def _staff(conn, claims: Claims, role: str) -> tuple[str, str]:
             user_id=principal.user.id,
             role=role,
             scope_type="platform",
-            scope_id="operations",
+            scope_id="*",
             issued_by=principal.user.id,
             reason="route test",
             created_at=now,
