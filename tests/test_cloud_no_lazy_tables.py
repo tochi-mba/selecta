@@ -22,7 +22,7 @@ SOURCE = Path(__file__).resolve().parents[1] / "src" / "selecta"
 
 CLOUD_PACKAGES = (
     "work", "scheduling", "workers", "storage", "usage", "billing", "identity", "authz", "ai",
-    "playback", "rooms", "flags", "persistence", "modes",
+    "playback", "rooms", "flags", "persistence", "modes", "admin",
 )
 CLOUD_MODULES = ("api_cloud.py", "gateway_cloud.py")
 CLOUD_ROUTE_GLOB = "routes/cloud_*.py"

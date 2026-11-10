@@ -19,7 +19,7 @@ Step-by-step recipes for the changes people make most. Each ends with the checks
 
 ## Add or change a table
 
-1. Declare the table in the owning package's `schema.py` on `persistence.metadata`, with `workspace_id` (non-null, indexed) if it holds tenant data. Register a new module in `persistence/registry.py`.
+1. Declare the table in the owning package's `schema.py` on `persistence.metadata`, with `workspace_id` (non-null, indexed) if it holds tenant data. Register a new module in `persistence/registry.py`. A table that belongs to no workspace goes in `GLOBAL_TABLES` in `tests/test_cloud_workspace_columns.py` with its reason.
 2. Generate a migration against an up-to-date scratch database:
    ```python
    from selecta.persistence import make_engine, migrate
@@ -27,8 +27,8 @@ Step-by-step recipes for the changes people make most. Each ends with the checks
    migrate.upgrade(engine)
    migrate.revision(engine, "what changed, in plain words")
    ```
-3. Rewrite the generated file in the style of the others in `persistence/migrations/versions/` (`from collections.abc import Sequence`, a docstring saying why), and check the `downgrade()` undoes it.
-4. **Check:** `migrate.pending_changes(engine)` is empty after `upgrade`, upgrading twice is a no-op, and `tests/test_cloud_api.py::test_cloud_schema_upgrade_and_rollback_preserve_legacy_local_tables` passes. Never edit a migration that has run anywhere: add a new one.
+3. Rewrite the generated file in the style of the others in `persistence/migrations/versions/` (`from collections.abc import Sequence`, a docstring saying why), and check the `downgrade()` undoes it. For a tenant table, also enable and force row-level security and add the `workspace_isolation` policy on PostgreSQL, as `c5f08d3a71e2` does; autogenerate doesn't write this for you.
+4. **Check:** `migrate.pending_changes(engine)` is empty after `upgrade`, upgrading twice is a no-op, `tests/test_cloud_api.py::test_cloud_schema_upgrade_and_rollback_preserve_legacy_local_tables` passes, and so do `tests/test_cloud_workspace_columns.py` and, with PostgreSQL, `tests/test_cloud_rls.py`. Never edit a migration that has run anywhere: add a new one.
 
 ## Add a job type
 

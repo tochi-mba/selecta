@@ -72,6 +72,8 @@ uvx --python 3.12 --with pgserver python -c "import pgserver, time; s = pgserver
 
 Each test run makes its own randomly named schema and drops it afterwards, so several runs can share one server. `.pgdata` is ignored by git.
 
+**Row-level security is on in every PostgreSQL test.** The fixture makes a role for each run (`<schema>_owner`: not a superuser, no `BYPASSRLS`, allowed to create roles), gives it the schema, and every connection logs in as it. The policies are forced, so they bind it even though it owns the tables. Superusers skip every policy, so a test that builds its own engine on the same schema (a bigger pool for a race, say) must use `cloud_db.sibling_engine(engine, ...)`, which keeps the schema and the login role. Rows a test sets up across workspaces go in through `transaction(engine)` with no workspace, or a plain connection; reads inside `transaction(engine, workspace_id)` see that workspace only.
+
 ## Rules for good tests here
 
 - **Name the rule** the test proves: `test_a_stale_fencing_token_cannot_publish`.
@@ -80,6 +82,7 @@ Each test run makes its own randomly named schema and drops it afterwards, so se
 - **Real migrations, not `create_all`**, so every run also tests the schema.
 - **Every bug gets a regression test** before the fix.
 - **Never weaken a test to make it pass.** If the test is wrong, say why in the commit.
+- **End job and race scenarios with the invariant checker:** `selecta.audit.invariants.assert_clean(engine)` checks the database-readable invariants of [§15.2](../saas/15-stress-testing.md) (no lost jobs, no stale publish, no cross-tenant rows, quota, artifacts, duplicates, entitlements, consistent heads) and names every violation.
 
 ## What CI checks
 
@@ -97,7 +100,6 @@ Four workflows live in `.github/workflows/`. `test.yml` runs on every pull reque
 | Cloud E2E (Linux) | Every cloud browser test, on Edge, against the one cloud test server (`pnpm e2e:cloud`) | Lint, Web |
 
 | Workflow | When | Runs |
-- **End job and race scenarios with the invariant checker:** `selecta.audit.invariants.assert_clean(engine)` checks the database-readable invariants of [§15.2](../saas/15-stress-testing.md) (no lost jobs, no stale publish, no cross-tenant rows, quota, artifacts, duplicates, entitlements, consistent heads) and names every violation.
 |---|---|---|
 | `nightly.yml` | Every night; Sundays; by hand | `pip-audit` and `pnpm audit` nightly; the cloud tests with Hypothesis at 5,000 examples on PostgreSQL on Sundays |
 | `codeql.yml` | Pull requests and pushes to `main` | CodeQL security queries over Python and TypeScript |
