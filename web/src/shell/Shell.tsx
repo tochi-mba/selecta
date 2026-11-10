@@ -95,7 +95,7 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
       </nav>
       <div className="context-actions">
         {palette && on('app.command_palette') && (
-          <button className="context-button palette-button" onClick={onCommands} aria-label="Search and commands" title="Search and commands (Ctrl K)">
+          <button className="context-button palette-button" onClick={onCommands} title="Search and commands (Ctrl K)">
             <Icon name="search" /><span className="context-label">Search</span><kbd className="context-label">Ctrl K</kbd>
           </button>
         )}
@@ -288,7 +288,7 @@ export function Shell({
           </ul>
           <div className="nav-foot">
             {on('requests') && (
-              <button className="nav-request" onClick={onRequests} aria-label={waitingRequests ? `Requests, ${waitingRequests} waiting` : 'Requests'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
+              <button className="nav-request" onClick={onRequests} aria-label={waitingRequests ? `Requests: Request a song, ${waitingRequests} waiting` : 'Requests: Request a song'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
                 <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
               </button>
             )}
