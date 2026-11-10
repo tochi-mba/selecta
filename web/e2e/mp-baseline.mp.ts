@@ -11,14 +11,15 @@ import { Defect, measure, Reading } from './mp-measure';
  * muted, light theme, still motion. Every route in docs/adr/mp-0272-surface-inventory.json is loaded at
  * all 11 viewports, and every driven dynamic fixture is set up once and then measured at all 11 (the
  * More drawer only exists on narrow layouts, so it is measured at those). Each fixture writes its
- * geometry and defects to mp-results/mp-0272/<fixture>.json. The last test gathers every P0/P1 defect
+ * geometry and defects to mp-data/mp-0272/<fixture>.json. The last test gathers every P0/P1 defect
  * and fails when one is missing from docs/adr/mp-0272-defect-register.md, so the register cannot fall
  * behind what the browser measures. MP_WRITE_DOCS=1 also refreshes docs/adr/mp-0272-measured-summary.json.
  */
 
 const ROOT = resolve(process.cwd(), process.cwd().replace(/\\/g, '/').endsWith('/web') ? '..' : '.');
-// its own folder (playwright.mp.config.ts outputDir), so another spec's run can't wipe it
-const OUT = resolve(process.cwd(), 'mp-results/mp-0272');
+// outside every outputDir: Playwright empties those at the start of a run, and the register check
+// must be able to run on its own against the last full run
+const OUT = resolve(process.cwd(), 'mp-data/mp-0272');
 type Viewport = { id: string; width: number; height: number };
 const INVENTORY = JSON.parse(readFileSync(resolve(ROOT, 'docs/adr/mp-0272-surface-inventory.json'), 'utf8')) as {
   viewports: Viewport[];
@@ -319,7 +320,19 @@ test('every measured P0 and P1 defect is in the defect register', async () => {
   })).sort((a, b) => a.severity.localeCompare(b.severity) || a.key.localeCompare(b.key));
   const result = { status: 'candidate-not-independently-verified', capturedAt: new Date().toISOString(), coverage, defects: summary };
   writeFileSync(resolve(OUT, 'defects.json'), JSON.stringify(result, null, 2));
-  if (process.env.MP_WRITE_DOCS === '1') writeFileSync(resolve(ROOT, 'docs/adr/mp-0272-measured-summary.json'), `${JSON.stringify(result, null, 2)}\n`);
+  // one defect per line, so the committed summary stays a readable size (the repo's 1,000-line rule)
+  const compact = [
+    '{',
+    `  "status": ${JSON.stringify(result.status)},`,
+    `  "capturedAt": ${JSON.stringify(result.capturedAt)},`,
+    `  "coverage": ${JSON.stringify(coverage)},`,
+    '  "defects": [',
+    summary.map((defect) => `    ${JSON.stringify(defect)}`).join(',\n'),
+    '  ]',
+    '}',
+    '',
+  ].join('\n');
+  if (process.env.MP_WRITE_DOCS === '1') writeFileSync(resolve(ROOT, 'docs/adr/mp-0272-measured-summary.json'), compact);
 
   const register = readFileSync(resolve(ROOT, 'docs/adr/mp-0272-defect-register.md'), 'utf8');
   const missing = summary.filter((defect) => defect.severity !== 'P2' && !register.includes(`\`${defect.key}\``)).map((defect) => defect.key);

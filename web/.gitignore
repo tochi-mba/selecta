@@ -1,5 +1,6 @@
 test-results/
 mp-results/
+mp-data/
 playwright-report/
 verify-tmp/
 dist-cloud-e2e/
