@@ -11,7 +11,7 @@
 .lucy-mark { flex: none; margin-top: var(--space-3); color: var(--text-soft); }
 .lucy-title .display.small { margin: 0; }
 .lucy-title .lede { margin: var(--space-1) 0 0; }
-.lucy-head-actions button { display: inline-flex; align-items: center; gap: var(--space-dense); }
+.lucy-head-actions button { display: inline-flex; align-items: center; gap: var(--icon-gap); }
 .lucy-scope { gap: var(--space-2); }
 .lucy-provider { margin: 0; }
 .lucy-link {
@@ -114,6 +114,8 @@
 .lucy-msg.is-sending article { border-style: dashed; }
 .lucy-msg-who { margin: 0 0 var(--space-1); font: 700 var(--text-sm) var(--body); }
 .lucy-msg-state { font-weight: 400; color: var(--text-soft); }
+/* LX-0356-01: a readable measure however wide the chat column gets */
+.lucy-text { max-width: 72ch; }
 .lucy-text p { margin: 0 0 var(--space-2); }
 .lucy-text :is(ul, ol) { margin: 0 0 var(--space-2); padding-left: 1.3em; }
 .lucy-text > :last-child { margin-bottom: 0; }

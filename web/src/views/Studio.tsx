@@ -611,7 +611,7 @@ export function Studio(props: {
                           tabIndex={focusCell.row === row && focusCell.column === SOLO_COLUMN ? 0 : -1}
                           aria-pressed={soloed === name}
                           aria-disabled={lost || saving || undefined}
-                          aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}`}
+                          aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}${lost ? ', unavailable' : ''}`}
                           title={lost ? 'This part couldn’t be loaded' : undefined}
                           onFocus={() => setFocusCell({ row, column: SOLO_COLUMN })}
                           onClick={() => void solo(name)}
@@ -627,7 +627,7 @@ export function Studio(props: {
                             className={`studio-cell ${index === cell ? 'now' : ''} ${changedCells.has(side + '_' + lane + ':' + index) ? 'ai-changed' : ''}`}
                             aria-pressed={Boolean(value)}
                             aria-disabled={lost || saving || undefined}
-                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}`}
+                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}${lost ? ', unavailable' : ''}`}
                             title={lost ? 'This part couldn’t be loaded' : barRange(index, barsPerCell)}
                             onFocus={() => setFocusCell({ row, column: index })}
                             onClick={(event) => { if (event.detail === 0) toggle(side, lane, index); }}

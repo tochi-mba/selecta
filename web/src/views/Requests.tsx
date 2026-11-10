@@ -635,11 +635,14 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
                   <RouteDiagram songs={option.songs} requestedId={request.song_id} state="proposed" compact />
                   <p className="hint">{option.words}</p>
                   <div className="row wrap">
-                    <button className="primary" onClick={() => use(option)}>Use this</button>
+                    <button className="primary" aria-describedby={`bridge-use-${request.id}-${index}`} onClick={() => use(option)}>Use this</button>
                     <button aria-expanded={hearing === index} onClick={() => setHearing(hearing === index ? null : index)}>
                       {hearing === index ? 'Hide transitions' : 'Hear the transitions'}
                     </button>
                   </div>
+                  <small className="hint request-consequence" id={`bridge-use-${request.id}-${index}`}>
+                    Adds {EXTRA_WORDS[extras.length] ?? `${extras.length} extra songs`} with {title}. They join together once every transition is ready, and none of them plays before that.
+                  </small>
                   {hearing === index && (
                     <TransitionPreviews request={{ ...request, transitions: option.transitions }} playback={state.playback} />
                   )}
@@ -648,7 +651,10 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
             })}
           </ul>
           {(request.picked || request.bridge_choice === true) && (
-            <button onClick={() => { onClose(); void state.chooseBridge(request, false); }}>Don’t use a bridge</button>
+            <div className="request-force row wrap">
+              <button aria-describedby={`bridge-none-${request.id}`} onClick={() => { onClose(); void state.chooseBridge(request, false); }}>Don’t use a bridge</button>
+              <small className="hint request-consequence" id={`bridge-none-${request.id}`}>No extra songs join. {title} keeps waiting for a spot it can go straight into.</small>
+            </div>
           )}
         </>
       )}
@@ -900,9 +906,11 @@ export function RequestsPanel() {
                     </ol>
                     <TransitionPreviews request={request} playback={playback} />
                     <div className="row wrap">
-                      <button className="primary" onClick={() => void chooseBridge(request, true)}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}</button>
-                      <button onClick={() => void chooseBridge(request, false)}>No, keep waiting</button>
+                      <button className="primary" aria-describedby={`request-approve-${request.id}`} onClick={() => void chooseBridge(request, true)}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}</button>
+                      <button aria-describedby={`request-decline-${request.id}`} onClick={() => void chooseBridge(request, false)}>No, keep waiting</button>
                     </div>
+                    <p className="hint request-consequence" id={`request-approve-${request.id}`}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}: {Math.max((request.route?.length ?? 1) - 1, 0) === 1 ? 'one extra song joins' : `${Math.max((request.route?.length ?? 1) - 1, 0)} extra songs join`} with {title}, in the order above.</p>
+                    <p className="hint request-consequence" id={`request-decline-${request.id}`}>No, keep waiting: nothing extra joins, and {title} keeps looking for a spot of its own.</p>
                   </div>
                 )}
                 {((bridges && CAN_BRIDGE.has(stage)) || CAN_FORCE.has(stage)) && (
@@ -917,11 +925,11 @@ export function RequestsPanel() {
                       </button>
                     )}
                     {CAN_FORCE.has(stage) && (
-                      <button onClick={() => void addAnyway(request)}>
+                      <button aria-describedby={`request-force-${request.id}`} onClick={() => void addAnyway(request)}>
                         Add to mix anyway
                       </button>
                     )}
-                    {CAN_FORCE.has(stage) && <small className="hint">Adding it directly may make a rough transition. This changes the mix; it does not promise immediate playback.</small>}
+                    {CAN_FORCE.has(stage) && <small className="hint request-consequence" id={`request-force-${request.id}`}>Adding it directly may make a rough transition. This changes the mix; it does not promise immediate playback.</small>}
                   </div>
                 )}
                 {finding === request.id && CAN_BRIDGE.has(stage) && (

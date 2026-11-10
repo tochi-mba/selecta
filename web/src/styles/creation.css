@@ -24,6 +24,8 @@
 .scope-badge { font-weight: 700; }
 .scope-words { color: var(--text-soft); overflow-wrap: anywhere; }
 .scope-revision { font: var(--type-counter); color: var(--text-soft); }
+/* MP-0287-07: Story, Arrange or Detail, named in the pinned bar beside current or draft */
+.scope-view { font-weight: 600; color: var(--text); }
 .editor-scope .status { white-space: normal; margin-left: auto; }
 @media (max-width: 760px) {
   .editor-scope .status { margin-left: 0; }

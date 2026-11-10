@@ -6,6 +6,14 @@
 
 <!-- Tests added or run, coverage for the packages touched, manual checks (and listening, for audio). -->
 
+## CSS changes
+
+<!-- Only when a stylesheet changes (docs/adr/completion/css-ownership.md, review rules). One line per rule. -->
+
+| Owning selector | Numeric delta | Visual evidence |
+|---|---|---|
+| <!-- styles/shell.css `.mini .round` --> | <!-- 40px to 44px at 320 and 1440 --> | <!-- web/e2e/mp-0281-mini-player.e2e.ts 'MP-0281-02' --> |
+
 ## Checklist
 
 - [ ] Every new feature, route, CLI command and job type is owned by a feature flag, and `docs/flags.md` is regenerated

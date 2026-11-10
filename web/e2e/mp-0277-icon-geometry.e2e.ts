@@ -329,26 +329,12 @@ test('MP-0277-07 icon-only controls have a name, a hint, a focus ring and a usab
   let measured = 0;
   const audit = async (target: Page, where: string, least: number) => {
     const controls = (await target.evaluate(iconReadings)).filter((icon) => icon.iconOnly);
-    const details = await target.evaluate(() => [...document.querySelectorAll<HTMLElement>('button, a, [role="button"]')].filter((control) => {
-      const icon = control.querySelector(':scope svg.ui-icon');
-      const box = control.getBoundingClientRect();
-      return icon && box.width > 0 && icon.getBoundingClientRect().width > 0 && !control.closest('[inert]') && ![...control.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())
-        && ![...control.querySelectorAll('*')].some((child) => !child.closest('svg') && !child.closest('.visually-hidden') && child.getBoundingClientRect().width > 0 && getComputedStyle(child).position !== 'absolute' && (child.textContent ?? '').trim());
-    }).map((control) => {
-      const box = control.getBoundingClientRect();
-      const tooltip = control.getAttribute('aria-describedby') && document.getElementById(control.getAttribute('aria-describedby')!)?.classList.contains('tooltip');
-      return {
-        where: `${control.tagName.toLowerCase()}.${[...control.classList].join('.')} "${control.getAttribute('aria-label') ?? control.textContent?.trim()}"`,
-        width: box.width, height: box.height,
-        hint: !!(control.title || control.dataset.tip || tooltip),
-      };
-    }));
-    expect(details.length, `${where}: icon-only controls`).toBe(controls.length);
-    for (const control of controls) expect(control.name, `${control.where} on ${where} has no name`).not.toBe('');
-    for (const control of details) {
-      expect(control.hint, `${control.where} on ${where} has no hint`).toBe(true);
-      expect(control.width, `${control.where} on ${where} width`).toBeGreaterThanOrEqual(least);
-      expect(control.height, `${control.where} on ${where} height`).toBeGreaterThanOrEqual(least);
+    for (const control of controls) {
+      const at = `${control.where} on ${where}`;
+      expect(control.name, `${at} has no name`).not.toBe('');
+      expect(control.hint, `${at} has no hint`).toBe(true);
+      expect(control.controlWidth, `${at} width`).toBeGreaterThanOrEqual(least);
+      expect(control.controlHeight, `${at} height`).toBeGreaterThanOrEqual(least);
       measured += 1;
     }
     // each one shows a ring when the keyboard reaches it

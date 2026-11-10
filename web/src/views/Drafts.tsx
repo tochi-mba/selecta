@@ -14,6 +14,35 @@ type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'>;
 
 const CHECK_EVERY_MS = 4000;
 
+/** CI-0179-04: one segment per transition, from the server's own ready, failed and waiting counts, so
+ * a draft never shows an invented overall percentage and a failure is never hidden inside "not ready
+ * yet". Anything the server doesn't count as one of those three stays a plain, unclaimed segment. */
+export function SeamSegments({ draft }: { draft: Pick<DraftInfo, 'seams' | 'ready' | 'failed' | 'waiting'> }) {
+  const count = (value: number) => (Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
+  const seams = count(draft.seams);
+  const ready = Math.min(count(draft.ready), seams);
+  const failed = Math.min(count(draft.failed), seams - ready);
+  const waiting = Math.min(count(draft.waiting), seams - ready - failed);
+  const other = seams - ready - failed - waiting;
+  const said = [
+    `${ready} of ${seams} transitions ready`,
+    failed && `${failed} couldn’t be made`,
+    waiting && `${waiting} waiting`,
+    other && `${other} not started`,
+  ].filter(Boolean).join(', ');
+  const kinds = [
+    ...Array<string>(ready).fill('ready'),
+    ...Array<string>(failed).fill('failed'),
+    ...Array<string>(waiting).fill('waiting'),
+    ...Array<string>(other).fill('other'),
+  ];
+  return (
+    <div className="draft-progress draft-seams" role="img" aria-label={said} title={said}>
+      {kinds.map((kind, index) => <i key={index} className={kind} />)}
+    </div>
+  );
+}
+
 /** The order audio gets prepared in, which is separate from what's playing and from the order of the
  * songs in any mix. Changing it only changes what's ready first. */
 function RenderLine({ inLine, current, onMove, onLeave }: {
@@ -267,9 +296,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                     <Status kind={facts.kind}>{facts.words}</Status>
                     {line && draft.place !== null && <span className="soft"> {nth(draft.place)} in the render line.</span>}
                     {draft.seams > 0 && (
-                      <div className="draft-progress" role="img" aria-label={`${draft.ready} of ${draft.seams} transitions ready`}>
-                        <i style={{ width: `${(100 * draft.ready) / draft.seams}%` }} />
-                      </div>
+                      <SeamSegments draft={draft} />
                     )}
                     {line && draft.place === null && draft.waiting > 0 && draft.seams > 0 && (
                       <span className="soft"> Rendering it would take {etaRangeWords({ seconds: draft.to_render, low: draft.to_render, high: draft.to_render })}.</span>

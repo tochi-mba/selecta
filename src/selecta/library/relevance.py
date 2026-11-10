@@ -14,12 +14,17 @@ _SPACES = re.compile(r"\s+")
 _PUNCTUATION = re.compile(r"[^\w]+", re.UNICODE)
 _CREDITS = re.compile(r"\b(?:feat(?:uring)?|ft)\b", re.IGNORECASE)
 _ENDS_IN_A_SYMBOL = re.compile(r"[^\w\s]\s*$", re.UNICODE)
+# GP-0251-02: letters that NFKD leaves whole, so "orsted" still finds "Ørsted" and "lodz" finds
+# "Łódź". Comparison only: the stored and displayed name is never rewritten.
+_UNDECOMPOSED = str.maketrans(
+    {"ø": "o", "æ": "ae", "œ": "oe", "ł": "l", "đ": "d", "ð": "d", "þ": "th", "ı": "i", "ŋ": "n"}
+)
 
 
 @lru_cache(maxsize=32768)
 def normalize_music(text: str) -> str:
     """Case- and accent-insensitive comparison, not a display transformation."""
-    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    decomposed = unicodedata.normalize("NFKD", text.casefold()).translate(_UNDECOMPOSED)
     plain = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     # Keep meaningful remix, live, edit, acoustic and remaster qualifiers intact.
     return _SPACES.sub(" ", _PUNCTUATION.sub(" ", _CREDITS.sub("feat", plain))).strip()

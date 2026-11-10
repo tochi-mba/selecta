@@ -516,8 +516,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
-          <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : 'No songs in this view'}</h2>
-          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while Selecta scans and analyses it.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
+          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while Selecta scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once Selecta has analysed it. Show all songs to see how far each one has got.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          {/* LX-0343-07: say which constraints are hiding songs, so clearing them is a known step */}
+          {(query || filter !== 'all') && (
+            <p className="hint library-active-constraints">
+              Looking in: {FILTERS.find((option) => option.name === filter)?.label ?? filter}{query ? `, searching for “${query}”` : ''}.
+            </p>
+          )}
           <div className="row wrap">
             {counts.music === 0 && !query && filter === 'all' && <button onClick={() => setView('Workshop')}>Add music</button>}
             {query && <button onClick={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}>Clear search</button>}

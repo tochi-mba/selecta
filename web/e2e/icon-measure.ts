@@ -6,6 +6,7 @@
 export type IconReading = {
   icon: string; size: string; width: number; height: number; stroke: number; hidden: boolean; transform: string;
   where: string; name: string; control: string | null; iconOnly: boolean; inside: boolean; onScreen: boolean;
+  hint: boolean; controlWidth: number; controlHeight: number;
 };
 
 /** MP-0277-01, -02, -04, -08: every visible icon, its slot and box, its stroke, and what names it. */
@@ -45,6 +46,8 @@ export function iconReadings(): IconReading[] {
       iconOnly = !seen.length && !text;
     }
     const outer = (control ?? icon.parentElement!).getBoundingClientRect();
+    const described = control?.getAttribute('aria-describedby');
+    const hint = !!control && !!(control.title || control.dataset.tip || (described && document.getElementById(described)?.classList.contains('tooltip')));
     out.push({
       icon: icon.dataset.icon ?? '', size: icon.dataset.size ?? '',
       width: Math.round(box.width * 100) / 100, height: Math.round(box.height * 100) / 100,
@@ -53,6 +56,7 @@ export function iconReadings(): IconReading[] {
       name, control: control ? control.tagName.toLowerCase() : null, iconOnly,
       inside: box.left >= outer.left - 0.5 && box.right <= outer.right + 0.5 && box.top >= outer.top - 0.5 && box.bottom <= outer.bottom + 0.5,
       onScreen: box.left >= -0.5 && box.right <= innerWidth + 0.5,
+      hint, controlWidth: outer.width, controlHeight: outer.height,
     });
   }
   return out;
@@ -66,25 +70,29 @@ export function labelGaps() {
     const box = icon.getBoundingClientRect();
     const parent = icon.parentElement;
     if (!parent || !box.width || getComputedStyle(parent).visibility === 'hidden') continue;
+    // all the words after the icon; in a right-to-left line a left-to-right phrase starts on its far side,
+    // so the gap is taken to the nearest edge of the words' first line, whichever node it belongs to
     let node = icon.nextSibling;
-    let first: DOMRect | null = null;
-    let lines = 0;
-    while (node && !first) {
+    const rects: DOMRect[] = [];
+    while (node) {
       const hidden = node instanceof HTMLElement && (node.classList.contains('visually-hidden') || !node.getBoundingClientRect().width);
       if (!hidden && (node.textContent ?? '').trim()) {
         const range = document.createRange();
         range.selectNodeContents(node);
-        const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
-        if (rects.length) { first = rects[0]; lines = new Set(rects.map((rect) => Math.round(rect.top))).size; }
+        rects.push(...[...range.getClientRects()].filter((rect) => rect.width > 0));
       }
       node = node.nextSibling;
     }
-    if (!first) continue;
+    if (!rects.length) continue;
+    const first = rects[0];
+    const lines = new Set(rects.map((rect) => Math.round(rect.top))).size;
+    const line = rects.filter((rect) => Math.abs(rect.top - first.top) < 2);
     const stacked = first.top >= box.bottom - 1;
     const rtl = getComputedStyle(parent).direction === 'rtl';
+    const near = rtl ? Math.max(...line.map((rect) => rect.right)) : Math.min(...line.map((rect) => rect.left));
     out.push({
       where: `${parent.tagName.toLowerCase()}.${[...parent.classList].join('.')} "${(parent.textContent ?? '').trim().slice(0, 30)}"`,
-      gap: Math.round((stacked ? first.top - box.bottom : rtl ? box.left - first.right : first.left - box.right) * 10) / 10,
+      gap: Math.round((stacked ? first.top - box.bottom : rtl ? box.left - near : near - box.right) * 10) / 10,
       dense: !!parent.closest(DENSE), stacked, lines, iconWidth: box.width,
     });
   }

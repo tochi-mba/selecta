@@ -1,6 +1,6 @@
 # ADR-0195 - Signal Ranges: landscape live-spectrum visualization
 
-**Decision:** Accepted under the user's 2026-11-08 approval for PR #33. **Implementation:** Source present on the PR branch; final CI not yet verified. **Independent verification:** No.
+**Decision:** Accepted under the user's 2026-11-08 approval for PR #33. **Implementation:** Source present on the PR branch; unit, keyboard persistence and browser tests green locally on 2026-11-10; final CI not yet verified. **Independent verification:** No.
 
 **Related:** [ADR-0170 - real-audio Listen](adr-0170-listen-audio-clock-and-handoffs.md), [ADR-0183 - accessibility and performance](adr-0183-responsive-accessibility-and-performance.md), and the other horizontal visualizer decisions, ADR-0185–0197.
 

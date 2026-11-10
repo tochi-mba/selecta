@@ -166,7 +166,7 @@ export function limeUses(allowed: string) {
 }
 
 /** An overlay's surface, edge and shadow against what it sits on. */
-export function overlayDepth(selector: string, scrim: boolean) {
+export function overlayDepth([selector, scrim]: readonly [string, boolean]) {
   const k = (new Function(`return (${(window as unknown as { __depthKit: string }).__depthKit})()`))() as ReturnType<typeof kit>;
   const element = [...document.querySelectorAll(selector)].find(k.visible);
   if (!element) return null;
@@ -187,7 +187,7 @@ export function overlayDepth(selector: string, scrim: boolean) {
 }
 
 /** Decorative one-sided rules on a page, against the selected marker and the focus ring beside them. */
-export function separators(markerSelector: string, focusSelector: string | null) {
+export function separators([markerSelector, focusSelector]: readonly [string, string | null]) {
   const k = (new Function(`return (${(window as unknown as { __depthKit: string }).__depthKit})()`))() as ReturnType<typeof kit>;
   const state = '[aria-current]:not([aria-current="false"]), [aria-selected="true"], [aria-pressed="true"], .now, .open, .selected, .playing, .is-selected, .attention';
   const rules: { name: string; width: number; contrast: number }[] = [];
@@ -208,7 +208,9 @@ export function separators(markerSelector: string, focusSelector: string | null)
     const ground = k.rgba(css.backgroundColor);
     marker = bar ? { width: bar.x, contrast: k.contrast(k.over(bar.colour, ground), k.behind(marked.parentElement)) } : null;
   }
-  const focused = focusSelector ? document.activeElement : null;
+  // a checkbox draws its ring on the label round it (:focus-within)
+  let focused = focusSelector ? document.activeElement : null;
+  if (focused && getComputedStyle(focused).outlineStyle === 'none') focused = focused.closest('label') ?? focused;
   let ring = null;
   if (focused && focused !== document.body) {
     const css = getComputedStyle(focused);

@@ -37,6 +37,16 @@ async function open(page: Page, route: string, width: number, height = 900) {
   await settle(page);
 }
 
+/** Start the current mix from its first song, then come back to the editor without a page load. */
+async function playInEditor(page: Page) {
+  await open(page, '/mix/current/edit', 1440);
+  await page.getByRole('button', { name: /^Play from / }).first().click();
+  await expect(page.locator('.now .transport .primary')).toHaveText('Pause', { timeout: 60_000 });
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Edit', exact: true }).click();
+  await settle(page);
+  await expect(page.locator('.timeline .song.playing')).toHaveCount(1, { timeout: 30_000 });
+}
+
 /** A candidate record for the reviewer, beside the run's other output; nothing in it judges how it looks. */
 function record(info: TestInfo, key: string, value: unknown) {
   writeFileSync(info.outputPath(`mp-0276-${key}.json`), JSON.stringify({ status: 'candidate-not-independently-verified', value }, null, 1));
@@ -242,18 +252,6 @@ for (const theme of THEMES) {
       const ring = await measure(page, stateCues, '.timeline .song-select:focus-visible');
       expect(ring[0].outlineStyle, `${where}: focus ring`).toBe('solid');
       expect(ring[0].outline, `${where}: focus ring width`).toBeGreaterThanOrEqual(2);
-
-      // playback: the playing song says so, beside its marker bar
-      if (width === WIDTHS[0]) await page.getByRole('button', { name: /^Play from / }).first().click();
-      await expect(page.locator('.timeline .song.playing')).toHaveCount(1, { timeout: 60_000 });
-      const playing = (await measure(page, stateCues, '.timeline .song.playing'))[0];
-      const resting = (await measure(page, stateCues, '.timeline .song:not(.playing)'))[0];
-      expect(playing.text, `${where}: playing words`).toContain('Playing now');
-      expect(playing.startBorder, `${where}: playing bar`).toBe(3);
-      expect(resting.startBorder, `${where}: a resting row has only its hairline`).toBe(1);
-      // focus and playing share lime in Dark, so their shapes differ: a ring round, a bar down one side
-      expect(ring[0].outline).not.toBe(0);
-      expect(playing.outline).toBe(0);
       // and the status hues themselves are told apart
       const hues = await page.evaluate(() => Object.fromEntries(['--status-request', '--status-warning', '--playing', '--status-ready'].map((name) => {
         const probe = document.createElement('i');
@@ -264,7 +262,28 @@ for (const theme of THEMES) {
         return [name, value];
       })));
       expect(new Set(Object.values(hues)).size, `${where}: request, warning, playing and ready hues`).toBe(4);
-      readings.push({ width, warnings: warnings.map((cue) => cue.text), request: asked, pill: pill.map((cue) => cue.text), ring: ring[0], playing, hues });
+      readings.push({ width, warnings: warnings.map((cue) => cue.text), request: asked, pill: pill.map((cue) => cue.text), ring: ring[0], hues });
+    }
+
+    // playback: the playing song says so, beside its marker bar. One start, then the window narrows,
+    // since a page load would stop the music
+    await playInEditor(page);
+    for (const width of WIDTHS) {
+      const where = `${theme} ${width}px`;
+      await page.setViewportSize({ width, height: 900 });
+      await settle(page);
+      const playing = (await measure(page, stateCues, '.timeline .song.playing'))[0];
+      const resting = (await measure(page, stateCues, '.timeline .song:not(.playing)'))[0];
+      expect(playing.text, `${where}: playing words`).toContain('Playing now');
+      expect(playing.startBorder, `${where}: playing bar`).toBe(3);
+      expect(resting.startBorder, `${where}: a resting row has only its hairline`).toBe(1);
+      await page.keyboard.press('Tab');
+      await page.locator('.timeline .song.playing .song-select').focus();
+      const ring = (await measure(page, stateCues, '.timeline .song.playing .song-select:focus-visible'))[0];
+      // focus and playing share lime in Dark, so their shapes differ: a ring round, a bar down one side
+      expect(ring.outline, `${where}: focus ring on the playing song`).toBeGreaterThanOrEqual(2);
+      expect(playing.outline, `${where}: playing is not a ring`).toBe(0);
+      readings.push({ width, playing, resting, ring });
     }
     await page.getByRole('button', { name: 'Pause' }).first().click().catch(() => undefined);
     for (const row of ((await (await request.get('/api/requests')).json()).requests as { id: number; title: string }[]).filter((item) => item.title === 'Last Call')) {
@@ -388,9 +407,7 @@ test('MP-0276-08 System, Light, Dark and forced colours keep the same state mean
     expect(ring.outline, `forced ${os}: focus ring`).toBeGreaterThanOrEqual(2);
     await page.locator('.library-rows .library-batch-check input').first().uncheck();
 
-    await open(page, '/mix/current/edit', 1440);
-    await page.getByRole('button', { name: /^Play from / }).first().click();
-    await expect(page.locator('.timeline .song.playing')).toHaveCount(1, { timeout: 60_000 });
+    await playInEditor(page);
     const playing = (await measure(page, stateCues, '.timeline .song.playing'))[0];
     const resting = (await measure(page, stateCues, '.timeline .song:not(.playing)'))[0];
     expect(playing.startBorder, `forced ${os}: playing bar`).toBeGreaterThanOrEqual(3);

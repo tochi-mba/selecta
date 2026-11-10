@@ -48,13 +48,13 @@ and `@media` preludes ignored).
 
 | Token | Base rule | Also refined in | Verdict |
 |---|---|---|---|
-| `.card` | `style.css` | `styles/listening.css`, `styles/lucy.css`, `styles/music-objects.css`, `styles/operations.css`, `styles/polish.css`, `styles/typography.css` | intentional: vibe cards (listening), Lucy cards, Library cards (music-objects, operations), disclosure and phone padding (polish), the label role (typography) |
-| `.panel` | `style.css` | `styles/depth.css`, `styles/foundation.css`, `styles/glossary.css`, `styles/polish.css`, `styles/shell.css` | intentional: overlay panels (shell, glossary) are `.overlay-panel`/`.glossary-panel` compounds; depth and padding refinements |
-| `.row` | `style.css` | `styles/creation.css`, `styles/depth.css`, `styles/foundation.css`, `styles/icons.css`, `styles/listening.css`, `styles/lucy.css`, `styles/music-objects.css`, `styles/operations.css`, `styles/polish.css`, `styles/shell.css` | intentional: `.row` is the layout helper; every refinement is scoped under its feature's container (`.song-row`, `.request-row`, `.toast-row`, `.card .row`) |
+| `.card` | `style.css` | `styles/polish.css` | intentional: `style.css` owns the card; polish adds name wrapping and the phone padding |
+| `.panel` | `style.css` | `styles/polish.css` | intentional: polish owns only the phone padding (24 to 16 px at 760 px), shared with `.card` |
+| `.row` | `style.css` | `styles/listening.css`, `styles/lucy.css`, `styles/operations.css`, `styles/polish.css` | intentional: `.row` is the layout helper; every refinement is scoped under its feature's container (`.hero .row`, `.lucy-approve .row`, `.link-card > .row`, `.start .row`) |
 | `.display` | `style.css` | `styles/listening.css`, `styles/lucy.css`, `styles/music-objects.css`, `styles/operations.css`, `styles/polish.css`, `styles/shell.css` | intentional: `style.css` owns the metrics (MP-0275-02); the others place it within a feature, and shell sets its text direction |
-| `.count` | `style.css` (`.song .count`) | `styles/glossary.css`, `styles/icons.css`, `styles/listening.css`, `styles/lucy.css`, `styles/polish.css`, `styles/shell.css`, `styles/typography.css` | was accidental (the badge inherited `grid-area: count`); now every rule is scoped (`.song .count`, `.nav .count`, `.mini .count`, `.context-bar .count`) |
-| `.song` | `style.css` | `styles/creation.css`, `styles/depth.css`, `styles/listening.css`, `styles/lucy.css`, `styles/polish.css`, `styles/shell.css`, `styles/typography.css` | intentional: timeline rows; Requests draws ghost rows that look like timeline rows on purpose |
-| `.seam` | `style.css` | `styles/creation.css`, `styles/listening.css`, `styles/lucy.css`, `styles/shell.css` | intentional: the seam between two timeline rows, its inspector (creation), its route diagram (lucy) and its phone indent (shell) |
+| `.count` | `style.css` (`.song .count`) | `styles/icons.css`, `styles/polish.css`, `styles/shell.css` | was accidental (the badge inherited `grid-area: count`); now the grid rule is `.song .count`, badges are `.nav .count`, `.mini .count`, `.context-bar .count`, and polish only makes every count tabular |
+| `.song` | `style.css` | `styles/creation.css`, `styles/depth.css`, `styles/polish.css`, `styles/shell.css` | intentional: timeline rows (creation scopes to `.timeline .song`); depth adds forced-colour state edges; Requests draws ghost rows that look like timeline rows on purpose |
+| `.seam` | `style.css` | `styles/creation.css`, `styles/shell.css` | intentional: the seam between two timeline rows, its timeline refinements (creation) and its phone indent (shell) |
 
 Other tokens used by more than one feature (`className` strings parsed across `web/src`):
 

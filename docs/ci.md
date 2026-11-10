@@ -78,3 +78,20 @@ The browser runner uses a 20-second action timeout for ordinary clicks and
 inputs. This prevents a renamed or missing element from consuming the entire
 five-minute test budget, while explicit audio/render waits retain their longer
 timeouts, the real Edge browser and the same behavioural assertions.
+
+## Flakes and quarantine
+
+There is no quarantine list. A test is never focused, declared skipped or marked
+`fixme` to make a run green; `tests/test_no_quarantined_tests.py` fails any
+`.only(`, `it.skip('...')`, `test.describe.skip('...')` or `test.fixme(` under
+`web/e2e` and `web/src`. A runtime skip is allowed only when it names a missing
+prerequisite (for example the micro-polish baseline JSON).
+
+On CI a Playwright test gets one retry (`retries: process.env.CI ? 1 : 0` in
+`web/playwright.config.ts`). A test that passes only on its retry is a flake:
+open an issue naming the test, the run id and the head SHA, and assign it to the
+author of the change that last touched the test or the surface it covers. Fix
+the cause (a missing wait on real state, a shared fixture, a timing assumption);
+never raise a timeout, loosen an assertion or refresh a screenshot baseline just
+to pass. A screenshot baseline changes only with an intended, reviewed visual
+change named in the pull request.

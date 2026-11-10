@@ -340,14 +340,16 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
 
   return (
     <article className={`link-card ${state.status}`}>
-      <h2 className="phrase">“{link.phrase}”</h2>
+      {/* CI-0176-01: each shared phrase, title and lyric line sets its own direction, so a right-to-left
+          or mixed-script line stays whole and readable beside a left-to-right one */}
+      <h2 className="phrase" dir="auto">“{link.phrase}”</h2>
       <p className="link-handoff">
-        <b>{link.title_a}</b> <span>{link.artist_a}</span>
-        <q>{link.line_a}</q>
+        <b dir="auto">{link.title_a}</b> <span dir="auto">{link.artist_a}</span>
+        <q dir="auto">{link.line_a}</q>
       </p>
       <p className="link-handoff">
-        <b>{link.title_b}</b> <span>{link.artist_b}</span>
-        <q>{link.line_b}</q>
+        <b dir="auto">{link.title_b}</b> <span dir="auto">{link.artist_b}</span>
+        <q dir="auto">{link.line_b}</q>
       </p>
       <div className="chips" role="group" aria-label="Which move">
         {link.moves.map((name) => (
