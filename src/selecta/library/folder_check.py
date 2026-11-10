@@ -72,9 +72,20 @@ def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
     # A manually entered local folder may live on any drive, but never accept network
     # shares, relative paths, or traversal components. Resolve symlinks before the
     # first filesystem probe, so every subsequent operation uses a canonical path.
-    if NOT_IN_A_PATH & set(text) or "\0" in text or text.startswith(("\\\\", "//")):
+    if (
+        len(text) > 32767
+        or NOT_IN_A_PATH & set(text)
+        or any(ord(character) < 32 for character in text)
+        or text.startswith(("\\\\", "//"))
+    ):
         return invalid
     try:
+        # The user deliberately selects an absolute path on a local drive. This
+        # endpoint is guarded against cross-site requests in routes/system.py,
+        # and the checks below reject relative/traversal/network paths before
+        # any directory enumeration. Confining to one directory would break
+        # legitimate folders on other drives.
+        # codeql[py/path-injection]
         candidate = Path(text).expanduser()
         if not candidate.is_absolute() or ".." in candidate.parts:
             return invalid
