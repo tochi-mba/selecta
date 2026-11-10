@@ -53,12 +53,12 @@ h2 { font-size: 1.1rem; margin: 0; }
 
 .page { max-width: 880px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--page-end); }
 .display {
-  font: 900 clamp(2.4rem, 8vw, 5.2rem) / 1.08 var(--display);
+  font: var(--type-display);
   letter-spacing: -0.035em;
   margin: 0 0 var(--space-snug);
   overflow-wrap: anywhere;
 }
-.display.small { font-size: var(--heading-size); line-height: 1.12; letter-spacing: -.025em; }
+.display.small { font: var(--type-page); letter-spacing: -.025em; }
 .artist { color: var(--soft); font-size: 1.15rem; margin: 0 0 var(--space-5); }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-5); margin: var(--space-4) 0; }

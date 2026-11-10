@@ -28,17 +28,19 @@ function TrackTitle({ title, songId, stage }: { title: string; songId?: number; 
     const fit = () => {
       const width = node.clientWidth;
       if (!width) return;
-      const maximum = Math.min(stage ? 40 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095)));
-      const minimum = 22;
+      // MP-0275-03: a complete title wins over shrinking. The floor is a token (--title-floor, 24px),
+      // so a long title wraps onto more lines at a readable size instead of being squeezed smaller.
+      const minimum = Number.parseFloat(getComputedStyle(node).getPropertyValue('--title-floor')) || 24;
+      const maximum = Math.max(minimum, Math.min(stage ? 40 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095))));
       let low = minimum;
       let high = maximum;
-      // A two-line budget prevents a long featured credit from burying
-      // playback controls. Extremely long titles remain fully visible.
+      // A three-line budget keeps a long featured credit from burying the
+      // playback controls. Longer titles stay whole at the floor, on more lines.
       for (let index = 0; index < 9; index += 1) {
         const size = (low + high) / 2;
         node.style.fontSize = `${size}px`;
         const height = node.getBoundingClientRect().height;
-        if (height <= size * 2.28 || !height) low = size;
+        if (height <= size * 3.4 || !height) low = size;
         else high = size;
       }
       node.style.fontSize = `${low}px`;
@@ -232,7 +234,9 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       {seekPreview !== null && (
         <b className="scrub-ghost" style={{ left: `${percent(seekPreview)}%` }} aria-hidden="true" />
       )}
-      <span className="time">
+      {/* MP-0274-03: room for the longest reading this song can show, "duration / duration", so the clock
+          never widens and nudges the separator when 9:59 becomes 10:00 */}
+      <span className="time" style={{ minWidth: `${(unavailable ? 0 : clock(duration).length * 2) + 3}ch` }}>
         {seekPreview === null ? clock(safeTime) : `Seek to ${clock(seekPreview)}`} / {unavailable ? 'unknown duration' : clock(duration)}
       </span>
     </div>

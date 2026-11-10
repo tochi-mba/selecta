@@ -51,7 +51,6 @@ button[aria-disabled='true'] { cursor: progress; }
 .action-labels { display: inline-grid; align-items: center; justify-items: center; }
 .action-labels > span { grid-area: 1 / 1; }
 .page { padding-inline: var(--page-gutter); }
-.page.mixes, .page.library { max-width: var(--content-browse); }
 .page > .display.small { margin-bottom: var(--space-5); }
 .eyebrow { letter-spacing: .075em; }
 .time, .metrics strong, .count, .countdown-number, .facts, input[type='number'] { font-variant-numeric: tabular-nums; }

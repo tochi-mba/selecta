@@ -8,12 +8,12 @@ as `--bottom-chrome` (navigation + player) plus `--keyboard-inset` and `--safe-b
 | Layer | Selector (file) | Position | z-index token | Typical size |
 |---|---|---|---|---|
 | Skip link | `.skip-link` (`shell.css`) | fixed, on focus | `--layer-toast` (60) | one line |
-| Editor scope bar (current vs draft) | `.editor-scope` (`creation.css`) | sticky below the context bar | `--layer-sticky` (5) | one row |
+| Editor scope bar (current vs draft) | `.editor-scope` (`creation.css`) | sticky at `--header-block` minus 1px, sharing the context bar's hairline | `--layer-sticky` (5) | one row |
 | Inspector pair identity; Studio head | `.inspector-identity`, `.studio-head` (`creation.css`) | sticky inside their panels | 1 / `--layer-sticky - 1` | one row |
 | Studio ruler and lane names | `.studio-ruler`, `.studio-name` (`creation.css`, `polish.css`, `style.css`) | sticky top/left inside the grid scroller | 1–4 (local) | one row / one column |
-| Listen side column | `.listen-side` (`listening.css`) | sticky below the header | none | column |
+| Listen side column | `.listen-side` (`listening.css`) | sticky at `--header-block` plus `--space-4` | none | column |
 | Listen narrow transport | `.now .transport` (`listening.css`, ≤ 760 px) | sticky above `--bottom-chrome` | `--layer-sticky` | transport row |
-| Context bar | `.context-bar` (`shell.css`) | sticky top | `--layer-header` (10) | `--header-height` 56 / 48 px |
+| Context bar | `.context-bar` (`shell.css`) | sticky top | `--layer-header` (10) | at least `--header-height` 56 / 48 px; its real height, wrapped crumbs and all, is published as `--header-block` (`Shell.tsx`) |
 | Navigation rail / bottom bar | `.nav` (`shell.css`) | fixed left (wide) or bottom (≤ 760 px) | `--layer-nav` (20) | 212 / 72 px wide; 58 px + safe area tall |
 | Mini-player | `.mini` (`shell.css`) | fixed bottom, above the bottom bar | `--layer-player` (30) | 66 px |
 | Toasts | `.toasts` (`shell.css`) | fixed bottom-right above bottom chrome | `--layer-sheet` (40) | ≤ 3 cards |

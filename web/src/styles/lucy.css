@@ -1,7 +1,7 @@
 /* Lucy, the optional chat under Make a Mix. Only meanings from tokens.css are used here, so light,
    dark and high contrast all follow. States always have words as well as a look. */
 
-.page.lucy { max-width: var(--content-work); padding-top: var(--space-4); }
+.page.lucy { padding-top: var(--space-4); }
 .page.lucy [hidden] { display: none !important; }
 .page.lucy p { overflow-wrap: anywhere; }
 
@@ -71,8 +71,8 @@
 .page.lucy.is-split .lucy-layout.has-history { grid-template-columns: 240px minmax(0, 1.1fr) minmax(340px, 1fr); }
 .page.lucy.is-split .lucy-side, .lucy-history-col {
   position: sticky;
-  top: calc(var(--header-height) + var(--space-3));
-  max-height: calc(100dvh - var(--header-height) - var(--bottom-chrome) - var(--space-6));
+  top: calc(var(--header-block) + var(--space-3));
+  max-height: calc(100dvh - var(--header-block) - var(--bottom-chrome) - var(--space-6));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -81,7 +81,7 @@
 .lucy-side { min-width: 0; }
 .lucy-tabs {
   position: sticky;
-  top: var(--header-height);
+  top: var(--header-block);
   z-index: var(--layer-sticky);
   display: flex;
   gap: var(--space-1);

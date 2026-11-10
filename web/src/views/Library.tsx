@@ -534,9 +534,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                     onChange={() => toggleBatch(song.id)} />
                 </label>}
                 <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`} data-focus-key={`song-details-${song.id}`}>
-                  <SongMotif songId={song.id} /><b title={title}>{title}</b>
+                  <SongMotif songId={song.id} /><b dir="auto" title={title}>{title}</b>
                 </button>
-                <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
+                <span dir="auto" title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
                 {duplicate && <small className="library-recording-id">Recording {song.id}</small>}
                 {query && song.match && <small className="hint" aria-label={`Search match: ${song.match}`}>{song.match}</small>}
               </div>

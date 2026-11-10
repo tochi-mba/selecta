@@ -1,11 +1,13 @@
 /* The editor, the transition inspector and the Studio. */
 
 /* The editor's three regions: a scoped header, a fluid timeline, and what's selected beside it. */
-.page.mix { max-width: var(--content-work); padding-top: var(--space-4); }
+.page.mix { padding-top: var(--space-4); }
 .editor-head { margin-bottom: var(--space-4); }
 .editor-scope {
   position: sticky;
-  top: var(--header-height);
+  /* MP-0274-05/06: pinned under the bar's real height, its top hairline tucked under the bar's own
+     bottom border, so the two read as one 1px edge rather than a doubled 2px line */
+  top: calc(var(--header-block) - 1px);
   z-index: var(--layer-sticky);
   display: flex;
   flex-wrap: wrap;
@@ -30,11 +32,11 @@
 .editor-actions { justify-content: flex-start; }
 /* on a phone the songs are what you came for, so the actions take as little of the first screen as they can */
 @media (max-width: 760px) {
-  .editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: var(--space-2); }
   .editor-actions > .primary { grid-column: 1 / -1; }
   /* which actions there are depends on the build, so one left alone on its row takes the row */
   .editor-actions > .primary:first-child ~ :last-child:nth-child(even) { grid-column: 1 / -1; }
-  .editor-actions > button, .editor-actions > a { width: 100%; padding-inline: var(--space-2); }
+  .editor-actions > button, .editor-actions > a { width: 100%; padding-inline: var(--space-2); display: inline-flex; align-items: center; justify-content: center; }
 }
 
 /* the timeline: songs are solid rows, transitions hang between them */
@@ -120,8 +122,8 @@
 
 /* what's selected, beside the timeline */
 .edit-inspector {
-  top: calc(var(--header-height) + 64px);
-  max-height: calc(100dvh - var(--header-height) - 64px - var(--bottom-chrome) - var(--space-4));
+  top: calc(var(--header-block) + 64px);
+  max-height: calc(100dvh - var(--header-block) - 64px - var(--bottom-chrome) - var(--space-4));
   padding: 0 var(--space-4) var(--space-4);
   margin-top: 0;
 }
@@ -202,6 +204,8 @@
 .studio-side-name h4 { white-space: normal; overflow-wrap: anywhere; margin: var(--space-2) 0 var(--space-1); unicode-bidi: plaintext; position: static; }
 .studio-side-name [role='gridcell'] { display: block; }
 .studio-lane .studio-name { background: var(--surface-control); font-size: var(--text-xs); overflow-wrap: anywhere; }
+/* MP-0274-05: a lane name is pinned to the grid scroller's left edge, so its ring sits inside it, like the cells' */
+.studio-grid .studio-name:focus-visible { outline-offset: -4px; }
 .studio-lane.soloed .studio-name { font-weight: 700; }
 /* on, off and being played each look different without colour: a filled mark, a hollow square, a bar on top */
 .studio-cell { position: relative; }

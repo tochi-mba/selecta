@@ -80,8 +80,10 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
   const { jobs } = useJobsStatus();
   const attention = jobAttention(jobs);
   const on = useFlags();
+  const bar = useRef<HTMLElement>(null);
+  useHeaderBlock(bar);
   return (
-    <header className="context-bar">
+    <header className="context-bar" ref={bar}>
       <nav className="crumbs" aria-label="Breadcrumb">
         <ol>
           {crumbs.map((crumb, index) => (
@@ -119,6 +121,25 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
       </div>
     </header>
   );
+}
+
+/** MP-0274-06: publishes the context bar's real height as --header-block. Crumbs wrap on a phone and at
+ * high zoom, so a fixed number would let the editor scope, Listen's side column and Lucy's tabs pin
+ * underneath the bar. Removed again when the bar goes (the Stage), which falls back to --header-height. */
+function useHeaderBlock(bar: { current: HTMLElement | null }) {
+  useEffect(() => {
+    const element = bar.current;
+    const root = document.documentElement;
+    if (!element) return;
+    const measure = () => root.style.setProperty('--header-block', `${Math.ceil(element.getBoundingClientRect().height)}px`);
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(element);
+    return () => {
+      observer?.disconnect();
+      root.style.removeProperty('--header-block');
+    };
+  }, [bar]);
 }
 
 /** Keeps everything fixed to the bottom above an on-screen keyboard, or out of its way, by working out

@@ -55,7 +55,7 @@ a.button:hover { border-color: var(--text); }
 .nav-more-mobile { display: none; }
 .nav li a i { font-style: normal; width: 1.4em; text-align: center; flex: none; }
 .nav a[aria-current='true'] { color: var(--text); }
-.nav .count, .mini .count, .context-bar .count { color: var(--request); font: 700 0.85rem var(--mono); }
+.nav .count, .mini .count, .context-bar .count { color: var(--request); font: 700 0.85rem var(--mono); font-variant-numeric: tabular-nums; }
 
 /* One frame. Every bit of its shape is measured from the numbers in tokens.css, so there is exactly one
    answer to how much room the bars take, whichever bars are showing. */
@@ -164,6 +164,9 @@ a.button:hover { border-color: var(--text); }
     font-size: 0.75rem;
   }
   .nav-more-mobile[aria-current='page'] { color: var(--text); background: var(--surface-control); }
+  /* MP-0274-05: each destination fills the scrolling tab list edge to edge, so its focus ring is drawn
+     inside the target; drawn outside, the list's own overflow would cut it off on every side */
+  .nav li a:focus-visible, .nav-more-mobile:focus-visible { outline-offset: -4px; }
   .mini-volume { display: none; }
   /* with a keyboard up, what's being typed gets the room */
   :root[data-keyboard='open'] .nav, :root[data-keyboard='open'] .mini { display: none; }
@@ -172,14 +175,22 @@ a.button:hover { border-color: var(--text); }
 .more-nav a { display: block; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); text-decoration: none; }
 .more-nav a[aria-current='page'] { border-color: var(--focus); background: var(--surface-selected); }
 .listen-empty {
-  min-height: calc(100dvh - var(--header-height) - var(--bottom-chrome));
+  min-height: calc(100dvh - var(--header-block) - var(--bottom-chrome));
   display: grid;
   align-content: center;
   justify-items: start;
-  max-width: 760px;
 }
 .listen-empty .display { max-width: 12ch; }
 .on-stage .content { padding-bottom: 0; }
+
+/* MP-0274-01: one page column. Each kind of page names its width once, here on .content, so the
+   breadcrumb bar above it starts and ends on the same edges as the title, filters, cards and lists. */
+.content { --page-max: var(--content-reading); }
+.content:has(> main.page.browse, > main.page.mixes, > main.page.library) { --page-max: var(--content-browse); }
+.content:has(> main.page.mix, > main.page.lucy, > main.page.now) { --page-max: var(--content-work); }
+.content:has(> main.page.listen-empty) { --page-max: 760px; }
+.content:has(> main.page.now.stage) { --page-max: 100%; }
+.content > main.page { max-width: var(--page-max); }
 
 /* the page's own bar: where you are, and what's reachable from anywhere */
 .context-bar {
@@ -192,6 +203,8 @@ a.button:hover { border-color: var(--text); }
   gap: var(--space-3);
   min-height: var(--header-height);
   padding: var(--space-1) var(--gutter);
+  /* the page column's own edges: the gutter, plus half of whatever the column leaves either side */
+  padding-inline: max(var(--gutter), calc((100% - var(--page-max)) / 2 + var(--gutter)));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -411,7 +424,6 @@ button[data-working]::after {
 @media (max-width: 760px) { .overlay-workspace { padding: 0; } .overlay-workspace .overlay-panel { border-radius: 0; } }
 
 /* the timeline, with whatever's selected beside it */
-.page.mix { max-width: 1320px; }
 .edit-layout.has-inspector { display: grid; grid-template-columns: minmax(420px, 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
 .inspector-column { position: relative; min-width: 0; align-self: stretch; }
 .inspector-resize {
@@ -454,7 +466,6 @@ button[data-working]::after {
 .song.over { box-shadow: 0 -3px 0 0 var(--accent); }
 
 /* Library */
-.page.library { max-width: 1120px; }
 .library-find { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; margin-bottom: var(--space-2); }
 .library-find input.wide { flex: 1 1 260px; margin: 0; width: auto; }
 .library-sort { display: flex; align-items: center; gap: var(--space-2); color: var(--text-soft); font-size: var(--text-sm); }

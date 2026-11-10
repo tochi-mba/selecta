@@ -1,7 +1,5 @@
 /* Discovery, Library, Workspace, export and listening studies. */
 
-.page.browse { max-width: var(--content-browse); }
-
 /* Word connections and harmonic matches */
 .link-status { margin: 0; }
 .link-status .status { white-space: normal; }

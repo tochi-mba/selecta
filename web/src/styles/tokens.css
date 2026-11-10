@@ -71,13 +71,27 @@
   --text-md: 1rem;
   --text-lg: 1.15rem;
   --text-xl: 1.5rem;
-  --type-display: 900 clamp(2.4rem, 8vw, 5.2rem) / 1.02 var(--display);
+  /* The type roles (MP-0275-01), largest first. Each is a whole `font` so a role is one declaration:
+       display   a hero headline or the playing song (.display; Listen fits its title, never below 24px)
+       page      the one page title (.display.small)
+       section   a section or card heading
+       song      a song title in a row, card or list
+       meta      artist, facts, hints and statuses beside a song
+       label     a small bold label above or inside a control group
+       caption   the smallest running text: help under a control, a footnote
+       counter   numbers that change in place: counts, revisions, positions (tabular, mono)
+     Numbers that change while you watch (time, BPM, percentages, counts) are tabular wherever they
+     appear; see styles/typography.css. Proof: web/e2e/mp-0275-typography.e2e.ts. */
+  --type-display: 900 clamp(2.4rem, 8vw, 5.2rem) / 1.08 var(--display);
   --type-page: 900 clamp(1.8rem, 3.5vw, 2.8rem) / 1.12 var(--display);
   --heading-size: clamp(1.8rem, 3.5vw, 2.8rem);
   --type-section: 800 clamp(1.15rem, 2vw, 1.5rem) / 1.2 var(--display);
   --type-song: 700 1rem / 1.3 var(--body);
   --type-meta: 400 var(--text-sm) / 1.4 var(--body);
+  --type-label: 600 var(--text-xs) / 1.35 var(--body);
+  --type-caption: 400 var(--text-xs) / 1.45 var(--body);
   --type-counter: 500 var(--text-sm) / 1.2 var(--mono);
+  --title-floor: 24px;    /* the smallest a focal song title (Listen, Stage) is ever fitted to */
 
   /* space, shape and depth */
   --space-1: 4px;
@@ -151,6 +165,10 @@
   --rail-width: var(--rail-open);
   --rail-offset: var(--rail-width);
   --header-height: 56px;
+  /* MP-0274-06: the context bar's real height. Shell.tsx measures it, because crumbs can wrap on a phone
+     or at high zoom; until then, and on the Stage where there is no bar, it is --header-height. Every
+     sticky offset below the bar starts here, so nothing pins underneath it. */
+  --header-block: var(--header-height);
   --nav-height: 58px;
   --nav-bottom: 0px;
   --player-height: 0px;
@@ -228,7 +246,7 @@
 
 html {
   /* a focused control is never left hiding behind the bars */
-  scroll-padding-top: calc(var(--header-height) + var(--space-4));
+  scroll-padding-top: calc(var(--header-block) + var(--space-4));
   scroll-padding-bottom: calc(var(--bottom-chrome) + var(--keyboard-inset) + var(--space-4));
 }
 

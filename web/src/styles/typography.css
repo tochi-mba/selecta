@@ -1,0 +1,24 @@
+/* ADR-0275 typography: who owns the type roles, how song names wrap, and numbers that hold still.
+   Roles and their values live in tokens.css; this sheet only applies them where an earlier rule left
+   a gap. Loaded last so it is the owner. Proof: web/e2e/mp-0275-typography.e2e.ts and
+   src/styles/typography.test.ts. */
+
+/* MP-0275-03: a focal song name is shown whole. Song details names the song in its sheet title, and
+   that title wraps at any character (a 76-letter word included) and reads in its own direction. */
+.overlay-head h2, .song-detail-artist { overflow-wrap: anywhere; unicode-bidi: plaintext; text-align: start; }
+
+/* MP-0275-05: numbers that change while you watch keep their width. Time, BPM, percentages and song
+   counts use tabular figures wherever they are shown, not only in the places that already had them. */
+.mini-song span,
+.song-facts dd,
+.library-count,
+.editor-scope .status,
+.carry-on-words .soft,
+.countdown-meta,
+.countdown-number span,
+.vibe-tempo,
+.vibe-card-facts,
+.vibe-filters span,
+.next-up .status,
+.why .hint,
+.mix-head .lede { font-variant-numeric: tabular-nums; }

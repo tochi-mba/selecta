@@ -45,7 +45,7 @@ const SURFACES: Record<string, { at: string; open?: (page: Page) => Promise<void
 };
 
 async function press(page: Page, name: string | RegExp, role: 'button' | 'tab' = 'button') {
-  const control = page.getByRole(role, { name }).first();
+  const control = page.getByRole(role, { name, exact: typeof name === 'string' }).first();
   if (await control.isVisible().catch(() => false)) {
     await control.click();
     await page.waitForTimeout(250);
