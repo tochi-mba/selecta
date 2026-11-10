@@ -5,8 +5,12 @@ import time
 import jwt
 import pytest
 import sqlalchemy as sa
+from cloud_helpers import GOOD_TOKEN, make_cloud_app
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
+from selecta import api_cloud
 from selecta.authz import roles
 from selecta.authz.check import Actor, authorize
 from selecta.authz.errors import Forbidden, InvalidScope, StepUpRequired
@@ -14,8 +18,9 @@ from selecta.authz.roles import StaffRole
 from selecta.authz.schema import role_assignments
 from selecta.authz.scopes import Scope
 from selecta.identity import accounts, tokens
+from selecta.identity import routes as identity_routes
 from selecta.identity.schema import users, workspaces
-from selecta.persistence import migrate
+from selecta.persistence import migrate, transaction
 
 
 @pytest.fixture
@@ -206,3 +211,83 @@ def test_authorization_requires_live_staff_session_and_matching_scope(conn):
     )
     with pytest.raises(StepUpRequired):
         authorize(conn, too_old, "platform.emergency_controls.manage")
+
+
+# ---- suspended accounts are read-only
+
+
+@pytest.fixture
+def suspended(tmp_path, monkeypatch):
+    """A signed-up account that staff then suspended. Object storage must never be asked."""
+    from selecta.storage import api as storage_api
+
+    for name in ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY"):
+        monkeypatch.setenv(f"SELECTA_R2_{name}", "test")
+
+    def no_storage(*_args, **_kwargs):
+        raise AssertionError("a suspended account reached object storage")
+
+    monkeypatch.setattr(storage_api, "R2Client", no_storage)
+    app, engine, _verifier = make_cloud_app(tmp_path)
+    headers = {"Authorization": f"Bearer {GOOD_TOKEN}"}
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/onboarding/complete", headers=headers, json={"age_confirmed": True}
+        ).json()
+        with transaction(engine) as conn:
+            accounts.suspend(conn, created["user_id"], actor_id="staff", reason="test")
+        yield client, headers
+    engine.dispose()
+
+
+def test_a_suspended_account_can_still_read_its_own_data_and_export_it(suspended):
+    client, headers = suspended
+    account = client.get("/api/account", headers=headers)
+    assert account.status_code == 200, account.text
+    assert account.json()["user"]["suspended"] is True
+    assert client.get("/api/assets", headers=headers).status_code == 200
+    export = client.get("/api/account/export", headers=headers)
+    assert export.status_code == 200, export.text
+    assert export.headers["content-type"] == "application/zip"
+
+
+def test_a_suspended_account_is_refused_anything_that_changes_or_processes_data(suspended):
+    client, headers = suspended
+    plan = client.post(
+        "/api/uploads/plan",
+        headers=headers,
+        json={"files": [{"name": "song.flac", "size": 10, "sha256": "a" * 64}]},
+    )
+    assert (plan.status_code, plan.json()["detail"]["code"]) == (403, "account_suspended")
+    lab = client.put("/api/account/labs/lucy", headers=headers, json={"enabled": True})
+    assert (lab.status_code, lab.json()["detail"]["code"]) == (403, "account_suspended")
+
+
+def test_a_suspended_account_can_still_delete_itself(suspended):
+    client, headers = suspended
+    assert client.delete("/api/account", headers=headers).status_code == 202
+
+
+def test_the_request_method_reaches_sync_handlers_run_in_the_threadpool():
+    """Starlette runs sync handlers in a worker thread; the method set by the middleware must
+    still be visible there, or a suspended account would be refused every read."""
+    app = FastAPI()
+    app.add_middleware(api_cloud.RequestMethodMiddleware)
+
+    @app.get("/sync")
+    def read_sync():
+        return {"method": identity_routes.request_method()}
+
+    @app.post("/sync")
+    def write_sync():
+        return {"method": identity_routes.request_method()}
+
+    @app.get("/async")
+    async def read_async():
+        return {"method": identity_routes.request_method()}
+
+    with TestClient(app) as client:
+        assert client.get("/sync").json() == {"method": "GET"}
+        assert client.post("/sync").json() == {"method": "POST"}
+        assert client.get("/async").json() == {"method": "GET"}
+    assert identity_routes.request_method() is None

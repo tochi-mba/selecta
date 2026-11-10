@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { authKitConfig, BLOCKED_MESSAGES, blockedCode, followReturnTo, MISSING_AUTH_DOMAIN, safeReturnPath } from './authConfig';
+import { authKitConfig, BLOCKED_MESSAGES, blockedCode, followReturnTo, MISSING_AUTH_DOMAIN, refusalMessage, safeReturnPath } from './authConfig';
 
 const origin = 'https://app.selecta.test';
 
@@ -44,12 +44,31 @@ describe('the path followed after sign-in', () => {
 });
 
 describe('account refusals', () => {
-  it('has a plain message for each account state the API refuses with', () => {
-    for (const code of ['verified_email_required', 'account_deleting', 'account_suspended', 'session_revoked']) {
+  it('replaces the app with a plain page for states that leave nothing to do but sign in or wait', () => {
+    for (const code of ['verified_email_required', 'account_deleting', 'session_revoked', 'token_invalid', 'token_expired']) {
       expect(blockedCode(code)).toBe(code);
       expect(BLOCKED_MESSAGES[blockedCode(code)!].title.length).toBeGreaterThan(5);
     }
-    expect(blockedCode('workspace_not_found')).toBeNull();
     expect(blockedCode(undefined)).toBeNull();
+  });
+
+  it('keeps a suspended account in the app, read-only, and says so where an action is refused', () => {
+    expect(blockedCode('account_suspended')).toBeNull();
+    expect(refusalMessage('account_suspended')).toMatch(/suspended.*view.*download/i);
+  });
+
+  it('says plainly when a workspace is unavailable or setup is unfinished, and nothing for other codes', () => {
+    expect(blockedCode('workspace_not_found')).toBeNull();
+    expect(refusalMessage('workspace_not_found')).toMatch(/workspace/i);
+    expect(refusalMessage('not_onboarded')).toMatch(/set/i);
+    expect(refusalMessage('flag_off')).toBeNull();
+    expect(refusalMessage(undefined)).toBeNull();
+  });
+
+  it('uses only the final codes, never the retired ones', () => {
+    for (const retired of ['invalid_session', 'onboarding_required', 'account_deleted', 'workspace_forbidden']) {
+      expect(blockedCode(retired)).toBeNull();
+      expect(refusalMessage(retired)).toBeNull();
+    }
   });
 });

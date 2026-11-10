@@ -6,7 +6,11 @@ configured explicitly; migrations run as a release command rather than at web-pr
 
 Identity (onboarding, signing out, deletion, WorkOS webhooks and admin entry) lives in
 ``selecta.identity.routes``; the WorkOS API key and webhook secret are kept out of ``repr`` so
-they can't reach a log line through the settings object.
+they can't reach a log line through the settings object. Cloud mode refuses to start without
+them: a server that boots and then answers 503 to every sign-up is worse than one that won't.
+
+``RequestMethodMiddleware`` records each request's method so the per-request account check can
+let a suspended account read (GET, HEAD) and refuse everything else, in one place.
 """
 
 from __future__ import annotations
@@ -97,6 +101,22 @@ class CloudSettings:
                 "Set SELECTA_WORKOS_CLIENT_ID, SELECTA_AUTH_ISSUER and "
                 "SELECTA_AUTH_AUDIENCE before starting Cloud mode."
             )
+        api_key = os.environ.get("SELECTA_WORKOS_API_KEY", "").strip()
+        webhook_secret = os.environ.get("SELECTA_WORKOS_WEBHOOK_SECRET", "").strip()
+        # Name what's missing, never what's set: these values are secrets.
+        missing = [
+            name
+            for name, value in (
+                ("SELECTA_WORKOS_API_KEY", api_key),
+                ("SELECTA_WORKOS_WEBHOOK_SECRET", webhook_secret),
+            )
+            if not value
+        ]
+        if missing:
+            raise CloudConfigurationError(
+                f"Set {' and '.join(missing)} before starting Cloud mode: onboarding, signing "
+                "out everywhere and WorkOS webhooks can't work without them."
+            )
         hosts = _csv("SELECTA_ALLOWED_HOSTS")
         origins = _csv("SELECTA_ALLOWED_ORIGINS")
         if not hosts or "*" in hosts or not origins:
@@ -117,8 +137,8 @@ class CloudSettings:
             allowed_hosts=hosts,
             allowed_origins=origins,
             workos_api_base=os.environ.get("SELECTA_WORKOS_API_BASE", "https://api.workos.com"),
-            workos_api_key=os.environ.get("SELECTA_WORKOS_API_KEY", "").strip(),
-            workos_webhook_secret=os.environ.get("SELECTA_WORKOS_WEBHOOK_SECRET", "").strip(),
+            workos_api_key=api_key,
+            workos_webhook_secret=webhook_secret,
             staff_organization_id=os.environ.get("SELECTA_STAFF_ORGANIZATION_ID", "").strip(),
             require_workos=True,
         )
@@ -143,6 +163,23 @@ OnboardingRequest = identity_routes.OnboardingRequest
 
 class LabPreference(BaseModel):
     enabled: bool
+
+
+class RequestMethodMiddleware:
+    """Record the request's HTTP method for the account check (see `identity.routes`)."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        token = identity_routes.REQUEST_METHOD.set(scope["method"])
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            identity_routes.REQUEST_METHOD.reset(token)
 
 
 def _csv(name: str) -> tuple[str, ...]:
@@ -191,7 +228,7 @@ def _bearer(request: Request, verifier: Verifier) -> Claims:
     except TokenError as error:
         raise HTTPException(
             status_code=401,
-            detail={"code": "invalid_session", "message": "Sign in again to continue."},
+            detail={"code": "token_invalid", "message": "Sign in again to continue."},
             headers={"WWW-Authenticate": "Bearer"},
         ) from error
 
@@ -237,6 +274,7 @@ def create_cloud_app(
     app.state.flag_rules = rule_cache
     flags.effective()
     flag_guard.install(app, strict=True)
+    app.add_middleware(RequestMethodMiddleware)
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
     app.add_middleware(
@@ -385,6 +423,7 @@ def create_cloud_app(
                 "id": principal.user.id,
                 "email": principal.user.email,
                 "email_verified": principal.user.email_verified,
+                "suspended": principal.user.suspended_at is not None,
                 "timezone": principal.user.timezone,
             },
             "workspace": {
@@ -546,4 +585,9 @@ def create_cloud_app(
     return app
 
 
-__all__ = ["CloudConfigurationError", "CloudSettings", "create_cloud_app"]
+__all__ = [
+    "CloudConfigurationError",
+    "CloudSettings",
+    "RequestMethodMiddleware",
+    "create_cloud_app",
+]

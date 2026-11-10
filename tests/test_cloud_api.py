@@ -69,7 +69,7 @@ def test_account_routes_require_a_verified_bearer_token(cloud):
         assert client.get("/api/account").status_code == 401
         bad = client.get("/api/account", headers={"Authorization": "Bearer forged"})
         assert bad.status_code == 401
-        assert bad.json()["detail"]["code"] == "invalid_session"
+        assert bad.json()["detail"]["code"] == "token_invalid"
 
 
 def test_onboarding_requires_age_confirmation_and_starts_free_plan(cloud):
@@ -355,6 +355,8 @@ def test_serve_defaults_to_local_and_cloud_does_not_start_local_workers(monkeypa
     monkeypatch.setenv("SELECTA_AUTH_AUDIENCE", "selecta-test")
     monkeypatch.setenv("SELECTA_ALLOWED_HOSTS", "api.test")
     monkeypatch.setenv("SELECTA_ALLOWED_ORIGINS", "https://app.test")
+    monkeypatch.setenv("SELECTA_WORKOS_API_KEY", "sk_test_serve")
+    monkeypatch.setenv("SELECTA_WORKOS_WEBHOOK_SECRET", "whsec_test_serve")
 
     def forbidden(*_args, **_kwargs):
         raise AssertionError("local startup side effect ran in Cloud mode")

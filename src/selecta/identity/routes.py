@@ -8,21 +8,30 @@ Each refusal has its own code so the site can say the right thing:
 | `session_revoked` | 401 | The session was signed out (by `sid` or the cut-off) |
 | `not_onboarded` | 409 | Signed in, but no Selecta account yet: only onboarding is allowed |
 | `account_deleting` | 403 | The account is being deleted (30-day recovery window) |
-| `account_suspended` | 403 | Suspended by staff; signing out, export and deletion still work |
+| `account_suspended` | 403 | Suspended by staff, and the request would change or process data |
 | `workspace_not_found` | 404 | `X-Workspace-ID` names a workspace the user isn't in (or none) |
 
-The workspace refusal keeps the code `workspace_not_found` and a 404, so naming another
-account's workspace looks exactly like naming one that doesn't exist (the tenant isolation
-tests rely on this).
+The workspace refusal is a 404 `workspace_not_found`, so naming another account's workspace
+looks exactly like naming one that doesn't exist (the tenant isolation tests rely on this).
+
+A suspended account is read-only (§7A.6, §16): it may read its own data and export it, sign out
+and delete itself, and nothing else. That is decided here, once, rather than route by route:
+`api_cloud` records each request's method in `REQUEST_METHOD`, and a GET or HEAD resolves for a
+suspended account while any other method is refused. Signing out everywhere and deleting the
+account pass `allow_suspended=True` explicitly. Outside a request nothing is recorded, so the
+check is strict. Starlette copies the context into the worker thread that runs a sync handler,
+so the method is visible there too (a test proves it).
 
 Onboarding reads the email and its verified status from the WorkOS user found by the token's
 subject, never from the token. Without a WorkOS client (local development and tests that don't
-need WorkOS) it falls back to the token's claims; settings read from the environment set
-`require_workos`, so production answers 503 instead of ever trusting the token for this.
+need WorkOS) it falls back to the token's claims. Production can't get there: settings read from
+the environment refuse to load without the WorkOS API key and webhook secret, and they also set
+`require_workos`, which answers 503 rather than ever trusting the token for this.
 """
 
 import logging
 from collections.abc import Callable
+from contextvars import ContextVar
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -40,6 +49,15 @@ from selecta.usage import quota
 
 logger = logging.getLogger(__name__)
 MAX_WEBHOOK_BYTES = 1_000_000
+# Methods that only read. A suspended account may use these and nothing else.
+SAFE_METHODS = frozenset({"GET", "HEAD"})
+# The HTTP method of the request being handled, set by `api_cloud.RequestMethodMiddleware`.
+REQUEST_METHOD: ContextVar[str | None] = ContextVar("selecta_request_method", default=None)
+
+
+def request_method() -> str | None:
+    """The method of the request being handled, or None outside a request."""
+    return REQUEST_METHOD.get()
 
 
 class OnboardingRequest(BaseModel):
@@ -82,9 +100,14 @@ def principal_or_refusal(
     claims: Claims,
     workspace_id: str | None = None,
     *,
-    allow_suspended: bool = False,
+    allow_suspended: bool | None = None,
 ) -> accounts.Principal:
-    """`resolve_principal`, answering each refusal with its own code (see the module notes)."""
+    """`resolve_principal`, answering each refusal with its own code (see the module notes).
+
+    `allow_suspended` defaults to whether this request only reads (GET or HEAD).
+    """
+    if allow_suspended is None:
+        allow_suspended = request_method() in SAFE_METHODS
     with transaction(engine) as conn:
         try:
             return accounts.resolve_principal(
@@ -124,7 +147,7 @@ def install_routes(
             except WorkOSNotFound as error:
                 raise HTTPException(
                     status_code=401,
-                    detail={"code": "invalid_session", "message": "Sign in again to continue."},
+                    detail={"code": "token_invalid", "message": "Sign in again to continue."},
                     headers={"WWW-Authenticate": "Bearer"},
                 ) from error
             except WorkOSError as error:
@@ -303,4 +326,12 @@ def install_routes(
         }
 
 
-__all__ = ["OnboardingRequest", "install_routes", "principal_or_refusal", "refusal"]
+__all__ = [
+    "REQUEST_METHOD",
+    "SAFE_METHODS",
+    "OnboardingRequest",
+    "install_routes",
+    "principal_or_refusal",
+    "refusal",
+    "request_method",
+]

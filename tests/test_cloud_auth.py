@@ -23,7 +23,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
 from selecta import flags
-from selecta.api_cloud import CloudSettings, create_cloud_app
+from selecta.api_cloud import CloudConfigurationError, CloudSettings, create_cloud_app
 from selecta.authz.check import authorize
 from selecta.authz.schema import audit_events, role_assignments
 from selecta.identity import accounts, privileged, sessions, workos_signature
@@ -39,7 +39,7 @@ from selecta.identity.schema import (
     users,
     workos_events,
 )
-from selecta.identity.tokens import Claims, TokenExpired
+from selecta.identity.tokens import BadSignature, Claims, TokenExpired
 from selecta.identity.workos import (
     WorkOSClient,
     WorkOSError,
@@ -56,6 +56,15 @@ SECRET = "whsec_workos_test"
 STAFF_ORG = "org_selecta_staff"
 USER = "user_01LISTENER"
 API = "https://api.workos.test"
+# Everything cloud mode needs from the environment except the WorkOS secrets.
+CLOUD_ENV = {
+    "SELECTA_DATABASE_URL": "postgresql+psycopg://u:p@db/selecta",
+    "SELECTA_WORKOS_CLIENT_ID": "client_x",
+    "SELECTA_AUTH_ISSUER": "https://issuer.test",
+    "SELECTA_AUTH_AUDIENCE": "selecta",
+    "SELECTA_ALLOWED_HOSTS": "api.test",
+    "SELECTA_ALLOWED_ORIGINS": "https://app.test",
+}
 
 
 def iso(epoch: float) -> str:
@@ -146,6 +155,8 @@ class Tokens:
     def verify(self, token: str) -> Claims:
         if token == "expired":
             raise TokenExpired("expired")
+        if token not in self.claims:
+            raise BadSignature("not a token this test minted")
         return self.claims[token]
 
 
@@ -323,12 +334,7 @@ def test_the_api_key_never_appears_in_logs_or_errors(caplog, monkeypatch):
             seen += [str(error), repr(error), "".join(traceback.format_exception(error))]
     seen.append(repr(client))
     for name, value in {
-        "SELECTA_DATABASE_URL": "postgresql+psycopg://u:p@db/selecta",
-        "SELECTA_WORKOS_CLIENT_ID": "client_x",
-        "SELECTA_AUTH_ISSUER": "https://issuer.test",
-        "SELECTA_AUTH_AUDIENCE": "selecta",
-        "SELECTA_ALLOWED_HOSTS": "api.test",
-        "SELECTA_ALLOWED_ORIGINS": "https://app.test",
+        **CLOUD_ENV,
         "SELECTA_WORKOS_API_KEY": API_KEY,
         "SELECTA_WORKOS_WEBHOOK_SECRET": SECRET,
         "SELECTA_STAFF_ORGANIZATION_ID": STAFF_ORG,
@@ -340,6 +346,28 @@ def test_the_api_key_never_appears_in_logs_or_errors(caplog, monkeypatch):
     assert len(seen) == 17
     for text in [*seen, caplog.text]:
         assert API_KEY not in text and SECRET not in text
+
+
+# ---- configuration
+
+
+@pytest.mark.parametrize("missing", ["SELECTA_WORKOS_API_KEY", "SELECTA_WORKOS_WEBHOOK_SECRET"])
+def test_cloud_mode_refuses_to_start_without_the_workos_api_key_or_webhook_secret(
+    monkeypatch, missing
+):
+    for name, value in CLOUD_ENV.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setenv("SELECTA_WORKOS_API_KEY", API_KEY)
+    monkeypatch.setenv("SELECTA_WORKOS_WEBHOOK_SECRET", SECRET)
+    assert CloudSettings.from_environment().workos_api_key == API_KEY
+    for absent in ("", "   "):
+        monkeypatch.setenv(missing, absent)
+        with pytest.raises(CloudConfigurationError, match=missing) as refused:
+            CloudSettings.from_environment()
+        assert API_KEY not in str(refused.value) and SECRET not in str(refused.value)
+    monkeypatch.delenv(missing)
+    with pytest.raises(CloudConfigurationError, match=missing):
+        CloudSettings.from_environment()
 
 
 # ---- onboarding reads WorkOS
@@ -378,6 +406,14 @@ def test_onboarding_refuses_an_account_that_is_being_deleted(world):
     assert (account.status_code, account.json()["detail"]["code"]) == (403, "account_deleting")
 
 
+def test_onboarding_refuses_a_token_whose_workos_user_is_gone(world):
+    answer = world.http.post(
+        "/api/onboarding/complete", headers=world.tokens.issue("t"), json={"age_confirmed": True}
+    )
+    assert (answer.status_code, answer.json()["detail"]["code"]) == (401, "token_invalid")
+    assert user_row(world) is None
+
+
 def test_onboarding_fails_closed_when_workos_is_unreachable(world):
     world.fake.add_user()
     world.fake.fail[("GET", "/user_management/users/")] = 503
@@ -397,6 +433,8 @@ def test_each_account_refusal_has_its_own_code(world):
     assert (answer.status_code, answer.json()["detail"]["code"]) == (409, "not_onboarded")
     expired = world.http.get("/api/account", headers={"Authorization": "Bearer expired"})
     assert (expired.status_code, expired.json()["detail"]["code"]) == (401, "token_expired")
+    forged = world.http.get("/api/account", headers={"Authorization": "Bearer forged"})
+    assert (forged.status_code, forged.json()["detail"]["code"]) == (401, "token_invalid")
 
     created = onboard(world, "t")
     other = onboard(world, "other", subject="user_02OTHER")
@@ -407,8 +445,12 @@ def test_each_account_refusal_has_its_own_code(world):
 
     with transaction(world.engine) as conn:
         accounts.suspend(conn, created["user_id"], actor_id="staff", reason="test")
+    # Suspended means read-only: reading works, changing anything is refused.
     suspended = world.http.get("/api/account", headers=headers)
-    assert (suspended.status_code, suspended.json()["detail"]["code"]) == (403, "account_suspended")
+    assert suspended.status_code == 200, suspended.text
+    assert suspended.json()["user"]["suspended"] is True
+    change = world.http.put("/api/account/labs/lucy", headers=headers, json={"enabled": True})
+    assert (change.status_code, change.json()["detail"]["code"]) == (403, "account_suspended")
     # A suspended account can still sign out everywhere.
     signed_out = world.http.post("/api/account/sign-out-everywhere", headers=headers)
     assert signed_out.status_code == 200, signed_out.text

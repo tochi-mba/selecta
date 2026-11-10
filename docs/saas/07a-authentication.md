@@ -74,10 +74,20 @@ Selecta never sees a password. Sign-up, sign-in, Google sign-in, "forgot passwor
 1. A bearer token is present and well formed.
 2. It's signed RS256 by a key in AuthKit's JWKS, from our issuer, unexpired (60 s leeway).
 3. Its session id (`sid`) isn't in the revoked list, and it wasn't issued before the user's revocation cut-off.
-4. The user exists in Selecta (otherwise only onboarding is allowed), isn't deleted, and isn't suspended.
-5. The workspace in `X-Workspace-ID` is one the user belongs to; RLS is set for it.
+4. The user exists in Selecta (otherwise only onboarding is allowed) and isn't deleted. A suspended account is read-only: reads (GET, HEAD) go ahead, and anything else is refused, except signing out everywhere and deleting the account.
+5. The workspace in `X-Workspace-ID` is one the user belongs to; RLS is set for it. Otherwise the answer is a 404, the same as for a workspace that doesn't exist, so it never reveals that someone else's workspace exists.
 
-Each refusal has its own code (`token_invalid`, `token_expired`, `session_revoked`, `not_onboarded`, `account_deleting`, `account_suspended`, `workspace_forbidden`), so the app can show the right message instead of a generic error.
+Each refusal has its own code, so the app can show the right message instead of a generic error:
+
+| Code | Status | When |
+|---|---|---|
+| `token_invalid` | 401 | The token is missing a valid signature, issuer or claim |
+| `token_expired` | 401 | The token has expired |
+| `session_revoked` | 401 | The session id is revoked, or the token predates the revocation cut-off |
+| `not_onboarded` | 409 | No Selecta account yet: only onboarding is allowed |
+| `account_deleting` | 403 | The account is being deleted |
+| `account_suspended` | 403 | The account is suspended and the request would change or process data |
+| `workspace_not_found` | 404 | The workspace doesn't exist or isn't one of the user's |
 
 ### 7A.4 WorkOS webhooks
 
@@ -117,7 +127,7 @@ Unknown event types are stored and ignored. Events can arrive late, twice or out
 | Same person signs up twice (password, then Google) | Linked by verified email into one account |
 | Account being deleted signs in | `account_deleting` page with the restore route |
 | Account erased, same email signs up | A brand-new account (the WorkOS user was deleted at erasure) |
-| Suspended account | `account_suspended`; can still sign out, export and delete |
+| Suspended account | Read-only: can view its own data, export, sign out and delete; anything else answers `account_suspended` |
 | `return_to` link after sign-in | Only same-origin paths; anything else goes to the home page |
 | Sign-up abuse (many accounts) | AuthKit's bot protection plus our sign-up flag (`cloud.signups`) and rate limits |
 | WorkOS outage | Existing access tokens keep working until expiry; new sign-ins show a clear outage message; the status page says so |

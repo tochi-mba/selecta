@@ -44,8 +44,14 @@ export function followReturnTo(state: unknown, win: Window = window) {
   win.dispatchEvent(new PopStateEvent('popstate'));
 }
 
-// The account states the API refuses with, and what the site says about each.
-export type BlockedCode = 'verified_email_required' | 'account_deleting' | 'account_suspended' | 'session_revoked';
+// What the site says for each refusal code the API uses (spec §7A.3).
+//
+// Some leave nothing to do but sign in again or wait, so a plain page replaces the app. The rest
+// leave the app usable and are said where the action failed. A suspended account stays in the
+// app, read-only: it can look at and download its data, sign out and delete itself.
+export type BlockedCode = 'verified_email_required' | 'account_deleting' | 'session_revoked' | 'token_invalid' | 'token_expired';
+
+const SIGN_IN_AGAIN = { title: 'Sign in again', detail: 'Your sign-in is no longer valid. Sign in again to continue.' };
 
 export const BLOCKED_MESSAGES: Record<BlockedCode, { title: string; detail: string }> = {
   verified_email_required: {
@@ -56,16 +62,26 @@ export const BLOCKED_MESSAGES: Record<BlockedCode, { title: string; detail: stri
     title: 'This account is being deleted',
     detail: 'It will be erased when the 30-day recovery window ends. To keep it, contact Selecta support before then.',
   },
-  account_suspended: {
-    title: 'This account is suspended',
-    detail: 'You can still sign out or delete your account. Contact Selecta support if you think this is a mistake.',
-  },
   session_revoked: {
     title: 'You were signed out',
     detail: 'This session was ended, for example by "Sign out everywhere" or a password reset. Sign in again to continue.',
   },
+  token_invalid: SIGN_IN_AGAIN,
+  token_expired: SIGN_IN_AGAIN,
+};
+
+export const SUSPENDED_NOTICE = 'This account is suspended. You can still view your library, download your data, sign out or delete your account.';
+
+const REFUSAL_MESSAGES: Record<string, string> = {
+  account_suspended: SUSPENDED_NOTICE,
+  workspace_not_found: 'That workspace isn’t available to this account.',
+  not_onboarded: 'Finish setting up your account first.',
 };
 
 export function blockedCode(code: string | undefined): BlockedCode | null {
-  return code && code in BLOCKED_MESSAGES ? (code as BlockedCode) : null;
+  return code && Object.hasOwn(BLOCKED_MESSAGES, code) ? (code as BlockedCode) : null;
+}
+
+export function refusalMessage(code: string | undefined): string | null {
+  return code && Object.hasOwn(REFUSAL_MESSAGES, code) ? REFUSAL_MESSAGES[code] : null;
 }

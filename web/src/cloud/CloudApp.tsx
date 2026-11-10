@@ -1,11 +1,11 @@
 import { useAuth } from '@workos-inc/authkit-react';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { BLOCKED_MESSAGES, BlockedCode, blockedCode } from './authConfig';
+import { BLOCKED_MESSAGES, BlockedCode, blockedCode, refusalMessage, SUSPENDED_NOTICE } from './authConfig';
 import './cloud.css';
 
 type Account = {
-  user: { id: string; email: string; email_verified: boolean };
+  user: { id: string; email: string; email_verified: boolean; suspended?: boolean };
   workspace: { id: string; name: string; role: string };
   entitlement: { plan: string; plan_version: number; storage_limit_bytes: number; storage_used_bytes: number; storage_state: string };
   features: Record<string, boolean>;
@@ -80,7 +80,7 @@ export function CloudApp() {
       // An account-level refusal replaces the whole app with a plain explanation.
       const accountState = blockedCode(code);
       if (accountState) setBlocked(accountState);
-      throw new CloudError(messageOf(payload, `Request failed (${response.status}).`), response.status, code);
+      throw new CloudError(refusalMessage(code) ?? messageOf(payload, `Request failed (${response.status}).`), response.status, code);
     }
     return payload as T;
   }, [getAccessToken]);
@@ -93,7 +93,7 @@ export function CloudApp() {
       setAccount(next);
       setNeedsOnboarding(false);
     } catch (problem) {
-      if (problem instanceof CloudError && problem.status === 409 && (problem.code === 'not_onboarded' || problem.code === 'onboarding_required')) {
+      if (problem instanceof CloudError && problem.status === 409 && problem.code === 'not_onboarded') {
         setNeedsOnboarding(true);
         setAccount(null);
       } else {
@@ -224,7 +224,7 @@ export function CloudApp() {
 
   if (isLoading) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Checking your sign-in…</p></main>;
   if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow">SELECTA CLOUD</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p><div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small></main>;
-  if (blocked) return <BlockedAccount code={blocked} busy={busy} onSignOut={() => signOut({ returnTo: window.location.origin })} onDelete={blocked === 'account_suspended' ? () => void deleteAccount() : undefined} />;
+  if (blocked) return <BlockedAccount code={blocked} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
   if (!user.emailVerified) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
   if (needsOnboarding) return <main className="cloud-onboarding"><span className="cloud-mark">S</span><p className="cloud-eyebrow">ONE QUICK CHECK</p><h1>Set up your Selecta workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
 
@@ -246,6 +246,7 @@ export function CloudApp() {
       </aside>
       <main className="cloud-main">
         <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1>{page === 'home' ? 'Your music workspace' : page === 'library' ? 'Your library' : page === 'uploads' ? 'Add music' : page === 'billing' ? 'Plan & billing' : 'Account settings'}</h1></div><span className="cloud-plan-chip">{account?.entitlement.plan ?? 'Free'} plan</span></header>
+        {account?.user.suspended && <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>}
         <Feedback error={error} notice={notice} />
         {page === 'home' && account && <Overview account={account} used={used} limit={limit} percent={pct} go={choosePage} />}
         {page === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} />}
@@ -258,12 +259,11 @@ export function CloudApp() {
   );
 }
 
-function BlockedAccount({ code, busy, onSignOut, onDelete }: { code: BlockedCode; busy: boolean; onSignOut: () => void; onDelete?: () => void }) {
+function BlockedAccount({ code, onSignOut }: { code: BlockedCode; onSignOut: () => void }) {
   const message = BLOCKED_MESSAGES[code];
   return <main className="cloud-runtime-message" role="alert"><span className="cloud-mark">S</span><h1>{message.title}</h1><p>{message.detail}</p>
     {code === 'verified_email_required' && <button onClick={() => window.location.reload()}>I’ve verified my email</button>}
-    {onDelete && <button className="cloud-delete-account" disabled={busy} onClick={onDelete}>Delete account</button>}
-    <button onClick={onSignOut}>{code === 'session_revoked' ? 'Sign in again' : 'Sign out'}</button>
+    <button onClick={onSignOut}>{code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired' ? 'Sign in again' : 'Sign out'}</button>
   </main>;
 }
 
