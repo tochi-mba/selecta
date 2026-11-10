@@ -19,7 +19,10 @@ The controls are declarative states (§14), each with a target:
 | `signups.disabled` | `*` | Onboarding refuses people without an account (`signups_closed`) |
 
 `EmergencyCache` keeps one process's view for up to `max_age` seconds, so a hot request path
-reads the table at most that often; the admin commands invalidate it in their own process.
+reads the table at most that often. On PostgreSQL every change also sends
+`pg_notify('selecta_emergency_controls')` in its own transaction (`notify()`), and each API
+instance's cache, subscribed through `persistence.listen.PgListener`, forgets its view the moment
+that commits; `max_age` stays as the fallback for a dropped LISTEN connection.
 """
 
 from __future__ import annotations
@@ -34,8 +37,10 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin.schema import emergency_controls, upload_restrictions, worker_controls
+from selecta.persistence import is_postgres
 
 ALL = "*"
+CHANNEL = "selecta_emergency_controls"
 
 
 class Control(StrEnum):
@@ -127,6 +132,12 @@ def load(conn: Connection) -> EmergencyState:
     return EmergencyState(frozenset((row.control, row.target) for row in rows))
 
 
+def notify(conn: Connection) -> None:
+    """Tell every instance the controls changed. Delivered only if this transaction commits."""
+    if is_postgres(conn):
+        conn.execute(sa.text("SELECT pg_notify(:channel, '')"), {"channel": CHANNEL})
+
+
 def worker_hold(conn: Connection, worker_id: str | None) -> str | None:
     """`drain` or `pause` when staff hold this worker, else None."""
     if worker_id is None:
@@ -170,6 +181,11 @@ class EmergencyCache:
     def invalidate(self) -> None:
         with self._lock:
             self._read_at = float("-inf")
+
+    def listen(self, listener) -> None:
+        """Forget the cached view whenever `listener` hears a change, and after each
+        (re)connect, since changes made while it was away weren't heard."""
+        listener.subscribe(CHANNEL, lambda _payload: self.invalidate())
 
 
 class DbWorkControls:

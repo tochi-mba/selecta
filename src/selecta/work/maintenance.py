@@ -158,6 +158,8 @@ class Schedule:
     reconcile_s: float = 60.0
     rebase_s: float = 60.0
     prune_s: float = 3_600.0
+    actions_s: float = 15.0
+    """How often due dangerous actions run (`due_actions`), well inside their 15-minute delay."""
     preempt_s: float = 5.0
     pools: tuple[str, ...] = ()
     """Pools to check for preemption each tick. Empty: leave preemption to the runners."""
@@ -178,12 +180,16 @@ class MaintenanceLoop:
         schedule: Schedule | None = None,
         *,
         on_differences: Callable[[list], None] | None = None,
+        due_actions: Callable[[TermFence], list] | None = None,
         tick_s: float = 1.0,
     ):
         self.store = store
         self.leadership = leadership
         self.schedule = schedule or Schedule()
         self.on_differences = on_differences
+        self.due_actions = due_actions
+        """Runs due dangerous actions under the term fence; the cloud passes
+        `selecta.admin.actions.maintenance_task(engine)`. Local mode has none."""
         self.tick_s = tick_s
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -223,6 +229,9 @@ class MaintenanceLoop:
                 done["rebased"] = self.store.rebase_vtimes(fence)
             if self._due("prune", self.schedule.prune_s, moment):
                 done["pruned"] = self.store.prune_outbox(fence=fence)
+            if self.due_actions is not None and self._due("actions", self.schedule.actions_s,
+                                                          moment):
+                done["actions"] = self.due_actions(fence)
         except LostLeadership:
             log.info("Maintenance term %s ended; standing by.", fence.term)
             self.leadership.term = None

@@ -26,6 +26,6 @@ Check the deployment's health and cost per tier on the AI routing page.
 ## Recover
 
 `POST /api/admin/emergency/lucy.deployment_disabled/release` queues the release as the dangerous action
-`platform.emergency_control.disable`. After 15 minutes, `POST /api/admin/actions/{id}/execute`
+`platform.emergency_control.disable`. After 15 minutes the maintenance leader runs it on its next tick (or `POST /api/admin/actions/{id}/execute` runs it by hand), which
 turns the control off (audited as `platform.emergency_control.release`). Then confirm normal
 behaviour returned; `tests/test_cloud_admin_emergency.py` shows what "normal" means for this control.

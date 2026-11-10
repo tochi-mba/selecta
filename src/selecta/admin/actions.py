@@ -12,14 +12,21 @@ also raises an alert (`admin.http.run`).
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Protocol
 
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin import commands, emergency, flags_admin
 from selecta.authz import assignments, delayed, grants
 from selecta.authz.check import Actor, authorize
+from selecta.authz.errors import ActionStateError, NotReady
 from selecta.persistence import transaction
+
+
+class Fence(Protocol):
+    """A maintenance leader's term check (`work.maintenance.TermFence`)."""
+
+    def check(self, connection: Connection) -> None: ...
 
 EXECUTORS: Mapping[delayed.ActionKind, delayed.Executor] = {
     delayed.ActionKind.EMERGENCY_CONTROL_DISABLE: emergency.release,
@@ -71,15 +78,30 @@ def execute(conn: Connection, actor: Actor, action_id: str) -> dict[str, Any]:
             "result": _json(outcome.result)}
 
 
-def run_due(engine: Engine) -> list[dict[str, Any]]:
-    """Run every due action and expire stale ones; for a scheduled maintenance process."""
+def run_due(engine: Engine, fence: Fence | None = None) -> list[dict[str, Any]]:
+    """Run every due action and expire stale ones. The maintenance leader calls this on its tick
+    (`work.maintenance.MaintenanceLoop`) with its term `fence`, checked first in every
+    transaction, so a leader that lost its term stops. An action another transaction holds, or
+    one that already ran, is skipped: each runs exactly once."""
     done = []
     with transaction(engine) as conn:
+        if fence is not None:
+            fence.check(conn)
         delayed.expire_stale(conn)
         due = [action.id for action in delayed.due(conn)]
     for action_id in due:
         with transaction(engine) as conn:
+            if fence is not None:
+                fence.check(conn)
             action = delayed.get(conn, action_id)
-            outcome = delayed.execute(conn, action_id, EXECUTORS[action.kind])
+            try:
+                outcome = delayed.execute(conn, action_id, EXECUTORS[action.kind])
+            except (ActionStateError, NotReady):
+                continue  # another runner has it, or it stopped being due
             done.append(action_json(outcome.action))
     return done
+
+
+def maintenance_task(engine: Engine):
+    """The maintenance loop's `due_actions` task for this engine."""
+    return lambda fence: run_due(engine, fence)

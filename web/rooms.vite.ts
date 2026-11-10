@@ -10,28 +10,10 @@
 // A static host must answer /r/* with guest.html and /display with display.html.
 
 import { resolve } from 'node:path';
-import type { OutputBundle, OutputChunk } from 'rollup';
 import type { Plugin } from 'vite';
+import { BundleItem, GUEST_JS_LIMIT, jsBytesFor } from './src/guest/budget.ts';
 
-export const GUEST_JS_LIMIT = 100 * 1024;
-
-export function jsBytesFor(bundle: OutputBundle, entryName: string): number {
-  const chunks = Object.values(bundle).filter((item): item is OutputChunk => item.type === 'chunk');
-  const entry = chunks.find((chunk) => chunk.isEntry && chunk.name === entryName);
-  if (!entry) throw new Error(`No entry chunk is named ${entryName}`);
-  const seen = new Set<string>();
-  const walk = (name: string) => {
-    if (seen.has(name)) return;
-    seen.add(name);
-    const chunk = bundle[name];
-    if (chunk?.type === 'chunk') [...chunk.imports, ...chunk.dynamicImports].forEach(walk);
-  };
-  walk(entry.fileName);
-  return [...seen].reduce((total, name) => {
-    const chunk = bundle[name];
-    return total + (chunk?.type === 'chunk' ? Buffer.byteLength(chunk.code) : 0);
-  }, 0);
-}
+export { GUEST_JS_LIMIT, jsBytesFor };
 
 export function roomPages(root: string): Plugin {
   return {
@@ -55,7 +37,7 @@ export function roomPages(root: string): Plugin {
       });
     },
     generateBundle(_options, bundle) {
-      const bytes = jsBytesFor(bundle, 'guest');
+      const bytes = jsBytesFor(bundle as unknown as Record<string, BundleItem>, 'guest');
       if (bytes > GUEST_JS_LIMIT) {
         this.error(`The guest page loads ${bytes} bytes of JavaScript; the limit is ${GUEST_JS_LIMIT} (SC-0416-02).`);
       }

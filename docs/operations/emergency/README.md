@@ -2,7 +2,7 @@
 
 Each emergency control is a declarative state (§14, ADR-0410), not a script. Engage one from the admin console or with `POST /api/admin/emergency/{control}/engage` (`platform.emergency_controls.manage`, fresh MFA). Engaging is instant, audited and alerts every Owner. Releasing is a dangerous action: `POST /api/admin/emergency/{control}/release` queues it, it waits 15 minutes (or a second approver once there are two staff), then `POST /api/admin/actions/{id}/execute` runs it after re-checking the proposer's authority.
 
-The controls take effect within two seconds on every API instance (`admin.state.EmergencyCache`) and at once in job claims, admission and Lucy turns, which read the table in their own transaction.
+The controls take effect at once in job claims, admission and Lucy turns, which read the table in their own transaction. API instances hear every change through PostgreSQL `NOTIFY` on `selecta_emergency_controls` and forget their cached view as soon as it commits; if the LISTEN connection is down they still re-read within two seconds (`admin.state.EmergencyCache`). Releases run on the maintenance leader's tick (`work.maintenance.MaintenanceLoop` with `due_actions=admin.actions.maintenance_task(engine)`), every 15 seconds and fenced by the leader's term, so exactly one instance runs each due action. `POST /api/admin/actions/{id}/execute` runs one by hand.
 
 | Control | Target | Runbook |
 |---|---|---|

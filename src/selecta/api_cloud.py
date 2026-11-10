@@ -296,6 +296,8 @@ def create_cloud_app(
     flag_guard.install(app, strict=True)
     emergency_cache = EmergencyCache(engine)
     app.state.emergency_controls = emergency_cache
+    if listener is not None:
+        emergency_cache.listen(listener)
     admin_guard.install(app, emergency_cache)
     app.add_middleware(RequestMethodMiddleware)
 

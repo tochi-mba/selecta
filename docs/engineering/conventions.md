@@ -39,6 +39,7 @@ Core flags can't be switched off, and are core only in the modes they exist in. 
 ## Code style
 
 - Python 3.12, `from __future__ import annotations`, type hints, dataclasses and enums.
+- FastAPI route modules are the exception: no `from __future__ import annotations` there, because dependencies declared in signatures become strings that FastAPI can't resolve, and it reads them as query parameters (a 422).
 - Ruff with line length 100 (`E,F,I,UP,B`). CI runs `ruff check .`.
 - **No file over 1,000 lines**, docs included (`tests/test_file_length.py`). Aim for modules under 500.
 - Docstrings and comments in plain English: what something is for and why, in short sentences. Match the voice of `selecta/persistence/__init__.py`.

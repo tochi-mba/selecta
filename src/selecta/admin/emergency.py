@@ -22,7 +22,7 @@ from sqlalchemy.engine import Connection
 
 from selecta.admin import alerts
 from selecta.admin.schema import emergency_controls
-from selecta.admin.state import ALL, DESCRIPTIONS, Control, known_targets
+from selecta.admin.state import ALL, DESCRIPTIONS, Control, known_targets, notify
 from selecta.ai.registry import load_deployments
 from selecta.authz import audit, delayed
 from selecta.authz.check import Actor, authorize
@@ -124,6 +124,7 @@ def engage(
         )
     _audit(conn, actor.user_id, "engage", kind.value, target,
            reason=reason, request_id=actor.request_id)
+    notify(conn)
     alerts.raise_alert(
         conn,
         alerts.EMERGENCY,
@@ -182,6 +183,7 @@ def release(conn: Connection, action: delayed.DangerousAction) -> dict[str, Any]
     )
     _audit(conn, action.proposer_id, "release", control, target,
            reason=action.reason, approval_id=action.id)
+    notify(conn)
     alerts.raise_alert(
         conn,
         alerts.EMERGENCY,

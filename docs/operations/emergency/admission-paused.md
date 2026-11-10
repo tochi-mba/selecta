@@ -26,6 +26,6 @@ On the Overview, look at jobs waiting and the oldest eligible job for that pool,
 ## Recover
 
 `POST /api/admin/emergency/admission.paused/release` queues the release as the dangerous action
-`platform.emergency_control.disable`. After 15 minutes, `POST /api/admin/actions/{id}/execute`
+`platform.emergency_control.disable`. After 15 minutes the maintenance leader runs it on its next tick (or `POST /api/admin/actions/{id}/execute` runs it by hand), which
 turns the control off (audited as `platform.emergency_control.release`). Then confirm normal
 behaviour returned; `tests/test_cloud_admin_emergency.py` shows what "normal" means for this control.
