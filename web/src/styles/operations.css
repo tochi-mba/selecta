@@ -26,7 +26,7 @@
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px);
   gap: var(--space-3);
-  padding: var(--space-2) 2px;
+  padding: var(--space-2) var(--space-hair);
   border-bottom: 1px solid var(--border-strong);
   color: var(--text-soft);
   font-size: var(--text-xs);
@@ -38,16 +38,16 @@
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px);
   grid-template-areas: 'name facts readiness actions';
   gap: var(--space-1) var(--space-3);
-  padding: var(--row-pad) 2px;
+  padding: var(--row-pad) var(--space-hair);
   /* a long list only lays out what's near the screen, and stays one real list for screen readers */
   content-visibility: auto;
   contain-intrinsic-size: auto 72px;
 }
 .library-rows .song-row:has([aria-expanded='true']) { content-visibility: visible; }
 .library-rows .song-name { grid-area: name; }
-.library-rows .song-readiness { grid-area: readiness; min-width: 0; display: grid; gap: 2px; }
+.library-rows .song-readiness { grid-area: readiness; min-width: 0; display: grid; gap: var(--space-hair); }
 .library-rows .song-actions { grid-area: actions; align-items: center; }
-.song-columns { grid-area: facts; display: flex; flex-wrap: wrap; gap: 2px var(--space-3); min-width: 0; }
+.song-columns { grid-area: facts; display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-3); min-width: 0; }
 .song-why { margin: 0; font-size: var(--text-xs); overflow-wrap: anywhere; }
 :root[data-density='compact'] .song-why { display: none; }
 .library-rows .song-actions button { min-height: var(--control-height); }
@@ -86,7 +86,7 @@
 
 /* Exports */
 .export-job { display: grid; gap: var(--space-1); padding-block: var(--space-2); border-bottom: 1px solid var(--border); }
-.export-job-name { display: grid; gap: 2px; min-width: 0; }
+.export-job-name { display: grid; gap: var(--space-hair); min-width: 0; }
 .export-job-name b, .export-job-name small { overflow-wrap: anywhere; unicode-bidi: plaintext; }
 .export-job .warn, .export-job .hint { margin: 0; }
 .export-job-actions a { overflow-wrap: anywhere; min-width: 0; }
@@ -138,7 +138,7 @@
    42px minimum height or padding. The label provides the 44px target. */
 .library-rows .song-name:has(.library-batch-check) {
   grid-template-columns: 44px minmax(0, 1fr);
-  gap: 2px var(--space-2);
+  gap: var(--space-hair) var(--space-2);
   align-items: center;
 }
 .library-rows .song-name:has(.library-batch-check) > :not(.library-batch-check) { grid-column: 2; min-width: 0; }

@@ -2,3 +2,4 @@ test-results/
 playwright-report/
 verify-tmp/
 dist-cloud-e2e/
+dist-cloud-e2e-authkit/

@@ -87,6 +87,30 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
+  /* Half steps for dense controls and inline text stacks. Every spacing value in the app's
+     stylesheets is one of these roles or a documented exception: docs/engineering/spacing-token-map.md,
+     enforced by web/src/styles/spacing-tokens.test.ts. */
+  --space-hair: 2px;      /* a title over its own subtitle; list rows that read as one block */
+  --space-dense: 6px;     /* chip and pill rows, dense control padding */
+  --space-snug: 10px;     /* row padding between 8 and 12 */
+  --space-cozy: 14px;     /* control and small-panel inline padding */
+  --space-loose: 20px;    /* between a lede and what it introduces */
+  --list-indent: 18px;    /* bulleted list text from its marker */
+  --timeline-indent: 26px; /* a seam, gap or adder nests under its song by this much */
+  --control-pad-block: 9px; /* (44px target - 24px line - 2px border) / 2 */
+  --icon-size: 20px;      /* ui/Icon.tsx default box */
+  --icon-gap: var(--space-2);     /* icon to its own label (MP-0273-02) */
+  --icon-gap-dense: var(--space-1); /* reviewed dense controls: status marks, badges, counts */
+  --field-gap: var(--space-1);    /* label, control, help and error inside one field */
+  --rhythm-related: var(--space-3); /* heading to the text or controls it introduces */
+  --rhythm-group: var(--space-5);   /* between groups inside one section */
+  --rhythm-section: var(--space-6); /* between distinct sections */
+  --page-end: 120px;      /* last action clear of the fixed player, bar and safe area */
+  /* Musical geometry: deliberate 1-3px gaps owned by the beat, bar and lane grids (MP-0273-08).
+     They are not spacing to be rounded to the scale; each one draws time. */
+  --grid-beat-gap: 3px;   /* Studio lane cells, beat pips, seam bars, seam diagrams */
+  --grid-bar-gap: 2px;    /* energy bars and seam strips */
+  --grid-cell-gap: 1px;   /* the smallest energy thumbnail */
   --radius: 10px;
   --radius-sm: 8px;
   --radius-pill: 99px;

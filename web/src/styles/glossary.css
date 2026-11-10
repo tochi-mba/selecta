@@ -4,7 +4,7 @@
 .overlay-dialog .overlay-panel:has(.glossary) { width: min(640px, 100%); }
 .glossary { display: grid; gap: var(--space-3); }
 .glossary > .hint { margin: 0; }
-.glossary .field { display: grid; gap: var(--space-1); }
+.glossary .field { display: grid; gap: var(--field-gap); }
 .glossary .field input { width: 100%; }
 .glossary .field-help { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
 .glossary-count { margin: 0; }

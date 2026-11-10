@@ -43,6 +43,11 @@ button, a.button { transition: background-color var(--motion-fast) var(--motion-
 button:active:not(:disabled) { transform: none; }
 button[aria-disabled='true'] { cursor: progress; }
 .ui-icon { display: inline-block; flex: 0 0 auto; vertical-align: middle; }
+/* MP-0273-02: an icon sits --icon-gap (8px) from its own words. The control lays out as a row, so
+   the source space between <Icon /> and the label never decides the gap. :where() keeps this at
+   zero specificity: any control that sets its own display (hidden, grid, column) still wins. */
+:where(button:has(> .ui-icon), a.button:has(> .ui-icon)) { display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
+:where(.menu-list button:has(> .ui-icon)) { justify-content: flex-start; }
 .action-labels { display: inline-grid; align-items: center; justify-items: center; }
 .action-labels > span { grid-area: 1 / 1; }
 .page { padding-inline: var(--page-gutter); }
@@ -75,7 +80,7 @@ button[aria-disabled='true'] { cursor: progress; }
 .library-search { flex: 1; min-width: 0; }
 .library-search input { margin: 0; }
 .song-actions details { position: relative; }
-.song-actions summary { min-height: 44px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.song-actions summary { min-height: 44px; padding: var(--space-2) var(--space-cozy); cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .song-actions details[open] { flex-basis: 100%; }
 .song-actions details > .row { margin-top: var(--space-3); }
 .song-readiness { max-width: 100%; }
@@ -212,7 +217,7 @@ button[aria-disabled='true'] { cursor: progress; }
   .status {
     border: 1px solid CanvasText;
     border-radius: var(--radius-pill);
-    padding-inline: 4px;
+    padding-inline: var(--space-1);
     color: CanvasText;
   }
   .status-failed, .status-warning, .status-blocked, .status-needs-action {

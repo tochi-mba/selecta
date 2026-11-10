@@ -30,7 +30,7 @@ a.button {
   align-items: center;
   justify-content: center;
   min-height: 40px;
-  padding: 8px 14px;
+  padding: var(--space-2) var(--space-cozy);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-control);
@@ -79,12 +79,12 @@ a.button:hover { border-color: var(--text); }
     overflow-y: auto;
   }
   .nav .brand { padding: var(--space-1) var(--space-2); }
-  .nav ul { flex-direction: column; gap: 2px; flex: 1 1 auto; }
-  .nav li a { display: flex; gap: var(--space-2); align-items: center; padding: 9px var(--space-2); border-radius: var(--radius-sm); min-height: var(--control-height); position: relative; }
+  .nav ul { flex-direction: column; gap: var(--space-hair); flex: 1 1 auto; }
+  .nav li a { display: flex; gap: var(--icon-gap); align-items: center; padding: var(--control-pad-block) var(--space-2); border-radius: var(--radius-sm); min-height: var(--control-height); position: relative; }
   .nav-context { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
   .nav-foot { display: flex; gap: var(--space-2); }
-  .nav-request { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-sm); padding: 8px; min-width: 0; }
-  .nav-collapse { flex: none; padding: 8px; }
+  .nav-request { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); font-size: var(--text-sm); padding: var(--space-2); min-width: 0; }
+  .nav-collapse { flex: none; padding: var(--space-2); }
 
   /* collapsed: icons only, and each one still has its name, for screen readers and on a resting pointer */
   :root[data-rail='collapsed'] .nav { padding-inline: var(--space-2); align-items: stretch; }
@@ -102,7 +102,7 @@ a.button:hover { border-color: var(--text); }
     top: 50%;
     transform: translateY(-50%);
     z-index: var(--layer-toast);
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
     white-space: nowrap;
     color: var(--text);
     background: var(--surface-raised);
@@ -140,7 +140,7 @@ a.button:hover { border-color: var(--text); }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: var(--space-hair);
     font-size: 0.75rem;
     white-space: nowrap;
     overflow: hidden;
@@ -155,7 +155,7 @@ a.button:hover { border-color: var(--text); }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: var(--space-hair);
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -196,14 +196,14 @@ a.button:hover { border-color: var(--text); }
   border-bottom: 1px solid var(--border);
 }
 .crumbs { min-width: 0; font-size: var(--text-sm); color: var(--text-soft); }
-.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px var(--space-2); }
+.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); }
 .crumbs li { min-width: 0; overflow-wrap: anywhere; }
 .crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
 .crumbs [aria-current='page'] { unicode-bidi: plaintext; }
 .crumbs a { color: var(--text-soft); }
 .crumbs [aria-current='page'] { color: var(--text); font-weight: 600; }
 .context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; min-width: 0; }
-.context-button { display: inline-flex; align-items: center; gap: var(--space-2); background: none; border-color: transparent; padding: 6px 8px; min-width: var(--control-height); justify-content: center; }
+.context-button { display: inline-flex; align-items: center; gap: var(--icon-gap); background: none; border-color: transparent; padding: var(--space-dense) var(--space-2); min-width: var(--control-height); justify-content: center; }
 .context-button:hover:not(:disabled) { border-color: var(--border); }
 .context-button.health-attention { color: var(--status-warning); text-decoration: none; border-color: var(--status-warning); }
 .palette-button { border-color: var(--border); color: var(--text-soft); }
@@ -247,16 +247,16 @@ a.mini-song { flex: 1 1 auto; min-width: 0; display: grid; color: var(--text); t
 .mini-song span { color: var(--text-soft); font-size: var(--text-sm); }
 .mini button { flex: none; }
 .mini .round { width: 44px; height: 44px; }
-.mini-next { padding: 8px 10px; min-width: 44px; }
+.mini-next { padding: var(--space-2) var(--space-snug); min-width: 44px; }
 /* Reserve digits even at zero so arriving requests never shove transport or track identity. */
 .mini-requests .count { display: inline-block; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 420px) {
-  .mini-requests { padding: 8px; font-size: var(--text-sm); }
+  .mini-requests { padding: var(--space-2); font-size: var(--text-sm); }
 }
 
 .volume { display: flex; align-items: center; gap: var(--space-1); min-width: 0; }
 .volume input { width: 96px; min-height: 24px; }
-button.icon { padding: 6px 8px; min-width: 40px; }
+button.icon { padding: var(--space-dense) var(--space-2); min-width: 40px; }
 
 .connection {
   display: flex;
@@ -295,8 +295,8 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 }
 .toast-row.problem { background: var(--warn); color: var(--accent-ink); }
 .toast-row > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: 4px 12px; flex: none; }
-.toast-row .toast-close { border: 0; padding: 4px 8px; min-width: 34px; }
+.toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: var(--space-1) var(--space-3); flex: none; }
+.toast-row .toast-close { border: 0; padding: var(--space-1) var(--space-2); min-width: 34px; }
 /* Only visual chrome yields here: the audio owner and saved Undo activity do not change. */
 :root[data-keyboard='open'] .toasts, :root[data-stage='on'] .toasts {
   visibility: hidden;
@@ -326,7 +326,7 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 .overlay-body { padding: var(--space-4); overflow-y: auto; flex: 1 1 auto; min-height: 0; scroll-padding-block: var(--space-3); }
 .overlay-body :is(input, select, textarea, button) { scroll-margin-block: var(--space-3); }
 .overlay-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
-.overlay-close { padding: 4px 10px; flex: none; }
+.overlay-close { padding: var(--space-1) var(--space-snug); flex: none; }
 
 .overlay-dialog { align-items: center; justify-content: center; padding: var(--space-4); }
 .overlay-dialog .overlay-panel { width: min(480px, 100%); border-radius: var(--radius); }
@@ -345,7 +345,7 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 }
 
 /* shared states */
-.status { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-sm); white-space: nowrap; }
+.status { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); font-size: var(--text-sm); white-space: nowrap; }
 .status i { font-style: normal; }
 .status-planned, .status-unavailable, .status-queued { color: var(--status-planned); }
 .status-working { color: var(--status-working); }
@@ -391,7 +391,7 @@ button[data-working]::after {
   margin-top: var(--space-1);
   min-width: 190px;
   display: grid;
-  gap: 2px;
+  gap: var(--space-hair);
   padding: var(--space-1);
   background: var(--surface-raised);
   border: 1px solid var(--border-strong);
@@ -436,7 +436,7 @@ button[data-working]::after {
   border-radius: var(--radius);
   background: var(--surface-raised);
   padding: var(--space-4);
-  margin-top: 20px;
+  margin-top: var(--space-loose);
 }
 @media (prefers-reduced-motion: reduce) { .edit-inspector { scroll-behavior: auto; } }
 .inspector-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
@@ -471,7 +471,7 @@ button.song-open:hover { text-decoration: underline; }
 .song-facts div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--border); padding: var(--space-1) 0; }
 .song-facts dt { color: var(--text-soft); }
 .song-facts dd { margin: 0; text-align: right; }
-.correct-field { display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.correct-field { display: grid; gap: var(--field-gap); font-size: var(--text-sm); }
 .correct-field input { width: 140px; }
 .overlay-body h3 { margin: var(--space-4) 0 var(--space-1); }
 
@@ -485,7 +485,7 @@ button.song-open:hover { text-decoration: underline; }
 .folder-list .status { white-space: normal; }
 .diagnostics { font: 0.82rem var(--mono); background: var(--surface-control); border-radius: var(--radius-sm); padding: var(--space-3); overflow-x: auto; margin: 0; }
 
-.choice { display: inline-flex; align-items: center; gap: var(--space-1); padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+.choice { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-dense) var(--space-snug); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
 .choice input { width: auto; min-height: 0; }
 .choice:has(input:checked) { border-color: var(--accent); }
 .choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
@@ -498,12 +498,12 @@ button.song-open { display: block; max-width: 100%; white-space: normal; overflo
 .seam-visual-bars { min-width: 0; overflow: hidden; }
 .seam-visual-caption { flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 560px) {
-  .seam { margin-left: 8px; padding-left: 10px; }
+  .seam { margin-left: var(--space-2); padding-left: var(--space-snug); }
   .seam-visual { margin-left: 0; }
 }
 
 /* Listen: the things you reach for stay in reach */
-.transport-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.transport-more { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
 .song-name { grid-template-columns: minmax(0, 1fr); }
 .song-name > * { min-width: 0; }
 button.song-open b { display: block; white-space: normal; overflow-wrap: anywhere; }
@@ -522,7 +522,7 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
   display: none;
   width: max-content;
   max-width: min(240px, 60vw);
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface);

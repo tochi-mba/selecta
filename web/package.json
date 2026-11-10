@@ -10,7 +10,7 @@
     "e2e": "playwright test",
     "e2e:flags": "playwright test -c playwright.flags.config.ts",
     "e2e:cloud": "playwright test -c playwright.cloud.config.ts",
-    "build:cloud-e2e": "vite build -c vite.cloud-e2e.config.ts"
+    "build:cloud-e2e": "vite build -c vite.cloud-e2e.config.ts && vite build -c vite.cloud-e2e-authkit.config.ts"
   },
   "dependencies": {
     "@noble/hashes": "^2.4.0",

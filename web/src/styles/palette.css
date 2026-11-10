@@ -1,7 +1,7 @@
 /* Search and commands: results come in named groups, songs first, so a song can't pass for a page
    or an action. Group names are labels, not choices, and are skipped by the arrow keys. */
 
-.palette-group { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.palette-group { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-hair); }
 .palette-group + .palette-group { margin-top: var(--space-2); }
 .palette-group-name {
   padding: var(--space-1) var(--space-3) 0;

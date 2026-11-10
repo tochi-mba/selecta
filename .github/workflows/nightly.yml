@@ -2,7 +2,8 @@ name: nightly
 
 # The slow checks that don't belong on every push. Every night: known vulnerabilities in every
 # Python and web dependency (about two minutes each). Every Sunday: the cloud property tests at
-# 5,000 examples each against a real PostgreSQL, which takes long enough that running it
+# 5,000 examples each against a real PostgreSQL, plus the scrambled Stripe replay at 250,000
+# webhook deliveries (SC-0403-02), which takes long enough that running it
 # nightly would use most of a private repository's monthly Actions minutes. A manual run does
 # both. A failure opens no PR; it shows on the Actions page and in GitHub notifications.
 # See docs/engineering/testing.md.
@@ -90,6 +91,9 @@ jobs:
     env:
       CI: "true"
       HYPOTHESIS_PROFILE: nightly
+      # tests/test_cloud_billing_replay.py: 250,000 shuffled, duplicated and delayed deliveries
+      # instead of the everyday 10,000.
+      SELECTA_BILLING_REPLAY_DELIVERIES: "250000"
       SELECTA_TEST_POSTGRES_URL: postgresql+psycopg://selecta:selecta@localhost:5432/selecta_test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
