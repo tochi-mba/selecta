@@ -384,7 +384,7 @@ def upgrade() -> None:
             sa.JSON().with_variant(postgresql.JSONB(astext_type=Text()), "postgresql"),
             nullable=False,
         ),
-        sa.Column("draining", sa.Boolean(), server_default=sa.text("0"), nullable=False),
+        sa.Column("draining", sa.Boolean(), server_default=sa.false(), nullable=False),
         sa.Column("registered_at", sa.Float(precision=53), nullable=False),
         sa.Column("last_seen_at", sa.Float(precision=53), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_workers")),
