@@ -70,7 +70,8 @@ _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 def clean_name(name: str | None, kind: DeviceKind) -> str:
     """A tidy device name: no control characters, single spaces, at most 60 characters."""
-    text = _SPACES.sub(" ", _CONTROL.sub("", name or "")).strip()[:DEVICE_NAME_MAX].strip()
+    # Whitespace first, so a tab or newline between words becomes a space, not nothing.
+    text = _CONTROL.sub("", _SPACES.sub(" ", name or "")).strip()[:DEVICE_NAME_MAX].strip()
     return text or kind.value.capitalize()
 
 
@@ -153,9 +154,7 @@ def register(
                     signed_out_at=None,
                 )
             )
-        others = [
-            row for row in mine if row["id"] != this_id and row["signed_out_at"] is None
-        ]
+        others = [row for row in mine if row["id"] != this_id and row["signed_out_at"] is None]
         signed_out = None
         if len(others) + 1 > MAX_SIGNED_IN_DEVICES:
             oldest = min(others, key=lambda row: (row["last_seen_at"], row["created_at"]))
@@ -217,9 +216,7 @@ def list_devices(
         return [device_from_row(row) for row in conn.execute(query).mappings()]
 
 
-def touch(
-    engine: Engine, workspace_id: str, device_id: str, *, now: float | None = None
-) -> Device:
+def touch(engine: Engine, workspace_id: str, device_id: str, *, now: float | None = None) -> Device:
     """Note that a signed-in device was just seen."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
