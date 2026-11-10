@@ -82,11 +82,11 @@
 | [EX-0128-03](adr-0128-calm-workspace-and-operations.md) | Audit truth of job state labels | Implemented | Yes (automated, 2026-11-10) | - | `web/src/views/ex-0128-job-truth.test.tsx`, `web/src/views/Workshop.test.tsx` (15 passed) | - | - | Unassigned |
 | [EX-0128-04](adr-0128-calm-workspace-and-operations.md) | Specify privacy-safe diagnostics | Implemented | No | - | `web/src/views/Workshop.test.tsx` diagnostics case | - | Needs a person: manual privacy and network review | Unassigned |
 | [EX-0128-05](adr-0128-calm-workspace-and-operations.md) | Verify accessible layout | Implemented | No | - | `web/e2e/mp-0293-workspace-operations.e2e.ts` (not green on 2026-11-10) | - | Needs a person: both themes, 400% zoom, NVDA | Unassigned |
-| [EX-0129-01](adr-0129-blind-study-neutral-audio.md) | Audit all method leakage | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-02](adr-0129-blind-study-neutral-audio.md) | Design balanced A/B interface | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-03](adr-0129-blind-study-neutral-audio.md) | Separate listening, grading and save | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-04](adr-0129-blind-study-neutral-audio.md) | Preserve once-only identity | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-05](adr-0129-blind-study-neutral-audio.md) | Verify with real blind sessions | Not started | No | - | - | - | - | Unassigned |
+| [EX-0129-01](adr-0129-blind-study-neutral-audio.md) | Audit all method leakage | Implemented | No | - | `tests/test_ex_0129_study_integrity.py`; MP-0294-07 | - | Needs a person: screen reader | Unassigned |
+| [EX-0129-02](adr-0129-blind-study-neutral-audio.md) | Design balanced A/B interface | Implemented | No | - | MP-0294-05 | - | Needs a person: counterbalanced pilot | Unassigned |
+| [EX-0129-03](adr-0129-blind-study-neutral-audio.md) | Separate listening, grading and save | Implemented | No | - | `web/src/views/Listening.test.tsx`, `ListeningStudyFlow.test.tsx`; E2E rerun needed | - | - | Unassigned |
+| [EX-0129-04](adr-0129-blind-study-neutral-audio.md) | Preserve once-only identity | Implemented | Yes (automated, 2026-11-10) | - | `tests/test_ex_0129_study_integrity.py` (5 passed) | - | - | Unassigned |
+| [EX-0129-05](adr-0129-blind-study-neutral-audio.md) | Verify with real blind sessions | Not started | No | - | - | - | Needs a person: real blind sessions | Unassigned |
 | [EX-0130-01](adr-0130-brand-tokens-and-css-ownership.md) | Approve semantic color and type contracts | Implemented | No | - | MP-0298-05 contrast | - | Needs a person: owner approval | Unassigned |
 | [EX-0130-02](adr-0130-brand-tokens-and-css-ownership.md) | Design song-focused compositions | Implemented | No | - | - | - | Needs a person: visual critique | Unassigned |
 | [EX-0130-03](adr-0130-brand-tokens-and-css-ownership.md) | Audit and assign CSS ownership | Implemented | No | - | `web/src/styles/css-ownership.test.ts`, `mp-css-register.test.ts`, `uf-cascade.test.ts` | - | Needs a person: before/after captures | Unassigned |

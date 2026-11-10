@@ -91,7 +91,8 @@ def test_every_env_var_render_sets_is_one_the_code_reads():
 
 
 def tofu() -> str:
-    return "\n".join(path.read_text("utf-8") for path in sorted((INFRA / "cloudflare").glob("*.tf")))
+    files = sorted((INFRA / "cloudflare").glob("*.tf"))
+    return "\n".join(path.read_text("utf-8") for path in files)
 
 
 def _without_strings(text: str) -> str:

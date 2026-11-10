@@ -381,7 +381,7 @@ class RemoteWorkerClient:
     def download_input(self, context, selector: str | int, destination: Path | None = None) -> Path:
         """Fetch a signed input, as a storage span in the job's trace (ADR-0410)."""
         with tracing.job_span(
-            "storage.get", context.job.id, service="worker", kind=SpanKind.CLIENT,
+            "storage.get", _job_id(context), service="worker", kind=SpanKind.CLIENT,
             **{"selecta.attempt_id": context.attempt_id},
         ) as span:
             path = self._download_input(context, selector, destination)
@@ -462,7 +462,7 @@ class RemoteWorkerClient:
     ) -> ArtifactOutput:
         """Upload one output, as a storage span in the job's trace (ADR-0410)."""
         with tracing.job_span(
-            "storage.put", context.job.id, service="worker", kind=SpanKind.CLIENT,
+            "storage.put", _job_id(context), service="worker", kind=SpanKind.CLIENT,
             **{"selecta.attempt_id": context.attempt_id, "selecta.artifact_kind": kind},
         ) as span:
             made = self._publish_artifact(
@@ -559,6 +559,11 @@ class RemoteWorkerClient:
             or not allowed
         ):
             raise RemoteGatewayError(502, "untrusted_signed_storage_url")
+
+
+def _job_id(context) -> str:
+    """The job id for tracing, or "" (no span) when a caller passes a bare context."""
+    return str(getattr(getattr(context, "job", None), "id", "") or "")
 
 
 def _failure(error: BaseException) -> str:

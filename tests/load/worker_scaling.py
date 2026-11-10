@@ -16,6 +16,7 @@ real Cloud workers through the gateway; record both in docs/saas/15-stress-testi
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 import threading
@@ -69,9 +70,9 @@ class Analysis:
 
 def analyse(runs: Sequence[Run], flat: float = FLAT) -> Analysis:
     ordered = tuple(sorted(runs, key=lambda run: run.workers))
-    monotonic = all(b.per_second >= a.per_second for a, b in zip(ordered, ordered[1:]))
+    monotonic = all(b.per_second >= a.per_second for a, b in itertools.pairwise(ordered))
     bottleneck = next(
-        (b.workers for a, b in zip(ordered, ordered[1:])
+        (b.workers for a, b in itertools.pairwise(ordered)
          if b.per_second < a.per_second * (1 + flat)),
         None,
     )

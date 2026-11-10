@@ -153,3 +153,16 @@ Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-
 | P0041 | Implemented | Slow and failed retrieval are honest with Retry, incl. Listen details and inspector checks | `pnpm exec vitest run src/views/polish-loading.test.tsx`: 3/3 | - |
 | P0042 | Open (partly proven) | Stale/out-of-order/failed refresh and de-duplicated announcements | `async.test.tsx`, `gp-0257-comfort.test.tsx` | Delayed/partial/retried flash tests |
 | P0043 | Open | Layout stability not measured green | MP-0297-01/03 failed | Green measurement |
+
+## ADR-0038 task evidence (reconciled 2026-11-10, uncommitted working tree)
+
+| Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
+|---|---|---|---|---|
+| P0052 | Implemented | Featured pick, durations and Customize hierarchy | `vitest run Mixes.test.tsx` 23/23 | - |
+| P0053 | Implemented | Card metadata, action order, unavailable reasons | `Mixes.test.tsx` | - |
+| P0054 | Implemented | Play now / Edit / Save as draft with the playback effect stated | `Mixes.test.tsx` | - |
+| P0055 | Implemented | Current mix vs drafts and their states | `Drafts.test.tsx`, `MyMixes.test.tsx`, `CurrentMix.test.tsx` 31 passed (`--pool threads --maxWorkers 1`) | - |
+| P0056 | Implemented | Defaults are for new mixes | `Mixes.test.tsx` | - |
+| P0057 | Implemented | Measured energy normalised to the mix's own range, labelled as not comparable | `polishPhase03Mixes.test.tsx` 4/4, `MixSetup.test.tsx` 3/3 | - |
+| P0058 | Implemented | No ready match vs failed search with Retry | `polishPhase03Mixes.test.tsx` | - |
+| P0059 | Implemented | Draft feedback; render line vs playback order | `Drafts.test.tsx` | - |

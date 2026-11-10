@@ -114,3 +114,20 @@ def test_every_keyframe_animation_has_an_owner_states_and_interruption_rule():
     assert keyframes - set(named) == set(), "keyframes with no owner row"
     for clock_mark in ("Hand-over progress width", "Spectrum canvas", "Lyric focus"):
         assert clock_mark in named
+
+
+# CI-0177-04: Start a mix from a song puts that exact song first, once, in the set it returns, so the
+# source track is identifiable; the site then plays from position 0 and names it.
+def test_start_a_mix_returns_a_set_that_opens_on_the_chosen_song(tmp_path):
+    from mix_helpers import _vibe_library
+
+    from selecta.planner.vibes import BY_KEY, build_vibe, eligible
+
+    songs, traits = _vibe_library(tmp_path)
+    vibe = BY_KEY["pick"]
+    fits = eligible(vibe, songs, traits)
+    for chosen in (fits[0], fits[len(fits) // 2], fits[-1]):
+        planned, _ = build_vibe(vibe, songs, traits, {}, 8, chosen.id, seed=3)
+        ids = [item.song.id for item in planned]
+        assert ids[0] == chosen.id
+        assert ids.count(chosen.id) == 1

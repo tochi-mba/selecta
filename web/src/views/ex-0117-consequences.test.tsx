@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setFlags } from '../flags';
 import { VibeCard } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, songs, status } from '../test/backend';
@@ -65,5 +66,48 @@ describe('EX-0117-04 Play, Edit and Save consequences', () => {
     await waitFor(() => expect(builds(calls)).toHaveLength(1));
     expect(builds(calls)[0].path).not.toContain('as_draft');
     await waitFor(() => expect(setMixData).toHaveBeenCalledOnce());
+  });
+});
+
+// EX-0117-02: length joins feel, stems, energy and destination as a remembered choice.
+describe('EX-0117-02 the chosen length is remembered', () => {
+  const pick: VibeCard = { ...card, key: 'pick', name: 'Selecta’s pick', group: '' };
+  function open() {
+    fakeBackend({ 'GET /vibes': [pick] });
+    const player = new SetPlayer(() => [], () => {});
+    return render(
+      <Mixes status={status()} mix={[]} mixName="" canUndo={false} refreshMix={() => {}} setMixData={() => {}}
+        refreshStatus={() => {}} player={player} now={player.state} setView={() => {}} notify={() => {}}
+        stage={false} toggleStage={() => {}} />,
+    );
+  }
+  const lengths = () => within(screen.getByRole('group', { name: 'How long, roughly' }));
+
+  afterEach(() => { setFlags(null); window.localStorage.clear(); });
+
+  it('a new visit starts on the length chosen last time', () => {
+    window.localStorage.clear();
+    const first = open();
+    fireEvent.click(lengths().getByRole('button', { name: 'About 1 hour' }));
+    first.unmount();
+    open();
+    expect(lengths().getByRole('button', { name: 'About 1 hour' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('a nonsense saved value falls back to 30 minutes', () => {
+    window.localStorage.setItem('selecta.mixLength', '999');
+    open();
+    expect(lengths().getByRole('button', { name: 'About 30 min' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('with the flag off nothing is kept and each visit starts at 30 minutes', () => {
+    setFlags({ 'mixes.shaping.remember_length': false });
+    window.localStorage.clear();
+    const first = open();
+    fireEvent.click(lengths().getByRole('button', { name: 'About 2 hours' }));
+    expect(window.localStorage.getItem('selecta.mixLength')).toBeNull();
+    first.unmount();
+    open();
+    expect(lengths().getByRole('button', { name: 'About 30 min' })).toHaveAttribute('aria-pressed', 'true');
   });
 });

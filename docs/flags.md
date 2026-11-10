@@ -59,6 +59,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `mixes.shaping.energy_arc` | **Energy arc.** A five-stop energy curve, drawn or set with sliders. | `mixes.shaping` |
 | `mixes.shaping.destination` | **Take me to.** End the mix on a song you choose. | `mixes.shaping` |
 | `mixes.shaping.stem_moves` | **Stem move steering.** Never, Sometimes or Often for moves that need separated stems. | `mixes.shaping`, `stems` |
+| `mixes.shaping.remember_length` | **Remember mix length.** The chosen length (30 min, 1 hour or 2 hours) is kept in this browser for the next visit, like the other shaping choices. | `mixes.shaping` |
 
 ## Lucy
 

@@ -177,3 +177,25 @@ def test_checklist_adrs_ledger_and_json_agree_on_every_task():
     verified = data["independent_verification_summary"]
     assert verified["Yes"] == sum(1 for t in tasks.values() if t["verified"])
     assert verified["No"] == sum(1 for t in tasks.values() if not t["verified"])
+
+
+def test_every_lx_adr_names_its_historical_owners_and_real_source_touchpoints():
+    """LX-0365-05: the overlap crosswalk names, for every LX ADR, the older decisions that own related
+    behaviour and the source files it touches. Every named ADR and file exists, so no older owner or
+    existing code can be overridden without the crosswalk pointing at it."""
+    overlap = (ADR_DIR / "selecta-library-lucy-experience-overlap-and-parity.md").read_text(
+        encoding="utf-8"
+    )
+    rows = {
+        int(match.group(1)): (match.group(2), match.group(3))
+        for match in re.finditer(r"^\| \[ADR-0(\d{3})\]\([^)]+\) \| ([^|]+) \| ([^|]+) \|$",
+                                 overlap, re.M)
+    }
+    assert sorted(rows) == list(NUMBERS)
+    for number, (owners, sources) in rows.items():
+        named = re.findall(r"ADR-(\d{4})", owners)
+        assert named, f"ADR-0{number} names no historical owner"
+        for owner in named:
+            assert sorted(ADR_DIR.glob(f"adr-{owner}-*.md")), f"ADR-0{number}: ADR-{owner} missing"
+        for path in re.findall(r"`([^`]+)`", sources):
+            assert (ROOT / path).exists(), f"ADR-0{number}: {path} does not exist"

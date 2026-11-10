@@ -113,7 +113,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0177-01 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0177-02 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0177-03 | existing | Met by earlier code; tests named on the checklist line |
-| CI-0177-04 | open | In progress: Start a mix builds from the song (start=ID) and says “A mix starting from <title>”, but no test proves the source track is identifiable in the returned set |
+| CI-0177-04 | built | test_start_a_mix_returns_a_set_that_opens_on_the_chosen_song; Library.test.tsx start=ID build plays from 0 |
 | CI-0177-05 | open | Not started: song details show no validated related songs or candidate connections |
 | CI-0177-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0177-07 | person | Needs a person: scroll, frame and zoom measurements on a large collection and an assistive technology review |

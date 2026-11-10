@@ -27,3 +27,4 @@ sections.
 
 - [Backups and the restore drill](backup-and-restore.md)
 - [Emergency controls](emergency/README.md)
+- [Game day: emergency controls drill](game-day.md)

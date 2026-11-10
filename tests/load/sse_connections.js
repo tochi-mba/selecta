@@ -6,7 +6,7 @@
 // keep p95 under 300 ms. Pass/fail is the thresholds below.
 //
 // Run against staging only, never production, with the xk6-sse extension:
-//   xk6 build v1.4.0 --with github.com/phymbert/xk6-sse@v0.1.12 --output ./k6
+//   xk6 build --with github.com/phymbert/xk6-sse --output ./k6   (pin the versions you verify)
 //   ./k6 run -e API=https://api.staging.example -e TOKENS=tokens.json tests/load/sse_connections.js
 // TOKENS is a JSON list of {"token", "workspace"} for synthetic staging users (Stripe test mode,
 // capped AI keys). Smaller runs: -e STREAMS=1000. tests/test_cloud_load_scripts.py checks it.
@@ -21,9 +21,9 @@ const STREAMS = Number(__ENV.STREAMS || 10000);
 const HOLD_S = Number(__ENV.HOLD_S || 120);
 const users = new SharedArray("users", () => JSON.parse(open(__ENV.TOKENS || "tokens.json")));
 
-const firstFrame = Trend("sse_first_frame_ms", true);
-const heldOpen = Rate("sse_held_open");
-const frames = Counter("sse_frames");
+const firstFrame = new Trend("sse_first_frame_ms", true);
+const heldOpen = new Rate("sse_held_open");
+const frames = new Counter("sse_frames");
 
 export const options = {
   scenarios: {

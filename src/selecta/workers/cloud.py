@@ -24,7 +24,8 @@ def main() -> None:
     registry = handlers(ffmpeg=ffmpeg)
     tracing.configure_from_environment("worker")
     caps = WorkerCaps(
-        pool=os.environ.get("SELECTA_WORKER_POOL", "cpu-light"), slots=1, job_types=frozenset(registry),
+        pool=os.environ.get("SELECTA_WORKER_POOL", "cpu-light"),
+        slots=1, job_types=frozenset(registry),
         engine_version=int(os.environ.get("SELECTA_WORKER_ENGINE_VERSION", "1")),
         scratch_mb=int(os.environ.get("SELECTA_WORKER_SCRATCH_MB", "4096")),
     )

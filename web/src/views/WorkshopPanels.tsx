@@ -54,6 +54,9 @@ export function StoragePanel() {
   const [saved, setSaved] = useState(true);
   const [problem, setProblem] = useState('');
   const [wanted, setWanted] = useState<number | null>(null);
+  // SF-0230-05: a limit below what's already kept removes files, so it waits for a yes
+  const [pending, setPending] = useState<number | null>(null);
+  const [reclaimed, setReclaimed] = useState('');
 
   const [loadFailed, setLoadFailed] = useState(false);
   const refresh = () => {
@@ -78,18 +81,31 @@ export function StoragePanel() {
   const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);
   const smallest = storage.smallest_budget_bytes / GB;
 
-  const move = (value: number) => {
+  const move = (value: number, confirmedRemoval = false) => {
     budgetEditing.current = true;
     setLimit(value);
-    setSaved(false);
     setProblem('');
     setWanted(null);
+    setReclaimed('');
     saves.current += 1;
     const mine = saves.current;
     window.clearTimeout(wait.current);
+    if (!confirmedRemoval && value * GB < storage.cache_bytes) {
+      // nothing is removed until this is confirmed; the preview says how much could go
+      setPending(value);
+      setSaved(true);
+      return;
+    }
+    setPending(null);
+    setSaved(false);
+    const before = storage.cache_bytes;
     wait.current = window.setTimeout(() => {
       const work = writeQueue.current.then(() => post<Storage>('/storage', { budget_gb: value }))
         .then((answer) => {
+          if (confirmedRemoval) {
+            const gone = Math.max(before - answer.cache_bytes, 0);
+            setReclaimed(gone ? `Removed ${gb(gone)}. Selecta now keeps ${gb(answer.cache_bytes)} it can make again.` : 'Nothing could be removed: what’s left belongs to priority songs.');
+          }
           // All successful responses update the confirmed server value; only
           // the latest choice updates the visible setting. If that choice
           // later fails, the fallback is the last real accepted limit.
@@ -103,14 +119,19 @@ export function StoragePanel() {
         })
         .catch((error: Error) => {
           if (mine !== saves.current) return;
-          setProblem(error.message);
+          setProblem(confirmedRemoval ? `Nothing was removed. ${error.message}` : error.message);
           setWanted(value);
           budgetEditing.current = false;
           setSaved(true);
           if (confirmed.current !== null) setLimit(confirmed.current);
         });
       writeQueue.current = work;
-    }, 400);
+    }, confirmedRemoval ? 0 : 400);
+  };
+  const keepLimit = () => {
+    budgetEditing.current = false;
+    setPending(null);
+    if (confirmed.current !== null) setLimit(confirmed.current);
   };
 
   const total = Math.max(1, storage.used_bytes + storage.free_bytes);
@@ -144,8 +165,20 @@ export function StoragePanel() {
           onChange={(event) => move(Number(event.target.value))}
         />
       </label>
+      {pending !== null && (
+        <div className="stack storage-preview" role="group" aria-label="Before anything is removed">
+          <p>
+            A limit of {pending.toFixed(1)} GB removes up to {gb(storage.cache_bytes - pending * GB)} of vocals and seams, oldest first.
+            Priority songs’ stems stay. Anything removed is made again when it’s needed, and your music is never touched.
+          </p>
+          <div className="row wrap">
+            <Action run={() => move(pending, true)}>Remove up to {gb(storage.cache_bytes - pending * GB)}</Action>
+            <button type="button" onClick={keepLimit}>Keep {confirmed.current?.toFixed(1) ?? limit.toFixed(1)} GB</button>
+          </div>
+        </div>
+      )}
       {!saved && !problem && <p className="hint" role="status">Saving…</p>}
-      {saved && !problem && <p className="hint" role="status">Saved: {limit.toFixed(1)} GB.</p>}
+      {saved && !problem && pending === null && <p className="hint" role="status">{reclaimed || `Saved: ${limit.toFixed(1)} GB.`}</p>}
       {problem && <p className="warn" role="alert">{problem} The limit is still {limit.toFixed(1)} GB.</p>}
       {wanted !== null && <Action run={() => move(wanted)}>Retry saving budget</Action>}
       <p className="hint">

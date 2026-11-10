@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Status, type StatusKind } from '../ui/controls';
 import { LifecyclePill } from '../views/LucyProposal';
+import { SongMotif } from '../ui/MusicObjects';
 
 /**
  * LX-0364-01, -04 and -06: Lucy's stylesheet uses only the app's tokens, every token the shared
@@ -84,5 +85,19 @@ describe('LX-0364-06 motion only for real work', () => {
     expect(lucyCss).toMatch(/:root\[data-motion='still'\] \.lucy-indeterminate \{ display: none; \}/);
     expect(lucyCss).toMatch(/@media \(prefers-reduced-motion: reduce\) \{ \.lucy-indeterminate \{ display: none; \} \}/);
     expect(tokens).toMatch(/:root\[data-motion='still'\] \*,[\s\S]*?animation: none !important/);
+  });
+});
+
+describe('LX-0364-02 one song identity in Library and Lucy', () => {
+  it('both rows draw the same SongMotif from the recording id beside the title, and no artwork', () => {
+    const library = fs.readFileSync(`${SOURCE}views/Library.tsx`, 'utf8');
+    const lucy = fs.readFileSync(`${SOURCE}views/LucySongs.tsx`, 'utf8');
+    expect(library).toMatch(/<SongMotif songId=\{song\.id\} \/><b dir="auto"/);
+    expect(lucy).toMatch(/<SongMotif songId=\{song\.song_id\} \/>/);
+    for (const source of [library, lucy]) expect(source).not.toMatch(/<img\b|artwork|cover_url|coverArt/i);
+    const one = render(<SongMotif songId={7} />).container.innerHTML;
+    const again = render(<SongMotif songId={7} />).container.innerHTML;
+    expect(again).toBe(one);
+    expect(doc).toMatch(/There is no artwork, real or invented\./);
   });
 });

@@ -1,4 +1,4 @@
-"""The Lucy evaluation gate for a model deployment (ADR-0404 SC-0404-06, docs/saas/09-lucy-ai-gateway.md 9.6).
+"""The Lucy evaluation gate for a model deployment (ADR-0404 SC-0404-06, section 9.6).
 
 A fixed evaluation set (`eval_set.json`: synthetic libraries and scripted requests) is run against
 a deployment through a `Subject`: anything that takes a case and returns what Lucy proposed. Each

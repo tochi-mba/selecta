@@ -91,7 +91,7 @@
 | CI-0177-01 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-02 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-03 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
-| CI-0177-04 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | In progress: Start a mix builds from the song (start=ID) and says “A mix starting from <title>”, but no test proves the source track is identifiable in the returned set | No | Unassigned | - | - |
+| CI-0177-04 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (built 2026-11-10: focused test added for existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-05 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Not started: song details show no validated related songs or candidate connections | No | Unassigned | - | - |
 | CI-0177-06 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-07 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Needs a person: scroll, frame and zoom measurements on a large collection and an assistive technology review | No | Unassigned | - | - |

@@ -22,7 +22,9 @@ export function capabilities(
       ? { name: 'Play', kind: 'unavailable', words: 'State unknown' }
       : { name: 'Play', kind: 'ready', words: 'The file is here and can play' };
   const mixes: Capability = { name: 'Mixes', kind: track.kind, words: track.words };
-  const stems: Capability = UNREACHABLE.includes(status)
+  const stems: Capability = track.words === 'State unknown'
+    ? { name: 'Stems', kind: 'unavailable', words: 'State unknown' }
+    : UNREACHABLE.includes(status)
     ? { name: 'Stems', kind: 'unavailable', words: 'Not split: mixes can’t use this song' }
     : status === 'needs_attention'
       ? { name: 'Stems', kind: 'unavailable', words: 'Not split until it can be analysed' }

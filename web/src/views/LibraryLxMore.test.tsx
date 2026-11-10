@@ -120,7 +120,7 @@ describe('LX-0344-04 one stable primary action per row, the rest in one menu', (
     expect(within(actions).getByRole('button', { name: primary })).toBeInTheDocument();
     await userEvent.click(within(actions).getByRole('button', { name: 'More actions for Only' }));
     const menu = screen.getByRole('menu');
-    expect(within(menu).getAllByRole(/menuitem/).length).toBeGreaterThan(0);
+    expect([...within(menu).queryAllByRole('menuitem'), ...within(menu).queryAllByRole('menuitemcheckbox')].length).toBeGreaterThan(0);
   });
 });
 
@@ -132,7 +132,7 @@ describe('LX-0348-02, LX-0348-06, LX-0349-01 the song sheet reads facts first, t
     show();
     await userEvent.click(await screen.findByRole('button', { name: 'Details for First' }));
     const sheet = screen.getByRole('dialog', { name: 'First' });
-    const facts = sheet.querySelector('dl.song-facts') as HTMLElement;
+    const facts = sheet.querySelector('dl.song-facts:not(.song-capabilities)') as HTMLElement;
     const firstField = within(sheet).getByRole('spinbutton', { name: /Tempo/ });
     expect(facts.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(facts).getByText('Tempo in use')).toBeInTheDocument();

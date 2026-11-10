@@ -20,7 +20,7 @@ const API = __ENV.API;
 const PHASE = "8m";
 const customers = new SharedArray("customers", () => JSON.parse(open(__ENV.TOKENS || "tokens.json")));
 const staff = new SharedArray("staff", () => JSON.parse(open(__ENV.STAFF || "staff.json")));
-const customerLatency = Trend("customer_latency_ms", true);
+const customerLatency = new Trend("customer_latency_ms", true);
 
 const ADMIN_PAGES = [
   "/api/admin/overview",
@@ -31,7 +31,7 @@ const ADMIN_PAGES = [
   "/api/admin/security",
   "/api/admin/flags",
 ];
-const CUSTOMER_READS = ["/api/account", "/api/assets", "/api/jobs"];
+const CUSTOMER_READS = ["/api/account", "/api/assets", "/api/account/lucy"];
 
 export const options = {
   scenarios: {

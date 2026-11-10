@@ -33,6 +33,19 @@ Users complete the named journey with clear action consequences, predictable con
 7. **UF-0377-07 - Ensure inspector and player parity.** **Acceptance:** Details overlay does not lose focus or obscure player at zoom. **Required verification:** Mobile/keyboard test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **UF-0377-08 - Record real integration deltas.** **Acceptance:** Only changes not owned by LX get a UF implementation task; update statuses independently. **Required verification:** Source-to-ADR review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
+## LX crosswalk and real integration deltas (UF-0377-01 and UF-0377-08, recorded 2026-11-10)
+
+Library design and behaviour belong to LX-0340 to LX-0352 and are not restated here as missing. Only the deltas below were UF's own:
+
+| UF task | LX / earlier owner | Classification | Proof |
+|---|---|---|---|
+| UF-0377-02 exact recording ID | LX-0340-05, LX-0344-01, LX-0345-03, GP-0258 | already satisfied | `web/e2e/lx-library.e2e.ts` LX-0340-05, `web/src/views/gp-0258-batch.test.tsx` |
+| UF-0377-03 search URL and Back | LX-0342-02, LX-0343-03 | already satisfied | `web/e2e/lx-library.e2e.ts` LX-0342-02, `web/src/router.test.tsx` "remembers filters in the address, without adding to Back" |
+| UF-0377-04 readiness counts | ADR-0227, LX-0341 | UF delta: one canonical count across Library, Make a Mix and Workspace | `web/src/views/readinessCounts.test.tsx` |
+| UF-0377-05 loaded batch selection | LX-0347, GP-0258 | already satisfied | `web/src/views/gp-0258-batch.test.tsx` "sends exactly the selected IDs", `web/e2e/lx-library.e2e.ts` LX-0347-04 |
+| UF-0377-06 collection scale | LX-0350, MP-0291-07 | verification only (named-device benchmark needs a person) | `web/e2e/mp-0291-library.e2e.ts` MP-0291-07 (20,000 songs, lab) |
+| UF-0377-07 inspector and player parity | LX-0348, LX-0351 | UF delta: 400% zoom focus and player reachability | `web/e2e/uf-creation-entry.e2e.ts` UF-0377-07 |
+
 ## Verification and release boundaries
 
 Compare baseline/candidate at the same route, viewport, theme, density, fixture, current player/revision and scroll. Test Light/Dark/System/forced-colours, 320–3840px, short landscape, 200/400% zoom, keyboard/touch/AT and reduced motion where relevant. Synthetic muted browser tests and screenshots alone do not prove real-audio quality, independent accessibility acceptance or user comprehension.

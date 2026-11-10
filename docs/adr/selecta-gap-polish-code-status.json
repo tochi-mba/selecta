@@ -2,10 +2,10 @@
   "schema_version": 1,
   "programme": "Selecta gap-focused UI/UX polish",
   "baseline_main_sha": "2956bc47fd735339e7216e03d27817fb3a31e92b",
-  "as_of": "2026-11-08",
+  "as_of": "2026-11-10",
   "scope": "GP-0248-01 through GP-0263-08",
   "decision": "16 Proposed; owner acceptance pending",
-  "implementation_status": "128 Not started; 0 In progress; 0 Implemented",
+  "implementation_status": "82 Not started; 2 In progress; 44 Implemented",
   "independent_verification": "0 Verified",
   "status_scope_note": "New acceptance deltas, not missing source features. Earlier programmes unchanged.",
   "groups": {
@@ -30,13 +30,14 @@
     },
     "0249": {
       "decision": "Accepted",
-      "implemented": [],
+      "implemented": [
+        "04"
+      ],
       "in_progress": [],
       "not_started": [
         "01",
         "02",
         "03",
-        "04",
         "05",
         "06",
         "07",
@@ -49,14 +50,15 @@
     },
     "0250": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
+        "05"
+      ],
+      "in_progress": [],
+      "not_started": [
         "04",
-        "05",
         "06",
         "07",
         "08"
@@ -125,16 +127,17 @@
     },
     "0254": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
-        "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "05",
         "08"
       ],
       "independently_verified": [],
@@ -144,16 +147,18 @@
     },
     "0255": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
-        "01",
+      "implemented": [
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "01"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
@@ -163,16 +168,17 @@
     },
     "0256": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
@@ -182,16 +188,18 @@
     },
     "0257": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
-        "01",
+      "implemented": [
         "02",
         "03",
+        "06",
+        "07"
+      ],
+      "in_progress": [
+        "01"
+      ],
+      "not_started": [
         "04",
         "05",
-        "06",
-        "07",
         "08"
       ],
       "independently_verified": [],
@@ -201,16 +209,17 @@
     },
     "0258": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
-        "01",
+      "implemented": [
         "02",
         "03",
         "04",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "01",
         "05",
         "06",
-        "07",
         "08"
       ],
       "independently_verified": [],
@@ -258,16 +267,17 @@
     },
     "0261": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
@@ -277,14 +287,15 @@
     },
     "0262": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
-        "03",
         "04",
-        "05",
+        "05"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "03",
         "06",
         "07",
         "08"
@@ -296,12 +307,13 @@
     },
     "0263": {
       "decision": "Accepted",
-      "implemented": [],
+      "implemented": [
+        "03"
+      ],
       "in_progress": [],
       "not_started": [
         "01",
         "02",
-        "03",
         "04",
         "05",
         "06",

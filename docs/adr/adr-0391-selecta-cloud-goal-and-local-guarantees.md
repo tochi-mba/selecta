@@ -1,7 +1,7 @@
 # ADR-0391 - Selecta Cloud becomes a goal; local-only guarantees are scoped to local mode
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 2/4 Implemented; 0/4 In progress; 2/4 Not started.
+- **Implementation:** 4/4 Implemented; 0/4 In progress; 0/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 0. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -31,11 +31,11 @@ A local user notices nothing: same first run, same copy, same privacy promises. 
 - Rewriting or superseding each older ADR one by one (hundreds of edits, high risk of drift).
 - Dropping the local app (the owner chose to keep both).
 
-## Implementation checklist - 2/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 4/4 Implemented; 0/4 In progress; 0/4 Not started; 0/4 independently Verified
 
 1. **SC-0391-01 - Programme entry.** **Acceptance:** `docs/adr/README.md` lists the Selecta Cloud programme and states local guarantees are unchanged. **Required verification:** Doc review. **Implementation:** Implemented. **Evidence:** `docs/adr/README.md`; `docs/saas/README.md`. **Independently Verified:** No.
 2. **SC-0391-02 - Guarantee list per mode.** **Acceptance:** A table of local-mode and cloud-mode guarantees exists and is linked from both READMEs. **Required verification:** Doc review. **Implementation:** Implemented. **Evidence:** `README.md`; `docs/adr/README.md`; `docs/saas/README.md#guarantees-by-runtime-mode`. **Independently Verified:** No.
-3. **SC-0391-03 - Local copy unchanged.** **Acceptance:** Local-mode user-facing text about privacy is unchanged by cloud work. **Required verification:** Playwright local-mode suite passes unchanged. **Implementation:** In progress; local privacy wording is pinned word for word against a22571d, the last main commit before the programme; the only addition is the lyrics-lookup-off variant of the glossary privacy term, which only drops the LRCLIB sentence; waits for a green CI run of the local suites. **Evidence:** `web/src/localPrivacyCopy.test.ts` (5 passed locally); `web/src/copy.test.ts`. **Independently Verified:** No.
+3. **SC-0391-03 - Local copy unchanged.** **Acceptance:** Local-mode user-facing text about privacy is unchanged by cloud work. **Required verification:** Playwright local-mode suite passes unchanged. **Implementation:** Implemented; local privacy wording is pinned word for word against a22571d, the last main commit before the programme; the only addition is the lyrics-lookup-off variant of the glossary privacy term, which only drops the LRCLIB sentence; the local Playwright suite passes unchanged in CI. **Evidence:** `web/src/localPrivacyCopy.test.ts` (5 passed locally on 2026-11-10); `web/src/copy.test.ts`; CI run 42891954111 (2026-11-10, current main merged with a web dependency bump: Edge E2E 1/2 and 2/2, Web unit tests, Python shards and verify all success). **Independently Verified:** No.
 4. **SC-0391-04 - Mode-aware privacy test.** **Acceptance:** `web/e2e/pages.e2e.ts` keeps 'only talks to this computer' in local mode and checks an origin allowlist in cloud mode. **Required verification:** Both e2e modes in CI. **Implementation:** Implemented; the local check stays in `web/e2e/pages.e2e.ts` (Edge E2E job); the cloud origin allowlist check is its cloud-suite twin in `web/e2e-cloud/live.cloud.ts` (Cloud E2E job), because the cloud config only runs e2e-cloud specs; both jobs are required by verify. **Evidence:** `web/e2e/pages.e2e.ts` 'the page only ever talks to this computer'; `web/e2e-cloud/live.cloud.ts` 'the cloud site only talks to its allowlisted origins'; `.github/workflows/test.yml` jobs browser and cloud-browser; CI run 42804446112 (Edge E2E 1/2, 2/2 and Cloud E2E (Linux): success); both rerun locally on 2026-11-10. **Independently Verified:** No.
 
 ## Governance

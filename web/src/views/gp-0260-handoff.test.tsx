@@ -80,7 +80,7 @@ describe('GP-0260-02/03 the add names the exact ordered pair, its target and its
     fireEvent.click(await screen.findByRole('button', { name: 'Add both to…' }));
     expect(screen.getByRole('menuitem', { name: 'Your current mix' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sunday' }));
-    await waitFor(() => expect(shown.notify).toHaveBeenCalledWith('Added “tonight” to Sunday. What’s playing hasn’t changed.'));
+    await waitFor(() => expect(shown.notify).toHaveBeenCalledWith('Added “tonight” to Sunday. What’s playing hasn’t changed.', expect.any(Function)));
     expect(calls.some((call) => call.path === '/mix?draft=3')).toBe(true);
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/mix/pair?draft=3', expect.objectContaining({ headers: expect.objectContaining({ 'x-mix-order': '8' }) }));
     expect(shown.setMixData).not.toHaveBeenCalled();

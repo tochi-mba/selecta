@@ -1,5 +1,5 @@
 import { expect, Locator, Page, test } from '@playwright/test';
-import { resetMix } from './helpers';
+import { resetMix, soundsStarted, spyOnAudio } from './helpers';
 
 /** UF-0376-08 and UF-0377-07: Make a Mix cards keep their facts and safe touch targets on a phone, and
  * the Library's song details neither lose focus nor hide the player at a 400% zoom equivalent. */
@@ -91,4 +91,20 @@ test('UF-0377-07 song details keep focus and leave the player usable at 320px (4
   await expect(pause).toBeVisible();
   expect(await uncovered(pause)).toBe(true);
   await noSidewaysScroll(page);
+});
+
+test('UF-0372-05 opening the app, Make a Mix, Listen and Library never starts music by itself', async ({ page }) => {
+  await spyOnAudio(page);
+  for (const address of ['/', '/mixes', '/listen', '/library']) {
+    await page.goto(address);
+    await expect(page.locator('main#main')).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(1500);
+    expect(await soundsStarted(page), `${address} started a sound`).toBe(0);
+  }
+  // Play is offered on Make a Mix because the made-up library has ready songs, and it waits to be pressed
+  await page.goto('/mixes');
+  const play = page.locator('.mix-quick').getByRole('button', { name: 'Play', exact: true });
+  await expect(play).toBeEnabled({ timeout: 30_000 });
+  await page.waitForTimeout(1000);
+  expect(await soundsStarted(page)).toBe(0);
 });
