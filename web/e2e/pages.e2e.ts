@@ -94,7 +94,7 @@ test('dialogs and drawers pass the automatic accessibility checks too', async ({
     found.push(...(await check(`export at ${width}`)));
 
     await page.goto('/mixes');
-    await page.getByRole('button', { name: 'Customize' }).click();
+    await page.getByRole('button', { name: /^Customize:/ }).click();
     await expect(page.getByRole('dialog').first()).toBeVisible();
     found.push(...(await check(`customize at ${width}`)));
 

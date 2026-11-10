@@ -308,7 +308,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
 export function AddGap({ title, landsAt, onAdd }: { title: string; landsAt: number; onAdd: () => void }) {
   return (
     <li className="add-gap">
-      <button onClick={onAdd} aria-label={`Add a song after ${title}`} title={`Add a song here, as number ${landsAt}`}>
+      <button onClick={onAdd} aria-label={`Add a song after ${title}; Add a song as number ${landsAt}`} title={`Add a song here, as number ${landsAt}`}>
         <Icon name="plus" width={16} height={16} /> Add a song <small aria-hidden="true">as number {landsAt}</small>
       </button>
     </li>
