@@ -1,0 +1,108 @@
+{
+  "uid": "selecta-slo-seam_start_latency",
+  "title": "SLO: Interactive seam start p95 under 10 s",
+  "tags": [
+    "selecta",
+    "slo"
+  ],
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus"
+      }
+    ]
+  },
+  "links": [
+    {
+      "title": "Runbook",
+      "url": "https://github.com/tochi-mba/selecta/blob/main/docs/operations/slo-seam-start.md"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "SLI (objective 95.000%)",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(traces_spanmetrics_latency_bucket{service=\"selecta-gateway\", span_name=\"job.wait\", selecta_lane=\"interactive\", le=\"10\"}[5m]))) / (sum(rate(traces_spanmetrics_latency_count{service=\"selecta-gateway\", span_name=\"job.wait\", selecta_lane=\"interactive\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Error budget left over 28d",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - ((1 - ((sum(rate(traces_spanmetrics_latency_bucket{service=\"selecta-gateway\", span_name=\"job.wait\", selecta_lane=\"interactive\", le=\"10\"}[28d]))) / (sum(rate(traces_spanmetrics_latency_count{service=\"selecta-gateway\", span_name=\"job.wait\", selecta_lane=\"interactive\"}[28d]))))) / 0.05)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Burn rate (1h and 6h)",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "selecta:slo_error_ratio:1h{slo=\"seam_start_latency\"} / 0.05"
+        }
+      ]
+    }
+  ]
+}

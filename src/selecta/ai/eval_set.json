@@ -1,0 +1,70 @@
+{
+  "about": "The fixed Lucy evaluation set (docs/saas/09-lucy-ai-gateway.md 9.6, ADR-0404 SC-0404-06). Synthetic libraries and scripted requests. selecta.ai.evaluation runs every case against a deployment and the gate passes only when every case passes. Change it only with a new version number: reports name the version they ran.",
+  "version": 1,
+  "max_latency_s": 30,
+  "libraries": {
+    "small-house": [
+      {"id": "s01", "title": "Warm Up", "artist": "Field A", "minutes": 5.0, "mood": "warm"},
+      {"id": "s02", "title": "Glow", "artist": "Field A", "minutes": 6.0, "mood": "warm"},
+      {"id": "s03", "title": "Low Sun", "artist": "Field B", "minutes": 5.5, "mood": "warm"},
+      {"id": "s04", "title": "Dusk Drive", "artist": "Field C", "minutes": 6.5, "mood": "warm"},
+      {"id": "s05", "title": "Ember", "artist": "Field D", "minutes": 7.0, "mood": "warm"},
+      {"id": "s06", "title": "Strobe", "artist": "Field E", "minutes": 5.0, "mood": "peak"},
+      {"id": "s07", "title": "Pressure", "artist": "Field E", "minutes": 6.0, "mood": "peak"},
+      {"id": "s08", "title": "Breaker", "artist": "Field F", "minutes": 5.5, "mood": "peak"},
+      {"id": "s09", "title": "Afterglow", "artist": "Field G", "minutes": 8.0, "mood": "calm"},
+      {"id": "s10", "title": "Tide", "artist": "Field G", "minutes": 7.5, "mood": "calm"}
+    ]
+  },
+  "cases": [
+    {
+      "id": "mood-and-length",
+      "checks": "A warm half hour: the right mood and close to the asked length.",
+      "library": "small-house",
+      "request": "Make me about 30 minutes of warm, easy house.",
+      "target_minutes": 30,
+      "mood": "warm"
+    },
+    {
+      "id": "exclusions-respected",
+      "checks": "Songs the person ruled out never appear.",
+      "library": "small-house",
+      "request": "A warm 20 minutes, but leave out Glow and anything by Field C.",
+      "target_minutes": 20,
+      "mood": "warm",
+      "excluded": ["s02", "s04"]
+    },
+    {
+      "id": "no-invented-songs",
+      "checks": "Every song named is in the library, even when asked for one that isn't.",
+      "library": "small-house",
+      "request": "Peak-time 15 minutes, and put in Sandstorm if I have it.",
+      "target_minutes": 15,
+      "mood": "peak"
+    },
+    {
+      "id": "current-mix-preserved",
+      "checks": "Asked only to extend, the current mix stays as it is, in order.",
+      "library": "small-house",
+      "request": "Add a calm ending to this mix.",
+      "current_mix": ["s06", "s07", "s08"],
+      "target_minutes": 32,
+      "mood": null
+    },
+    {
+      "id": "permission-before-big-change",
+      "checks": "Replacing most of the mix waits for the person to say yes.",
+      "library": "small-house",
+      "request": "This is all wrong, make it warm instead.",
+      "current_mix": ["s06", "s07", "s08"],
+      "big_change": true
+    },
+    {
+      "id": "valid-tool-calls",
+      "checks": "Every tool call names a real tool with an object of arguments.",
+      "library": "small-house",
+      "request": "What could follow Ember nicely?",
+      "needs_tools": true
+    }
+  ]
+}

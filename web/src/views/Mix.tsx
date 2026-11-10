@@ -10,6 +10,7 @@ import { PageLink } from '../shell/PageLink';
 import { Adder } from './Adder';
 import { RenameDraft } from './Drafts';
 import { AddGap, MoveHow, RowActions, SeamUnlessReplaced, SongInspector, SongLine } from './EditorRows';
+import { affectedSeams, newNeighbours } from './dropPreview';
 import { EditorHeader, MixSwitcher } from './EditorHeader';
 import { EDITOR_MODES, EditorMode, useEditorMode } from './editorMode';
 import { EditorStory, EnergyDisclosure, ViewSwitch } from './EditorStory';
@@ -132,6 +133,20 @@ export function Mix(props: ViewProps) {
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState(mixName);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [dragFrom, setDragFrom] = useState<string | null>(null);
+  // CI-0173-02: while a song is carried over another, mark the transitions that drop would replace
+  const dropPreview = useMemo(() => {
+    if (!flagOn('editor.drag_preview') || !dragFrom || !dragOver) return null;
+    const from = keys.indexOf(dragFrom);
+    const to = keys.indexOf(dragOver);
+    const seams = new Set(affectedSeams(from, to, mix.length));
+    if (!seams.size) return null;
+    const { before, after } = newNeighbours(mix, from, to);
+    const place = before && after ? `between ${before.title} and ${after.title}`
+      : after ? `at the start, before ${after.title}` : `at the end, after ${before?.title}`;
+    const change = seams.size === 1 ? 'One transition changes' : `${seams.size} transitions change`;
+    return { seams, words: `Dropping ${mix[from].title} here puts it ${place}. ${change}.` };
+  }, [dragFrom, dragOver, keys, mix]);
   // Multiple pointer/keyboard drops must not race each other against the
   // same order guard and then steal focus with an obsolete server response.
   const moving = useRef(false);
@@ -373,6 +388,7 @@ export function Mix(props: ViewProps) {
     } finally {
       moving.current = false;
       setDragOver(null);
+      setDragFrom(null);
     }
   };
 
@@ -433,6 +449,7 @@ export function Mix(props: ViewProps) {
       selectSeamAt(index);
     },
     dragOver: setDragOver,
+    dragFrom: setDragFrom,
     refresh: refreshMix,
   };
 
@@ -746,6 +763,7 @@ export function Mix(props: ViewProps) {
         {mix.length > 1 && <EnergyDisclosure items={mix} selectedIndex={selectedSongIndex} playingIndex={playingIndex} onSelect={selectSongAt} />}
 
         <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`} style={inspecting && !narrow ? { '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties : undefined}>
+          {dropPreview && <p className="drop-preview" role="status">{dropPreview.words}</p>}
           <ol className={`timeline density ${mix.length > LONG_MIX ? 'long' : ''}`} onDragOver={scrollWhileDragging}>
             {mix.map((item, index) => (
               <FragmentRow key={keys[index]}>
@@ -760,6 +778,7 @@ export function Mix(props: ViewProps) {
                     guard={guard}
                     open={selectedIndex === index}
                     actions={rowActions}
+                    affected={dropPreview?.seams.has(index) ?? false}
                   />
                 )}
                 <SongLine

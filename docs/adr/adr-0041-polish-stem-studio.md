@@ -1,7 +1,7 @@
 # ADR-0041: Readable Stem Studio grid, audition ownership and explicit commit state
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-10 reconciliation: 4 of 9 tasks ticked (P0082, P0083, P0085, P0086), 3 implemented but not verified in the browser, P0087 and P0088 need a person. See the [evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 4 - Editing and Stem Studio

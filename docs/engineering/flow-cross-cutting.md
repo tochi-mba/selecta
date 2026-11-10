@@ -105,9 +105,55 @@ Only these modules may open outbound connections:
 | `src/selecta/lucy/providers.py` | The AI provider the person configured | Lucy conversation and the mix facts it needs | Only when Lucy is set up and used |
 | `src/selecta/analysis/key.py` | GitHub raw (S-KEY weights, pinned commit) | Nothing but the download request | First key analysis without cached weights |
 | Cloud-only: `src/selecta/billing/webhooks.py`, `src/selecta/identity/tokens.py`, `src/selecta/identity/workos.py`, `src/selecta/identity/deletion_effects.py`, `src/selecta/storage/r2.py`, `src/selecta/workers/remote.py` | Cloud services | Cloud mode only (ADR-0391, ADR-0392) | Never in local mode |
+| Cloud image build only: `src/selecta/workers/model_lock.py` | The pinned model URLs in `services/worker/models.lock.json` | Nothing but the download request; each file is checked against its SHA-256 | Only when the Cloud worker image is built (ADR-0396); never at run time or in local mode |
 
 Local files: original music is only read; analysis, stems, renders and exports go under the Selecta
 home (`SELECTA_HOME`, default `~/.selecta`). No module changes file permissions.
 Proof: `tests/test_flow_cross_cutting.py` (egress allowlist and local bind),
 `web/e2e/pages.e2e.ts` ("the page only ever talks to this computer"),
 `web/e2e/finishing.e2e.ts` ("a first run says what leaves this PC before anything is sent").
+
+## Breakpoint behaviour per scene (SF-0233-01)
+
+Widths are the `max-width` media queries in the owning stylesheets; heights are `max-height`.
+Every row is exercised by `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` ("MP-0298-01 every page
+holds from 320 to 3840px, at both sides of 620 and 760, and in short landscape").
+
+| Scene | Wide (over 1040px) | 1040px and below | 760px and below | 620px and below | Short height | Owner |
+|---|---|---|---|---|---|---|
+| Shell and navigation | Side rail (`min-width: 761px`) | Side rail | Bottom bar; Request becomes an icon; drawers and sheets rise from the bottom at full width | Same | Dialogs start at the top and fit the window (`max-height: 520px`); with an on-screen keyboard up, overlays pad by `--keyboard-inset` | `web/src/styles/shell.css` |
+| Listen | Stage and side column | One column; side column stops being sticky | Song identity, transport, then display options in that order | Mini-player requests compact at 420px | Transport stays fixed | `web/src/styles/listening.css` |
+| Make a Mix ideas | Three cards a row | Two cards a row | Two cards a row | One card a row | Scrolls | `web/src/styles/listening.css` |
+| Mix editor and inspector | Timeline with the inspector beside it | Inspector below the timeline | Editor actions in a two-column grid, primary action full width | Song rows wrap their actions under the title | Scope bar stops being sticky (`max-height: 420px`) | `web/src/styles/creation.css`, `web/src/styles/shell.css`, `web/src/styles/typography.css` |
+| Library | Column headers over rows | Headers hidden, actions beside facts (`max-width: 1024px`) | Same | One column: name, facts, readiness, actions | Scrolls | `web/src/styles/operations.css` |
+| Requests and Workshop | Rows with status beside | Same | Same | Request status moves under the song at 520px; job rows stack at 560px | Scrolls | `web/src/style.css`, `web/src/styles/shell.css` |
+
+## Feature parity: each capability's tested journey (SF-0247-05)
+
+Each capability row in `docs/adr/selecta-flow-feature-parity.md` names its source there; this table
+names the end-to-end journey that proves it still works. `tests/test_flow_cross_cutting.py` checks
+every capability is listed and every test named exists in its file.
+
+| Capability | Tested journey |
+|---|---|
+| All navigation/scene routes | `web/e2e/pages.e2e.ts` "Back and Forward go where they should" |
+| Player and manual Pause | `web/e2e/listen.e2e.ts` "Pause stops the clock, and Resume carries on from the same place" |
+| Listen and current song identity | `web/e2e/listen.e2e.ts` "moving around the app leaves the music alone, and the mini-player follows" |
+| Fifteen spectrum styles | `web/e2e/creative-visualizers.e2e.ts` "all thirteen additional horizontal visualizers are selectable without restarting real audio" |
+| Mix idea selection | `web/e2e/mp-0283-make-a-mix.e2e.ts` "MP-0283-07 saving, building and a failure keep each card its size, and what is playing keeps playing" |
+| Energy shaping | `web/e2e/mp-0283-make-a-mix.e2e.ts` "MP-0283-06 Shape groups energy, length and song count, with Done and Escape to leave" |
+| Track and seam editor | `web/e2e/flows.e2e.ts` "editing: move with the buttons, undo it, and remove a song" |
+| Transition preview | `web/e2e/listen.e2e.ts` "a preview takes the sound, and gives it back when it’s done" |
+| Stem Studio | `web/e2e/finishing.e2e.ts` "the full Studio grid works at the smallest size: it scrolls by itself, and the keyboard can reach all of it" |
+| Requests | `web/e2e/flows.e2e.ts` "requests: asking, then seeing it find a place, and cancelling for good" |
+| Library at scale | `web/e2e/mp-0291-library.e2e.ts` "MP-0291-07 a 20,000-song library pages, searches and keeps focus without jumping" |
+| Song metadata and repairs | `web/e2e/flows.e2e.ts` "the Library: search, song details, a correction that can be put back" |
+| Current mix vs drafts | `web/e2e/integration.e2e.ts` "editing a draft while the current mix plays: neither touches the other, and Undo knows which is which" |
+| First-run setup | `web/e2e/finishing.e2e.ts` "the first run says which stage it’s at, from what the server says, and each can go wrong on its own" |
+| Workshop operations | `web/e2e/flows.e2e.ts` "Workshop tells the truth about what’s running, and diagnostics hold nothing private" |
+| Frozen FLAC export | `web/e2e/flows.e2e.ts` "saving a mix as an audio file makes a real FLAC" |
+| Human comparison studies | `web/e2e/flows.e2e.ts` "the listening test: nothing gives away which is which, and a failed send can be retried" |
+| Themes and user preferences | `web/e2e/finishing.e2e.ts` "changing the theme while playing starts nothing again, and the title bar follows" |
+| Keyboard/AT/responsive | `web/e2e/flows.e2e.ts` "keyboard alone gets from the top of the page to the content, and dialogs give focus back" |
+| Performance and recovery | `web/e2e/flows.e2e.ts` "it says so, keeps what’s on screen, and recovers by itself" |
+| Privacy and source safety | `web/e2e/pages.e2e.ts` "the page only ever talks to this computer" |

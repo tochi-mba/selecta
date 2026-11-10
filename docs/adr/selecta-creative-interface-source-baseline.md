@@ -83,7 +83,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0172-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0172-07 | person | Needs a person: observed audition, edit and compare task |
 | CI-0173-01 | person | Needs a person: full-density and 320px specimen review of song blocks and seam links |
-| CI-0173-02 | open | In progress: the drop target is marked (.song.over in web/src/views/EditorRows.tsx) but the seams a move would change are not previewed |
+| CI-0173-02 | built | dropPreview.ts with dropPreview.test.tsx; flag editor.drag_preview |
 | CI-0173-03 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0173-04 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0173-05 | existing | Met by earlier code; tests named on the checklist line |
@@ -113,7 +113,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0177-01 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0177-02 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0177-03 | existing | Met by earlier code; tests named on the checklist line |
-| CI-0177-04 | open | In progress: Start a mix builds from the song (start=ID) and says “A mix starting from <title>”, but no test proves the source track is identifiable in the returned set |
+| CI-0177-04 | built | test_start_a_mix_returns_a_set_that_opens_on_the_chosen_song; Library.test.tsx start=ID build plays from 0 |
 | CI-0177-05 | open | Not started: song details show no validated related songs or candidate connections |
 | CI-0177-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0177-07 | person | Needs a person: scroll, frame and zoom measurements on a large collection and an assistive technology review |
@@ -145,8 +145,8 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0181-05 | built | Built or given a focused test on 2026-11-10 |
 | CI-0181-06 | built | Built or given a focused test on 2026-11-10 |
 | CI-0181-07 | existing | Met by earlier code; tests named on the checklist line |
-| CI-0182-01 | open | In progress: docs/adr/selecta-creative-interface-interaction-matrix.md lists interactions with data authority, reduced-motion equivalent and guard, but it has not been reconciled against every animation in the stylesheets |
-| CI-0182-02 | open | In progress: --motion-fast, --motion-slow and --motion-ease exist in web/src/styles/tokens.css, but some animations still use literal durations (style.css pending-flow and request-pulse, shell.css skeleton-breathe, lucy.css lucy-slide) |
+| CI-0182-01 | built | animation ownership table in the interaction matrix; test_every_keyframe_animation_has_an_owner_states_and_interruption_rule |
+| CI-0182-02 | existing | six semantic motion tokens; loops and the clock-bound width are documented exceptions (web/src/styles/motion-tokens.test.ts) |
 | CI-0182-03 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0182-04 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0182-05 | person | Needs a person: writing and comprehension review of the musical glossary (web/src/ui/glossaryTerms.ts) |

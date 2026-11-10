@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, Page, test } from '@playwright/test';
-import { resetMix } from './helpers';
+import { audioClock, resetMix, spyOnAudio } from './helpers';
 
 /**
  * FP-0264-01/02/05/07 (ADR-0264): every functional edge in the app, measured where it actually sits.
@@ -124,6 +124,14 @@ async function measure(page: Page, state: string, theme: string): Promise<Edge[]
             candidates.push(contrast(over(colour, surface), surface));
           }
         }
+        // a state marker drawn as a box-shadow bar or ring (the selected row's inset start bar) counts too
+        for (const shadow of style.boxShadow === 'none' ? [] : style.boxShadow.split(/,(?![^(]*\))/)) {
+          const colour = parse(shadow.match(/rgba?\([^)]+\)|color\(srgb [^)]+\)/)?.[0] ?? '');
+          const lengths = [...shadow.replace(/rgba?\([^)]+\)|color\([^)]+\)/, '').matchAll(/(-?[\d.]+)px/g)].map((m) => Math.abs(Number(m[1])));
+          // crisp only (no blur), and at least 1px thick: a soft depth shadow is not a boundary
+          const crisp = lengths.length >= 3 && lengths[2] === 0 && Math.max(lengths[0], lengths[1], lengths[3] ?? 0) >= 1;
+          if (colour && colour[3] > 0 && crisp) candidates.push(contrast(over(colour, surface), surface));
+        }
         const native = (node instanceof HTMLInputElement && (node.type === 'checkbox' || node.type === 'radio')) && style.appearance !== 'none';
         const label = (node.getAttribute('aria-label') ?? (node as HTMLElement).innerText ?? node.getAttribute('name') ?? '').trim().replace(/\s+/g, ' ').slice(0, 60);
         out.push({
@@ -164,3 +172,75 @@ test('functional edges reach 3:1 against their real surfaces in Light and Dark (
   const failing = report.filter((edge) => edge.essential && edge.edge < 3);
   expect(failing, JSON.stringify(failing, null, 1)).toEqual([]);
 });
+
+/** colour helpers run in the page: the contrast of a computed colour against the surface behind a node */
+const markContrast = (page: Page, selector: string, nth: number, property: string) => page.locator(selector).nth(nth).evaluate((node, prop) => {
+  const parse = (value: string) => {
+    const rgb = value.match(/rgba?\(([^)]+)\)/);
+    if (!rgb) return null;
+    const parts = rgb[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return [parts[0] / 255, parts[1] / 255, parts[2] / 255, parts[3] ?? 1];
+  };
+  const surface = (start: Element | null): number[] => {
+    for (let at = start; at; at = at.parentElement) {
+      const colour = parse(getComputedStyle(at).backgroundColor);
+      if (colour && colour[3] >= 1) return colour.slice(0, 3);
+    }
+    return parse(getComputedStyle(document.body).backgroundColor)!.slice(0, 3);
+  };
+  const lum = (c: number[]) => c.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const style = getComputedStyle(node);
+  const colour = parse(style.getPropertyValue(prop));
+  if (!colour) return { ratio: 0, raw: style.getPropertyValue(prop), width: 0 };
+  const [hi, lo] = [lum(colour.slice(0, 3)), lum(surface(node.parentElement))].sort((a, b) => b - a);
+  return { ratio: Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100, raw: style.getPropertyValue(prop), width: Number.parseFloat(style.outlineWidth) || 0 };
+}, property);
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`focus, selection and playback stay legible together in ${theme} (FP-0264-05)`, async ({ page }) => {
+    await spyOnAudio(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/mixes');
+    await page.evaluate((chosen) => localStorage.setItem('selecta.prefs', JSON.stringify({ theme: chosen, motion: 'still' })), theme);
+
+    // Library: a selected row whose checkbox has keyboard focus keeps the selected marker and adds a focus ring
+    await page.goto('/library');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+    const boxes = page.getByRole('checkbox', { name: /^Select recording/ });
+    await boxes.nth(1).focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Space');
+    await expect(boxes.nth(1)).toBeChecked();
+    await expect(boxes.nth(1)).toBeFocused();
+    const row = page.locator('.library-rows .song-row').nth(1);
+    await expect(row).toHaveClass(/selected/);
+    const plain = await page.locator('.library-rows .song-row').nth(2).evaluate((node) => getComputedStyle(node).backgroundColor);
+    const look = await row.evaluate((node) => ({ shadow: getComputedStyle(node).boxShadow, background: getComputedStyle(node).backgroundColor }));
+    expect(look.shadow, 'selected marker').toContain('inset');
+    expect(look.background, 'selected surface').not.toBe(plain);
+    const ring = await markContrast(page, '.library-rows .library-batch-check', 1, 'outline-color');
+    expect(ring.width, 'focus ring on a selected row').toBeGreaterThanOrEqual(2);
+    expect(ring.ratio, `focus ring ${ring.raw}`).toBeGreaterThanOrEqual(3);
+
+    // Editor: the playing song, also selected, with the keyboard on it, keeps all three marks
+    await page.goto('/listen');
+    await page.getByRole('button', { name: /^(Play|Resume from)/ }).first().click();
+    await expect.poll(async () => (await audioClock(page))[0] ?? 0).toBeGreaterThan(0.2);
+    await page.goto('/mix/current/edit');
+    const current = page.locator('.timeline > .song').first();
+    await expect(current).toHaveClass(/playing/);
+    await expect(current.locator('.story-tag.playing')).toHaveText(/Playing now/);
+    await current.locator('.song-select').click();
+    await expect(current).toHaveClass(/selected/);
+    await current.locator('.grip').focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    const focused = await page.evaluate(() => document.activeElement?.closest('.timeline > .song') !== null);
+    if (!focused) await current.locator('.grip').focus();
+    expect(await current.evaluate((node) => getComputedStyle(node).boxShadow), 'selected and playing keep two marks').toContain(',');
+    const editorRing = await markContrast(page, ':focus-visible, :focus', 0, 'outline-color');
+    expect(editorRing.width, 'keyboard focus on the playing, selected song').toBeGreaterThanOrEqual(2);
+    expect(editorRing.ratio, `editor focus ring ${editorRing.raw}`).toBeGreaterThanOrEqual(3);
+  });
+}

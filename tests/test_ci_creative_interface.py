@@ -92,3 +92,42 @@ def test_crosswalk_lists_every_ci_task_once_and_matches_the_checklist():
     for task, disposition, _note in rows:
         assert disposition in {"existing", "built", "open", "person"}, task
         assert (task in ticked) == (disposition in {"existing", "built"}), task
+
+
+# CI-0182-01: every animation the stylesheets run has a data owner, states and an interruption rule.
+MATRIX = ROOT / "docs/adr/selecta-creative-interface-interaction-matrix.md"
+
+
+def test_every_keyframe_animation_has_an_owner_states_and_interruption_rule():
+    import re
+
+    rows = _table_rows(MATRIX.read_text(encoding="utf-8"), "| Animation | Source | Data owner |")
+    named = {}
+    for animation, source, owner, states, interruption in rows:
+        assert len(owner) > 15 and len(states) > 3 and len(interruption) > 20, animation
+        path = source.strip("`")
+        assert (ROOT / path).is_file(), f"{animation}: {path} is missing"
+        named[animation.strip("`")] = path
+    sheets = [*(ROOT / "web/src").glob("*.css"), *(ROOT / "web/src/styles").glob("*.css")]
+    keyframes = {name for sheet in sheets for name in re.findall(r"@keyframes\s+([\w-]+)", sheet.read_text(encoding="utf-8"))}
+    assert len(keyframes) >= 10
+    assert keyframes - set(named) == set(), "keyframes with no owner row"
+    for clock_mark in ("Hand-over progress width", "Spectrum canvas", "Lyric focus"):
+        assert clock_mark in named
+
+
+# CI-0177-04: Start a mix from a song puts that exact song first, once, in the set it returns, so the
+# source track is identifiable; the site then plays from position 0 and names it.
+def test_start_a_mix_returns_a_set_that_opens_on_the_chosen_song(tmp_path):
+    from mix_helpers import _vibe_library
+
+    from selecta.planner.vibes import BY_KEY, build_vibe, eligible
+
+    songs, traits = _vibe_library(tmp_path)
+    vibe = BY_KEY["pick"]
+    fits = eligible(vibe, songs, traits)
+    for chosen in (fits[0], fits[len(fits) // 2], fits[-1]):
+        planned, _ = build_vibe(vibe, songs, traits, {}, 8, chosen.id, seed=3)
+        ids = [item.song.id for item in planned]
+        assert ids[0] == chosen.id
+        assert ids.count(chosen.id) == 1

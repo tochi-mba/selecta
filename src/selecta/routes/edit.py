@@ -107,6 +107,14 @@ def add_routes(app, ctx) -> None:
     @app.post("/api/mix/move")
     def move_song(body: MoveRequest, draft: int | None = None) -> dict:
         with connect() as conn:
+            if flags.on("editor.locks"):
+                held = mix.locked_in_the_way(conn, body.source, body.target, draft)
+                if held is not None:
+                    raise HTTPException(
+                        409,
+                        f"Song {held + 1} is locked, so it stays where it is and nothing moved. "
+                        "Unlock it first to move songs past it.",
+                    )
             mix.remember(conn, "moving that song", draft)
             mix.move_song(conn, body.source, body.target, draft)
             return mix_payload(conn, draft)

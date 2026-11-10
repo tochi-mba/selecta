@@ -185,3 +185,52 @@ describe('LX-0363-06 provider facts before anything is sent', () => {
     expect(within(consent).getByRole('checkbox', { name: /I agree to send exactly this to/ })).not.toBeChecked();
   });
 });
+
+describe('LX-0361-07 looking at an older revision never moves the scope', () => {
+  it('keeps the second of two identical songs asked about through viewing, comparing and coming back', async () => {
+    const current = { ...revision, number: 2 };
+    const older = {
+      ...revision, id: 'rev_old', number: 1, summary: 'first try',
+      snapshot: { ...revision.snapshot, revision: 'rev_old', number: 1, songs: [songs[2], songs[0]], seams: [] },
+    };
+    const snap = snapshotOf('cv_1', 'Sunday');
+    snap.proposal = {
+      id: 'prop_1', current,
+      history: [
+        { ...older, snapshot: undefined, songs: 2, title: 'Sunday mix', ready_only: false, current: false },
+        { ...current, snapshot: undefined, songs: 3, title: 'Sunday mix', ready_only: false, current: true },
+      ],
+    } as never;
+    const calls = fakeBackend({
+      'GET /lucy/status': status(),
+      'GET /lucy/conversations': { conversations: [conversation('cv_1', 'Sunday')] },
+      'GET /lucy/conversations/cv_1': snap,
+      'GET /lucy/conversations/cv_1/events.json': { events: [], gap: false, cursor: 10 },
+      'GET /lucy/revisions/rev_1': current,
+      'GET /lucy/revisions/rev_old': older,
+      'GET /lucy/revisions/rev_1/readiness': { seams: [], ready: 0, needed: 2, playable_now: false, checked_at: '' },
+      'GET /lucy/revisions/rev_old/readiness': { seams: [], ready: 0, needed: 1, playable_now: false, checked_at: '' },
+      'GET /lucy/revisions/rev_old/diff': {
+        songs: [], removed: [], counts: { added: 1, removed: 0, replaced: 0, moved: 1, kept: 1 }, seams_changed: [], rules_changed: [],
+      },
+      'POST /lucy/conversations/cv_1/turns': { turn: { id: 'turn_2', seq: 3, status: 'queued' }, new: true, run: 'run_2' },
+    });
+    render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
+    await userEvent.click(await screen.findByRole('tab', { name: 'Your mix' }));
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Ask about Twice' }))[1]);
+    await userEvent.click(screen.getByRole('tab', { name: 'Your mix' }));
+    // open the older revision, where the same recording sits in a different place, and compare
+    await userEvent.click(screen.getByRole('button', { name: /^Revision 2/ }));
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Revision 1/ }));
+    expect(await screen.findByText('You’re looking at revision 1.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Compare with current' }));
+    expect(await screen.findByText(/Compared with revision 2/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Back to the current one' }));
+    const asks = await screen.findAllByRole('button', { name: 'Ask about Twice' });
+    expect(asks.map((ask) => ask.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    await userEvent.click(screen.getByRole('tab', { name: 'Chat' }));
+    await userEvent.type(await box(), 'make this one calmer{Enter}');
+    await waitFor(() => expect(calls.some((call) => call.path.endsWith('/turns'))).toBe(true));
+    expect((calls.find((call) => call.path.endsWith('/turns'))?.body as { selection: unknown }).selection).toEqual({ occurrence: 'occ_c' });
+  });
+});

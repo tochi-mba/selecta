@@ -1,7 +1,7 @@
 # ADR-0130 - Warm editorial design language, independent themes and CSS ownership
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** Not started (0/5 new EX tasks).
+- **Implementation:** 5/5 Implemented (2026-11-10).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
 - **Priority / phase:** P0 / Foundation.
@@ -30,11 +30,11 @@ Current overlapping selectors do not establish user-facing breakage. Contrast mu
 
 ## Implementation tasks (all Not started; Verified: No)
 
-1. **EX-0130-01 - Approve semantic color and type contracts**. Acceptance: Both themes have readable hierarchy and status without color alone. Required verification: Contrast, screenshots and control gallery. **Implementation: Not started; Verified: No.**
-2. **EX-0130-02 - Design song-focused compositions**. Acceptance: Title, artist and musical intent outrank tool chrome. Required verification: Cross-route human visual critique. **Implementation: Not started; Verified: No.**
-3. **EX-0130-03 - Audit and assign CSS ownership**. Acceptance: Legacy style overrides enumerated, no silent regressions. Required verification: CSS selector map and before/after captures. **Implementation: Not started; Verified: No.**
-4. **EX-0130-04 - Specify all interactive component states**. Acceptance: Selected/focus/disabled/error/loading clear in dark/light. Required verification: Review fixture and accessibility scan. **Implementation: Not started; Verified: No.**
-5. **EX-0130-05 - Test real-content resilience**. Acceptance: Long/RTL names, system fonts and zoom preserve layout. Required verification: 320px/400% zoom plus screenshots. **Implementation: Not started; Verified: No.**
+1. **EX-0130-01 - Approve semantic color and type contracts**. Acceptance: Both themes have readable hierarchy and status without color alone. Required verification: Contrast, screenshots and control gallery. **Implementation: Implemented; Verified: No. Needs a person: owner approval of colour and type contracts.**
+2. **EX-0130-02 - Design song-focused compositions**. Acceptance: Title, artist and musical intent outrank tool chrome. Required verification: Cross-route human visual critique. **Implementation: Implemented; Verified: No. Needs a person: cross-route visual critique.**
+3. **EX-0130-03 - Audit and assign CSS ownership**. Acceptance: Legacy style overrides enumerated, no silent regressions. Required verification: CSS selector map and before/after captures. **Implementation: Implemented; Verified: No. Needs a person: before/after capture review.** Evidence: `docs/engineering/css-ownership.md`, `web/src/styles/uf-cascade.test.ts`.
+4. **EX-0130-04 - Specify all interactive component states**. Acceptance: Selected/focus/disabled/error/loading clear in dark/light. Required verification: Review fixture and accessibility scan. **Implementation: Implemented; Verified: No.** Open: `web/e2e/mp-0279-component-gallery.e2e.ts` not green on 2026-11-10; needs a person to review the fixture.
+5. **EX-0130-05 - Test real-content resilience**. Acceptance: Long/RTL names, system fonts and zoom preserve layout. Required verification: 320px/400% zoom plus screenshots. **Implementation: Implemented; Verified: No.** Open: MP-0298-02 and MP-0279-06 not green on 2026-11-10; needs a person for RTL/system-font screenshots.
 
 ## Verification and sources
 

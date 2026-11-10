@@ -1,7 +1,7 @@
 # ADR-0374 - Listen hierarchy, lyrics integrity, seek and transitions
 
 - **Decision:** Accepted (requester approved all 24 UF ADRs on 2026-11-08; implementation and independent acceptance remain separate).
-- **Implementation:** 8/8 Not started; 0/8 In progress; 0/8 Implemented.
+- **Implementation:** 7/8 Not started; 0/8 In progress; 1/8 Implemented (1/8 ticked in the checklist with automated evidence, 2026-11-10).
 - **Independent verification:** 0/8 Verified.
 - **Programme/date/baseline:** Selecta Unified Experience Finish (UF); 2026-11-08; `main` `f17944530d54203e49baebdabc08a57ee9f40526`.
 - **Priority / phase:** P1 / 04 Listen. **Owner:** Unassigned. **Implementing PR/SHA:** -.
@@ -22,14 +22,14 @@ Users complete the named journey with clear action consequences, predictable con
 
 **Preservation and trade-offs:** Keep original music local/unchanged, one authoritative audio owner and deliberate Pause, exact recording/mix/draft/revision/occurrence/seam identities, guarded Undo, consented atomic request bridges, real valid ready-only seams, eight Studio lanes/8–64 cells, true library readiness and lyric provenance, frozen-revision decodable FLAC and blinded human evaluation. No SaaS, telemetry, engine rewrite or unsolicited upload.
 
-## Implementation checklist - 0/8 Implemented; 0/8 independently Verified
+## Implementation checklist - 1/8 Implemented; 0/8 independently Verified
 
 1. **UF-0374-01 - Prioritise now-playing.** **Acceptance:** Identity, transport, progress and coming handoff appear before optional configuration. **Required verification:** Five-second recall task. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 2. **UF-0374-02 - Label timed lyrics honestly.** **Acceptance:** Approximate word timing is not presented as sung-word ground truth. **Required verification:** Real music + no-lyrics fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 3. **UF-0374-03 - Fit long title variations.** **Acceptance:** Long/RTL/CJK song metadata and repeated titles remain readable at zoom. **Required verification:** Responsive text test. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 4. **UF-0374-04 - Synchronise handoff information.** **Acceptance:** Countdown and transition scene follow actual playback clock and seam. **Required verification:** Audio/video correlation. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 5. **UF-0374-05 - Provide accessible seeking.** **Acceptance:** Overview strip enables keyboard/pointer seeking with bounded status. **Required verification:** Seeking fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
-6. **UF-0374-06 - Clarify next-song steering.** **Acceptance:** Next-up actions do not promise ready audio where absent. **Required verification:** Pending/ready request matrix. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
+6. **UF-0374-06 - Clarify next-song steering.** **Acceptance:** Next-up actions do not promise ready audio where absent. **Required verification:** Pending/ready request matrix. **Implementation:** Implemented; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** branch `feat/finish-checklists` (2026-11-10, coordinator commits); **Evidence:** web/src/views/listenNextUp.test.tsx 'a transition still being made is planned, with what happens if it is late', 'a ready transition gets a countdown' (2/2 passed) (2026-11-10); **Evidence/reviewer:** independent reviewer -.
 7. **UF-0374-07 - Reduce optional panel competition.** **Acceptance:** Lyrics, spectrum settings and reasons use a secondary hierarchy. **Required verification:** Narrow viewport and usability review. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **UF-0374-08 - Test passive and active listening.** **Acceptance:** No configuration is required to enjoy music; essential controls remain available. **Required verification:** Novice/expert session. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 

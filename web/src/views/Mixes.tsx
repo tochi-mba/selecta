@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, get, MixData, post, VibeCard } from '../api';
-import { useFlags } from '../flags';
+import { flagOn, useFlags } from '../flags';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { useLocationText } from '../router';
 import { orderOf } from '../state/readiness';
@@ -21,10 +21,28 @@ const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 
 type Asked = { key: string; name: string; open: boolean; order?: string };
 
+// EX-0117-02: the chosen length is kept in this browser, like the other shaping choices,
+// so a new visit starts where the listener left it. Anything unexpected falls back to 30 min.
+const LENGTH_KEY = 'selecta.mixLength';
+function rememberedLength(): number {
+  if (!flagOn('mixes.shaping.remember_length')) return SET_LENGTHS[0].songs;
+  try {
+    const saved = Number(window.localStorage.getItem(LENGTH_KEY));
+    return SET_LENGTHS.some((option) => option.songs === saved) ? saved : SET_LENGTHS[0].songs;
+  } catch {
+    return SET_LENGTHS[0].songs;
+  }
+}
+function rememberLength(songs: number) {
+  if (!flagOn('mixes.shaping.remember_length')) return;
+  try { window.localStorage.setItem(LENGTH_KEY, String(songs)); } catch { /* not remembered is fine */ }
+}
+
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
 export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus }: ViewProps) {
   const [cards, setCards] = useState<VibeCard[] | null>(null);
-  const [songs, setSongs] = useState(12);
+  const [songs, setSongsState] = useState(rememberedLength);
+  const setSongs = (next: number) => { setSongsState(next); rememberLength(next); };
   const [building, setBuilding] = useState('');
   const buildingNow = useRef(false);
   const hereNow = useRef(true);

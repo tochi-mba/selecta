@@ -116,7 +116,8 @@ test('MP-0283-03 Play leads, Shape first follows, Save draft is the quiet third'
     const tiers = await page.locator('.vibe-card .card-actions').first().evaluate((row) => [...row.children].map((button) => {
       const style = getComputedStyle(button);
       const box = button.getBoundingClientRect();
-      return { name: button.textContent?.trim(), background: style.backgroundColor, border: style.borderTopColor, color: style.color, weight: Number(style.fontWeight), top: box.top, bottom: box.bottom, height: box.height, width: box.width };
+      // an Action keeps its busy label in the button, hidden, so its size never jumps: read the shown label
+      return { name: (button.querySelector('.action-labels > :first-child') ?? button).textContent?.trim(), background: style.backgroundColor, border: style.borderTopColor, color: style.color, weight: Number(style.fontWeight), top: box.top, bottom: box.bottom, height: box.height, width: box.width };
     }));
     const where = `${width}px`;
     expect(tiers.map((tier) => tier.name), `${where}: order`).toEqual(['Play', 'Shape first', 'Save draft']);

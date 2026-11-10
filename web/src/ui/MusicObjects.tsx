@@ -64,7 +64,7 @@ export function VibeMotif({ idea, group }: { idea: string; group: string }) {
 /** Stable mix-specific identity from the returned song order, not a predicted
  * energy curve or waveform. An edit changes the motif only after the actual
  * mix items change; the same mix always draws the same mark. */
-export function MixSignature({ items }: { items: Pick<MixItem, 'song_id'>[] }) {
+export function MixSignature({ items, compact = false }: { items: Pick<MixItem, 'song_id'>[]; compact?: boolean }) {
   if (!items.length) return null;
   const seed = items.reduce((state, item, index) => Math.imul(state ^ (item.song_id + index * 101), 16777619) >>> 0, 2166136261);
   const strokes = Array.from({ length: 3 }, (_, row) => {
@@ -76,7 +76,7 @@ export function MixSignature({ items }: { items: Pick<MixItem, 'song_id'>[] }) {
     return y.map((level, index) => (index === 0 ? 'M' : 'L') + (index * (120 / (y.length - 1))).toFixed(1) + ',' + level.toFixed(1)).join(' ');
   });
   return (
-    <svg className="mix-signature" viewBox="0 0 120 55" preserveAspectRatio="none"
+    <svg className={'mix-signature' + (compact ? ' compact' : '')} viewBox="0 0 120 55" preserveAspectRatio="none"
       aria-hidden="true" focusable="false">
       {strokes.map((path, index) => <path key={index} d={path} fill="none" stroke="currentColor" strokeWidth={2 - index * 0.3} opacity={0.95 - index * 0.22} />)}
     </svg>

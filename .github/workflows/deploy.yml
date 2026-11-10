@@ -1,0 +1,113 @@
+name: deploy
+
+# Selecta Cloud deploys (ADR-0409, SC-0409-03). A push to main builds one image, migrates and
+# deploys staging, runs the smoke test, then waits for an approval on the protected production
+# environment before doing the same there. Pull requests never trigger this workflow, and no
+# long-lived deploy secret is stored in GitHub: each deploy job trades its OIDC token for
+# credentials that expire within the hour (infra/deploy/oidc_credentials.sh).
+# tests/test_cloud_deploy_workflow.py checks these rules; actionlint runs in test.yml.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Nothing by default; each job asks for exactly what it needs.
+permissions: {}
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/selecta-service
+
+jobs:
+  image:
+    name: Build service image
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: tag
+        run: echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - name: Build and push
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "${REGISTRY_TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
+          docker build -f infra/docker/service.Dockerfile -t "${IMAGE}:${GITHUB_SHA}" .
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          docker logout ghcr.io
+
+  staging:
+    name: Deploy staging
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: staging
+      url: ${{ vars.SELECTA_STAGING_API_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Short-lived credentials over OIDC
+        env:
+          SELECTA_CREDENTIAL_BROKER_URL: ${{ vars.SELECTA_CREDENTIAL_BROKER_URL }}
+        run: bash infra/deploy/oidc_credentials.sh staging
+      - name: Deploy
+        env:
+          SELECTA_ENVIRONMENT: staging
+          TAG: ${{ needs.image.outputs.tag }}
+        run: bash infra/deploy/release.sh
+      - name: Smoke test
+        env:
+          API: ${{ vars.SELECTA_STAGING_API_URL }}
+          GATEWAY: ${{ vars.SELECTA_STAGING_GATEWAY_URL }}
+        run: uv run --no-project --with httpx python infra/deploy/smoke.py --api "$API" --gateway "$GATEWAY"
+
+  production:
+    name: Deploy production
+    needs: [image, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Required reviewers are set on this environment in the repository settings.
+    environment:
+      name: production
+      url: ${{ vars.SELECTA_PRODUCTION_API_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Short-lived credentials over OIDC
+        env:
+          SELECTA_CREDENTIAL_BROKER_URL: ${{ vars.SELECTA_CREDENTIAL_BROKER_URL }}
+        run: bash infra/deploy/oidc_credentials.sh production
+      - name: Deploy
+        env:
+          SELECTA_ENVIRONMENT: production
+          TAG: ${{ needs.image.outputs.tag }}
+        run: bash infra/deploy/release.sh
+      - name: Smoke test
+        env:
+          API: ${{ vars.SELECTA_PRODUCTION_API_URL }}
+          GATEWAY: ${{ vars.SELECTA_PRODUCTION_GATEWAY_URL }}
+        run: uv run --no-project --with httpx python infra/deploy/smoke.py --api "$API" --gateway "$GATEWAY"

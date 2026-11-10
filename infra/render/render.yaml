@@ -1,0 +1,214 @@
+# Render Blueprint for Selecta Cloud (ADR-0409). One project, two environments.
+# Frankfurt only. API, gateway and maintenance run here; workers never do (see infra/modal/).
+# Secrets are `sync: false`: they are typed into Render once per environment, never committed.
+# Images come from GHCR, built on `main` by .github/workflows/deploy.yml; a deploy sets the tag.
+# Checked by tests/test_cloud_infra.py.
+projects:
+  - name: selecta-cloud
+    environments:
+      - name: staging
+        protectedEnvironment: false
+        services:
+          - type: web
+            name: selecta-api-staging
+            runtime: image
+            image: &image
+              url: ghcr.io/tochi-mba/selecta-service:main
+              creds:
+                fromRegistryCreds:
+                  name: ghcr
+            region: frankfurt
+            plan: starter
+            numInstances: 1
+            healthCheckPath: /api/ready
+            dockerCommand: selecta web --no-open --port 10000
+            envVars:
+              - fromGroup: selecta-staging-api
+              - key: SELECTA_ENV
+                value: staging
+              - key: SELECTA_DATABASE_URL
+                fromDatabase:
+                  name: selecta-db-staging
+                  property: connectionString
+          - type: web
+            name: selecta-gateway-staging
+            runtime: image
+            image: *image
+            region: frankfurt
+            plan: starter
+            numInstances: 1
+            healthCheckPath: /api/ready
+            dockerCommand: selecta gateway --port 10000
+            envVars:
+              - fromGroup: selecta-staging-gateway
+              - key: SELECTA_GATEWAY_DATABASE_URL
+                fromDatabase:
+                  name: selecta-db-staging
+                  property: connectionString
+          - type: worker
+            name: selecta-maintain-staging
+            runtime: image
+            image: *image
+            region: frankfurt
+            plan: starter
+            numInstances: 2
+            dockerCommand: selecta maintain
+            envVars:
+              - fromGroup: selecta-staging-maintenance
+              - key: SELECTA_MAINTENANCE_DATABASE_URL
+                fromDatabase:
+                  name: selecta-db-staging
+                  property: connectionString
+        databases:
+          - name: selecta-db-staging
+            region: frankfurt
+            plan: basic-1gb
+            postgresMajorVersion: "17"
+            ipAllowList: []
+      - name: production
+        protectedEnvironment: true
+        services:
+          - type: web
+            name: selecta-api-production
+            runtime: image
+            image: *image
+            region: frankfurt
+            plan: standard
+            scaling:
+              minInstances: 2
+              maxInstances: 6
+              targetCPUPercent: 70
+            healthCheckPath: /api/ready
+            dockerCommand: selecta web --no-open --port 10000
+            envVars:
+              - fromGroup: selecta-production-api
+              - key: SELECTA_ENV
+                value: production
+              - key: SELECTA_DATABASE_URL
+                fromDatabase:
+                  name: selecta-db-production
+                  property: connectionString
+          - type: web
+            name: selecta-gateway-production
+            runtime: image
+            image: *image
+            region: frankfurt
+            plan: standard
+            numInstances: 2
+            healthCheckPath: /api/ready
+            dockerCommand: selecta gateway --port 10000
+            envVars:
+              - fromGroup: selecta-production-gateway
+              - key: SELECTA_GATEWAY_DATABASE_URL
+                fromDatabase:
+                  name: selecta-db-production
+                  property: connectionString
+          - type: worker
+            name: selecta-maintain-production
+            runtime: image
+            image: *image
+            region: frankfurt
+            plan: starter
+            numInstances: 2
+            dockerCommand: selecta maintain
+            envVars:
+              - fromGroup: selecta-production-maintenance
+              - key: SELECTA_MAINTENANCE_DATABASE_URL
+                fromDatabase:
+                  name: selecta-db-production
+                  property: connectionString
+        databases:
+          - name: selecta-db-production
+            region: frankfurt
+            plan: pro-4gb
+            postgresMajorVersion: "17"
+            highAvailability:
+              enabled: true
+            ipAllowList: []
+
+# Secret groups: every secret value is entered in the Render dashboard (sync: false).
+envVarGroups:
+  - name: selecta-staging-api
+    envVars: &api_vars
+      - key: SELECTA_MODE
+        value: cloud
+      - key: SELECTA_ALLOWED_HOSTS
+        sync: false
+      - key: SELECTA_ALLOWED_ORIGINS
+        sync: false
+      - key: SELECTA_AUTH_ISSUER
+        sync: false
+      - key: SELECTA_AUTH_AUDIENCE
+        sync: false
+      - key: SELECTA_WORKOS_API_KEY
+        sync: false
+      - key: SELECTA_WORKOS_CLIENT_ID
+        sync: false
+      - key: SELECTA_WORKOS_WEBHOOK_SECRET
+        sync: false
+      - key: SELECTA_STRIPE_SECRET_KEY
+        sync: false
+      - key: SELECTA_STRIPE_WEBHOOK_SECRETS
+        sync: false
+      - key: SELECTA_STRIPE_PRICES
+        sync: false
+      - key: SELECTA_R2_ACCOUNT_ID
+        sync: false
+      - key: SELECTA_R2_ACCESS_KEY_ID
+        sync: false
+      - key: SELECTA_R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: SELECTA_R2_JURISDICTION
+        value: eu
+      - key: SELECTA_IP_HASH_KEY
+        sync: false
+      - key: SELECTA_ROOMS_PEPPER
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_HEADERS
+        sync: false
+  - name: selecta-production-api
+    envVars: *api_vars
+  - name: selecta-staging-gateway
+    envVars: &gateway_vars
+      - key: SELECTA_MODE
+        value: cloud
+      - key: SELECTA_GATEWAY_ALLOWED_HOSTS
+        sync: false
+      - key: SELECTA_WORKER_TOKEN_SECRET
+        sync: false
+      - key: SELECTA_WORKER_BOOTSTRAP_TOKEN
+        sync: false
+      - key: SELECTA_R2_ACCOUNT_ID
+        sync: false
+      - key: SELECTA_R2_ACCESS_KEY_ID
+        sync: false
+      - key: SELECTA_R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: SELECTA_R2_JURISDICTION
+        value: eu
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_HEADERS
+        sync: false
+  - name: selecta-production-gateway
+    envVars: *gateway_vars
+  - name: selecta-staging-maintenance
+    envVars: &maintenance_vars
+      - key: SELECTA_MODE
+        value: cloud
+      - key: SELECTA_WORKOS_API_KEY
+        sync: false
+      - key: SELECTA_STRIPE_SECRET_KEY
+        sync: false
+      - key: SELECTA_R2_ACCOUNT_ID
+        sync: false
+      - key: SELECTA_R2_ACCESS_KEY_ID
+        sync: false
+      - key: SELECTA_R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: SELECTA_R2_JURISDICTION
+        value: eu
+  - name: selecta-production-maintenance
+    envVars: *maintenance_vars

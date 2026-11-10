@@ -56,3 +56,36 @@ describe('action-tier register', () => {
     }
   });
 });
+
+describe('consequence-specific labels (FP-0269-05)', () => {
+  const table = doc.slice(doc.indexOf('## Consequence-specific labels')).split('\n')
+    .filter((line) => line.startsWith('| ') && !line.startsWith('| Label') && !line.startsWith('|---'))
+    .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()));
+
+  it('names Play, Shape, Save draft, Apply, the bridge choice and Export, each with its own effect', () => {
+    const labels = table.flatMap(([label]) => label.replace(/\s*\(.*\)$/, '').split(' / '));
+    for (const wanted of ['Play', 'Shape first', 'Save draft', 'Apply to this transition', 'Use this', 'Download audio']) {
+      expect(labels, wanted).toContain(wanted);
+    }
+    const effects = table.map(([, effect]) => effect);
+    expect(new Set(effects).size, 'two labels promise the same effect').toBe(effects.length);
+  });
+
+  for (const [label, effect] of table) {
+    it(`${label}: every label is a real control in the register, and its effect agrees with the register`, () => {
+      for (const name of label.replace(/\s*\(.*\)$/, '').split(' / ')) {
+        const row = rows.find(([, , action]) => unquote(action) === name);
+        expect(row, `${name} is not in the register`).toBeDefined();
+        expect(fs.readFileSync(`${ROOT}${unquote(row![6])}`, 'utf8')).toContain(name);
+      }
+      // a label that never touches playback must not be described as replacing it, and vice versa
+      const touchesPlayback = /replaces what is playing/.test(effect);
+      const playbackRows = rows.filter(([, , action]) => label.replace(/\s*\(.*\)$/, '').split(' / ').includes(unquote(action)))
+        .map(([, , , , , risk]) => risk);
+      for (const risk of playbackRows) {
+        if (touchesPlayback) expect(risk, `${label}: register disagrees`).toMatch(/replaces the playing mix/);
+        else expect(risk, `${label}: register says it replaces playback`).not.toMatch(/replaces the playing mix/);
+      }
+    });
+  }
+});

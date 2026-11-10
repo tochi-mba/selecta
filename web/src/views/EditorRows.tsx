@@ -20,6 +20,8 @@ export type RowActions = {
   toggleSeam: (rowKey: string) => void;
   hearSeam: (rowKey: string) => void;
   dragOver: (rowKey: string | null) => void;
+  /** CI-0173-02: which song is being carried, so the seams a drop would change can be marked. */
+  dragFrom: (rowKey: string | null) => void;
   refresh: () => void;
 };
 
@@ -44,11 +46,13 @@ type SeamRowProps = {
   names: Record<string, string>;
   guard: Record<string, string>;
   actions: RefObject<RowActions>;
+  /** this transition would be replaced if the carried song were dropped where it is hovering */
+  affected?: boolean;
 };
 
 /** A transition isn't a song, so it doesn't look like one: it hangs between two songs, with its own
  * state, and selecting it opens it beside the timeline. Nothing here plays unless Hear it is pressed. */
-const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, names, guard, actions }: SeamRowProps) {
+const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, names, guard, actions, affected = false }: SeamRowProps) {
   const seam = item.seam!;
   const state = seam.state;
   const chosen = seam.settings.move ?? 'auto';
@@ -64,8 +68,9 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
 
   return (
     <li
-      className={`seam ${open ? 'open' : ''}`}
+      className={`seam ${open ? 'open' : ''} ${affected ? 'drop-affected' : ''}`}
       data-seam={seamKey}
+      data-drop-affected={affected || undefined}
       onClick={(event) => { if (inspect && pickedTheRow(event)) actions.current.selectSeam(rowKey); }}
     >
       {seam.too_soon && (
@@ -105,6 +110,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
           {inspect && <button onClick={() => actions.current.toggleSeam(rowKey)}>{open ? 'Close' : 'Change'}</button>}
         </div>
       </div>
+      {affected && <p className="drop-affected-note">Changes if the song is dropped there</p>}
       <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} compact />
       {state.status === 'failed' && <p className="warn">Remembered failed attempt: {state.error}</p>}
     </li>
@@ -112,6 +118,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
 }, (before, after) => before.rowKey === after.rowKey
   && before.seamKey === after.seamKey
   && before.open === after.open
+  && before.affected === after.affected
   && before.guard === after.guard
   && before.names === after.names
   && before.previous.title === after.previous.title
@@ -153,6 +160,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     if (!started.moved) {
       if (Math.hypot(event.clientX - started.x, event.clientY - started.y) < 8) return;
       started.moved = true;
+      actions.current.dragFrom(rowKey);
     }
     actions.current.dragOver(rowUnder(event)?.dataset.songKey ?? null);
     const margin = 90;
@@ -165,6 +173,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     holding.current = null;
     const target = started.moved ? rowUnder(event) : null;
     actions.current.dragOver(null);
+    actions.current.dragFrom(null);
     if (target?.dataset.position && Number(target.dataset.position) !== item.position) {
       void actions.current.move(item.position, Number(target.dataset.position), 'drag');
     }
@@ -204,6 +213,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData(SONG_DRAG_TYPE, String(item.position));
         event.dataTransfer.setDragImage?.(event.currentTarget, 24, 24);
+        actions.current.dragFrom(rowKey);
       }}
       onDragOver={(event) => {
         if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
@@ -212,7 +222,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         actions.current.dragOver(rowKey);
       }}
       onDragLeave={() => actions.current.dragOver(null)}
-      onDragEnd={() => actions.current.dragOver(null)}
+      onDragEnd={() => { actions.current.dragOver(null); actions.current.dragFrom(null); }}
       onDrop={(event) => {
         if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
         event.preventDefault();
@@ -239,8 +249,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         onPointerDown={pressHandle}
         onPointerMove={moveHandle}
         onPointerUp={releaseHandle}
-        onPointerCancel={() => { holding.current = null; actions.current.dragOver(null); }}
-        onLostPointerCapture={() => { holding.current = null; actions.current.dragOver(null); }}
+        onPointerCancel={() => { holding.current = null; actions.current.dragOver(null); actions.current.dragFrom(null); }}
+        onLostPointerCapture={() => { holding.current = null; actions.current.dragOver(null); actions.current.dragFrom(null); }}
       >
         <Icon name="grip" />
       </span>

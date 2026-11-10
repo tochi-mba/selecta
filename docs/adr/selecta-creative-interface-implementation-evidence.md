@@ -61,7 +61,7 @@
 | CI-0172-06 | [ADR-0172](adr-0172-seam-inspector-and-audition-comparison.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0172-07 | [ADR-0172](adr-0172-seam-inspector-and-audition-comparison.md) | Needs a person: observed audition, edit and compare task | No | Unassigned | - | - |
 | CI-0173-01 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Needs a person: full-density and 320px specimen review of song blocks and seam links | No | Unassigned | - | web/src/views/EditorRows.tsx draws a SeamDiagram between song lines |
-| CI-0173-02 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | In progress: the drop target is marked (.song.over in web/src/views/EditorRows.tsx) but the seams a move would change are not previewed | No | Unassigned | - | - |
+| CI-0173-02 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Implemented (built 2026-11-10, flag editor.drag_preview) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0173-03 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0173-04 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0173-05 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
@@ -91,7 +91,7 @@
 | CI-0177-01 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-02 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-03 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
-| CI-0177-04 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | In progress: Start a mix builds from the song (start=ID) and says “A mix starting from <title>”, but no test proves the source track is identifiable in the returned set | No | Unassigned | - | - |
+| CI-0177-04 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (built 2026-11-10: focused test added for existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-05 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Not started: song details show no validated related songs or candidate connections | No | Unassigned | - | - |
 | CI-0177-06 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-07 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Needs a person: scroll, frame and zoom measurements on a large collection and an assistive technology review | No | Unassigned | - | - |
@@ -123,8 +123,8 @@
 | CI-0181-05 | [ADR-0181](adr-0181-export-frozen-revision-and-artifact.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0181-06 | [ADR-0181](adr-0181-export-frozen-revision-and-artifact.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0181-07 | [ADR-0181](adr-0181-export-frozen-revision-and-artifact.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
-| CI-0182-01 | [ADR-0182](adr-0182-causal-motion-and-microcopy.md) | In progress: docs/adr/selecta-creative-interface-interaction-matrix.md lists interactions with data authority, reduced-motion equivalent and guard, but it has not been reconciled against every animation in the stylesheets | No | Unassigned | - | - |
-| CI-0182-02 | [ADR-0182](adr-0182-causal-motion-and-microcopy.md) | In progress: --motion-fast, --motion-slow and --motion-ease exist in web/src/styles/tokens.css, but some animations still use literal durations (style.css pending-flow and request-pulse, shell.css skeleton-breathe, lucy.css lucy-slide) | No | Unassigned | - | - |
+| CI-0182-01 | [ADR-0182](adr-0182-causal-motion-and-microcopy.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
+| CI-0182-02 | [ADR-0182](adr-0182-causal-motion-and-microcopy.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0182-03 | [ADR-0182](adr-0182-causal-motion-and-microcopy.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0182-04 | [ADR-0182](adr-0182-causal-motion-and-microcopy.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0182-05 | [ADR-0182](adr-0182-causal-motion-and-microcopy.md) | Needs a person: writing and comprehension review of the musical glossary (web/src/ui/glossaryTerms.ts) | No | Unassigned | - | - |

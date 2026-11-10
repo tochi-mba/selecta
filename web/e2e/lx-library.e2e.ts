@@ -637,3 +637,51 @@ test('LX-0348-01 the sheet leads with the exact recording, whole long titles inc
   await expect(sheet).toBeHidden();
   await expect(page.getByRole('button', { name: /^Details for An Extraordinarily Long Song Title/ })).toBeFocused();
 });
+
+test('LX-0350-02 overlapping cursor pages, a deep return and Show more give each recording exactly once', async ({ page }) => {
+  let template: Record<string, unknown> | null = null;
+  // each page overlaps the last by five recordings, as cursor pages can while analysis reorders songs
+  const starts = [1, 96, 191, 286];
+  await page.route('**/api/library?**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('q')) return route.fallback();
+    if (!template) template = (await (await route.fetch()).json()).songs[0];
+    const index = Number(url.searchParams.get('after') ?? 0);
+    const limit = Number(url.searchParams.get('limit') ?? 100);
+    const from = starts[index] ?? 1;
+    const songs = Array.from({ length: Math.min(limit, 100) }, (_, offset) => ({ ...template, id: 500_000 + from + offset, title: `Cursor Recording ${from + offset}` }));
+    await route.fulfill({ json: { songs, total: 400, next: index + 1 < starts.length ? String(index + 1) : null } });
+  });
+  await openLibrary(page, '/library?pages=3');
+  const ids = () => page.locator('ul.library-rows > li .song-open').evaluateAll((nodes) =>
+    nodes.map((node) => Number(node.getAttribute('data-focus-key')!.replace('song-details-', ''))));
+  await expect(rows(page)).toHaveCount(290);
+  let seen = await ids();
+  expect(new Set(seen).size, 'no recording appears twice').toBe(seen.length);
+  expect(seen[0]).toBe(500_001);
+  expect(seen.at(-1)).toBe(500_290);
+  await page.getByRole('button', { name: 'Show more songs' }).click();
+  await expect(rows(page)).toHaveCount(385);
+  seen = await ids();
+  expect(new Set(seen).size).toBe(seen.length);
+  expect(seen.at(-1)).toBe(500_385);
+  await expect(page).toHaveURL(/pages=4/);
+});
+
+test('LX-0342-01 search is the largest Library control and the result count stays in view beside it', async ({ page }) => {
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await openLibrary(page);
+    const field = await box(search(page));
+    const others = await page.locator('.library-find select, .library-find button, .library-filters button').evaluateAll((nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().width));
+    for (const other of others) expect(field.width, `search is wider than every other control at ${width}px`).toBeGreaterThan(other);
+    const filters = await box(page.locator('.library-filters'));
+    expect(field.y, 'search comes before the filters').toBeLessThan(filters.y);
+    const count = await box(page.locator('.library-count'));
+    expect(count.y + count.height, `the result count is on screen with the search at ${width}px`).toBeLessThanOrEqual(800);
+    await search(page).fill('Same Name');
+    await expect(page.locator('.library-count')).toHaveText('2 songs.');
+    await expect(page.locator('.library-count')).toBeInViewport();
+  }
+});

@@ -1,7 +1,7 @@
 # ADR-0233 - Responsive cinematic-to-precision layouts from 320px to wide screens
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started; 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Cross-cutting.
@@ -37,7 +37,7 @@ No offscreen focus, trapped horizontal scrolling on basic tasks, tap targets los
 5. **SF-0233-05 - Handle library table reflow.** **Acceptance:** Sorting/filtering and titles accessible at zoom. **Required verification:** 400%/320px tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 6. **SF-0233-06 - Support landscape and shallow heights.** **Acceptance:** Sticky layers never cover active controls. **Required verification:** Viewport matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 7. **SF-0233-07 - Test text and RTL stress.** **Acceptance:** Long localized metadata does not break grid. **Required verification:** Unicode fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0233-08 - Independently approve each scene.** **Acceptance:** No critical obstruction across named device sizes. **Required verification:** Visual and AT sign-off. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0233-08 - Independently approve each scene.** **Acceptance:** No critical obstruction across named device sizes. **Required verification:** Visual and AT sign-off. **Implementation:** Not started; Needs a person: independent visual and assistive-technology sign-off of each scene across named device sizes; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 
@@ -47,5 +47,5 @@ Preserve original local music; intentional Pause and one audio owner; disclosed 
 
 - **Depends on:** ADR-0160/0183/0129; ADR-0198/0199 and cross-cutting UI foundation.
 - **Next:** owner decision → prototypes → source-level implementation PR → regression tests → independent visual, access, audio and device evidence → release gate.
-- **Now:** Accepted; 0/8 Implemented; 0/8 independently Verified; no implementing PR/SHA.
+- **Now:** Decision Accepted; Implementation 0/8 (2026-11-10); Independently Verified No; no implementation PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

@@ -1,7 +1,7 @@
 # ADR-0116 - Listening-first player, Up Next and optional DJ controls
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/5 new tasks implemented).
+- **Implementation status:** Implemented (5/5 on 2026-11-10; evidence in the checklist). **Verified (automated):** EX-0116-03 on 2026-11-10; -02 and -04 await a browser rerun on a fresh build; -01 and -05 need a person.
 - **Independent verification:** No (0/5).
 - **Programme/date:** Experience-first UI/UX; 2026-11-07; baseline `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).
 - **Priority / phase:** P0 / Listener.
@@ -30,11 +30,11 @@ A beautiful player with missing steering or broken media-key continuity would be
 
 ## Implementation tasks (all Not started / Not verified)
 
-1. **EX-0116-01 - Prototype default Listen hierarchy.** Acceptance: Current track, Play/Pause, progress and next song understandable immediately. Verification: Uncoached listener task study. **Implementation: Not started; Verified: No.**
+1. **EX-0116-01 - Prototype default Listen hierarchy.** Acceptance: Current track, Play/Pause, progress and next song understandable immediately. Verification: Uncoached listener task study. **Implementation: Implemented (2026-11-10); Verified: No. Needs a person: uncoached listener study.**
 2. **EX-0116-02 - Provide optional DJ-controls parity.** Acceptance: Every current steering/rating/explanation/display operation remains accessible. Verification: Keyboard and feature-preservation mapping. **Implementation: Not started; Verified: No.**
-3. **EX-0116-03 - Design truthful transition cues.** Acceptance: No unrendered suggestion shown as playable result. Verification: Late/fallback/failure and live-seam fixtures. **Implementation: Not started; Verified: No.**
+3. **EX-0116-03 - Design truthful transition cues.** Acceptance: No unrendered suggestion shown as playable result. Verification: Late/fallback/failure and live-seam fixtures. **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-10).**
 4. **EX-0116-04 - Validate Lyrics and Stage behavior.** Acceptance: Long/missing/RTL text and fullscreen denial never obscure transport. Verification: Both themes, reduced-motion, phone/zoom tests. **Implementation: Not started; Verified: No.**
-5. **EX-0116-05 - Prove single-owner transport.** Acceptance: No overlapping previews, stopped audio or unexpected resume. Verification: Real-audio media session and race tests. **Implementation: Not started; Verified: No.**
+5. **EX-0116-05 - Prove single-owner transport.** Acceptance: No overlapping previews, stopped audio or unexpected resume. Verification: Real-audio media session and race tests. **Implementation: Implemented (2026-11-10); Verified: No. Needs a person: real-audio media-session check.**
 
 ## Required negative cases and references
 

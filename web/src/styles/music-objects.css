@@ -193,6 +193,8 @@
 .mix-identity { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
 .mix-signature { display: block; width: clamp(130px, 25vw, 240px); max-width: 100%; height: 48px; color: var(--motif); }
 .mix-identity small { font-size: var(--text-xs); }
+/* SF-0206-04: the same sleeve, smaller, on each draft in My Mixes. */
+.mix-signature.compact { width: clamp(72px, 18vw, 120px); height: 28px; }
 @media (forced-colors: active) { .mix-signature { color: CanvasText; } }
 
 /* CI-0179-04: one segment per transition. Ready is solid, a failure is striped and waiting is hollow,

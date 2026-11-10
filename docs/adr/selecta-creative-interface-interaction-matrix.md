@@ -63,3 +63,27 @@ Review applicable idle, hovered, focused, pressed, selected, pending, queued, pr
 ## Performance and attention policy
 
 Animations never delay a musical action, steal keyboard focus, trigger UI sounds, strobe or show endless particles. Media effects stop when hidden or paused and are capped against real render load. No visual treatment implies that a technical quality check proves a transition sounds good. [Checklist](selecta-creative-interface-implementation-checklist.md) · [Verification](selecta-creative-interface-verification-matrix.md).
+
+## Animation ownership and interruption (CI-0182-01, reconciled 2026-11-10)
+
+Every animation the stylesheets actually run, reconciled against every `@keyframes` in `web/src` and the
+clock-driven marks. Each row names the data that owns it (the only thing allowed to start or stop it),
+the states it is drawn in, and what interrupts it. Timings live in
+[the motion inventory](../engineering/motion-inventory.md); `tests/test_ci_creative_interface.py`
+fails if a stylesheet adds a `@keyframes` name that is not in this table, or a row loses its owner.
+
+| Animation | Source | Data owner | States drawn | Interruption and cancellation |
+|---|---|---|---|---|
+| `button-working` | `web/src/ui/controls.tsx` | the `Action` press promise (`data-working` while it runs) | idle, working, done, failed | stops the moment the promise settles; a second press is ignored while busy; reduced motion shows a still bar |
+| `skeleton-breathe` | `web/src/ui/Skeleton.tsx` | the page or panel fetch that has not answered yet | loading only | removed when the data arrives or fails; breathes 3 times then holds still; reduced motion holds still |
+| `skeleton-reveal` | `web/src/ui/Skeleton.tsx` | the same pending fetch, after `--motion-fast` so quick answers never flash | loading only | the whole skeleton unmounts when data or an error arrives; none under reduced motion |
+| `lucy-slide` | `web/src/views/LucyCards.tsx` | a running Lucy card with no count from the server | running without a count | replaced by the real progress width as soon as a count arrives; gone once the card settles; never drawn under Still |
+| `request-pulse` | `web/src/views/Requests.tsx` | the request stage from the server (adding, preparing, ready, analysing) | working stages only | stops on any other stage, including failed and cancelled; reduced motion holds still |
+| `pending-flow` | `web/src/views/Now.tsx` | the next transition not yet rendered (`ready` false or no seam time) | preparing the hand-off | replaced by the clock-driven hand-over once the seam is ready; gone on the last track; reduced motion holds still |
+| `feeling-reveal` | `web/src/views/Mixes.tsx` | a vibe group inserted on Make a Mix | first appearance only | runs once per inserted group, never loops; a filter change only reveals new groups; none under reduced motion |
+| `toast-appear` | `web/src/ui/toasts.tsx` | a finished operation reporting success or failure | shown | entrance only; dismissing or a newer toast replaces it without replaying; none under reduced motion |
+| `overlay-appear` | `web/src/ui/controls.tsx` | the person opening a dialog, sheet or drawer | opening | entrance only; Escape or close removes it at once and returns focus; none under reduced motion |
+| `route-reveal` | `web/src/App.tsx` | a navigation to a valid route | entering a page | only the page content fades; the player and navigation never move; not on Stage; none under reduced motion |
+| Hand-over progress width | `web/src/views/Now.tsx` | the player clock during a rendered seam | during the hand-over | follows the clock, so pause, seek or a skipped track move it at once; it never runs ahead of audio |
+| Spectrum canvas | `web/src/views/Now.tsx` | the playing audio's analyser | playing, paused, hidden | blank on pause, stopped while the tab is hidden or the canvas off screen; one still frame under reduced motion |
+| Lyric focus | `web/src/views/Now.tsx` | timed lyric lines and words against the player clock | current line or word | moves only when the clock passes a real timestamp; untimed lyrics never animate |

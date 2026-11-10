@@ -1,0 +1,14 @@
+{
+  "about": "Expected bytes uploaded to R2 per finished job, by job type (ADR-0396 SC-0396-07). null means not measured yet: the Phase 0 real-audio benchmark sets each number, and selecta.work.egress compares staging metrics against it (25% tolerance).",
+  "bytes_per_job": {
+    "ingest.validate": null,
+    "play.proxy": null,
+    "analyse.song": null,
+    "lyrics.fetch": null,
+    "lyrics.align": null,
+    "stems.window": null,
+    "seam.render": null,
+    "export.render": null,
+    "discover.sweep": null
+  }
+}

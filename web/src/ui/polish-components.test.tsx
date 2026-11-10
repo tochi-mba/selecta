@@ -38,6 +38,7 @@ describe('P0021 development gallery inventory', () => {
     has('article.card .card-actions button');              // cards
     has('[aria-haspopup], button[aria-expanded]');         // menus
     has('.status');                                         // status badges
+    has('button.destructive');                              // destructive (S31-0079-06)
     expect(within(gallery as HTMLElement).getAllByText(/Tooltip/).length).toBeGreaterThan(0);
     expect(within(gallery as HTMLElement).getByRole('button', { name: 'Open dialog', hidden: true })).toBeInTheDocument();
     expect(within(gallery as HTMLElement).getByRole('button', { name: 'Open drawer', hidden: true })).toBeInTheDocument();
@@ -148,5 +149,15 @@ describe('P0119 reduced motion follows a preference change while the app is open
     expect(screen.getByText('Still')).toBeInTheDocument();
     act(() => { media.matches = false; listener(); });
     expect(screen.getByText('Animated')).toBeInTheDocument();
+  });
+});
+
+describe('P0117 explanations separate automated checks from human judgement', () => {
+  it('says audio checks cannot judge sound, and a chord match is a suggestion to check by ear', () => {
+    const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
+    const fs = node.getBuiltinModule('node:fs') as { readFileSync(path: string, encoding: 'utf8'): string };
+    const read = (file: string) => fs.readFileSync(`${node.cwd()}/src/${file}`, 'utf8');
+    expect(read('views/WorkshopPanels.tsx')).toContain('are automatic checks on the audio. They can’t say how something sounds.');
+    expect(read('views/Links.tsx')).toContain('Chord match, a suggestion to check by ear, not a verified match');
   });
 });

@@ -36,4 +36,15 @@ describe('Up Next only promises what is ready', () => {
     expect(within(next).queryByText(/It hasn’t been made yet/)).toBeNull();
     expect(await screen.findByRole('timer')).toHaveAccessibleName(/until the transition/);
   });
+
+  // T0121: a transition whose render failed is never counted down or called planned; the fade that
+  // will really play and the way to choose another are said instead.
+  it('a failed transition says the music carries on and how to choose another, with no countdown', async () => {
+    listen(songs(seam('failed', 'a', { error: 'The render stopped part way.' })), false);
+    const next = screen.getByText('Up Next').closest('section')!;
+    expect(within(next).getByText(/this song plays on and the next one fades in, so the music doesn’t stop/)).toBeInTheDocument();
+    expect(within(next).getByText(/falls back to its own pick\. You can choose another in Edit/)).toBeInTheDocument();
+    expect(within(next).queryByText(/It hasn’t been made yet/)).toBeNull();
+    expect(screen.queryByRole('timer')).toBeNull();
+  });
 });

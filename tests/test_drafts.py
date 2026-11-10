@@ -846,6 +846,9 @@ def test_the_list_says_where_each_draft_has_got_to(client):
     assert friday["place"] is None
     assert friday["eta"] is None
     assert friday["to_render"] > 0
+    # SF-0206-04: the returned song order, for the draft's Mix Sleeve
+    assert friday["song_ids"] == [1, 2, 3]
+    assert by_id[empty]["song_ids"] == []
     assert listing["current"]["left"] == 0
     assert listing["out_of_room"] is False
 

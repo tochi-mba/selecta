@@ -1,7 +1,7 @@
 # ADR-0087: Verify WCAG, device reflow, audio latency and scale
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 3 Implemented (automated), 2 In progress, 6 need a person only (2026-11-10 reconciliation); 0/11 Verified
+- **Implementation status:** In progress: 4 Implemented (automated), 1 In progress, 6 need a person only (2026-11-10 reconciliation); 0/11 Verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 5 - cross-cutting quality
@@ -32,7 +32,7 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 7. **S31-0087-07 - Measure user interactions during background render on real hardware.** Acceptance: Record hardware, production build, input latency, long tasks and any audio timing disturbances. **Status (2026-11-10):** Not Verified. **Needs a person:** measure input latency and audio timing during background render on real hardware.
 8. **S31-0087-08 - Profile 20k Library, 100-song Edit and full Studio grid.** Acceptance: Realistic search, reorder, scroll, repaint, memory and loading budgets defined from baseline. **Status (2026-11-10):** Not Verified. **Needs a person:** profile 20k Library, 100-song Edit and full Studio grid on real hardware.
 9. **S31-0087-09 - Verify media continuity across page, theme, Stage, audition and tabs.** Acceptance: Real audible evidence shows correct owner, seek/transition timing and no surprise resume. **Status (2026-11-10):** Not Verified. **Needs a person:** audible continuity review across page, theme, Stage, audition and tabs.
-10. **S31-0087-10 - Review PWA installed-mode startup and backend-unavailable recovery.** Acceptance: No claim of offline playback without running local server; direct routes and recovery remain truthful. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `web/src/RuntimeApp.test.tsx` ("picks up by itself when a server that wasn't there starts") passed. **Needs a person:** installed-PWA startup with the backend stopped.
+10. **S31-0087-10 - Review PWA installed-mode startup and backend-unavailable recovery.** Acceptance: No claim of offline playback without running local server; direct routes and recovery remain truthful. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/RuntimeApp.test.tsx` ("picks up by itself when a server that wasn't there starts", "never claims offline playback while the local server is down": no offline/still-playing claim, and no service worker in `main.tsx`, `RuntimeApp.tsx` or `index.html`) passed on 2026-11-10. **Needs a person:** installed-PWA startup with the backend stopped.
 11. **S31-0087-11 - Define evidence-backed performance and accessibility budgets.** Acceptance: Use reference 200ms INP/0.1 CLS properly as context, not unsupported field compliance claim. **Status (2026-11-10):** Not Verified. **Needs a person:** owner approves evidence-backed budgets from measured baselines.
 
 ## Required adverse cases and evidence
@@ -58,7 +58,7 @@ The owner accepted this decision on 2026-11-08. Only the explicitly identified S
 | 2026-11-07 | Proposed | Not started | Initial documentation-only finishing plan | 
 | 2026-11-07 | Proposed | In progress | Selected UI/Edge/test or visual-review infrastructure on draft PR #25; no human acceptance or task Verified |
 | 2026-11-08 | Accepted | In progress | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
-| 2026-11-10 | Accepted | In progress | Every task re-checked against current code; 3 Implemented (automated), 2 In progress, 6 need a person only (2026-11-10 reconciliation); focused Vitest, pytest and Edge runs named per task; 0/11 Verified |
+| 2026-11-10 | Accepted | In progress | Every task re-checked against current code; 4 Implemented (automated), 1 In progress, 6 need a person only (2026-11-10 reconciliation); focused Vitest, pytest and Edge runs named per task; 0/11 Verified |
 
 ## Related documents
 

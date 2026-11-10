@@ -50,3 +50,75 @@ describe('music graphics inventory (FP-0266-01)', () => {
     expect(modes).toContain('SPECTRUM_MODES');
   });
 });
+
+/**
+ * FP-0266-03: every meaningful musical mark reads against the surfaces it is drawn on, in Light and in
+ * Dark. Contrast is computed from luminance alone, so a pass here is also a pass in grayscale; the
+ * inventory's "Without colour" column carries the shape or words for anyone who can't see hue at all.
+ */
+describe('theme-pair mark readability (FP-0266-03)', () => {
+  const tokens = fs.readFileSync(`${SOURCE}styles/tokens.css`, 'utf8');
+  const block = (head: string): Record<string, string> => {
+    const start = tokens.indexOf(head);
+    let depth = 0;
+    let end = start;
+    for (let i = tokens.indexOf('{', start); i < tokens.length; i += 1) {
+      if (tokens[i] === '{') depth += 1;
+      if (tokens[i] === '}' && --depth === 0) { end = i; break; }
+    }
+    const body = tokens.slice(start, end).replace(/\/\*[\s\S]*?\*\//g, '');
+    return Object.fromEntries([...body.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)].map((match) => [match[1], match[2].trim()]));
+  };
+  const dark = block(':root {');
+  const light = { ...dark, ...block(":root[data-theme='light']") };
+  const channels = (value: string) => [0, 2, 4].map((i) => Number.parseInt(value.slice(1 + i, 3 + i), 16) / 255);
+  const resolve = (theme: Record<string, string>, value: string): string => {
+    const v = value.trim();
+    const ref = v.match(/^var\((--[a-z0-9-]+)\)$/);
+    if (ref) return resolve(theme, theme[ref[1]]);
+    const mix = v.match(/^color-mix\(in srgb, (.+?) (\d+)%, (.+)\)$/);
+    if (mix) {
+      const a = channels(resolve(theme, mix[1]));
+      const b = channels(resolve(theme, mix[3]));
+      const t = Number(mix[2]) / 100;
+      return `#${a.map((c, i) => Math.round((c * t + b[i] * (1 - t)) * 255).toString(16).padStart(2, '0')).join('')}`;
+    }
+    expect(v, `unresolvable ${value}`).toMatch(/^#[0-9a-f]{6}$/i);
+    return v.toLowerCase();
+  };
+  const luminance = (value: string) => {
+    const [r, g, b] = channels(value).map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  /** the colour tokens that carry a musical state in the inventory, and what each one marks */
+  const MARKS: Record<string, string> = {
+    '--ink': 'playhead, played waveform, Studio cell on',
+    '--focus': 'seek marker, Studio keyboard focus',
+    '--playing': 'seam on the waveform, countdown, Studio playing cell',
+    '--selected': 'chosen energy song, wanted route song, soloed lane',
+    '--status-ready': 'rendered seam edge, measured energy bar',
+    '--status-planned': 'queued seam edge',
+    '--status-working': 'rendering seam edge',
+    '--status-failed': 'failed seam edge',
+  };
+  const doc = fs.readFileSync(`${SOURCE}../../docs/engineering/music-graphics-inventory.md`, 'utf8');
+
+  it('names only marks the inventory actually uses', () => {
+    for (const token of Object.keys(MARKS)) expect(doc, token).toContain(`\`${token}\``);
+  });
+
+  for (const [name, theme] of [['Light', light], ['Dark', dark]] as const) {
+    for (const [token, marks] of Object.entries(MARKS)) {
+      it(`${name}: ${token} (${marks}) reaches 3:1 on the page and on raised panels`, () => {
+        for (const surface of ['--surface-base', '--surface-raised']) {
+          const ratio = contrast(resolve(theme, `var(${token})`), resolve(theme, `var(${surface})`));
+          expect(ratio, `${name} ${token} on ${surface}`).toBeGreaterThanOrEqual(3);
+        }
+      });
+    }
+  }
+});

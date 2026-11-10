@@ -1,0 +1,45 @@
+{
+  "levels": {
+    "L1": {
+      "name": "L1",
+      "active_users": 100,
+      "pending_jobs": 1000,
+      "duration_s": 600,
+      "purpose": "Normal: baseline and regressions"
+    },
+    "L2": {
+      "name": "L2",
+      "active_users": 1000,
+      "pending_jobs": 50000,
+      "duration_s": 900,
+      "purpose": "Busy: beta headroom x10"
+    },
+    "L3": {
+      "name": "L3",
+      "active_users": 10000,
+      "pending_jobs": 500000,
+      "duration_s": 1800,
+      "purpose": "Heavy: sustained overload behaviour"
+    },
+    "L4": {
+      "name": "L4",
+      "active_users": 100000,
+      "pending_jobs": 10000000,
+      "duration_s": 1800,
+      "purpose": "Extreme: control-plane limits"
+    }
+  },
+  "thresholds": {
+    "routine_p95_ms": 300.0,
+    "routine_error_rate": 0.005,
+    "duplicate_results": 0,
+    "cross_tenant_successes": 0,
+    "accepted_jobs_lost": 0
+  },
+  "routine": [
+    "/api/status",
+    "/api/account",
+    "/api/devices",
+    "/api/uploads"
+  ]
+}

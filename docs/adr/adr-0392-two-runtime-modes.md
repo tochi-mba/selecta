@@ -1,7 +1,7 @@
 # ADR-0392 - Two runtime modes, one codebase
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 4/5 Implemented; 0/5 In progress; 1/5 Not started.
+- **Implementation:** 5/5 Implemented; 0/5 In progress; 0/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 1. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -31,11 +31,11 @@ The same commit builds the local app and the cloud services; a mode can never ac
 - Forking a separate cloud repository (duplicate engine, drift).
 - Making cloud the only mode.
 
-## Implementation checklist - 1/5 Implemented; 1/5 In progress; 0/5 independently Verified
+## Implementation checklist - 5/5 Implemented; 0/5 In progress; 0/5 Not started; 0/5 independently Verified
 
 1. **SC-0392-01 - Mode switch.** **Acceptance:** App factory selects adapters from `SELECTA_MODE`; default `local`. **Required verification:** Unit tests for both modes. **Implementation:** Implemented; `serve()` defaults to local and selects the Cloud API factory in Cloud mode. **Evidence:** `tests/test_cloud_api.py::test_serve_defaults_to_local_and_cloud_does_not_start_local_workers`. **Independently Verified:** No.
 2. **SC-0392-02 - No local side effects in cloud.** **Acceptance:** Cloud mode starts no watcher, warm-up or worker threads and never calls `forget_unfinished()`. **Required verification:** Integration test asserts no threads/subprocesses at start. **Implementation:** Implemented; building the app through `api.serve()` with `SELECTA_MODE=cloud` and running its whole lifespan starts no watcher, warm-up, seam worker, restore, `forget_unfinished()`, subprocess or Selecta thread. **Evidence:** `tests/test_cloud_startup_side_effects.py` (4 tests), passing. **Independently Verified:** No.
-3. **SC-0392-03 - Local parity.** **Acceptance:** All existing Python and Playwright tests pass in local mode. **Required verification:** CI. **Implementation:** In progress; the python and browser CI jobs run the full local suites; main run 42804446112 failed only on `tests/test_cloud_jobs_races.py::test_the_same_mixed_load_on_sqlite_finishes_every_job` in Python shard 1/2, and no main run has been green since the Cloud programme started; being stabilised in PR 51. **Evidence:** `.github/workflows/test.yml` jobs python and browser; CI run 42804446112. **Independently Verified:** No.
+3. **SC-0392-03 - Local parity.** **Acceptance:** All existing Python and Playwright tests pass in local mode. **Required verification:** CI. **Implementation:** Implemented; the python and browser CI jobs run the full local suites, and they are green on current main: the SQLite mixed-load race that failed main run 42804446112 now passes. **Evidence:** `.github/workflows/test.yml` jobs python and browser; CI run 42891954111 (2026-11-10, pull_request run of current main merged with a web dependency bump: Python / tests shards 1/2 and 2/2, Edge E2E shards 1/2 and 2/2, Cloud / PostgreSQL shards 1-3, Cloud E2E and verify all success). **Independently Verified:** No.
 4. **SC-0392-04 - Copy layer.** **Acceptance:** User-facing strings that mention 'this PC' come from a mode-keyed copy layer. **Required verification:** Vitest snapshot per mode. **Implementation:** Implemented; local and Cloud words come from the mode-keyed `web/src/copy.ts`; what remains elsewhere mentioning this PC or File Explorer is code comments only. **Evidence:** `web/src/copy.test.ts` with per-mode snapshots in `web/src/__snapshots__/copy.test.ts.snap`, passing on Node 22 and 24. **Independently Verified:** No.
 5. **SC-0392-05 - Linux CI for cloud mode.** **Acceptance:** A Linux job runs the cloud-mode test set. **Required verification:** CI. **Implementation:** Implemented; the Linux `Cloud / PostgreSQL` CI job runs the cloud test set on SQLite and PostgreSQL 16 with branch coverage and the coverage gate. **Evidence:** `.github/workflows/test.yml` job `cloud`; CI run 42748170607 (Cloud / PostgreSQL: success). **Independently Verified:** No.
 

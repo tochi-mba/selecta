@@ -1,0 +1,44 @@
+{
+  "about": "Worker pools as code (ADR-0396, docs/saas/04-queue-and-scheduling.md 4A.6). Read by selecta.work.autoscale; tests/test_cloud_autoscale.py parses it. Costs are the beta Modal estimates from docs/saas/13-hosting-and-cost.md and are checked against the first staging invoice.",
+  "pools": {
+    "cpu-light": {
+      "min_workers": 0,
+      "max_workers": 16,
+      "slots_per_worker": 2,
+      "target_drain_s": 120,
+      "p95_wait_target_s": 30,
+      "daily_spend_ceiling_usd": 20,
+      "primary": {"provider": "modal", "cpu": 1, "memory_mb": 2048, "cost_per_hour_usd": 0.06}
+    },
+    "cpu-heavy": {
+      "min_workers": 0,
+      "max_workers": 32,
+      "slots_per_worker": 1,
+      "target_drain_s": 300,
+      "p95_wait_target_s": 60,
+      "daily_spend_ceiling_usd": 60,
+      "warm_while_listening": true,
+      "primary": {"provider": "modal", "cpu": 4, "memory_mb": 8192, "cost_per_hour_usd": 0.24}
+    },
+    "gpu": {
+      "min_workers": 0,
+      "max_workers": 8,
+      "slots_per_worker": 1,
+      "target_drain_s": 300,
+      "p95_wait_target_s": 60,
+      "daily_spend_ceiling_usd": 40,
+      "warm_while_listening": true,
+      "primary": {"provider": "modal", "gpu": "T4", "cpu": 4, "memory_mb": 16384, "cost_per_hour_usd": 0.59, "speed_factor": 1.0},
+      "fallback": {"provider": "modal", "cpu": 8, "memory_mb": 16384, "cost_per_hour_usd": 0.48, "speed_factor": 0.15}
+    },
+    "export": {
+      "min_workers": 0,
+      "max_workers": 8,
+      "slots_per_worker": 1,
+      "target_drain_s": 1800,
+      "p95_wait_target_s": 600,
+      "daily_spend_ceiling_usd": 20,
+      "primary": {"provider": "modal", "cpu": 4, "memory_mb": 8192, "cost_per_hour_usd": 0.24}
+    }
+  }
+}

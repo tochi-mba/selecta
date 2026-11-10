@@ -31,7 +31,8 @@ const looks = (shot: Shot) => [shot.outline, shot.outlineWidth, shot.shadow, sho
 /** Keyboard focus, so :focus-visible applies as it would for a real keyboard user. */
 async function keyboardFocus(page: Page, control: Locator) {
   await control.evaluate((element) => {
-    const all = [...document.querySelectorAll<HTMLElement>('button, a[href], input, select, summary, [tabindex="0"]')];
+    // only what Tab can reach, so a disabled neighbour never swallows the focus call
+    const all = [...document.querySelectorAll<HTMLElement>('button, a[href], input, select, summary, [tabindex="0"]')].filter((item) => item === element || (!(item as HTMLButtonElement).disabled && item.getClientRects().length > 0));
     all[all.indexOf(element as HTMLElement) - 1]?.focus();
   });
   await page.keyboard.press('Tab');
@@ -44,7 +45,7 @@ test.beforeEach(async ({ page }) => {
 
 test('MP-0279-01 controls, fields, tabs, menus, skeletons, overlays and statuses are all in the gallery', async ({ page }) => {
   const gallery = await openGallery(page);
-  for (const name of ['Default', 'Primary', 'Disabled', 'Toggle selection', 'Example icon action', 'Working', 'Busy and disabled', 'Save', 'Tooltip', 'More actions']) {
+  for (const name of ['Default', 'Primary', 'Disabled', 'Toggle selection', 'Example icon action', 'Working', 'Busy and disabled', 'Save', 'Tooltip', 'More actions', 'Delete example']) {
     await expect(gallery.getByRole('button', { name, exact: true }), `button ${name}`).toBeVisible();
   }
   for (const [role, name] of [['searchbox', 'Search'], ['textbox', 'Invalid field'], ['combobox', 'Choice'], ['slider', 'Range'], ['checkbox', 'Checkbox label']] as const) {
@@ -53,6 +54,10 @@ test('MP-0279-01 controls, fields, tabs, menus, skeletons, overlays and statuses
   await expect(gallery.getByRole('tablist', { name: 'Example tabs' }).getByRole('tab')).toHaveCount(3);
   await gallery.getByRole('button', { name: 'More actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'First action' })).toBeVisible();
+  // S31-0079-06: the destructive state is in the gallery, and looks different from an ordinary action
+  await expect(page.getByRole('menuitem', { name: 'Delete from menu' })).toHaveClass(/destructive/);
+  const colour = (name: string) => gallery.getByRole('button', { name, exact: true }).evaluate((element) => getComputedStyle(element).color);
+  expect(await colour('Delete example'), 'destructive differs from default').not.toBe(await colour('Default'));
   await page.keyboard.press('Escape');
   expect(await gallery.locator('.status').count(), 'every status kind').toBeGreaterThanOrEqual(8);
   expect(await gallery.locator('.skeleton').count(), 'every skeleton variant').toBeGreaterThanOrEqual(9);
@@ -128,7 +133,7 @@ test('MP-0279-03 disabled, busy, error and retry states keep the controls’ ali
   for (const item of firstLine) expect(Math.abs(item.top - heights[0].top), `${item.name}: off the line`).toBeLessThanOrEqual(0.5);
 
   // busy: the Save action keeps its box while it works, then returns
-  const save = gallery.getByRole('button', { name: 'Save' });
+  const save = gallery.locator('button:has(> .action-labels)'); // found by shape, as its name changes while it works
   const rest = await snapshot(save);
   await save.click();
   await expect(save).toHaveAttribute('aria-busy', 'true');
@@ -276,7 +281,7 @@ test('MP-0279-07 reduced and still motion keep every state’s feedback without 
     await page.keyboard.press('Enter');
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('Enter');
-    const save = gallery.getByRole('button', { name: 'Save' });
+    const save = gallery.locator('button:has(> .action-labels)'); // found by shape, as its name changes while it works
     await save.click();
     await expect(save).toHaveAttribute('aria-busy', 'true');
     await expect(gallery.getByText('Saved locally for this demonstration.')).toBeVisible();

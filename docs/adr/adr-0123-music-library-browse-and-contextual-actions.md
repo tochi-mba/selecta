@@ -36,6 +36,21 @@ Do not infer artist or song readiness from unavailable metadata; avoid loss of k
 4. **EX-0123-04 - Polish song details and corrections**. Acceptance: Effective vs measured values and validation always clear. Required verification: Correction error, focus, Undo tests. **Implementation: Not started; Verified: No.**
 5. **EX-0123-05 - Measure 20k responsiveness**. Acceptance: Fast enough scrolling and input without focus drops. Required verification: Hardware/frame time/DOM profile. **Implementation: Not started; Verified: No.**
 
+## EX-0123-02 row action crosswalk (2026-11-10)
+
+Every Library row operation in `web/src/views/Library.tsx`, and how it is reached without hover:
+
+| Operation | Control | Mouse / touch | Keyboard | Proof |
+|---|---|---|---|---|
+| Open details and corrections | `Details for <song>` button | click / tap | Tab, Enter | `web/e2e/flows.e2e.ts` "the Library: search, song details, a correction that can be put back"; `web/e2e/lx-library.e2e.ts` LX-0348-05 |
+| Start a mix here | primary row action when ready | click / tap | Tab, Enter | `web/src/views/Library.test.tsx` "starting a mix from a song" |
+| Analyse / analyse all | row action when not analysed, bulk button | click / tap | Tab, Enter | `web/src/views/LibraryLx.test.tsx` LX-0346-05 |
+| Add to mix, Play next | More menu items | menu open by click / tap | Enter, arrow keys | `LibraryLx.test.tsx` LX-0346-04; `lx-library.e2e.ts` LX-0346-06 |
+| Prioritize, Never play | More menu checkbox items, with Undo | menu open by click / tap | Enter, arrow keys | `lx-library.e2e.ts` LX-0346-06 (keyboard and touch, both undo) |
+| Select for batch, batch Prioritize / Never play | checkbox and selection rail | click / tap | Tab, Space | `LibraryLx.test.tsx` LX-0347-02/05/06/07 |
+
+No operation is hover-only: each is a native button, checkbox or menu item in the tab order.
+
 ## Adversarial cases and research
 
 Test partial/empty/failure/stale/recovering states, long/duplicate/Unicode/RTL metadata, both themes, keyboard, touch, 200/400% zoom, reduced motion and 320–2560px layouts. Concurrent mutation must never act on a different revision. Real-audio quality and continuity need actual listening. [WCAG 2.2](https://www.w3.org/TR/WCAG22/) · [APG grid guidance](https://www.w3.org/WAI/ARIA/apg/patterns/grid/) · [Microsoft human-AI principles](https://www.microsoft.com/en-us/research/publication/guidelines-for-human-ai-interaction/) are standards/pattern references, not user evidence. See [implementation checklist](selecta-experience-implementation-checklist.md), [evidence](selecta-experience-evidence.md), [status reconciliation](selecta-experience-status-reconciliation.md).

@@ -59,6 +59,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `mixes.shaping.energy_arc` | **Energy arc.** A five-stop energy curve, drawn or set with sliders. | `mixes.shaping` |
 | `mixes.shaping.destination` | **Take me to.** End the mix on a song you choose. | `mixes.shaping` |
 | `mixes.shaping.stem_moves` | **Stem move steering.** Never, Sometimes or Often for moves that need separated stems. | `mixes.shaping`, `stems` |
+| `mixes.shaping.remember_length` | **Remember mix length.** The chosen length (30 min, 1 hour or 2 hours) is kept in this browser for the next visit, like the other shaping choices. | `mixes.shaping` |
 
 ## Lucy
 
@@ -87,8 +88,10 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `editor` | **Editor.** Change a mix song by song: reorder, add, remove, swap and clear. |  |
 | `editor.suggestions` | **Song suggestions.** Songs suggested for a spot before you search, each saying how it would hand over. | `editor` |
 | `editor.locks` | **Locked songs.** A locked song stays where it is when the mix is rebuilt. | `editor` |
+| `editor.drag_preview` | **Move preview.** While a song is dragged, the transitions the drop would change are marked before it lands. | `editor` |
 | `seam_inspector` | **Transition inspector.** Pick the move for any transition, hear it, render it and see its checks. | `editor` |
 | `seam_inspector.exact_cues` | **Exact cues.** Choose the exact bars and phrase a transition leaves and lands on. | `seam_inspector` |
+| `seam_inspector.compare` | **Compare with before.** Hear a transition's earlier finished render beside the new one, once both really exist. | `seam_inspector` |
 | `stem_studio` | **Stem Studio.** Both songs' voice, drums, bass and melody on one grid, heard instantly. | `seam_inspector`, `stems` |
 | `stem_studio.auto_arrange` | **Studio arranging.** Selecta arranges the stems itself, or fine-tunes yours, and says what changed. | `stem_studio` |
 | `export` | **Export.** Save the whole mix as an audio file, with a list of exports. | `editor` |
@@ -127,6 +130,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `discover.word_links` | **Word connections.** Lyric links between songs, where a word in one hands off to the same word in the next. | `lyrics.display` |
+| `discover.relationship_map` | **Connection map.** An optional map of the word connections found, drawing only the ones returned. | `discover.word_links` |
 | `discover.harmonic` | **Harmonic matches.** Songs that might share chords, with an audition in four steps. |  |
 
 ## Library
@@ -137,6 +141,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `library.priority` | **Priority songs.** Songs analysed first, whose stems are kept when the cache is cleared. |  |
 | `library.never_play` | **Never play.** Songs Selecta won't pick when it builds a mix. |  |
 | `library.corrections` | **Corrections.** Fix a song's measured tempo, or say whether it's music. |  |
+| `library.capability_readiness` | **Readiness by capability.** Song details say separately whether a song can play, join mixes, have stems split and show timed lyrics. |  |
 | `library.card_view` | **Card view.** The Library as cards instead of a list. |  |
 | `library.folders` | **Music folders.** The Sources tab: more than one folder, checking for new songs, and stopping watching one. |  |
 | `library.relink` | **Re-link a moved folder.** Point Selecta at a folder that moved, with a preview first. | `library.folders` |
@@ -161,6 +166,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `workspace.storage` | **Storage.** Free and cached space, and the cache budget. |  |
 | `workspace.backup` | **Local backup.** Back up the library's data and restore it on the next start. |  |
 | `workspace.diagnostics` | **Diagnostics.** The raw details of what Selecta is doing, for when something goes wrong. |  |
+| `workspace.library_health` | **Library health.** Overview says whether the library can be mixed or what blocks it, and which one thing to do first. |  |
 
 ## Across the app
 
@@ -173,6 +179,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `app.theme_choice` | **Theme choice.** Light, dark or match this computer. |  |
 | `app.motion_choice` | **Motion choice.** Still, subtle or expressive movement. The computer's reduced-motion setting always wins. |  |
 | `app.classic_nav` | **Classic navigation.** The older navigation labels over the same pages, with ?ui=classic as a way back. |  |
+| `app.scene_transitions` | **Page cross-fades.** With Expressive motion, pages cross-fade where the browser supports it; otherwise they change at once. | `app.motion_choice` |
 | `app.install` | **Install as an app.** Chrome and Edge can install Selecta as its own window. |  |
 
 ## Tools

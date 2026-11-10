@@ -88,6 +88,11 @@
 /* MP-0288-03: Hear it leads the row, ahead of Good and Bad, with its play mark and a firmer edge */
 .timeline .seam-actions .seam-hear { font-weight: 600; color: var(--text); border-color: var(--text-soft); }
 .timeline .seam-name { min-height: var(--control-height); }
+/* CI-0173-02: while a song is carried, the transitions its drop would replace are dashed and say so */
+.timeline .seam.drop-affected { border-left-style: dashed; border-left-color: var(--selected); background: var(--surface-selected); }
+.timeline .drop-affected-note { margin: 0; font-size: var(--text-xs); color: var(--text); }
+.drop-preview { margin: 0 0 var(--space-2); font-size: var(--text-sm); color: var(--text); }
+@media (forced-colors: active) { .timeline .seam.drop-affected { border-left-color: Highlight; } }
 
 /* somewhere real to press between two songs */
 .timeline .add-gap { padding-block: var(--space-hair); }

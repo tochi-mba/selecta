@@ -1,7 +1,7 @@
 # ADR-0133 - Uncoached user research, real performance and release evidence
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** Not started (0/5 new EX tasks).
+- **Implementation:** 0/5 Implemented; 3 In progress, 2 Not started (2026-11-10).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
 - **Priority / phase:** P0 / Quality.
@@ -30,11 +30,11 @@ A numerical pass rate from tiny samples is unreliable; publish raw counts and ta
 
 ## Implementation tasks (all Not started; Verified: No)
 
-1. **EX-0133-01 - Define and run baseline UX tasks**. Acceptance: Observed errors and outcomes separated from design hypotheses. Required verification: Consented uncoached sessions. **Implementation: Not started; Verified: No.**
-2. **EX-0133-02 - Establish approved visual baselines**. Acceptance: All key states, themes and browser environments reviewed. Required verification: Playwright snapshots plus reviewer. **Implementation: Not started; Verified: No.**
-3. **EX-0133-03 - Benchmark meaningful scale**. Acceptance: Latency, memory and audio continuity on recorded hardware. Required verification: 20k/100-song/64-cell profile. **Implementation: Not started; Verified: No.**
-4. **EX-0133-04 - Verify real audio and assistive access**. Acceptance: Audible seam, Stage, previews, NVDA and export checked. Required verification: Human listening and AT signoff. **Implementation: Not started; Verified: No.**
-5. **EX-0133-05 - Conduct exact-head release and rollback**. Acceptance: No P0 and all risks approved before GO. Required verification: CI, old-new-old restoration, decision record. **Implementation: Not started; Verified: No.**
+1. **EX-0133-01 - Define and run baseline UX tasks**. Acceptance: Observed errors and outcomes separated from design hypotheses. Required verification: Consented uncoached sessions. **Implementation: Not started; Verified: No. Needs a person: consented uncoached sessions.**
+2. **EX-0133-02 - Establish approved visual baselines**. Acceptance: All key states, themes and browser environments reviewed. Required verification: Playwright snapshots plus reviewer. **Implementation: In progress; Verified: No. Needs a person: named reviewer approves captures.**
+3. **EX-0133-03 - Benchmark meaningful scale**. Acceptance: Latency, memory and audio continuity on recorded hardware. Required verification: 20k/100-song/64-cell profile. **Implementation: In progress; Verified: No. Needs a person: profile on recorded hardware with listening.**
+4. **EX-0133-04 - Verify real audio and assistive access**. Acceptance: Audible seam, Stage, previews, NVDA and export checked. Required verification: Human listening and AT signoff. **Implementation: Not started; Verified: No. Needs a person: human listening and AT sign-off.**
+5. **EX-0133-05 - Conduct exact-head release and rollback**. Acceptance: No P0 and all risks approved before GO. Required verification: CI, old-new-old restoration, decision record. **Implementation: In progress; Verified: No. Needs a person: owner GO record at an exact SHA.**
 
 ## Verification and sources
 

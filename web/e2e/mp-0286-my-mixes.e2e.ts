@@ -109,7 +109,7 @@ test('MP-0286-04 Edit leads, Play explains itself, and Copy, Prioritize and Dele
   const made = await draft(request, 'Tiered', [1, 2, 3]);
   await mine(page);
   const card = page.locator('.draft-list .draft').first();
-  const look = await card.locator('.draft-actions').evaluate((row) => [...row.querySelectorAll(':scope > button, :scope > .menu > button')].map((button) => ({ text: button.textContent?.trim(), primary: button.classList.contains('primary'), background: getComputedStyle(button).backgroundColor })));
+  const look = await card.locator('.draft-actions').evaluate((row) => [...row.querySelectorAll(':scope > button, :scope > .menu > button')].map((button) => ({ text: (button.querySelector('.action-labels > :first-child') ?? button).textContent?.trim(), primary: button.classList.contains('primary'), background: getComputedStyle(button).backgroundColor })));
   expect(look[0], 'Edit first and primary').toMatchObject({ text: 'Edit', primary: true });
   expect(look[1].text).toBe('Play');
   expect(look[1].primary).toBe(false);

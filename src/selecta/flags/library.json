@@ -29,6 +29,11 @@
       "surfaces": ["overlay.song_details"],
       "words": ["Correct it"]
     },
+    "library.capability_readiness": {
+      "label": "Readiness by capability",
+      "about": "Song details say separately whether a song can play, join mixes, have stems split and show timed lyrics.",
+      "surfaces": ["overlay.song_details"]
+    },
     "library.card_view": {
       "label": "Card view",
       "about": "The Library as cards instead of a list.",

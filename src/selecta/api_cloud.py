@@ -54,6 +54,7 @@ from selecta.identity.tokens import (
 )
 from selecta.identity.workos import WorkOSClient
 from selecta.lucy import cloud_settings as lucy_cloud_settings
+from selecta.observability import tracing
 from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.listen import PgListener
 from selecta.persistence.migrate import current as migration_current
@@ -342,6 +343,9 @@ def create_cloud_app(
         emergency_cache.listen(listener)
     admin_guard.install(app, emergency_cache)
     app.add_middleware(RequestMethodMiddleware)
+    # One server span per request; job spans link to it (ADR-0410).
+    tracing.install(app, "api")
+    tracing.configure_from_environment("api")
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
     app.add_middleware(

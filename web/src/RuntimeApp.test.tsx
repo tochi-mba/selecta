@@ -41,4 +41,20 @@ describe('before the app knows what it is', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try now' }));
     expect(await screen.findByText('The local app')).toBeInTheDocument();
   });
+
+  // S31-0087-10: with no local server, an installed or direct-route start never claims music can play offline
+  it('never claims offline playback while the local server is down', async () => {
+    vi.stubGlobal('fetch', answering(() => false));
+    render(<RuntimeApp />);
+    expect(await screen.findByRole('heading', { name: 'Can’t reach Selecta.' })).toBeInTheDocument();
+    expect(screen.getByText(/stopped running\. Start it again/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/offline|keep(s)? playing|still play/i);
+    expect(screen.queryByText('The local app')).toBeNull();
+    // and nothing installs a service worker that could serve stale pages or audio without the server
+    const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
+    const fs = node.getBuiltinModule('node:fs') as { readFileSync(path: string, encoding: 'utf8'): string };
+    for (const file of ['src/main.tsx', 'src/RuntimeApp.tsx', 'index.html']) {
+      expect(fs.readFileSync(`${node.cwd()}/${file}`, 'utf8'), file).not.toMatch(/serviceWorker/);
+    }
+  });
 });

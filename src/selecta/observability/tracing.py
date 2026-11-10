@@ -29,6 +29,8 @@ from opentelemetry.trace import (
     NonRecordingSpan,
     SpanContext,
     SpanKind,
+    Status,
+    StatusCode,
     TraceFlags,
 )
 
@@ -101,8 +103,8 @@ def _attributes(job_id: str, service: str, extra: Mapping[str, Any]) -> dict[str
 def job_span(
     name: str, job_id: str, *, service: str, kind: SpanKind = SpanKind.INTERNAL, **attributes: Any
 ) -> Iterator[trace.Span]:
-    """A span about one job, in that job's trace, current for the block."""
-    if not enabled():
+    """A span about one job, in that job's trace, current for the block (none without an id)."""
+    if not job_id or not enabled():
         yield trace.INVALID_SPAN
         return
     parent, links = _parent_and_links(job_id)
@@ -164,6 +166,8 @@ class TracingMiddleware:
             async def send_traced(message):
                 if message["type"] == "http.response.start":
                     span.set_attribute("http.response.status_code", message["status"])
+                    if message["status"] >= 500:
+                        span.set_status(Status(StatusCode.ERROR))
                 await send(message)
 
             try:

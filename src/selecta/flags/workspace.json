@@ -24,6 +24,11 @@
       "about": "The raw details of what Selecta is doing, for when something goes wrong.",
       "routes": ["GET /api/diagnostics"],
       "surfaces": ["workshop.diagnostics", "workshop"]
+    },
+    "workspace.library_health": {
+      "label": "Library health",
+      "about": "Overview says whether the library can be mixed or what blocks it, and which one thing to do first.",
+      "surfaces": ["workshop"]
     }
   }
 }

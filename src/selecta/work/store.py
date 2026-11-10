@@ -336,6 +336,13 @@ class JobStore:
             claimed = claims.ClaimSession(connection, self, pool, caps, now).run()
         if claimed is not None:
             self._remember(claimed.attempt_id, claimed.job.workspace_id)
+            if claimed.job.queued_at:
+                # Queue wait as its own span, so span metrics give wait time by lane (SLOs).
+                tracing.record_job_span(
+                    "job.wait", claimed.job.id, int(claimed.job.queued_at * 1e9),
+                    service=self.trace_service,
+                    **{"selecta.lane": str(claimed.job.lane), "selecta.pool": pool},
+                )
             tracing.record_job_span(
                 "job.claim", claimed.job.id, started, service=self.trace_service,
                 **{"selecta.attempt_id": claimed.attempt_id, "selecta.pool": pool},

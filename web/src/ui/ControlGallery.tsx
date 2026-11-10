@@ -25,7 +25,8 @@ export function ControlGallery() {
         <button disabled data-working aria-busy="true" aria-disabled="true">Busy and disabled</button>
         <Action working="Saving this longer label…" run={() => new Promise<void>((resolve) => window.setTimeout(() => { setSaved(true); resolve(); }, 1200))}>Save</Action>
         <Tooltip text="Available on hover and keyboard focus"><button>Tooltip</button></Tooltip>
-        <Menu label="More actions"><button role="menuitem">First action</button><button role="menuitem">Second action</button></Menu>
+        <button className="destructive">Delete example</button>
+        <Menu label="More actions"><button role="menuitem">First action</button><button role="menuitem">Second action</button><button role="menuitem" className="destructive">Delete from menu</button></Menu>
       </div>{saved && <p role="status">Saved locally for this demonstration.</p>}
       <div className="row wrap">{kinds.map((kind) => <Status key={kind} kind={kind} />)}</div></section>
       <section className="stack"><h3>Fields and validation</h3>
