@@ -103,6 +103,7 @@ New fields: `scope`, `modes`, `when_off`, `when_locked`, `kind` (`release` / `op
 - Propagation: change a rule, then assert every API instance and the gateway enforce it within the targets.
 - Mid-flight: flag off during upload, render, export, Lucy turn and an open Room.
 - The existing reflow sweep runs in both modes, plus a "teaser" pass for locked features.
+- **Cloud defaults.** A flag may set `cloud_default: false` to start off in the cloud while staying on locally. `lyrics.display` does (ADR-0406): with no licence, the cloud decides it off at the mode layer, so `listen.lyrics`, `listen.word_focus`, `listen.stage` and `discover.word_links` are off with it, and only the build (`SELECTA_FLAGS=+lyrics.display`) can turn it on; targeting rules can't. Local mode ignores the field. **Note for the cloud reflow sweep:** run it once with the cloud defaults and check that Listen, Stage and Discover > Words close up with no empty lyric panel, stage button, palette entry or help text (`tests/test_cloud_lyric_display.py` lists the surfaces).
 
 ### 11B.9 Who can change flags, and how far
 
