@@ -317,7 +317,8 @@ describe('listener-controlled presentation', () => {
     );
     const button = await screen.findByRole('button', { name: 'Read all lyrics' });
     fireEvent.click(button);
-    expect(screen.getByRole('region', { name: 'All timed lyrics, scroll manually' })).toHaveTextContent('Hello, beautiful world!');
+    // The sheet can render a tick after the click on a busy runner; wait for it like the button.
+    expect(await screen.findByRole('region', { name: 'All timed lyrics, scroll manually' })).toHaveTextContent('Hello, beautiful world!');
     fireEvent.click(screen.getByRole('button', { name: 'Resume lyric follow' }));
     expect(screen.queryByRole('region', { name: 'All timed lyrics, scroll manually' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Read all lyrics' })).toBeInTheDocument();
