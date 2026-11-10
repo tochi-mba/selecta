@@ -195,6 +195,21 @@ describe('things on top of the page', () => {
     expect(opener).toHaveFocus();
     opener.remove();
   });
+  it('give focus to the opener’s replacement when a re-render swapped the opener out', () => {
+    // A Library correction reloads the list while the sheet is open, replacing the row's button.
+    const opener = document.createElement('button');
+    opener.dataset.focusKey = 'song-details-7';
+    document.body.append(opener);
+    opener.focus();
+    const { unmount } = render(<Dialog title="Song" onClose={() => {}}><button>Only</button></Dialog>);
+    opener.remove();
+    const replacement = document.createElement('button');
+    replacement.dataset.focusKey = 'song-details-7';
+    document.body.append(replacement);
+    unmount();
+    expect(replacement).toHaveFocus();
+    replacement.remove();
+  });
   it('makes the parent inert during a nested dialog and restores the nested opener', () => {
     function Nested() {
       const [inner, setInner] = useState(false);

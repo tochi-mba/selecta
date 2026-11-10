@@ -157,6 +157,9 @@ function Overlay({
   const titleId = useId();
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
+    // A list can re-render while the overlay is open and replace the button that opened it.
+    // `data-focus-key` names that button stably, so focus goes back to its replacement.
+    const beforeKey = before?.dataset.focusKey;
     if (openOverlays++ === 0) {
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -184,7 +187,11 @@ function Overlay({
         if (at >= 0) overlayStack.splice(at, 1);
       }
       syncInert();
+      const replacement = !before?.isConnected && beforeKey
+        ? document.querySelector<HTMLElement>(`[data-focus-key="${CSS.escape(beforeKey)}"]`)
+        : null;
       if (before?.isConnected && before !== document.body) before.focus();
+      else if (replacement) replacement.focus();
       else document.getElementById('content')?.focus({ preventScroll: true });
     };
   }, []);
