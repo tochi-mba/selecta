@@ -55,35 +55,82 @@ and stops at 80% of its storage limit.
 
 ## Working on Selecta
 
-Double-click `dev.cmd`, or run it from a terminal. It starts the server and the site, each reloading
-as you edit, and opens your browser. Closing the window stops it all.
+**One command starts local development:** the Python API (auto-reloads when code changes) and the
+Vite site (hot-reloads as you edit), with its API proxy. Use `dev.cmd` from Windows Command Prompt,
+`.\\dev.cmd` in PowerShell, or `uv run python -x dev.cmd` on macOS/Linux. You can also
+double-click `dev.cmd` on Windows. It uses the project root regardless of your current directory.
 
 ```bash
 dev.cmd
 ```
 
-It needs [uv](https://docs.astral.sh/uv/) and [pnpm](https://pnpm.io/) and installs everything else.
-It uses your normal data folder, so set `SELECTA_HOME` to work on a different library. On macOS or
-Linux, the same file runs with `uv run python -x dev.cmd`.
+You need [uv](https://docs.astral.sh/uv/), [Node.js 22+](https://nodejs.org/), and
+[pnpm](https://pnpm.io/) on your PATH. The launcher prepares Python dependencies through
+`uv run` and performs an incremental, lockfile-checked `pnpm install` itself.
+Install [ffmpeg](https://ffmpeg.org/download.html) for music analysis and playback; missing ffmpeg
+is reported prominently rather than hidden. No production Cloud credentials or hosted services are
+needed for **local mode**. Set `SELECTA_HOME` to use a separate development library, otherwise
+the usual user data folder is used.
 
-To run everything CI checks:
+You can see progress while it starts. Every stage is labelled, API and site output are prefixed,
+and until ready the launcher reports which of the API, website, and Vite API proxy is still
+pending. When healthy, it prints working URLs (normally `http://127.0.0.1:5173/` for the site,
+`http://127.0.0.1:8733/` for the API) and opens the browser. It periodically reports that
+the processes are alive. Press Ctrl+C or close the window to stop **only processes it started**.
+
+```text
+18:44:00 [SETUP  ] Step 1/4 - Checking the local environment
+18:44:00 [SETUP  ] Step 2/4 - Preparing browser dependencies
+18:44:02 [SETUP  ] Step 3/4 - Starting hot-reloading API and website
+18:44:02 [START  ] API: ...
+18:44:02 [START  ] SITE: ...
+18:44:02 [SETUP  ] Step 4/4 - Waiting for API, site and API proxy
+18:44:03 [WAIT   ] 0s elapsed; waiting for api, proxy. Logs appear above as they arrive.
+18:44:05 [OK     ] API: responding
+18:44:05 [OK     ] PROXY: responding
+18:44:05 [READY  ] Website (hot reload): http://127.0.0.1:5173/
+```
+
+Example only; your times, paths, and ports will differ. Occupied ports are reported and the
+next free port is selected, rather than silently using a different checkout's server.
+Use `--reuse-server` only when you deliberately want to connect to an existing Selecta API.
+The existing server is never stopped when this launcher exits.
+
+| Command | What it does |
+|---|---|
+| `dev.cmd` | Start the full **local** API + Vite dev stack and open the browser |
+| `dev.cmd --no-browser` | Start the stack without opening a browser |
+| `dev.cmd --check` | Start both services, verify API/site/proxy, then cleanly stop |
+| `dev.cmd doctor` | Show Python, uv, Node, pnpm, ffmpeg, local mode and data configuration |
+| `dev.cmd --api-port 8740 --site-port 5180` | Request different starting ports |
+| `dev.cmd --reuse-server` | Explicitly reuse an existing API on port 8733 |
+| `dev.cmd test` | Run local lint, Python, TypeScript, web unit/build and Edge browser checks |
+
+For non-Windows systems, replace the `dev.cmd` prefix with `uv run python -x dev.cmd`.
+The `--check` option is useful after setup, and `doctor` is useful when the prerequisite
+check reports something missing. `SELECTA_MODE=cloud` is deliberately rejected; Cloud's API,
+gateway, identity, storage and database require their separate deployment configuration.
+
+**CI runs more than `dev.cmd test`.** In particular, GitHub Actions also runs PostgreSQL
+isolation tests, the feature-flag sweep, Cloud browser tests, coverage aggregation, and CodeQL.
+A passing local test command does *not* guarantee every CI check has passed. See
+[the testing guide](docs/engineering/testing.md) to run those jobs separately.
 
 ```bash
 dev.cmd test
-```
-
-Or one piece at a time:
-
-```bash
+# Or individual checks:
 uv run pytest
 cd web
 pnpm test
+pnpm build
 pnpm e2e
+pnpm e2e:flags
+pnpm e2e:cloud
 ```
 
-`pnpm e2e` runs the browser tests. They open real pages in Edge against a real server, with a small
-library synthesized by `tests/e2e_server.py`, so no real music is involved, and they run muted. Run
-`pnpm build` first, since they test the built site.
+`pnpm e2e` runs browser tests in Edge against a real local test server with a synthetic library
+(`tests/e2e_server.py`), so no personal audio is involved. Run `pnpm build` first; tests exercise
+the built site.
 
 No file in the project goes over 1,000 lines. `tests/test_file_length.py` enforces it, and CI runs it
 as its own step. When a file gets close, split it by what the pieces do.
