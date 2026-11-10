@@ -61,6 +61,12 @@
       "words": ["LRCLIB", "with timed lyrics"],
       "cli": ["lyrics"]
     },
+    "lyrics.display": {
+      "label": "Lyric display",
+      "about": "Shows lyric text in listening and discovery views where its use is permitted.",
+      "requires": ["lyrics.lookup"],
+      "cloud_default": false
+    },
     "lyrics.word_timing": {
       "label": "Word timing",
       "about": "When each sung word lands, for moves that hand over on a word.",

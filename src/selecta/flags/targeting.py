@@ -178,6 +178,9 @@ class _Evaluator:
             return Decision(False, Layer.MODE, MODE_OFF)
         if self.local:
             return Decision(True, Layer.BUILD, DEFAULT)
+        state = self.build_states.get(flag.id)
+        if flag.cloud_default is False and state is not None and state.why != flags.ENV:
+            return Decision(False, Layer.MODE, MODE_OFF)
         if flag.id in self.plan_gated and flag.id not in self.entitled:
             return Decision(False, Layer.PLAN, PLAN_LOCKED)
         return self.rule_verdict(flag)[0]

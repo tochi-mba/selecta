@@ -33,6 +33,9 @@ from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from selecta import flags
+from selecta.admin import routes as admin_routes
+from selecta.admin import routes_controls as admin_control_routes
+from selecta.admin.state import EmergencyCache
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
 from selecta.flags import guard as flag_guard
@@ -293,6 +296,7 @@ def create_cloud_app(
             "Last-Event-ID",
             "X-Workspace-ID",
             "X-Operation-ID",
+            "X-Admin-Session",
         ],
         expose_headers=["X-Request-ID"],
         max_age=600,
@@ -607,6 +611,22 @@ def create_cloud_app(
     rooms_wiring.install(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         rules=rule_cache, allowed_origins=settings.allowed_origins, ports=room_ports,
+    )
+
+    emergency_cache = EmergencyCache(engine)
+    app.state.emergency_controls = emergency_cache
+    admin_routes.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        emergency=emergency_cache,
+    )
+    admin_control_routes.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        emergency_cache=emergency_cache,
+        rule_cache=rule_cache,
     )
 
     flag_guard.assert_cloud_api_routes_owned(app)

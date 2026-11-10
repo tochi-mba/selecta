@@ -105,6 +105,7 @@ FIELDS = {
     "kind",
     "owner",
     "review_by",
+    "cloud_default",
 }
 
 # The cloud-only fields and the values each may take. The first value is the default.
@@ -151,6 +152,9 @@ class Flag:
     kind: str = KINDS[0]
     owner: str | None = None
     review_by: str | None = None
+    # A cloud product can start more conservatively than the local app. An explicit
+    # `SELECTA_FLAGS=+name` still enables it, so licensing/operations is configuration.
+    cloud_default: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -191,6 +195,7 @@ def registry() -> dict[str, Flag]:
                 kind=spec.get("kind", KINDS[0]),
                 owner=spec.get("owner"),
                 review_by=spec.get("review_by"),
+                cloud_default=spec.get("cloud_default"),
             )
     return flags
 
@@ -255,6 +260,8 @@ def _cloud_problems(flag: Flag) -> list[str]:
             dt.date.fromisoformat(str(flag.review_by))
         except ValueError:
             found.append(f"{flag.id}: review_by {flag.review_by!r} isn't a date like 2027-01-31")
+    if flag.cloud_default is not None and not isinstance(flag.cloud_default, bool):
+        found.append(f"{flag.id}: cloud_default should be true or false")
     return found
 
 

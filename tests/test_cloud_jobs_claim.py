@@ -174,6 +174,22 @@ def test_an_account_level_refusal_blocks_its_jobs_and_no_one_else(cloud_engine, 
     assert store.claim("cpu-heavy", worker()).job.workspace_id == "w2"
 
 
+def test_a_queued_job_waits_while_its_flag_is_off_and_runs_when_it_returns(cloud_engine):
+    feature_flags = Flags()
+    store = make_store(cloud_engine, flags=feature_flags)
+    queued = store.enqueue(JobSpec("w1", "analyse.song")).job
+
+    feature_flags.off.add(("w1", "core.analysis"))
+    assert store.claim("cpu-heavy", worker()) is None
+    with transaction(cloud_engine) as connection:
+        held = connection.execute(sa.select(jobs).where(jobs.c.id == queued.id)).one()
+    assert held.state == "queued", "switching a flag off pauses queued work; it does not cancel it"
+
+    feature_flags.off.remove(("w1", "core.analysis"))
+    claimed = store.claim("cpu-heavy", worker())
+    assert claimed is not None and claimed.job.id == queued.id
+
+
 def test_a_job_with_no_owning_flag_is_never_held_back_by_flags(cloud_engine):
     flags = Flags()
     flags.off.add(("w1", "core.analysis"))

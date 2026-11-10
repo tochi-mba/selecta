@@ -7,10 +7,36 @@ from types import SimpleNamespace
 import pytest
 from cloud_party import CAROL, auth
 from fastapi import HTTPException
+from fastapi.routing import APIRoute
 
 from selecta.flags import cloud_gate, targeting
+from selecta.work.catalogue import CATALOGUE
 
 pytest_plugins = ("cloud_party",)
+
+
+def test_every_cloud_route_and_worker_job_has_a_valid_owned_cloud_flag(party):
+    registry = cloud_gate.flags.registry()
+    owners = cloud_gate.flags.route_owners()
+    served = {
+        f"{method} {route.path}"
+        for route in party.app.routes
+        if isinstance(route, APIRoute) and route.path.startswith("/api/")
+        for method in route.methods
+    }
+
+    assert served, "the Cloud API should serve customer and staff routes"
+    assert served <= set(owners), f"Cloud routes without a flag: {sorted(served - set(owners))}"
+    for route in served:
+        flag_id = owners[route]
+        assert flag_id in registry
+        assert "cloud" in registry[flag_id].modes, f"{route} belongs to non-Cloud flag {flag_id}"
+    for job in CATALOGUE.values():
+        assert job.flag_id is not None, f"{job.name} needs an owning feature flag"
+        assert job.flag_id in registry, f"{job.name} names unknown flag {job.flag_id}"
+        assert "cloud" in registry[job.flag_id].modes, (
+            f"{job.name} is Cloud work but {job.flag_id} is not a Cloud flag"
+        )
 
 
 def test_a_plan_locked_route_names_the_plan_that_unlocks_it(party):

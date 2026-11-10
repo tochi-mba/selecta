@@ -67,6 +67,45 @@ SELF_ONLY = {
     # Staff only: starts the caller's own admin session and never reads a customer workspace.
     ("POST", "/api/admin/session"),
 }
+# Staff-console routes never trust a customer workspace header. Every one first requires the
+# caller's server-side privileged session; the admin route tests exercise its scoped commands.
+STAFF_ONLY = {
+    ("GET", "/api/admin/me"),
+    ("GET", "/api/admin/overview"),
+    ("GET", "/api/admin/jobs"),
+    ("GET", "/api/admin/jobs/{job_id}"),
+    ("POST", "/api/admin/jobs/{job_id}/{command}"),
+    ("GET", "/api/admin/workers"),
+    ("POST", "/api/admin/workers/{worker_id}/{command}"),
+    ("GET", "/api/admin/accounts"),
+    ("GET", "/api/admin/accounts/{user_id}"),
+    ("POST", "/api/admin/accounts/{user_id}/{command}"),
+    ("POST", "/api/admin/overrides"),
+    ("POST", "/api/admin/overrides/mass"),
+    ("DELETE", "/api/admin/overrides/{override_id}"),
+    ("GET", "/api/admin/ai"),
+    ("GET", "/api/admin/security"),
+    ("POST", "/api/admin/security/roles"),
+    ("GET", "/api/admin/audit"),
+    ("PATCH", "/api/admin/audit/{event_id}"),
+    ("DELETE", "/api/admin/audit/{event_id}"),
+    ("GET", "/api/admin/alerts"),
+    ("GET", "/api/admin/actions"),
+    ("POST", "/api/admin/actions/{action_id}/{command}"),
+    ("GET", "/api/admin/emergency"),
+    ("POST", "/api/admin/emergency/{control}/{command}"),
+    ("GET", "/api/admin/flags"),
+    ("GET", "/api/admin/flags/history"),
+    ("POST", "/api/admin/flags/rollback"),
+    ("GET", "/api/admin/flags/explain/{user_id}"),
+    ("POST", "/api/admin/flags/{flag_id}/impact"),
+    ("POST", "/api/admin/flags/{flag_id}/change"),
+    ("POST", "/api/admin/flags/{flag_id}/preview"),
+    ("GET", "/api/admin/takedowns"),
+    ("POST", "/api/admin/takedowns"),
+    ("POST", "/api/admin/takedowns/{notice_id}/{command}"),
+    ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
+}
 # Every route that can reach a workspace's data, with a body valid enough to get past
 # validation, so the refusal we see comes from the workspace check and not from a 422.
 SCOPED: dict[tuple[str, str], dict | None] = {
@@ -328,7 +367,7 @@ def test_every_cloud_route_is_classified(world):
         if isinstance(route, APIRoute) and route.path.startswith("/api")
         for method in route.methods - {"HEAD"}
     }
-    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | set(SCOPED)
+    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | set(SCOPED)
     assert routes - classified == set(), "new routes must join the tenant isolation matrix"
     assert classified - routes == set(), "the matrix names routes that no longer exist"
 

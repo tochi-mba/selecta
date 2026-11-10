@@ -4,7 +4,7 @@
     "discover.word_links": {
       "label": "Word connections",
       "about": "Lyric links between songs, where a word in one hands off to the same word in the next.",
-      "requires": ["lyrics.lookup"],
+      "requires": ["lyrics.display"],
       "routes": ["GET /api/links", "POST /api/seams", "POST /api/mix/pair"],
       "surfaces": ["discover.words", "mixes", "overlay.palette"],
       "words": ["Word connections"],

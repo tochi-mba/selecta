@@ -11,18 +11,20 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
 import httpx
 
-from selecta import __version__, db, flags
+from selecta import __version__, db, flags, modes
 from selecta.library.scan import _ARTIST_SPLIT, _FEAT_TAIL, _TITLE_NOISE
 
 API = "https://lrclib.net/api"
 USER_AGENT = f"selecta/{__version__} (https://github.com/tochi-mba/selecta)"
 REQUEST_SPACING_SECONDS = 0.7
+CLOUD_REQUEST_SPACING_SECONDS = 1.0
 DURATION_TOLERANCE_SECONDS = 4.0
 
 _LRC_LINE = re.compile(r"^\[(\d+):(\d+(?:\.\d+)?)\](.*)$")
@@ -31,6 +33,53 @@ _WORD = re.compile(r"[^\W_]+(?:['’][^\W_]+)?", re.UNICODE)
 SECONDS_PER_WORD = 0.42
 MIN_LINE_SECONDS = 1.2
 MAX_LINE_SECONDS = 8.0
+
+
+class LookupQueue:
+    """One FIFO-shaped process gate for outbound lyric requests.
+
+    The lock covers the wait and the HTTP call: callers from every account and worker thread
+    share both the minimum spacing and a single in-flight request. Multiple processes still need
+    the deployment's one lyrics-worker queue, while each process independently keeps the agreed
+    ceiling if a worker is restarted or misrouted.
+    """
+
+    def __init__(
+        self,
+        spacing_s: float = CLOUD_REQUEST_SPACING_SECONDS,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        if spacing_s < 0:
+            raise ValueError("lyrics request spacing cannot be negative")
+        self.spacing_s = spacing_s
+        self._clock = clock
+        self._sleep = sleep
+        self._lock = threading.Lock()
+        self._last_request: float | None = None
+
+    def run(self, request: Callable[[], httpx.Response]) -> httpx.Response:
+        with self._lock:
+            if self._last_request is not None:
+                wait = self.spacing_s - (self._clock() - self._last_request)
+                if wait > 0:
+                    self._sleep(wait)
+            self._last_request = self._clock()
+            return request()
+
+
+_cloud_lookup_queue = LookupQueue()
+
+
+def cloud_lookup_queue() -> LookupQueue:
+    return _cloud_lookup_queue
+
+
+def use_cloud_lookup_queue(queue: LookupQueue) -> None:
+    """Replace the process queue in tests or a worker bootstrap before lookups begin."""
+    global _cloud_lookup_queue
+    _cloud_lookup_queue = queue
 
 
 @dataclass(frozen=True)
@@ -81,12 +130,17 @@ class LrcLib:
         self._last_request = 0.0
 
     def _get(self, path: str, params: dict) -> httpx.Response:
-        wait = REQUEST_SPACING_SECONDS - (time.monotonic() - self._last_request)
-        if wait > 0:
-            time.sleep(wait)
+        cloud = modes.current_mode() is modes.Mode.CLOUD
+        if not cloud:
+            wait = REQUEST_SPACING_SECONDS - (time.monotonic() - self._last_request)
+            if wait > 0:
+                time.sleep(wait)
         for _ in range(5):
-            self._last_request = time.monotonic()
-            response = self.client.get(f"{API}{path}", params=params)
+            def send() -> httpx.Response:
+                self._last_request = time.monotonic()
+                return self.client.get(f"{API}{path}", params=params)
+
+            response = cloud_lookup_queue().run(send) if cloud else send()
             if response.status_code != 429:
                 return response
             time.sleep(float(response.headers.get("Retry-After", "10")))
