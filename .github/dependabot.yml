@@ -1,0 +1,37 @@
+# Keeps actions and dependencies current. Monthly and grouped, so a month's updates arrive as
+# one pull request per ecosystem: each one runs the full test workflow, which costs Actions
+# minutes once the repository is private. Security fixes don't wait for the schedule: turn on
+# Dependabot security updates in the repository settings (free on public and private repos).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      web-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps(web)

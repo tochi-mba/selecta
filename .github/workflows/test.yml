@@ -4,43 +4,87 @@ on:
   push:
     branches: [main, build/v1]
   pull_request:
+  workflow_dispatch:
 
+# While the repository is public, Actions minutes are free, so a run that has started always
+# finishes and every push gets a verdict. Once it's private, minutes are billed (Windows at
+# twice the Linux rate), so a newer push to a pull request cancels the run it supersedes. Runs
+# on main and manual runs are never cancelled. Either way GitHub keeps at most one waiting run
+# per group, so a burst of pushes costs one extra run, which tests the newest commit.
 concurrency:
   group: test-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.repository.private == true }}
 
 permissions:
   contents: read
 
 jobs:
+  workflows:
+    # The workflow files themselves: syntax, expressions, runner labels, action inputs, and
+    # shellcheck over every run script.
+    name: Workflows / actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lint every workflow
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
+          ./actionlint -color
+
+  lint:
+    # Fast and on Linux, so a style slip or an oversized file fails in a minute and the Windows
+    # jobs (billed at twice the Linux rate on a private repository) never start.
+    name: Lint / ruff, file length, committed secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - name: No file over 1,000 lines, and no live secret committed
+        run: uv run pytest tests/test_file_length.py tests/test_no_committed_secrets.py -q
+
   checklist-evidence:
     name: Checklist / evidence integrity
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Reject checked tasks without evidence
         run: python src/selecta/audit/checklist_evidence.py
 
   python:
     # Every pytest case is assigned to exactly one isolated Windows runner.
     name: Python / tests (shard ${{ matrix.shard }}/2)
+    needs: [lint]
     runs-on: windows-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
           enable-cache: true
       - name: Install FFmpeg
         run: choco install ffmpeg --yes --no-progress
       - run: uv sync --locked
-      - run: uv run ruff check .
-      - name: No file over 1,000 lines
-        run: uv run pytest tests/test_file_length.py -q
       - name: Run full assigned pytest shard with coverage
         env:
           SELECTA_TEST_SHARD: ${{ matrix.shard }}/2
@@ -48,19 +92,22 @@ jobs:
       - name: Rename per-runner coverage
         run: Rename-Item .coverage ".coverage.${{ matrix.shard }}"
       - name: Upload coverage for aggregate verification
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: python-coverage-${{ matrix.shard }}
           path: .coverage.${{ matrix.shard }}
           include-hidden-files: true
           if-no-files-found: error
+          retention-days: 3
 
   cloud:
     # Cloud code on Linux against a real PostgreSQL: row locks, SKIP LOCKED, LISTEN/NOTIFY,
     # advisory locks and row-level security only exist there. The Windows shards run the same
     # tests on SQLite. See docs/saas/18-test-plan.md.
     name: Cloud / PostgreSQL
+    needs: [lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16
@@ -79,8 +126,10 @@ jobs:
       CI: "true"
       SELECTA_TEST_POSTGRES_URL: postgresql+psycopg://selecta:selecta@localhost:5432/selecta_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
           enable-cache: true
@@ -98,21 +147,25 @@ jobs:
         run: uv run python tests/coverage_gate.py cloud-coverage.json
       - name: Keep the cloud coverage report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cloud-coverage
           path: cloud-coverage.json
           if-no-files-found: warn
+          retention-days: 14
 
   web:
     name: Web / unit tests and production build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
@@ -127,24 +180,28 @@ jobs:
   browser:
     # One worker per isolated Windows server; two shards split all real Edge tests.
     name: Edge E2E (shard ${{ matrix.shard }}/2)
+    needs: [lint, web]
     runs-on: windows-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
           enable-cache: true
       - name: Install FFmpeg
         run: choco install ffmpeg --yes --no-progress
       - run: uv sync --locked
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
@@ -158,41 +215,47 @@ jobs:
         working-directory: web
       - name: Keep failed browser artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: browser-test-results-${{ matrix.shard }}
           path: web/test-results
           if-no-files-found: ignore
+          retention-days: 7
       - name: Upload synthetic visual-review candidates
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: selecta-3-1-visual-review-${{ matrix.shard }}
           path: web/test-results/**/candidate-*.png
           if-no-files-found: ignore
+          retention-days: 7
 
   flags:
     # Every feature turned off in turn, on every page it shows up on: layout, accessibility, links,
     # wording and server calls. Screenshots are review candidates, uploaded every time.
     name: Feature-flag sweep (shard ${{ matrix.shard }}/2)
+    needs: [lint, web]
     runs-on: windows-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
           enable-cache: true
       - name: Install FFmpeg
         run: choco install ffmpeg --yes --no-progress
       - run: uv sync --locked
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
@@ -206,22 +269,26 @@ jobs:
         working-directory: web
       - name: Upload what the pages look like with features off
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: flags-sweep-${{ matrix.shard }}
           path: web/test-results
           if-no-files-found: ignore
+          retention-days: 7
 
   verify:
     # A canceled, missing or failing shard cannot yield a green verification.
     # Combined Python coverage, not a partial shard, must meet the original 70%.
     name: verify
     if: ${{ always() }}
-    needs: [checklist-evidence, python, cloud, web, browser, flags]
+    needs: [workflows, lint, checklist-evidence, python, cloud, web, browser, flags]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Require all prerequisite jobs to pass
         env:
+          WORKFLOWS_RESULT: ${{ needs.workflows.result }}
+          LINT_RESULT: ${{ needs.lint.result }}
           EVIDENCE_RESULT: ${{ needs.checklist-evidence.result }}
           PYTHON_RESULT: ${{ needs.python.result }}
           WEB_RESULT: ${{ needs.web.result }}
@@ -229,20 +296,24 @@ jobs:
           FLAGS_RESULT: ${{ needs.flags.result }}
           CLOUD_RESULT: ${{ needs.cloud.result }}
         run: |
-          echo "Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT"
+          echo "Workflows: $WORKFLOWS_RESULT; Lint: $LINT_RESULT; Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT"
+          test "$WORKFLOWS_RESULT" = success
+          test "$LINT_RESULT" = success
           test "$EVIDENCE_RESULT" = success
           test "$PYTHON_RESULT" = success
           test "$WEB_RESULT" = success
           test "$BROWSER_RESULT" = success
           test "$FLAGS_RESULT" = success
           test "$CLOUD_RESULT" = success
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
           enable-cache: true
       - name: Download every Python coverage result
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: python-coverage-*
           path: .
