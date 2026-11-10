@@ -16,6 +16,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.persistence import new_id
+from selecta.work import provenance
 from selecta.work.ports import ArtifactOutput
 from selecta.work.schema import artifacts
 from selecta.work.sql import upsert
@@ -39,9 +40,9 @@ class Artifact:
     kind: str
     input_hash: str
     keys: Any
-    checksum: str | None
+    checksum: str
     size_bytes: int | None
-    provenance: Any
+    provenance: dict[str, Any]
     protected: bool
     job_id: str | None
     attempt_id: str | None
@@ -57,6 +58,10 @@ def write(
     outputs: Iterable[ArtifactOutput],
     now: float,
 ) -> None:
+    """Record outputs, refusing (`ProvenanceInvalid`) any without a checksum and provenance."""
+    outputs = tuple(outputs)
+    for output in outputs:
+        provenance.check_output(output)
     for output in outputs:
         upsert(
             connection,
@@ -69,7 +74,7 @@ def write(
                 "keys": output.keys,
                 "checksum": output.checksum,
                 "size_bytes": output.size_bytes,
-                "provenance": dict(output.provenance) if output.provenance else None,
+                "provenance": dict(output.provenance),
                 "protected": output.protected,
                 "job_id": job_id,
                 "attempt_id": attempt_id,

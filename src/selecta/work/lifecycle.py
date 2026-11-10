@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
-from selecta.work import artifacts, dependents, heads, outbox
+from selecta.work import artifacts, dependents, heads, outbox, provenance
 from selecta.work.errors import (
     CompletionRejected,
     JobCancelled,
@@ -296,6 +296,14 @@ def complete(
     if job.state == S.CANCEL_REQUESTED:
         job = finish_cancelled(connection, store, job, attempt, cost, now)
         return job, JobCancelled(f"Job {job.id} was cancelled, so its results weren't kept.")
+    for output in outputs:
+        try:
+            provenance.check_output(output)
+        except provenance.ProvenanceInvalid as problem:
+            job = record_failure(
+                connection, store, job, attempt, ErrorClass.ENGINE_BUG, str(problem), cost, now
+            )
+            return job, CompletionRejected(str(ErrorClass.ENGINE_BUG), str(problem))
     for output in outputs:
         if not store.verifier.verify(job.workspace_id, output):
             detail = f"Its {output.kind} output is missing or doesn't match its checksum."

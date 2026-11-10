@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from selecta.scheduling.policy import WorkerCaps
+from selecta.work import provenance as provenance_rule
 from selecta.work.claims import Claim
 from selecta.work.errors import CompletionRejected, JobCancelled, StaleLease
 from selecta.work.lifecycle import Heartbeat
@@ -369,7 +370,7 @@ class RemoteWorkerClient:
             "keys": item.keys,
             "checksum": item.checksum,
             "size_bytes": item.size_bytes,
-            "provenance": dict(item.provenance) if item.provenance else None,
+            "provenance": dict(item.provenance) if item.provenance is not None else None,
             "protected": item.protected,
         }
 
@@ -447,6 +448,7 @@ class RemoteWorkerClient:
             raise InputInvalid("An artifact input hash must be a lower-case SHA-256.")
         if not _OUTPUT_NAME.fullmatch(name):
             raise InputInvalid("The artifact file name is unsafe.")
+        provenance_rule.check(kind, provenance)
         claim = self._claim(context.attempt_id, context.fencing_token)
         payload = self._request(
             "POST",

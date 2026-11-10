@@ -7,7 +7,7 @@ tables, on SQLite and PostgreSQL.
 from __future__ import annotations
 
 import pytest
-from test_cloud_jobs_support import make_store, output, run_to_success, worker
+from test_cloud_jobs_support import made_provenance, make_store, output, run_to_success, worker
 
 from selecta.audit import invariants
 from selecta.billing import plans
@@ -44,7 +44,7 @@ def published(store):
     made = output(HASH)
     store.complete(
         claim.attempt_id, claim.fencing_token,
-        artifacts=(type(made)(made.kind, HASH, [key], "c" * 64, 10),),
+        artifacts=(type(made)(made.kind, HASH, [key], "c" * 64, 10, made.provenance),),
     )
     return job, claim
 
@@ -116,8 +116,19 @@ def test_5_an_artifact_without_a_checksum_or_outside_its_prefix_is_caught(store)
     published(store)
     sql(store, artifacts.update().values(keys=["w/w1/analysis/" + "b" * 64 + "/attempts/x/f"]))
     assert numbers(store) == {5}
-    sql(store, artifacts.update().values(checksum=None))
+    sql(store, artifacts.update().values(checksum=""))
     assert numbers(store) == {5}
+
+
+def test_5_an_artifact_whose_provenance_lost_its_versions_is_caught(store):
+    published(store)
+    assert numbers(store) == set()
+    unversioned = {key: value for key, value in made_provenance().items() if key != "versions"}
+    sql(store, artifacts.update().values(provenance=unversioned))
+    assert numbers(store) == {5}
+    with transaction(store.engine) as connection:
+        found = invariants.check(connection)
+    assert any("versions" in item.detail for item in found if item.invariant == 5)
 
 
 def test_5_a_stored_object_that_does_not_match_is_caught():
@@ -126,7 +137,8 @@ def test_5_a_stored_object_that_does_not_match_is_caught():
             return False
 
     rows = [type("Row", (), {
-        "id": "a1", "size_bytes": 1, "checksum": "c", "keys": ["w/w1/k/h/attempts/t/f"],
+        "id": "a1", "size_bytes": 1, "checksum": "c" * 64, "keys": ["w/w1/k/h/attempts/t/f"],
+        "provenance": made_provenance("k"),
         "workspace_id": "w1", "kind": "k", "input_hash": "h", "attempt_id": "t",
     })()]
     original = invariants._rows

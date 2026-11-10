@@ -16,6 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 from selecta import jobs as engine_jobs
+from selecta.work import provenance, proxies
 from selecta.work.ports import ArtifactOutput
 from selecta.workers import audio_handlers, cloud
 from selecta.workers.context import InputInvalid
@@ -85,7 +86,9 @@ def test_a_playback_proxy_is_a_lossless_flac_at_the_analysis_rate(tmp_path, orig
     )
     assert result["sample_rate"] == 22_050 and result["keys"] == ["k/playback.flac"]
     made = ctx.published[0]
-    assert made.kind == "playback" and made.provenance["bits"] == 24
+    assert made.kind == "playback" and made.provenance["settings"]["bits"] == 24
+    assert made.provenance == proxies.identity(digest, 22_050)[0]
+    provenance.check_output(made)
     assert result["input_hash"] == made.input_hash
     assert (scratch / "playback.flac").read_bytes()[:4] == b"fLaC"
     assert ctx.progressed == [(1, 1)]

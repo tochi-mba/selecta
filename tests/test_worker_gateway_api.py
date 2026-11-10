@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from test_cloud_jobs_support import made_provenance
 
 from selecta.persistence import make_engine, migrate
 from selecta.work.enqueue import JobSpec
@@ -353,10 +354,31 @@ def test_artifact_keys_inside_the_attempts_own_prefix_are_accepted(gateway):
         answer = client.post(path + "/complete", headers=bearer(token), json={
             "fencing_token": claim["fencing_token"],
             "artifacts": [{"kind": "analysis", "input_hash": "a" * 64, "keys": key,
-                           "checksum": "c", "size_bytes": 1}],
+                           "checksum": "c" * 64, "size_bytes": 1,
+                           "provenance": made_provenance()}],
         })
     assert answer.json()["state"] == "succeeded"
     assert store.find_artifact("workspace-1", "analysis", "a" * 64).keys == key
+
+
+@pytest.mark.parametrize("missing", ["checksum", "provenance"])
+def test_an_artifact_without_a_checksum_or_provenance_is_refused_as_an_engine_bug(
+    gateway, missing
+):
+    app, store = gateway
+    with TestClient(app) as client:
+        _, token, claim, path = claimed(client, store)
+        key = f"w/workspace-1/analysis/{'a' * 64}/attempts/{claim['attempt_id']}/features.npz"
+        artifact = {"kind": "analysis", "input_hash": "a" * 64, "keys": key,
+                    "checksum": "c" * 64, "size_bytes": 1, "provenance": made_provenance()}
+        del artifact[missing]
+        answer = client.post(path + "/complete", headers=bearer(token), json={
+            "fencing_token": claim["fencing_token"], "artifacts": [artifact],
+        })
+    detail = answer.json()["detail"]
+    assert (answer.status_code, detail["code"]) == (422, "completion_rejected")
+    assert detail["error_class"] == "engine_bug"
+    assert store.find_artifact("workspace-1", "analysis", "a" * 64) is None
 
 
 def test_output_slots_need_a_signer_that_answers_one_slot_per_name(tmp_path):

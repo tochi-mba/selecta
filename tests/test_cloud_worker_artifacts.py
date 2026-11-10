@@ -13,7 +13,7 @@ import hashlib
 from pathlib import Path
 
 import pytest
-from test_cloud_jobs_support import make_store, worker
+from test_cloud_jobs_support import made_provenance, make_store, worker
 from test_cloud_storage_fakes import FakeS3
 
 from selecta.storage.artifacts import (
@@ -26,12 +26,14 @@ from selecta.storage.keys import derived_key, original_key
 from selecta.work.enqueue import JobSpec
 from selecta.work.model import Job, JobState
 from selecta.work.ports import ArtifactOutput
+from selecta.work.provenance import ProvenanceInvalid
 from selecta.workers.context import AttemptSignals, InputInvalid, JobContext
 from selecta.workers.runner import WorkerRunner
 
 WS = "ws-a"
 OTHER = "ws-b"
 HASH = "a" * 64
+FEATURES = made_provenance("features")
 AUDIO = b"RIFF pretend audio" * 64
 
 
@@ -91,11 +93,11 @@ def test_publish_stores_under_the_attempts_own_key_and_reports_size_and_hash(sto
     made = tmp_path / "scratch" / "features.npz"
     made.write_bytes(b"features")
 
-    output = ctx.publish("features", HASH, made, "features.npz", provenance={"v": 1})
+    output = ctx.publish("features", HASH, made, "features.npz", provenance=FEATURES)
 
     key = derived_key(WS, "features", HASH, "attempt-1", "features.npz")
     assert output == ArtifactOutput(
-        "features", HASH, [key], hashlib.sha256(b"features").hexdigest(), 8, {"v": 1}, False
+        "features", HASH, [key], hashlib.sha256(b"features").hexdigest(), 8, FEATURES, False
     )
     assert ctx.artifacts.outputs == [output]
     assert ctx.verify(key, 8, output.checksum)
@@ -122,10 +124,22 @@ def test_publish_refuses_a_name_or_hash_outside_the_key_layout(store, tmp_path):
     made = tmp_path / "scratch" / "x"
     made.write_bytes(b"x")
     with pytest.raises(InputInvalid):
-        ctx.publish("features", "not-a-hash", made, "features.npz")
+        ctx.publish("features", "not-a-hash", made, "features.npz", provenance=FEATURES)
     with pytest.raises(InputInvalid):
-        ctx.publish("features", HASH, made, "../../escape")
+        ctx.publish("features", HASH, made, "../../escape", provenance=FEATURES)
     assert ctx.artifacts.outputs == []
+
+
+def test_publish_without_provenance_stores_nothing_and_queues_nothing(store, tmp_path):
+    ctx = _context(store, tmp_path)
+    made = tmp_path / "scratch" / "features.npz"
+    made.write_bytes(b"features")
+    unversioned = {key: value for key, value in FEATURES.items() if key != "versions"}
+    for missing in (None, {}, unversioned):
+        with pytest.raises(ProvenanceInvalid):
+            ctx.publish("features", HASH, made, "features.npz", provenance=missing)
+    assert ctx.artifacts.outputs == []
+    assert not store.exists(derived_key(WS, "features", HASH, "attempt-1", "features.npz"))
 
 
 def test_stored_outputs_accept_only_matching_objects_under_the_workspace_prefix(store, tmp_path):
@@ -152,7 +166,7 @@ def test_without_a_store_the_context_uses_the_gateways_signed_urls(tmp_path):
         return path
 
     def publish(ctx, kind, input_hash, source, name, *, provenance=None, protected=False):
-        return ArtifactOutput(kind, input_hash, [f"w/{WS}/k"], "c" * 64, 1)
+        return ArtifactOutput(kind, input_hash, [f"w/{WS}/k"], "c" * 64, 1, provenance)
 
     job = _job(WS, "play.proxy")
     scratch = tmp_path / "scratch"
@@ -167,7 +181,9 @@ def test_without_a_store_the_context_uses_the_gateways_signed_urls(tmp_path):
     assert seen["selector"] == key and not path.exists()
     made = scratch / "out"
     made.write_bytes(b"x")
-    assert ctx.publish("playback", HASH, made, "playback.flac").keys == [f"w/{WS}/k"]
+    playback = made_provenance("playback")
+    assert ctx.publish("playback", HASH, made, "playback.flac",
+                       provenance=playback).keys == [f"w/{WS}/k"]
     with pytest.raises(RuntimeError):
         ctx.verify(key, 1, "c" * 64)
 
@@ -187,7 +203,8 @@ def test_a_handler_reads_its_input_and_publishes_through_the_runner(cloud_engine
         with ctx.open_input(current.input_ref["objects"][0]) as source:
             features = ctx.scratch / "features.npz"
             features.write_bytes(hashlib.sha256(source.read_bytes()).digest())
-        ctx.publish("features", HASH, features, "features.npz", provenance={"source": key})
+        ctx.publish("features", HASH, features, "features.npz",
+                    provenance=made_provenance("features", source=key))
         return {"ok": True}
 
     runner = WorkerRunner(
@@ -201,7 +218,7 @@ def test_a_handler_reads_its_input_and_publishes_through_the_runner(cloud_engine
     expected = hashlib.sha256(AUDIO).digest()
     assert found.size_bytes == len(expected)
     assert found.checksum == hashlib.sha256(expected).hexdigest()
-    assert found.provenance == {"source": key}
+    assert found.provenance == made_provenance("features", source=key)
     assert artifacts.verify(found.keys[0], found.size_bytes, found.checksum)
     assert found.keys[0].startswith(f"w/{WS}/features/{HASH}/attempts/{result.attempt_id}/")
 
@@ -215,7 +232,7 @@ def test_an_output_changed_after_publishing_is_refused_at_completion(cloud_engin
     def tampered(current, ctx):
         made = ctx.scratch / "features.npz"
         made.write_bytes(b"right")
-        output = ctx.publish("features", HASH, made, "features.npz")
+        output = ctx.publish("features", HASH, made, "features.npz", provenance=FEATURES)
         made.write_bytes(b"wrong!")
         artifacts.publish(output.keys[0], made)
         return {"ok": True}

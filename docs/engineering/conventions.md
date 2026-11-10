@@ -13,6 +13,7 @@ The rules every change follows. Most are enforced by CI; the rest by review. If 
 - **Tables come only from migrations.** No cloud module calls `create_all`, `Table.create` or runs `CREATE TABLE` (`tests/test_cloud_no_lazy_tables.py`); tests build databases with `migrate.upgrade` too.
 - **Locks.** `persistence.lock_rows()` is `FOR UPDATE SKIP LOCKED`: right for "take the next free thing" (job claims), wrong for "this exact row" (a quota, a session), where a skipped row looks missing. Use a waiting `with_for_update()` there, and say why in a comment.
 - **Ids** are `persistence.new_id()` (time-ordered UUIDv7 strings).
+- **Every artifact records how it was made.** Publish with a SHA-256 checksum and a provenance from `selecta.work.provenance.build(inputs, versions, settings, models)`; publish and complete refuse anything else with `ProvenanceInvalid` ([§10.6](../saas/10-audio-engine-in-cloud.md#106-versioning-and-cache-reuse)). A new kind whose bytes depend on a version or model adds it to `REQUIRED_VERSIONS` or `MODEL_KINDS`.
 - **Times that get compared** (leases, expiries, deadlines) are epoch seconds from `persistence.db_now(conn)`: the database's clock on PostgreSQL, `persistence.wall_clock()` on SQLite. Never compare against a worker's or client's clock.
 
 ## Feature flags

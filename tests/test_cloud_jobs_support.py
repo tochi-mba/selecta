@@ -15,7 +15,7 @@ from sqlalchemy.engine import Engine
 
 from selecta.persistence import transaction
 from selecta.scheduling.policy import PolicyConfig, WorkerCaps
-from selecta.work import upkeep
+from selecta.work import provenance, upkeep
 from selecta.work.ports import AccountStanding, ArtifactOutput
 from selecta.work.schema import fair_heads, job_attempts, jobs, outbox_events
 from selecta.work.store import JobStore
@@ -65,9 +65,20 @@ def worker(pool: str = "cpu-heavy", worker_id: str = "worker-1", **values) -> Wo
     return WorkerCaps(pool=pool, worker_id=worker_id, **values)
 
 
+def made_provenance(kind: str = "analysis", source: str = "a" * 64) -> dict:
+    """Provenance that `selecta.work.provenance` accepts for a `kind` artifact."""
+    versions: dict = {"analysis": 3}
+    if kind == "seam":
+        versions["render"] = 2
+    if kind == "playback":
+        versions = {"proxy": 1}
+    models = {"separator": "htdemucs"} if kind in provenance.MODEL_KINDS else None
+    return provenance.build({"source": source}, versions, {"sample_rate": 44_100}, models)
+
+
 def output(input_hash: str = "a" * 64, kind: str = "analysis") -> ArtifactOutput:
     return ArtifactOutput(kind, input_hash, [f"w/ws/{kind}/{input_hash}/features.npz"],
-                          checksum="c" * 64, size_bytes=10)
+                          checksum="c" * 64, size_bytes=10, provenance=made_provenance(kind))
 
 
 def expire_lease(store: JobStore, attempt_id: str) -> None:

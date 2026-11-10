@@ -37,6 +37,8 @@ from selecta.storage.keys import UnsafeKey, derived_key, workspace_of
 from selecta.work.errors import StaleLease
 from selecta.work.model import ErrorClass, Job
 from selecta.work.ports import ArtifactOutput
+from selecta.work.provenance import check as check_provenance
+from selecta.work.provenance import check_output
 
 log = logging.getLogger(__name__)
 PROGRESS_EVERY_S = 5.0
@@ -95,9 +97,9 @@ class CollectingSink:
         provenance: Mapping[str, Any] | None = None,
         protected: bool = False,
     ) -> None:
-        self.outputs.append(
-            ArtifactOutput(kind, input_hash, keys, checksum, size_bytes, provenance, protected)
-        )
+        output = ArtifactOutput(kind, input_hash, keys, checksum, size_bytes, provenance, protected)
+        check_output(output)
+        self.outputs.append(output)
 
 
 @dataclass
@@ -181,6 +183,7 @@ class JobContext:
         """Upload one artifact via a signed attempt-scoped slot and queue its manifest row."""
         if self._artifact_publisher is None:
             raise RuntimeError("This worker context has no remote artifact publisher.")
+        check_provenance(kind, provenance)
         output = self._artifact_publisher(
             self,
             kind,
@@ -190,6 +193,7 @@ class JobContext:
             provenance=provenance,
             protected=protected,
         )
+        check_output(output)
         self.artifacts.outputs.append(output)
         return output
 
@@ -238,8 +242,11 @@ class JobContext:
 
         The key is always `w/{workspace}/{kind}/{input_hash}/attempts/{attempt}/{name}`, so an
         attempt can only write under its own prefix, and the row records the size and SHA-256
-        the store measured, which `complete` then checks again.
+        the store measured, which `complete` then checks again. `provenance` must record the
+        inputs, versions, models and settings hash (`selecta.work.provenance`); without it the
+        file isn't stored and `ProvenanceInvalid` is raised.
         """
+        check_provenance(kind, provenance)
         if self.store is None:
             return self.publish_artifact(
                 kind, input_hash, source, name, provenance=provenance, protected=protected
@@ -250,6 +257,7 @@ class JobContext:
             raise InputInvalid(str(error)) from None
         size, sha256 = self.store.publish(key, Path(source))
         output = ArtifactOutput(kind, input_hash, [key], sha256, size, provenance, protected)
+        check_output(output)
         self.artifacts.outputs.append(output)
         return output
 

@@ -11,7 +11,6 @@ bytes on the quota. `add_playback_file` adds the prepared playback file a worker
 from __future__ import annotations
 
 import hashlib
-import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -27,7 +26,7 @@ from selecta.storage import api as storage_api
 from selecta.storage.keys import derived_key, original_key
 from selecta.storage.schema import assets
 from selecta.usage import quota
-from selecta.work import artifacts
+from selecta.work import artifacts, proxies
 from selecta.work.ports import ArtifactOutput
 
 ORIGINALS = "sel-originals"
@@ -143,14 +142,7 @@ def add_playback_file(
     """The prepared playback file for an asset, as the `play.proxy` worker publishes it."""
     with transaction(engine, workspace_id) as conn:
         row = conn.execute(assets.select().where(assets.c.id == asset_id)).mappings().one()
-        provenance = {
-            "source_sha256": row["sha256"],
-            "sample_rate": row["sample_rate"],
-            "proxy_version": 1,
-            "codec": "flac",
-            "bits": 24,
-        }
-        input_hash = hashlib.sha256(json.dumps(provenance, sort_keys=True).encode()).hexdigest()
+        provenance, input_hash = proxies.identity(row["sha256"], row["sample_rate"])
         key = derived_key(workspace_id, "playback", input_hash, new_id(), "proxy.flac")
         objects.put_bytes(DERIVED, key, content, sha256=hashlib.sha256(content).hexdigest())
         artifacts.write(

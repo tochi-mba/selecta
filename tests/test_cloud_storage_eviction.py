@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 import sqlalchemy as sa
-from test_cloud_jobs_support import make_store, worker
+from test_cloud_jobs_support import made_provenance, make_store, worker
 
 from selecta.billing import plans
 from selecta.persistence import transaction
@@ -39,6 +39,7 @@ def world(cloud_engine, tmp_path):
         made = ctx.scratch / "stem.flac"
         made.write_bytes(b"x" * current.input_ref["size"])
         ctx.publish("stems", current.input_ref["hash"], made, "stem.flac",
+                    provenance=made_provenance("stems"),
                     protected=current.input_ref.get("protected", False))
         return {}
 

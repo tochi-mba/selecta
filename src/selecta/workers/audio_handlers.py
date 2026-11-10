@@ -15,6 +15,7 @@ import threading
 from collections.abc import Mapping
 
 from selecta.work.model import Job
+from selecta.work.provenance import build as build_provenance
 from selecta.workers.context import Handler, InputInvalid, JobContext
 
 PROXY_VERSION = 1
@@ -64,9 +65,14 @@ def playback_proxy(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict
                     process.kill()
                     process.wait()
     ctx.check_in()
-    provenance = {"source_sha256": source_hash, "sample_rate": rate,
-                  "proxy_version": PROXY_VERSION, "codec": "flac", "bits": 24}
-    input_hash = hashlib.sha256(json.dumps(provenance, sort_keys=True).encode()).hexdigest()
+    hashed = {"source_sha256": source_hash, "sample_rate": rate,
+              "proxy_version": PROXY_VERSION, "codec": "flac", "bits": 24}
+    input_hash = hashlib.sha256(json.dumps(hashed, sort_keys=True).encode()).hexdigest()
+    provenance = build_provenance(
+        inputs={"source": source_hash},
+        versions={"proxy": PROXY_VERSION},
+        settings={"sample_rate": rate, "codec": "flac", "bits": 24},
+    )
     artifact = ctx.publish_artifact(
         "playback", input_hash, output, "playback.flac", provenance=provenance,
     )

@@ -30,6 +30,11 @@ from selecta.scheduling.policy import LANES
 from selecta.work.model import TERMINAL, JobState
 
 JSON = sa.JSON().with_variant(postgresql.JSONB(), "postgresql")
+RequiredJSON = sa.JSON(none_as_null=True).with_variant(
+    postgresql.JSONB(none_as_null=True), "postgresql"
+)
+"""JSON whose Python None is SQL NULL, so a NOT NULL column refuses it (plain JSON stores
+None as the JSON value `null`, which NOT NULL lets through)."""
 EventId = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
@@ -220,9 +225,9 @@ artifacts = sa.Table(
     sa.Column("kind", sa.String(32), nullable=False),
     sa.Column("input_hash", sa.String(128), nullable=False),
     sa.Column("keys", JSON, nullable=False),
-    sa.Column("checksum", sa.String(128)),
+    sa.Column("checksum", sa.String(128), nullable=False),
     sa.Column("size_bytes", sa.BigInteger),
-    sa.Column("provenance", JSON),
+    sa.Column("provenance", RequiredJSON, nullable=False),
     sa.Column("protected", sa.Boolean, nullable=False, server_default=sa.false()),
     sa.Column("job_id", Id),
     sa.Column("attempt_id", Id),

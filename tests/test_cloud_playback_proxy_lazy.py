@@ -89,7 +89,8 @@ def test_the_producer_and_the_worker_agree_on_the_files_identity():
     provenance, digest = proxies.identity("a" * 64, 48_000)
     from selecta.workers import audio_handlers
 
-    assert provenance["proxy_version"] == audio_handlers.PROXY_VERSION
+    assert provenance["versions"] == {"proxy": audio_handlers.PROXY_VERSION}
+    assert provenance["inputs"] == {"source": "a" * 64}
     assert len(digest) == 64
 
 
@@ -112,7 +113,10 @@ def test_a_made_playback_file_is_reused_evicted_under_budget_and_made_again(clou
         made = ctx.scratch / "playback.flac"
         made.write_bytes(b"f" * 5_000)
         output = current.input_ref["output"]
-        ctx.publish("playback", output["input_hash"], made, "playback.flac")
+        made_from, _ = proxies.identity(current.input_ref["source_sha256"],
+                                        current.input_ref["sample_rate"])
+        ctx.publish("playback", output["input_hash"], made, "playback.flac",
+                    provenance=made_from)
         return {}
 
     runner = WorkerRunner(store, worker("cpu-light"), {"play.proxy": proxy}, heartbeat_s=0.05,

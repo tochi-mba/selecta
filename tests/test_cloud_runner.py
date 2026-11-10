@@ -11,7 +11,14 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
-from test_cloud_jobs_support import Outputs, expire_lease, make_store, output, worker
+from test_cloud_jobs_support import (
+    Outputs,
+    expire_lease,
+    made_provenance,
+    make_store,
+    output,
+    worker,
+)
 
 from selecta import jobs as engine_jobs
 from selecta.work.enqueue import JobSpec
@@ -144,8 +151,8 @@ def test_outputs_published_by_the_handler_are_recorded_as_artifacts(store):
     store.enqueue(JobSpec("w1", "seam.render"))
 
     def render(current, ctx):
-        ctx.artifacts.publish("seam", "b" * 64, ["w/w1/seam/clip.flac"], checksum="c",
-                              size_bytes=3)
+        ctx.artifacts.publish("seam", "b" * 64, ["w/w1/seam/clip.flac"], checksum="c" * 64,
+                              size_bytes=3, provenance=made_provenance("seam"))
         return JobOutput(result={"ok": True}, artifacts=(output("d" * 64),))
 
     assert runner(store, {"seam.render": render}).run_once().outcome == "succeeded"
@@ -532,7 +539,9 @@ def test_remote_inputs_and_outputs_go_through_the_functions_the_worker_gives():
         artifact_publisher=lambda context, kind, input_hash, source, name, **extra: published,
     )
     assert ctx.download_input(2) == Path("in-2")
-    assert ctx.publish_artifact("analysis", "f" * 64, Path("x"), "x.npz") is published
+    assert ctx.publish_artifact(
+        "analysis", "f" * 64, Path("x"), "x.npz", provenance=published.provenance
+    ) is published
     assert ctx.artifacts.outputs == [published]
 
 

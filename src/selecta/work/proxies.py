@@ -35,6 +35,7 @@ from selecta import persistence
 from selecta.scheduling.policy import DEFAULT_URGENCY, Lane, inherited
 from selecta.storage.keys import original_key
 from selecta.storage.schema import assets
+from selecta.work import provenance
 from selecta.work.dependents import move_lane
 from selecta.work.enqueue import JobSpec
 from selecta.work.model import TERMINAL, Job
@@ -61,11 +62,20 @@ class Prepared:
 
 
 def identity(source_sha256: str, sample_rate: int) -> tuple[dict, str]:
-    """The playback file's provenance and its input hash, as `play.proxy` computes them."""
-    provenance = {"source_sha256": source_sha256, "sample_rate": sample_rate,
-                  "proxy_version": PROXY_VERSION, "codec": "flac", "bits": 24}
-    digest = hashlib.sha256(json.dumps(provenance, sort_keys=True).encode()).hexdigest()
-    return provenance, digest
+    """The playback file's provenance and its input hash, as `play.proxy` computes them.
+
+    The input hash is the SHA-256 of the flat inputs it has always hashed, so existing playback
+    files keep their keys; the provenance is the shape every artifact records (`work.provenance`).
+    """
+    hashed = {"source_sha256": source_sha256, "sample_rate": sample_rate,
+              "proxy_version": PROXY_VERSION, "codec": "flac", "bits": 24}
+    digest = hashlib.sha256(json.dumps(hashed, sort_keys=True).encode()).hexdigest()
+    made = provenance.build(
+        inputs={"source": source_sha256},
+        versions={"proxy": PROXY_VERSION},
+        settings={"sample_rate": sample_rate, "codec": "flac", "bits": 24},
+    )
+    return made, digest
 
 
 def plays_directly(asset: Any) -> bool:

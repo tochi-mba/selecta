@@ -18,8 +18,9 @@ What each check looks at:
    workspace as their job, and every stored key starts with its row's own workspace.
 4. **Quota never exceeded.** Committed plus reserved bytes fit the limit, unless the workspace is
    read-only because its plan shrank; reserved bytes equal its active reservations.
-5. **Artifacts match their inputs.** Each artifact has a size and checksum, and every key sits
-   under `w/{workspace}/{kind}/{input_hash}/attempts/{attempt}/`. Given an `ArtifactStore`, the
+5. **Artifacts match their inputs.** Each artifact has a size and checksum and a provenance that
+   passes `selecta.work.provenance`, and every key sits under
+   `w/{workspace}/{kind}/{input_hash}/attempts/{attempt}/`. Given an `ArtifactStore`, the
    stored objects are verified too.
 6. **Duplicates make one effect.** At most one live job per idempotency key, one artifact per
    input hash, one storage ledger entry per reservation and one terminal settlement each.
@@ -48,7 +49,7 @@ from selecta.billing import plans as plan_catalogue
 from selecta.billing.schema import entitlement_overrides
 from selecta.storage.schema import assets
 from selecta.usage.schema import quota_state, storage_reservations, usage_ledger
-from selecta.work import upkeep
+from selecta.work import provenance, upkeep
 from selecta.work.model import ACTIVE, TERMINAL, UNSUCCESSFUL, JobState
 from selecta.work.schema import artifacts, fair_heads, job_attempts, job_dependencies, jobs
 
@@ -220,6 +221,10 @@ def artifacts_match(connection: Connection, store: Any = None) -> list[Violation
         if artifact.size_bytes is None or not artifact.checksum:
             found.append(Violation(5, f"artifact {artifact.id} has no size or checksum"))
             continue
+        try:
+            provenance.check_output(artifact)
+        except provenance.ProvenanceInvalid as problem:
+            found.append(Violation(5, f"artifact {artifact.id}: {problem}"))
         keys = artifact.keys if isinstance(artifact.keys, list) else [artifact.keys]
         prefix = f"w/{artifact.workspace_id}/{artifact.kind}/{artifact.input_hash}/attempts/"
         if artifact.attempt_id is not None:

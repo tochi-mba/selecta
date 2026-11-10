@@ -15,7 +15,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from test_cloud_jobs_support import Outputs, make_store
+from test_cloud_jobs_support import Outputs, made_provenance, make_store
 from test_cloud_runner import WAIT, until_stopped
 
 from selecta.scheduling.policy import WorkerCaps
@@ -24,6 +24,7 @@ from selecta.work.errors import CompletionRejected, JobCancelled, StaleLease
 from selecta.work.gateway_api import install_routes
 from selecta.work.model import JobState
 from selecta.work.ports import ArtifactOutput
+from selecta.work.provenance import ProvenanceInvalid
 from selecta.workers import remote
 from selecta.workers.context import InputInvalid, TransientError
 from selecta.workers.remote import RemoteGatewayError, RemoteWorkerClient
@@ -33,6 +34,7 @@ TOKEN_SECRET = "remote-worker-token-secret-long-enough-for-hs256"
 BOOTSTRAP = "remote-worker-bootstrap-secret-long-enough-too"
 STORAGE = "https://bucket.account.r2.cloudflarestorage.com"
 HASH = "c" * 64
+PLAYBACK = made_provenance("playback")
 
 
 def bridge(app: FastAPI) -> httpx.MockTransport:
@@ -115,7 +117,8 @@ def test_a_remote_worker_claims_runs_and_completes_through_the_gateway(gateway, 
         ctx.progress(1, 2)
         made = ctx.scratch / "features.npz"
         made.write_bytes(b"features")
-        ctx.publish_artifact("analysis", HASH, made, "features.npz")
+        ctx.publish_artifact("analysis", HASH, made, "features.npz",
+                             provenance=made_provenance())
         return {"bpm": 120}
 
     result = WorkerRunner(client, client.caps, {"analyse.song": analyse},
@@ -184,7 +187,7 @@ def test_a_rejected_remote_completion_reports_the_class_and_the_new_state(gatewa
     client = enroll(gateway)
     claim = client.claim("cpu-heavy", client.caps)
     produced = ArtifactOutput("analysis", HASH, [output_key(job, claim.attempt_id, "f.npz")],
-                              checksum="d" * 64, size_bytes=1)
+                              checksum="d" * 64, size_bytes=1, provenance=made_provenance())
     with pytest.raises(CompletionRejected) as rejected:
         client.complete(claim.attempt_id, claim.fencing_token, artifacts=(produced,))
     assert rejected.value.error_class == "transient"
@@ -399,7 +402,7 @@ def test_publishing_uploads_to_the_signed_slot_and_reports_checksum_and_size(
     seen = storage(monkeypatch, lambda request: httpx.Response(200))
     context = holding(client, [], tmp_path)
     made = client.publish_artifact(context, "playback", HASH, source, "out.flac",
-                                   provenance={"v": 1}, protected=True)
+                                   provenance=PLAYBACK, protected=True)
     assert made.keys == ["w/k/out.flac"] and made.size_bytes == 9
     assert made.checksum == hashlib.sha256(b"flac-data").hexdigest()
     assert seen[0].method == "PUT" and "cookie" not in seen[0].headers
@@ -425,7 +428,27 @@ def test_bad_output_slots_are_refused(tmp_path, payload, problem):
     client = slots(payload)
     context = holding(client, [], tmp_path)
     with pytest.raises(problem):
-        client.publish_artifact(context, "playback", HASH, source, "out.flac")
+        client.publish_artifact(context, "playback", HASH, source, "out.flac",
+                                provenance=PLAYBACK)
+
+
+def test_an_artifact_without_provenance_is_refused_before_anything_is_uploaded(
+    monkeypatch, tmp_path
+):
+    asked = []
+    client = client_with(httpx.MockTransport(lambda request: asked.append(request) or
+                                             httpx.Response(200, json={})))
+    seen = storage(monkeypatch, lambda request: httpx.Response(200))
+    context = holding(client, [], tmp_path)
+    source = tmp_path / "out.flac"
+    source.write_bytes(b"x")
+    unversioned = {key: value for key, value in PLAYBACK.items() if key != "versions"}
+    for missing in (None, unversioned):
+        with pytest.raises(ProvenanceInvalid):
+            client.publish_artifact(context, "playback", HASH, source, "out.flac",
+                                    provenance=missing)
+    assert [request for request in asked if "/outputs" in request.url.path] == []
+    assert seen == []
 
 
 def test_unsafe_artifact_names_hashes_and_missing_files_are_refused(monkeypatch, tmp_path):
@@ -433,13 +456,17 @@ def test_unsafe_artifact_names_hashes_and_missing_files_are_refused(monkeypatch,
     client = slots(good)
     context = holding(client, [], tmp_path)
     with pytest.raises(InputInvalid, match="SHA-256"):
-        client.publish_artifact(context, "playback", "ABC", tmp_path / "x", "out.flac")
+        client.publish_artifact(context, "playback", "ABC", tmp_path / "x", "out.flac",
+                                provenance=PLAYBACK)
     with pytest.raises(InputInvalid, match="unsafe"):
-        client.publish_artifact(context, "playback", HASH, tmp_path / "x", "../out.flac")
+        client.publish_artifact(context, "playback", HASH, tmp_path / "x", "../out.flac",
+                                provenance=PLAYBACK)
     with pytest.raises(InputInvalid, match="missing"):
-        client.publish_artifact(context, "playback", HASH, tmp_path / "absent", "out.flac")
+        client.publish_artifact(context, "playback", HASH, tmp_path / "absent", "out.flac",
+                                provenance=PLAYBACK)
     source = tmp_path / "out.flac"
     source.write_bytes(b"x")
     storage(monkeypatch, lambda request: httpx.Response(403))
     with pytest.raises(TransientError, match="403"):
-        client.publish_artifact(context, "playback", HASH, source, "out.flac")
+        client.publish_artifact(context, "playback", HASH, source, "out.flac",
+                                provenance=PLAYBACK)

@@ -49,6 +49,15 @@ Today each song triggers an LRCLIB lookup (artist, title, album, duration), and 
 
 Artifacts record input asset hashes, analysis version (`ANALYSIS_VERSION`), render version (`RENDER_VERSION`), model checkpoints and settings hash. A new engine version doesn't invalidate exported revisions; new requests use new versions; old artifacts are evicted by normal budgets. Mixed-version workers during a deploy are safe because jobs declare the engine version they need.
 
+**As built** (ADR-0397, SC-0397-03): every `artifacts` row has a non-null `checksum` (the SHA-256 of its bytes) and a non-null `provenance` of one shape, checked by `selecta.work.provenance` (`build()` makes one, `check()` / `check_output()` apply the rule):
+
+- `inputs`: role to an asset content hash or stored object key (or a non-empty list of them), at least one;
+- `versions`: name to an integer or name, at least one; a playback file must name `proxy`, a seam `analysis` and `render`;
+- `models`: name to checkpoint, required for stems;
+- `settings_hash`: SHA-256 of the sorted settings JSON (`settings` may ride along and must hash to it). No other top-level keys.
+
+The rule runs before a file is stored (`JobContext.publish`, so for both `LocalArtifactStore` and `R2ArtifactStore`; `publish_artifact` and `RemoteWorkerClient.publish_artifact` behind the gateway), when a handler queues an output (`CollectingSink`), when `complete` accepts outputs (local runner, cloud runner and the gateway's `/complete`) and in `artifacts.write`. A refusal raises `ProvenanceInvalid`; at `complete` the attempt fails with error class `engine_bug` (the gateway answers 422 `completion_rejected`) and no row is written. Migration `a3f8d2c61b97` made both columns NOT NULL and rewrote the older flat `play.proxy` provenance into this shape (input hashes unchanged); it stops instead of guessing if any row lacks either. Invariant 5 (`selecta.audit.invariants`) flags a row whose provenance fails the rule. Tests: `tests/test_cloud_artifact_provenance.py`.
+
 ---
 
 [← 09-lucy-ai-gateway.md](09-lucy-ai-gateway.md) · [Contents](README.md#chapters) · [11-ui-ux.md →](11-ui-ux.md)
