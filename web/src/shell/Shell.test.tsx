@@ -146,10 +146,10 @@ describe('requests', () => {
     backend();
     render(<App />);
     fireEvent.click((await nav()).getByRole('button', { name: 'Requests: Request a song' }));
-    const drawer = await screen.findByRole('dialog', { name: 'Requests: Request a song' });
+    const drawer = await screen.findByRole('dialog', { name: 'Requests' });
     expect(within(drawer).getByRole('combobox', { name: 'Request a song' })).toBeInTheDocument();
     fireEvent.click(within(drawer).getByRole('button', { name: 'Close Requests' }));
-    expect(screen.queryByRole('dialog', { name: 'Requests: Request a song' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Requests' })).toBeNull();
   });
 
   it('show how many are waiting', async () => {
@@ -163,7 +163,7 @@ describe('requests', () => {
     render(<App />);
     await nav();
     fireEvent.keyDown(window, { key: 'r' });
-    expect(await screen.findByRole('dialog', { name: 'Requests: Request a song' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Requests' })).toBeInTheDocument();
   });
 });
 
