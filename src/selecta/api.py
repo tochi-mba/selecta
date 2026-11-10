@@ -10,6 +10,7 @@ import asyncio
 import hashlib
 import os
 import re
+import sqlite3
 import threading
 import time
 from collections import deque
@@ -73,10 +74,18 @@ def create_app(
         """A cheap local readiness probe: no SQLite, models, cache or render work."""
         return {"service": "selecta-local", "status": "ok"}
 
+    trace = os.environ.get("SELECTA_DEV_STARTUP") == "1"
+    started_at = time.monotonic()
+
+    def progress(stage: str) -> None:
+        if trace:
+            print(f"[BOOT] +{time.monotonic() - started_at:.1f}s {stage}", flush=True)
+
+    progress("Loading persisted transition metadata...")
     store = SeamStore(settings)
-
+    progress("Transition metadata loaded; clearing incomplete render states...")
     store.forget_unfinished()  # no worker is running yet, so nothing can be under way
-
+    progress("Constructing background worker controller...")
     background = _Background(settings.home)
 
     # Operation names are not permission to replay an unrelated command. Bind
@@ -96,8 +105,10 @@ def create_app(
         recent_operations=recent_operations,
         restore_problem=restore_problem,
     )
+    progress("Registering helper and library routes...")
     helpers_routes(app, ctx)
     library_routes(app, ctx)
+    progress("Registering mix and system routes...")
     mixes_routes(app, ctx)
     system_routes(app, ctx)
     # before edit's /api/exports/{name}, or that would answer for /api/exports/jobs
@@ -106,9 +117,31 @@ def create_app(
     song_requests_routes(app, ctx)
     discover_routes(app, ctx)
     lucy_routes(app, ctx)
+    progress("All routes registered; configuring middleware...")
     connect = ctx.connect
     ranked_links = ctx.ranked_links
     watch_for_new_songs = ctx.watch_for_new_songs
+
+    @app.get("/api/ready", include_in_schema=False)
+    def ready():
+        """Local SQLite check without loading every song or transition."""
+        if not settings.db_path.is_file():
+            return JSONResponse({"detail": "Local library database is not initialized"}, status_code=503)
+        try:
+            connection = sqlite3.connect(
+                settings.db_path.resolve().as_uri() + "?mode=ro", uri=True, timeout=0.5
+            )
+            try:
+                row = connection.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='songs'"
+                ).fetchone()
+            finally:
+                connection.close()
+        except (sqlite3.Error, OSError) as problem:
+            return JSONResponse({"detail": type(problem).__name__}, status_code=503)
+        if row is None:
+            return JSONResponse({"detail": "Local library schema is not ready"}, status_code=503)
+        return {"service": "selecta-local", "status": "ready"}
 
     @app.middleware("http")
     async def same_operation_once(request, call_next):
@@ -243,11 +276,12 @@ def create_app(
 
         threading.Thread(target=warm_up, daemon=True).start()
 
+    progress("Starting optional workers and setting up static assets...")
     root = web_dir or Path(__file__).parents[2] / "web" / "dist"
 
     if root.exists():
         app.mount("/", FreshFiles(directory=root, html=True), name="web")
-
+    progress("Application initialization complete.")
     return app
 
 
@@ -279,7 +313,13 @@ def serve() -> FastAPI:
         else:
             gather_if_needed(settings.home)
     progress(f"Data check finished after {time.monotonic() - started:.1f}s.")
-    progress("Preparing routes, SQLite connections and background workers...")
+    progress("Checking local database schema and first-run migrations...")
+    from selecta import db
+
+    connection = db.connect(settings.db_path)
+    connection.close()
+    progress("SQLite schema ready.")
+    progress("Preparing routes, persisted transitions and background workers...")
     application = create_app(settings=settings, prepare_links=True)
     progress(f"API factory completed after {time.monotonic() - started:.1f}s.")
     return application
