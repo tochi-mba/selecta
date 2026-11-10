@@ -199,6 +199,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
+| `cloud.tracing` | **Job tracing.** OpenTelemetry spans across the API, worker gateway, workers and storage, one trace per job with its id as a span attribute. |  |
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |

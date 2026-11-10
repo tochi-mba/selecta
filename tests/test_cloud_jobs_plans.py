@@ -249,4 +249,6 @@ def test_row_level_security_keeps_a_plan_inside_its_workspace(postgres_engine):
             )
     with transaction(postgres_engine, "w2") as connection:
         assert connection.execute(sa.select(job_plans.c.id)).scalars().all() == [theirs.id]
-    assert theirs.state == "open"
+        # A small plan may already be fully materialised ("done"); verify
+        # RLS left the other workspace state unchanged, not that it is "open".
+        assert connection.execute(sa.select(job_plans.c.state)).scalar_one() == theirs.state
