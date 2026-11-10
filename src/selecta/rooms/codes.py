@@ -76,7 +76,12 @@ def display(code: str) -> str:
 
 def normalise(text: str, length: int = CODE_LENGTH) -> str:
     """What someone typed, as the code it must be: uppercase, no spaces or dashes."""
-    code = _SEPARATORS.sub("", text or "").upper()
+    code = _SEPARATORS.sub("", text or "")
+    # Only ASCII is upper-cased: Python turns a long s into S and a sharp s into SS, so a
+    # character outside the alphabet would otherwise be read as one inside it.
+    if not code.isascii():
+        raise InvalidCode("That isn't a valid code")
+    code = code.upper()
     if len(code) != length or not set(code) <= _ALLOWED:
         raise InvalidCode("That isn't a valid code")
     return code
