@@ -13,6 +13,7 @@ cancelled, preempted, timed out or has lost its lease.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 import traceback
@@ -213,9 +214,22 @@ def classify(problem: BaseException) -> ErrorClass:
     return ErrorClass.ENGINE_BUG
 
 
+# A URL's query string: where signed URLs keep their signature and credential.
+_URL_QUERY = re.compile(r"(https?://[^\s'\"<>?#]+)\?[^\s'\"<>]*", re.IGNORECASE)
+
+
+def scrub_urls(text: str) -> str:
+    """Drop every URL's query string, so a signed URL in an error can't be reused."""
+    return _URL_QUERY.sub(r"\1?<redacted>", text)
+
+
 def describe(problem: BaseException, limit: int = 4_000) -> str:
-    """A plain reason for people, then the traceback's tail for us, kept short."""
+    """A plain reason for people, then the traceback's tail for us, kept short.
+
+    The detail is stored with the attempt and shown to staff, and libraries such as httpx put
+    the full request URL in their messages, so every URL loses its query string first.
+    """
     if isinstance(problem, InputInvalid):
-        return str(problem)
-    text = "".join(traceback.format_exception(problem))
+        return scrub_urls(str(problem))
+    text = scrub_urls("".join(traceback.format_exception(problem)))
     return text[-limit:]

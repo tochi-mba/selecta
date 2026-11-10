@@ -71,7 +71,7 @@ class RoomContext:
     """Everything Rooms need from outside: the database, the pepper for codes, and the ports."""
 
     engine: Engine
-    pepper: bytes
+    pepper: bytes = field(repr=False)  # the secret that hashes room codes
     catalog: SongCatalogPort
     planner: RequestPlannerPort
     plans: PlanPort
@@ -196,9 +196,7 @@ def request_from_row(row: Mapping[str, Any]) -> RoomRequest:
     )
 
 
-def load_room(
-    conn: Connection, workspace_id: str, room_id: str, *, lock: bool = False
-) -> Room:
+def load_room(conn: Connection, workspace_id: str, room_id: str, *, lock: bool = False) -> Room:
     query = sa.select(rooms).where(rooms.c.workspace_id == workspace_id, rooms.c.id == room_id)
     if lock:
         query = query.with_for_update()

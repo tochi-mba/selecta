@@ -14,7 +14,7 @@ cloud that needs the lookup role described in `store`.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 
 import sqlalchemy as sa
@@ -48,8 +48,9 @@ class DisplayState(StrEnum):
 
 @dataclass(frozen=True)
 class PairingStart:
-    pairing_code: str  # shown on the TV as XXX-XXX
-    display_token: str  # kept by the TV; never stored
+    # Both are secrets: kept out of repr so tracebacks and error reports never carry them.
+    pairing_code: str = field(repr=False)  # shown on the TV as XXX-XXX
+    display_token: str = field(repr=False)  # kept by the TV; never stored
     expires_at: float
 
 
@@ -57,7 +58,8 @@ class PairingStart:
 class DisplayView:
     state: DisplayState
     room_name: str | None = None
-    code: str | None = None  # the room code, for the QR and "Scan to request a song"
+    # The room code, for the QR and "Scan to request a song"; never in repr.
+    code: str | None = field(default=None, repr=False)
     now_playing: SongSummary | None = None
     up_next: tuple[SongSummary, ...] = ()
     upcoming: tuple[UpcomingItem, ...] = ()
@@ -158,9 +160,7 @@ def unpair_displays(
         )
 
 
-def display_view(
-    ctx: RoomContext, display_token: str, *, now: float | None = None
-) -> DisplayView:
+def display_view(ctx: RoomContext, display_token: str, *, now: float | None = None) -> DisplayView:
     """What the TV shows now. Read-only: the token can't do anything else."""
     if not display_token:
         raise RoomError(Refusal.NO_SUCH_PAIRING)

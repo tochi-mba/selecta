@@ -9,7 +9,7 @@ to other guests only if the host chose that; the host always sees them.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
@@ -105,7 +105,7 @@ class GuestSummary:
 @dataclass(frozen=True)
 class HostView:
     room: Room
-    code: str | None
+    code: str | None = field(repr=False)  # never in repr
     settings: RoomSettings
     guests: tuple[GuestSummary, ...]
     inbox: tuple[UpcomingItem, ...]  # sent, most wanted first
@@ -122,9 +122,7 @@ def now_playing_for(ctx: RoomContext, workspace_id: str) -> NowPlaying:
 
 def nickname_map(conn: Connection, room: Room) -> dict[str, str]:
     rows = conn.execute(
-        sa.select(room_guests.c.id, room_guests.c.nickname).where(
-            room_guests.c.room_id == room.id
-        )
+        sa.select(room_guests.c.id, room_guests.c.nickname).where(room_guests.c.room_id == room.id)
     )
     return {row.id: row.nickname for row in rows}
 

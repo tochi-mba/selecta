@@ -12,7 +12,7 @@ stops new joins from that network.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import sqlalchemy as sa
 
@@ -46,7 +46,7 @@ PRESENT = (GuestStatus.ACTIVE.value, GuestStatus.PENDING.value)
 
 @dataclass(frozen=True)
 class JoinResult:
-    guest_token: str  # goes in the guest's cookie; never stored
+    guest_token: str = field(repr=False)  # goes in the guest's cookie; never stored or shown
     guest_id: str
     room_id: str
     nickname: str

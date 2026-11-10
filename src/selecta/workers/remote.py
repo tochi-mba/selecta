@@ -418,7 +418,10 @@ class RemoteWorkerClient:
                             output.write(chunk)
         except (httpx.HTTPError, OSError) as error:
             target.unlink(missing_ok=True)
-            raise TransientError("The worker could not download a signed input object.") from error
+            # `from None`: httpx's message holds the signed URL, which must reach no log or detail.
+            raise TransientError(
+                f"The worker could not download a signed input object ({_failure(error)})."
+            ) from None
         expected_size = item.get("size_bytes")
         expected_hash = item.get("sha256")
         if expected_size is not None and size != int(expected_size):
@@ -487,9 +490,10 @@ class RemoteWorkerClient:
         except RemoteGatewayError:
             raise
         except (httpx.HTTPError, OSError) as error:
+            # `from None`: httpx's message holds the signed URL, which must reach no log or detail.
             raise TransientError(
-                "The worker could not publish its signed output object."
-            ) from error
+                f"The worker could not publish its signed output object ({_failure(error)})."
+            ) from None
         return ArtifactOutput(
             kind=kind,
             input_hash=input_hash,
@@ -514,6 +518,13 @@ class RemoteWorkerClient:
             or not allowed
         ):
             raise RemoteGatewayError(502, "untrusted_signed_storage_url")
+
+
+def _failure(error: BaseException) -> str:
+    """What went wrong talking to storage, without the signed URL httpx puts in its messages."""
+    if isinstance(error, httpx.HTTPStatusError):
+        return f"HTTP {error.response.status_code}"
+    return type(error).__name__
 
 
 __all__ = ["RemoteGatewayError", "RemoteWorkerClient"]

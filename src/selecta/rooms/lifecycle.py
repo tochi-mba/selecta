@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import sqlalchemy as sa
@@ -58,7 +58,7 @@ class EndReason:
 @dataclass(frozen=True)
 class OpenedRoom:
     room: Room
-    code: str  # shown as XXXX-XXXX
+    code: str = field(repr=False)  # shown as XXXX-XXXX; never in repr
 
 
 @dataclass(frozen=True)
@@ -187,9 +187,7 @@ def rotate_code(
                 sa.update(room_guests)
                 .where(
                     room_guests.c.room_id == room.id,
-                    room_guests.c.status.in_(
-                        [GuestStatus.ACTIVE.value, GuestStatus.PENDING.value]
-                    ),
+                    room_guests.c.status.in_([GuestStatus.ACTIVE.value, GuestStatus.PENDING.value]),
                 )
                 .values(status=GuestStatus.REMOVED.value)
             )
