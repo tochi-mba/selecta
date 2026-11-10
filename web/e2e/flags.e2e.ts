@@ -70,9 +70,14 @@ function offPages(on: (id: FlagId) => boolean): string[] {
   return off;
 }
 
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// A route template such as "GET /api/songs/{id}/audio": every literal character matches
+// itself, and each {placeholder} matches one path segment.
 const asPattern = (route: string) => {
   const [method, template] = route.split(' ');
-  return { method, path: new RegExp(`^${template.replace(/\{[^}]+\}/g, '[^/]+').replace(/\./g, '\\.')}$`) };
+  const literal = template.split(/\{[^}]+\}/).map(escapeRegExp).join('[^/]+');
+  return { method, path: new RegExp(`^${literal}$`) };
 };
 
 async function useFlags(request: APIRequestContext, flags: string): Promise<(id: FlagId) => boolean> {
@@ -176,8 +181,10 @@ for (const area of AREAS) {
   });
 }
 
-for (const id of FLAG_IDS.filter((flag) => !REGISTRY[flag].core && (REGISTRY[flag].surfaces ?? []).length)) {
+// The local site's surfaces only: `cloud.*` ones are the Cloud site's, swept by e2e-cloud/flags.cloud.ts.
+const localSurfaces = (id: FlagId) => (REGISTRY[id].surfaces ?? []).filter((surface) => surface in SURFACES);
+for (const id of FLAG_IDS.filter((flag) => !REGISTRY[flag].core && localSurfaces(flag).length)) {
   test(`with ${id} turned off, the pages it was on still hold together`, async ({ page, request }) => {
-    expect(await sweep(page, request, `-${id}`, REGISTRY[id].surfaces ?? [])).toEqual([]);
+    expect(await sweep(page, request, `-${id}`, localSurfaces(id))).toEqual([]);
   });
 }

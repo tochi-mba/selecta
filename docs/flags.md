@@ -35,7 +35,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 
 | Flag | What it is | Needs |
 |---|---|---|
-| `listen.lyrics` | **Lyrics.** Line-synced lyrics on the Listen page, following the music. | `lyrics.lookup` |
+| `listen.lyrics` | **Lyrics.** Line-synced lyrics on the Listen page, following the music. | `lyrics.display` |
 | `listen.word_focus` | **Current-word focus.** The word being sung right now is picked out in the lyrics. | `listen.lyrics` |
 | `listen.stage` | **Fullscreen lyrics.** Stage mode: the lyrics fill the screen. | `listen.lyrics` |
 | `listen.visualizers` | **Visualizers.** Fifteen spectrum styles that move with the music, with an intensity setting. |  |
@@ -124,7 +124,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 
 | Flag | What it is | Needs |
 |---|---|---|
-| `discover.word_links` | **Word connections.** Lyric links between songs, where a word in one hands off to the same word in the next. | `lyrics.lookup` |
+| `discover.word_links` | **Word connections.** Lyric links between songs, where a word in one hands off to the same word in the next. | `lyrics.display` |
 | `discover.harmonic` | **Harmonic matches.** Songs that might share chords, with an audition in four steps. |  |
 
 ## Library
@@ -140,6 +140,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `library.relink` | **Re-link a moved folder.** Point Selecta at a folder that moved, with a preview first. | `library.folders` |
 | `library.folder_watching` | **Watching for new songs.** Songs added to a music folder come in by themselves within about a minute. |  |
 | `lyrics.lookup` | **Lyric lookup.** Line-synced lyrics from LRCLIB. Only artist, title, album and duration are sent. |  |
+| `lyrics.display` | **Lyric display.** Shows lyric text in listening and discovery views where its use is permitted. | `lyrics.lookup` |
 | `lyrics.word_timing` | **Word timing.** When each sung word lands, for moves that hand over on a word. | `lyrics.lookup` |
 | `analysis.time_estimates` | **Time estimates.** How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds. |  |
 
@@ -180,3 +181,27 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `tools.set_mix` | **Whole-set render.** Render a planned set straight to one file from the command line. |  |
 | `tools.stem_preview` | **Stem preview.** Hear two songs' stems side by side from the command line. | `stems` |
 | `tools.old_planner` | **Rolling set planner.** The original rolling set plan, before mix ideas. |  |
+
+## Cloud services
+
+| Flag | What it is | Needs |
+|---|---|---|
+| `account.identity` | **Account and sessions.** Read account settings and end sign-in sessions. **Core:** People must be able to view their account and sign out. |  |
+| `account.identity_sync` | **Account sync with WorkOS.** Accept signed WorkOS events that keep emails, revoked sessions and deleted accounts in step. **Core:** Revoked sessions, password resets and deleted users must reach Selecta at once. |  |
+| `account.labs` | **Labs.** Opt into preview features that your plan is allowed to use. |  |
+| `account.deletion` | **Account deletion.** Request account removal and revoke active sessions. **Core:** People must always be able to request deletion of their account. |  |
+| `account.data_export` | **Account data export.** Download a portable copy of available account data and original files. **Core:** People must be able to take a copy of their personal data. |  |
+| `account.lucy_settings` | **Lucy settings in Cloud.** Choose whether to use Lucy, its phases and what it may share; see this month's Lucy turns. | `lucy` |
+| `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
+| `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
+| `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
+| `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
+| `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
+| `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
+| `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
+| `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |
+| `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
+| `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |
+| `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |
+| `lucy.deep_plan` | **Lucy deep planning.** Use Lucy's premium planning model and larger plan allowance. | `lucy` |
+| `admin.console` | **Staff console.** Show internal tools to authenticated staff with the required permission. |  |

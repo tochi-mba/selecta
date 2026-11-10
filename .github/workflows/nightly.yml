@@ -1,0 +1,110 @@
+name: nightly
+
+# The slow checks that don't belong on every push. Every night: known vulnerabilities in every
+# Python and web dependency (about two minutes each). Every Sunday: the cloud property tests at
+# 5,000 examples each against a real PostgreSQL, which takes long enough that running it
+# nightly would use most of a private repository's monthly Actions minutes. A manual run does
+# both. A failure opens no PR; it shows on the Actions page and in GitHub notifications.
+# See docs/engineering/testing.md.
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # nightly audits
+    - cron: "43 4 * * 0" # weekly long property run
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python-dependencies:
+    name: Audit / Python dependencies
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Export the exact locked versions
+        # PyTorch's CPU builds carry a "+cpu" local version that PyPI doesn't list; the
+        # advisories for torch 2.x apply to them all the same, so audit them by base version.
+        run: >-
+          uv export --locked --no-hashes --no-emit-project --format requirements-txt
+          | sed -E 's/\+cpu//' > locked.txt
+      - name: Check them against the Python advisory databases
+        run: uvx pip-audit --requirement locked.txt --no-deps --disable-pip --strict --progress-spinner off
+
+  web-dependencies:
+    name: Audit / web dependencies
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Fail on high or critical advisories in shipped code
+        run: pnpm audit --prod --audit-level high
+
+  cloud-properties:
+    # The same cloud tests CI runs, but Hypothesis tries 5,000 cases per property instead of
+    # 300: long random job lifecycles, fairness under every mix of plans, quotas under races.
+    name: Cloud / long property runs on PostgreSQL
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '43 4 * * 0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: selecta
+          POSTGRES_PASSWORD: selecta
+          POSTGRES_DB: selecta_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U selecta -d selecta_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      CI: "true"
+      HYPOTHESIS_PROFILE: nightly
+      SELECTA_TEST_POSTGRES_URL: postgresql+psycopg://selecta:selecta@localhost:5432/selecta_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: uv sync --locked
+      - name: Cloud tests with the nightly Hypothesis profile
+        run: >-
+          uv run pytest
+          tests/test_cloud_*.py tests/test_worker_gateway_api.py tests/test_room_to_play.py
+          tests/test_operation_identity.py tests/test_flags.py tests/test_flag_server.py
+          -q -p no:cacheprovider --hypothesis-show-statistics

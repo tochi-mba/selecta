@@ -1,4 +1,5 @@
 import { Gate, gateOpen } from '../flags';
+import { words } from '../copy';
 
 /** Music and Selecta words, in plain language, with what each one changes and how to take it back.
  * Every claim here is about what this app really does. Nothing in it starts sound, changes a mix or
@@ -80,7 +81,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'rendered',
     term: 'Rendered',
     aka: ['ready', 'made'],
-    plain: 'Made into finished audio on this PC, and checked for problems a measurement can find. “Ready” means the audio exists. It doesn’t mean it sounds good: only listening can tell you that.',
+    get plain() { return words().glossaryRendered; },
     related: ['planned', 'heard', 'render'],
   },
   {
@@ -102,7 +103,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'render',
     term: 'Render',
     aka: ['rendering', 'render line', 'in line', 'queue', 'line'],
-    plain: 'Making a transition into audio. It happens on this PC in the background. Jobs wait their turn in the render line, and the current mix always goes first. Drafts and word links being prepared wait behind it.',
+    get plain() { return words().glossaryRender; },
     effect: 'Rendering never changes your music files. What it makes can be cleared to save space and made again.',
     related: ['planned', 'rendered'],
   },
@@ -126,7 +127,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'stems',
     term: 'Stems',
     aka: ['stem', 'parts', 'separation', 'vocals', 'drums', 'bass', 'melody'],
-    plain: 'A song split into four parts: voice, drums, bass and melody (everything else). Selecta separates them on this PC, so a transition can bring parts in and out on their own.',
+    get plain() { return words().glossaryStems; },
     effect: 'Separating a pair takes a few minutes the first time. The parts are kept in Selecta’s own storage, which can be cleared and made again. Your files aren’t touched.',
     related: ['studio-lane', 'priority'],
   },
@@ -158,7 +159,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'suggestion',
     term: 'Selecta’s suggestion',
     aka: ['AI suggestion', 'proposal', 'proposed', 'Let Selecta arrange it', 'Fine tune mine', 'arrange'],
-    plain: 'In the Studio, Let Selecta arrange it and Fine tune mine ask Selecta to propose a set of cells. It works this out on this PC from what it measures in the stems and what you’ve rated. Nothing is sent online. It’s only a proposal: it changes your working copy, and lists each cell it changed.',
+    get plain() { return words().glossaryArrange; },
     effect: 'Nothing reaches the mix until you choose Apply.',
     reversible: 'Put it back restores the working copy you had before.',
     related: ['applied', 'studio-cell'],
@@ -275,7 +276,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'analysis',
     term: 'Analysis',
     aka: ['analysed', 'analysing', 'analyse'],
-    plain: 'Selecta listening to a song on this PC to find its tempo, key, beats, bars, sections and energy, and, from its lyrics where they’re found, where the singing is. It never changes the audio file.',
+    get plain() { return words().glossaryAnalysis; },
     effect: 'Songs are analysed in the background. Priority songs go first.',
     related: ['mix-ready', 'priority'],
   },
@@ -322,7 +323,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'local-only',
     term: 'Local-only',
     aka: ['privacy', 'LRCLIB', 'lyrics lookup', 'online', 'offline', 'cloud'],
-    plain: 'Your music, analysis, mixes, ratings and renders stay on this PC. There’s no account and no cloud. To find lyrics, Selecta sends each song’s artist, title, album and duration to LRCLIB, a public lyrics service. The audio itself never leaves this PC, and nothing else about your music is sent anywhere.',
+    get plain() { return words().glossaryPrivacy; },
     related: ['analysis'],
   },
 ];
@@ -353,14 +354,29 @@ const TERM_FLAGS: Record<string, Gate> = {
 
 const termOn = (entry: GlossaryTerm) => !TERM_FLAGS[entry.id] || gateOpen(TERM_FLAGS[entry.id]);
 
-/** The terms this build has. */
+/** How a term reads in a build without a feature it mentions. The term itself stays, because what
+ * it explains is still true, but it says nothing about the feature that's gone. */
+const TERM_WITHOUT: Record<string, { gate: Gate; reads: Partial<GlossaryTerm> }[]> = {
+  'local-only': [{
+    gate: { flag: 'lyrics.lookup' },
+    reads: {
+      aka: ['privacy', 'online', 'offline', 'cloud'],
+      get plain() { return words().glossaryPrivacyNoLyrics; },
+    },
+  }],
+};
+
+const asBuilt = (entry: GlossaryTerm): GlossaryTerm =>
+  (TERM_WITHOUT[entry.id] ?? []).reduce((term, { gate, reads }) => (gateOpen(gate) ? term : { ...term, ...reads }), entry);
+
+/** The terms this build has, as this build says them. */
 export function glossaryOn(): GlossaryTerm[] {
-  return GLOSSARY.filter(termOn);
+  return GLOSSARY.filter(termOn).map(asBuilt);
 }
 
 export function glossaryTerm(id: string): GlossaryTerm | undefined {
   const entry = BY_ID.get(id);
-  return entry && termOn(entry) ? entry : undefined;
+  return entry && termOn(entry) ? asBuilt(entry) : undefined;
 }
 
 /** Case and accents don't matter, so “cafe” finds “café” and curly quotes match straight ones. */

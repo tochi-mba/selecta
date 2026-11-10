@@ -1,7 +1,7 @@
-# ADR-0406 — Lyrics in cloud mode
+# ADR-0406 - Lyrics in cloud mode
 
-- **Decision:** Proposed (owner review pending).
-- **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
+- **Decision:** Accepted (owner, 2026-11-09).
+- **Implementation:** 1/4 Implemented; 0/4 In progress; 3/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 0. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -31,13 +31,13 @@ Cloud users still get word-aware transitions where allowed, without Selecta disp
 - Calling LRCLIB per user without limits.
 - Displaying lyrics commercially without a licence.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0406-01 — Operator contact.** **Acceptance:** LRCLIB's operators have confirmed or refused the intended use in writing. **Required verification:** Correspondence on file. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0406-02 — Global rate limit.** **Acceptance:** Cloud lookups never exceed the agreed rate across all users. **Required verification:** Load test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0406-03 — Display gating.** **Acceptance:** Lyric display flags default off in cloud mode; pages reflow. **Required verification:** Flag sweep in cloud mode. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0406-04 — Legal decision recorded.** **Acceptance:** Internal-use and display questions answered and this ADR updated. **Required verification:** ADR update. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0406-01 - Operator contact.** **Acceptance:** LRCLIB's operators have confirmed or refused the intended use in writing. **Required verification:** Correspondence on file. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0406-02 - Global rate limit.** **Acceptance:** Cloud lookups never exceed the agreed rate across all users. **Required verification:** Load test. **Implementation:** Not started; **Independently Verified:** No.
+3. **SC-0406-03 - Display gating.** **Acceptance:** Lyric display flags default off in cloud mode; pages reflow. **Required verification:** Flag sweep in cloud mode. **Implementation:** Implemented; with no rules, Cloud decides `lyrics.display`, `listen.lyrics`, `listen.word_focus`, `listen.stage` and `discover.word_links` off for Free and Premium (lookups stay on), and every Cloud page reflows around them. **Evidence:** `web/e2e-cloud/flags.cloud.ts` 'with the cloud defaults, lyric display is off and every page closes up around it' and `tests/test_cloud_lyric_display.py`, passing. **Independently Verified:** No.
+4. **SC-0406-04 - Legal decision recorded.** **Acceptance:** Internal-use and display questions answered and this ADR updated. **Required verification:** ADR update. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.

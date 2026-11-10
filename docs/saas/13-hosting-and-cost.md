@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 13. Hosting, infrastructure and cost
 
@@ -6,24 +6,25 @@
 
 | Piece | Choice | Why | Alternative |
 |---|---|---|---|
-| Code, CI, images | GitHub, GitHub Actions, GHCR | Already home; OIDC deploys | — |
+| Code, CI, images | GitHub, GitHub Actions, GHCR | Already home; OIDC deploys | - |
 | Static app + marketing | Cloudflare Pages | Free, global, same vendor as R2 | Vercel |
-| DNS, TLS, WAF | Cloudflare | Rate limiting, bot protection | — |
+| DNS, TLS, WAF | Cloudflare | Rate limiting, bot protection | - |
 | Object storage | Cloudflare R2, EU jurisdiction | $0.015/GB-month, **zero egress**: essential for audio playback | S3 (egress fees), Backblaze B2 |
 | API, gateway, maintenance | Render web services (Frankfurt), Pro workspace ($25/month flat; autoscaling needs Pro or above) | Docker deploys from GitHub, simple; their traffic is small JSON/SSE, so Render's 25 GB included egress and $0.15/GB beyond are acceptable here | Fly.io Machines, AWS ECS later |
 | PostgreSQL | Render Postgres (Frankfurt) with point-in-time recovery; Render's built-in PgBouncer (transaction mode, free on paid databases) for request traffic, direct connections for `LISTEN` and the leader lock | Same network as the API, simple ops | Neon (scale-to-zero, branching for previews), Supabase |
 | CPU workers (beta) | Modal functions in an EU region (per-second billing, scale to zero) | No servers to run; absorbs import spikes; monthly egress allowance then ~$0.04/GiB | Runpod CPU |
-| Reserved CPU workers (later) | Hetzner shared-vCPU servers (CX/CAX lines) | Cheapest steady compute with large included traffic; add when steady utilisation justifies it. Dedicated CCX prices more than doubled in 2026, so avoid those | — |
+| Reserved CPU workers (later) | Hetzner shared-vCPU servers (CX/CAX lines) | Cheapest steady compute with large included traffic; add when steady utilisation justifies it. Dedicated CCX prices more than doubled in 2026, so avoid those | - |
 | GPU stems | Modal (T4 ~$0.59/h, L4 ~$0.80/h) | Per-second, scale to zero, Python-native | Runpod serverless (flex workers per-second) |
-| **Not chosen for workers** | Render background workers | Every worker upload to R2 is Render egress at $0.15/GB past 25 GB/month; proxies, stems and exports would make that the biggest bill | — |
+| **Not chosen for workers** | Render background workers | Every worker upload to R2 is Render egress at $0.15/GB past 25 GB/month; proxies, stems and exports would make that the biggest bill | - |
+| Maintenance service | Two Render background workers running `selecta maintain` (one leads, one stands by), on a direct database connection | Small and steady; it only talks to PostgreSQL, Stripe, WorkOS and R2, so no worker egress | Any always-on container host |
 | Identity | WorkOS AuthKit | Free to 1M MAU, MFA, passkeys | Clerk |
 | Payments | Stripe Billing, Checkout, Portal, Tax | Your choice | Paddle as merchant of record if VAT burden bites |
 | AI | Anthropic API | Already integrated (`providers.py`), tiered model family | Second vendor via OpenAI-compatible adapter |
-| Errors | Sentry | Frontend + backend | — |
+| Errors | Sentry | Frontend + backend | - |
 | Metrics, logs, traces | Grafana Cloud via OpenTelemetry | Free tier to start | Better Stack |
-| Email | Postmark or Resend | Transactional only | — |
-| Status page | Better Stack or Instatus (separate infrastructure) | Up when we're down | — |
-| IaC | OpenTofu for Cloudflare; `render.yaml` blueprint; Modal apps in code | Reproducible staging/prod | — |
+| Email | Postmark or Resend | Transactional only | - |
+| Status page | Better Stack or Instatus (separate infrastructure) | Up when we're down | - |
+| IaC | OpenTofu for Cloudflare; `render.yaml` blueprint; Modal apps in code | Reproducible staging/prod | - |
 
 ### 13.2 Environments
 

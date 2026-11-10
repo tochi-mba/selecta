@@ -3,18 +3,19 @@ import { FormEvent, useId, useState } from 'react';
 import { lucy } from '../lucy/client';
 import type { Budgets, LucyStatus, PhaseName, Phases, ProviderKind, SettingsChange } from '../lucy/types';
 import { LucyMemory } from './LucyMemory';
+import { words } from '../copy';
 
 /** Lucy's settings. The built-in planner runs on this computer and sends nothing anywhere. An AI
  * service can only be chosen after agreeing to exactly what would be sent to it. An API key can be
  * typed in but is never shown back: the page only knows whether one is saved. */
 
 const PROVIDERS: ({ kind: ProviderKind; label: string; about: string } & Gate)[] = [
-  { kind: 'builtin', label: 'Built-in (on this computer, no AI service)', about: 'Plans with Selecta’s own rules. Nothing leaves this computer.' },
+  { kind: 'builtin', get label() { return words().lucyBuiltinLabel; }, get about() { return words().lucyBuiltinAbout; } },
   { kind: 'anthropic', flag: 'lucy.remote_providers', label: 'Anthropic', about: 'Uses Anthropic’s AI service with your own API key.' },
   { kind: 'openai', flag: 'lucy.remote_providers', label: 'OpenAI-compatible (OpenAI, Ollama, LM Studio…)', about: 'Any service that speaks the OpenAI format, including ones running on your own machine.' },
 ];
 
-const PHASES: ({ name: PhaseName; label: string; about: string } & Gate)[] = [
+export const PHASES: ({ name: PhaseName; label: string; about: string } & Gate)[] = [
   { name: 'chat', label: 'Chat', about: 'Talk to Lucy about mixes.' },
   { name: 'proposals', flag: 'lucy.proposals', label: 'Proposals', about: 'Lucy plans a mix you can look over.' },
   { name: 'commit', flag: 'lucy.commit', label: 'Saving drafts', about: 'Approved proposals can be saved, and played if you confirm.' },
@@ -140,7 +141,7 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
                 <label htmlFor={`${ids}-key`}>API key</label>
                 <input id={`${ids}-key`} type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} autoComplete="off" spellCheck={false}
                   placeholder={sameProvider && status.provider.key_set ? 'Key saved. Type a new one to replace it.' : ''} aria-describedby={`${ids}-key-help`} />
-                <p id={`${ids}-key-help`} className="field-help">{sameProvider && status.provider.key_set ? 'Key saved. It’s never shown here again.' : 'Saved on this computer and never shown here again.'}</p>
+                <p id={`${ids}-key-help`} className="field-help">{sameProvider && status.provider.key_set ? 'Key saved. It’s never shown here again.' : words().lucyKeySavedHere}</p>
               </div>
               <div className="lucy-consent">
                 <p><b>What would be sent to this service</b></p>

@@ -1,7 +1,7 @@
-# ADR-0394 — Durable jobs with leases and fencing
+# ADR-0394 - Durable jobs with leases and fencing
 
-- **Decision:** Proposed (owner review pending).
-- **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
+- **Decision:** Accepted (owner, 2026-11-09).
+- **Implementation:** 4/6 Implemented; 2/6 In progress; 0/6 Not started.
 - **Independent verification:** 0/6 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 1. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -13,7 +13,7 @@
 
 Background work is coordinated through a stdin pipe to one seam-worker subprocess, in-memory deques, `seam.json` status files, a `rendering-mix` sign file, an analysis subprocess and JSON export-job files tracked in a process dict. None of it survives multiple instances or remote workers, and some of it corrupts state when a second instance starts.
 
-This ADR records a proposed decision. Nothing in it is implemented or measured yet; numbers come from the proposal and must be re-checked when the work starts.
+The shared schema, fenced job store, retry/reaper lifecycle, transactional outbox and cooperative handler runner are implemented in code. Local audio handlers have not been migrated, PostgreSQL race behavior is not verified, and the required Hypothesis/chaos evidence remains outstanding.
 
 ## Decision
 
@@ -34,15 +34,15 @@ Work survives restarts, crashes and deploys; a stale worker can never overwrite 
 - Celery/Redis as the source of truth (weak durability, no fencing).
 - Keeping file-based status alongside the database (two truths).
 
-## Implementation checklist — 0/6 Implemented; 0/6 independently Verified
+## Implementation checklist - 0/6 Implemented; 0/6 independently Verified
 
-1. **SC-0394-01 — Job tables and state module.** **Acceptance:** All transitions go through one module; illegal transitions raise. **Required verification:** Hypothesis state-machine tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0394-02 — Leases and fencing.** **Acceptance:** A completion with a stale fencing token is refused; the zombie-worker scenario publishes once. **Required verification:** Integration race test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0394-03 — Reaper.** **Acceptance:** Expired attempts return to queued or fail when attempts are exhausted, within lease + interval. **Required verification:** Kill-loop chaos test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0394-04 — Local runner.** **Acceptance:** Seam worker pipe, analysis subprocess and export JSON jobs are replaced in local mode; transitions sound the same. **Required verification:** Existing tests plus the owner's listening check. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0394-05 — Error classes and quarantine.** **Acceptance:** Each error class follows its retry policy; a job that crashes three workers is quarantined. **Required verification:** Unit and chaos tests. **Implementation:** Not started; **Independently Verified:** No.
-6. **SC-0394-06 — Outbox.** **Acceptance:** Every transition writes an outbox event in the same transaction. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0394-01 - Job tables and state module.** **Acceptance:** All transitions go through one module; illegal transitions raise. **Required verification:** Hypothesis state-machine tests. **Implementation:** Implemented; every transition goes through `work/state.py` and `work/lifecycle.py`; illegal transitions raise; a Hypothesis state machine drives random lifecycles and checks every invariant after each step. **Evidence:** `tests/test_cloud_jobs_stateful.py::test_random_lifecycles_keep_every_invariant`, `tests/test_cloud_jobs_lifecycle.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
+2. **SC-0394-02 - Leases and fencing.** **Acceptance:** A completion with a stale fencing token is refused; the zombie-worker scenario publishes once. **Required verification:** Integration race test. **Implementation:** Implemented; claims issue a fencing token that rises with every claim; completion from a stale holder is refused and publishes nothing; PostgreSQL races prove one winner and no deadlock. **Evidence:** `tests/test_cloud_jobs_claim.py::test_each_claim_increments_the_fencing_token_by_one`, `tests/test_cloud_jobs_lifecycle.py`, `tests/test_cloud_jobs_races.py` (PostgreSQL, 7 passed); green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
+3. **SC-0394-03 - Reaper.** **Acceptance:** Expired attempts return to queued or fail when attempts are exhausted, within lease + interval. **Required verification:** Kill-loop chaos test. **Implementation:** In progress; expired-lease reaping and a term-fenced maintenance loop exist; kill-loop chaos verification remains. **Independently Verified:** No.
+4. **SC-0394-04 - Local runner.** **Acceptance:** Seam worker pipe, analysis subprocess and export JSON jobs are replaced in local mode; transitions sound the same. **Required verification:** Existing tests plus the owner's listening check. **Implementation:** In progress; cooperative durable runner supports injected handlers, but local audio jobs still use existing workers. **Independently Verified:** No.
+5. **SC-0394-05 - Error classes and quarantine.** **Acceptance:** Each error class follows its retry policy; a job that crashes three workers is quarantined. **Required verification:** Unit and chaos tests. **Implementation:** Implemented; transient, resource, input, dependency, poison and engine-bug classes follow their retry policies; a job that crashes three workers is quarantined. **Evidence:** `tests/test_cloud_jobs_failures.py::test_transient_errors_retry_with_backoff_until_attempts_run_out`, `tests/test_cloud_jobs_failures.py::test_poison_and_three_crashed_workers_quarantine`, `tests/test_cloud_scheduling_simulator.py::test_workers_that_keep_dying_quarantine_the_job`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
+6. **SC-0394-06 - Outbox.** **Acceptance:** Every transition writes an outbox event in the same transaction. **Required verification:** Integration test. **Implementation:** Implemented; enqueue, claim and every lifecycle transition write one outbox event in the same transaction and wake the pool. **Evidence:** `tests/test_cloud_jobs_enqueue.py::test_enqueue_writes_one_outbox_event_and_wakes_the_pool`, `tests/test_cloud_jobs_claim.py::test_a_claim_writes_one_outbox_event_naming_its_attempt_and_worker`, `tests/test_cloud_jobs_lifecycle.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.

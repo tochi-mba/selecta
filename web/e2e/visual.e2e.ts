@@ -58,6 +58,9 @@ for (const display of DISPLAYS) {
     await capture('customize-dialog');
 
     await page.goto('/listen');
+    // The app has to be on screen before a key can mean anything: until it has asked the server what it
+    // is, there's nothing there to press R on.
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
     await page.keyboard.press('r');
     await expect(page.getByRole('dialog', { name: 'Requests' })).toBeVisible();
     await capture('requests-dialog');

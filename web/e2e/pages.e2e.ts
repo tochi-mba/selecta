@@ -99,6 +99,9 @@ test('dialogs and drawers pass the automatic accessibility checks too', async ({
     found.push(...(await check(`customize at ${width}`)));
 
     await page.goto('/listen');
+    // The app has to be on screen before a key can mean anything: until it has asked the server what it
+    // is, there's nothing there to press R on.
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
     await page.keyboard.press('r');
     await expect(page.getByRole('dialog', { name: 'Requests' })).toBeVisible();
     found.push(...(await check(`requests at ${width}`)));
@@ -191,6 +194,8 @@ test('addresses that go nowhere say so, and API mistakes aren’t dressed up as 
   expect((await request.get('/assets/nope.js')).status()).toBe(404);
 });
 
+// Local mode: nothing leaves this computer. The Cloud site's version of this check, that it talks
+// only to its allowlisted origins, is in e2e-cloud/live.cloud.ts (`pnpm e2e:cloud`).
 test('the page only ever talks to this computer', async ({ page }) => {
   const elsewhere: string[] = [];
   page.on('request', (sent) => {

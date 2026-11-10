@@ -1,0 +1,50 @@
+name: codeql
+
+# Static analysis for security bugs (injection, unsafe deserialisation, path traversal, XSS)
+# in the Python server and the TypeScript site, with GitHub's extended security queries.
+#
+# Code scanning is free on public repositories. On a private one it needs GitHub Code Security,
+# and without that the upload is refused, so the job skips itself once the repository is
+# private. Ruff's security rules, the tenant isolation matrix and the secret checks keep
+# running in the test workflow either way.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL / ${{ matrix.language }}
+    if: ${{ github.event.repository.private != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}

@@ -4,7 +4,7 @@
     "listen.lyrics": {
       "label": "Lyrics",
       "about": "Line-synced lyrics on the Listen page, following the music.",
-      "requires": ["lyrics.lookup"],
+      "requires": ["lyrics.display"],
       "surfaces": ["listen"],
       "words": ["Lyrics focus", "All timed lyrics"]
     },

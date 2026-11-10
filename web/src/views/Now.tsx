@@ -9,6 +9,7 @@ import { Action, announce, Problem, Skeleton, Status, Tooltip } from '../ui/cont
 import { useShownTheme } from '../state/prefs';
 import { TermHint } from '../ui/Glossary';
 import { Icon } from '../ui/Icon';
+import { useMediaQuery } from '../ui/useMediaQuery';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
 import { SongMotif } from '../ui/MusicObjects';
@@ -489,6 +490,10 @@ function noLyricsWords(status: string | null | undefined): string {
 
 function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail; time: number; focus?: boolean; canBrowse?: boolean }) {
   const [reading, setReading] = useState(false);
+  // On a phone the first screen is the song and its words, and anything to press starts below it, so
+  // nothing sits half hidden behind the player at whatever height the phone is (listening.css). The
+  // button comes after the words there, in the page as well as on screen, so Tab meets it where it is.
+  const phone = useMediaQuery('(max-width: 760px)');
   useEffect(() => setReading(false), [detail.id]);
   const lines = detail.lines;
   const starts = useMemo(() => lines.map((line) => line.start), [lines]);
@@ -509,14 +514,15 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
     : words && lines.some((line) => !!line.words?.length)
       ? 'Word highlights follow stored lyric alignment; timing may be approximate.'
       : 'Line-timed lyrics; individual word timing unavailable.';
+  const browse = canBrowse && (
+    <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReading(!reading)}>
+      {reading ? 'Resume lyric follow' : 'Read all lyrics'}
+    </button>
+  );
   return (
     <div className={`lyrics ${focus ? 'focus' : ''} ${reading ? 'reading' : ''}`} aria-live="off">
       <p className="lyric-confidence">{timingWords}</p>
-      {canBrowse && (
-        <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReading(!reading)}>
-          {reading ? 'Resume lyric follow' : 'Read all lyrics'}
-        </button>
-      )}
+      {!phone && browse}
       {reading ? (
         <div className="lyrics-scroll" tabIndex={0} role="region" aria-label="All timed lyrics, scroll manually">
           {lines.map((line, at) => (
@@ -536,6 +542,7 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
       ))}
         </>
       )}
+      {phone && browse}
     </div>
   );
 }

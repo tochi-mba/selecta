@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 11. UI and UX changes
 
@@ -39,7 +39,18 @@ The music-first app stays recognisable: same five destinations, same design toke
 
 ### 11.3 Real-time updates
 
-Replace most polling with **one SSE stream per signed-in tab** (`/api/events`): job state changes, upload status, entitlement changes, Lucy events. Heartbeat comments every 20 s (Cloudflare idle limits), resume with `Last-Event-ID`, fan-out across API instances via Postgres `LISTEN/NOTIFY` from the outbox, on one direct (non-pooled) connection per instance, catching up by event id after any gap. Existing `useVisiblePoll` stays as the fallback when SSE drops.
+Replace most polling with **one SSE stream per signed-in tab** (`/api/events`): job state changes, upload status, entitlement changes, Lucy events. Heartbeat comments every 20 s (Cloudflare idle limits), resume with `Last-Event-ID`, fan-out across API instances via Postgres `LISTEN/NOTIFY` from the outbox, on one direct (non-pooled) connection per instance, catching up by event id after any gap. Existing `useVisiblePoll` stays as the fallback when SSE drops. **Today:** each API instance's `OutboxFanout` (`work/fanout.py`) listens on `selecta_outbox` through one direct connection and wakes every open stream on that instance when any instance commits an event; a stream arms its wake-up before it reads, then reads only its workspace's rows from its cursor. While listening a stream re-polls only every 15 s as a backstop; without notifications (SQLite, or while the listener reconnects) it polls every 2 s. `tests/test_cloud_fanout.py` commits on one instance's engine and times the event reaching a stream served by another over HTTP.
+
+Current implementation (`web/src/cloud/events.ts`): the Cloud site reads `/api/events` with `fetch` (EventSource can't send the bearer token), keeps the last event id per tab in `sessionStorage` and sends it back as `Last-Event-ID`, and reconnects at once when the server ends a stream. A stream that errors, isn't `text/event-stream`, or is silent for 45 seconds counts as blocked: the tab switches to `useVisiblePoll` (every 10 seconds, re-reading the account), says "Live updates are paused on this network", keeps retrying the stream with a doubling wait up to 30 seconds, and reads once more when it comes back. `entitlement.*`, `quota.*` and `account.*` events re-read the account; `upload.*` and `asset.*` also reload the library.
+
+### 11.3a Cloud screens as built
+
+- **Plan & billing** (`web/src/cloud/Billing.tsx`, `Meters.tsx`): current plan and Lucy level, four meters from `/api/account` `usage` (storage used of limit, analysis today, Lucy turns this month, exports this month), each with its reset date in the account's timezone, and fair use said in words where a plan has no limit. Free accounts subscribe through Checkout after three separate tick boxes (terms, immediate access, the 14-day cancellation right); the request sends the server's `billing.consent_version`. Paid accounts upgrade, downgrade or cancel in the Stripe portal. Returning from Checkout shows "Confirming your payment…" and only says "You're on Premium" once `/api/account` shows the new plan (re-read every 2 seconds and on `entitlement.changed`), with a plain message if it takes more than a minute.
+- **Over quota** (`OverQuota.tsx`): a banner on every page names the overage ("You're 35.0 GB over Free's 10.0 GB") with Manage storage (the library) and Upgrade; Add music is disabled with the reason; listening, removing songs and Download my data keep working.
+- **Add music** (`Uploads.tsx`, `uploadParts.ts`): unfinished upload sessions are listed from `GET /api/uploads`, so they survive a refresh; choosing the same file again (same size and SHA-256) carries on from the parts already in storage without planning it again.
+- **Library playback** (`Library.tsx`, `useCloudPlayer.ts`): Listen starts a run to the end of the list. Once a song plays, the next one's playback file is prepared and downloaded in full (shown as "Up next: ... · loaded") and the hand-over uses that copy. A media error refreshes the signed URL once, restoring the playhead and play state without changing the queue; a second failure on the same song is reported. Cloud has no mixes with transitions yet, so only the next song is buffered.
+- **Listen** (`rooms/CloudListen.tsx`, mounted by `CloudApp.tsx` at `/listen`): the "Playing on..." bar and the host's room panel ([§11A](11a-devices-and-rooms.md)).
+- **Account** (`AccountData.tsx`, `devices/DevicesPanel.tsx`, `views/LucyCloudSettings.tsx`): Download my data saves the export ZIP; the signed-in devices list follows; Lucy's Cloud settings show the plan's Lucy level, this month's turns and only the person's own choices (Use Lucy, phases, the two sharing choices). Local mode keeps `views/LucySettings.tsx` unchanged.
 
 ### 11.4 Honest status language
 

@@ -195,6 +195,21 @@ describe('things on top of the page', () => {
     expect(opener).toHaveFocus();
     opener.remove();
   });
+  it('give focus to the opener’s replacement when a re-render swapped the opener out', () => {
+    // A Library correction reloads the list while the sheet is open, replacing the row's button.
+    const opener = document.createElement('button');
+    opener.dataset.focusKey = 'song-details-7';
+    document.body.append(opener);
+    opener.focus();
+    const { unmount } = render(<Dialog title="Song" onClose={() => {}}><button>Only</button></Dialog>);
+    opener.remove();
+    const replacement = document.createElement('button');
+    replacement.dataset.focusKey = 'song-details-7';
+    document.body.append(replacement);
+    unmount();
+    expect(replacement).toHaveFocus();
+    replacement.remove();
+  });
   it('makes the parent inert during a nested dialog and restores the nested opener', () => {
     function Nested() {
       const [inner, setInner] = useState(false);
@@ -243,6 +258,26 @@ describe('things on top of the page', () => {
     expect(screen.getByRole('button', { name: 'Ready' })).toHaveFocus();
   });
 
+  it('keep focus when a control in them goes away once it has done its job, so Escape still closes them', async () => {
+    const onClose = vi.fn();
+    function PutBack() {
+      const [corrected, setCorrected] = useState(true);
+      return (
+        <Dialog title="Paper Moon" onClose={onClose}>
+          <p>Tempo {corrected ? '238' : '119'}</p>
+          {corrected && <button onClick={() => setCorrected(false)}>Use what was measured</button>}
+        </Dialog>
+      );
+    }
+    render(<PutBack />);
+    const putBack = screen.getByRole('button', { name: 'Use what was measured' });
+    putBack.focus();
+    fireEvent.click(putBack);
+    expect(screen.queryByRole('button', { name: 'Use what was measured' })).toBeNull();
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Paper Moon' })).toHaveFocus());
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalled();
+  });
 });
 
 describe('menu Tab continuity', () => {

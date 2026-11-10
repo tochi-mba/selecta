@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 4. Target architecture
 
@@ -15,6 +15,56 @@
 | Settings UI | Machine settings visible | Machine settings hidden; plan and billing shown |
 
 `SELECTA_MODE=local|cloud` selects adapters at app start. Domain logic (analysis, planner, render, seams, mix, Lucy tools) stays shared. The strangler order is deliberate: **the durable job system lands in local mode first** (Phase 1), so the live local app proves it with real audio before anything goes to the cloud.
+
+### 4.1.1 Current implementation on the Cloud branch
+
+The branch now has an executable Cloud slice: `selecta.api:serve` selects the Cloud app when
+`SELECTA_MODE=cloud`; the Cloud app requires PostgreSQL, explicit AuthKit issuer/audience settings,
+and host/origin allowlists; it starts no local watcher or audio worker. It exposes liveness and
+migration-aware readiness, verified-email and age-confirmed account provisioning, Free-plan storage initialization,
+account/entitlement reads with per-user feature decisions, Labs opt-ins, sign-out-everywhere,
+Stripe Checkout and customer portal sessions, and a signed Stripe webhook receiver that persists
+event ids and re-fetches subscription state before updating entitlement and storage quota.
+The onboarding route is owned by `cloud.signups` in the shared flag registry. `selecta db upgrade` applies the checked-in Alembic
+schema to the configured PostgreSQL database.
+
+The automated Cloud bootstrap test guards against the local startup hooks running in Cloud mode.
+
+The shared migration set currently contains 51 tables across five revisions and has been exercised
+through SQLite upgrade, schema comparison and rollback while preserving a legacy `songs` table. PostgreSQL
+migration execution and row-level security are not yet verified or implemented. Stripe session
+creation and webhook reconciliation are wired, and Cloud uploads can reserve quota, resume
+multipart transfers, check the actual audio metadata and accept objects into workspace storage.
+The React app now selects local or Cloud mode from `/api/status`; Cloud mode includes WorkOS
+sign-in, account onboarding, plan and billing screens, and browser multipart uploads. Nightly billing
+scheduled billing retries/reconciliation and Stripe Tax setup remain incomplete. The Cloud web app
+now has a private paginated asset library and can play an owned original through a short-lived URL;
+mix assembly, derived playback proxies and the complete Cloud listening experience remain
+outstanding. Upload completion currently probes audio metadata in API temporary
+storage; moving that work to remote workers remains part of the worker gateway effort. The worker
+gateway is now a standalone `selecta gateway` service with separate host allowlisting, worker
+secrets, readiness checks and R2 URL signing. Long-poll notifications, deploy manifests, worker
+images and end-to-end job handlers remain outstanding.
+
+`RemoteWorkerClient` and the cooperative `WorkerRunner` now speak the gateway protocol and exchange
+audio only through attempt-scoped signed URLs. Cloud job handlers and pinned worker images remain
+to be built, so the transport cannot yet process real mixes end to end.
+
+Cloud also exposes a workspace-scoped `/api/events` stream of durable outbox events in commit
+order; clients resume with `Last-Event-ID`. Each instance wakes on PostgreSQL `LISTEN/NOTIFY`
+(`work/fanout.py`) and falls back to polling, and the Cloud site falls back to polling when the
+stream is blocked (`web/src/cloud/events.ts`). Event ids are commit-order numbers (`seq`, below),
+so a reconnect never skips an event that committed late.
+
+Account deletion now has a `DELETE /api/account` route and durable, leased workflow. Its effect
+adapter cancels jobs and Stripe subscriptions, deletes the WorkOS identity after the recovery
+window, removes memberships, releases upload reservations, and tombstones account objects. The
+`account-deletion-maintenance` and `storage-maintenance` CLI commands advance workflows, mirror
+storage tombstones to a dedicated private R2 ledger bucket, and perform the delayed physical purge.
+`replay-deletions-after-restore` re-applies storage tombstones and requeues account workflows before
+restored traffic opens. Those commands need scheduled deployment and a restore drill. Cloud account
+export now packages integrity-checked originals and settings; mixes are unavailable until Cloud
+mix persistence exists.
 
 ### 4.2 Component map
 
@@ -59,6 +109,8 @@ External services: WorkOS AuthKit (identity), Stripe (billing), Anthropic (Lucy)
 | `maintenance` | `selecta-api` with `selecta maintain` | 1 active + 1 standby (Render) | Leader election with `pg_try_advisory_lock` on a direct connection; tasks idempotent and term-fenced |
 | `worker-cpu` | `selecta-worker` (ffmpeg, torch CPU, models baked in) | 0–N on Modal at beta; reserved Hetzner pool later | Pools selected by env |
 | `worker-gpu` | `selecta-worker-gpu` (CUDA torch, Demucs) | 0–N on Modal | Stems only at first |
+
+**As built: `maintenance`.** `selecta maintain` (`src/selecta/maintain.py`) runs `work.maintenance.MaintenanceLoop` with every recurring cloud task: lease reaping, due retries, head reconciliation, outbox pruning, due dangerous actions, storage reservation expiry, abandoned Lucy turns, flag previews, admin metrics, Stripe event drains and the daily reconciliation, account-deletion steps, storage deletions, room sweeps, the derived-data eviction sweep and the nightly usage reconciliation (drift becomes a `platform_alerts` row). Tasks whose secrets are missing are named at start-up and left out. Run two copies: the advisory lock on a direct connection (`SELECTA_MAINTENANCE_DATABASE_URL`, else `SELECTA_DATABASE_URL`) makes one the leader and the other a standby that takes over on the tick after the leader's connection dies. SIGTERM stops it at the end of the tick and releases the lock. The runbook is [docs/operations/maintenance-service-down.md](../operations/maintenance-service-down.md).
 
 ---
 

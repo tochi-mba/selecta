@@ -1,8 +1,10 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 3. Product: plans, entitlements and economics
 
 ### 3.1 Plan catalogue (starting values, all admin-tunable and versioned)
+
+**Current implementation:** Plans are versioned in `src/selecta/billing/plans.py`. Cloud API and worker gateway startup call `validate_catalogue()` to catch stale flag ids, invalid plan versions and plan-gating conflicts before serving requests. The required unit and CI checks have not yet been run.
 
 Storage is your decision. Everything else is a proposed starting point to validate in beta.
 
@@ -34,7 +36,7 @@ Notes:
 | | Free | Standard | Premium |
 |---|---|---|---|
 | Monthly | £0 | £6.99 | £12.99 |
-| Annual | — | £59 | £109 |
+| Annual | - | £59 | £109 |
 
 Reference points: Moises lists Premium around $4–6/month and Pro around $10–30/month (sources disagree); DJ.Studio sells a perpetual licence at the higher end. Selecta's differentiator is automatic, musically clever transitions on *your own* library in the browser, a gap most competitors don't fill (Soundverse DJ One and Fadr are the closest browser tools; djay and DJ.Studio are native apps).
 

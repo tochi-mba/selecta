@@ -8,6 +8,7 @@ from collections import Counter
 
 import numpy as np
 import pytest
+from cloud_helpers import make_cloud_app
 from fastapi.testclient import TestClient
 from mix_helpers import _same_songs, _song_row, _takes
 
@@ -16,7 +17,16 @@ from selecta.api import create_app
 from selecta.config import Settings
 from selecta.seams import SeamStore
 
-WITH_ROUTES = [flag.id for flag in flags.registry().values() if flag.routes and not flag.core]
+WITH_ROUTES = [
+    flag.id
+    for flag in flags.registry().values()
+    if flag.routes and not flag.core and "local" in flag.modes
+]
+CLOUD_WITH_ROUTES = [
+    flag.id
+    for flag in flags.registry().values()
+    if flag.routes and not flag.core and "local" not in flag.modes
+]
 
 
 @pytest.fixture
@@ -45,6 +55,25 @@ def test_every_route_of_a_turned_off_feature_is_refused(app_client, flag_id):
         body = response.json()
         assert body["code"] == "flag_off" and body["flag"] == flag_id, route
         assert "turned off in this build" in body["detail"]
+
+
+@pytest.fixture
+def cloud_client(tmp_path):
+    app, engine, _ = make_cloud_app(tmp_path)
+    with TestClient(app) as client:
+        yield client
+    engine.dispose()
+
+
+@pytest.mark.parametrize("flag_id", CLOUD_WITH_ROUTES)
+def test_every_cloud_route_of_a_turned_off_feature_is_refused(cloud_client, flag_id):
+    """Cloud-only features are refused by the cloud app before sign-in is even checked."""
+    flags.use(f"-{flag_id}")
+    for route in flags.registry()[flag_id].routes:
+        response = _call(cloud_client, route)
+        assert response.status_code == 403, route
+        body = response.json()
+        assert body["code"] == "flag_off" and body["flag"] == flag_id, route
 
 
 def test_a_feature_that_needs_one_thats_off_is_refused_too(app_client):

@@ -533,7 +533,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
                     checked={selectedIdSet.has(song.id)} disabled={searching || failed || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
                     onChange={() => toggleBatch(song.id)} />
                 </label>}
-                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`}>
+                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`} data-focus-key={`song-details-${song.id}`}>
                   <SongMotif songId={song.id} /><b title={title}>{title}</b>
                 </button>
                 <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>

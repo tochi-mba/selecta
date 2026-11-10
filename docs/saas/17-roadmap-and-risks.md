@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 17. Roadmap
 
@@ -44,7 +44,7 @@ Durations assume one developer working with AI agents and are ranges, not promis
 4. Offer a 14-day Premium trial in beta?
 5. Product name for the cloud edition ("Selecta Cloud" is a placeholder).
 6. Rooms: is 100 guests the right beta cap, and should Standard get one trial room?
-7. ADR-0390 says flags are developer-only with no switch page. The cloud Flags page reverses that for cloud mode only; ADR-0414 records it, but it's your call to accept.
+7. Resolved: ADR-0414 (accepted 2026-11-09) adds the cloud-only Flags page; local-mode flags stay developer-only as ADR-0390 says.
 
 ---
 
@@ -124,4 +124,4 @@ ADR-0390 (feature flags) already exists; the new set starts at 0391.
 
 ---
 
-[← 16-edge-cases.md](16-edge-cases.md) · [Contents](README.md#chapters) · [sources.md →](sources.md)
+[← 16-edge-cases.md](16-edge-cases.md) · [Contents](README.md#chapters) · [18-test-plan.md →](18-test-plan.md)

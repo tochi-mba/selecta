@@ -219,6 +219,10 @@
   .now:not(.stage) { --above-lyrics: 432px; }
   .now:not(.stage):has(.music-visualizer) { --above-lyrics: 540px; }
   .now:not(.stage) .lyrics:not(.focus) { min-height: max(7.5em, calc(100svh - 36px - var(--above-lyrics))); }
+  /* The words are the first screen, so the button to read them all sits at the bottom of their space,
+     with everything else below the screen, instead of wherever the words happen to end. */
+  .now:not(.stage) .lyrics:not(.focus) { display: flex; flex-direction: column; }
+  .now:not(.stage) .lyrics:not(.focus) > .lyrics-browse { align-self: flex-start; margin: auto 0 0; }
   .seek-note { margin-top: calc(var(--space-3) * -1); }
 }
 

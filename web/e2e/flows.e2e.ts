@@ -157,13 +157,13 @@ test('the Library: search, song details, a correction that can be put back', asy
 
 test('songs that can’t be mixed say why', async ({ page }) => {
   await page.goto('/library');
-  await page.getByRole('group', { name: 'Show' }).getByRole('button', { name: /Set aside/ }).click();
+  await page.getByRole('group', { name: 'Filter Library recordings' }).getByRole('button', { name: /Set aside/ }).click();
   await expect(page.getByText('Episode 12')).toBeVisible();
   await page.getByRole('button', { name: /^Details for Episode 12/ }).click();
   await expect(page.getByRole('dialog', { name: 'Episode 12' }).getByText('Long and talky').first()).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('searchbox', { name: 'Search your library' }).fill('');
-  await page.getByRole('group', { name: 'Show' }).getByRole('button', { name: /attention/i }).click();
+  await page.getByRole('group', { name: 'Filter Library recordings' }).getByRole('button', { name: /attention/i }).click();
   await expect(page.getByRole('button', { name: 'Details for Broken File' })).toBeVisible();
   await page.getByRole('button', { name: /^Details for Broken File/ }).click();
   await expect(page.getByRole('dialog', { name: 'Broken File' }).getByText('couldn’t analyse').first()).toBeVisible();
@@ -176,6 +176,9 @@ test('requests: asking, then seeing it find a place, and cancelling for good', a
     await request.delete(`/api/requests/${row.id}`);
   }
   await page.goto('/listen');
+  // The app has to be on screen before a key can mean anything: until it has asked the server what it
+  // is, there's nothing there to press R on.
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
   await page.keyboard.press('r');
   const drawer = page.getByRole('dialog', { name: 'Requests' });
   await drawer.getByRole('combobox', { name: 'Request a song' }).fill('Last Call');

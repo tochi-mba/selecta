@@ -1,7 +1,7 @@
-# ADR-0404 — Lucy AI gateway with server-owned model routing
+# ADR-0404 - Lucy AI gateway with server-owned model routing
 
-- **Decision:** Proposed (owner review pending).
-- **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
+- **Decision:** Accepted (owner, 2026-11-09).
+- **Implementation:** 5/6 Implemented; 0/6 In progress; 1/6 Not started.
 - **Independent verification:** 0/6 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 5. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -34,15 +34,15 @@ Users get a Lucy that matches their plan without seeing model names; a maxed-out
 - Self-hosted model GPUs (owner chose hosted APIs).
 - Showing token counts to users.
 
-## Implementation checklist — 0/6 Implemented; 0/6 independently Verified
+## Implementation checklist - 0/6 Implemented; 0/6 independently Verified
 
-1. **SC-0404-01 — Registry and routing.** **Acceptance:** Tier requests resolve to the configured deployment; changes apply to new runs only. **Required verification:** Unit and integration tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0404-02 — Allowance ledger.** **Acceptance:** Turns are metered; limits enforced mid-conversation gracefully. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0404-03 — Spend guards.** **Acceptance:** No admission past per-account or platform ceilings, proven with a fake provider. **Required verification:** Load test with fake provider. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0404-04 — Fallback chain.** **Acceptance:** Provider outage degrades to the next model or the built-in planner; the rest of the app is unaffected. **Required verification:** Chaos test. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0404-05 — Settings split.** **Acceptance:** Cloud Lucy settings show only user-owned choices and a usage meter. **Required verification:** Playwright test per mode. **Implementation:** Not started; **Independently Verified:** No.
-6. **SC-0404-06 — Evaluation gate.** **Acceptance:** The Lucy evaluation set passes for each tier's deployment. **Required verification:** Eval run report. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0404-01 - Registry and routing.** **Acceptance:** Tier requests resolve to the configured deployment; changes apply to new runs only. **Required verification:** Unit and integration tests. **Implementation:** Implemented; each tier and request class resolves to its configured deployment, never above the tier's allowed set; routing versions are immutable and a run keeps the deployment it started with. **Evidence:** `tests/test_cloud_ai_routing.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
+2. **SC-0404-02 - Allowance ledger.** **Acceptance:** Turns are metered; limits enforced mid-conversation gracefully. **Required verification:** Integration test. **Implementation:** Implemented; turns are metered per served class; a turn in progress finishes at the limit and the next is told why; allowances reset monthly in the account's time zone. **Evidence:** `tests/test_cloud_ai_gateway.py`, `tests/test_cloud_ai_spend.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
+3. **SC-0404-03 - Spend guards.** **Acceptance:** No admission past per-account or platform ceilings, proven with a fake provider. **Required verification:** Load test with fake provider. **Implementation:** Implemented; per-call, per-turn, per-account and platform caps are reserved before a call and reconciled after; concurrent turn starts on PostgreSQL never admit past a ceiling. **Evidence:** `tests/test_cloud_ai_spend.py` (including the PostgreSQL races); green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
+4. **SC-0404-04 - Fallback chain.** **Acceptance:** Provider outage degrades to the next model or the built-in planner; the rest of the app is unaffected. **Required verification:** Chaos test. **Implementation:** Implemented; an unhealthy, disabled or draining deployment falls back down the chain to the built-in planner; the circuit breaker opens, half-opens and closes. **Evidence:** `tests/test_cloud_ai_routing.py`, `tests/test_cloud_ai_spend.py`; green in CI run 42752343336 (Python shards on SQLite, Cloud / PostgreSQL). **Independently Verified:** No.
+5. **SC-0404-05 - Settings split.** **Acceptance:** Cloud Lucy settings show only user-owned choices and a usage meter. **Required verification:** Playwright test per mode. **Implementation:** Implemented; Cloud Lucy settings show the plan's level, the turn meter and only the person's own choices; local keeps provider, limits and key. **Evidence:** `web/e2e-cloud/live.cloud.ts` 'Lucy settings in Cloud show the plan's level, the turn meter and only the person's choices' and `web/e2e/lucy-settings.e2e.ts` for local mode, passing. **Independently Verified:** No.
+6. **SC-0404-06 - Evaluation gate.** **Acceptance:** The Lucy evaluation set passes for each tier's deployment. **Required verification:** Eval run report. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.

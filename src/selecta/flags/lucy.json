@@ -21,7 +21,7 @@
         "POST /api/lucy/permissions/{permission}",
         "GET /api/lucy/diagnostics"
       ],
-      "surfaces": ["mixes", "edit", "lucy", "overlay.palette"],
+      "surfaces": ["mixes", "edit", "lucy", "overlay.palette", "cloud.settings", "cloud.billing"],
       "words": ["Lucy"]
     },
     "lucy.proposals": {

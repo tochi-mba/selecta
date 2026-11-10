@@ -5,6 +5,7 @@ import { lucy } from '../lucy/client';
 import type { LucyStatus, Memory, MemoryFact, MemoryKind } from '../lucy/types';
 import { humanize, plural, valueWords, whenWords } from '../lucy/words';
 import { Action, Problem, Skeleton } from '../ui/controls';
+import { words } from '../copy';
 
 /** What Lucy remembers, where each thing came from and how sure it is, and a way to change or forget
  * any of it. It also shows exactly what an AI service would be given. */
@@ -168,7 +169,7 @@ export function LucyMemory({ onStatus }: { onStatus: (status: LucyStatus) => voi
             <h4>What a remote AI would receive</h4>
             {memory.provider_receives.length
               ? <ul>{memory.provider_receives.map((item) => <li key={item}>{item}</li>)}</ul>
-              : <p className="hint">Nothing. With the built-in planner, nothing leaves this computer.</p>}
+              : <p className="hint">{words().lucyMemoryNothingSent}</p>}
           </div>
         </>
       )}

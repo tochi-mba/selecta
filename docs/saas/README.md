@@ -2,7 +2,20 @@
 
 *Prepared 9 November 2026 for Tochi Mba. Grounded in the `tochi-mba/selecta` repo at `main` (3c2f1eb, including the feature-flag work merged today), three code maps of the backend, frontend and docs/CI, and web research on hosting, queues, billing, AI pricing, licensing and music-locker law. Prices are from public pages and third-party summaries as of Oct–Nov 2026 and must be re-checked before any spend decision.*
 
-**Status:** Proposed, for owner review. Decisions are recorded as ADR-0391 to ADR-0416 (all Proposed). Local mode keeps every guarantee it has today.
+**Status:** Accepted by the owner on 2026-11-09. Decisions are recorded as ADR-0391 to ADR-0416 (all Accepted); progress is tracked in the [implementation checklist](../adr/selecta-cloud-implementation-checklist.md). Local mode keeps every guarantee it has today.
+
+## Guarantees by runtime mode
+
+| Concern | Local mode | Cloud mode |
+|---|---|---|
+| Music and storage | Music stays on this PC; Selecta never uploads it. | Music is private to the account and workspace in tenant-isolated object storage. |
+| Network boundary | The app serves only the local loopback origin and needs no account. | Authenticated public APIs use explicit browser origins, short-lived access, and private signed object URLs. |
+| Processing | Analysis, rendering, lyrics, and Lucy use only the local adapters the user enables. | Remote work is fenced, metered, plan-bounded, and processed only by allowlisted workers and models. |
+| Product control | Existing local flags, privacy copy, folders, backups, and offline behavior remain unchanged. | Plan entitlements, server-side flags, deletion/retention, billing, and audit controls apply. |
+| User trust | No telemetry or cloud account is required; local files remain under the user's control. | Tenant isolation, honest status, export/deletion rights, bounded spending, and audited staff access are required. |
+
+The local contract remains owned by ADR-0025, ADR-0072, and ADR-0390. Cloud-specific guarantees
+are additive and are tracked by ADR-0391–0416; they do not relax the local contract.
 
 ---
 
@@ -74,6 +87,7 @@
 | [05-storage-uploads-playback.md](05-storage-uploads-playback.md) | R2 layout, uploads, quotas, deletion and cloud playback |
 | [06-data-model.md](06-data-model.md) | Schema approach, tables by domain and local data migration |
 | [07-identity-rbac-admin.md](07-identity-rbac-admin.md) | Sign-in, staff roles, dangerous actions, admin console and audit |
+| [07a-authentication.md](07a-authentication.md) | Sign-up, Google, forgot password, sessions, sign out everywhere, WorkOS webhooks, staff sign-in, every edge case |
 | [08-billing.md](08-billing.md) | Stripe setup, webhooks, entitlement rules and UK obligations |
 | [09-lucy-ai-gateway.md](09-lucy-ai-gateway.md) | Model routing per tier, spend protection and settings split |
 | [10-audio-engine-in-cloud.md](10-audio-engine-in-cloud.md) | Engine storage abstraction, CPU vs GPU, model licences, lyrics |
@@ -86,6 +100,7 @@
 | [15-stress-testing.md](15-stress-testing.md) | Invariants, tools, the load ladder, scenarios and thresholds |
 | [16-edge-cases.md](16-edge-cases.md) | Product and correctness edge cases by area |
 | [17-roadmap-and-risks.md](17-roadmap-and-risks.md) | Phases, risks, open questions, repo layout and the ADR list |
+| [18-test-plan.md](18-test-plan.md) | Every edge case and test per module, coverage gates, security suite and CI wiring |
 | [sources.md](sources.md) | Where the facts and prices came from |
 | [licence-register.md](licence-register.md) | Every model and key dependency, its licence and whether cloud mode may use it |
 

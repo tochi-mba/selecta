@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 5. Storage, uploads and playback
 
@@ -13,9 +13,9 @@
 
 Rules: object keys never contain filenames or user text; all buckets private (no public access, no r2.dev); reads and writes only through short-lived presigned URLs (≤ 15 min, single object), handed to browsers per action and to workers per claimed attempt, so no browser or worker ever holds a bucket credential; only the API, gateway and maintenance services hold R2 keys. R2's EU jurisdiction keeps data in the EU (fine under UK GDPR, which recognises EU adequacy). R2 is strongly consistent: a completed write is immediately readable everywhere, so the database never points at an object that "isn't there yet".
 
-**Bucket CORS**: only the app's origin may `PUT` (staging bucket, exposing `ETag`) or `GET` (derived and exports buckets, for playback and downloads). Presigned URLs work only on R2's S3 endpoint, not on custom domains, so that endpoint is the one in the CORS rules and the CSP.
+**Bucket CORS**: only the app's origin may `PUT` (staging bucket, exposing `ETag`) or `GET` (originals, derived and exports buckets, for playback and downloads). Allow `Range` requests and expose `Accept-Ranges`, `Content-Length`, `Content-Range` and `ETag` for browser audio seeking. Presigned URLs work only on R2's S3 endpoint, not on custom domains, so that endpoint is the one in the CORS rules and the CSP.
 
-**System-managed data budget**: each workspace's derived data (features, playback files, stems, clips, waveforms) is capped at about 15% of its plan storage and evicted least-recently-used, except anything a playing or frozen revision references. Evicted items are regenerated on demand, which costs compute and egress, so eviction is tuned from beta measurements.
+**System-managed data budget**: each workspace's derived data (features, playback files, stems, clips, waveforms) is capped at about 15% of its plan storage and evicted least-recently-used, except anything a playing or frozen revision references. Evicted items are regenerated on demand, which costs compute and egress, so eviction is tuned from beta measurements. **Today** (`storage/eviction.py`): the budget is 15% of the workspace's storage limit; `evict` takes its artifact rows least recently used first (`last_used_at`, refreshed on every reuse) and deletes rows until the total fits, skipping any row marked `protected`, any a frozen revision uses and any the revision playing now uses (the playback session names it and is playing or paused). `revision_artifacts` records which artifacts a revision uses (`pin`, `unpin`). Objects are deleted after the rows commit, so a crash can only leave an orphan for the garbage collector. Tests: `tests/test_cloud_storage_eviction.py`. Every artifact row also records its checksum and provenance (inputs, versions, models, settings hash; [§10.6](10-audio-engine-in-cloud.md#106-versioning-and-cache-reuse)). Scheduling the sweep (`over_budget` lists who needs it) is still to do.
 
 ### 5.2 Upload protocol (always multipart, server completes)
 
@@ -28,20 +28,58 @@ Because R2 can't enforce size in a presigned policy, the server controls the one
 5. **Accept**: `ingest.validate` runs in a sandboxed worker: ffprobe with strict limits, real format check (not extension), duration and channel/sample-rate sanity, decode test of the first and last minute, tag parsing with length limits and Unicode normalisation, full SHA-256. Valid → server-side copy into `sel-originals` (`CopyObject`; plan file limits stay under its 5 GB single-copy limit) and delete the staging object, create `assets` + `songs` rows, convert the reservation into committed usage, enqueue analysis. Playback files are made later, only when needed ([§5.8](#58-playback-in-the-cloud-a-real-design-problem)). Invalid → delete, release reservation, show the reason.
 6. **Idempotency**: every step is keyed by the session id; repeating "complete" returns the same outcome; a lost response is recovered by polling the session.
 
+#### Current API implementation
+
+Cloud mode exposes `POST /api/uploads/plan`, `GET /api/uploads`,
+`GET /api/uploads/{session_id}`, `POST /api/uploads/{session_id}/parts`,
+`POST /api/uploads/{session_id}/complete`, and `DELETE /api/uploads/{session_id}`. Every session
+lookup is scoped to the authenticated workspace. Planning applies server-side plan limits, reserves
+quota atomically, and detects duplicate and in-flight hashes. The Cloud UI hashes selected files in
+chunks, uploads parts directly to R2, and can resume by reselecting the same file after refresh.
+
+The API completes the multipart object itself, downloads it to temporary disk for a Mutagen format
+and metadata probe, then verifies the copied original's byte count and checksum before accepting
+the asset and committing the reservation. This first slice rejects unsupported formats and
+duration/metadata problems, but it does not yet run a decode test or isolate hostile media parsing
+in a constrained worker. The workspace-scoped asset API exposes `GET /api/assets` with cursor
+pagination, `GET /api/assets/{asset_id}`, and `DELETE /api/assets/{asset_id}`. Delete hides the
+asset immediately and releases quota while recording physical deletion for retention handling. The
+Cloud API also exposes `GET /api/assets/{asset_id}/playback-url` for an owner-checked original and
+`POST /api/storage/derived-playback-url` for a workspace-owned derived key. Both check R2 object
+existence before returning a short-lived URL; original delivery also checks stored size and SHA-256
+metadata and can set attachment disposition. The Cloud library can request a signed URL and play an
+original track in a native audio control; on a media load error it requests one replacement URL and
+restores the playhead and playing state. Requests from an earlier track selection or an unmounted
+player cannot replace the current selection, and refreshing a paused track keeps it paused.
+It does not yet assemble mixes or create lossless playback
+proxies, and accepted asset rows are not yet playable song records. R2 credentials are read from
+`SELECTA_R2_ACCOUNT_ID`, `SELECTA_R2_ACCESS_KEY_ID`, `SELECTA_R2_SECRET_ACCESS_KEY`, and optional
+`SELECTA_R2_JURISDICTION` / bucket-name variables. The staging bucket CORS policy must allow the
+Cloud web origin to `PUT` signed parts.
+
 ### 5.3 Quota accounting
 
 - `usage = committed_bytes + active_reservations`; a new reservation succeeds only if `usage + size ≤ limit`, checked in the same transaction with a row lock on the workspace's quota row, so 1,000 parallel uploads can't oversubscribe the last gigabyte.
 - Reservations expire with their session (2 days) and are released by the maintenance leader.
 - A nightly reconciler compares Postgres totals with an R2 inventory listing and reports drift; it never silently "fixes" by deleting.
+- The database half of that check exists: `usage.reconcile.reconcile(connection)` compares every `usage_daily` rollup with the ledger it sums (total and entries, per workspace, UTC day and kind), and each workspace's storage ledger with its `quota_state.committed_bytes` and with the originals it still keeps (`assets` not deleted). It only reads and returns each difference as a `Drift`; rebuilding a rollup or correcting a charge is a separate, deliberate step. Tests: `tests/test_cloud_usage_reconcile.py`. The R2 inventory listing and the nightly schedule are still to do.
 - Deleting a song releases its bytes as soon as the deletion is recorded (the song is hidden and unusable at once). The copy Selecta keeps for the 30-day recovery window ([§5.5](#55-deletion)) is Selecta's cost, not the user's quota.
 
 ### 5.4 Over quota (downgrades and expired subscriptions)
 
 Never delete music because of a plan change. When usage exceeds the plan: state `over_quota_read_only`: browse, play, make mixes from existing songs, download originals, delete songs: allowed. Upload, new exports, and other storage-growing actions: blocked with a clear "you're 35 GB over Free's 10 GB" banner and two buttons (manage storage, upgrade). If an account stays over quota for 12 months after a cancelled subscription, follow the published retention policy: emails at 30, 60 and 7 days before any deletion, an export link, then deletion via the normal workflow. The policy is in the terms from day one and never changed retroactively.
 
+Current implementation: `quota.set_limit` puts a workspace whose committed bytes exceed its new
+limit into `over_quota_read_only`. `POST /api/uploads/plan` then refuses each file with the overage
+named ("You're 35 GB over your plan's 10 GB. Free up space or upgrade to add more.") and makes no
+session or reservation, while listing, playback URLs, prepared playback files, the account export
+and deleting songs keep working, and no asset or object is removed by the plan change
+(`tests/test_cloud_over_quota.py`). `/api/account` reports `usage.storage.state` and
+`over_by_bytes`, and `usage.exports_month.blocked`, for the banner.
+
 ### 5.5 Deletion
 
-Deletion is a workflow, not a `DELETE`: mark tombstone (the song disappears and its quota is released immediately) → cancel jobs → remove from mixes per policy (old frozen revisions keep a "song deleted" placeholder rather than silently changing) → after a 30-day recovery window, delete the original and derived objects in batches, then the backup copy → confirm → audit. Support can restore a song within the window; after it, deletion is final. Account deletion follows the same path for everything the account owns. Tombstones survive in a small `deletions` ledger so a database restore can re-apply them ([§12.4](12-security-privacy-legal.md#124-data-lifecycle)).
+Deletion is a workflow, not a `DELETE`: mark tombstone (the song disappears and its quota is released immediately) → cancel jobs → remove from mixes per policy (old frozen revisions keep a "song deleted" placeholder rather than silently changing) → after a 30-day recovery window, delete objects in bounded batches, then the backup copy → confirm → audit. Tombstone creation and physical/backup completion append to a transactional mirror outbox. `selecta account-deletion-maintenance` advances account deletion steps, deletes the WorkOS identity before erasing the local user, and writes account-plan snapshots to a dedicated private R2 bucket; `selecta storage-maintenance` mirrors pending song/account/export tombstones before draining due physical deletions, and marks completion only after all R2 targets delete successfully. Both commands need scheduling. Support can restore a song within the window; after it, deletion is final. `selecta replay-deletions-after-restore` reapplies offsite storage/account records before restored traffic reopens; a restore drill remains required ([§12.4](12-security-privacy-legal.md#124-data-lifecycle)).
 
 ### 5.6 No cross-account deduplication
 
@@ -57,7 +95,7 @@ Today the browser receives whole songs decoded to WAV by the server, which keeps
 
 - **Lossy formats shift samples.** MP3 and AAC add encoder delay and padding; browsers handle gapless metadata inconsistently, so a 25 ms offset can wreck a beat-matched hand-off.
 - **Decision (v1)**: a **lossless FLAC playback file** per song, made from the exact PCM the analysis used (same decoder, same sample rate). Seam clips are already FLAC. The player decodes them with `decodeAudioData` as now, but fetches them cross-origin from R2 with presigned URLs (CORS allowlist for the app origin) and loads one song ahead.
-- **Made lazily, not at upload.** A FLAC copy of an MP3 is about six times its size (≈25 MB vs ≈4 MB for 4 minutes), so making one for every song would turn a full 100 GB MP3 library into roughly 600 GB of playback files and the same in worker upload traffic. Instead `play.proxy` runs when a song enters a mix revision, a preview or a request, inherits that work's urgency, and lands in the evictable derived budget ([§5.1](#51-buckets-and-keys-cloudflare-r2-eu-jurisdiction)). Originals that are already lossless at the analysis sample rate (44.1 kHz stereo FLAC or WAV) are played directly and get no copy.
+- **Made lazily, not at upload.** A FLAC copy of an MP3 is about six times its size (≈25 MB vs ≈4 MB for 4 minutes), so making one for every song would turn a full 100 GB MP3 library into roughly 600 GB of playback files and the same in worker upload traffic. Instead `play.proxy` runs when a song enters a mix revision, a preview or a request, inherits that work's urgency, and lands in the evictable derived budget ([§5.1](#51-buckets-and-keys-cloudflare-r2-eu-jurisdiction)). Originals that are already lossless at the analysis sample rate (44.1 kHz stereo FLAC or WAV) are played directly and get no copy. **Today** (`work/proxies.py`): `prepare(store, workspace, songs, need="mix" | "preview" | "request", ...)` is the producer. A song already a 44.1 kHz stereo FLAC or WAV comes back `direct`; one with a playback file comes back `ready` (and is marked used); any other gets one `play.proxy` job, keyed by the file's input hash so asking again finds the same job. With `for_job` the needing job waits on the proxy and the queue's inheritance lifts the proxy to its lane and urgency; otherwise the lane and urgency given are used, and an existing proxy job is raised to them, never lowered. Tests: `tests/test_cloud_playback_proxy_lazy.py`. The preview route (`routes/cloud_proxy.py`) computes the same identity (`proxies.identity`) and, after an admission check, enqueues its own interactive job; mixes and requests don't call `prepare` yet because Cloud mixes aren't built.
 - **Cost**: about 375 MB of download per hour of listening. R2 egress is free, so it's a user-bandwidth question, not a Selecta cost. Show a "data use" note on mobile.
 - **v2 (after beta)**: play only the sections a mix uses (each mix plays a slice of each song between seams): render per-revision segment files or use range requests with a streaming FLAC decoder, cutting transfer by ~40–60%.
 - **Signed URL expiry during playback**: the player requests fresh URLs per song just before fetch; a 403 triggers one refresh-and-retry, never a mix change.

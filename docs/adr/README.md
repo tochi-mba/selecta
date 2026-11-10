@@ -1,14 +1,14 @@
-# Selecta — Selecta Cloud (SaaS) proposal (2026-11-09)
+# Selecta - Selecta Cloud (SaaS) proposal (2026-11-09)
 
-**26 proposed ADRs, [ADR-0391](adr-0391-selecta-cloud-goal-and-local-guarantees.md) to [ADR-0416](adr-0416-rooms-guest-requests.md):** a subscription cloud edition beside the local app, from one codebase. Free, Standard and Premium plans (10, 50 and 100 GB); a durable job queue in Postgres with per-account fair shares by tier, leases and fencing; workers that scale by adding containers; R2 storage with server-completed uploads; Stripe billing; Lucy routed to hosted models per tier; staff roles and an admin console; one playing device per account; Premium Rooms with QR-code guest requests; and layered feature-flag targeting on top of [ADR-0390](adr-0390-feature-flags.md). All 26 Proposed, every task Not started, 0 independently Verified, owners unassigned. Baseline main `3c2f1eb`.
+**26 accepted ADRs, [ADR-0391](adr-0391-selecta-cloud-goal-and-local-guarantees.md) to [ADR-0416](adr-0416-rooms-guest-requests.md):** a subscription cloud edition beside the local app, from one codebase. Free, Standard and Premium plans (10, 50 and 100 GB); a durable job queue in Postgres with per-account fair shares by tier, leases and fencing; workers that scale by adding containers; R2 storage with server-completed uploads; Stripe billing; Lucy routed to hosted models per tier; staff roles and an admin console; one playing device per account; Premium Rooms with QR-code guest requests; and layered feature-flag targeting on top of [ADR-0390](adr-0390-feature-flags.md). All 26 Accepted by the owner on 2026-11-09; implementation tracked in the [checklist](selecta-cloud-implementation-checklist.md); 0 independently Verified. Baseline main `3c2f1eb`.
 
-**Scope:** documentation only (`docs/saas/` and these ADRs). Local mode keeps every guarantee in earlier ADRs, including ADR-0025 and ADR-0072, and its flags behave exactly as ADR-0390 describes; ADR-0391 scopes the earlier SaaS non-goals to local mode without changing any older status.
+**Scope:** Local mode keeps every guarantee in earlier ADRs, including ADR-0025 and ADR-0072, and its flags behave exactly as ADR-0390 describes; ADR-0391 scopes the earlier SaaS non-goals to local mode without changing any older status. The [mode-by-mode guarantee table](../saas/README.md#guarantees-by-runtime-mode) is the concise contract for both runtimes.
 
 **Start here:** [Proposal](../saas/README.md) · [Queue and scheduling](../saas/04-queue-and-scheduling.md) · [Devices and Rooms](../saas/11a-devices-and-rooms.md) · [Feature flags](../saas/11b-feature-flags.md) · [Roadmap and risks](../saas/17-roadmap-and-risks.md) · [Licence register](../saas/licence-register.md)
 
 ---
 
-# Selecta — Feature flags ADR proposal (2026-11-09)
+# Selecta - Feature flags ADR proposal (2026-11-09)
 
 **One proposed ADR, [ADR-0390](adr-0390-feature-flags.md):** a single feature-flag registry for every feature, read by the server, the site, the CLI and the tests, with a browser sweep that checks every page with each feature turned off. 7 of 8 tasks Implemented, 1 In progress, 0 independently Verified. The catalog is [docs/flags.md](../flags.md).
 

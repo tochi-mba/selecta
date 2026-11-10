@@ -1,9 +1,10 @@
 import { setPrefs, Theme, usePrefs } from '../state/prefs';
 import { Menu } from './controls';
 import { Icon, IconName } from './Icon';
+import { words } from '../copy';
 
 export const THEMES: { id: Theme; label: string }[] = [
-  { id: 'system', label: 'Match this computer' },
+  { id: 'system', get label() { return words().themeMatchSystem; } },
   { id: 'light', label: 'Light' },
   { id: 'dark', label: 'Dark' },
 ];

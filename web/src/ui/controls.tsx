@@ -157,6 +157,9 @@ function Overlay({
   const titleId = useId();
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
+    // A list can re-render while the overlay is open and replace the button that opened it.
+    // `data-focus-key` names that button stably, so focus goes back to its replacement.
+    const beforeKey = before?.dataset.focusKey;
     if (openOverlays++ === 0) {
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -167,14 +170,28 @@ function Overlay({
     const first = [...(panel.current?.querySelectorAll<HTMLElement>('[data-autofocus]') ?? [])]
       .find((node) => canFocusInOverlay(node, panel.current)) ?? panel.current;
     first?.focus();
+    // A control that goes away once it has done its job, like "Use what was measured" after it has,
+    // would leave focus on nothing, where Escape and Tab no longer reach this overlay. Focus comes back
+    // to the overlay itself instead, as it does when a notice's own button goes.
+    const own = panel.current;
+    const lost = new MutationObserver(() => {
+      const at = document.activeElement;
+      if ((!at || at === document.body) && own?.isConnected && overlayStack[overlayStack.length - 1] === mine) own.focus({ preventScroll: true });
+    });
+    if (own) lost.observe(own, { childList: true, subtree: true });
     return () => {
+      lost.disconnect();
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
       if (mine) {
         const at = overlayStack.indexOf(mine);
         if (at >= 0) overlayStack.splice(at, 1);
       }
       syncInert();
+      const replacement = !before?.isConnected && beforeKey
+        ? document.querySelector<HTMLElement>(`[data-focus-key="${CSS.escape(beforeKey)}"]`)
+        : null;
       if (before?.isConnected && before !== document.body) before.focus();
+      else if (replacement) replacement.focus();
       else document.getElementById('content')?.focus({ preventScroll: true });
     };
   }, []);

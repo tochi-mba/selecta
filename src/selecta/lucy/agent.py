@@ -355,7 +355,9 @@ async def _run(app: Any, active: Active) -> None:
                     _set_state(ctx, "streaming", cycles)
                     system = [context.INVARIANT, context.dynamic(conn, app, active.conversation,
                                                                  ctx.selection, lib_count)]
-                    if writer.content and not writer.content.endswith("\n"):
+                    # Count text still in the buffer too: whether it was flushed yet is timing.
+                    written = writer.content + writer.buffer
+                    if written and not written.endswith("\n"):
                         await writer.write("\n\n")
                     result = await asyncio.wait_for(
                         provider.turn(system, messages, tool_list, writer.write), remaining)

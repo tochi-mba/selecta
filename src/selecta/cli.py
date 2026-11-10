@@ -15,11 +15,51 @@ from rich.table import Table
 
 from selecta import db
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, load_settings
+from selecta.persistence import make_engine
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+database_app = typer.Typer(no_args_is_help=True, add_completion=False)
+app.add_typer(database_app, name="db", help="Cloud database schema operations.")
 console = Console()
 DEFAULT_MIX_OUTPUT = Path("out/mix.flac")
 DEFAULT_REEL_OUTPUT = Path("reels/reel-1")
+
+
+def _cloud_database_engine():
+    """Cloud database commands must never fall back to the user's local music database."""
+    url = os.environ.get("SELECTA_DATABASE_URL", "").strip()
+    if not url.startswith(("postgresql://", "postgresql+psycopg://")):
+        raise typer.BadParameter(
+            "Set SELECTA_DATABASE_URL to the Cloud PostgreSQL database; local SQLite is not "
+            "upgraded by this command."
+        )
+    return make_engine(url)
+
+
+@database_app.command("upgrade")
+def database_upgrade() -> None:
+    """Apply the checked-in Alembic migrations to the configured Cloud PostgreSQL database."""
+    from selecta.persistence.migrate import current, head, upgrade
+
+    engine = _cloud_database_engine()
+    try:
+        before = current(engine)
+        upgrade(engine)
+        console.print(f"Cloud database schema: {before or 'empty'} → {head()}.")
+    finally:
+        engine.dispose()
+
+
+@database_app.command("current")
+def database_current() -> None:
+    """Show the configured Cloud database revision and the revision expected by this checkout."""
+    from selecta.persistence.migrate import current, head
+
+    engine = _cloud_database_engine()
+    try:
+        console.print(f"Database: {current(engine) or 'empty'}; code: {head() or 'empty'}.")
+    finally:
+        engine.dispose()
 
 
 def _open():
@@ -419,7 +459,7 @@ def web(
     open_browser: bool = typer.Option(True, "--open/--no-open"),
     reload: bool = typer.Option(False, "--reload", help="Restart as the code changes."),
 ) -> None:
-    """Open the local Selecta web app."""
+    """Run Selecta in the selected mode (local app or Cloud API)."""
     import webbrowser
 
     import uvicorn
@@ -430,18 +470,229 @@ def web(
     if off:
         shown = ", ".join(off[:12]) + (f" and {len(off) - 12} more" if len(off) > 12 else "")
         console.print(f"Turned off in this build: {shown}. `selecta flags` says why.")
+    from selecta.modes import Mode, current_mode
+
+    mode = current_mode()
     url = f"http://127.0.0.1:{port}/"
-    if open_browser:
+    if mode is Mode.LOCAL and open_browser:
         webbrowser.open(url)
+    elif mode is Mode.CLOUD:
+        console.print(
+            f"Starting Selecta Cloud API on port {port}; web assets are hosted separately."
+        )
     uvicorn.run(
         "selecta.api:serve",
         factory=True,
-        host="127.0.0.1",
+        host="127.0.0.1" if mode is Mode.LOCAL else os.environ.get("SELECTA_BIND_HOST", "0.0.0.0"),
         port=port,
         log_level="warning",
         reload=reload,
         reload_dirs=[str(Path(__file__).parent)] if reload else None,
     )
+
+
+@app.command()
+def gateway(
+    port: int = typer.Option(8734),
+    host: str | None = typer.Option(
+        None, help="Defaults to SELECTA_GATEWAY_BIND_HOST or 0.0.0.0."
+    ),
+    reload: bool = typer.Option(False, "--reload", help="Restart as the code changes."),
+) -> None:
+    """Run the isolated Cloud worker gateway service."""
+    import uvicorn
+
+    uvicorn.run(
+        "selecta.gateway_cloud:create_gateway_app",
+        factory=True,
+        host=host or os.environ.get("SELECTA_GATEWAY_BIND_HOST", "0.0.0.0"),
+        port=port,
+        log_level="warning",
+        reload=reload,
+        reload_dirs=[str(Path(__file__).parent)] if reload else None,
+    )
+
+
+@app.command()
+def maintain(
+    tick: float = typer.Option(1.0, min=0.1, max=60.0, help="Seconds between maintenance ticks."),
+) -> None:
+    """Run the Cloud maintenance service: one leader runs every recurring task, a copy stands by."""
+    import logging
+
+    from selecta.maintain import main
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    try:
+        main(tick_s=tick)
+    except ValueError as problem:
+        raise typer.BadParameter(str(problem)) from problem
+
+
+@app.command("billing-maintenance")
+def billing_maintenance(
+    limit: int = typer.Option(50, min=1, max=500, help="Maximum webhook events to drain."),
+    reconcile: bool = typer.Option(
+        False, "--reconcile", help="Also re-fetch every subscription and repair drift."
+    ),
+) -> None:
+    """Drain Stripe webhook retries; optionally run the slower full reconciliation."""
+    from selecta.billing.maintenance import drain_stripe_events, reconcile_stripe_billing
+    from selecta.billing.stripe_sync import load_price_map
+    from selecta.billing.webhooks import HttpStripeClient
+
+    key = os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip()
+    prices = load_price_map()
+    if not key or not prices:
+        raise typer.BadParameter(
+            "Set SELECTA_STRIPE_SECRET_KEY and SELECTA_STRIPE_PRICES before running "
+            "billing maintenance."
+        )
+    engine = _cloud_database_engine()
+    client = HttpStripeClient(key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION"))
+    try:
+        drained = drain_stripe_events(engine, client, prices, limit=limit)
+        console.print(
+            f"Stripe webhooks: {drained.processed} processed, {drained.failed} failed, "
+            f"{drained.busy} busy, {drained.errors} maintenance errors."
+        )
+        if reconcile:
+            report = reconcile_stripe_billing(engine, client, prices)
+            console.print(
+                f"Reconciliation: {report.checked} subscriptions checked, "
+                f"{report.changed} differences, {report.unmatched} unmatched, "
+                f"{report.audit_entries} audit entries."
+            )
+    finally:
+        engine.dispose()
+
+
+@app.command("storage-maintenance")
+def storage_maintenance(
+    limit: int = typer.Option(100, min=1, max=1000, help="Maximum due tombstones to process."),
+) -> None:
+    """Mirror deletion tombstones, then purge R2 objects past their recovery window."""
+    from selecta.storage import api as storage_api
+    from selecta.storage.maintenance import drain_physical_deletions
+    from selecta.storage.offsite_ledger import drain_deletion_mirror
+
+    ledger_bucket = os.environ.get("SELECTA_R2_BUCKET_DELETION_LEDGER", "").strip()
+    if not ledger_bucket:
+        raise typer.BadParameter(
+            "Set SELECTA_R2_BUCKET_DELETION_LEDGER to a dedicated private R2 bucket."
+        )
+    engine = _cloud_database_engine()
+    client = storage_api.r2_client()
+    try:
+        mirror = drain_deletion_mirror(engine, client, ledger_bucket, limit=limit)
+        console.print(
+            f"Deletion mirror: {mirror.delivered}/{mirror.examined} delivered, "
+            f"{mirror.failed} failed, {mirror.pending} pending."
+        )
+        if mirror.failed or mirror.pending:
+            raise typer.Exit(1)
+        report = drain_physical_deletions(
+            engine, client, buckets=storage_api.buckets(), limit=limit
+        )
+        console.print(
+            f"Storage deletions: {report.completed}/{report.examined} purged, "
+            f"{report.failed} need retry; {report.objects_deleted} objects removed."
+        )
+        if report.failed:
+            raise typer.Exit(1)
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
+        engine.dispose()
+
+
+@app.command("account-deletion-maintenance")
+def account_deletion_maintenance(
+    limit: int = typer.Option(50, min=1, max=500, help="Maximum workflow steps to run."),
+) -> None:
+    """Advance due account-deletion steps; schedule this command in Cloud maintenance."""
+    from selecta.billing.stripe_sync import load_price_map
+    from selecta.billing.webhooks import HttpStripeClient
+    from selecta.identity.deletion import run_once
+    from selecta.identity.deletion_effects import (
+        AccountDeletionEffects,
+        HttpWorkOSUserDeleter,
+    )
+    from selecta.identity.deletion_ledger import R2DeletionLedgerWriter
+    from selecta.storage import api as storage_api
+    from selecta.work.store import JobStore
+
+    stripe_key = os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip()
+    workos_key = os.environ.get("SELECTA_WORKOS_API_KEY", "").strip()
+    ledger_bucket = os.environ.get("SELECTA_R2_BUCKET_DELETION_LEDGER", "").strip()
+    prices = load_price_map()
+    if not stripe_key:
+        raise typer.BadParameter(
+            "Set SELECTA_STRIPE_SECRET_KEY before running deletion maintenance."
+        )
+    if not workos_key:
+        raise typer.BadParameter(
+            "Set SELECTA_WORKOS_API_KEY before running deletion maintenance."
+        )
+    if not ledger_bucket:
+        raise typer.BadParameter(
+            "Set SELECTA_R2_BUCKET_DELETION_LEDGER to a dedicated private R2 bucket."
+        )
+
+    engine = _cloud_database_engine()
+    client = storage_api.r2_client()
+    stripe = HttpStripeClient(
+        stripe_key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION")
+    )
+    effects = AccountDeletionEffects(
+        engine,
+        JobStore(engine),
+        stripe,
+        client,
+        price_map=prices,
+        ledger_writer=R2DeletionLedgerWriter(client, ledger_bucket),
+        identity=HttpWorkOSUserDeleter(
+            workos_key,
+            api_base=os.environ.get("SELECTA_WORKOS_API_BASE", "https://api.workos.com"),
+        ),
+        buckets=storage_api.buckets(),
+    )
+    processed = 0
+    try:
+        while processed < limit and run_once(engine, "account-deletion-cli", effects):
+            processed += 1
+        console.print(f"Account-deletion workflow steps attempted: {processed}.")
+    finally:
+        client.close()
+        engine.dispose()
+
+
+@app.command("replay-deletions-after-restore")
+def replay_deletions_after_restore() -> None:
+    """Replay offsite tombstones before reopening Cloud after a database restore."""
+    from selecta.identity.deletion_ledger import replay_account_deletions_after_restore
+    from selecta.storage import api as storage_api
+    from selecta.storage.offsite_ledger import replay_storage_tombstones_after_restore
+
+    ledger_bucket = os.environ.get("SELECTA_R2_BUCKET_DELETION_LEDGER", "").strip()
+    if not ledger_bucket:
+        raise typer.BadParameter(
+            "Set SELECTA_R2_BUCKET_DELETION_LEDGER to the dedicated private R2 bucket."
+        )
+    engine = _cloud_database_engine()
+    client = storage_api.r2_client()
+    try:
+        storage = replay_storage_tombstones_after_restore(engine, client, ledger_bucket)
+        accounts = replay_account_deletions_after_restore(engine, client, ledger_bucket)
+        console.print(
+            f"Restore replay: {storage.tombstones_replayed} storage tombstones, "
+            f"{accounts.accounts_requeued} account workflows requeued. "
+            "Keep customer traffic closed until this command succeeds."
+        )
+    finally:
+        client.close()
+        engine.dispose()
 
 
 @app.command()

@@ -1,0 +1,16 @@
+.playing-bar { display: grid; gap: 8px; padding: 12px 16px; border: 1px solid var(--line, #3a362c); border-radius: 14px; background: var(--surface, #1c1a15); }
+.playing-bar-where { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.playing-bar-song { color: var(--text-soft); overflow-wrap: anywhere; }
+.playing-bar-controls, .playing-bar-ask { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.playing-bar button, .devices-panel button { min-height: 44px; min-width: 44px; }
+.playing-bar-warning { border-left: 3px solid var(--accent, #e8ff3a); padding-left: 8px; margin: 0; }
+.playing-bar-message:empty { display: none; }
+.playing-bar-message, .playing-bar-error { margin: 0; }
+.playing-bar-error, .devices-error { color: var(--danger, #ffb4a8); }
+.devices-panel { display: grid; gap: 8px; }
+.devices-list { list-style: none; margin: 0; padding: 0; }
+.devices-list li { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line, #3a362c); }
+.devices-list form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.devices-name { flex: 1 1 12rem; overflow-wrap: anywhere; }
+.devices-seen, .devices-help, .devices-this { color: var(--text-soft); }
+.devices-actions { display: flex; gap: 8px; flex-wrap: wrap; }

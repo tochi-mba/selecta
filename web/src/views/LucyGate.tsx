@@ -1,6 +1,7 @@
 import type { LucyStatus } from '../lucy/types';
 import { PageLink } from '../shell/PageLink';
 import { Action } from '../ui/controls';
+import { words } from '../copy';
 
 /** Why Lucy can't be used right now, and the way forward. Make a Mix is always one press away, because
  * nothing about Lucy being off or unavailable ever stops a normal mix. */
@@ -53,7 +54,7 @@ export function LucyNotice({ gate, status, onBuiltin, onSettings }: { gate: Gate
   return (
     <div className="lucy-notice" role="region" aria-label={gate === 'consent' ? 'Before Lucy can start' : 'Lucy’s planner isn’t available'}>
       {gate === 'consent' ? (
-        <p><b>Lucy is set to use {status.provider.label}, which runs outside this computer.</b> Nothing is sent until you agree to exactly what would be sent.</p>
+        <p><b>Lucy is set to use {status.provider.label}, {words().lucyRunsOutside}</b> Nothing is sent until you agree to exactly what would be sent.</p>
       ) : (
         <p><b>{status.provider.label} isn’t available right now{status.provider.reason ? `: ${status.provider.reason}` : '.'}</b> Make a Mix still works as usual.</p>
       )}
@@ -62,7 +63,7 @@ export function LucyNotice({ gate, status, onBuiltin, onSettings }: { gate: Gate
         <button type="button" onClick={onSettings}>{gate === 'consent' ? 'Review what’s sent' : 'Settings'}</button>
         <PageLink to="/mixes" className="button">Back to Make a Mix</PageLink>
       </div>
-      <p className="hint">The built-in planner runs on this computer. No data leaves it.</p>
+      <p className="hint">{words().lucyBuiltinStays}</p>
     </div>
   );
 }
@@ -72,7 +73,7 @@ export function ProviderNote({ status, onSettings }: { status: LucyStatus; onSet
   return (
     <p className="hint lucy-provider">
       {builtin
-        ? 'Using the built-in planner on this computer. No data leaves it.'
+        ? words().lucyUsingBuiltin
         : `Using ${status.provider.label}${status.provider.model ? ` (${status.provider.model})` : ''}.`}
       {status.provider.mode === 'constrained' && ` Working in a simpler mode${status.provider.reason ? `: ${status.provider.reason.replace(/[.\s]+$/, '')}` : ''}.`}
       {' '}<button type="button" className="lucy-link" onClick={onSettings}>{builtin ? 'Choose an AI service' : 'Change'}</button>

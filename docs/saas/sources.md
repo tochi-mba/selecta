@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 22. Sources
 
@@ -37,4 +37,4 @@
 
 ---
 
-[← 17-roadmap-and-risks.md](17-roadmap-and-risks.md) · [Contents](README.md#chapters)
+[← 18-test-plan.md](18-test-plan.md) · [Contents](README.md#chapters)

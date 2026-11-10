@@ -101,6 +101,10 @@ test('a transition takes over exactly where it was planned, with no gap', async 
   await play(page);
   const { mix } = await (await request.get('/api/mix')).json();
   const seam = mix[1].seam.state;
+  // Playing schedules the transition and the next song ahead of time, once they've loaded. Wait for
+  // that to happen first, or it can land between counting and jumping, and the jump's own song, clip
+  // and next song would be read from the wrong place in the list.
+  await expect.poll(() => soundsStarted(page), { timeout: 30_000 }).toBe(3);
   // what's started from the jump on is this transition. The next one may get scheduled straight after
   const earlier = await soundsStarted(page);
   await page.getByRole('button', { name: 'Jump to the transition' }).click();
@@ -169,10 +173,10 @@ test('volume and mute change what comes out, and are remembered', async ({ page 
   const volume = page.getByRole('slider', { name: 'Volume' }).first();
   await volume.fill('50');
   await expect(volume).toHaveValue('50');
-  await page.getByRole('button', { name: 'Mute' }).first().click();
-  await expect(page.getByRole('button', { name: 'Turn the sound back on' }).first()).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Mute', exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Unmute', exact: true }).first()).toHaveAttribute('aria-pressed', 'true');
   await expect(volume).toHaveValue('0');
-  await page.getByRole('button', { name: 'Turn the sound back on' }).first().click();
+  await page.getByRole('button', { name: 'Unmute', exact: true }).first().click();
   await expect(volume).toHaveValue('50');
   await page.reload();
   await expect(page.getByRole('slider', { name: 'Volume' }).first()).toHaveValue('50');
@@ -187,15 +191,16 @@ test('the keyboard works the player, and pressing Space on a button only does on
   await page.keyboard.press('Shift+N');
   await expect(title(page)).toHaveText('Slow Tide');
   await page.keyboard.press('m');
-  await expect(page.getByRole('button', { name: 'Turn the sound back on' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Unmute', exact: true }).first()).toBeVisible();
   await page.keyboard.press('m');
+  await expect(page.getByRole('button', { name: 'Mute', exact: true }).first()).toBeVisible();
   await page.keyboard.press('r');
   const drawer = page.getByRole('dialog', { name: 'Requests' });
   await expect(drawer).toBeVisible();
   // typing in the box doesn't work the player
   await page.keyboard.type('n m');
   await expect(title(page)).toHaveText('Slow Tide');
-  await expect(page.getByRole('button', { name: 'Mute' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mute', exact: true }).first()).toBeVisible();
   // The first Escape clears the active song autocomplete; the next closes Requests.
   await page.keyboard.press('Escape');
   await expect(drawer.getByRole('combobox', { name: 'Request a song' })).toHaveValue('');

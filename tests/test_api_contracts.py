@@ -619,13 +619,15 @@ def test_without_an_id_nothing_is_remembered(client):
 
 
 def test_a_refusal_is_remembered_too_rather_than_being_tried_again(client):
+    # The retry is the identical request: since f609504 the same id with a different body is a
+    # conflict (tests/test_operation_identity.py), not a replay.
     headers = {"x-operation-id": "bad"}
-    assert (
-        client.post("/api/songs/1/correct", json={"bpm": 900}, headers=headers).status_code == 400
-    )
-    assert (
-        client.post("/api/songs/1/correct", json={"bpm": 120}, headers=headers).status_code == 400
-    )
+    first = client.post("/api/songs/1/correct", json={"bpm": 900}, headers=headers)
+    again = client.post("/api/songs/1/correct", json={"bpm": 900}, headers=headers)
+    assert first.status_code == again.status_code == 400
+    assert again.json() == first.json()
+    seen = client.get("/api/diagnostics").json()["recent_operations"]
+    assert [item["repeat"] for item in seen if item["kind"] == "bad"] == [False, True]
 
 
 # ---- what's going on

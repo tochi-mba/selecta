@@ -35,6 +35,19 @@ def use(client, script, model="claude-opus-5-5"):
                                                             model=model)
 
 
+def test_rounds_are_separated_even_when_the_first_is_still_buffered(lucy, monkeypatch):
+    # CI caught "Let me look.Here is a proposal.": the separator only counted flushed text.
+    monkeypatch.setattr(agent, "FLUSH_CHARS", 10_000)
+    monkeypatch.setattr(agent, "FLUSH_SECONDS", 3600.0)
+    use(lucy, [
+        {"chunks": ["Let me ", "look."], "calls": [{"name": "selecta", "input": PLAN}],
+         "tokens_in": 1000, "tokens_out": 50},
+        {"chunks": ["Here is ", "a proposal."], "tokens_in": 1500, "tokens_out": 30},
+    ])
+    snap = say(lucy, new_conversation(lucy), "five songs please")
+    assert reply(snap)["content"] == "Let me look.\n\nHere is a proposal."
+
+
 def test_model_turns_stream_real_deltas_and_tools_update_cards(lucy):
     use(lucy, [
         {"chunks": ["Let me ", "look."], "calls": [{"name": "selecta", "input": PLAN}],

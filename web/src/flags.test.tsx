@@ -7,6 +7,7 @@ import { buildCommands, CommandContext } from './shell/commands';
 import { aboutOf, classicDestinations, exploreTabs, routeOn, shownRoute, workspaceTabs } from './shell/manifest';
 import { PageLink } from './shell/PageLink';
 import { shortcutFor, shortcutsOn, SHORTCUTS } from './state/shortcuts';
+import { glossaryOn, glossaryTerm, GlossaryTerm, searchGlossary } from './ui/glossaryTerms';
 import { LinkTabs } from './ui/primitives';
 
 const allOn = Object.fromEntries(FLAG_IDS.map((id) => [id, true]));
@@ -137,5 +138,16 @@ describe('commands and keys with features turned off', () => {
   it('reads a server’s refusal of something turned off as its own kind of problem', () => {
     expect(problemKind(new ApiError('off', 403, 'flag_off'))).toBe('off');
     expect(problemKind(new ApiError('no', 403, ''))).toBe('invalid');
+  });
+
+  it('keeps a music term whose feature is off out of its own words, but keeps the term', () => {
+    const says = (terms: GlossaryTerm[]) => terms.map((term) => [term.term, ...(term.aka ?? []), term.plain].join(' ')).join(' ');
+    setFlags(allOn);
+    expect(says(glossaryOn())).toContain('LRCLIB');
+    setFlags(without('lyrics.lookup'));
+    expect(says(glossaryOn())).not.toContain('LRCLIB');
+    expect(glossaryTerm('local-only')?.plain).toContain('stay on this PC');
+    expect(searchGlossary('LRCLIB')).toEqual([]);
+    setFlags(allOn);
   });
 });

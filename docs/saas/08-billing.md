@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 8. Billing and entitlements (Stripe, UK business)
 
@@ -7,6 +7,57 @@
 - Products: Selecta Standard, Selecta Premium. Prices: monthly and annual in GBP (beta), USD and EUR later.
 - **Stripe Checkout** for purchase, **Customer Portal** for upgrades, downgrades, payment methods, invoices and cancellation, **Stripe Tax** for VAT calculation, **Smart Retries** for failed renewals.
 - A server-side plan catalogue maps Stripe price IDs → `plan_id` and version; the client never sends a plan name that is trusted.
+
+#### Current API implementation
+
+Cloud mode exposes `POST /api/billing/checkout`, `POST /api/billing/portal`, and
+`POST /api/webhooks/stripe`. Checkout accepts a plan and interval, resolves those to a configured
+server-side price, requires the current versioned consent plus explicit immediate-access and
+cancellation-right acknowledgements, and only builds redirects from the configured CORS origin.
+Both session routes require an `Idempotency-Key`; customer records are workspace-scoped. Portal
+access has its own `billing.portal` kill switch so users can still manage or cancel subscriptions
+when new checkout is disabled.
+
+The webhook caps request bodies, verifies the raw-body Stripe signature (supporting secret
+rotation), inserts each event once, ignores unknown event types, and re-fetches Stripe state before
+updating entitlement snapshots and storage limits. A repeated delivery retries an event that is
+still `received` or `failed`. `billing.maintenance` now provides a bounded retry drain and a full
+subscription reconciliation with quota synchronization and append-only audit entries written in
+the same transaction as each correction (including unmatched Stripe subscriptions). Run `uv run
+selecta billing-maintenance` from a scheduled process to drain events and add `--reconcile` for the
+full subscription sweep. Production scheduling and drift alerts remain outstanding.
+Reconciliation records changes to entitlement versions, expiry, source and reason as well as
+plan names, so a catalogue version change also updates the workspace quota and audit trail.
+Webhook processing and maintenance use the effective entitlement when setting storage limits,
+including active staff overrides. Full reconciliation also refreshes every existing quota account
+so an expired override returns to the underlying plan even when Stripe has not changed.
+Production PostgreSQL
+and real Stripe test-mode runs remain to be verified.
+
+`GET /api/account` carries what the Plan & billing page needs: `entitlement.plan_label` and
+`snapshot_version`, `billing.consent_version` (the server's current checkout consent version, so
+the form sends exactly the version the server will check), `lucy.tier`, and `usage` with four
+meters read from the rows the server enforces with (`selecta.usage.meters`): storage used of the
+limit (with committed, reserved, over-by and state), songs analysed today, exports this month
+(with retention days and whether over-quota blocks them) and Lucy turns this month (per model
+class and summed; a fair-use class has no limit). Each allowance carries its `resets_at`, the
+account's own local midnight. Writing a new entitlement snapshot version emits an
+`entitlement.changed` outbox event in the same transaction, so a page waiting on a checkout hears
+the change over `/api/events`; re-confirming an unchanged snapshot emits nothing.
+
+Checkout creation enables Stripe automatic tax, requires a billing address, updates the stored
+Stripe customer address and permits tax-ID collection. Stripe's business address, registrations
+and product tax codes must be configured before paid launch. The UK-only beta restriction must be
+enforced with Stripe account-level controls; collecting an address in Checkout is not a country
+restriction.
+
+Configuration: `SELECTA_STRIPE_SECRET_KEY`, `SELECTA_STRIPE_WEBHOOK_SECRETS` (comma-separated
+rotation set), `SELECTA_STRIPE_PRICES` (JSON price-id to plan/version/interval map),
+`SELECTA_CHECKOUT_CONSENT_VERSION`, and optionally `SELECTA_IP_HASH_KEY` and
+`SELECTA_STRIPE_API_VERSION`. Checkout requests Stripe automatic tax, a billing address, customer
+address updates, and tax-ID collection. Before taking payments, configure the Stripe account's
+business address, registrations and product tax codes, then enforce the UK-only beta sales boundary
+in account-level controls.
 
 ### 8.2 Event handling
 
@@ -37,4 +88,4 @@
 
 ---
 
-[← 07-identity-rbac-admin.md](07-identity-rbac-admin.md) · [Contents](README.md#chapters) · [09-lucy-ai-gateway.md →](09-lucy-ai-gateway.md)
+[← 07a-authentication.md](07a-authentication.md) · [Contents](README.md#chapters) · [09-lucy-ai-gateway.md →](09-lucy-ai-gateway.md)

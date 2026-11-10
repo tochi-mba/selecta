@@ -1,0 +1,282 @@
+{
+  "area": "Cloud services",
+  "flags": {
+    "account.identity": {
+      "label": "Account and sessions",
+      "about": "Read account settings and end sign-in sessions.",
+      "core": "People must be able to view their account and sign out.",
+      "routes": ["GET /api/account", "POST /api/account/sign-out-everywhere"],
+      "modes": ["cloud"],
+      "owner": "identity"
+    },
+    "account.identity_sync": {
+      "label": "Account sync with WorkOS",
+      "about": "Accept signed WorkOS events that keep emails, revoked sessions and deleted accounts in step.",
+      "core": "Revoked sessions, password resets and deleted users must reach Selecta at once.",
+      "routes": ["POST /api/webhooks/workos"],
+      "modes": ["cloud"],
+      "owner": "identity"
+    },
+    "account.labs": {
+      "label": "Labs",
+      "about": "Opt into preview features that your plan is allowed to use.",
+      "routes": [
+        "GET /api/account/labs",
+        "PUT /api/account/labs/{flag_id}"
+      ],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "platform"
+    },
+    "account.deletion": {
+      "label": "Account deletion",
+      "about": "Request account removal and revoke active sessions.",
+      "core": "People must always be able to request deletion of their account.",
+      "routes": ["DELETE /api/account"],
+      "modes": ["cloud"],
+      "owner": "identity"
+    },
+    "account.data_export": {
+      "label": "Account data export",
+      "about": "Download a portable copy of available account data and original files.",
+      "core": "People must be able to take a copy of their personal data.",
+      "routes": ["GET /api/account/export"],
+      "modes": ["cloud"],
+      "owner": "privacy"
+    },
+    "account.lucy_settings": {
+      "label": "Lucy settings in Cloud",
+      "about": "Choose whether to use Lucy, its phases and what it may share; see this month's Lucy turns.",
+      "routes": ["GET /api/account/lucy", "PUT /api/account/lucy"],
+      "requires": ["lucy"],
+      "surfaces": ["cloud.settings"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "lucy"
+    },
+    "cloud.signups": {
+      "label": "New accounts",
+      "about": "Allow new Cloud users to complete account onboarding.",
+      "routes": ["POST /api/onboarding/complete"],
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    },
+    "cloud.uploads": {
+      "label": "Cloud uploads",
+      "about": "Upload private audio files to a Cloud workspace.",
+      "routes": [
+        "POST /api/uploads/plan",
+        "GET /api/uploads",
+        "GET /api/uploads/{session_id}",
+        "POST /api/uploads/{session_id}/parts",
+        "POST /api/uploads/{session_id}/complete",
+        "DELETE /api/uploads/{session_id}",
+        "GET /api/assets",
+        "GET /api/assets/{asset_id}",
+        "DELETE /api/assets/{asset_id}",
+        "GET /api/assets/{asset_id}/playback-url",
+        "POST /api/assets/{asset_id}/playback-proxy",
+        "GET /api/assets/{asset_id}/playback-proxy",
+        "POST /api/storage/derived-playback-url"
+      ],
+      "surfaces": ["cloud.home", "cloud.library", "cloud.uploads"],
+      "words": ["Upload tracks"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "storage"
+    },
+    "billing.checkout": {
+      "label": "Plan checkout",
+      "about": "Start or change a paid Selecta Cloud subscription.",
+      "routes": ["POST /api/billing/checkout"],
+      "surfaces": ["cloud.billing"],
+      "words": ["Before subscribing"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "billing"
+    },
+    "billing.portal": {
+      "label": "Subscription portal",
+      "about": "Manage or cancel an existing paid Selecta Cloud subscription.",
+      "routes": ["POST /api/billing/portal"],
+      "surfaces": ["cloud.billing"],
+      "words": ["Change plan or cancel"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "billing"
+    },
+    "cloud.operations": {
+      "label": "Cloud operations",
+      "about": "Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct.",
+      "core": "The cloud service can't run, recover or erase data on time without them.",
+      "cli": [
+        "db",
+        "gateway",
+        "maintain",
+        "account-deletion-maintenance",
+        "billing-maintenance",
+        "storage-maintenance",
+        "replay-deletions-after-restore"
+      ],
+      "modes": ["cloud"],
+      "owner": "platform"
+    },
+    "billing.webhooks": {
+      "label": "Billing updates",
+      "about": "Accept signed subscription state changes from Stripe.",
+      "core": "Billing changes must be applied even when checkout is paused.",
+      "routes": ["POST /api/webhooks/stripe"],
+      "modes": ["cloud"],
+      "owner": "billing"
+    },
+    "devices": {
+      "label": "Playback devices",
+      "about": "Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here.",
+      "routes": [
+        "POST /api/devices",
+        "GET /api/devices",
+        "PATCH /api/devices/{device_id}",
+        "POST /api/devices/{device_id}/sign-out",
+        "GET /api/playback/session",
+        "POST /api/playback/heartbeat",
+        "POST /api/playback/take-over",
+        "POST /api/playback/reconnect"
+      ],
+      "surfaces": ["cloud.listen", "cloud.settings"],
+      "words": ["Play here"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "playback"
+    },
+    "devices.remote_control": {
+      "label": "Remote playback control",
+      "about": "Control the account's active playback session from another device.",
+      "routes": ["POST /api/playback/commands"],
+      "requires": ["devices"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "playback"
+    },
+    "rooms": {
+      "label": "Rooms",
+      "about": "Let Premium hosts share a request room with guests.",
+      "routes": [
+        "POST /api/rooms",
+        "GET /api/rooms/current",
+        "GET /api/rooms/{room_id}",
+        "PATCH /api/rooms/{room_id}/settings",
+        "POST /api/rooms/{room_id}/lock",
+        "POST /api/rooms/{room_id}/unlock",
+        "POST /api/rooms/{room_id}/code",
+        "POST /api/rooms/{room_id}/end",
+        "POST /api/rooms/{room_id}/requests/{request_id}/approve",
+        "POST /api/rooms/{room_id}/requests/{request_id}/pass",
+        "POST /api/rooms/{room_id}/guests/{guest_id}/approve",
+        "POST /api/rooms/{room_id}/guests/{guest_id}/remove",
+        "POST /api/rooms/{room_id}/guests/{guest_id}/ban",
+        "POST /api/guest/join",
+        "GET /api/guest/rooms/{room_id}",
+        "GET /api/guest/rooms/{room_id}/search",
+        "POST /api/guest/rooms/{room_id}/requests",
+        "DELETE /api/guest/rooms/{room_id}/requests/{request_id}",
+        "GET /api/guest/rooms/{room_id}/nicknames",
+        "PUT /api/guest/rooms/{room_id}/nickname",
+        "POST /api/guest/rooms/{room_id}/leave"
+      ],
+      "surfaces": ["cloud.home", "cloud.listen", "cloud.billing"],
+      "words": ["request room", "Open a room", "Rooms are part of"],
+      "modes": ["cloud"],
+      "when_locked": "teaser",
+      "kind": "release",
+      "owner": "rooms"
+    },
+    "rooms.votes": {
+      "label": "Room votes",
+      "about": "Let room guests vote on song requests.",
+      "routes": [
+        "POST /api/guest/rooms/{room_id}/requests/{request_id}/vote",
+        "DELETE /api/guest/rooms/{room_id}/requests/{request_id}/vote"
+      ],
+      "requires": ["rooms"],
+      "surfaces": ["cloud.listen"],
+      "words": ["Guests can vote"],
+      "modes": ["cloud"],
+      "when_locked": "teaser",
+      "kind": "release",
+      "owner": "rooms"
+    },
+    "rooms.display": {
+      "label": "Room display",
+      "about": "Pair a screen to show the room QR code and playback queue.",
+      "routes": [
+        "POST /api/rooms/{room_id}/displays",
+        "DELETE /api/rooms/{room_id}/displays",
+        "POST /api/display/pairings",
+        "GET /api/display/view"
+      ],
+      "requires": ["rooms"],
+      "surfaces": ["cloud.listen"],
+      "words": ["Big screen", "Pair screen"],
+      "modes": ["cloud"],
+      "when_locked": "teaser",
+      "kind": "release",
+      "owner": "rooms"
+    },
+    "lucy.deep_plan": {
+      "label": "Lucy deep planning",
+      "about": "Use Lucy's premium planning model and larger plan allowance.",
+      "requires": ["lucy"],
+      "modes": ["cloud"],
+      "when_locked": "teaser",
+      "kind": "release",
+      "owner": "ai"
+    },
+    "admin.console": {
+      "label": "Staff console",
+      "about": "Show internal tools to authenticated staff with the required permission.",
+        "routes": [
+          "POST /api/admin/session",
+          "GET /api/admin/me",
+          "GET /api/admin/overview",
+          "GET /api/admin/jobs",
+          "GET /api/admin/jobs/{job_id}",
+          "POST /api/admin/jobs/{job_id}/{command}",
+          "GET /api/admin/workers",
+          "POST /api/admin/workers/{worker_id}/{command}",
+          "GET /api/admin/accounts",
+          "GET /api/admin/accounts/{user_id}",
+          "POST /api/admin/accounts/{user_id}/{command}",
+          "POST /api/admin/overrides",
+          "POST /api/admin/overrides/mass",
+          "DELETE /api/admin/overrides/{override_id}",
+          "GET /api/admin/ai",
+          "GET /api/admin/security",
+          "POST /api/admin/security/roles",
+          "GET /api/admin/audit",
+          "PATCH /api/admin/audit/{event_id}",
+          "DELETE /api/admin/audit/{event_id}",
+          "GET /api/admin/alerts",
+          "GET /api/admin/actions",
+          "POST /api/admin/actions/{action_id}/{command}",
+          "GET /api/admin/emergency",
+          "POST /api/admin/emergency/{control}/{command}",
+          "GET /api/admin/flags",
+          "GET /api/admin/flags/history",
+          "POST /api/admin/flags/rollback",
+          "GET /api/admin/flags/explain/{user_id}",
+          "POST /api/admin/flags/{flag_id}/impact",
+          "POST /api/admin/flags/{flag_id}/change",
+          "POST /api/admin/flags/{flag_id}/preview",
+          "GET /api/admin/takedowns",
+          "POST /api/admin/takedowns",
+          "POST /api/admin/takedowns/{notice_id}/{command}",
+          "POST /api/admin/upload-restrictions/{workspace_id}/lift"
+        ],
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    }
+  }
+}

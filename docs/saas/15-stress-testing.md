@@ -1,6 +1,8 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 15. Stress testing and verification
+
+This chapter covers load, chaos and release gates. Module-by-module correctness and security tests, with every edge case, are in [§18](18-test-plan.md#18-test-plan-every-edge-case-every-layer).
 
 ### 15.1 What must be proven
 
@@ -23,6 +25,8 @@
 10. The UI never shows "done" without a verified result.
 
 Every run ends with a **reconciliation audit**: stuck jobs, unreleased reservations, orphaned objects, ledger vs inventory drift, entitlement vs Stripe drift. A run that "looked fine" but leaves drift fails.
+
+**The checker today.** `selecta.audit.invariants` checks, from the database, invariants 1 to 7 and 9 after a test or a scenario: `check(connection, accepted=..., store=...)` returns every `Violation` with its invariant number, and `assert_clean(engine)` raises listing them all. It reads jobs, attempts, dependencies, fair-share heads, artifacts (and, given an `ArtifactStore`, the stored objects), assets, quota rows, reservations, the storage ledger and entitlement overrides. Invariants 8 and 10 can't be read from the database and stay with the AI gateway's and the site's own tests (`invariants.NOT_CHECKED`). The job state-machine test checks every invariant when each random history ends, and every race test checks them after its race (`tests/test_cloud_jobs_stateful.py`, `tests/test_cloud_jobs_races.py`); `tests/test_cloud_invariants.py` plants a violation for each check. Ledger-against-rollup drift is the usage reconciler's (`usage.reconcile`, §5.3).
 
 ### 15.3 Tools
 

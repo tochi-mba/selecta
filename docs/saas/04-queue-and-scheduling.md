@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 4A. The processing and queue system (the core)
 
@@ -18,16 +18,16 @@ This is where most of the engineering care goes. The rules below are written so 
 | Job type | Pool | Typical cost | Default lane | Depends on | Output |
 |---|---|---|---|---|---|
 | `ingest.validate` | cpu-light | 1–5 s | standard | upload complete | probe JSON, content hash, tags |
-| `play.proxy` | cpu-light | 3–10 s | inherits from the mix that needs it | validate | playback FLAC (system-managed, evictable). Created lazily when a song enters a mix revision or a preview, never for the whole library; skipped when the original is already lossless at the analysis sample rate ([§5.8](05-storage-uploads-playback.md#58-playback-in-the-cloud-a-real-design-problem)) |
+| `play.proxy` | cpu-light | 3–10 s | inherits from the mix that needs it | validate | playback FLAC (system-managed, evictable). Created lazily when a song enters a mix revision, a preview or a request (`work/proxies.py`), never for the whole library; skipped when the original is already lossless at the analysis sample rate ([§5.8](05-storage-uploads-playback.md#58-playback-in-the-cloud-a-real-design-problem)) |
 | `analyse.song` | cpu-heavy | ~0.15× duration + warm model | standard (interactive if user tapped "Analyse") | validate | features `.npz`, analysis row |
 | `lyrics.fetch` | cpu-light (network) | <1 s | standard | validate | lyrics row (subject to [§10.5](10-audio-engine-in-cloud.md#105-lyrics-in-cloud-mode-needs-a-decision)) |
 | `lyrics.align` | cpu-heavy | 10–40 s | standard | lyrics, analyse | alignment |
 | `stems.window` | gpu (cpu fallback) | 3–5 s GPU / ~120 s CPU | inherits from parent | analyse | 4–5 stem WAV/FLAC |
 | `seam.render` | cpu-heavy | 5–80 s | interactive / standard / speculative by context | analyse ×2, stems (optional) | clip, preview, seam manifest |
-| `mix.prepare` (workflow) | — | — | — | — | marks revision playable |
+| `mix.prepare` (workflow) | - | - | - | - | marks revision playable |
 | `export.render` | cpu-heavy + scratch disk | minutes | standard | all seams of frozen revision | FLAC export, validated |
 | `discover.sweep` | cpu-heavy | bounded slices | speculative | analyses | comparisons, links |
-| `maintenance.*` | internal | — | — | — | GC, reconcile (not tenant-visible) |
+| `maintenance.*` | internal | - | - | - | GC, reconcile (not tenant-visible) |
 
 Room requests ([§11A.2](11a-devices-and-rooms.md#11a2-rooms-premium)) add no new job type: they enter the existing request planner and produce `seam.render` jobs in the host's interactive lane. Every job type names the feature flag that owns it ([§11B.4](11b-feature-flags.md#11b4-enforcement-in-the-cloud)).
 
@@ -63,7 +63,7 @@ The policy is hierarchical: **pool → lane → account → job**.
 
 Lane weights: interactive 4, standard 1, speculative strictly last. Lanes are chosen by the same virtual-time rule as accounts, charged in estimated compute seconds, so when both are backlogged interactive gets about 80% of the pool's compute time and standard at least 20%: the weights *are* the floor that stops a flood of interactive work from freezing imports and exports. Raising standard's weight to 2 makes its floor 33%.
 
-**Headroom for interactive work.** Speculative attempts may never occupy the last free slot of a pool (at least one slot, or 10% of slots, whichever is larger, stays free of speculative work), and they are the one kind of work that may be preempted across accounts ([§4A.5](#4a5-mapping-todays-ranks-onto-the-new-policy)).
+**Headroom for interactive work.** In a pool with two or more slots, speculative attempts may never occupy the last free slots: at least one slot, or 10% of slots, whichever is larger, stays free of speculative work. A pool with a single slot (the local app's one runner thread) has no headroom to keep, so speculative work runs there whenever the pool is otherwise idle and gives way at its next `check_in()` the moment interactive or standard work arrives. Speculative attempts are also the one kind of work that may be preempted across accounts ([§4A.5](#4a5-mapping-todays-ranks-onto-the-new-policy)).
 
 **Accounts inside a lane: weighted fair share with virtual time** (start-time fair queuing).
 - Each `(pool, lane, workspace)` with waiting work has a virtual time `V`.
@@ -88,7 +88,7 @@ Worked example, one pool of 20 identical slots, 60 s jobs, all backlogged:
 
 **Deadlines for playback.** A seam needed by the mix that is playing carries `needed_by = now + time until that hand-off`. If its slack (time left minus estimated run time) drops under 1.5× the estimate, it gets a deadline boost: considered before other interactive work in its pool, up to a per-account boost allowance (e.g. 3 boosts per 10 minutes) so it can't be abused. If a hand-off can't be ready in time, the planner picks a cheaper, already-ready move (the existing fallback order) instead of leaving silence; the UI never pretends.
 
-**Eligibility filters** applied before picking: dependencies satisfied; `not_before` passed; workspace under its per-pool concurrency cap; worker capabilities match (`engine_version_required`, GPU memory, scratch disk); entitlement allows the job type right now; the job's owning feature flag is on for that workspace ([§11B.4](11b-feature-flags.md#11b4-enforcement-in-the-cloud)); account not suspended; pool not paused.
+**Eligibility filters** applied before picking: dependencies satisfied; `not_before` passed; workspace under its per-pool concurrency cap; worker capabilities match (`engine_version_required`, GPU memory, scratch disk); entitlement allows the job type right now; the job's owning feature flag is on for that workspace ([§11B.4](11b-feature-flags.md#11b4-enforcement-in-the-cloud); a queued job met with its flag off is blocked or cancelled per the flag's `when_off`, and blocked ones return to the queue when it comes back on, see [§11B.3](11b-feature-flags.md)); account not suspended; pool not paused.
 
 **Urgency is never client-chosen.** The server derives lane and urgency from job type and context (is this mix playing? is the seam within the next two hand-offs? did a person click?). Clients can reorder their own render line, which only affects order *within* their account.
 
@@ -120,7 +120,9 @@ The existing `give_way_when` preemption maps to "interactive work arrives → ru
 
 **Workers hold no database or storage credentials.** They talk to the worker gateway with a short-lived worker token (minted per pool, rotated, scoped to `claim/heartbeat/complete/fail`) and touch storage only through the signed URLs a claim hands them. Benefits: no connection-pool explosion when you add 500 workers; one place to enforce fencing; a stolen worker token reaches only the jobs it claims; workers can live on any provider.
 
-**The gateway is its own service.** It runs from the same image as the API but as a separate deployment (`gateway`), so a storm of worker long-polls or completions can never starve customer requests, and each can scale on its own.
+**The gateway is its own service.** The code now exposes `selecta gateway`, backed by `selecta.gateway_cloud:create_gateway_app`, as a separately deployed process. It has an independent host allowlist, database URL override, worker token and bootstrap secrets, and readiness check; it does not load customer identity settings or local library workers. This is the service boundary, though deployment manifests and traffic-isolation measurements remain outstanding.
+
+The gateway routes cover worker enrollment, claim/start, heartbeat, progress, completion, release and failure. Enrollment mints a short-lived pool-scoped token; claims contain workspace-checked signed input URLs and an attempt-scoped output prefix. The `RemoteWorkerClient` and cooperative `WorkerRunner` refresh tokens, report progress and heartbeats, download only claimed inputs, and publish artifacts through attempt-scoped signed PUT URLs. Completion checks artifact key scope, object size and checksum before the durable store accepts it. Set `SELECTA_GATEWAY_DATABASE_URL` (or share `SELECTA_DATABASE_URL`), `SELECTA_GATEWAY_ALLOWED_HOSTS`, `SELECTA_WORKER_TOKEN_SECRET` and `SELECTA_WORKER_BOOTSTRAP_TOKEN` for the gateway deployment. R2 settings are shared with the Cloud storage adapter. The current claim path is a bounded database claim request, not the proposal's LISTEN/NOTIFY-backed long-poll; worker containers and real job handlers are still required for end-to-end processing.
 
 Endpoints (`/internal/workers/…`):
 - `POST /register` → capabilities (pool, engine version, CPU, RAM, GPU type/VRAM, scratch disk, region) → `worker_id`.
@@ -151,7 +153,7 @@ Indexes keep this fast with millions of rows: a partial index on `jobs (pool, wo
 
 **The maintenance leader** holds a session-level advisory lock on its own direct connection (session locks also don't survive a transaction-mode pooler). If that connection drops, the lock is released and a standby can take over while the old process may still be finishing a task, so every maintenance task is idempotent and records the leader's term number; a task started under an older term stops when it sees a newer one.
 
-**Outbox delivery.** Each state change inserts an `outbox_events` row and calls `pg_notify` in the same transaction (Postgres delivers notifications only on commit). Listeners read events by increasing id, so a missed notification is caught up on the next read; consumers dedupe by event id (at-least-once delivery). Outbox rows are kept 7 days, partitioned by day.
+**Outbox delivery.** Each state change inserts an `outbox_events` row and calls `pg_notify` in the same transaction (Postgres delivers notifications only on commit). Listeners read events by increasing `seq`, a commit-order number stamped as each transaction commits (a deferred trigger under a short advisory lock on PostgreSQL; the id itself on SQLite, which has one writer), never by id: ids are handed out at insert, so a transaction holding a lower id can commit after a reader has passed a higher one (`tests/test_cloud_outbox_order.py`). A missed notification is caught up on the next read; consumers dedupe by event id (at-least-once delivery). Outbox rows are kept 7 days, partitioned by day.
 
 ### 4A.7 Retries and error classes
 

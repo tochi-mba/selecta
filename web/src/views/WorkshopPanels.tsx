@@ -9,6 +9,7 @@ import { Field, Slider } from '../ui/primitives';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ViewProps } from './shared';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
+import { words } from '../copy';
 
 const GB = 1024 ** 3;
 
@@ -23,7 +24,7 @@ export function MemoryPanel() {
   useEffect(() => { void load(); }, [load]);
   if (failed) return <Problem retry={load}>Couldn’t load learning history.</Problem>;
   if (!memory) return <Skeleton variant="metrics" label="Loading learning history" />;
-  if (!memory.tried) return <section className="panel"><h2>Learning starts with listening</h2><p className="hint">Rate transitions after you hear them. Your feedback stays on this PC.</p></section>;
+  if (!memory.tried) return <section className="panel"><h2>Learning starts with listening</h2><p className="hint">{words().learningStaysHere}</p></section>;
   const rated = memory.liked + memory.disliked;
   return (
     <section className="panel stack">
@@ -193,7 +194,7 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
   useEffect(() => {
     if (jobs) onJobs?.(jobs);
   }, [jobs, onJobs]);
-  if (unsupported) return <p className="hint">This running copy of Selecta can’t report background jobs. Restart Selecta to update it.</p>;
+  if (unsupported) return <p className="hint">{words().jobsNeedRestart}</p>;
   if (!jobs) return failed ? <Problem retry={refreshJobs}>Couldn’t find out what’s running.</Problem> : <Skeleton variant="metrics" label="Finding out what’s running" />;
   const left = jobs.mix.queued + jobs.mix.rendering + jobs.mix.none;
   return (
@@ -425,7 +426,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
         <Action working="Checking…" run={checkNow}>Check now</Action>
       </div>
       <h3>Add another folder</h3>
-      <p className="hint">Copy a folder address from File Explorer. Your audio stays on this PC. For lyric lookup, Selecta sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file. Selecta also communicates with its local server.</p>
+      <p className="hint">{words().sourcesHelp}</p>
       <p className="hint">Example folder paths: Windows <code>C:\\Users\\you\\Music</code>; macOS <code>/Users/you/Music</code>; Linux <code>/home/you/Music</code>. Use a path on the computer running Selecta, not a website address.</p>
       <form className="row wrap sources-add" onSubmit={(event) => void scan(event)}>
         <Field label="Music folder" error={problem}>
@@ -532,7 +533,7 @@ export function Diagnostics() {
       <ul className="diagnostic-facts">
         {diagnosticFacts(info).map((fact) => <li key={fact.key}><Status kind={fact.kind}>{fact.words}</Status></li>)}
       </ul>
-      <p className="hint">No paths or song names, and nothing is sent anywhere. It only leaves this PC if you copy it somewhere yourself.</p>
+      <p className="hint">{words().diagnosticsStaysHere}</p>
       <details className="diagnostic-raw">
         <summary>The raw details</summary>
         <pre className="diagnostics" tabIndex={0}>{text}</pre>

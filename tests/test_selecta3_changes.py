@@ -78,6 +78,10 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
         return {"seconds": 42}
 
     monkeypatch.setattr(mix, "export_snapshot", fake_export)
+    # The real FLAC check has its own tests (test_export_validation.py); this one is about job
+    # state, so record that the final file was checked rather than decoding fake bytes.
+    verified = []
+    monkeypatch.setattr(exports, "verify_export", lambda path, _seconds: verified.append(path))
     response = client.post("/api/exports/jobs")
     assert response.status_code == 200, response.text
     job = response.json()
@@ -98,6 +102,7 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
             break
         time.sleep(0.02)
     assert saved["state"] == "ready", saved
+    assert verified == [settings.home / "exports" / saved["name"]]
     assert saved["revision"] == job["revision"]
     assert captured["songs"] == [1, 2]
     assert captured["keys"] == [job["seams"][0]["key"]]
@@ -121,6 +126,10 @@ def test_a_job_file_busy_for_a_moment_loses_nothing(client, tmp_path, monkeypatc
         return {"seconds": 42}
 
     monkeypatch.setattr(mix, "export_snapshot", fake_export)
+    # The real FLAC check has its own tests (test_export_validation.py); this one is about job
+    # state, so record that the final file was checked rather than decoding fake bytes.
+    verified = []
+    monkeypatch.setattr(exports, "verify_export", lambda path, _seconds: verified.append(path))
 
     # what Windows does: the first attempt at each is refused, and the next one works
     real_replace, real_read = exports.os.replace, Path.read_text
@@ -152,6 +161,7 @@ def test_a_job_file_busy_for_a_moment_loses_nothing(client, tmp_path, monkeypatc
             break
         time.sleep(0.02)
     assert saved["state"] == "ready", saved
+    assert verified == [settings.home / "exports" / saved["name"]]
     assert refused["read"] >= 1
     assert not list((tmp_path / "exports" / "jobs").glob("*.part")), "nothing left lying around"
 

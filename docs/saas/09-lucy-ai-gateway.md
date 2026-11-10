@@ -1,4 +1,4 @@
-*Part of the [Selecta Cloud proposal](README.md). Proposed, for owner review.*
+*Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
 ## 9. Lucy and the AI gateway (hosted APIs, server-owned routing)
 
@@ -11,7 +11,7 @@ Plans grant a **capability**; a routing table maps capabilities to **deployments
 | Free | `lucy_basic` | Claude Haiku 5.5 (`claude-haiku-5-5`), effort low | $0.10/$0.50 per M tokens: cheap enough to give Free users a real Lucy |
 | Standard | `lucy_standard` | Haiku 5.5 at medium/high effort for everyday turns; Claude Sonnet 5.5 (`claude-sonnet-5-5`, $2/$10) for a monthly allowance of whole-mix planning turns | Keeps a maxed-out Standard user well inside a £6.99 plan |
 | Premium | `lucy_advanced` | Sonnet 5.5 for everyday turns; Claude Opus 5.5 (`claude-opus-5-5`, $4/$20) for "deep plan" turns within an allowance; Haiku for quick questions | Opus only where it earns its cost |
-| Fallbacks | — | Per-tier chain: next smaller model of the same family → built-in planner (`lucy/builtin.py`) | Lucy degrades, never breaks the app |
+| Fallbacks | - | Per-tier chain: next smaller model of the same family → built-in planner (`lucy/builtin.py`) | Lucy degrades, never breaks the app |
 
 **Routing down, never up.** Within a tier, the gateway sends simple requests (help questions, "skip this song", small edits) to the cheapest model the tier allows, and keeps the bigger model for planning. It never routes a request to a model above the tier.
 
@@ -32,6 +32,8 @@ Each deployment record: provider, model id, secret reference, capabilities (stre
 | Per provider | concurrency limit, circuit breaker on errors/429s |
 | Platform | daily and monthly spend alarms, hard admission cap, emergency disable per deployment |
 
+A turn uses the allowance of the class that actually served it: a deep plan that falls back from Opus to Sonnet counts as a planning turn, the run records both the class requested and the class served, and a turn the built-in planner answers uses no model allowance.
+
 Prompt caching (already used in `providers.py`) keeps repeated system prompts and library context cheap; the gateway tracks cache-hit rate per tier as a cost KPI.
 
 ### 9.4 Safety of tool use
@@ -47,7 +49,14 @@ Unchanged principle from today's design and worth restating: model output never 
 | Memory facts, clear memory, conversation history and deletion | User | User |
 | Provider, model, base URL, API key, consent to a provider | User (bring your own key) | **Hidden**; shows "Lucy Basic / Standard / Advanced" from the plan |
 | Max rounds/steps/seconds, spend limit (USD) | User | **Hidden**; server policy |
-| Usage shown | — | Turns used this month, resets on date |
+| Usage shown | - | Turns used this month, resets on date |
+
+Current implementation: `GET` and `PUT /api/account/lucy` (flag `account.lucy_settings`,
+`selecta.lucy.cloud_settings`) read and change only Use Lucy, the phases and the two sharing
+choices, stored per user under `lucy:` ids in the user preferences table. The answer adds the
+plan's tier ("Lucy Basic", "Lucy Standard", "Lucy Advanced") and this month's turn meter. A body
+naming a provider, model, key or budget is refused (422), and an unknown phase is refused by name.
+There is no Cloud memory or conversation history yet, so those rows of the table are not offered.
 
 Server-side, API keys move from plaintext `lucy-secrets.json` to the hosting platform's secret store in cloud mode (local mode keeps the file but should restrict its permissions).
 

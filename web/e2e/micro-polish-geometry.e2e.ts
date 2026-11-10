@@ -120,7 +120,10 @@ test('mini-player and overlay geometry stay actionable on a narrow phone', async
   const play = page.locator('.now .transport .primary');
   await play.click();
   await expect(play).toHaveText('Pause', { timeout: 30_000 });
-  await page.goto('/library');
+  // Leave Listen the way a person does, inside the app. Loading /library afresh would start a new
+  // page with nothing playing, and the mini-player only shows while something is.
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library', exact: true }).click();
+  await expect(page).toHaveURL(/\/library$/);
   const mini = page.locator('.mini');
   await expect(mini).toBeVisible();
   const transport = mini.getByRole('button', { name: 'Pause' });
@@ -137,6 +140,10 @@ test('mini-player and overlay geometry stay actionable on a narrow phone', async
   await opener.click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
+  // The panel slides up 8px as it appears (overlay-appear); measure where it comes to rest.
+  await dialog.evaluate((element) => Promise.all(
+    element.getAnimations({ subtree: true }).map((animation) => animation.finished),
+  ));
   const box = await dialog.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);
@@ -224,7 +231,9 @@ test('Listen display toggles never grow to the height of their neighbouring help
     await page.goto('/listen');
     const disclosure = page.locator('details.view-options');
     await expect(disclosure).toBeVisible();
-    await disclosure.locator('summary').click();
+    // DJ controls now nests its own disclosures (About the visualizer, Why this transition?), so
+    // open the panel by its own summary, not the first summary anywhere inside it.
+    await disclosure.locator(':scope > summary').click();
     const panels = disclosure.locator('.listen-display-toggles');
     const countdown = panels.getByRole('button', { name: 'Beat countdown' });
     await expect(countdown).toBeVisible();

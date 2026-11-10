@@ -1,7 +1,7 @@
-# ADR-0413 — Copyright terms, takedown and repeat infringers
+# ADR-0413 - Copyright terms, takedown and repeat infringers
 
-- **Decision:** Proposed (owner review pending).
-- **Implementation:** 0/4 Implemented; 0/4 In progress; 4/4 Not started.
+- **Decision:** Accepted (owner, 2026-11-09).
+- **Implementation:** 0/4 Implemented; 2/4 In progress; 2/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 7. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -31,13 +31,13 @@ Selecta behaves as a responsible host and avoids features that would turn it int
 - Public mix links at launch.
 - Cross-account deduplication.
 
-## Implementation checklist — 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
 
-1. **SC-0413-01 — Terms.** **Acceptance:** Terms cover rights, private use and public performance. **Required verification:** Legal review. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0413-02 — Takedown process.** **Acceptance:** Notices are logged, acted on and audited within the stated time. **Required verification:** Drill. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0413-03 — Repeat-infringer enforcement.** **Acceptance:** Accounts with repeated valid notices are restricted per policy. **Required verification:** Admin test. **Implementation:** Not started; **Independently Verified:** No.
-4. **SC-0413-04 — DMCA agent.** **Acceptance:** Agent registered and renewal calendared. **Required verification:** Registration on file. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0413-01 - Terms.** **Acceptance:** Terms cover rights, private use and public performance. **Required verification:** Legal review. **Implementation:** Not started; **Independently Verified:** No.
+2. **SC-0413-02 - Takedown process.** **Acceptance:** Notices are logged, acted on and audited within the stated time. **Required verification:** Drill. **Implementation:** In progress; notice/action/deadline/evidence/audit services and staff routes exist; the drill remains. **Evidence:** `src/selecta/admin/takedowns.py`; `src/selecta/admin/routes_controls.py`. **Independently Verified:** No.
+3. **SC-0413-03 - Repeat-infringer enforcement.** **Acceptance:** Accounts with repeated valid notices are restricted per policy. **Required verification:** Admin test. **Implementation:** In progress; restriction and lifting commands exist; focused repeat-infringer admin coverage remains. **Evidence:** `src/selecta/admin/takedowns.py`; `src/selecta/admin/routes_controls.py`. **Independently Verified:** No.
+4. **SC-0413-04 - DMCA agent.** **Acceptance:** Agent registered and renewal calendared. **Required verification:** Registration on file. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
 
-Decision Proposed until the owner says otherwise. Older ADRs keep their statuses; this one only links to them.
+Accepted by the owner on 2026-11-09. Older ADRs keep their statuses; this one only links to them.
