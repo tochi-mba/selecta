@@ -19,7 +19,7 @@ import os
 import socket
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 import sqlalchemy as sa
@@ -103,10 +103,19 @@ class Leadership:
 
     def _try_lock(self) -> bool:
         connection = self.lock_connection
-        got = connection.execute(
-            sa.text("SELECT pg_try_advisory_lock(:key)"), {"key": advisory_key(self.name)}
-        ).scalar()
-        connection.commit()  # the lock belongs to the session, not this transaction
+        try:
+            got = connection.execute(
+                sa.text("SELECT pg_try_advisory_lock(:key)"), {"key": advisory_key(self.name)}
+            ).scalar()
+            connection.commit()  # the lock belongs to the session, not this transaction
+        except sa.exc.SQLAlchemyError:
+            # The lock session died (so whatever it held is gone). Clear it so the next tick
+            # reconnects and stands as a candidate again, instead of failing forever.
+            try:
+                connection.rollback()
+            except Exception:  # noqa: BLE001 - a dead connection can't even roll back
+                pass
+            return False
         return bool(got)
 
     def is_current(self) -> bool:
@@ -119,6 +128,10 @@ class Leadership:
                 self.lock_connection.commit()
             except Exception:  # noqa: BLE001 - any failure means the session (and lock) is gone
                 self.term = None
+                try:
+                    self.lock_connection.rollback()  # so the next acquire can reconnect
+                except Exception:  # noqa: BLE001 - a dead connection can't even roll back
+                    pass
                 return False
         try:
             with transaction(self.engine) as connection:
@@ -166,11 +179,26 @@ class Schedule:
     last: dict[str, float] = field(default_factory=dict)
 
 
-class MaintenanceLoop:
-    """Runs the maintenance tasks on a thread while this process leads.
+@dataclass(frozen=True)
+class Task:
+    """One more recurring job for the leader (billing drains, deletion steps, sweeps).
 
-    Every task is idempotent and term-fenced. Head differences found by the reconciler go to
-    `on_differences`, which the cloud wires to an alert: the heads should never drift.
+    `run` gets the leader's term fence: a task that writes in several transactions should check
+    it in each (as `admin.actions.run_due` does); one that is idempotent may ignore it, since the
+    loop only starts it while this process holds a current term."""
+
+    name: str
+    every_s: float
+    run: Callable[[TermFence], object]
+
+
+class MaintenanceLoop:
+    """Runs the maintenance tasks while this process leads.
+
+    Every task is idempotent and term-fenced. Each runs on its own interval, and a task that
+    raises is logged and recorded under `failed` without stopping the others; a lost term stops
+    the tick. Head differences found by the reconciler go to `on_differences`, which the cloud
+    wires to an alert: the heads should never drift.
     """
 
     def __init__(
@@ -181,6 +209,7 @@ class MaintenanceLoop:
         *,
         on_differences: Callable[[list], None] | None = None,
         due_actions: Callable[[TermFence], list] | None = None,
+        tasks: Sequence[Task] = (),
         tick_s: float = 1.0,
     ):
         self.store = store
@@ -190,6 +219,7 @@ class MaintenanceLoop:
         self.due_actions = due_actions
         """Runs due dangerous actions under the term fence; the cloud passes
         `selecta.admin.actions.maintenance_task(engine)`. Local mode has none."""
+        self.tasks = tuple(tasks)
         self.tick_s = tick_s
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -208,30 +238,45 @@ class MaintenanceLoop:
             return {}
         fence = self.leadership.fence()
         done: dict[str, object] = {}
+
+        def step(task: str, every: float, work: Callable[[], object]) -> None:
+            if not self._due(task, every, moment):
+                return
+            try:
+                done[task] = work()
+            except LostLeadership:
+                raise
+            except Exception as problem:  # noqa: BLE001 - one task's failure mustn't stop the rest
+                log.exception("Maintenance task %s failed", task)
+                done.setdefault("failed", {})[task] = type(problem).__name__  # type: ignore[index]
+
+        def reap() -> object:
+            done["retried"] = self.store.promote_due_retries(fence)
+            return self.store.reap_expired(fence)
+
+        def reconcile() -> object:
+            differences = self.store.reconcile_heads(fence)
+            if differences:
+                log.warning("fair_heads drifted: %s", differences)
+                if self.on_differences is not None:
+                    self.on_differences(differences)
+            return differences
+
+        def preempt() -> object:
+            return [target for pool in self.schedule.pools
+                    if (target := self.store.request_preemption(pool)) is not None]
+
         try:
-            if self._due("reap", self.schedule.reap_s, moment):
-                done["reaped"] = self.store.reap_expired(fence)
-                done["retried"] = self.store.promote_due_retries(fence)
-            if self._due("preempt", self.schedule.preempt_s, moment):
-                done["preempted"] = [
-                    target
-                    for pool in self.schedule.pools
-                    if (target := self.store.request_preemption(pool)) is not None
-                ]
-            if self._due("reconcile", self.schedule.reconcile_s, moment):
-                differences = self.store.reconcile_heads(fence)
-                done["reconciled"] = differences
-                if differences:
-                    log.warning("fair_heads drifted: %s", differences)
-                    if self.on_differences is not None:
-                        self.on_differences(differences)
-            if self._due("rebase", self.schedule.rebase_s, moment):
-                done["rebased"] = self.store.rebase_vtimes(fence)
-            if self._due("prune", self.schedule.prune_s, moment):
-                done["pruned"] = self.store.prune_outbox(fence=fence)
-            if self.due_actions is not None and self._due("actions", self.schedule.actions_s,
-                                                          moment):
-                done["actions"] = self.due_actions(fence)
+            step("reaped", self.schedule.reap_s, reap)
+            step("preempted", self.schedule.preempt_s, preempt)
+            step("reconciled", self.schedule.reconcile_s, reconcile)
+            step("rebased", self.schedule.rebase_s, lambda: self.store.rebase_vtimes(fence))
+            step("pruned", self.schedule.prune_s, lambda: self.store.prune_outbox(fence=fence))
+            if self.due_actions is not None:
+                due_actions = self.due_actions
+                step("actions", self.schedule.actions_s, lambda: due_actions(fence))
+            for task in self.tasks:
+                step(task.name, task.every_s, lambda task=task: task.run(fence))
         except LostLeadership:
             log.info("Maintenance term %s ended; standing by.", fence.term)
             self.leadership.term = None

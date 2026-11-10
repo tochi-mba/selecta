@@ -108,6 +108,8 @@ External services: WorkOS AuthKit (identity), Stripe (billing), Anthropic (Lucy)
 | `worker-cpu` | `selecta-worker` (ffmpeg, torch CPU, models baked in) | 0–N on Modal at beta; reserved Hetzner pool later | Pools selected by env |
 | `worker-gpu` | `selecta-worker-gpu` (CUDA torch, Demucs) | 0–N on Modal | Stems only at first |
 
+**As built: `maintenance`.** `selecta maintain` (`src/selecta/maintain.py`) runs `work.maintenance.MaintenanceLoop` with every recurring cloud task: lease reaping, due retries, head reconciliation, outbox pruning, due dangerous actions, storage reservation expiry, abandoned Lucy turns, flag previews, admin metrics, Stripe event drains and the daily reconciliation, account-deletion steps, storage deletions, room sweeps, the derived-data eviction sweep and the nightly usage reconciliation (drift becomes a `platform_alerts` row). Tasks whose secrets are missing are named at start-up and left out. Run two copies: the advisory lock on a direct connection (`SELECTA_MAINTENANCE_DATABASE_URL`, else `SELECTA_DATABASE_URL`) makes one the leader and the other a standby that takes over on the tick after the leader's connection dies. SIGTERM stops it at the end of the tick and releases the lock. The runbook is [docs/operations/maintenance-service-down.md](../operations/maintenance-service-down.md).
+
 ---
 
 [← 02-plans-and-economics.md](02-plans-and-economics.md) · [Contents](README.md#chapters) · [04-queue-and-scheduling.md →](04-queue-and-scheduling.md)

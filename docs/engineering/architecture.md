@@ -31,6 +31,7 @@ Everything lives in `src/selecta/`. The audio engine predates the cloud work and
 | `persistence/` | One schema for SQLite and PostgreSQL, transactions, database time, ids, migrations | ADR-0393 |
 | `modes/` | Local vs cloud, and picking the adapter for each | ADR-0392 |
 | `work/` | Durable jobs: lifecycle, leases, fencing, dependencies, outbox, maintenance, the gateway API | ADR-0394, ADR-0396 |
+| `maintain.py` | `selecta maintain`: the leader-elected maintenance service that runs every recurring cloud task | §4.3 |
 | `scheduling/` | Who runs next: lanes, per-account fair share by plan, admission, the simulator | ADR-0395 |
 | `workers/` | Runners that claim and execute jobs: in-process, and the remote gateway client | ADR-0394, ADR-0396 |
 | `storage/` | Object keys, artifacts, the R2 client and SigV4, uploads, deletion | ADR-0397, ADR-0398, ADR-0412 |

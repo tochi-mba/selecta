@@ -106,6 +106,7 @@
       "cli": [
         "db",
         "gateway",
+        "maintain",
         "account-deletion-maintenance",
         "billing-maintenance",
         "storage-maintenance",

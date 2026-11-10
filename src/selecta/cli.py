@@ -513,6 +513,22 @@ def gateway(
     )
 
 
+@app.command()
+def maintain(
+    tick: float = typer.Option(1.0, min=0.1, max=60.0, help="Seconds between maintenance ticks."),
+) -> None:
+    """Run the Cloud maintenance service: one leader runs every recurring task, a copy stands by."""
+    import logging
+
+    from selecta.maintain import main
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    try:
+        main(tick_s=tick)
+    except ValueError as problem:
+        raise typer.BadParameter(str(problem)) from problem
+
+
 @app.command("billing-maintenance")
 def billing_maintenance(
     limit: int = typer.Option(50, min=1, max=500, help="Maximum webhook events to drain."),

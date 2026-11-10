@@ -16,6 +16,7 @@
 | Reserved CPU workers (later) | Hetzner shared-vCPU servers (CX/CAX lines) | Cheapest steady compute with large included traffic; add when steady utilisation justifies it. Dedicated CCX prices more than doubled in 2026, so avoid those | - |
 | GPU stems | Modal (T4 ~$0.59/h, L4 ~$0.80/h) | Per-second, scale to zero, Python-native | Runpod serverless (flex workers per-second) |
 | **Not chosen for workers** | Render background workers | Every worker upload to R2 is Render egress at $0.15/GB past 25 GB/month; proxies, stems and exports would make that the biggest bill | - |
+| Maintenance service | Two Render background workers running `selecta maintain` (one leads, one stands by), on a direct database connection | Small and steady; it only talks to PostgreSQL, Stripe, WorkOS and R2, so no worker egress | Any always-on container host |
 | Identity | WorkOS AuthKit | Free to 1M MAU, MFA, passkeys | Clerk |
 | Payments | Stripe Billing, Checkout, Portal, Tax | Your choice | Paddle as merchant of record if VAT burden bites |
 | AI | Anthropic API | Already integrated (`providers.py`), tiered model family | Second vendor via OpenAI-compatible adapter |
