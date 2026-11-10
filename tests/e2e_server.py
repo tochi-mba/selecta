@@ -211,7 +211,10 @@ def main() -> None:
     atexit.register(shutil.rmtree, home, ignore_errors=True)
     os.environ["SELECTA_HOME"] = str(home)
     settings = build(home)
-    app = create_app(settings, ROOT / "web" / "dist", prepare_links=False)
+    # SELECTA_E2E_DIST names another build folder under web/, so runs side by side can each
+    # serve their own build instead of one rebuilding web/dist under another's feet
+    dist = ROOT / "web" / os.environ.get("SELECTA_E2E_DIST", "dist")
+    app = create_app(settings, dist, prepare_links=False)
     add_flag_switch(app)
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 

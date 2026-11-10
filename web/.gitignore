@@ -5,3 +5,6 @@ playwright-report/
 verify-tmp/
 dist-cloud-e2e/
 dist-cloud-e2e-authkit/
+
+# per-run e2e builds (SELECTA_E2E_DIST)
+/dist-*/
