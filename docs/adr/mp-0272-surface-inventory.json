@@ -65,7 +65,7 @@
     { "id": "route.workshop.learning", "path": "/workshop/learning", "flagSurface": "workshop.learning", "owner": ["web/src/views/WorkshopPanels.tsx"], "fixtureId": "fx.route.idle", "states": ["initial", "empty", "partial", "saving", "failed", "offline"], "denominator": 6, "measured": ["empty"] },
     { "id": "route.workshop.diagnostics", "path": "/workshop/diagnostics", "flagSurface": "workshop.diagnostics", "owner": ["web/src/views/WorkshopPanels.tsx"], "fixtureId": "fx.route.idle", "states": ["initial", "partial", "refreshing", "failed", "offline"], "denominator": 5, "measured": ["partial"] },
     { "id": "route.listening", "path": "/listening", "flagSurface": "listening", "owner": ["web/src/views/Listening.tsx"], "fixtureId": "fx.route.idle", "states": ["initial", "empty", "partial", "saving", "failed", "offline", "unavailable", "recovery"], "denominator": 8, "measured": ["initial"] },
-    { "id": "route.missing", "path": "/no-such-place", "owner": ["web/src/shell/Shell.tsx"], "fixtureId": "fx.route.missing", "states": ["idle"], "denominator": 1, "measured": ["idle"] }
+    { "id": "route.missing", "path": "/no-such-place", "owner": ["web/src/App.tsx", "web/src/shell/manifest.ts"], "fixtureId": "fx.route.missing", "states": ["idle"], "denominator": 1, "measured": ["idle"] }
   ],
   "persistent": [
     { "id": "persistent.nav", "selector": ".nav", "owner": ["web/src/shell/Shell.tsx", "web/src/shell/manifest.ts"], "fixtureId": "fx.route.idle", "states": ["idle", "playing"], "denominator": 2, "measured": ["idle", "playing"] },

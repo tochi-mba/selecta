@@ -1,7 +1,6 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import inventory from '../../../docs/adr/mp-0272-surface-inventory.json' with { type: 'json' };
+import spec from '../../e2e/mp-baseline.mp.ts?raw';
 import { REGISTRY, type FlagId } from '../flags';
 import { ALIASES, parseRoute, pathOf } from '../router';
 import { DESTINATIONS, exploreTabs, workspaceTabs } from './manifest';
@@ -10,9 +9,13 @@ import { DESTINATIONS, exploreTabs, workspaceTabs } from './manifest';
  * state denominator in docs/adr/mp-0272-surface-inventory.json. A new page, tab, overlay or flag
  * surface without an entry fails here, so the inventory cannot quietly fall behind the source. */
 
-// vitest runs from web/, under jsdom, where import.meta.url is not a file URL
-const ROOT = resolve(process.cwd(), '..');
-const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
+// Every source file under web/src, as text, keyed the way the inventory names it (web/src/...).
+const SOURCES = Object.fromEntries(
+  Object.entries(import.meta.glob<string>(['../**/*.{ts,tsx}', '!../**/*.test.{ts,tsx}'], { query: '?raw', import: 'default', eager: true }))
+    .map(([key, text]) => [`web/src/${key.replace(/^\.\.\//, '').replace(/^\.\//, 'shell/')}`, text]),
+);
+const DRIVERS: Record<string, string> = { 'web/e2e/mp-baseline.mp.ts': spec };
+const read = (path: string) => SOURCES[path] ?? DRIVERS[path];
 
 type Entry = { id: string; owner: string | string[]; fixtureId: string; states: string[]; denominator: number; measured: string[]; flagSurface?: string };
 const routes = inventory.routes as (Entry & { path: string })[];
@@ -23,14 +26,6 @@ const everything: Entry[] = [...routes, ...persistent, ...overlays];
 const owners = (entry: Entry) => (Array.isArray(entry.owner) ? entry.owner : [entry.owner]);
 const routeKey = (path: string) => JSON.stringify(parseRoute(path));
 
-function sourceFiles(dir: string): string[] {
-  return readdirSync(join(ROOT, dir)).flatMap((name) => {
-    const path = `${dir}/${name}`;
-    if (statSync(join(ROOT, path)).isDirectory()) return sourceFiles(path);
-    return /\.tsx?$/.test(name) && !/\.test\./.test(name) ? [path] : [];
-  });
-}
-
 describe('MP-0272 surface inventory', () => {
   it('every entry names an owner that exists, a known fixture and an honest state denominator', () => {
     const ids = new Set<string>();
@@ -38,7 +33,7 @@ describe('MP-0272 surface inventory', () => {
       expect(ids.has(entry.id), `duplicate id ${entry.id}`).toBe(false);
       ids.add(entry.id);
       expect(owners(entry).length, entry.id).toBeGreaterThan(0);
-      for (const owner of owners(entry)) expect(existsSync(join(ROOT, owner)), `${entry.id} owner ${owner}`).toBe(true);
+      for (const owner of owners(entry)) expect(read(owner), `${entry.id} owner ${owner}`).toBeTypeOf('string');
       expect(fixtures[entry.fixtureId], `${entry.id} fixture ${entry.fixtureId}`).toBeDefined();
       expect(entry.states.length, entry.id).toBeGreaterThan(0);
       expect(entry.denominator, `${entry.id} denominator`).toBe(entry.states.length);
@@ -53,7 +48,7 @@ describe('MP-0272 surface inventory', () => {
         expect(fixture.gap, `${id} has no driver and no gap`).toBeTruthy();
         continue;
       }
-      expect(read(fixture.driver), `${fixture.driver} never names ${id}`).toContain(`'${id}'`);
+      expect(read(fixture.driver) ?? '', `${fixture.driver} never names ${id}`).toContain(`'${id}'`);
     }
     for (const entry of everything) {
       if (entry.measured.length) expect(fixtures[entry.fixtureId].driver, `${entry.id} claims measured states without a driver`).not.toBeNull();
@@ -83,16 +78,15 @@ describe('MP-0272 surface inventory', () => {
 
   it('covers every overlay the source opens', () => {
     const counted = new Map<string, number>();
-    for (const file of sourceFiles('web/src')) {
+    for (const [file, text] of Object.entries(SOURCES)) {
       if (inventory.outOfScope.some((scope) => file.startsWith(`${scope.path}/`))) continue;
-      const text = read(file);
       const opens = (text.match(/<(Dialog|Drawer|Workspace|Sheet)(\s|>|$)/gm) ?? []).length + (text.match(/role="alertdialog"/g) ?? []).length;
       if (opens) counted.set(file, opens);
     }
     expect(counted.size).toBeGreaterThan(5);
     for (const [file, opens] of counted) {
       const listed = overlays.filter((overlay) => owners(overlay).includes(file)).length;
-      expect(listed, `${relative(ROOT, join(ROOT, file))} opens ${opens} overlays, inventory lists ${listed}`).toBe(opens);
+      expect(listed, `${file} opens ${opens} overlays, inventory lists ${listed}`).toBe(opens);
     }
   });
 

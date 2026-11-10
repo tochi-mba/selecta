@@ -43,7 +43,7 @@ h2 { font-size: 1.1rem; margin: 0; }
 .hint { color: var(--soft); font-size: 0.9rem; margin: var(--space-dense) 0 0; }
 .warn { color: var(--warn); margin: var(--space-2) 0 0; }
 .notice { color: var(--soft); margin: var(--space-2) 0; }
-.lede { color: var(--soft); max-width: 62ch; margin: 0 0 var(--space-loose); }
+.lede { color: var(--soft); max-width: 62ch; margin: 0 0 var(--rhythm-group); }
 .eyebrow { font: 600 0.75rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); margin: 0 0 var(--space-dense); }
 .row { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
 .row.wrap { flex-wrap: wrap; }
@@ -232,7 +232,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .round { border-radius: 99px; width: 42px; height: 42px; padding: 0; flex: none; }
 
 .why-not { margin-top: var(--space-2); font-size: 0.88rem; color: var(--soft); }
-.why-not summary { cursor: pointer; }
+.why-not summary { cursor: pointer; min-height: 24px; } /* MP-0272 D-02: WCAG 2.5.8 minimum */
 .why-not ul { margin: var(--space-dense) 0 0; padding-left: var(--list-indent); }
 .steer { margin-top: var(--space-2); }
 
@@ -245,7 +245,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .hero { padding: var(--space-2) 0 var(--rhythm-group); border-bottom: 1px solid var(--line); margin-bottom: var(--space-5); }
 .hero .display { font-size: clamp(2.8rem, 10vw, 6rem); }
 .hero .lede { font-size: 1.1rem; }
-.section-title { font: 900 1.5rem var(--display); letter-spacing: -0.02em; margin: var(--space-6) 0 var(--space-1); }
+.section-title { font: 900 1.5rem var(--display); letter-spacing: -0.02em; margin: var(--rhythm-section) 0 var(--space-2); }
 .carry-on {
   display: flex;
   flex-wrap: wrap;
@@ -259,7 +259,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 }
 .carry-on h2 { font: 800 1.3rem var(--display); }
 .carry-on .eyebrow, .carry-on p { margin: 0; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: var(--space-3); margin-top: var(--space-cozy); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: var(--space-3); margin-top: var(--rhythm-related); }
 .card {
   background: var(--panel);
   border: 1px solid var(--line);

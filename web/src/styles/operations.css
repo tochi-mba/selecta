@@ -33,7 +33,9 @@
   font-weight: 650;
 }
 .library-column-head span:last-child { text-align: end; min-width: 200px; }
-.library-rows { gap: var(--row-gap); }
+/* MP-0272 D-01: one track that can shrink. Rows skip layout off screen (content-visibility) and keep
+   their last width, so an auto track held a 1280px layout's width after the window narrowed. */
+.library-rows { gap: var(--row-gap); grid-template-columns: minmax(0, 1fr); }
 .library-rows .song-row {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px);
   grid-template-areas: 'name facts readiness actions';
@@ -50,7 +52,7 @@
 .song-columns { grid-area: facts; display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-3); min-width: 0; }
 .song-why { margin: 0; font-size: var(--text-xs); overflow-wrap: anywhere; }
 :root[data-density='compact'] .song-why { display: none; }
-.library-rows .song-actions button { min-height: var(--control-height); }
+.library-rows .song-actions button { min-height: var(--control-height); min-width: var(--control-height); }
 /* Add and In the mix are the same button, so a row doesn't shift when one changes to the other */
 .library-rows .song-actions .song-add { min-width: 5.6em; }
 @media (max-width: 1024px) {

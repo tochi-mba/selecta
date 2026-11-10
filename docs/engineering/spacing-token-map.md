@@ -74,7 +74,7 @@ Compact applies only inside `.density` (Library rows, the editor timeline, My Mi
 | `--row-pad` | 12px | 8px | 8px |
 | `--row-gap` | 8px | 4px | 4px |
 
-Song titles stay at least 14px and metadata at least 12px. Every control in a compact row is at least 24px on a fine pointer (WCAG 2.5.8) and at least 44px on touch.
+Song titles stay at least 14px and metadata at least 12px. Every control in a compact row is at least 24px on a fine pointer (WCAG 2.5.8) and at least 44px on touch; Library row actions are also at least `--control-height` wide, so an icon-only action is square.
 
 ## End-of-page clearance (MP-0273-07)
 

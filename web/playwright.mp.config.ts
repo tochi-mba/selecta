@@ -11,12 +11,14 @@ export default defineConfig({
   ...base,
   testMatch: '**/*.mp.ts',
   testIgnore: [],
+  // its own folder: another spec's run empties test-results, and these files feed the register check
+  outputDir: './mp-results',
   use: { ...base.use, baseURL: `http://127.0.0.1:${port}` },
   webServer: {
     command: `${python} ../tests/e2e_server.py ${port}`,
     url: `http://127.0.0.1:${port}/api/status`,
     reuseExistingServer: false,
-    timeout: 180_000,
+    timeout: 300_000, // twenty synthesized songs on a busy 4-core laptop
     stdout: 'ignore',
     stderr: 'pipe',
     env: { SELECTA_E2E_STRESS: '1' },
