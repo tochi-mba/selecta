@@ -148,11 +148,12 @@ def list_grants(
 def revoke_grant(conn: Connection, actor: Actor, grant_id: str, *, reason: str) -> AccessGrant:
     """End a grant early. Its holder may always; others need the approving permission."""
     grant = get_grant(conn, grant_id)
-    if grant.revoked_at is not None:
-        return grant
     resource = content_resource(grant.workspace_id, grant.support_case_id)
     if actor.user_id != grant.staff_user_id:
+        # Checked first, so a grant you may not touch is denied whatever its state.
         authorize(conn, actor, "support.content_access.approve", resource)
+    if grant.revoked_at is not None:
+        return grant
     conn.execute(
         access_grants.update()
         .where(access_grants.c.id == grant.id)

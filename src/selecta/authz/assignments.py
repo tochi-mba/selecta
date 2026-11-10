@@ -157,11 +157,12 @@ def revoke_assignment(
 ) -> Assignment:
     """Take a role away at once. Owner rows need `security.owners.assign` and a remaining Owner."""
     assignment = get_assignment(conn, assignment_id)
-    if assignment.revoked_at is not None:
-        return assignment
     is_owner = assignment.role is StaffRole.OWNER
     permission = "security.owners.assign" if is_owner else "security.roles.assign"
+    # Check first, so asking about an assignment you may not touch is denied whatever its state.
     authorize(conn, actor, permission, _resource(assignment.user_id))
+    if assignment.revoked_at is not None:
+        return assignment
     if is_owner:
         ensure_not_last_owner(conn, assignment.user_id, assignment_id=assignment.id)
     conn.execute(
