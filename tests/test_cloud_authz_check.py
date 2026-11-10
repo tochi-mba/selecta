@@ -27,6 +27,7 @@ from test_cloud_authz_kit import (
 from selecta.authz import check
 from selecta.authz.check import (
     CLOCK_LEEWAY,
+    MFA_BEFORE_SESSION_SECONDS,
     STAFF_SESSION_SECONDS,
     AccessGrant,
     Assignment,
@@ -41,6 +42,7 @@ from selecta.authz.errors import Forbidden, SelfApproval, StepUpRequired, Unknow
 from selecta.authz.permissions import PERMISSIONS
 from selecta.authz.roles import ROLE_PERMISSIONS, StaffRole
 from selecta.authz.scopes import PLATFORM_RESOURCE, ResourceRef, Scope
+from selecta.identity import privileged
 from selecta.persistence import db_now
 
 SENSITIVE = "accounts.suspend"  # audited, no step-up
@@ -173,6 +175,30 @@ def test_an_mfa_time_in_the_future_is_refused(db):
     assert error.reason == "MFA time is in the future"
     assert not isinstance(error, StepUpRequired)
     assert authorize(db, session(db, user, mfa_at=now + CLOCK_LEEWAY / 2), "jobs.read")
+
+
+def test_an_mfa_from_before_the_session_began_does_not_count(db):
+    # It belongs to an earlier session, so this session never had MFA of its own.
+    now = db_now(db)
+    user = staff(db)
+    stale = now - 60 - MFA_BEFORE_SESSION_SECONDS - CLOCK_LEEWAY - 1
+    actor = session(db, user, age=60, mfa_at=stale)
+    error = deny_reason(db, actor, "jobs.read")
+    assert isinstance(error, StepUpRequired)
+    assert error.reason == "MFA is from an earlier session"
+    assert error.max_age == STAFF_SESSION_SECONDS
+
+
+def test_the_sign_in_mfa_that_started_the_session_counts(db):
+    # An admin session starts from a sign-in at most five minutes old, and that sign-in is its MFA
+    # (identity.privileged.start), so the MFA may precede the session by that much.
+    assert MFA_BEFORE_SESSION_SECONDS == privileged.FRESH_SIGN_IN_SECONDS
+    now = db_now(db)
+    user = staff(db)
+    actor = session(db, user, age=0, mfa_at=now - MFA_BEFORE_SESSION_SECONDS)
+    assert authorize(db, actor, "jobs.read")
+    stepped_up = session(db, user, age=1800, mfa_at=now - 10)
+    assert authorize(db, stepped_up, "jobs.read")
 
 
 def test_a_session_issued_before_the_last_revocation_is_denied(db):

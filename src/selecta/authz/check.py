@@ -3,7 +3,8 @@
 `authorize()` denies by default. It allows only when all of these hold:
 
 1. The actor is a live user with a staff session: started with MFA, at most an hour long, not yet
-   expired, and not older than their last "sign out everywhere".
+   expired, and not older than their last "sign out everywhere". An MFA from before the session
+   began (beyond the sign-in that started it) belongs to an earlier session and doesn't count.
 2. The MFA is fresh enough when the permission is dangerous (five minutes) or the caller asks for
    a tighter window.
 3. An active assignment (not revoked, not expired) gives the actor a role whose bundle holds the
@@ -43,6 +44,9 @@ from selecta.persistence import db_now
 
 STAFF_SESSION_SECONDS = 3600
 CLOCK_LEEWAY = 60
+# An admin session starts from a sign-in at most this old, and that sign-in is its MFA
+# (`identity.privileged.FRESH_SIGN_IN_SECONDS`). An earlier MFA belongs to another session.
+MFA_BEFORE_SESSION_SECONDS = 300
 
 __all__ = [
     "AccessGrant",
@@ -365,6 +369,17 @@ def authorize(
     if actor.mfa_at > now + CLOCK_LEEWAY:
         # A time from the future would count as fresh forever.
         _deny(conn, actor, permission, resource, "MFA time is in the future")
+    started = actor.session_issued_at
+    assert started is not None  # `_session_problem` refuses a session without a start time
+    if started - actor.mfa_at > MFA_BEFORE_SESSION_SECONDS + CLOCK_LEEWAY:
+        _deny(
+            conn,
+            actor,
+            permission,
+            resource,
+            "MFA is from an earlier session",
+            step_up=STAFF_SESSION_SECONDS,
+        )
     window = _freshness(perm, fresh_mfa_seconds)
     if window is not None and now - actor.mfa_at > window:
         _deny(conn, actor, permission, resource, "MFA isn't fresh enough", step_up=window)

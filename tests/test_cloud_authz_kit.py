@@ -106,12 +106,15 @@ def session(
     user_id: str,
     *,
     mfa_age: float = 0.0,
-    age: float = 0.0,
+    age: float | None = None,
     **overrides: Any,
 ) -> Actor:
-    """A valid one-hour staff session that started `age` seconds ago, MFA `mfa_age` seconds ago."""
+    """A valid one-hour staff session that started `age` seconds ago, MFA `mfa_age` seconds ago.
+
+    Without `age`, the session started with that MFA, as a real admin session does.
+    """
     now = db_now(conn)
-    issued = now - age
+    issued = now - (mfa_age if age is None else age)
     actor = Actor(
         user_id=user_id,
         staff_session_id=f"staff-session-{user_id}",
