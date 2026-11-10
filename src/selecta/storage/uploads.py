@@ -62,6 +62,7 @@ PART_URL_TTL = MAX_URL_TTL
 MAX_BATCH = 500
 MAX_PRESIGN_BATCH = 100
 MAX_ERROR_LENGTH = 500
+EXPIRED_REASON = "This upload took too long and expired; please upload the file again."
 # R2 errors at completion that mean the parts themselves are wrong, not that R2 is unwell.
 BAD_PARTS = frozenset({"InvalidPart", "InvalidPartOrder", "EntityTooSmall", "EntityTooLarge"})
 FORMAT_TYPES = {
@@ -383,6 +384,9 @@ class Uploads:
             return Outcome(session, asset_id=session.id)
         if session.status is Status.COMPLETED or session.status in ENDED:
             return Outcome(session)
+        if session.expires_at <= db_now(conn):
+            # Its reservation has run out with it (spec 5.3), so it can't become an asset now.
+            return self._finish(conn, session, Status.EXPIRED, EXPIRED_REASON)
         if session.status is Status.PLANNED or not session.upload_id:
             return self._finish(conn, session, Status.ABORTED, "No data arrived for this file.")
         bucket, key = self.buckets.staging, session.staging_key
@@ -559,9 +563,8 @@ class Uploads:
             .limit(limit)
         )
         rows = conn.execute(query).mappings().all()
-        reason = "This upload took too long and expired; please upload the file again."
         for row in rows:
-            self._finish(conn, UploadSession.from_row(row), Status.EXPIRED, reason)
+            self._finish(conn, UploadSession.from_row(row), Status.EXPIRED, EXPIRED_REASON)
         return len(rows)
 
     # -- plumbing ---------------------------------------------------------------------------
