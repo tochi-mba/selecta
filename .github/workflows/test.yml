@@ -130,6 +130,11 @@ jobs:
     env:
       CI: "true"
       SELECTA_TEST_POSTGRES_URL: postgresql+psycopg://selecta:selecta@localhost:5432/selecta_test
+      # MinIO, an S3 server, for the object-storage adapter's integration tests
+      # (tests/test_cloud_storage_minio.py). Throwaway credentials for a throwaway container.
+      SELECTA_TEST_S3_ENDPOINT: http://localhost:9000
+      SELECTA_TEST_S3_ACCESS_KEY: selecta-minio
+      SELECTA_TEST_S3_SECRET_KEY: selecta-minio-secret
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -141,6 +146,21 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: uv sync --locked
+      - name: Start MinIO
+        # A service container can't be given `server /data`, so it's started here instead.
+        # The site region is R2's `auto`, the region our requests are signed for.
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER="$SELECTA_TEST_S3_ACCESS_KEY" \
+            -e MINIO_ROOT_PASSWORD="$SELECTA_TEST_S3_SECRET_KEY" \
+            -e MINIO_SITE_REGION=auto \
+            minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:9000/minio/health/live > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker logs minio
+          exit 1
       - name: Cloud tests on SQLite and PostgreSQL, with branch coverage
         env:
           SELECTA_TEST_SHARD: ${{ matrix.shard }}/3

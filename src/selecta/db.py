@@ -12,6 +12,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from selecta import local_upgrade
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS songs (
     id INTEGER PRIMARY KEY,
@@ -161,6 +163,8 @@ def connect(path: Path) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    # an older library is copied aside before any step below changes it (core.upgrade_backup)
+    local_upgrade.backup_before_migrating(conn, path)
     conn.executescript(SCHEMA)
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(songs)")}
     if "processing_priority" not in columns:
@@ -200,6 +204,7 @@ def connect(path: Path) -> sqlite3.Connection:
         )
     if legacy:
         conn.commit()
+    local_upgrade.mark_migrated(conn)
     return conn
 
 

@@ -24,6 +24,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `core.local_server` | **Local server.** The server on this computer: its status, the local-only checks and the one data folder. **Core:** Everything else talks to it. |  |
+| `core.upgrade_backup` | **Backup before upgrade.** The first time a newer Selecta opens a library, it keeps a copy of the library's database before changing its tables. **Core:** An upgrade must never be the thing that loses a library. |  |
 | `core.library` | **Library.** Reading a music folder, setting aside what isn't music, and the Library page with search, filters and sorting. **Core:** Without songs there is nothing to play. |  |
 | `core.analysis` | **Analysis.** Beats, downbeats, key, tempo and energy for every song, in the background. **Core:** A mix can only be planned from analysed songs. |  |
 | `core.playback` | **Playback.** The Listen page, the player, gapless audio, what's coming up, and rendering the transitions it plays. **Core:** Selecta is for listening. |  |

@@ -8,6 +8,12 @@
       "routes": ["GET /api/status", "GET /api/ready"],
       "cli": ["web", "gather-data", "flags"]
     },
+    "core.upgrade_backup": {
+      "label": "Backup before upgrade",
+      "about": "The first time a newer Selecta opens a library, it keeps a copy of the library's database before changing its tables.",
+      "core": "An upgrade must never be the thing that loses a library.",
+      "modes": ["local"]
+    },
     "core.library": {
       "label": "Library",
       "about": "Reading a music folder, setting aside what isn't music, and the Library page with search, filters and sorting.",

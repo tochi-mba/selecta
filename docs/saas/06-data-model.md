@@ -42,7 +42,9 @@
 
 Local users keep their SQLite file; Alembic upgrades it in place (with an automatic backup first, reusing `backup.py`).
 
-**Not built yet.** The local app does not run the shared migrations today: its start-up keeps the original hand-made SQLite schema (`db.connect`, `lucy/schema.py` and the other local tables), and `selecta db upgrade` refuses anything but PostgreSQL. So there is nothing yet to back up before. Wiring the migrations into local start would add the shared tables and an `alembic_version` table to every local library file, so it waits for the local modules to move onto the shared schema, and the backup-then-migrate step lands with it.
+**Built for the local schema.** The local app keeps its own hand-made SQLite schema (`db.SCHEMA` and the start-up steps in `db.connect` that add columns and move old rows). Each library file records the local schema it is on in SQLite's `user_version`. The first time a newer Selecta opens an older library, `local_upgrade.backup_before_migrating` copies the file (SQLite's online backup, so the WAL is included) to `upgrade-backups/` beside it and checks the copy's integrity, and only then do the start-up steps change it; if the copy fails, the file is left untouched and the start stops. The last five copies are kept. Flag: `core.upgrade_backup`. Test: `tests/test_local_upgrade.py`, from a library built with the schema of commit 7b51a70.
+
+The shared Alembic migrations still don't run on local files (`selecta db upgrade` refuses anything but PostgreSQL): that would add the shared tables and an `alembic_version` table to every local library, so it waits for the local modules to move onto the shared schema, and will reuse this backup step when it does.
 
 A one-way "move my local library to Selecta Cloud" tool is a later feature (it would upload files through the normal pipeline, not copy databases).
 
