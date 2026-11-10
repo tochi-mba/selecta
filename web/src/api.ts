@@ -174,6 +174,8 @@ export type VibeCard = {
   tempo: [number, number] | null;
   moves: string;
   seconds: number;
+  /** GP-0259-07: the measured song facts this idea chooses by; older servers omit it */
+  basis?: string[];
 };
 
 export type Suggestion = {
@@ -202,13 +204,25 @@ export type Storage = {
 export class ApiError extends Error {
   status: number;
   code: string;
+  /** T0244: the request's own operation id, the same one Diagnostics lists beside its outcome. */
+  operation: string;
 
-  constructor(message: string, status: number, code = '') {
+  constructor(message: string, status: number, code = '', operation = '') {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.operation = operation;
   }
+}
+
+/** The operation id a request was sent with, if it had one. */
+function operationOf(init?: RequestInit): string {
+  const headers = init?.headers;
+  if (!headers) return '';
+  if (headers instanceof Headers) return headers.get('x-operation-id') ?? '';
+  if (Array.isArray(headers)) return headers.find(([name]) => name.toLowerCase() === 'x-operation-id')?.[1] ?? '';
+  return (headers as Record<string, string>)['x-operation-id'] ?? '';
 }
 
 /** What a stopped server looks like to someone using the app, wherever it comes up. It doesn't say
@@ -250,7 +264,7 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* the status text will do */
     }
-    throw new ApiError(detail, response.status, code);
+    throw new ApiError(detail, response.status, code, operationOf(init));
   }
   return await response.json();
   } catch (error) {

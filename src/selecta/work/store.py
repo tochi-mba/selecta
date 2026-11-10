@@ -22,6 +22,7 @@ from typing import Any, Protocol
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
+from selecta.observability import tracing
 from selecta.persistence import db_now, new_id, transaction
 from selecta.scheduling import admission
 from selecta.scheduling.policy import Lane, PolicyConfig, WorkerCaps
@@ -71,6 +72,9 @@ class TermFence(Protocol):
 
 
 class JobStore:
+    trace_service = "api"
+    """Which service this store's job spans name (the gateway sets "gateway"; ADR-0410)."""
+
     def __init__(
         self,
         engine: Engine,
@@ -181,8 +185,14 @@ class JobStore:
     # --- producers ---
 
     def enqueue(self, spec: JobSpec) -> Enqueued:
+        started = tracing.now_ns()
         with self._tx(spec.workspace_id, heads_first=True) as (connection, now):
-            return enqueue.enqueue(connection, spec, now)
+            made = enqueue.enqueue(connection, spec, now)
+        tracing.record_job_span(
+            "job.enqueue", made.job.id, started, service=self.trace_service,
+            **{"selecta.job_type": made.job.type, "selecta.created": made.created},
+        )
+        return made
 
     def add_dependency(self, workspace_id: str, job_id: str, depends_on: str) -> Job:
         with self._tx(workspace_id, heads_first=True) as (connection, now):
@@ -321,10 +331,15 @@ class JobStore:
 
     def claim(self, pool: str, caps: WorkerCaps) -> Claim | None:
         """The next job this worker should run in this pool, or None if nothing is eligible."""
+        started = tracing.now_ns()
         with self._tx() as (connection, now):
             claimed = claims.ClaimSession(connection, self, pool, caps, now).run()
         if claimed is not None:
             self._remember(claimed.attempt_id, claimed.job.workspace_id)
+            tracing.record_job_span(
+                "job.claim", claimed.job.id, started, service=self.trace_service,
+                **{"selecta.attempt_id": claimed.attempt_id, "selecta.pool": pool},
+            )
         return claimed
 
     def start(self, attempt_id: str, token: int) -> Job:
@@ -385,11 +400,17 @@ class JobStore:
             if size > self.config.max_result_bytes:
                 raise ResultTooLarge(f"The results are {size} bytes; store them as artifacts.")
         outputs = tuple(artifacts)
+        started = tracing.now_ns()
         with self._tx(self._workspace_of(attempt_id), heads_first=True) as (connection, now):
             job, problem = lifecycle.complete(
                 connection, self, attempt_id, token, result, outputs, cost_s, now
             )
         self._forget(attempt_id)
+        tracing.record_job_span(
+            "job.complete", getattr(job, "id", ""), started, service=self.trace_service,
+            **{"selecta.attempt_id": attempt_id, "selecta.state": str(getattr(job, "state", "")),
+               "selecta.artifacts": len(outputs)},
+        )
         if problem is not None:
             raise problem
         return job
@@ -402,11 +423,16 @@ class JobStore:
         detail: str = "",
         cost_s: float | None = None,
     ) -> Job:
+        started = tracing.now_ns()
         with self._tx(self._workspace_of(attempt_id), heads_first=True) as (connection, now):
             job = lifecycle.fail(
                 connection, self, attempt_id, token, error_class, detail, cost_s, now
             )
         self._forget(attempt_id)
+        tracing.record_job_span(
+            "job.fail", getattr(job, "id", ""), started, service=self.trace_service,
+            **{"selecta.attempt_id": attempt_id, "selecta.error_class": str(error_class)},
+        )
         return job
 
     def release(self, attempt_id: str, token: int, cost_s: float | None = None) -> Job:

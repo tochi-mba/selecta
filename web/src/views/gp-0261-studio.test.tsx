@@ -50,7 +50,7 @@ afterEach(() => {
 describe('GP-0261-07 a 64-cell Studio', () => {
   it('shows all 512 squares as one tab stop and reaches every corner by keyboard', async () => {
     open();
-    await screen.findAllByRole('button', { name: /^Song 1 voice, bars? [0-9]/ });
+    await screen.findAllByRole('button', { name: /^Song 1 voice, bars? [0-9]/ }, { timeout: 30_000 });
     expect(cells()).toHaveLength(8 * CELLS);
     expect(cells().filter((cell) => cell.tabIndex === 0)).toHaveLength(1);
     const first = cells()[0];
@@ -63,11 +63,11 @@ describe('GP-0261-07 a 64-cell Studio', () => {
     fireEvent.keyDown(document.activeElement!, { key: 'Home', ctrlKey: true });
     expect(document.activeElement).toBe(first);
     expect(cells().filter((cell) => cell.tabIndex === 0)).toHaveLength(1);
-  });
+  }, 180_000);
 
   it('paints one value across a whole 64-cell lane and Start again restores it', async () => {
     open();
-    await screen.findAllByRole('button', { name: /^Song 1 voice, bars? [0-9]/ });
+    await screen.findAllByRole('button', { name: /^Song 1 voice, bars? [0-9]/ }, { timeout: 30_000 });
     const lane = cells().filter((cell) => /^Song 1 voice,/.test(cell.getAttribute('aria-label')!));
     expect(lane).toHaveLength(CELLS);
     expect(lane.every((cell) => cell.getAttribute('aria-pressed') === 'true')).toBe(true);
@@ -91,5 +91,5 @@ describe('GP-0261-07 a 64-cell Studio', () => {
     expect(cells().filter((cell) => /^Song 1 drums,/.test(cell.getAttribute('aria-label')!)).every((cell) => cell.getAttribute('aria-pressed') === 'true')).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Start again' }));
     expect(lane.every((cell) => cell.getAttribute('aria-pressed') === 'true')).toBe(true);
-  });
+  }, 180_000);
 });

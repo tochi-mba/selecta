@@ -1,14 +1,14 @@
 # ADR-0061: Word connections and four-stage harmonic discovery
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 8 of 8 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0019, ADR-0042
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0061-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Place Word Connections and Harmonic Matches under Explore, with their own focuse
 
 - A result's musical-fit rating is separate from renderer failures. The UI must never claim a successful connection solely because detection produced a candidate.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0061-01 - Not started.** Rebuild Word Connections browse hierarchy around readable shared lyric phrase and two source tracks.
-2. **S3-0061-02 - Not started.** Preserve available transition moves, preparation, preview, fallback and exact audio-version status.
-3. **S3-0061-03 - Not started.** Design clear approve/rate/add-pair actions with current/draft target and atomic insertion.
-4. **S3-0061-04 - Not started.** Retain failed or poor connection access with accurate reasons, not fabricated quality judgments.
-5. **S3-0061-05 - Not started.** Rebuild harmonic four-stage audition flow with obvious current stage and playback state.
-6. **S3-0061-06 - Not started.** Preserve Yes/No/Skip, editable judgments, failure recovery, study-like non-overlap and submission persistence.
-7. **S3-0061-07 - Not started.** Test discovery filtering, long international lyrics, pairs changing during render and draft target changes.
-8. **S3-0061-08 - Not started.** Keep Search/Explore return navigation and deep links stable.
+1. **S3-0061-01 - Implemented.** Rebuild Word Connections browse hierarchy around readable shared lyric phrase and two source tracks. **Evidence:** web/src/views/Links.tsx phrase heading with both songs and lines; web/src/views/Links.test.tsx 'shows the whole phrase in its own direction, and a search shows only what matches' and 'says there’s nothing yet when there is nothing to show' (passed 2026-11-10).
+2. **S3-0061-02 - Implemented.** Preserve available transition moves, preparation, preview, fallback and exact audio-version status. **Evidence:** web/src/views/Links.test.tsx 'goes in as one thing, so half of it can’t be left behind'; tests/test_wordplay.py (whole file, synthetic audio for each word move) (passed 2026-11-10).
+3. **S3-0061-03 - Implemented.** Design clear approve/rate/add-pair actions with current/draft target and atomic insertion. **Evidence:** web/src/views/Links.test.tsx 'goes in as one thing, so half of it can’t be left behind' and 'can go in a draft instead, and leaves what’s playing alone' (passed 2026-11-10).
+4. **S3-0061-04 - Implemented.** Retain failed or poor connection access with accurate reasons, not fabricated quality judgments. **Evidence:** web/src/views/Links.test.tsx 'says so when a pair cannot be played, and you can still answer' and 'can’t load isn’t the same as nothing there' (passed 2026-11-10).
+5. **S3-0061-05 - Implemented.** Rebuild harmonic four-stage audition flow with obvious current stage and playback state. **Evidence:** web/src/views/Links.test.tsx 'plays what it detected in one press: the chords, each song, then both', 'shows the chords it read and lights the one being played', 'lets you jump to any step' and 'never calls a requested harmonic stage playing until the media element starts' (passed 2026-11-10).
+6. **S3-0061-06 - Implemented.** Preserve Yes/No/Skip, editable judgments, failure recovery, study-like non-overlap and submission persistence. **Evidence:** web/src/views/Links.test.tsx 'answering moves straight on to the next pair, and keeps playing', 'skipping puts a pair at the back without answering it', 'keeps answers out of the way, and they can be changed', 'pauses the mix when it starts playing' and 'stopping really stops, and answering afterwards does not start it again' (passed 2026-11-10).
+7. **S3-0061-07 - Implemented.** Test discovery filtering, long international lyrics, pairs changing during render and draft target changes. **Evidence:** web/src/views/Links.test.tsx 'shows the whole phrase in its own direction, and a search shows only what matches', 'never plays an obsolete prepared audition after the user skips that pair' and 'can go in a draft instead, and leaves what’s playing alone' (passed 2026-11-10).
+8. **S3-0061-08 - Implemented.** Keep Search/Explore return navigation and deep links stable. **Evidence:** web/src/router.ts /discover, /discover/harmonic and /explore aliases; web/src/views/Links.test.tsx 'each have their own address'; web/e2e/pages.e2e.ts 'Back and Forward go where they should' (passed 2026-11-10).
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (8/8) | Task-by-task evidence on each item; 0 need a person, 0 still open |
 
 ## References
 

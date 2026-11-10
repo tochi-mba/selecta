@@ -5,7 +5,9 @@
 - **Scope:** Documentation only. Neither source, tests, CI nor user interface have been changed.
 - **Historical note:** PRs #25 and #26 have merged. Older 3.1 status headings may be stale and do not authorize retroactive completion of S3/S31 tasks.
 
-## Per-task evidence slots - no evidence yet
+## Per-task evidence slots
+
+Implementation status and automated evidence were reconciled task by task on 2026-11-10. Verified stays No until an independent reviewer records real acceptance.
 
 | Task | Implementation | Verified | Implementing PR / commit | Automated & adversarial tests | Visual/theme | Human/AT/audio/performance | Owner |
 |---|---|---|---|---|---|---|---|

@@ -1,7 +1,7 @@
 # ADR-0079: Unify typography, themes, visual rhythm and CSS ownership
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
+- **Implementation status:** In progress: 5 Implemented (automated), 3 In progress, 2 need a person only (2026-11-10 reconciliation); 0/10 Verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 1 - design foundations
@@ -23,16 +23,16 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0079-01 - Approve visual hierarchy for page, song, metadata and technical values.** Acceptance: Screens use a documented typographic scale; long/RTL/missing song metadata remains readable.
-2. **S31-0079-02 - Specify semantic colour role mapping for both themes.** Acceptance: Buttons, links, statuses, playback, requests, caution, focus and selections preserve contrast and meaning in light/dark.
-3. **S31-0079-03 - Audit existing CSS cascade and overlapping selectors.** Acceptance: Ownership map names each rule's canonical file; proposals identify obsolete overrides without changing code in this PR.
-4. **S31-0079-04 - Standardize spacing, gutters, radii, separators and depth.** Acceptance: Listen, browse, work, panel, dialog and toast examples use a reviewed common rhythm with justified exceptions.
-5. **S31-0079-05 - Standardize SVG icon dimensions, stroke and accessible names.** Acceptance: All core actions have consistent icon alignment, discernible names and non-glyph fallback behaviour.
-6. **S31-0079-06 - Review button, input, checkbox, tab, menu and status variants.** Acceptance: Control gallery covers default, hover, focus, pressed, busy, disabled, failure and destructive states.
-7. **S31-0079-07 - Review light/dark/system theme and first-paint transitions.** Acceptance: No theme flash, incorrect title-bar colour, unreadable lime text, or unexpected audio reaction on switch.
-8. **S31-0079-08 - Audit visible numerical values and truncation.** Acceptance: BPM, keys, durations, counts, storage, waveforms and titles align and remain understandable.
-9. **S31-0079-09 - Review screen composition at every density and content width.** Acceptance: No arbitrary giant heading, excessive dead space, clipping or giant unstructured action clusters in representative screenshots.
-10. **S31-0079-10 - Approve visual regression fixtures and change-review rules.** Acceptance: Reviewed baselines exist for representative pages and state changes; no blind snapshot acceptance.
+1. **S31-0079-01 - Approve visual hierarchy for page, song, metadata and technical values.** Acceptance: Screens use a documented typographic scale; long/RTL/missing song metadata remains readable. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/styles/typography.test.ts`; `web/src/views/Mix.test.tsx` ("keeps duplicate, RTL and CJK song names readable"); `web/e2e/finishing.e2e.ts` ("long, right-to-left and duplicate names stay readable and whole at the smallest size") passed. **Needs a person:** visual approval of the hierarchy in both themes.
+2. **S31-0079-02 - Specify semantic colour role mapping for both themes.** Acceptance: Buttons, links, statuses, playback, requests, caution, focus and selections preserve contrast and meaning in light/dark. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/styles/tokens.css` semantic roles for both themes; `web/src/ui/controls.test.tsx` ("never rely on colour alone") passed. **Needs a person:** contrast and meaning review of every role in light and dark by a named reviewer.
+3. **S31-0079-03 - Audit existing CSS cascade and overlapping selectors.** Acceptance: Ownership map names each rule's canonical file; proposals identify obsolete overrides without changing code in this PR. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `docs/adr/completion/css-ownership.md` names each file's owner and `web/src/styles/css-ownership.test.ts` guards it; on 2026-11-10 its `.card`/`.panel` rows failed because a concurrent edit took those selectors out of `styles/depth.css` without updating the register. **Needs a person:** owner review for Verified of the ownership map once the register is green again.
+4. **S31-0079-04 - Standardize spacing, gutters, radii, separators and depth.** Acceptance: Listen, browse, work, panel, dialog and toast examples use a reviewed common rhythm with justified exceptions. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `docs/engineering/spacing-token-map.md`; `web/src/styles/spacing-tokens.test.ts`, `surface-depth.test.ts`, `optical-alignment.test.ts` passed. **Needs a person:** reviewer approves the common rhythm and its justified exceptions.
+5. **S31-0079-05 - Standardize SVG icon dimensions, stroke and accessible names.** Acceptance: All core actions have consistent icon alignment, discernible names and non-glyph fallback behaviour. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `docs/engineering/icon-inventory.md`; `web/src/styles/icon-geometry.test.ts`, `web/src/ui/destructiveIcons.test.ts` passed. **Needs a person:** owner review for Verified of icon alignment.
+6. **S31-0079-06 - Review button, input, checkbox, tab, menu and status variants.** Acceptance: Control gallery covers default, hover, focus, pressed, busy, disabled, failure and destructive states. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `web/src/ui/controls.test.tsx` covers busy, pressed, disabled, failure and retry states (passed); no single control gallery page exists. **Needs a person:** a reviewed gallery of every control state in both themes.
+7. **S31-0079-07 - Review light/dark/system theme and first-paint transitions.** Acceptance: No theme flash, incorrect title-bar colour, unreadable lime text, or unexpected audio reaction on switch. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("changing the theme while playing starts nothing again, and the title bar follows", "a manual theme and browser chrome agree before app JavaScript") passed. **Needs a person:** visual check of first paint and title bar on a real installed browser.
+8. **S31-0079-08 - Audit visible numerical values and truncation.** Acceptance: BPM, keys, durations, counts, storage, waveforms and titles align and remain understandable. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `web/src/audio/transportWords.test.tsx` (never reads NaN), `web/src/lib.test.ts` (storage parts add up), `web/src/shell/Shell.test.tsx` (non-finite timing) passed. **Needs a person:** visual review of BPM, key, duration, count and waveform alignment.
+9. **S31-0079-09 - Review screen composition at every density and content width.** Acceptance: No arbitrary giant heading, excessive dead space, clipping or giant unstructured action clusters in representative screenshots. **Status (2026-11-10):** Not Verified. **Needs a person:** review representative screenshots at every density for dead space, clipping and action clusters.
+10. **S31-0079-10 - Approve visual regression fixtures and change-review rules.** Acceptance: Reviewed baselines exist for representative pages and state changes; no blind snapshot acceptance. **Status (2026-11-10):** Not Verified. **Evidence:** Candidate capture exists (`web/e2e/visual.e2e.ts`, `selecta-3-1-visual-review.md`). **Needs a person:** owner approves baselines and the change-review rule.
 
 ## Required adverse cases and evidence
 
@@ -56,6 +56,7 @@ The owner accepted this decision on 2026-11-08. Every S31 task remains **Not sta
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Original documentation-only finishing plan |\n| 2026-11-07 | Proposed | In progress | Selected UI/test code now on PR #25; complete verification still outstanding |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress | Every task re-checked against current code; 5 Implemented (automated), 3 In progress, 2 need a person only (2026-11-10 reconciliation); focused Vitest, pytest and Edge runs named per task; 0/10 Verified |
 
 ## Related documents
 

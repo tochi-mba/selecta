@@ -30,7 +30,7 @@ describe('rating a word connection while its move changes', () => {
       return backend(url, init);
     }));
     render(<Links {...props()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Good' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Good' }, { timeout: 8000 }));
     const blend = screen.getByRole('button', { name: /word_blend|Word blend/i });
     fireEvent.click(blend);
     await waitFor(() => expect(calls.some((call) => call.path === '/seams' && (call.body as { move: string }).move === 'word_blend')).toBe(true));

@@ -440,3 +440,18 @@ describe('LX-0343-04, LX-0342-08 nothing unapproved is offered', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
   });
 });
+
+describe('LX-0340-05 a title shared by different artists never gives two recordings the same button name', () => {
+  it('names the artist when only the title is shared, and the ID when title and artist are', async () => {
+    fakeBackend({ 'GET /library': page(
+      row(1, 'Same', { artist: 'Ann' }), row(2, 'Same', { artist: 'Bo' }),
+      row(3, 'Twin', { artist: 'Cy' }), row(4, 'Twin', { artist: 'Cy' }), row(5, 'Alone'),
+    ) });
+    show();
+    await screen.findByText('Alone');
+    const names = [...document.querySelectorAll('.song-open')].map((node) => node.getAttribute('aria-label'));
+    expect(names).toEqual(['Details for Same by Ann', 'Details for Same by Bo', 'Details for Twin (song 3)', 'Details for Twin (song 4)', 'Details for Alone']);
+    expect(new Set(names).size).toBe(names.length);
+    expect(screen.getByRole('button', { name: 'More actions for Same by Bo' })).toBeInTheDocument();
+  });
+});

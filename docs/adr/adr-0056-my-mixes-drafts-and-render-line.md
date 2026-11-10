@@ -1,14 +1,14 @@
 # ADR-0056: My Mixes workspace, safe drafts, restoration and render priority
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 8 of 8 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 3 - Core journeys
 - **Extends existing decisions:** ADR-0012, ADR-0038
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0056-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Establish My Mixes as the permanent home for a distinguished current set, saved 
 
 - Background saves are reported honestly. A saved but unrendered mix cannot be called fully playable merely because edits persisted. Sorting or compact layout must not mutate scheduler priority accidentally.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0056-01 - Not started.** Design prominent current-mix summary separate from all draft project cards.
-2. **S3-0056-02 - Not started.** Move secondary draft actions into accessible menus with labels and non-hover entry.
-3. **S3-0056-03 - Not started.** Define draft saved, saving, failed-save, render pending, ready and missing-track states.
-4. **S3-0056-04 - Not started.** Preserve create, copy, rename, delete, undo restore, play swap, render priority/order and draft-first editing.
-5. **S3-0056-05 - Not started.** Improve queue position explanation and distinguish processing order from music order.
-6. **S3-0056-06 - Not started.** Provide scoped Undo after navigation, including multi-operation draft changes.
-7. **S3-0056-07 - Not started.** Add task-oriented empty states and long/duplicate-name handling.
-8. **S3-0056-08 - Not started.** Validate reload, browser history, concurrent requests and draft deletion during open edit.
+1. **S3-0056-01 - Implemented.** Design prominent current-mix summary separate from all draft project cards. **Evidence:** web/src/views/CurrentMix.test.tsx 'tracks the exact returned song order without adding an audio action'; web/src/views/Drafts.test.tsx 'plays, and opens for editing, from the list' (passed 2026-11-10).
+2. **S3-0056-02 - Implemented.** Move secondary draft actions into accessible menus with labels and non-hover entry. **Evidence:** Menu with named items in web/src/views/Drafts.tsx; web/src/views/Drafts.test.tsx 'confirms before deleting, preserves the draft on cancel and supports Undo' and 'copies a draft'; web/src/ui/controls.test.tsx 'opens, moves with the arrow keys, and closes with Escape, back on its button' (passed 2026-11-10).
+3. **S3-0056-03 - Implemented.** Define draft saved, saving, failed-save, render pending, ready and missing-track states. **Evidence:** web/src/views/Drafts.test.tsx 'says where each draft has got to', 'is honest about seams that could not be made', 'says when a song has left the library' and 'keeps the delete confirmation and error visible when the server rejects the deletion' (passed 2026-11-10).
+4. **S3-0056-04 - Implemented.** Preserve create, copy, rename, delete, undo restore, play swap, render priority/order and draft-first editing. **Evidence:** web/src/views/Drafts.test.tsx 'invites you to start one when there are none, and starts it in one press', 'copies a draft', 'saves on Enter and says what name it ended up with', 'confirms before deleting, preserves the draft on cancel and supports Undo' and 'prioritizing puts it in line and says when it will start'; web/src/App.test.tsx 'playing one goes to Listen, and keeps what was playing in the drafts'; web/e2e/flows.e2e.ts 'drafts: make one, name it, fill it, and it stays apart from the current mix' (passed 2026-11-10).
+5. **S3-0056-05 - Implemented.** Improve queue position explanation and distinguish processing order from music order. **Evidence:** render-line copy in web/src/views/Drafts.tsx ('doesn’t change what’s playing or the order of songs in any mix'); web/src/views/Drafts.test.tsx 'prioritizing puts it in line and says when it will start', 'can move through the line, but not past the ends' and 'quotes how long a draft would take before it is prioritized' (passed 2026-11-10).
+6. **S3-0056-06 - Implemented.** Provide scoped Undo after navigation, including multi-operation draft changes. **Evidence:** web/src/shell/Shell.test.tsx 'undoes the mix it was about, even after moving to another page'; web/e2e/integration.e2e.ts 'editing a draft while the current mix plays: neither touches the other, and Undo knows which is which' (passed 2026-11-10).
+7. **S3-0056-07 - Implemented.** Add task-oriented empty states and long/duplicate-name handling. **Evidence:** web/src/views/Drafts.test.tsx 'invites you to start one when there are none, and starts it in one press', 'saves on Enter and says what name it ended up with' and 'renders a bounded first page and reveals more without losing exact identities' (passed 2026-11-10).
+8. **S3-0056-08 - Implemented.** Validate reload, browser history, concurrent requests and draft deletion during open edit. **Evidence:** web/src/App.test.tsx 'opens from the list without touching the current mix, and stays open after a reload'; web/e2e/flows.e2e.ts 'a draft that’s been deleted is explained, and never quietly swapped for another mix'; web/src/views/Drafts.test.tsx 'serializes competing render-line changes in the order the listener made them' (passed 2026-11-10).
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (8/8) | Task-by-task evidence on each item; 0 need a person, 0 still open |
 
 ## References
 

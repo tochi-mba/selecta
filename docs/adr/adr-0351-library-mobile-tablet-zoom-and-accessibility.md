@@ -35,6 +35,16 @@ The same real recording can be found, inspected, selected and added on keyboard,
 7. **LX-0351-07 - Test assistive technology.** **Acceptance:** ARIA labels, lists, selected state, headings and status updates are coherent. **Required verification:** NVDA, VoiceOver and TalkBack task scripts. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **LX-0351-08 - Validate complete mobile journey.** **Acceptance:** User completes search to exact song to action without desktop requirement. **Required verification:** Uncoached one-handed task study. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
+## Target and contrast exceptions (LX-0351-06, 2026-11-10)
+
+Measured by `web/e2e/lx-library.e2e.ts` "LX-0344-02 LX-0344-05 LX-0351-06" in light and dark, both densities.
+
+- **Comfortable density (the default):** Start a mix, More actions and the selection checkbox's label are at least 44 x 44 px. Song, artist, tempo/key/length, readiness, counts and the readiness help reach 4.5:1 against their background.
+- **Compact density (a chosen desktop density):** the same controls shrink but stay at least 24 x 24 px, the WCAG 2.2 AA minimum (2.5.8). This is the documented exception.
+- **Filter chips:** at least 24 px tall at every width, normally the 44 px control height.
+- **Song title link:** the title opens the song sheet; it is text inside the row, so the row's own Start/More buttons carry the 44 px primary targets.
+- **Forced colours:** the chosen filter keeps a Highlight border, so its state never depends on colour alone.
+
 ## Evidence and release boundaries
 
 Compare baseline and candidate at the same route, data, theme, viewport, scroll, player and revision state. Record screenshots and measured DOM geometry where pertinent, plus tests for keyboard, touch, 320px, 200/400% zoom, Light/Dark/System, forced colours, Still/reduced motion, long and RTL/CJK names, offline, stale, cancelled, failed and multitab conditions. Use actual local audio and independent listening review for playback-affecting changes; screenshots or green CI alone do not prove musical quality or user comprehension.

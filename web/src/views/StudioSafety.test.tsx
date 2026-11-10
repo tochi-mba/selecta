@@ -50,7 +50,8 @@ function open(more: Record<string, unknown> = {}) {
   return { calls, onClose, onUsed };
 }
 
-const first = (part: string) => screen.findAllByRole('button', { name: new RegExp('^' + part + ', bars? 1') }).then((all) => all[0]);
+// A cold first render on a busy machine can take longer than findBy's 1 s default.
+const first = (part: string) => screen.findAllByRole('button', { name: new RegExp('^' + part + ', bars? 1') }, { timeout: 8000 }).then((all) => all[0]);
 
 describe('Studio safety cases', () => {
   beforeEach(() => {

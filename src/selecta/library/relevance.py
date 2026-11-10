@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections import Counter
 from difflib import SequenceMatcher
 from functools import lru_cache
 
@@ -31,9 +30,13 @@ def normalize_music(text: str) -> str:
     return _SPACES.sub(" ", _PUNCTUATION.sub(" ", _CREDITS.sub("feat", plain))).strip()
 
 
-@lru_cache(maxsize=64)
-def _letters(needle: str) -> Counter:
-    return Counter(needle)
+@lru_cache(maxsize=131072)
+def _closeness(needle: str, candidate: str) -> float:
+    """GP-0251-08: the same SequenceMatcher ratio, remembered per pair, so the words a 20,000-song
+    library repeats (artist names, common title words) are compared once per search, not per row.
+    quick_ratio() is a cheap upper bound, so the full comparison runs only for names that could pass."""
+    matcher = SequenceMatcher(None, needle, candidate, autojunk=False)
+    return matcher.ratio() if matcher.quick_ratio() >= 0.84 else 0.0
 
 
 def relevance(query: str, song_id: int, artist: str | None, title: str | None) -> int | None:
@@ -82,18 +85,11 @@ def relevance(query: str, song_id: int, artist: str | None, title: str | None) -
         return None
     candidates = [name, creator]
     candidates.extend(token for token in tokens if abs(len(token) - len(needle)) <= 2)
-    best = 0.0
-    letters = _letters(needle)
-    for candidate in candidates:
-        if not candidate or abs(len(candidate) - len(needle)) > 3:
-            continue
-        # GP-0251-08: twice the shared letters over both lengths is an upper bound on ratio(), so
-        # the full comparison only runs for names that could pass. Same results, far less work on
-        # 20,000 songs.
-        shared = sum((Counter(candidate) & letters).values())
-        if 2 * shared < 0.84 * (len(needle) + len(candidate)):
-            continue
-        best = max(best, SequenceMatcher(None, needle, candidate, autojunk=False).ratio())
+    best = max(
+        (_closeness(needle, candidate)
+         for candidate in candidates if candidate and abs(len(candidate) - len(needle)) <= 3),
+        default=0.0,
+    )
     if best >= 0.84:
         return 60 + int((1.0 - best) * 100)
     return None

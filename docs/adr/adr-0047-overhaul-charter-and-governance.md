@@ -1,14 +1,14 @@
 # ADR-0047: Selecta 3.0 charter, feature preservation and decision governance
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 4 of 8 tasks implemented with automated evidence on 2026-11-10; 3 need a person; 1 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 0 - Baseline and governance
 - **Extends existing decisions:** ADR-0001, ADR-0029, ADR-0030, ADR-0033
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0047-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Create a separately numbered, evidence-based experience programme. Keep the warm
 
 - No design claim may be described as a measured finding without a recorded screenshot, trace, observation or playback measurement. Use acceptance criteria tied to observable outcomes instead of 'perfect' or 'premium' as completion definitions.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0047-01 - Not started.** Pin the current exact commit, inventory the current app, enumerate all routes, subviews, overlays, notifications, and state transitions, and record supported OS/browser/PWA assumptions.
-2. **S3-0047-02 - Not started.** Map each row of existing feature-parity.md and each unverified T/P task to one or more new S3 decisions; avoid duplicate completion claims.
-3. **S3-0047-03 - Not started.** Publish a signed-off feature preservation and no-regression contract covering source audio, preferences, drafts, learning/rating data, audio ownership, bridge consent, revisions, security, lyric metadata and FLAC.
-4. **S3-0047-04 - Not started.** Create three task scripts (listener, creator, expert) and capture current first-run, everyday and failure-state experience with sanitized fixtures.
-5. **S3-0047-05 - Not started.** Classify defects by P0 integrity/access, P1 task/recovery and P2 presentation/detail; record affected flows and reproductions.
-6. **S3-0047-06 - Not started.** Require decision review, a separate design review, implementation PR, code/test evidence, screenshot comparison, keyboard check and any needed audible evidence for each item.
-7. **S3-0047-07 - Not started.** Set status rules, ownership, change control and dependency gates; unresolved risks must appear explicitly in a release disposition.
-8. **S3-0047-08 - Not started.** Publish a verified no-runtime-change statement for this documentation PR; after code work starts, maintain an immutable evidence trail.
+1. **S3-0047-01 - Implemented.** Pin the current exact commit, inventory the current app, enumerate all routes, subviews, overlays, notifications, and state transitions, and record supported OS/browser/PWA assumptions. **Evidence:** docs/adr/selecta-3-baseline.md 'Starting point' (pinned commit 84b8b5c, Windows/Chromium/Edge/PWA assumptions), 'Every place, overlay and message' and 'States by surface'; docs/adr/mp-0272-surface-inventory.json held to the source by web/src/shell/mpSurfaceInventory.test.ts 'covers every page and tab the router can produce', 'covers every overlay the source opens' and 'covers every destination and tab in the navigation manifest' (passed 2026-11-10).
+2. **S3-0047-02 - In progress.** Map each row of existing feature-parity.md and each unverified T/P task to one or more new S3 decisions; avoid duplicate completion claims. **Status:** In progress: docs/adr/selecta-3-parity-matrix.md maps every existing capability row of feature-parity.md to its S3 ADRs; the per-task mapping of each unverified T and P task to S3 decisions has not been written.
+3. **S3-0047-03 - Needs a person.** Publish a signed-off feature preservation and no-regression contract covering source audio, preferences, drafts, learning/rating data, audio ownership, bridge consent, revisions, security, lyric metadata and FLAC. **Status:** Needs a person: the owner must sign off the preservation contract written in docs/adr/selecta-3-baseline.md 'What must never break' (the implementer wrote it; sign-off is not theirs to give).
+4. **S3-0047-04 - Needs a person.** Create three task scripts (listener, creator, expert) and capture current first-run, everyday and failure-state experience with sanitized fixtures. **Status:** Needs a person: the listener, creator, expert and failure scripts are written in docs/adr/selecta-3-baseline.md 'Task scripts'; running them with an unbriefed participant on a real library and recording completion, time and hesitation is human work.
+5. **S3-0047-05 - Implemented.** Classify defects by P0 integrity/access, P1 task/recovery and P2 presentation/detail; record affected flows and reproductions. **Evidence:** docs/adr/selecta-3-baseline.md 'How issues are judged' (P0/P1/P2) and 'Defects found while doing this' (each defect with its fix), plus docs/adr/mp-0272-defect-register.md; the recorded P0/P1 defects stay fixed under web/src/audio/focus.test.tsx 'a new preview stops the old one, and the mix waits for the last of them', web/src/ui/controls.test.tsx 'keeps older Undo blocked while the newer one runs and after it fails' and web/e2e/finishing.e2e.ts 'the mini-player and bottom bar never overlap, and the last row can always be reached' (passed 2026-11-10).
+6. **S3-0047-06 - Needs a person.** Require decision review, a separate design review, implementation PR, code/test evidence, screenshot comparison, keyboard check and any needed audible evidence for each item. **Status:** Needs a person: the rule is recorded (checklist 'Required completion evidence for every S3 item', docs/adr/selecta-3-baseline.md 'How work moves and who decides'), but the separate design review, screenshot comparison and audible check for each item are reviews only a person can perform.
+7. **S3-0047-07 - Implemented.** Set status rules, ownership, change control and dependency gates; unresolved risks must appear explicitly in a release disposition. **Evidence:** docs/adr/selecta-3-baseline.md 'How work moves and who decides' (status rules, ownership, owner-only decisions), docs/adr/selecta-3-roadmap.md release gates and docs/adr/selecta-3-verification-matrix.md P0/P1/P2 disposition rules; ticks are machine-checked by src/selecta/audit/checklist_evidence.py under tests/test_checklist_evidence.py (passed 2026-11-10).
+8. **S3-0047-08 - Implemented.** Publish a verified no-runtime-change statement for this documentation PR; after code work starts, maintain an immutable evidence trail. **Evidence:** docs/adr/selecta-3-baseline.md 'This document's own honesty' records that the no-runtime-change statement held for PR 24 as opened and stopped holding once code was added; the evidence trail is this checklist plus docs/adr/selecta-3-evidence.md, guarded by src/selecta/audit/checklist_evidence.py and tests/test_checklist_evidence.py (passed 2026-11-10).
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (4/8) | Task-by-task evidence on each item; 3 need a person, 1 still open |
 
 ## References
 

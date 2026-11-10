@@ -207,7 +207,7 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
           {!jobs.worker.running
             ? <Status kind="unavailable">Not started. It starts by itself when there’s something to do.</Status>
             : jobs.storage_full
-              ? <Status kind="needs-action">Paused: the storage limit has been reached</Status>
+              ? <Status kind="needs-action">Blocked: the storage limit has been reached</Status>
               : jobs.mix.rendering || jobs.worker.rendering_the_mix
                 ? <Status kind="working">Working through your current mix</Status>
                 : left
@@ -510,6 +510,8 @@ export function safeDiagnostics(info: Record<string, unknown>): Record<string, u
         kind: typeof operation.kind === 'string' && /^[a-z]{1,32}$/.test(operation.kind) ? operation.kind : 'other',
         ...(typeof operation.status === 'number' && Number.isInteger(operation.status) ? { status: operation.status } : {}),
         repeat: operation.repeat === true,
+        // T0244: the page's random operation id, so a failed request can be matched to its outcome
+        ...(typeof operation.operation === 'string' && /^[a-z]{1,32}-[A-Za-z0-9-]{1,96}$/.test(operation.operation) ? { operation: operation.operation } : {}),
       }];
     });
   }

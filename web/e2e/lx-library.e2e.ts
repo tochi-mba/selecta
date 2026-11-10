@@ -123,7 +123,7 @@ test('LX-0340-06 LX-0343-06 LX-0345-06 list and cards share address, count, orde
   // the choice is remembered, and the address alone restores the same results
   await page.reload();
   await expect(page.getByRole('button', { name: 'Card view' })).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.locator('.song-open').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label')))).toEqual(before.names);
+  await expect.poll(() => page.locator('.song-open').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label')))).toEqual(before.names);
   await useLayout(page, 'List view');
 });
 
@@ -439,7 +439,10 @@ test('LX-0352-04 LX-0352-05 a failed refresh keeps rows labelled stale with writ
   await expect(page.getByRole('button', { name: 'Select up to 200 loaded songs' })).toBeDisabled();
   await expect(rows(page).first().getByRole('checkbox')).toBeDisabled();
   await page.unroute('**/api/library?**');
-  await page.getByRole('button', { name: 'Retry loading' }).click();
+  // pressed in place, so the test itself doesn't scroll the page to the button
+  const before = await page.evaluate(() => window.scrollY);
+  expect(Math.abs(before - scrolled)).toBeLessThanOrEqual(2);
+  await page.getByRole('button', { name: 'Retry loading' }).evaluate((button: HTMLButtonElement) => button.click());
   await expect(page.getByText(/may be out of date/)).toHaveCount(0);
   expect(page.url()).toBe(address);
   await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveValue('artist');
@@ -453,7 +456,9 @@ test('LX-0352-02 LX-0352-06 the placeholder matches the layout, never pulses und
   for (const layout of ['List view', 'Card view'] as const) {
     await openLibrary(page);
     await useLayout(page, layout);
-    const real = await box(rows(page).first());
+    // the typical row, not the one long title
+    const heights = (await rows(page).evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height))).sort((a, b) => a - b);
+    const real = { height: heights[Math.floor(heights.length / 2)] };
     let release: () => void = () => {};
     const held = new Promise<void>((done) => { release = done; });
     await page.route('**/api/library?**', async (route) => { await held; await route.continue(); });
@@ -554,9 +559,12 @@ test('LX-0344-02 LX-0344-05 LX-0351-06 columns line up with their labels, target
           filters: [...document.querySelectorAll('.library-filters button')].map((node) => node.getBoundingClientRect().height),
         };
       });
+      // Comfortable keeps 44px primary targets. Compact is the documented exception (ADR-0351):
+      // a chosen desktop density whose targets stay above the WCAG 2.2 AA 24px minimum.
+      const least = density === 'Comfortable' ? 44 : 24;
       for (const key of ['start', 'more', 'check'] as const) {
-        expect(sizes[key]!.height, `${key} ${density} ${scheme}`).toBeGreaterThanOrEqual(44);
-        expect(sizes[key]!.width, `${key} ${density} ${scheme}`).toBeGreaterThanOrEqual(44);
+        expect(sizes[key]!.height, `${key} ${density} ${scheme}`).toBeGreaterThanOrEqual(least);
+        expect(sizes[key]!.width, `${key} ${density} ${scheme}`).toBeGreaterThanOrEqual(least);
       }
       expect(Math.min(...sizes.filters)).toBeGreaterThanOrEqual(24);
       const ratios = await page.evaluate(() => {

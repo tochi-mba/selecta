@@ -1,7 +1,7 @@
 # ADR-0082: Polish Listen, navigation, mini-player and Stage without audio regressions
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
+- **Implementation status:** In progress: 10 Implemented (automated), 1 In progress, 0 need a person only (2026-11-10 reconciliation); 0/11 Verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 2 - listener journeys
@@ -23,17 +23,17 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0082-01 - Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete.
-2. **S31-0082-02 - Test Next versus Skip semantics and transition countdown wording.** Acceptance: Users understand whether the next song is immediate or transition-aligned without changing transport behaviour.
-3. **S31-0082-03 - Verify waveform seek and disabled-seek feedback with real audio.** Acceptance: Time, output and accessibility value agree; unavailable areas explain why.
-4. **S31-0082-04 - Review timed/untimed/instrumental/missing lyrics presentation.** Acceptance: Readable line and word focus; no fabricated timing; explicit no-lyrics fallback.
-5. **S31-0082-05 - Review Spectrum, Beat countdown, Lyrics focus and Why disclosure.** Acceptance: View options are discoverable but do not obscure transport, player state or song title.
-6. **S31-0082-06 - Review next-song, steering, rating and requests grouping.** Acceptance: Users can inspect the next song and shape energy without mistaking a preview for a live edit.
-7. **S31-0082-07 - Re-test mini-player and bottom nav geometry at narrow widths.** Acceptance: No overlap or obscured last row at 320–430px, short height, orientation or display safe area.
-8. **S31-0082-08 - Verify visual keyboard and focus changes on narrow screens.** Acceptance: Input is visible, navigation/player step away predictably, and focus resumes correctly.
-9. **S31-0082-09 - Verify Stage fullscreen denial and exit fallbacks.** Acceptance: Exit/Escape work, focus returns, audio continues, reduced motion and announcements remain appropriate.
-10. **S31-0082-10 - Exercise main/preview/multi-tab audio ownership on real media.** Acceptance: One active owner, no unintended overlap, silence, play restart or surprise resume.
-11. **S31-0082-11 - Review route, history, breadcrumbs and deep-link continuity.** Acceptance: Listen and mini-player survive page navigation, Back/Forward and old aliases with correct page titles.
+1. **S31-0082-01 - Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `web/src/views/Now.test.tsx` ("keeps expert view controls discoverable without competing with playback") passed. **Needs a person:** listener tasks in playing/paused/empty/error in both themes.
+2. **S31-0082-02 - Test Next versus Skip semantics and transition countdown wording.** Acceptance: Users understand whether the next song is immediate or transition-aligned without changing transport behaviour. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/player.test.ts` ("Next goes straight to the next song", "jumping to the transition isn't the same thing"); `listenNextUp.test.tsx`; `Shell.test.tsx` (N and Shift N) passed. **Needs a person:** comprehension check of the wording with listeners.
+3. **S31-0082-03 - Verify waveform seek and disabled-seek feedback with real audio.** Acceptance: Time, output and accessibility value agree; unavailable areas explain why. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Now.test.tsx` ("keeps a finite, disabled slider and never attempts a seek"); `listenSeek.test.tsx` ("refuses to seek during a transition and says why") passed. **Needs a person:** audible seek check with real audio and a screen reader.
+4. **S31-0082-04 - Review timed/untimed/instrumental/missing lyrics presentation.** Acceptance: Readable line and word focus; no fabricated timing; explicit no-lyrics fallback. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/views/lyricHonesty.test.tsx` (untimed, line-timed, word-aligned, no lyrics); `Now.test.tsx` lyric cases passed. **Needs a person:** readability review.
+5. **S31-0082-05 - Review Spectrum, Beat countdown, Lyrics focus and Why disclosure.** Acceptance: View options are discoverable but do not obscure transport, player state or song title. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Now.test.tsx` ("keeps the countdown compact, preserves choices and explains lyric focus") passed. **Needs a person:** hierarchy review in a real browser.
+6. **S31-0082-06 - Review next-song, steering, rating and requests grouping.** Acceptance: Users can inspect the next song and shape energy without mistaking a preview for a live edit. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/views/UpNext.test.tsx` (SF-0215-03 steering guarded with the mix it saw); `Now.test.tsx` steering cases passed. **Needs a person:** comprehension of preview versus live edit.
+7. **S31-0082-07 - Re-test mini-player and bottom nav geometry at narrow widths.** Acceptance: No overlap or obscured last row at 320–430px, short height, orientation or display safe area. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("the mini-player and bottom bar never overlap, and the last row can always be reached") passed. **Needs a person:** real phones at 320-430px, short height, orientation and safe area.
+8. **S31-0082-08 - Verify visual keyboard and focus changes on narrow screens.** Acceptance: Input is visible, navigation/player step away predictably, and focus resumes correctly. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("with an on-screen keyboard up, what's being typed gets the room"); `Shell.test.tsx` ("only yields chrome to a real editor keyboard") passed. **Needs a person:** real phone virtual keyboard check.
+9. **S31-0082-09 - Verify Stage fullscreen denial and exit fallbacks.** Acceptance: Exit/Escape work, focus returns, audio continues, reduced motion and announcements remain appropriate. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("fullscreen refused: ... Escape gets out, focus comes back, and the music never stops") passed. **Needs a person:** screen-reader and reduced-motion check of Stage.
+10. **S31-0082-10 - Exercise main/preview/multi-tab audio ownership on real media.** Acceptance: One active owner, no unintended overlap, silence, play restart or surprise resume. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/audio/focus.test.tsx` ("two can't play at once", previews); `mediaSession.test.ts` passed. **Needs a person:** audible main/preview/multi-tab ownership check on real media.
+11. **S31-0082-11 - Review route, history, breadcrumbs and deep-link continuity.** Acceptance: Listen and mini-player survive page navigation, Back/Forward and old aliases with correct page titles. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/router.test.tsx`; `Shell.test.tsx` (title, breadcrumb, "nothing here restarts the music") passed. **Needs a person:** owner review for Verified.
 
 ## Required adverse cases and evidence
 
@@ -57,6 +57,7 @@ The owner accepted this decision on 2026-11-08. Every S31 task remains **Not sta
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Original documentation-only finishing plan |\n| 2026-11-07 | Proposed | In progress | Selected UI/test code now on PR #25; complete verification still outstanding |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress | Every task re-checked against current code; 10 Implemented (automated), 1 In progress, 0 need a person only (2026-11-10 reconciliation); focused Vitest, pytest and Edge runs named per task; 0/11 Verified |
 
 ## Related documents
 

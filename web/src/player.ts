@@ -406,11 +406,13 @@ export class SetPlayer {
     const current = this.current;
     // pressed again while the last press is still loading: carry on from where that was going
     if (!current && this.state.phase !== 'loading') return;
-    const position = current ? audiblePosition(this.getMix(), current.songId, current.position) : this.state.position;
-    const following = this.getMix()[position + 1];
+    const found = current ? audiblePosition(this.getMix(), current.songId, current.position) : this.state.position;
+    // a playing song that was removed has no place: what slid into it comes next, not the top of the mix
+    const nextPosition = current && found < 0 ? current.position : found + 1;
+    const following = this.getMix()[nextPosition];
     if (!following) return;
     if (!current) {
-      await this.playFrom(position + 1);
+      await this.playFrom(nextPosition);
       return;
     }
     if (this.transitionIsLive()) {
@@ -420,7 +422,7 @@ export class SetPlayer {
     const heard = (this.heard.get(current.songId) ?? 0) + Math.max(0, (this.context?.currentTime ?? current.startedAt) - current.startedAt);
     void post('/playback/skip', { song_id: current.songId, heard_seconds: heard, source_position: this.songTime() }).catch(() => {});
     listenEnded(current.songId, 'skip', heard, this.songTime());
-    await this.playFrom(position + 1);
+    await this.playFrom(nextPosition);
   }
 
   /** Back to the start of this song, or to the song before if it has only just begun. */
@@ -606,8 +608,10 @@ export class SetPlayer {
     // the mix may have been edited, so find our place by song
     const found = audiblePosition(mix, current.songId, current.position);
     if (found >= 0) current.position = found;
-    const nextItem = mix[current.position + 1];
-    const listedSeam = nextItem?.seam?.state;
+    // If the playing song was removed, the song that slid into its place comes next, and the
+    // seam listed there leads from a different song, so this one ends on the plain fade.
+    const nextItem = mix[found >= 0 ? current.position + 1 : current.position];
+    const listedSeam = found >= 0 ? nextItem?.seam?.state : undefined;
     if (this.watchedState?.key !== listedSeam?.key) this.watchedState = null;
     const seam: SeamState | undefined = this.watchedState ?? listedSeam;
     if (nextItem && seam && !this.planned) this.watchSeam(current, nextItem, seam);
@@ -755,13 +759,15 @@ export class SetPlayer {
     if (this.current !== current || this.planned) return;
     const liveMix = this.getMix();
     const livePosition = audiblePosition(liveMix, current.songId, current.position);
-    if (livePosition < 0 || liveMix[position]?.song_id !== item.song_id || position <= livePosition) {
+    // a playing song that was removed keeps its old place, which the following song now holds
+    const gone = livePosition < 0;
+    if (liveMix[position]?.song_id !== item.song_id || (gone ? position < current.position : position <= livePosition)) {
       this.ending = false;
       return;
     }
     // Rendering can finish while the fallback song downloads. Let the next tick
     // schedule that seam instead of committing a competing fade.
-    const listedSeam = liveMix[livePosition + 1]?.seam?.state;
+    const listedSeam = gone ? undefined : liveMix[livePosition + 1]?.seam?.state;
     const liveSeam = this.watchedState?.key === listedSeam?.key ? this.watchedState : listedSeam;
     if (liveSeam?.status === 'ready' && liveSeam.a_source_start !== undefined
       && current.startedAt + liveSeam.a_source_start - current.offset >= context.currentTime) {

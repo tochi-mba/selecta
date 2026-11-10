@@ -280,6 +280,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                       <p>{card.blurb}</p>
                       <p className="artists"><span>Draws from</span> {card.artists.join(', ') || 'your mix-ready songs'}</p>
                       <p className="how">{card.moves}</p>
+                      {!!card.basis?.length && <p className="vibe-basis">Chosen by {listed(card.basis)}, measured from your songs. The name and words describe the aim, not a label on every song.</p>}
                       <p className="hint">Planning preference, not a promised song order or transition quality. Play replaces the current mix after confirmation{on('editor') ? '; Shape first opens the new mix for editing' : ''}{on('drafts') ? '; Save draft leaves playback unchanged' : ''}. The generated result depends on available recordings and cues.</p>
                       {on('lucy') && (
                         <>

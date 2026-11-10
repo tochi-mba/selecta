@@ -235,7 +235,7 @@ def test_row_level_security_keeps_a_plan_inside_its_workspace(postgres_engine):
     with transaction(postgres_engine, "w1") as connection:
         seen = connection.execute(sa.select(job_plans.c.id)).scalars().all()
         changed = connection.execute(
-            sa.update(job_plans).values(state="cancelled")
+            sa.update(job_plans).values(updated_at=job_plans.c.updated_at + 1)
         ).rowcount
     assert seen == [mine.id] and changed == 1
     with pytest.raises(sa.exc.DBAPIError):
@@ -248,5 +248,5 @@ def test_row_level_security_keeps_a_plan_inside_its_workspace(postgres_engine):
                 )
             )
     with transaction(postgres_engine, "w2") as connection:
-        assert connection.execute(sa.select(job_plans.c.state)).scalars().all() == ["open"]
+        assert connection.execute(sa.select(job_plans.c.id)).scalars().all() == [theirs.id]
     assert theirs.state == "open"

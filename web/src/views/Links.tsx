@@ -398,6 +398,15 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
       </div>
       <p className="hint link-destination" id={addId}>
         Adds {nameA}, then {nameB}, joined by this transition, both at once or neither. They go at the end of {flagOn('drafts') && drafts.length ? 'the mix you choose: your current mix or one draft' : 'your current mix'}, or beside whichever of the two is already there.
+        {/* GP-0260-07: a shared phrase is evidence for a pair, not a finished transition, so the add
+            line says which of the two it is offering right now */}
+        <span className="link-evidence" data-evidence={state.status === 'ready' ? 'rendered' : state.status === 'failed' ? 'failed' : 'candidate'}>
+          {' '}{state.status === 'ready'
+            ? state.passed === false ? 'The transition is rendered, with a rough spot.' : 'The transition is rendered and is what you’d hear.'
+            : state.status === 'failed'
+              ? 'This transition didn’t render, so for now the shared words are only a match to check.'
+              : 'The transition isn’t rendered yet: the shared words are a match to check, and Selecta renders it after they go in.'}
+        </span>
       </p>
       {state.status === 'ready' && playing && (
         // keyed by what was rendered, so a clip from before a change can't be taken for this one

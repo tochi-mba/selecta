@@ -1,14 +1,14 @@
 # ADR-0058: Context-preserving seam inspector, exact cues and honest rendered outcome
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 9 of 9 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 4 - Creation workspaces
 - **Extends existing decisions:** ADR-0014, ADR-0016, ADR-0027, ADR-0040
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0058-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,17 +26,17 @@ Keep the four feature families but redesign around permanent outgoing/incoming s
 
 - The inspector sheet on mobile restores timeline focus and scroll on close. A selected pair that disappears after reorder/removal must not mutate an adjacent pair.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0058-01 - Not started.** Design an always-visible pair identity header with exact scope, selection and renderer revision.
-2. **S3-0058-02 - Not started.** Implement Listen tab with revision-matched preview and single audio-owner behavior.
-3. **S3-0058-03 - Not started.** Group Change controls by style, length and exact cue with accessible form validation.
-4. **S3-0058-04 - Not started.** Preserve all existing seam styles, phrase alignment, bar lengths, out/in positions, warnings and fallback options.
-5. **S3-0058-05 - Not started.** Expose requested/manual versus actual rendered/fallback state without conflating readiness.
-6. **S3-0058-06 - Not started.** Keep Details audit hierarchy: actual move, selected move, music data, failed alternatives, quality checks.
-7. **S3-0058-07 - Not started.** Make transition ratings identify the precise seam and survive route switching.
-8. **S3-0058-08 - Not started.** Rebuild mobile inspector as a focus-safe sheet/workspace without losing timeline context.
-9. **S3-0058-09 - Not started.** Add stale-render, exact-pair, cue-invalid and preview-cancellation tests.
+1. **S3-0058-01 - Implemented.** Design an always-visible pair identity header with exact scope, selection and renderer revision. **Evidence:** inspector-identity in web/src/views/SeamInspector.tsx (pair, Transition N, current or draft, render version); web/src/views/Mix.test.tsx 'opens beside the timeline, for the two songs it’s between'; web/e2e/finishing.e2e.ts 'a transition’s tabs work from the keyboard, and it stays clear which pair they’re about' (passed 2026-11-10).
+2. **S3-0058-02 - Implemented.** Implement Listen tab with revision-matched preview and single audio-owner behavior. **Evidence:** AudioPreview keyed by the rendered seam in web/src/views/SeamInspector.tsx; web/src/views/Mix.test.tsx 'plays the exact render, and the same stays selected when others move'; web/src/audio/focus.test.tsx 'two can’t play at once' (passed 2026-11-10).
+3. **S3-0058-03 - Implemented.** Group Change controls by style, length and exact cue with accessible form validation. **Evidence:** grouped fieldsets and aria-invalid cues in web/src/views/SeamInspector.tsx; web/src/views/Mix.test.tsx 'marks both cue fields invalid, says why, and keeps the server’s choice' (passed 2026-11-10).
+4. **S3-0058-04 - Implemented.** Preserve all existing seam styles, phrase alignment, bar lengths, out/in positions, warnings and fallback options. **Evidence:** web/e2e/flows.e2e.ts 'a transition’s inspector: its four areas, and a change of move renders the new one'; web/src/views/Mix.test.tsx 'says when it’s been held back to give the song a turn'; tests/test_seam_correction_locks.py (passed 2026-11-10).
+5. **S3-0058-05 - Implemented.** Expose requested/manual versus actual rendered/fallback state without conflating readiness. **Evidence:** web/src/views/Mix.test.tsx 'keeps the move you asked for pressed, and names what really plays separately', 'says nothing about a fallback when what played is what was asked for' and 'says what you chose and what will really play, if they differ' (passed 2026-11-10).
+6. **S3-0058-06 - Implemented.** Keep Details audit hierarchy: actual move, selected move, music data, failed alternatives, quality checks. **Evidence:** Details tab in web/src/views/SeamInspector.tsx (what will play, the music, what else was tried, quality checks); web/src/views/Mix.test.tsx 'has everything about it a tab away' (passed 2026-11-10).
+7. **S3-0058-07 - Implemented.** Make transition ratings identify the precise seam and survive route switching. **Evidence:** web/src/views/Mix.test.tsx 'posts to that seam alone, and shows the saved rating again after a remount'; web/src/views/Now.test.tsx 'rates the transition that just played, by its key, and explains what was measured' (passed 2026-11-10).
+8. **S3-0058-08 - Implemented.** Rebuild mobile inspector as a focus-safe sheet/workspace without losing timeline context. **Evidence:** Sheet for narrow screens in web/src/views/Mix.tsx; web/src/ui/controls.test.tsx 'take focus, keep it inside, and give it back'; web/e2e/pages.e2e.ts 'on a phone, nothing you can press sits half hidden behind the player, at any height' (passed 2026-11-10).
+9. **S3-0058-09 - Implemented.** Add stale-render, exact-pair, cue-invalid and preview-cancellation tests. **Evidence:** web/src/views/Mix.test.tsx 'keeps the latest choice visible when an older server response refreshes the inspector', 'never confuses two different drafts with identical songs and transition keys' and 'marks both cue fields invalid, says why, and keeps the server’s choice'; web/src/audio/focus.test.tsx 'leaving the page lets the sound go, and the mix carries on'; web/e2e/finishing.e2e.ts 'two quick seam changes on a slow server: the last one wins, and Undo shows what’s really there' (passed 2026-11-10).
 
 ## Preservation and integration constraints
 
@@ -66,6 +66,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (9/9) | Task-by-task evidence on each item; 0 need a person, 0 still open |
 
 ## References
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import re
 import threading
 from collections import deque
 from pathlib import Path
@@ -41,6 +42,9 @@ from selecta.seams import (
 )
 
 __all__ = ["FreshFiles", "_Background", "create_app", "serve"]
+
+# What the page's operationId() makes: a lowercase kind, then a random UUID or a time and counter.
+SAFE_OPERATION = re.compile(r"[a-z]{1,32}-[A-Za-z0-9-]{1,96}")
 
 
 def create_app(
@@ -125,6 +129,10 @@ def create_app(
                 )
             await running_operations[operation].wait()
         kind = operation.split("-", 1)[0]
+        # T0244: the page's own operation id ties its request to this outcome. It is the random id
+        # the page made up, so it names nothing; anything else is left out rather than echoed.
+        traced = {"operation": operation} if SAFE_OPERATION.fullmatch(operation) else {}
+        echo = {"x-operation-id": operation} if traced else {}
         known = finished_operations.get(operation)
         if known is not None:
             if known[2] != fingerprint:
@@ -132,15 +140,19 @@ def create_app(
                     {"detail": "That operation ID already belongs to a different action."},
                     status_code=409,
                 )
-            recent_operations.append({"kind": kind, "status": known[0], "repeat": True})
-            return Response(known[1], status_code=known[0], media_type="application/json")
+            recent_operations.append(
+                {"kind": kind, "status": known[0], "repeat": True, **traced}
+            )
+            return Response(
+                known[1], status_code=known[0], media_type="application/json", headers=echo
+            )
         running_operations[operation] = asyncio.Event()
         active_fingerprints[operation] = fingerprint
         try:
             response = await call_next(request)
             body = b"".join([chunk async for chunk in response.body_iterator])
             recent_operations.append(
-                {"kind": kind, "status": response.status_code, "repeat": False}
+                {"kind": kind, "status": response.status_code, "repeat": False, **traced}
             )
             if response.status_code < 500:
                 finished_operations[operation] = (response.status_code, body, fingerprint)
@@ -152,7 +164,10 @@ def create_app(
         return Response(
             body,
             status_code=response.status_code,
-            headers={k: v for k, v in response.headers.items() if k.lower() != "content-length"},
+            headers={
+                **{k: v for k, v in response.headers.items() if k.lower() != "content-length"},
+                **echo,
+            },
         )
 
     @app.middleware("http")

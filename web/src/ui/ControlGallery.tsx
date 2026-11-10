@@ -38,6 +38,13 @@ export function ControlGallery() {
       <section className="stack gallery-tabs"><h3>Tabs</h3>
         <Tabs label="Example tabs" tabs={[{ id: 'first', label: 'First' }, { id: 'second', label: 'Second' }, { id: 'third', label: 'A longer third tab' }]} current={tab} onChange={setTab}><p>Showing the {tab} tab.</p></Tabs>
       </section>
+      <section className="stack gallery-content" id="gallery-links"><h3>Links, chips, badges, rows and cards</h3>
+        <p><a href="#gallery-links">Example text link</a></p>
+        <div className="chips" role="group" aria-label="Example chips"><button aria-pressed="true">Selected chip</button><button aria-pressed="false">Chip</button><button aria-pressed="false" disabled>Unavailable chip</button></div>
+        <div className="row wrap" aria-label="Example badges"><span className="pill ready">Ready</span><span className="pill queued">In line</span><span className="pill failed">Couldn’t be made</span><span className="pill">A longer badge label that wraps</span></div>
+        <div className="song-row"><span className="song-name">A long example song title that wraps onto a second line</span><small className="soft">Example artist</small></div>
+        <article className="card"><h3>Example card</h3><p className="soft">Card description and metadata.</p><div className="card-actions"><button>Card action</button></div></article>
+      </section>
       <section className="stack"><h3>Overlays and recovery</h3><div className="row wrap"><button onClick={() => setOverlay('dialog')}>Open dialog</button><button onClick={() => setOverlay('drawer')}>Open drawer</button></div>
         <Problem retry={() => {}}>Example: content could not be loaded.</Problem>
         <div className="empty-state"><h3>No matching results</h3><p>Clear your filters or try another query.</p><button>Clear filters</button></div>
