@@ -53,6 +53,8 @@ def scrub(value: Any, key: str = "") -> Any:
     """`value` with anything secret-looking replaced by "[redacted]", recursively."""
     if key and _SECRET_KEY.search(key):
         return REDACTED
+    if isinstance(value, bytes | bytearray | memoryview):
+        return REDACTED  # binary is audio or a key, never something to keep
     if isinstance(value, Mapping):
         return {str(k): scrub(v, str(k)) for k, v in value.items()}
     if isinstance(value, list | tuple | set | frozenset):
