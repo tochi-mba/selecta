@@ -8,8 +8,9 @@ entitlement snapshot its final Stripe subscription implies, and every subscripti
 Stripe's final word.
 
 The run is seeded, so a failure replays exactly. Its size is the number of webhook deliveries:
-`SELECTA_BILLING_REPLAY_DELIVERIES` (the weekly nightly run sets 250,000; locally that takes a
-few minutes on SQLite), defaulting to a size that keeps the everyday suite quick. The seed comes
+`SELECTA_BILLING_REPLAY_DELIVERIES` (the weekly nightly run sets 250,000, about 21 minutes on
+SQLite on a 4-core laptop), defaulting to 10,000 (about 45 seconds) to keep the everyday suite
+quick. The seed comes
 from `SELECTA_BILLING_REPLAY_SEED` when set.
 
 The Hypothesis property in `test_cloud_billing_webhooks.py` explores odd orders for one
