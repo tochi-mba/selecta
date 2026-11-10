@@ -5,7 +5,7 @@
       "label": "Local server",
       "about": "The server on this computer: its status, the local-only checks and the one data folder.",
       "core": "Everything else talks to it.",
-      "routes": ["GET /api/status", "GET /api/ready"],
+      "routes": ["GET /api/status", "GET /api/ready", "GET /api/health"],
       "cli": ["web", "gather-data", "flags"]
     },
     "core.upgrade_backup": {

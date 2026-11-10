@@ -5,7 +5,7 @@
   "as_of": "2026-11-10",
   "scope": "GP-0248-01 through GP-0263-08",
   "decision": "16 Proposed; owner acceptance pending",
-  "implementation_status": "44 Not started; 4 In progress; 80 Implemented",
+  "implementation_status": "41 Not started; 4 In progress; 83 Implemented",
   "independent_verification": "0 Verified",
   "status_scope_note": "New acceptance deltas, not missing source features. Earlier programmes unchanged.",
   "groups": {
@@ -31,11 +31,11 @@
     "0249": {
       "decision": "Accepted",
       "implemented": [
+        "01",
         "04"
       ],
       "in_progress": [],
       "not_started": [
-        "01",
         "02",
         "03",
         "05",
@@ -298,11 +298,11 @@
         "02",
         "03",
         "04",
-        "05"
+        "05",
+        "06"
       ],
       "in_progress": [],
       "not_started": [
-        "06",
         "07",
         "08"
       ],
@@ -315,7 +315,8 @@
       "decision": "Accepted",
       "implemented": [
         "03",
-        "05"
+        "05",
+        "07"
       ],
       "in_progress": [],
       "not_started": [
@@ -323,7 +324,6 @@
         "02",
         "04",
         "06",
-        "07",
         "08"
       ],
       "independently_verified": [],

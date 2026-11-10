@@ -10,6 +10,7 @@ import { seamFacts, seamLayers } from '../ui/seam';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { MixScope, useMixPath } from './mixScope';
 import { Undo } from './shared';
+import { pairKey, rememberRender, SeamCompare } from './SeamCompare';
 import { Studio } from './Studio';
 
 const cueRange = (cues: { time: number }[]) => {
@@ -319,6 +320,11 @@ export function SeamInspector(props: {
   const position = item.position;
   const [capabilityError, setCapabilityError] = useState(false);
   const [capabilityAttempt, setCapabilityAttempt] = useState(0);
+  const pair = pairKey(scope, previous.song_id, item.song_id, item.position);
+  // SF-0221-06: every finished render seen here, so a later one can be compared with it
+  useEffect(() => {
+    if (state.status === 'ready' && state.key) rememberRender(pair, { key: state.key, label: state.label ?? layers.heard });
+  }, [pair, state.status, state.key]);
   useEffect(() => {
     let live = true;
     setCanStudio(null);
@@ -363,6 +369,7 @@ export function SeamInspector(props: {
                     <Action aria-pressed={state.rating === 'bad'} run={() => rate('bad')}>Bad</Action>
                   </div>
                 )}
+                {on('seam_inspector.compare') && <SeamCompare pair={pair} now={{ key: state.key, label: state.label ?? layers.heard }} title={`${previous.title} into ${item.title}`} />}
               </>
             ) : state.status === 'failed' ? (
               <p className="hint">There’s nothing to hear yet, because this one couldn’t be made. Try another move under Change.</p>

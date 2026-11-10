@@ -208,6 +208,7 @@ No task in this ADR is ticked: each needs a full candidate run, recorded hardwar
 |---|---|---|---|---|
 | P0089 | Implemented | One request vocabulary; `RequestTag` shared by Listen and Edit | `polishPhase03Listen.test.tsx` 7/7; `Requests.test.tsx` 51/51 | - |
 | P0090 | Implemented | Planned place named; waiting, unplaceable and failed apart | `Requests.test.tsx`; `RequestsJoining.test.tsx` (with `Links.test.tsx` 73 passed) | - |
+| P0091 | Implemented | Extra songs named and counted before approval; all-or-nothing join | `Requests.test.tsx`, `RequestsJoining.test.tsx`; pytest atomic insertion + bridge consent, 3 passed | - |
 | P0092 | Implemented | Search, duplicates, cancel, retry, stale bridge, no match | `Requests.test.tsx`, `RequestsJoining.test.tsx` | - |
 | P0093 | Implemented | Word-pair cards, rating, failed-render retry | `Links.test.tsx`, `LinksRating.test.tsx` 1/1, `polishPhase03Listen.test.tsx` P0093 | - |
 | P0094 | Implemented | Loading vs no candidates vs failed; audition stage only after playback starts | `Links.test.tsx` | - |
@@ -216,3 +217,18 @@ No task in this ADR is ticked: each needs a full candidate run, recorded hardwar
 | P0097 | Implemented | Current mix vs named draft destination; atomic `/mix/pair` | `Links.test.tsx` | - |
 | P0098 | Implemented | Competing requests, bridge rejection, playhead, stale cancel, duplicates | `Requests.test.tsx` | - |
 | P0099 | Implemented | New: pair being heard stays put through a background refresh | `polishPhase03Listen.test.tsx` P0099, `Links.test.tsx`, `LinksRating.test.tsx` | - |
+
+## ADR-0043 task evidence (reconciled 2026-11-10, uncommitted working tree)
+
+Implementing history: PR #23 (`84b8b5c`) plus Library/Lucy (LX), Selecta 3.0 Library and Measured micro-polish (MP-0291, MP-0293, MP-0294). Vitest: `Library.test.tsx`, `LibraryLx.test.tsx` (47/47 on rerun), `Workshop.test.tsx`, `ExportJobs.test.tsx`, `Listening.test.tsx`, `ListeningStudyFlow.test.tsx`, `controls.test.tsx` passed; new `polishWorkshopShowcase.test.tsx` 5/5 and `polishReadinessDistinct.test.ts` 3/3. Playwright: MP-0291-01/02/04/05, MP-0293-01/02/05/07/08, MP-0294-01/07/08 passed; MP-0291-03/06/07, MP-0293-03/04/06, MP-0294-02/03/04, -05, -06 failed.
+
+| Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
+|---|---|---|---|---|
+| P0100 | Verified (automated) | Title, artist, readiness and the relevant action lead; secondary actions sit in a keyboard menu | `LibraryLx.test.tsx` readiness decides actions; `Library.test.tsx` layouts keep actions; `controls.test.tsx` menu; MP-0291-02 | MP-0291-03 target check failing |
+| P0101 | Verified (automated) | One search/filter/sort/count bar; empty library, empty filter and no-match differ; Clear search keeps the filter | `LibraryLx.test.tsx`; MP-0291-01 | - |
+| P0102 | Verified (automated) | Analysed vs mix-ready, measured vs corrected, Never play vs Set aside, priority vs readiness stay distinct | new `web/src/state/polishReadinessDistinct.test.ts`; `Library.test.tsx`; `LibraryLx.test.tsx`; MP-0291-04 | - |
+| P0103 | Implemented | Query, page depth, typed values and search focus survive | `Library.test.tsx`; `LibraryLx.test.tsx` | MP-0291-06 (the way back) failed |
+| P0104 | Implemented | 20,000-song library renders one page as a real list | `LibraryLx.test.tsx` LX-0345-07 | MP-0291-07 failed; hardware timing is P0135 |
+| P0105 | Verified (automated) | Overview leads with repairs; sections share one rhythm; keyboard repair path | `Workshop.test.tsx`; MP-0293-01/02/05/07/08 | MP-0293-03/04/06 layout checks failing |
+| P0106 | Verified (automated) | Control gallery only in development (or VITE_SELECTA_GALLERY=1) builds, folded under Diagnostics | new `web/src/views/polishWorkshopShowcase.test.tsx` P0106 (2); production bundle `dist-saas-p3/assets/*.js` has 0 `control-gallery` | - |
+| P0107 | Verified (automated) | Budget, cache, free disk and untouched music named apart; refused save shows the confirmed limit and Retry; older save never overrides a newer choice | `polishWorkshopShowcase.test.tsx` P0107/P0111 (3); `Workshop.test.tsx` protected stems, really-saved value | MP-0293-04 geometry failing |

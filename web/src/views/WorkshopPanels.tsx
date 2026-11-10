@@ -202,16 +202,29 @@ export function NeedsYou({ jobs, readySongs, folders }: { jobs: Jobs; readySongs
   if (jobs.failed_songs.length) items.push({ key: 'songs', words: `${jobs.failed_songs.length} song${jobs.failed_songs.length === 1 ? '' : 's'} couldn’t be analysed.`, to: '/library?show=attention', action: 'Look at those songs' });
   if (jobs.analysis.paused && jobs.analysis.left) items.push({ key: 'paused', words: `Analysis is paused, with ${jobs.analysis.left} to go.`, to: '/workshop/analysis', action: 'Carry on' });
   if (missing.length) items.push({ key: 'folders', words: `${missing.length} music folder${missing.length === 1 ? '' : 's'} can’t be found right now. Songs are kept until ${missing.length === 1 ? 'it’s' : 'they’re'} back.`, to: '/workshop/sources', action: 'See your folders' });
+  // CI-0180-01: one line on whether the library can be mixed at all, and the first item is the one
+  // thing to do first; the rest stay listed below it (MP-0293-01)
+  const health = flagOn('workspace.library_health');
+  const blocked = readySongs < 6;
   return (
     <section className="panel stack needs-you">
       <h2>What needs you</h2>
+      {health && (
+        <p className="library-health">
+          {blocked
+            ? <Status kind="blocked">{`Mixing is blocked: ${readySongs} of the 6 mix-ready songs a mix needs`}</Status>
+            : jobs.storage_full
+              ? <Status kind="blocked">{`Your library can be mixed, with ${readySongs} songs ready, but rendering is blocked`}</Status>
+              : <Status kind="ready">{`Your library can be mixed: ${readySongs} songs ready`}</Status>}
+        </p>
+      )}
       {items.length === 0
         ? <p><Status kind="ready">Nothing needs you right now</Status></p>
         : (
           <ul className="needs-you-list">
-            {items.map((item) => (
-              <li key={item.key}>
-                <Status kind="needs-action">{item.words}</Status>
+            {items.map((item, index) => (
+              <li key={item.key} className={health && index === 0 && items.length > 1 ? 'needs-you-first' : undefined}>
+                <Status kind="needs-action">{health && index === 0 && items.length > 1 ? <><b>Do this first. </b>{item.words}</> : item.words}</Status>
                 <LinkIfThere to={item.to}>{item.action}</LinkIfThere>
               </li>
             ))}

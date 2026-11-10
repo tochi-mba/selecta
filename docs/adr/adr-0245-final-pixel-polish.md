@@ -1,7 +1,7 @@
 # ADR-0245 - Final visual-detail audit and art-direction coherence
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Implementation:** In progress (0/8 Implemented, 3/8 In progress, 5/8 Not started; 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P1 / Polish.
@@ -30,14 +30,14 @@ No status hidden for aesthetic minimalism, low-contrast shadow-only focus or fla
 
 ## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0245-01 - Audit alignment and spacing.** **Acceptance:** Controls align across scene, card and dialog components. **Required verification:** Pixel-diff review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-2. **SF-0245-02 - Audit type and icon optics.** **Acceptance:** Titles, timestamps and icons align optically. **Required verification:** Visual specimen audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-3. **SF-0245-03 - Audit borders and depth.** **Acceptance:** Nested panels, elevation and selected states intentional. **Required verification:** Light/dark gallery. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+1. **SF-0245-01 - Audit alignment and spacing.** **Acceptance:** Controls align across scene, card and dialog components. **Required verification:** Pixel-diff review. **Implementation:** In progress; Needs a person: a pixel-diff review of control alignment across scene, card and dialog; automated rhythm checks exist (`web/src/styles/optical-alignment.test.ts`, `web/src/styles/spacing-tokens.test.ts`); **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0245-02 - Audit type and icon optics.** **Acceptance:** Titles, timestamps and icons align optically. **Required verification:** Visual specimen audit. **Implementation:** In progress; Needs a person: a visual specimen audit of title, timestamp and icon optics; `web/src/styles/typography.test.ts` and `web/e2e/mp-0277-icon-geometry.e2e.ts` cover the measurable part; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0245-03 - Audit borders and depth.** **Acceptance:** Nested panels, elevation and selected states intentional. **Required verification:** Light/dark gallery. **Implementation:** Not started; Needs a person: a light and dark gallery review of borders, elevation and selected states; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 4. **SF-0245-04 - Review state-specific artwork.** **Acceptance:** Empty/failed/loading/pending visuals do not claim data. **Required verification:** Fixture snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-5. **SF-0245-05 - Review all hover/focus/active states.** **Acceptance:** Every shared primitive consistent. **Required verification:** Interactive screenshot grid. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0245-05 - Review all hover/focus/active states.** **Acceptance:** Every shared primitive consistent. **Required verification:** Interactive screenshot grid. **Implementation:** Not started; Needs a person: an interactive screenshot grid review of hover, focus and active states across shared primitives; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 6. **SF-0245-06 - Audit content edge cases.** **Acceptance:** Long strings, tiny counts, nulls and overflow handled. **Required verification:** RTL/zoom tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **SF-0245-07 - Audit motion finishing.** **Acceptance:** Transitions cancel without jitter or ghost surfaces. **Required verification:** Slow-motion capture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0245-08 - Sign off across devices.** **Acceptance:** Independent reviewer approves exact candidate SHA. **Required verification:** Signed visual QA dossier. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0245-07 - Audit motion finishing.** **Acceptance:** Transitions cancel without jitter or ghost surfaces. **Required verification:** Slow-motion capture. **Implementation:** In progress; Needs a person: a slow-motion capture review of transitions cancelling without jitter; `web/e2e/mp-0296-motion.e2e.ts` 'MP-0296-05' is the automated part; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0245-08 - Sign off across devices.** **Acceptance:** Independent reviewer approves exact candidate SHA. **Required verification:** Signed visual QA dossier. **Implementation:** Not started; Needs a person: an independent reviewer approving the exact candidate SHA in a signed visual QA dossier; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 
@@ -47,5 +47,5 @@ Preserve one player and intentional Pause, unchanged local audio and LRCLIB meta
 
 - **Depends on:** ADR-0091/0130/0183; new ADR-0198/0199 and corresponding programme checklist.
 - **Next:** owner acceptance → design review → focused implementing PR with tests → independent audio, accessibility, visual and hardware acceptance → release decision.
-- **Now:** Accepted; 0/8 Implemented, 0/8 independently Verified; no implementing PR/SHA.
+- **Now:** Decision Accepted; Implementation 0/8 (2026-11-10); Independently Verified No; no implementation PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

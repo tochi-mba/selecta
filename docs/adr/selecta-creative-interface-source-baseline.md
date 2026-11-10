@@ -83,7 +83,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0172-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0172-07 | person | Needs a person: observed audition, edit and compare task |
 | CI-0173-01 | person | Needs a person: full-density and 320px specimen review of song blocks and seam links |
-| CI-0173-02 | open | In progress: the drop target is marked (.song.over in web/src/views/EditorRows.tsx) but the seams a move would change are not previewed |
+| CI-0173-02 | built | dropPreview.ts with dropPreview.test.tsx; flag editor.drag_preview |
 | CI-0173-03 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0173-04 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0173-05 | existing | Met by earlier code; tests named on the checklist line |

@@ -1,7 +1,7 @@
 # ADR-0249 - Listen control hierarchy and attention budget
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** In progress (1/8 Implemented, 0/8 In progress, 7/8 Not started).
+- **Implementation:** In progress (2/8 Implemented, 0/8 In progress, 6/8 Not started).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta gap-focused UI/UX polish; 2026-11-08; main `2956bc47fd735339e7216e03d27817fb3a31e92b`.
 - **Priority / phase:** P0 / Gap-focused polish.
@@ -31,9 +31,9 @@ Primary music identity and real transport remain legible. Make source truth dist
 
 **Non-negotiable preservation:** Original local music remains unchanged; one audio owner and intentional Pause; accurate song occurrence/seam identity, current/draft revision and scoped Undo; explicitly consented atomic request bridges; eight Studio lanes and 8–64 cells; truthful Library readiness and LRCLIB metadata disclosure; neutral listening studies; correct frozen-revision decodable FLAC. No SaaS, accounts, telemetry, cloud music, native folder picker or launcher is authorized.
 
-## Implementation checklist - 1/8 Implemented, 0/8 independently Verified
+## Implementation checklist - 2/8 Implemented, 0/8 independently Verified
 
-1. **GP-0249-01 - Inventory controls and define foreground versus advanced tiers.** **Acceptance:** Inventory controls and define foreground versus advanced tiers is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence:** -.
+1. **GP-0249-01 - Inventory controls and define foreground versus advanced tiers.** **Acceptance:** Inventory controls and define foreground versus advanced tiers is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Implemented; **Verified:** No; **Owner:** Checklist agent (2026-11-10); **Implementing PR/SHA:** existing source (web/src/views/Now.tsx); inventory and test added 2026-11-10, uncommitted; **Evidence:** inventory in docs/adr/adr-0249-listen-attention-hierarchy.md 'Listen control inventory'; web/src/views/gp-0249-tiers.test.tsx 'keeps the transport in the foreground and every advanced control behind DJ controls' and web/src/views/Now.test.tsx 'keeps expert view controls discoverable without competing with playback' (vitest, passed 2026-11-10).
 2. **GP-0249-02 - Keep core transport fixed when panels open or close.** **Acceptance:** Keep core transport fixed when panels open or close is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence:** -.
 3. **GP-0249-03 - Expose fifteen visualizers without a permanently tall selector.** **Acceptance:** Expose fifteen visualizers without a permanently tall selector is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence:** -.
 4. **GP-0249-04 - Reduce oversized countdown space except in explicit focus view.** **Acceptance:** Reduce oversized countdown space except in explicit focus view is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Implemented; **Verified:** No; **Owner:** Checklist agent (2026-11-10); **Implementing PR/SHA:** existing source (web/src/views/Now.tsx); **Evidence:** web/src/views/Now.test.tsx 'keeps the countdown compact, preserves choices and explains lyric focus' (vitest, passed 2026-11-10).
@@ -41,6 +41,14 @@ Primary music identity and real transport remain legible. Make source truth dist
 6. **GP-0249-06 - Keep lyrics, steering and request controls discoverable.** **Acceptance:** Keep lyrics, steering and request controls discoverable is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence:** -.
 7. **GP-0249-07 - Preserve accessibility and audio focus during visual changes.** **Acceptance:** Preserve accessibility and audio focus during visual changes is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence:** -.
 8. **GP-0249-08 - Compare control-discovery time for listeners and DJs.** **Acceptance:** Compare control-discovery time for listeners and DJs is demonstrably satisfied for all relevant current states without loss of existing capabilities. **Required verification:** full-route visual state matrix, real audio and novice/DJ task study; relevant negative-case and exact-SHA source tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence:** -.
+
+## Listen control inventory (GP-0249-01, 2026-11-10)
+
+Read from `web/src/views/Now.tsx` and pinned by `web/src/views/gp-0249-tiers.test.tsx`.
+
+- **Foreground tier, always on screen:** the mix eyebrow, song motif, title and artist; Previous song, Play/Pause/Resume and Next song; Jump to the transition; volume; the seek strip ("Where in the song"); the countdown to the next transition and the Coming up list; the current lyric when the song has lyrics.
+- **Advanced tier, inside the closed "DJ controls" disclosure:** Request a song; Visible listening panels (Spectrum, Beat countdown, Lyrics focus); Audio visualizer style (fifteen styles in one ordinary select); Visual intensity; Fullscreen lyrics; Good/Bad rating of the transition just heard; Bigger, Calmer and Something else steering; Why this transition.
+- **Stage:** its own Play/Pause and exit; everything else stays out of the way.
 
 ## Negative cases and required evidence
 
@@ -54,5 +62,5 @@ Required verification is *independent* of code completion: named reviewer, date,
 
 - **Depends on:** ADR-0210, ADR-0212, ADR-0214, ADR-0215, ADR-0199 (status reconciliation), ADR-0237 (source truth), ADR-0239/0240 (tests and research), ADR-0247 (GO/NO-GO).
 - **Sequence:** decision review → design specimens → narrow implementing PR with tests → independent audio/AT/human review → evidence and release verdict.
-- **Now:** Accepted; 1/8 Implemented, 0/8 In progress, 7/8 Not started (2026-11-10); 0 Verified; implementation in the feat/finish-checklists working tree and wip commits, cited per task. Historical T/P/S3/S31/S4/EX/MI/CI/SF statuses unchanged.
+- **Now:** Accepted; 2/8 Implemented, 0/8 In progress, 6/8 Not started (2026-11-10); 0 Verified; implementation in the feat/finish-checklists working tree and wip commits, cited per task. Historical T/P/S3/S31/S4/EX/MI/CI/SF statuses unchanged.
 - [Roadmap](selecta-gap-polish-roadmap.md) · [Checklist](selecta-gap-polish-implementation-checklist.md) · [Evidence](selecta-gap-polish-implementation-evidence.md) · [Parity](selecta-gap-polish-overlap-and-parity.md) · [Verification](selecta-gap-polish-verification-matrix.md) · [Gates](selecta-gap-polish-release-gates.md).

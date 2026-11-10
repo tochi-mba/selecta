@@ -49,4 +49,4 @@ def test_vocabulary_friction_and_conclusion_rules() -> None:
 
 def test_no_result_is_claimed_and_no_em_dash() -> None:
     assert "It is not a result" in DOC
-    assert "—" not in DOC
+    assert chr(0x2014) not in DOC

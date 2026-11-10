@@ -43,9 +43,21 @@ function bleed({ names, inside }: { names: string[]; inside: string | null }) {
   const visit = (list: CSSRuleList) => {
     for (const rule of [...list]) {
       if (rule instanceof CSSStyleRule) {
-        if (!names.some((name) => new RegExp(`\\.${name}(?![\\w-])`).test(rule.selectorText))) continue;
+        // a grouped rule (".display, .song-open") is judged only by the selectors that name a view class
+        const parts: string[] = [];
+        let depth = 0;
+        let part = '';
+        for (const char of rule.selectorText) {
+          if (char === ',' && depth === 0) { parts.push(part); part = ''; continue; }
+          if (char === '(') depth += 1;
+          if (char === ')') depth -= 1;
+          part += char;
+        }
+        parts.push(part);
+        const named = parts.map((item) => item.trim()).filter((item) => names.some((name) => new RegExp(`\\.${name}(?![\\w-])`).test(item)));
+        if (!named.length) continue;
         let matches: Element[] = [];
-        try { matches = [...document.querySelectorAll(rule.selectorText.replace(/::?(before|after|placeholder|marker|-webkit-[\w-]+)/g, ''))]; } catch { continue; }
+        try { matches = [...document.querySelectorAll(named.join(', ').replace(/::?(before|after|placeholder|marker|-webkit-[\w-]+)/g, ''))]; } catch { continue; }
         const outside = matches.filter((element) => !inside || !element.closest(inside)).map((element) => `${element.tagName.toLowerCase()}.${[...element.classList].join('.')}`);
         rules.push({ selector: rule.selectorText, matched: matches.length, outside });
       } else if ('cssRules' in rule) {

@@ -1,7 +1,8 @@
 """T0175: the seam inspector's settings under fast switching and malformed cues.
 
-The client fixture's server is real apart from rendering, which is replaced by a queue that answers
-with each request's own key, so what the mix row reports can be compared with the request it came from.
+The client fixture's server is real apart from rendering, which is replaced by a queue that
+answers with each request's own key, so what the mix row reports can be compared with the
+request it came from.
 """
 
 from __future__ import annotations

@@ -61,7 +61,7 @@
 | CI-0172-06 | [ADR-0172](adr-0172-seam-inspector-and-audition-comparison.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0172-07 | [ADR-0172](adr-0172-seam-inspector-and-audition-comparison.md) | Needs a person: observed audition, edit and compare task | No | Unassigned | - | - |
 | CI-0173-01 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Needs a person: full-density and 320px specimen review of song blocks and seam links | No | Unassigned | - | web/src/views/EditorRows.tsx draws a SeamDiagram between song lines |
-| CI-0173-02 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | In progress: the drop target is marked (.song.over in web/src/views/EditorRows.tsx) but the seams a move would change are not previewed | No | Unassigned | - | - |
+| CI-0173-02 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Implemented (built 2026-11-10, flag editor.drag_preview) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0173-03 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0173-04 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0173-05 | [ADR-0173](adr-0173-tactile-mix-editor-and-energy-overview.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |

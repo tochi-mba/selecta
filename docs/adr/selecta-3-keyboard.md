@@ -30,7 +30,7 @@ Highest first:
 
 ## Exceptions
 
-- Ctrl K is the only shortcut that works from a text box, because nothing being typed uses it. It does nothing while a dialog is open, because the dialog comes first.
+- Ctrl K works with a modifier held, unlike the single keys, but it still stands aside for a text box or any widget that owns its keys (S4-0110 moved it out of text boxes so a draft or search is never interrupted). It does nothing while a dialog is open, because the dialog comes first. `web/src/state/shortcuts.test.ts` and `web/e2e/s3-0068-palette-preference.e2e.ts` hold both rules.
 - Anything with Ctrl, Cmd or Alt held is otherwise left to the browser and the system. Selecta doesn't intercept their shortcuts.
 - Escape closes the top overlay, and only the top one. A menu inside a sheet closes first and the sheet stays open. If no overlay is open, it leaves a Stage that isn't in real fullscreen.
 - In the Studio, Space toggles the focused square and arrow keys move around the grid. The whole grid is one tab stop, so neither reaches the global shortcuts.

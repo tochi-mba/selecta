@@ -47,6 +47,13 @@
       "surfaces": ["overlay.inspector"],
       "words": ["Exact cues"]
     },
+    "seam_inspector.compare": {
+      "label": "Compare with before",
+      "about": "Hear a transition's earlier finished render beside the new one, once both really exist.",
+      "requires": ["seam_inspector"],
+      "surfaces": ["overlay.inspector"],
+      "words": ["Compare with before"]
+    },
     "stem_studio": {
       "label": "Stem Studio",
       "about": "Both songs' voice, drums, bass and melody on one grid, heard instantly.",

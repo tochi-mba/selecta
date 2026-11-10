@@ -28,11 +28,11 @@ describe('EX-0120-03 Clear, a whole-mix command', () => {
     const notify = vi.fn();
     render(<Harness start={start} notify={notify} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Clear', exact: true } as never));
+    await userEvent.click(screen.getByRole('button', { name: /^Clear$/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Keep current mix' }));
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Clear', exact: true } as never));
+    await userEvent.click(screen.getByRole('button', { name: /^Clear$/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Clear current mix' }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Cleared the mix.', true));
     const sent = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/mix/clear'));

@@ -91,6 +91,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `editor.drag_preview` | **Move preview.** While a song is dragged, the transitions the drop would change are marked before it lands. | `editor` |
 | `seam_inspector` | **Transition inspector.** Pick the move for any transition, hear it, render it and see its checks. | `editor` |
 | `seam_inspector.exact_cues` | **Exact cues.** Choose the exact bars and phrase a transition leaves and lands on. | `seam_inspector` |
+| `seam_inspector.compare` | **Compare with before.** Hear a transition's earlier finished render beside the new one, once both really exist. | `seam_inspector` |
 | `stem_studio` | **Stem Studio.** Both songs' voice, drums, bass and melody on one grid, heard instantly. | `seam_inspector`, `stems` |
 | `stem_studio.auto_arrange` | **Studio arranging.** Selecta arranges the stems itself, or fine-tunes yours, and says what changed. | `stem_studio` |
 | `export` | **Export.** Save the whole mix as an audio file, with a list of exports. | `editor` |
@@ -165,6 +166,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `workspace.storage` | **Storage.** Free and cached space, and the cache budget. |  |
 | `workspace.backup` | **Local backup.** Back up the library's data and restore it on the next start. |  |
 | `workspace.diagnostics` | **Diagnostics.** The raw details of what Selecta is doing, for when something goes wrong. |  |
+| `workspace.library_health` | **Library health.** Overview says whether the library can be mixed or what blocks it, and which one thing to do first. |  |
 
 ## Across the app
 

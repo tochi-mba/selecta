@@ -1,7 +1,7 @@
 # ADR-0239 - Automated regression strategy and visual-evidence governance
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Implementation:** In progress (1/8 Implemented, 2/8 In progress, 5/8 Not started; 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Verification.
@@ -28,16 +28,16 @@ Expand source-level unit, interaction E2E and screenshot candidates to cover new
 
 No snapshot update that masks a real functional break, no CI-only audio quality claims and no doctored baselines. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist - 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 1/8 Implemented, 0/8 Verified
 
-1. **SF-0239-01 - Map existing tests to new tasks.** **Acceptance:** Every task has relevant automated and independent evidence gap. **Required verification:** Test crosswalk. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-2. **SF-0239-02 - Build stable visual fixtures.** **Acceptance:** Light/dark, no-data, errors, loading and sizes captured. **Required verification:** Deterministic screenshot runs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+1. **SF-0239-01 - Map existing tests to new tasks.** **Acceptance:** Every task has relevant automated and independent evidence gap. **Required verification:** Test crosswalk. **Implementation:** In progress; the Flow checklist and evidence ledger now record automated evidence or the named human gap for each task ADR-0198 to ADR-0247 handled so far; earlier Flow sections are still being filled by other agents; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** -; **Evidence:** -.
+2. **SF-0239-02 - Build stable visual fixtures.** **Acceptance:** Light/dark, no-data, errors, loading and sizes captured. **Required verification:** Deterministic screenshot runs. **Implementation:** In progress; fixtures exist for light/dark, empty, error, loading and sizes (`web/e2e/visual.e2e.ts`, `web/e2e/paired-theme.e2e.ts`, `web/e2e/mp-baseline.mp.ts`), but a deterministic screenshot run was not done in this session; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** -; **Evidence:** -.
 3. **SF-0239-03 - Protect audio ownership E2E.** **Acceptance:** Theme, scene, preview and route changes never duplicate player. **Required verification:** Real-browser counter tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 4. **SF-0239-04 - Test revision and request contracts.** **Acceptance:** Optimistic edits, conflicts and bridge consent resilient. **Required verification:** API stubs and integration tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 5. **SF-0239-05 - Specify a11y automation.** **Acceptance:** Contrast, labels, focus and reduced motion checked where possible. **Required verification:** Automated audit plus manual gap. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 6. **SF-0239-06 - Define exact screenshot approval.** **Acceptance:** Candidates not considered golden until signed review. **Required verification:** Evidence manifest checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **SF-0239-07 - Build low-power stress suites.** **Acceptance:** Live playback during analysis and render measured. **Required verification:** Hardware logs. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0239-08 - Require per-PR evidence record.** **Acceptance:** SHA, fixture, reviewer and unresolved findings attached. **Required verification:** CI and independent sign-off checklist. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0239-07 - Build low-power stress suites.** **Acceptance:** Live playback during analysis and render measured. **Required verification:** Hardware logs. **Implementation:** Not started; Needs a person: hardware logs of live playback during analysis and render on named low-power machines; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0239-08 - Require per-PR evidence record.** **Acceptance:** SHA, fixture, reviewer and unresolved findings attached. **Required verification:** CI and independent sign-off checklist. **Implementation:** Implemented; the pull request template asks for tested SHA, fixture, independent reviewer and unresolved findings on every PR; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `.github/pull_request_template.md` Evidence record; `tests/test_flow_cross_cutting.py` 'test_every_pull_request_carries_its_evidence_record' (passed 2026-11-10).
 
 ## Invariants and negative cases
 
@@ -47,5 +47,5 @@ Single player and intentional Pause; unchanged local music and explicit LRCLIB m
 
 - **Depends on:** ADR-0164/0184/0029; new ADR-0198/0199 and previous programme acceptance records.
 - **Next:** dated owner decision → design specimens → small code/test PR → separate independent human/AT/audio/performance report → explicit release gate.
-- **Now:** Accepted; 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
+- **Now:** Decision Accepted; Implementation 1/8 (2026-11-10); Independently Verified No; implementing branch feat/finish-checklists.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).
