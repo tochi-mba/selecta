@@ -22,6 +22,7 @@
    "prepared": "number",
    "preparing": "number"
   },
+  "/api/listening?study=contract": [],
   "/api/memory": {
    "clean": "number",
    "disliked": "number",
