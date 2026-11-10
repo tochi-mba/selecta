@@ -1,6 +1,7 @@
 import { useAuth } from '@workos-inc/authkit-react';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { BLOCKED_MESSAGES, BlockedCode, blockedCode } from './authConfig';
 import './cloud.css';
 
 type Account = {
@@ -50,12 +51,17 @@ function bytes(value: number) {
   return `${(value / (unit === 'GB' ? 1_000_000_000 : 1_000_000)).toFixed(1)} ${unit}`;
 }
 
+function pageFor(pathname: string): Page {
+  return pathname.includes('/account/billing') ? 'billing' : pathname.includes('/library') ? 'library' : 'home';
+}
+
 export function CloudApp() {
   const { isLoading, user, getAccessToken, signIn, signUp, signOut } = useAuth();
   const [account, setAccount] = useState<Account | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [blocked, setBlocked] = useState<BlockedCode | null>(null);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
-  const [page, setPage] = useState<Page>(() => window.location.pathname.includes('/account/billing') ? 'billing' : window.location.pathname.includes('/library') ? 'library' : 'home');
+  const [page, setPage] = useState<Page>(() => pageFor(window.location.pathname));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -71,6 +77,9 @@ export function CloudApp() {
     if (!response.ok) {
       const detail = payload && typeof payload === 'object' && 'detail' in payload ? (payload as { detail: unknown }).detail : undefined;
       const code = detail && typeof detail === 'object' && 'code' in detail ? String((detail as { code: unknown }).code) : undefined;
+      // An account-level refusal replaces the whole app with a plain explanation.
+      const accountState = blockedCode(code);
+      if (accountState) setBlocked(accountState);
       throw new CloudError(messageOf(payload, `Request failed (${response.status}).`), response.status, code);
     }
     return payload as T;
@@ -84,7 +93,7 @@ export function CloudApp() {
       setAccount(next);
       setNeedsOnboarding(false);
     } catch (problem) {
-      if (problem instanceof CloudError && problem.status === 409 && problem.code === 'onboarding_required') {
+      if (problem instanceof CloudError && problem.status === 409 && (problem.code === 'not_onboarded' || problem.code === 'onboarding_required')) {
         setNeedsOnboarding(true);
         setAccount(null);
       } else {
@@ -94,6 +103,15 @@ export function CloudApp() {
   }, [api, user]);
 
   useEffect(() => { void refreshAccount(); }, [refreshAccount]);
+
+  // After sign-in, AuthKit's redirect callback moves to the page the person started from.
+  useEffect(() => {
+    const follow = () => setPage(pageFor(window.location.pathname));
+    window.addEventListener('popstate', follow);
+    return () => window.removeEventListener('popstate', follow);
+  }, []);
+
+  const startSignIn = () => void signIn({ state: { returnTo: `${window.location.pathname}${window.location.search}` } });
 
   useEffect(() => {
     const checkout = new URLSearchParams(window.location.search).get('checkout');
@@ -205,7 +223,8 @@ export function CloudApp() {
   const choosePage = (next: Page) => { setPage(next); setNotice(''); setError(''); };
 
   if (isLoading) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Checking your sign-in…</p></main>;
-  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow">SELECTA CLOUD</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p><div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={() => void signIn()}>Sign in</button></div><small>Your music stays private to your workspace.</small></main>;
+  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow">SELECTA CLOUD</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p><div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small></main>;
+  if (blocked) return <BlockedAccount code={blocked} busy={busy} onSignOut={() => signOut({ returnTo: window.location.origin })} onDelete={blocked === 'account_suspended' ? () => void deleteAccount() : undefined} />;
   if (!user.emailVerified) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
   if (needsOnboarding) return <main className="cloud-onboarding"><span className="cloud-mark">S</span><p className="cloud-eyebrow">ONE QUICK CHECK</p><h1>Set up your Selecta workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
 
@@ -237,6 +256,15 @@ export function CloudApp() {
       </main>
     </div>
   );
+}
+
+function BlockedAccount({ code, busy, onSignOut, onDelete }: { code: BlockedCode; busy: boolean; onSignOut: () => void; onDelete?: () => void }) {
+  const message = BLOCKED_MESSAGES[code];
+  return <main className="cloud-runtime-message" role="alert"><span className="cloud-mark">S</span><h1>{message.title}</h1><p>{message.detail}</p>
+    {code === 'verified_email_required' && <button onClick={() => window.location.reload()}>I’ve verified my email</button>}
+    {onDelete && <button className="cloud-delete-account" disabled={busy} onClick={onDelete}>Delete account</button>}
+    <button onClick={onSignOut}>{code === 'session_revoked' ? 'Sign in again' : 'Sign out'}</button>
+  </main>;
 }
 
 function Feedback({ error, notice }: { error: string; notice: string }) {
