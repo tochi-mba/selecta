@@ -9,7 +9,19 @@ from typing import Any
 
 import pytest
 import sqlalchemy as sa
-from test_cloud_rooms_fakes import HOST, OTHER_HOST, follow_clock, make_rooms, play, request_rows
+from test_cloud_rooms_fakes import (
+    HOST,
+    OTHER_HOST,
+    PEPPER,
+    FakePlans,
+    FakeRequestPlanner,
+    FakeSongCatalog,
+    FakeSpeakers,
+    follow_clock,
+    make_rooms,
+    play,
+    request_rows,
+)
 
 from selecta.persistence import transaction
 from selecta.rooms import purge
@@ -23,6 +35,7 @@ from selecta.rooms.schema import (
     room_votes,
     rooms,
 )
+from selecta.rooms.service import Rooms
 from selecta.rooms.store import GuestStatus, RequestStatus, RoomStatus
 
 DAY = 86_400.0
@@ -386,3 +399,20 @@ def test_song_details_come_only_from_the_library_summary():
         "length_s",
     }
     assert RequestStatus.PLAYED.value == "played"
+
+
+def test_with_nothing_wired_in_for_now_playing_or_events_a_room_still_works(engine):
+    plain = Rooms(
+        engine,
+        PEPPER,
+        catalog=FakeSongCatalog(),
+        planner=FakeRequestPlanner(),
+        plans=FakePlans(),
+        speakers=FakeSpeakers(),
+    )
+    opened = plain.open_room(HOST, "Party")
+    guest = plain.join(opened.code, None)
+    plain.request(guest.guest_token, 1)
+    view = plain.guest_view(guest.guest_token)
+    assert view.now_playing is None and view.up_next == ()
+    assert view.my_requests[0].text == "Accepted" and view.my_requests[0].minutes_until is None

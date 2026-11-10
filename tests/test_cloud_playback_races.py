@@ -105,6 +105,37 @@ def test_two_simultaneous_take_overs_queue_up_on_sqlite(sqlite_engine, someone_p
     _two_take_overs(sqlite_engine, rounds=3, someone_playing=someone_playing)
 
 
+def _three_press_play(engine) -> None:
+    workspace = f"ws-{new_id()}"
+    trio = [_device(engine, workspace, name) for name in ("Laptop", "Phone", "Tablet")]
+
+    results = _race(3, lambda index: session.take_over(engine, workspace, trio[index].id))
+
+    by_seq = sorted(results, key=lambda result: result.session.seq)
+    assert [result.session.seq for result in by_seq] == [1, 2, 3], "one after another"
+    assert by_seq[0].previous_device is None
+    for before, after in zip(by_seq, by_seq[1:], strict=False):
+        assert after.previous_device is not None
+        assert after.previous_device.id == before.session.active_device_id, "each told why"
+    final = session.get_session(engine, workspace)
+    assert final.active_device_id == by_seq[-1].session.active_device_id
+    reporting = [d.id for d in trio if session.is_reporting_device(engine, workspace, d.id)]
+    assert reporting == [final.active_device_id], "one speaker, two remotes"
+
+
+def test_three_devices_pressing_play_in_the_same_second_leave_one_speaker_on_postgres(
+    postgres_engine,
+):
+    for _ in range(5):
+        _three_press_play(postgres_engine)
+
+
+def test_three_devices_pressing_play_in_the_same_second_leave_one_speaker_on_sqlite(
+    sqlite_engine,
+):
+    _three_press_play(sqlite_engine)
+
+
 # ---- many remotes pressing skip on one session
 
 

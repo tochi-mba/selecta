@@ -125,6 +125,20 @@ def test_settings_of_the_wrong_kind_are_refused_before_anything_opens(rooms):
     assert rooms.current_room(HOST) is None
 
 
+def test_a_room_opened_by_someone_else_a_moment_earlier_is_reported_as_already_open(
+    rooms, monkeypatch
+):
+    rooms.open_room(HOST, "First tab")
+    real = lifecycle.current_room_row
+    looks = iter([None])  # the first look missed it, as a racing request would
+
+    def missed_once(conn, workspace_id):
+        return next(looks, None) or real(conn, workspace_id)
+
+    monkeypatch.setattr(lifecycle, "current_room_row", missed_once)
+    _refused(Refusal.ALREADY_OPEN, rooms.open_room, HOST, "Second tab")
+
+
 def test_two_rooms_opened_at_once_leave_one_open_on_postgres(postgres_engine):
     rooms = make_rooms(postgres_engine)
     barrier = threading.Barrier(2)

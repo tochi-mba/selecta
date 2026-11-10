@@ -596,6 +596,20 @@ def test_a_speaker_back_online_carries_on_when_nobody_took_over(engine, clock, l
     assert session.speaker_online(engine, WORKSPACE)
 
 
+def test_a_speaker_whose_network_flaps_for_an_hour_keeps_the_music(engine, clock, laptop, phone):
+    _playing(engine, laptop)
+    offset = 0
+    for _ in range(60):
+        clock.advance(30)  # gone longer than the lease, then back
+        offset += 30_000
+        assert session.on_reconnect(engine, WORKSPACE, laptop.id).action is ReconnectAction.CONTINUE
+        assert _beat(engine, laptop, 0, offset).outcome is HeartbeatOutcome.RENEWED
+    now = _current(engine)
+    assert now.active_device_id == laptop.id and now.offset_ms == 30 * 60 * 1000
+    assert now.seq == 1, "nothing changed hands, so remotes' commands stay valid"
+    assert session.session_view(engine, WORKSPACE, phone.id).speaker is SpeakerStatus.ELSEWHERE
+
+
 def test_a_speaker_back_online_fades_out_when_someone_took_over(engine, clock, laptop, phone):
     _playing(engine, laptop)
     clock.advance(LEASE_SECONDS + 5)
