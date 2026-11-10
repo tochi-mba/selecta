@@ -43,6 +43,22 @@ PUBLIC = {
     ("POST", "/api/webhooks/stripe"),
     ("POST", "/api/webhooks/workos"),
 }
+# Anonymous routes are isolated by an unguessable guest/display capability cookie rather than a
+# signed-in workspace. Their own API suite proves a cookie for one room cannot address another.
+CAPABILITY_ONLY = {
+    ("POST", "/api/guest/join"),
+    ("GET", "/api/guest/rooms/{room_id}"),
+    ("GET", "/api/guest/rooms/{room_id}/search"),
+    ("POST", "/api/guest/rooms/{room_id}/requests"),
+    ("DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}"),
+    ("POST", "/api/guest/rooms/{room_id}/requests/{request_id}/vote"),
+    ("DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}/vote"),
+    ("GET", "/api/guest/rooms/{room_id}/nicknames"),
+    ("PUT", "/api/guest/rooms/{room_id}/nickname"),
+    ("POST", "/api/guest/rooms/{room_id}/leave"),
+    ("POST", "/api/display/pairings"),
+    ("GET", "/api/display/view"),
+}
 # Routes that act only on the signed-in person, whatever workspace a request names.
 SELF_ONLY = {
     ("POST", "/api/onboarding/complete"),
@@ -59,6 +75,12 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/account/labs"): None,
     ("PUT", "/api/account/labs/{flag_id}"): {"enabled": False},
     ("GET", "/api/account/export"): None,
+    ("GET", "/api/account/lucy"): None,
+    ("PUT", "/api/account/lucy"): {
+        "enabled": True,
+        "phases": {"chat": True},
+        "privacy": {"share_lyrics": False},
+    },
     ("POST", "/api/billing/checkout"): {
         "plan": "premium",
         "interval": "month",
@@ -81,6 +103,39 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/assets/{asset_id}/playback-proxy"): None,
     ("GET", "/api/assets/{asset_id}/playback-proxy"): None,
     ("POST", "/api/storage/derived-playback-url"): None,  # body built per test: Alice's key
+    ("POST", "/api/devices"): {"name": "Browser", "kind": "laptop"},
+    ("GET", "/api/devices"): None,
+    ("PATCH", "/api/devices/{device_id}"): {"name": "Kitchen"},
+    ("POST", "/api/devices/{device_id}/sign-out"): None,
+    ("GET", "/api/playback/session"): None,
+    ("POST", "/api/playback/heartbeat"): {
+        "device_id": "missing",
+        "song_index": 0,
+        "offset_ms": 0,
+    },
+    ("POST", "/api/playback/take-over"): {"device_id": "missing"},
+    ("POST", "/api/playback/reconnect"): {"device_id": "missing"},
+    ("POST", "/api/playback/commands"): {
+        "device_id": "missing",
+        "command": "pause",
+        "based_on_seq": 0,
+        "idempotency_key": "tenant-matrix",
+    },
+    ("POST", "/api/rooms"): {"name": "Party", "settings": {}},
+    ("GET", "/api/rooms/current"): None,
+    ("GET", "/api/rooms/{room_id}"): None,
+    ("PATCH", "/api/rooms/{room_id}/settings"): {"votes": False},
+    ("POST", "/api/rooms/{room_id}/lock"): None,
+    ("POST", "/api/rooms/{room_id}/unlock"): None,
+    ("POST", "/api/rooms/{room_id}/code"): {"remove_everyone": False},
+    ("POST", "/api/rooms/{room_id}/end"): None,
+    ("POST", "/api/rooms/{room_id}/requests/{request_id}/approve"): None,
+    ("POST", "/api/rooms/{room_id}/requests/{request_id}/pass"): None,
+    ("POST", "/api/rooms/{room_id}/guests/{guest_id}/approve"): None,
+    ("POST", "/api/rooms/{room_id}/guests/{guest_id}/remove"): None,
+    ("POST", "/api/rooms/{room_id}/guests/{guest_id}/ban"): None,
+    ("POST", "/api/rooms/{room_id}/displays"): {"pairing_code": "ABC-123"},
+    ("DELETE", "/api/rooms/{room_id}/displays"): None,
 }
 # The scoped routes that name one resource. In his own workspace, Bob asking for Alice's
 # resource must get the same answer as asking for one that doesn't exist.
@@ -216,7 +271,15 @@ def world(tmp_path, monkeypatch):
             "objects": objects,
             "alice_ws": alice_ws,
             "bob_ws": bob_ws,
-            "ids": {"session_id": session_id, "asset_id": asset_id, "flag_id": "lucy"},
+            "ids": {
+                "session_id": session_id,
+                "asset_id": asset_id,
+                "flag_id": "lucy",
+                "device_id": new_id(),
+                "room_id": new_id(),
+                "request_id": new_id(),
+                "guest_id": new_id(),
+            },
             "derived": derived,
             "alice_keys": {original_key(alice_ws, asset_id), derived, f"s/{session_id}/object"},
         }
@@ -265,7 +328,7 @@ def test_every_cloud_route_is_classified(world):
         if isinstance(route, APIRoute) and route.path.startswith("/api")
         for method in route.methods - {"HEAD"}
     }
-    classified = PUBLIC | SELF_ONLY | set(SCOPED)
+    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | set(SCOPED)
     assert routes - classified == set(), "new routes must join the tenant isolation matrix"
     assert classified - routes == set(), "the matrix names routes that no longer exist"
 

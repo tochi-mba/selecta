@@ -68,6 +68,9 @@ class Party:
         return TestClient(self.app, base_url="https://testserver", headers={"Origin": ORIGIN})
 
     def register(self, token: str, name: str = "Laptop", **body) -> dict:
+        # Each helper call represents a different browser. The shared TestClient keeps the
+        # Secure fallback cookie, so name a fresh id unless a test explicitly asks to reuse one.
+        body.setdefault("device_id", made_up())
         answer = self.client.post(
             "/api/devices", headers=auth(token), json={"name": name, "kind": "laptop", **body}
         )

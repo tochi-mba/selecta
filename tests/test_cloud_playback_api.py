@@ -4,18 +4,18 @@ Each test signs people up through the real routes. Devices are the caller's own:
 account's device id, or another person's, looks exactly like one that doesn't exist.
 """
 
+# ruff: noqa: F811 -- imported pytest fixtures are intentionally requested by test arguments.
+
 from __future__ import annotations
 
 import pytest
-from cloud_party import ALICE, BOB, CAROL, auth, made_up
+from cloud_party import ALICE, BOB, CAROL, auth, made_up, party  # noqa: F401
 from test_cloud_playback_fakes import follow_clock
 
 from selecta import flags
 from selecta.persistence import transaction
 from selecta.playback.model import MAX_SIGNED_IN_DEVICES
 from selecta.work.schema import outbox_events
-
-pytest_plugins = ("cloud_party",)
 
 
 def test_register_list_rename_and_sign_out(party):
@@ -220,11 +220,11 @@ def test_naming_another_workspace_is_refused(party):
 
 def test_the_features_follow_their_flags(party, monkeypatch):
     party.register(CAROL)  # every plan has devices
-    flags.use({"devices.remote_control": False})
+    flags.use("-devices.remote_control")
     answer = party.client.post("/api/playback/commands", headers=auth(CAROL), json={
         "command": "pause", "based_on_seq": 0, "idempotency_key": "x"})
     assert answer.status_code == 403 and answer.json()["code"] == "flag_off"
-    flags.use({"devices": False})
+    flags.use("-devices")
     off = party.client.get("/api/devices", headers=auth(CAROL))
     assert off.status_code == 403 and off.json()["flag"] == "devices"
 

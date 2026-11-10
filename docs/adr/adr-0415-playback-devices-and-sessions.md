@@ -1,7 +1,7 @@
 # ADR-0415 - Playback devices and one session per account
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/5 Implemented; 0/5 In progress; 5/5 Not started.
+- **Implementation:** 0/5 Implemented; 4/5 In progress; 1/5 Not started.
 - **Independent verification:** 0/5 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 6. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -34,11 +34,11 @@ No room ever hears two copies of the mix, any device can steer, and moving the m
 
 ## Implementation checklist - 0/5 Implemented; 0/5 independently Verified
 
-1. **SC-0415-01 - Devices.** **Acceptance:** Registration, naming, list and sign-out work; the 11th device signs out the oldest. **Required verification:** Integration and Playwright tests. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0415-02 - Lease and remotes.** **Acceptance:** Commands from many remotes apply once and in order. **Required verification:** Concurrency test. **Implementation:** Not started; **Independently Verified:** No.
-3. **SC-0415-03 - Transfer.** **Acceptance:** 'Play here' moves playback with no double audio. **Required verification:** Playwright multi-context test plus real devices. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0415-01 - Devices.** **Acceptance:** Registration, naming, list and sign-out work; the 11th device signs out the oldest. **Required verification:** Integration and Playwright tests. **Implementation:** In progress; the API integration suite covers the lifecycle and limit; the browser UI test remains. **Evidence:** `src/selecta/playback/api.py`; `tests/test_cloud_playback_api.py`. **Independently Verified:** No.
+2. **SC-0415-02 - Lease and remotes.** **Acceptance:** Commands from many remotes apply once and in order. **Required verification:** Concurrency test. **Implementation:** In progress; leases, sequences and idempotency are API-tested; the multi-remote concurrency run remains. **Evidence:** `tests/test_cloud_playback_api.py`. **Independently Verified:** No.
+3. **SC-0415-03 - Transfer.** **Acceptance:** 'Play here' moves playback with no double audio. **Required verification:** Playwright multi-context test plus real devices. **Implementation:** In progress; the server transfer is covered; browser multi-context and real-device audio evidence remain. **Evidence:** `tests/test_cloud_playback_api.py::test_play_here_moves_the_lease_and_names_the_old_speaker`. **Independently Verified:** No.
 4. **SC-0415-04 - Offline speaker.** **Acceptance:** A speaker that loses connection keeps playing; reconnect behaviour matches the rules. **Required verification:** Chaos test on real devices. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0415-05 - Device guidance.** **Acceptance:** iOS speaker warning and wake-lock request shown where relevant. **Required verification:** Manual device test. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0415-05 - Device guidance.** **Acceptance:** iOS speaker warning and wake-lock request shown where relevant. **Required verification:** Manual device test. **Implementation:** In progress; capability responses include warning/wake-lock guidance; the UI and manual-device check remain. **Evidence:** `tests/test_cloud_playback_api.py::test_an_iphone_is_told_to_keep_the_screen_on`. **Independently Verified:** No.
 
 ## Governance
 

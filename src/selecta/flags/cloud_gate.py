@@ -6,7 +6,8 @@ staff rule may pause a feature for some accounts. `require` asks the same target
 site's feature list comes from, so a route and the screen that shows its button always agree.
 
 A feature the account's plan doesn't include is refused as 403 `plan_required`, naming the plan
-that unlocks it; any other "no" (a rule, an opt-out) is 403 `feature_unavailable`.
+that unlocks it; any other "no" (a build setting, rule, or opt-out) is 403 `flag_off`, matching
+the stable flag error contract used by local mode and the site.
 """
 
 from __future__ import annotations
@@ -27,7 +28,10 @@ from selecta.persistence import db_now
 def decide(conn: Connection, principal, flag_id: str, rules: RulesCache) -> targeting.Decision:
     """The targeting decision for this person in this workspace, inside the caller's
     transaction."""
-    rules.refresh_if_stale()
+    # Reuse the request transaction. Opening a second connection here deadlocks a cold cache on
+    # SQLite once the request has written, and needlessly spends another pooled connection on
+    # PostgreSQL.
+    rules.refresh_if_stale(conn)
     snapshot = rules.snapshot
     workspace_id = principal.workspace.id
     entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
@@ -76,7 +80,7 @@ def require(conn: Connection, principal, flag_id: str, rules: RulesCache) -> Non
     raise HTTPException(
         status_code=403,
         detail={
-            "code": "feature_unavailable",
+            "code": "flag_off",
             "message": f"{label} isn't available on this account right now.",
             "flag": flag_id,
         },

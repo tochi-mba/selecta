@@ -561,26 +561,38 @@ class RulesCache:
     def version(self) -> int:
         return self.snapshot.version
 
-    def refresh_if_newer(self, version: int | None = None) -> bool:
+    def refresh_if_newer(
+        self,
+        version: int | None = None,
+        connection: Connection | None = None,
+    ) -> bool:
         """Reload when the stored rules are newer than the snapshot. True when it reloaded."""
         held = self._snapshot
         if version is not None and held is not None and version <= held.version:
             return False
         with self._lock:
-            with persistence.transaction(self._engine) as conn:
-                latest = current_version(conn)
+            if connection is None:
+                with persistence.transaction(self._engine) as conn:
+                    latest = current_version(conn)
+                    held = self._snapshot
+                    if held is not None and latest <= held.version:
+                        self._checked_at = self._clock()
+                        return False
+                    self._snapshot = load_snapshot(conn)
+            else:
+                latest = current_version(connection)
                 held = self._snapshot
                 if held is not None and latest <= held.version:
                     self._checked_at = self._clock()
                     return False
-                self._snapshot = load_snapshot(conn)
+                self._snapshot = load_snapshot(connection)
             self._checked_at = self._clock()
             return True
 
-    def refresh_if_stale(self) -> bool:
+    def refresh_if_stale(self, connection: Connection | None = None) -> bool:
         if self._snapshot is not None and self._clock() - self._checked_at < self._max_age:
             return False
-        return self.refresh_if_newer()
+        return self.refresh_if_newer(connection=connection)
 
     def invalidate(self) -> None:
         """Forget the snapshot; the next read loads a fresh one."""

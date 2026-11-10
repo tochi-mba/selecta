@@ -37,6 +37,10 @@ GLOBAL_TABLES: dict[str, str] = {
     "model_deployments": "platform AI model configuration",
     "model_routing_versions": "platform AI routing history",
     "ai_spend_daily": "the platform's total AI spend per day, a cost guard across workspaces",
+    "admin_metrics": "small platform-wide aggregates read by the operations console",
+    "emergency_controls": "platform controls that pause shared services or worker pools",
+    "platform_alerts": "security and operations alerts delivered to platform owners",
+    "worker_controls": "staff holds on workers in the shared platform fleet",
 }
 
 # Tables with a `workspace_id` that may be empty, because some rows belong to no workspace yet.

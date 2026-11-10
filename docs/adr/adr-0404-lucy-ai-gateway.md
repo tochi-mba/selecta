@@ -1,7 +1,7 @@
 # ADR-0404 - Lucy AI gateway with server-owned model routing
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/6 Implemented; 0/6 In progress; 6/6 Not started.
+- **Implementation:** 0/6 Implemented; 1/6 In progress; 5/6 Not started.
 - **Independent verification:** 0/6 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 5. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -40,7 +40,7 @@ Users get a Lucy that matches their plan without seeing model names; a maxed-out
 2. **SC-0404-02 - Allowance ledger.** **Acceptance:** Turns are metered; limits enforced mid-conversation gracefully. **Required verification:** Integration test. **Implementation:** Not started; **Independently Verified:** No.
 3. **SC-0404-03 - Spend guards.** **Acceptance:** No admission past per-account or platform ceilings, proven with a fake provider. **Required verification:** Load test with fake provider. **Implementation:** Not started; **Independently Verified:** No.
 4. **SC-0404-04 - Fallback chain.** **Acceptance:** Provider outage degrades to the next model or the built-in planner; the rest of the app is unaffected. **Required verification:** Chaos test. **Implementation:** Not started; **Independently Verified:** No.
-5. **SC-0404-05 - Settings split.** **Acceptance:** Cloud Lucy settings show only user-owned choices and a usage meter. **Required verification:** Playwright test per mode. **Implementation:** Not started; **Independently Verified:** No.
+5. **SC-0404-05 - Settings split.** **Acceptance:** Cloud Lucy settings show only user-owned choices and a usage meter. **Required verification:** Playwright test per mode. **Implementation:** In progress; the Cloud account API exposes and persists only user-owned Lucy choices plus the allowance meter, and rejects provider/model/key/budget fields. **Evidence:** `src/selecta/lucy/cloud_settings.py`; `tests/test_cloud_lucy_settings.py`. The mode-specific UI and Playwright test remain. **Independently Verified:** No.
 6. **SC-0404-06 - Evaluation gate.** **Acceptance:** The Lucy evaluation set passes for each tier's deployment. **Required verification:** Eval run report. **Implementation:** Not started; **Independently Verified:** No.
 
 ## Governance
