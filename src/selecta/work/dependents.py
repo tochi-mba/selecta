@@ -84,7 +84,12 @@ def release(connection: Connection, job_id: str, now: float) -> list[str]:
                 continue
             released.append(dependent.id)
             if lookup(dependent.type).workflow:
-                set_state(connection, dependent, S.SUCCEEDED, now, finished_at=now)
+                # A blocked workflow can't succeed in one step; it goes by way of waiting.
+                through = (S.WAITING_DEPS,) if dependent.state == S.BLOCKED else ()
+                set_state(
+                    connection, dependent, S.SUCCEEDED, now, through=through, finished_at=now,
+                    error_class=None, error_detail=None,
+                )
                 stack.append(dependent.id)
                 continue
             set_state(
