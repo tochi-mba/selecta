@@ -139,7 +139,8 @@ __all__ = [
 
 IDLE_CHECK_SECONDS = 3.0
 
-MEMORY_SECONDS = 5.0
+MEMORY_SECONDS = 60.0
+# A poll must never enumerate thousands of transition files on the HTTP thread.
 
 """How far past its limit each forgiving check can go, in its own units."""
 
@@ -210,6 +211,10 @@ class SeamStore:
         self.window_totals: dict[str, int] = {}
         self._quote: float | None = None
         self._remembered: tuple[float, SeamMemory] | None = None
+        self._memory_scan_lock = threading.Lock()
+        self._memory_refresh_lock = threading.Lock()
+        self._memory_refresh: threading.Thread | None = None
+        self._memory_revision = 0
         self._records: dict[Path, tuple[tuple[int, int], dict]] = {}
         self._asked_by_requests: set[str] = set()
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
@@ -247,6 +252,10 @@ class SeamStore:
             json.dump(state, stream)
         try:
             temporary.replace(target)
+            # Internal writes must be reflected immediately, independent of the
+            # longer cache TTL used to avoid expensive Windows disk walks.
+            self._memory_revision += 1
+            self._remembered = None
         finally:
             temporary.unlink(missing_ok=True)
 
@@ -467,31 +476,72 @@ class SeamStore:
             self._requested = deque(item for item in self._requested if item[0].key not in gone)
             self._request_keys -= gone
 
-    def remembered(self, fresh: bool = False) -> SeamMemory:
-        """Everything finished seams have shown, including ones the render cache has cleared. It's
-        kept for a few seconds, since suggestions ask for it with every key pressed."""
+    def remembered_count(self) -> tuple[int, bool]:
+        """Non-blocking status count; refresh transition history on one background thread.
+
+        The first request may return zero with pending=True, not a false claim
+        that an empty library has no history. Subsequent requests use the latest
+        snapshot while a slow refresh is in progress.
+        """
         now = time.monotonic()
-        if not fresh and self._remembered and now - self._remembered[0] < MEMORY_SECONDS:
-            return self._remembered[1]
-        states: dict[str, dict] = {}
-        histories = (self.settings.home / "seam-history").glob("*.json")
-        records: dict[Path, tuple[tuple[int, int], dict]] = {}
-        for meta in [*self.root.glob("*/seam.json"), *histories]:
-            try:
-                facts = meta.stat()
-                stamp = (facts.st_mtime_ns, facts.st_size)
-                known = self._records.get(meta)
-                state = (
-                    known[1] if known and known[0] == stamp else json.loads(meta.read_text("utf-8"))
-                )
-            except (OSError, ValueError):
-                continue
-            records[meta] = (stamp, state)  # a file that hasn't changed needn't be read again
-            states.setdefault(state.get("key", str(meta)), state)
-        self._records = records
-        memory = SeamMemory.from_states(states.values())
-        self._remembered = (now, memory)
-        return memory
+        snapshot = self._remembered
+        if snapshot is None or now - snapshot[0] >= MEMORY_SECONDS:
+            with self._memory_refresh_lock:
+                thread = self._memory_refresh
+                if thread is None or not thread.is_alive():
+                    thread = threading.Thread(
+                        target=self._refresh_memory, name="selecta-transition-memory", daemon=True
+                    )
+                    self._memory_refresh = thread
+                    thread.start()
+        return (len(snapshot[1].clean) if snapshot else 0, snapshot is None)
+
+    def _refresh_memory(self) -> None:
+        try:
+            self.remembered(fresh=True)
+        except Exception:
+            # A background failure must not prevent the API responding; next
+            # polling interval can retry and the regular memory path still raises.
+            import logging
+
+            logging.getLogger(__name__).exception("Refreshing transition memory failed")
+
+    def remembered(self, fresh: bool = False) -> SeamMemory:
+        """Load complete seam history only when needed; serialize expensive scans."""
+        snapshot = self._remembered
+        now = time.monotonic()
+        if not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS:
+            return snapshot[1]
+        with self._memory_scan_lock:
+            snapshot = self._remembered
+            now = time.monotonic()
+            if not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS:
+                return snapshot[1]
+            revision = self._memory_revision
+            states: dict[str, dict] = {}
+            records: dict[Path, tuple[tuple[int, int], dict]] = {}
+            histories = (self.settings.home / "seam-history").glob("*.json")
+            for meta in [*self.root.glob("*/seam.json"), *histories]:
+                try:
+                    facts = meta.stat()
+                    stamp = (facts.st_mtime_ns, facts.st_size)
+                    known = self._records.get(meta)
+                    state = (
+                        known[1]
+                        if known and known[0] == stamp
+                        else json.loads(meta.read_text("utf-8"))
+                    )
+                except (OSError, ValueError):
+                    continue
+                records[meta] = (stamp, state)
+                states.setdefault(state.get("key", str(meta)), state)
+            memory = SeamMemory.from_states(states.values())
+            self._records = records
+            # Writes that arrived during the scan force another refresh, rather
+            # than treating a potentially stale snapshot as recently valid.
+            stamp = time.monotonic() if revision == self._memory_revision else 0.0
+            self._remembered = (stamp, memory)
+            return memory
 
     def forget_unfinished(self) -> None:
         """Anything marked as under way was cut off when the last worker stopped."""
