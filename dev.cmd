@@ -1,4 +1,4 @@
-@cd /d "%~dp0" & (where uv >nul 2>nul || (echo Install uv from https://docs.astral.sh/uv/ & exit /b 1)) & (if /I "%~1"=="doctor" (uv run --no-sync python -x "%~f0" %*) else (uv run python -x "%~f0" %*)) & exit /b
+@cd /d "%~dp0" & (where uv >nul 2>nul || (echo [BOOT] uv missing: https://docs.astral.sh/uv/ & pause & exit /b 1)) & echo [BOOT] Preparing the Python environment (first install can take a while)... & (if /I "%~1"=="doctor" (uv run --no-sync python -x "%~f0" %*) else (uv run python -x "%~f0" %*)) & if errorlevel 1 (echo [BOOT] Startup failed. Review the errors above. & pause & exit /b 1) & exit /b 0
 """One-command local development: Python API, hot-reloading site and health checks.
 
 Windows: double-click dev.cmd or run it from cmd/PowerShell.
@@ -42,6 +42,7 @@ SITE_PORT = 5173
 PORTS_TO_TRY = 20
 STARTING_SECONDS = 180
 HEARTBEAT_SECONDS = 60
+REPORT_SECONDS = 5
 
 _PRINT_LOCK = threading.Lock()
 
@@ -187,6 +188,14 @@ class Service:
     name: str
     process: subprocess.Popen[str]
     last_lines: deque[str] = field(default_factory=lambda: deque(maxlen=20))
+    started_at: float = field(default_factory=time.monotonic)
+    last_output_at: float = field(default_factory=time.monotonic)
+
+
+@dataclass(frozen=True)
+class Probe:
+    ok: bool
+    detail: str
 
 
 def start_service(name: str, command: list[str], cwd: Path, env: dict[str, str]) -> Service:
@@ -206,6 +215,7 @@ def start_service(name: str, command: list[str], cwd: Path, env: dict[str, str])
     except OSError as problem:
         raise StartupError(f"{name} could not start: {problem}") from problem
     service = Service(name, process)
+    say("PID", f"{name} started as PID {process.pid}; waiting for its first output.")
 
     def forward_output() -> None:
         if process.stdout is None:
@@ -214,6 +224,7 @@ def start_service(name: str, command: list[str], cwd: Path, env: dict[str, str])
             clean = line.rstrip("\r\n")
             if clean:
                 service.last_lines.append(clean)
+                service.last_output_at = time.monotonic()
                 say(name, clean)
 
     threading.Thread(target=forward_output, name=f"selecta-{name}", daemon=True).start()
@@ -232,45 +243,126 @@ def check_exits(services: list[Service]) -> None:
             )
 
 
-def wait_until_ready(
-    api_port: int, site_port: int, services: list[Service], *, timeout: float = STARTING_SECONDS
-) -> None:
-    """Require the API, Vite and Vite-to-API proxy, not merely an occupied TCP port."""
-    api_url = f"http://127.0.0.1:{api_port}/api/status"
-    site_url = f"http://127.0.0.1:{site_port}/"
-    proxy_url = f"{site_url}api/status"
-    deadline = time.monotonic() + timeout
-    last_report = 0.0
-    ready: set[str] = set()
-    while time.monotonic() < deadline:
-        check_exits(services)
-        checks = {
-            "API": status_ok(read(api_url)),
-            "SITE": read(site_url) is not None,
-        }
-        checks["PROXY"] = checks["SITE"] and checks["API"] and status_ok(read(proxy_url))
-        for name, ok in checks.items():
-            if ok and name not in ready:
-                ready.add(name)
-                say("OK", f"{name}: responding")
-        if all(checks.values()):
-            return
-        now = time.monotonic()
-        if now - last_report >= 5:
-            waiting = ", ".join(name.lower() for name, ok in checks.items() if not ok)
-            elapsed = int(max(0, timeout - (deadline - now)))
-            say(
-                "WAIT",
-                f"{elapsed}s elapsed; waiting for {waiting}. Logs appear above as they arrive.",
-            )
-            last_report = now
-        time.sleep(0.5)
-    missing = ", ".join(name.lower() for name in ("API", "SITE", "PROXY") if name not in ready)
-    raise StartupError(
-        f"Startup timed out after {timeout:.0f}s (not ready: {missing}). "
-        "Check the API/SITE logs, firewall and selected ports."
+_LOCAL_HTTP = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+def probe(url: str, kind: str) -> Probe:
+    """Show the actual HTTP failure, never mistake an unrelated server for Selecta."""
+    request = urllib.request.Request(url, headers={"Accept": "application/json, text/html"})
+    try:
+        with _LOCAL_HTTP.open(request, timeout=1.5) as response:
+            body = response.read(8192).decode("utf-8", "replace")
+            status = response.status
+    except urllib.error.HTTPError as error:
+        return Probe(False, f"HTTP {error.code} at {url}")
+    except (OSError, urllib.error.URLError, ValueError) as error:
+        return Probe(False, f"{type(error).__name__}: {error}")
+    if status != 200:
+        return Probe(False, f"HTTP {status} at {url}")
+    if kind == "health":
+        try:
+            payload = json.loads(body)
+        except ValueError:
+            return Probe(False, "HTTP 200 but not Selecta health JSON")
+        if payload != {"service": "selecta-local", "status": "ok"}:
+            return Probe(False, f"HTTP 200 but wrong health response: {body[:120]!r}")
+        return Probe(True, "Selecta local health returned HTTP 200")
+    if kind == "status":
+        return (
+            Probe(True, "local library status returned HTTP 200")
+            if status_ok(body)
+            else Probe(False, f"HTTP 200 but invalid /api/status: {body[:120]!r}")
+        )
+    if kind == "site":
+        return (
+            Probe(True, "Vite HTML returned HTTP 200")
+            if "<html" in body.lower()
+            else Probe(False, "HTTP 200 but page is not HTML")
+        )
+    raise ValueError(f"Unsupported health-check type: {kind}")
+
+
+def format_service_state(service: Service, now: float) -> str:
+    """Human-actionable process status, even if the child wrote no output yet."""
+    process = service.process
+    uptime = now - service.started_at
+    silence = now - service.last_output_at
+    result = process.poll()
+    state = "running" if result is None else f"exited {result}"
+    last = service.last_lines[-1][:180] if service.last_lines else "no output yet"
+    return (
+        f"{service.name} PID {process.pid}: {state}, {uptime:.0f}s old, "
+        f"{silence:.0f}s since output; last: {last}"
     )
 
+
+def wait_until_ready(
+    api_port: int,
+    site_port: int,
+    services: list[Service],
+    *,
+    timeout: float = STARTING_SECONDS,
+) -> None:
+    """Verify API HTTP health, site, Vite proxy, and the actual library status."""
+    api_health = f"http://127.0.0.1:{api_port}/api/health"
+    api_status = f"http://127.0.0.1:{api_port}/api/status"
+    site_url = f"http://127.0.0.1:{site_port}/"
+    proxy_health = f"{site_url}api/health"
+    start_time = time.monotonic()
+    deadline = start_time + timeout
+    last_report = start_time - REPORT_SECONDS
+    last_status_check = start_time - REPORT_SECONDS
+    status_result = Probe(False, "waiting for API HTTP health")
+    announced: set[str] = set()
+    last_results: dict[str, Probe] = {}
+    while time.monotonic() < deadline:
+        check_exits(services)
+        health = probe(api_health, "health")
+        site = probe(site_url, "site")
+        proxy = (
+            probe(proxy_health, "health")
+            if health.ok and site.ok
+            else Probe(False, "waiting for API and website")
+        )
+        now = time.monotonic()
+        if health.ok and now - last_status_check >= REPORT_SECONDS:
+            status_result = probe(api_status, "status")
+            last_status_check = now
+        results = {"API": health, "SITE": site, "PROXY": proxy, "DATA": status_result}
+        last_results = results
+        for name, result in results.items():
+            if result.ok and name not in announced:
+                announced.add(name)
+                say("OK", f"{name}: {result.detail}")
+        if all(result.ok for result in results.values()):
+            return
+        if now - last_report >= REPORT_SECONDS:
+            say("WAIT", f"{now - start_time:.0f}/{timeout:.0f}s elapsed; current readiness:")
+            for name, result in results.items():
+                if not result.ok:
+                    say("WAIT", f"  {name}: {result.detail}")
+            for service in services:
+                say("PROC", f"  {format_service_state(service, now)}")
+            if not health.ok:
+                say(
+                    "HINT",
+                    "If API modules are still loading, see the [BOOT] output. "
+                    "If migration is running, leave it uninterrupted; no data is deleted.",
+                )
+            elif not status_result.ok:
+                say(
+                    "HINT",
+                    "The HTTP server is alive but /api/status is not ready. "
+                    "Check the data-folder permissions, SQLite locks and API logs.",
+                )
+            last_report = now
+        time.sleep(0.5)
+    missing = ", ".join(name for name, result in last_results.items() if not result.ok)
+    details = "; ".join(f"{name}: {r.detail}" for name, r in last_results.items() if not r.ok)
+    raise StartupError(
+        f"Startup timed out after {timeout:.0f}s; not ready: {missing}. "
+        f"Last checks: {details}. Run dev.cmd doctor and inspect the API logs above."
+    )
 
 def stop(service: Service) -> None:
     """Stop the launcher-owned process tree, never an externally reused API."""
@@ -316,13 +408,18 @@ def run(options: argparse.Namespace) -> int:
         say("INFO", f"Data folder: {home}")
         # Pin the resolved path: the Python server runs from ROOT even if the
         # launcher was invoked from a different current working directory.
-        local_env = {**os.environ, "SELECTA_MODE": "local", "SELECTA_HOME": str(home)}
+        local_env = {
+            **os.environ,
+            "SELECTA_MODE": "local",
+            "SELECTA_HOME": str(home),
+            "SELECTA_DEV_STARTUP": "1",
+        }
         phase(2, 4, "Preparing browser dependencies")
         install_site_tools(pnpm)
         phase(3, 4, "Starting hot-reloading API and website")
         api_port = options.api_port
         if options.reuse_server:
-            if not status_ok(read(f"http://127.0.0.1:{api_port}/api/status")):
+            if not probe(f"http://127.0.0.1:{api_port}/api/health", "health").ok:
                 raise StartupError(
                     f"--reuse-server needs an existing local Selecta API at port {api_port}. "
                     "Start one first or omit --reuse-server."
@@ -334,8 +431,11 @@ def run(options: argparse.Namespace) -> int:
                 start_service(
                     "API",
                     [
-                        sys.executable, "-m", "selecta.cli", "web", "--no-open",
-                        "--reload", "--port", str(api_port),
+                        sys.executable, "-u", "-m", "uvicorn",
+                        "selecta.dev_server:application", "--factory",
+                        "--host", "127.0.0.1", "--port", str(api_port),
+                        "--reload", "--reload-dir", str(ROOT / "src" / "selecta"),
+                        "--log-level", "debug" if options.verbose else "info",
                     ],
                     ROOT,
                     local_env,
@@ -354,7 +454,9 @@ def run(options: argparse.Namespace) -> int:
             )
         )
         phase(4, 4, "Waiting for API, site and API proxy")
-        wait_until_ready(api_port, site_port, services)
+        wait_until_ready(
+            api_port, site_port, services, timeout=options.startup_timeout
+        )
         site_url = f"http://127.0.0.1:{site_port}/"
         api_url = f"http://127.0.0.1:{api_port}/"
         say("READY", f"Local development is up after {time.monotonic() - started_at:.1f}s.")
@@ -372,6 +474,7 @@ def run(options: argparse.Namespace) -> int:
                 say("INFO", "Browser could not be opened. Copy the website URL above.")
         say("INFO", "Edit web/src for instant updates or src/selecta for API reloads.")
         say("INFO", "Press Ctrl+C or close this console to stop the services started here.")
+        say("INFO", "Use --verbose for extra Uvicorn diagnostics or --startup-timeout for slow disks.")
         last_heartbeat = time.monotonic()
         while True:
             check_exits(services)
@@ -438,7 +541,14 @@ def main() -> int:
     )
     parser.add_argument("--api-port", type=int, default=SERVER_PORT)
     parser.add_argument("--site-port", type=int, default=SITE_PORT)
+    parser.add_argument(
+        "--startup-timeout", type=float, default=STARTING_SECONDS,
+        help="maximum seconds to wait for all API/site/proxy/data health checks",
+    )
+    parser.add_argument("--verbose", action="store_true", help="show detailed Uvicorn logs")
     options = parser.parse_args()
+    if options.startup_timeout <= 0:
+        parser.error("--startup-timeout must be positive")
     if options.what == "doctor":
         return doctor()
     if options.what == "test":
