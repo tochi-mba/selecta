@@ -64,7 +64,9 @@ def test_a_missing_folder_hands_back_what_was_typed(conn, tmp_path):
     assert "plug it in" in answer["reason"]
 
 
-@pytest.mark.parametrize("typed", ["relative/music", "../music", "\\\\server\\share\\music", "//server/share/music"])
+@pytest.mark.parametrize(
+    "typed", ["relative/music", "../music", "\\\\server\\share\\music", "//server/share/music"]
+)
 def test_relative_traversal_and_network_addresses_are_not_scanned(conn, typed):
     answer = check_folder(conn, typed)
     assert answer["kind"] == "invalid"
