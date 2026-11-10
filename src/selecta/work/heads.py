@@ -4,9 +4,13 @@ Every job change that affects a head (queued, dispatched, finished, moved lane) 
 functions here before its transaction commits, so the heads can't drift by design. The reconciler
 in `selecta.work.upkeep` recomputes them from `jobs` every minute anyway.
 
-Lock order, which keeps PostgreSQL free of deadlocks: a job row, then its head, then the lane
-clock. The claim is the exception: it takes the pool's lane clocks first (`lock_lanes`), then
-heads and jobs with `SKIP LOCKED`, so it never waits once it holds anything.
+Lock order, which keeps PostgreSQL free of deadlocks: lane clocks first, then job rows, then
+heads. A claim takes its own pool's clocks (`lock_lanes`) and then heads and jobs with
+`SKIP LOCKED`, so it never waits once it holds anything. Every other transaction that may touch
+a head (enqueue, complete and the dependents it releases, fail, cancel, retry, maintenance)
+takes every lane clock first (`lock_all_lanes`), before any other row. Clocks are a handful of
+rows taken in one fixed order, so no transaction can hold a head while waiting for a clock, and
+two of them can never wait on each other's heads.
 """
 
 from __future__ import annotations
@@ -15,7 +19,8 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Row
 
 from selecta.scheduling import policy
-from selecta.scheduling.policy import COMPETING_LANES, Lane
+from selecta.scheduling.policy import COMPETING_LANES, LANES, Lane
+from selecta.work.catalogue import INTERNAL, POOLS
 from selecta.work.schema import fair_heads, lane_clock
 from selecta.work.sql import insert_ignore, locked, wake
 
@@ -113,6 +118,26 @@ def lock_lanes(connection: Connection, pool: str) -> dict[str, float]:
         )
     )
     return {row.lane: row.vtime for row in rows}
+
+
+def create_lanes(connection: Connection, now: float) -> None:
+    """Make sure every pool and lane has its clock row, so `lock_all_lanes` always has rows to
+    take (a lock on a row that doesn't exist yet orders nothing)."""
+    for pool in POOLS:
+        if pool == INTERNAL:
+            continue
+        for lane in LANES:
+            insert_ignore(
+                connection, lane_clock, {"pool": pool, "lane": str(lane), "updated_at": now},
+                CLOCK_KEYS,
+            )
+
+
+def lock_all_lanes(connection: Connection) -> None:
+    """The first lock of every transaction that may change a head (see the module notes)."""
+    connection.execute(
+        locked(sa.select(lane_clock.c.pool).order_by(lane_clock.c.pool, lane_clock.c.lane))
+    ).all()
 
 
 def lane_vtimes(connection: Connection, pool: str) -> dict[str, float]:

@@ -91,6 +91,7 @@ class JobStore:
         self._wakers: list[Waker] = []
         self._workspaces: dict[str, str] = {}
         self._lock = threading.Lock()
+        self._lanes_ready = False
 
     # --- plumbing ---
 
@@ -112,10 +113,18 @@ class JobStore:
 
     @contextlib.contextmanager
     def _tx(
-        self, workspace_id: str | None = None, fence: TermFence | None = None
+        self,
+        workspace_id: str | None = None,
+        fence: TermFence | None = None,
+        heads_first: bool = False,
     ) -> Iterator[tuple[Connection, float]]:
+        """One transaction. `heads_first` for anything that may change `fair_heads`: it takes
+        every lane clock before any other row, the lock order that keeps PostgreSQL free of
+        deadlocks (see `selecta.work.heads`)."""
         with transaction(self.engine, workspace_id) as connection:
             connection.info.pop(WOKEN, None)
+            if heads_first:
+                self._lock_lanes(connection)
             if fence is not None:
                 fence.check(connection)
             yield connection, db_now(connection)
@@ -128,6 +137,12 @@ class JobStore:
                     waker(pool)
                 except Exception:  # noqa: BLE001 - a broken listener must not undo a commit
                     pass
+
+    def _lock_lanes(self, connection: Connection) -> None:
+        if not self._lanes_ready:
+            heads.create_lanes(connection, db_now(connection))
+            self._lanes_ready = True
+        heads.lock_all_lanes(connection)
 
     def _remember(self, attempt_id: str, workspace_id: str) -> None:
         with self._lock:
@@ -157,19 +172,19 @@ class JobStore:
     # --- producers ---
 
     def enqueue(self, spec: JobSpec) -> Enqueued:
-        with self._tx(spec.workspace_id) as (connection, now):
+        with self._tx(spec.workspace_id, heads_first=True) as (connection, now):
             return enqueue.enqueue(connection, spec, now)
 
     def add_dependency(self, workspace_id: str, job_id: str, depends_on: str) -> Job:
-        with self._tx(workspace_id) as (connection, now):
+        with self._tx(workspace_id, heads_first=True) as (connection, now):
             return enqueue.add_dependency(connection, workspace_id, job_id, depends_on, now)
 
     def cancel(self, workspace_id: str, job_id: str) -> Job:
-        with self._tx(workspace_id) as (connection, now):
+        with self._tx(workspace_id, heads_first=True) as (connection, now):
             return lifecycle.cancel(connection, workspace_id, job_id, now)
 
     def retry(self, workspace_id: str, job_id: str) -> Job:
-        with self._tx(workspace_id) as (connection, now):
+        with self._tx(workspace_id, heads_first=True) as (connection, now):
             return retrying.retry(connection, workspace_id, job_id, now)
 
     def admit(self, spec: JobSpec, *, day_start: float | None = None) -> admission.Admission:
@@ -284,7 +299,7 @@ class JobStore:
             if size > self.config.max_result_bytes:
                 raise ResultTooLarge(f"The results are {size} bytes; store them as artifacts.")
         outputs = tuple(artifacts)
-        with self._tx(self._workspace_of(attempt_id)) as (connection, now):
+        with self._tx(self._workspace_of(attempt_id), heads_first=True) as (connection, now):
             job, problem = lifecycle.complete(
                 connection, self, attempt_id, token, result, outputs, cost_s, now
             )
@@ -301,7 +316,7 @@ class JobStore:
         detail: str = "",
         cost_s: float | None = None,
     ) -> Job:
-        with self._tx(self._workspace_of(attempt_id)) as (connection, now):
+        with self._tx(self._workspace_of(attempt_id), heads_first=True) as (connection, now):
             job = lifecycle.fail(
                 connection, self, attempt_id, token, error_class, detail, cost_s, now
             )
@@ -310,7 +325,7 @@ class JobStore:
 
     def release(self, attempt_id: str, token: int, cost_s: float | None = None) -> Job:
         """The attempt gave way: back in line, or cancelled if a cancel was asked for."""
-        with self._tx(self._workspace_of(attempt_id)) as (connection, now):
+        with self._tx(self._workspace_of(attempt_id), heads_first=True) as (connection, now):
             job = lifecycle.release(connection, self, attempt_id, token, cost_s, now)
         self._forget(attempt_id)
         return job
@@ -337,7 +352,7 @@ class JobStore:
     def reap_expired(self, fence: TermFence | None = None) -> list[str]:
         reaped: list[str] = []
         while True:
-            with self._tx(None, fence) as (connection, now):
+            with self._tx(None, fence, heads_first=True) as (connection, now):
                 found = upkeep.reap_expired(connection, self, now, self.batch)
             reaped.extend(found)
             if len(found) < self.batch:
@@ -346,7 +361,7 @@ class JobStore:
     def promote_due_retries(self, fence: TermFence | None = None) -> int:
         total = 0
         while True:
-            with self._tx(None, fence) as (connection, now):
+            with self._tx(None, fence, heads_first=True) as (connection, now):
                 moved = upkeep.promote_due_retries(connection, now, self.batch)
             total += moved
             if moved < self.batch:
@@ -358,14 +373,14 @@ class JobStore:
             suspects = upkeep.head_suspects(connection)
         fixed = []
         for key in suspects:
-            with self._tx(None, fence) as (connection, now):
+            with self._tx(None, fence, heads_first=True) as (connection, now):
                 difference = upkeep.fix_head(connection, key, now)
             if difference is not None:
                 fixed.append(difference)
         return fixed
 
     def rebase_vtimes(self, fence: TermFence | None = None) -> list[tuple[str, str, float]]:
-        with self._tx(None, fence) as (connection, now):
+        with self._tx(None, fence, heads_first=True) as (connection, now):
             return upkeep.rebase(connection, self.config.rebase_threshold, now)
 
     def prune_outbox(self, keep_s: float = outbox.KEEP_S, fence: TermFence | None = None) -> int:

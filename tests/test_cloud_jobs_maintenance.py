@@ -182,7 +182,9 @@ def test_rebase_keeps_order_and_differences_and_shifts_lane_clocks(cloud_engine)
             connection.execute(fair_heads.update().where(mine).values(vtime=vtime))
         for lane, vtime, floor in (("standard", 500.0, 120.0), ("interactive", 300.0, 0.0)):
             connection.execute(
-                lane_clock.update().where(lane_clock.c.lane == lane).values(
+                lane_clock.update().where(
+                    lane_clock.c.pool == "cpu-heavy", lane_clock.c.lane == lane
+                ).values(
                     vtime=vtime, floor_vtime=floor
                 )
             )
@@ -197,7 +199,10 @@ def test_rebase_keeps_order_and_differences_and_shifts_lane_clocks(cloud_engine)
     with transaction(store.engine) as connection:
         clocks = {
             row.lane: (row.vtime, row.floor_vtime)
-            for row in connection.execute(sa.select(lane_clock))
+            for row in connection.execute(
+                sa.select(lane_clock).where(lane_clock.c.pool == "cpu-heavy",
+                                            lane_clock.c.lane != "speculative")
+            )
         }
     assert clocks == {"standard": (200.0, 20.0), "interactive": (0.0, 0.0)}
     assert store.rebase_vtimes() == [], "the smallest busy V is now zero"

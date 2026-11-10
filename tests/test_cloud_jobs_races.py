@@ -161,3 +161,92 @@ def test_two_threads_racing_for_one_job_leave_one_winner(cloud_engine, threads):
     store.enqueue(JobSpec("w1", "analyse.song"))
     claims, errors = race(store, threads=threads, complete=False)
     assert errors == [] and len(claims) == 1
+
+
+def mixed_load(store, rounds: int = 40) -> tuple[list, int]:
+    """Enqueuers, light workers and heavy workers all at once. Completing a light job releases a
+    heavy dependent and completing a heavy one releases a light dependent, often into a lane
+    nobody was waiting in, in the same few workspaces; enqueues add work at the same time.
+    Returns every error raised and how many operations ran."""
+    errors, lock = [], threading.Lock()
+    operations = [0]
+    enqueuing = threading.Event()
+    enqueuing.set()
+    plans = Plans(caps=UNLIMITED)
+    store.entitlements = plans
+
+    def count() -> None:
+        with lock:
+            operations[0] += 1
+
+    def enqueuer(number: int) -> None:
+        try:
+            for step in range(rounds):
+                workspace = f"w{(number + step) % 3}"
+                lane = "interactive" if step % 2 else None
+                if (number + step) % 2:
+                    first = store.enqueue(JobSpec(workspace, "ingest.validate")).job
+                    then = "analyse.song"
+                else:
+                    first = store.enqueue(JobSpec(workspace, "analyse.song")).job
+                    then = "lyrics.fetch"
+                store.enqueue(JobSpec(workspace, then, lane=lane, depends_on=(first.id,)))
+                count()
+                count()
+        except Exception as problem:  # noqa: BLE001 - reported by the test
+            errors.append(problem)
+
+    def runner(pool: str, number: int) -> None:
+        caps = worker(pool, worker_id=f"{pool}-{number}", slots=1_000)
+        empty = 0
+        try:
+            while empty < 20 or enqueuing.is_set():
+                claim = store.claim(pool, caps)
+                count()
+                if claim is None:
+                    empty += 1
+                    threading.Event().wait(0.01)
+                    continue
+                empty = 0
+                store.complete(claim.attempt_id, claim.fencing_token, cost_s=COST)
+                count()
+        except Exception as problem:  # noqa: BLE001 - reported by the test
+            errors.append(problem)
+
+    producers = [threading.Thread(target=enqueuer, args=(n,)) for n in range(5)]
+    consumers = [
+        threading.Thread(target=runner, args=(pool, n))
+        for pool in ("cpu-light", "cpu-heavy")
+        for n in range(10)
+    ]
+    for thread in (*producers, *consumers):
+        thread.start()
+    for thread in producers:
+        thread.join(600.0)
+    enqueuing.clear()
+    for thread in consumers:
+        thread.join(600.0)
+    return errors, operations[0]
+
+
+def test_claims_completions_releasing_dependents_and_enqueues_never_deadlock(postgres_engine):
+    store = make_store(wide(postgres_engine))
+    errors, operations = mixed_load(store)
+    deadlocks = [e for e in errors if "40P01" in repr(e) or "deadlock" in repr(e).lower()]
+    assert deadlocks == [], f"{len(deadlocks)} deadlocks in {operations} operations"
+    assert errors == [], f"{len(errors)} failed, first: {errors[:1]!r}"
+    assert operations >= 800
+    with transaction(store.engine) as connection:
+        states = Counter(connection.execute(sa.select(jobs.c.state)).scalars())
+    assert states == {"succeeded": 400}
+    assert drift(store) == []
+
+
+def test_the_same_mixed_load_on_sqlite_finishes_every_job(sqlite_engine):
+    store = make_store(sqlite_engine)
+    errors, _ = mixed_load(store, rounds=8)
+    assert errors == []
+    with transaction(store.engine) as connection:
+        states = Counter(connection.execute(sa.select(jobs.c.state)).scalars())
+    assert states == {"succeeded": 80}
+    assert drift(store) == []

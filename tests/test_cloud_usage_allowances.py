@@ -308,8 +308,9 @@ def test_giving_back_part_returns_only_that_part_and_never_more_than_was_taken(c
     taken = consume(cloud_engine, amount=2)
     give_back(cloud_engine, taken, 0.5)
     assert left(cloud_engine).used == 2.5
+    # Only the 1.5 still out comes back, not another 2.
     give_back(cloud_engine, taken, 50)
-    assert left(cloud_engine).used == 0.5
+    assert left(cloud_engine).used == 1
 
 
 def test_giving_back_a_refused_amount_changes_nothing(cloud_engine):

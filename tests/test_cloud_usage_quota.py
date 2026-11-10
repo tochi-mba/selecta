@@ -4,9 +4,12 @@ and over-quota read-only (ADR-0398, ADR-0402; docs/saas/05-storage-uploads-playb
 
 from __future__ import annotations
 
+import contextlib
 import random
 import threading
 import uuid
+from collections.abc import Iterator
+from dataclasses import dataclass, field
 
 import pytest
 import sqlalchemy as sa
@@ -20,9 +23,10 @@ from hypothesis.stateful import (
     rule,
     run_state_machine_as_test,
 )
+from sqlalchemy.engine import Engine
 
 from selecta.billing.plans import GB, MB, plan_for
-from selecta.persistence import transaction
+from selecta.persistence import make_engine, transaction
 from selecta.usage import ledger, quota
 from selecta.usage.quota import QuotaExceeded, QuotaStatus, ReservationClosed, ReservationState
 from selecta.usage.schema import storage_reservations
@@ -428,36 +432,80 @@ def test_an_entitlement_override_sets_its_own_limit(cloud_engine):
 # Many uploads at once
 
 
-def race(engine, workspace: str, sizes: list[int]) -> tuple[list[int], list[int]]:
-    """Start one reservation per size at the same moment. Returns the sizes that got through
-    and those refused; any other error fails the test."""
-    accepted: list[int] = []
-    refused: list[int] = []
+# Connections a PostgreSQL race may hold at once. The server allows 100, shared with every other
+# test run, so the race holds enough to contend hard and leaves the rest alone.
+RACE_CONNECTIONS = 25
+
+
+@contextlib.contextmanager
+def racing_engine(engine) -> Iterator[Engine]:
+    """On PostgreSQL, an engine on the same schema whose pool fits the race: RACE_CONNECTIONS at
+    once, the other threads waiting their turn for a connection. SQLite has no pool to size."""
+    if engine.dialect.name != "postgresql":
+        yield engine
+        return
+    with engine.connect() as conn:
+        schema = conn.execute(sa.text("SELECT current_schema()")).scalar_one()
+    racing = make_engine(
+        engine.url.render_as_string(hide_password=False),
+        connect_args={"options": f"-csearch_path={schema}"},
+        pool_size=RACE_CONNECTIONS,
+        max_overflow=0,
+        pool_timeout=300,
+    )
+    try:
+        yield racing
+    finally:
+        racing.dispose()
+
+
+@dataclass
+class Race:
+    accepted: list[int] = field(default_factory=list)
+    refused: list[int] = field(default_factory=list)
+    # The most reservations in flight at once, each holding a connection and its transaction.
+    overlap: int = 0
+
+
+def race(engine, workspace: str, sizes: list[int]) -> Race:
+    """Start one reservation per size at the same moment. Returns the sizes that got through,
+    those refused and how many were in flight at once; any other error fails the test."""
+    found = Race()
     errors: list[BaseException] = []
     start = threading.Barrier(len(sizes))
     lock = threading.Lock()
+    inside = 0
 
     def attempt(n: int, size: int) -> None:
+        nonlocal inside
         try:
             start.wait()
-            with transaction(engine, workspace) as conn:
-                quota.reserve(conn, workspace, size, f"upload-{n}")
-            outcome = accepted
+            with transaction(racing, workspace) as conn:
+                with lock:
+                    inside += 1
+                    found.overlap = max(found.overlap, inside)
+                try:
+                    quota.reserve(conn, workspace, size, f"upload-{n}")
+                finally:
+                    with lock:
+                        inside -= 1
+            outcome = found.accepted
         except QuotaExceeded:
-            outcome = refused
+            outcome = found.refused
         except BaseException as error:  # noqa: BLE001
             errors.append(error)
             return
         with lock:
             outcome.append(size)
 
-    threads = [threading.Thread(target=attempt, args=(n, s)) for n, s in enumerate(sizes)]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join()
+    with racing_engine(engine) as racing:
+        threads = [threading.Thread(target=attempt, args=(n, s)) for n, s in enumerate(sizes)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
     assert errors == []
-    return accepted, refused
+    return found
 
 
 def assert_never_oversubscribed(engine, workspace, accepted, refused) -> None:
@@ -470,32 +518,36 @@ def assert_never_oversubscribed(engine, workspace, accepted, refused) -> None:
 
 def test_two_hundred_reservations_for_the_last_gigabyte_never_oversubscribe(postgres_engine):
     filled(postgres_engine, 9 * GB, workspace="ws-race")
-    accepted, refused = race(postgres_engine, "ws-race", [10 * MB] * 200)
-    assert len(accepted) == 100
-    assert len(refused) == 100
-    assert_never_oversubscribed(postgres_engine, "ws-race", accepted, refused)
+    found = race(postgres_engine, "ws-race", [10 * MB] * 200)
+    # Many transactions really did wait on the quota row together.
+    assert found.overlap >= 5
+    assert len(found.accepted) == 100
+    assert len(found.refused) == 100
+    assert_never_oversubscribed(postgres_engine, "ws-race", found.accepted, found.refused)
     assert usage(postgres_engine, "ws-race").used_bytes == 10 * GB
 
 
 def test_uneven_reservations_for_the_last_gigabyte_never_oversubscribe(postgres_engine):
     filled(postgres_engine, 9 * GB, workspace="ws-uneven")
     sizes = [random.Random(n).randint(1, 40 * MB) for n in range(200)]
-    accepted, refused = race(postgres_engine, "ws-uneven", sizes)
-    assert refused
-    assert_never_oversubscribed(postgres_engine, "ws-uneven", accepted, refused)
+    found = race(postgres_engine, "ws-uneven", sizes)
+    assert found.overlap >= 5
+    assert found.refused
+    assert_never_oversubscribed(postgres_engine, "ws-uneven", found.accepted, found.refused)
 
 
 def test_first_uploads_racing_to_create_the_quota_row_never_oversubscribe(postgres_engine):
-    accepted, refused = race(postgres_engine, "ws-new", [1 * GB] * 50)
-    assert len(accepted) == 10
-    assert_never_oversubscribed(postgres_engine, "ws-new", accepted, refused)
+    found = race(postgres_engine, "ws-new", [1 * GB] * 50)
+    assert found.overlap >= 5
+    assert len(found.accepted) == 10
+    assert_never_oversubscribed(postgres_engine, "ws-new", found.accepted, found.refused)
 
 
 def test_reservations_racing_on_sqlite_never_oversubscribe(sqlite_engine):
     filled(sqlite_engine, 9 * GB, workspace="ws-race")
-    accepted, refused = race(sqlite_engine, "ws-race", [50 * MB] * 30)
-    assert len(accepted) == 20
-    assert_never_oversubscribed(sqlite_engine, "ws-race", accepted, refused)
+    found = race(sqlite_engine, "ws-race", [50 * MB] * 30)
+    assert len(found.accepted) == 20
+    assert_never_oversubscribed(sqlite_engine, "ws-race", found.accepted, found.refused)
 
 
 # Any sequence of operations keeps the books straight

@@ -670,10 +670,12 @@ def test_a_completed_upload_gets_two_more_days_to_be_checked(cloud_engine, uploa
     age(cloud_engine, session.id, SESSION_TTL - 600)
     send_as_planned(fake, session)
     done = call(cloud_engine, uploads.complete, session.id)
+    old_end = session.expires_at - (SESSION_TTL - 600)
     assert done.session.expires_at == done.session.updated_at + SESSION_TTL
-    assert done.session.expires_at > session.expires_at
+    assert done.session.expires_at > old_end + 3600
     with transaction(cloud_engine) as conn:
-        assert uploads.expire_sessions(conn, now=session.expires_at + 600) == 0
+        # An hour after the original two days ran out, the completed upload is still waiting.
+        assert uploads.expire_sessions(conn, now=old_end + 3600) == 0
 
 
 # -- display names and probes -----------------------------------------------------------------
