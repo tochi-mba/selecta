@@ -249,13 +249,17 @@ def plan_for(plan_id: str | None, version: int | None = None) -> Plan:
 
 
 def current_plans() -> tuple[Plan, ...]:
-    """The current version of each plan, cheapest first."""
-    return tuple(sorted((versions[-1] for versions in CATALOGUE.values()), key=lambda p: p.rank))
+    """The current version of each plan, cheapest first. A plan with no versions has no current
+    one; `problems()` reports it."""
+    current = (versions[-1] for versions in CATALOGUE.values() if versions)
+    return tuple(sorted(current, key=lambda p: p.rank))
 
 
 def plan_gated_flags() -> frozenset[str]:
     """Flags some current plans include and others don't."""
     plans = current_plans()
+    if not plans:
+        return frozenset()
     named = frozenset().union(*(plan.flags for plan in plans))
     everywhere = frozenset.intersection(*(plan.flags for plan in plans))
     return named - everywhere
