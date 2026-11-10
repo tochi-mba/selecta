@@ -2,7 +2,7 @@
 
 Each of the 279 tasks in [#22](https://github.com/tochi-mba/selecta/pull/22), and what's true of it today. Done rows are the ones ticked on the PR.
 
-**207 done, 49 partly, 3 not done, and 20 that need a person** (approvals, screen readers, listening, installing it).
+**212 done, 44 partly, 3 not done, and 20 that need a person** (approvals, screen readers, listening, installing it).
 
 Passing these checks doesn't mean it sounds good. That's for people to judge, using [the listening procedure](../listening-procedure.md).
 
@@ -28,7 +28,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0009 Inventory component and player tests; map every existing behavioural assertion to parity requirements. | Not done | Existing tests were kept and extended. Mapping each assertion to a parity row wasn't done. |
 | T0010 Create deterministic original/licensed fixture audio with valid/invalid beat grids, cue positions and fallback seams. | Partly | `tests/synth.py` and `tests/e2e_server.py` make deterministic audio. Invalid grids and cue fixtures only exist as unit test values. |
 | T0011 Create metadata fixtures for empty library, one song, short library, duplicate title, unicode/RTL, wrong tempo and missing files. | Done | `tests/e2e_server.py` and `tests/test_library_edges.py`: empty, duplicates, Unicode and RTL, wrong tempo, missing files. |
-| T0012 Create render/request/stem fixtures for pending, ready, failed, canceled, stale and storage-blocked operations. | Partly | Pending, ready, failed and stale are covered in `web/src/test/backend.ts` stubs. Canceled and storage-blocked are only partly covered. |
+| T0012 Create render/request/stem fixtures for pending, ready, failed, canceled, stale and storage-blocked operations. | Done | `web/src/test/operations.ts` holds render, request, stem and export fixtures for all six states (pending, ready, failed, canceled, stale, storage-blocked); `web/src/test/operations.test.ts` (7 tests, operation fixtures (T0012)) checks each one means what its name says. Passed 2026-11-10 (vitest). |
 | T0013 Set up a browser E2E test harness and deterministic clock/network failure injection. | Partly | Playwright in `web/e2e` with network failure injection. No deterministic clock. |
 | T0014 Set up accessible component tests, visual-regression baseline and real Web Audio browser smoke tests. | Partly | Automatic accessibility checks and real Web Audio tests exist. No visual regression baseline. |
 | T0015 Record manual listening procedure and blind A/B benchmark separate from renderer assertions. | Done | `docs/listening-procedure.md`. |
@@ -63,7 +63,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 
 | Task | Status | How we know, or what's left |
 |---|---|---|
-| T0030 Implement shared Button, IconButton, text input, combobox, select and slider with correct labels/states. | Partly | `Action`, `Status` and friends are shared. Inputs, selects and sliders are labelled native controls, not shared components. |
+| T0030 Implement shared Button, IconButton, text input, combobox, select and slider with correct labels/states. | Done | `web/src/ui/formControls.tsx` (TextField, Select, Combobox on `Field`) with `Action`, `IconButton` and `Slider` from `controls.tsx`/`primitives.tsx`; `web/src/ui/formControls.test.tsx` (5 tests: names, busy state, joined label/help/error, disabled select, slider value text, combobox arrow/Enter/Escape). Passed 2026-11-10 (vitest). Existing pages still use labelled native controls; adopting the shared ones page by page is follow-up polish. |
 | T0031 Implement shared Dialog, Drawer, BottomSheet, Menu and Tooltip with focus trapping and restoration. | Done | `web/src/ui/controls.tsx`, tested in `controls.test.tsx`. |
 | T0032 Implement reusable audio preview, render status, validation error, skeleton/loading and error-boundary components. | Done | `AudioPreview`, `Status`, `Problem`, `Skeleton`, `Section`. |
 | T0033 Replace global recent-click busy heuristic with per-mutation loading and disabled states. | Done | `Action` tracks each mutation. The global heuristic is gone. |
@@ -189,7 +189,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0102 Implement volume and mute with master gain and retained pre-mute level. | Done | `web/e2e/listen.e2e.ts`. |
 | T0103 Implement OS Media Session Play/Pause/Next/Previous/Seek only where semantics are correct and APIs supported. | Done | `web/e2e/listen.e2e.ts`: media keys. |
 | T0104 Honor audible commit boundary for already scheduled/live seams. | Done | `transitionIsLive` in `web/src/player.ts`. |
-| T0105 Test pause/seek/Next during seam, repeat keys, end-of-mix, suspend/resume, decoding errors and gapless continuity. | Partly | Real browser tests cover pause, seek, Next and end of mix. Decoding errors are only covered by a failed fetch. |
+| T0105 Test pause/seek/Next during seam, repeat keys, end-of-mix, suspend/resume, decoding errors and gapless continuity. | Done | `web/src/audio/transportEdges.test.ts` (10 tests): pause, seek and Next mid-seam, held-down Next and repeated play/pause, end of mix, undecodable current and next songs, system suspend and resume in place, gapless ready seam and fallback overlap; real-browser pause/seek/Next/end in `web/e2e/listen.e2e.ts`. Unit tests passed 2026-11-10 (vitest). |
 | T0106 Approve ADR-0006 audio semantics. | Done | The owner accepted ADR-0006 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
 
 ### [Cross-feature audio focus](adr-0007-audio-focus-ownership.md)
@@ -201,7 +201,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0109 Never resume the main set after a later explicit user Pause or a route change against intent. | Done | `web/src/audio/focus.test.tsx`. |
 | T0110 Cancel/release preview on close, unmount or stale render revision. | Done | `AudioPreview`, `usePreview`. |
 | T0111 Ensure Stage and preview UI state reflect the actual active audio session. | Done | `usePreview` state and the player's phase. |
-| T0112 Test A/B non-overlap, rapid preview switch, failed load, suspended context and multi-tab ownership. | Partly | Non-overlap, tabs and take-back are tested. Rapid switching and failed loads only in unit tests. |
+| T0112 Test A/B non-overlap, rapid preview switch, failed load, suspended context and multi-tab ownership. | Done | `web/src/audio/focusEdges.test.tsx` (7 tests): A/B non-overlap with one owner, twenty rapid preview switches and a late AbortError, a clip failing to load giving the sound back, slow and refused context resume, multi-tab ownership. Passed 2026-11-10 (vitest). |
 | T0113 Approve ADR-0007. | Done | The owner accepted ADR-0007 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
 
 ### [Listen experience](adr-0008-listen-screen.md)
@@ -422,7 +422,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0238 Ensure only one study audio condition plays at once; don't disclose condition identity. | Done | `usePreview`, and the page shows only A and B. |
 | T0239 Keep failed response submission recoverable and prevent duplicate stored trial responses. | Done | `x-operation-id` in `Listening.tsx`, `tests/test_listening.py`. |
 | T0240 Do not change musical study protocol/meaning without a separate versioned ADR. | Done | The study's questions and scoring weren't changed. |
-| T0241 Test missing clip, partial trial, refresh, keyboard, double submit and final completion. | Partly | A failed save and repeats are tested. A missing clip, refreshing part way and finishing a whole study have no test of their own. |
+| T0241 Test missing clip, partial trial, refresh, keyboard, double submit and final completion. | Done | `web/src/views/ListeningStudyFlow.test.tsx` (5 tests, blind listening study, start to finish): missing clip with cannot-judge, refresh part way restoring the same comparison, double submit stored once, keyboard alone to the end, finishing saves each once and says complete. Passed 2026-11-10 (vitest). |
 | T0242 Approve ADR-0021. | Done | The owner accepted ADR-0021 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
 
 ### [Local diagnostics and operation tracing](adr-0032-diagnostics-and-operations.md)

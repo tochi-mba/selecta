@@ -1,6 +1,6 @@
 # Selecta - UF per-task implementation and independent evidence ledger
 
-**Status:** 24 Accepted ADRs (0366–0389); 153 UF tasks Not started; 11 In progress; 28 Implemented; 0 independently Verified. Decision acceptance recorded at requester instruction 2026-11-08; implementation owners and independent reviewers unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app code and regression tests.
+**Status:** 24 Accepted ADRs (0366–0389); 149 UF tasks Not started; 8 In progress; 35 Implemented; 0 independently Verified. Decision acceptance recorded at requester instruction 2026-11-08; implementation owners and independent reviewers unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app code and regression tests.
 
 All future evidence fields are deliberately blank. The creation of a proposed ADR, checklist, code-status record or screenshot capture instruction is **not source implementation or independent verification**. A synthetic muted browser run does not prove music quality.
 
@@ -46,12 +46,12 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0370-06 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0370-07 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0370-08 | [ADR-0370](adr-0370-shared-controls-overlays-and-feedback.md) | Accepted | Not started | No | Unassigned | - | - | - |
-| UF-0371-01 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `527b6c9741a635f758da22609849383c3072f16c` | `web/src/state/async.ts`, async unit tests; broader state matrix pending | Independent review pending |
+| UF-0371-01 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Implemented | No | Unassigned | branch `feat/finish-checklists` (2026-11-10, coordinator commits) | web/src/state/workState.ts nine-state vocabulary (initial, stale, queued, running, paused, blocked, cancelled, failed, ready) mapped from page reads, seams, analysis and exports; web/src/state/workState.test.ts cross-route state matrix (6/6 passed) (ticked 2026-11-10) | Independent review pending |
 | UF-0371-02 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0371-03 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0371-04 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `527b6c9741a635f758da22609849383c3072f16c` | `web/src/state/async.ts`, stale/retry unit tests; route checks pending | Independent review pending |
 | UF-0371-05 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | - | - | - |
-| UF-0371-06 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | In progress | No | Unassigned | #41 / `527b6c9741a635f758da22609849383c3072f16c` | `web/src/state/async.ts`, superseded-request unit tests; job lifecycle pending | Independent review pending |
+| UF-0371-06 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Implemented | No | Unassigned | branch `feat/finish-checklists` (2026-11-10, coordinator commits) | web/src/state/workState.ts isSuccess; web/src/state/workState.test.ts 'exports: cancelled, interrupted and expired never read as done, and Workspace agrees', 'a seam that is cached but blocked where it is placed is never ready' (6/6 passed) (ticked 2026-11-10) | Independent review pending |
 | UF-0371-07 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0371-08 | [ADR-0371](adr-0371-truthful-loading-recovery-and-async-state.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0372-01 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | - | - | - |
@@ -63,19 +63,19 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0372-07 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0372-08 | [ADR-0372](adr-0372-navigation-onboarding-and-returning-context.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0373-01 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | - | - | - |
-| UF-0373-02 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | - | - | - |
-| UF-0373-03 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | - | - | - |
+| UF-0373-02 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Implemented | No | Unassigned | branch `feat/finish-checklists` (2026-11-10, coordinator commits) | web/src/audio/transportWords.ts shared words for song, phase, time and seam; web/src/audio/transportWords.test.tsx 'the mini-player and Listen agree on song, phase and time' for every phase (6/6 passed) (ticked 2026-11-10) | - |
+| UF-0373-03 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Implemented | No | Unassigned | branch `feat/finish-checklists` (2026-11-10, coordinator commits) | web/src/audio/mediaSession.test.ts 'follows the current song, rejects invalid seeks and refuses seeking during a seam' (3/3 passed); web/src/audio/transportWords.test.tsx 'never reads NaN, and says an unknown length'; web/src/views/listenSeek.test.tsx (3/3 passed) (ticked 2026-11-10) | - |
 | UF-0373-04 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0373-05 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0373-06 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0373-07 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | - | - | - |
-| UF-0373-08 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Not started | No | Unassigned | - | - | - |
+| UF-0373-08 | [ADR-0373](adr-0373-persistent-player-and-audio-focus.md) | Accepted | Implemented | No | Unassigned | branch `feat/finish-checklists` (2026-11-10, coordinator commits) | web/src/shell/Shell.tsx interruption reason on the mini-player; web/src/audio/outputInterruptions.test.ts lost device, changed device, system interruption and mute (5/5 passed); web/src/audio/transportWords.test.tsx 'an interrupted output says why on the mini-player as well as on Listen' (ticked 2026-11-10) | - |
 | UF-0374-01 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0374-02 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0374-03 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0374-04 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0374-05 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | - | - | - |
-| UF-0374-06 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | - | - | - |
+| UF-0374-06 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Implemented | No | Unassigned | branch `feat/finish-checklists` (2026-11-10, coordinator commits) | web/src/views/listenNextUp.test.tsx 'a transition still being made is planned, with what happens if it is late', 'a ready transition gets a countdown' (2/2 passed) (ticked 2026-11-10) | - |
 | UF-0374-07 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0374-08 | [ADR-0374](adr-0374-listening-hierarchy-lyrics-and-handoffs.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0375-01 | [ADR-0375](adr-0375-visualizer-stage-and-sensory-motion.md) | Accepted | Not started | No | Unassigned | - | - | - |
@@ -97,7 +97,7 @@ All future evidence fields are deliberately blank. The creation of a proposed AD
 | UF-0377-01 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0377-02 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0377-03 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | - | - | - |
-| UF-0377-04 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | In progress | No | Unassigned | #41 / `471bcdfb50e96188f2f3a7c252b0bedc33cbff06` | `web/src/state/readiness.ts` and readiness unit tests; cross-route audit pending | Independent review pending |
+| UF-0377-04 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Implemented | No | Unassigned | branch `feat/finish-checklists` (2026-11-10, coordinator commits) | web/src/state/readiness.ts canonical count; web/src/views/readinessCounts.test.tsx Library, Make a Mix and Workspace show the same ready-for-mixes count as /status (3/3 passed) (ticked 2026-11-10) | Independent review pending |
 | UF-0377-05 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0377-06 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | - | - | - |
 | UF-0377-07 | [ADR-0377](adr-0377-library-experience-integration-and-proof.md) | Accepted | Not started | No | Unassigned | - | - | - |

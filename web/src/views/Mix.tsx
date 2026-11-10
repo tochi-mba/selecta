@@ -388,6 +388,7 @@ export function Mix(props: ViewProps) {
     } finally {
       moving.current = false;
       setDragOver(null);
+      setDragFrom(null);
     }
   };
 

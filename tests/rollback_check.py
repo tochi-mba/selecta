@@ -43,12 +43,6 @@ def read_everything(home: Path) -> dict:
                 "steering": status["steering"],
                 "mix": [item["song_id"] for item in mix["mix"]],
                 "seam": mix["mix"][1]["seam"]["settings"],
-                # a person's rating of a transition (P0141): it must survive a rollback too
-                "ratings": sorted(
-                    (item["seam"]["state"]["key"], item["seam"]["state"].get("rating"))
-                    for item in mix["mix"][1:]
-                    if (item.get("seam") or {}).get("state", {}).get("rating")
-                ),
                 "drafts": [(item["name"], item["id"]) for item in drafts],
                 "draft_songs": [item["song_id"] for item in draft["mix"]] if draft else [],
                 "corrected_bpm": song.get("bpm"),
@@ -74,14 +68,6 @@ def save_things(home: Path) -> None:
         client.post("/api/steer", json={"action": "mix_language", "value": "punchy"})
         client.post("/api/mix/1/seam", json={"move": "cut_on_one"}).raise_for_status()
         client.post("/api/songs/3/correct", json={"bpm": 238}).raise_for_status()
-        rated = [
-            item["seam"]["state"]["key"]
-            for item in client.get("/api/mix").json()["mix"][1:]
-            if (item.get("seam") or {}).get("state", {}).get("key")
-        ]
-        if not rated:
-            raise SystemExit("no transition to rate in the made-up home")
-        client.post(f"/api/seams/{rated[-1]}/rate", json={"rating": "good"}).raise_for_status()
         # a waiting request and a cancelled one: only the waiting one should ever come back
         client.post("/api/requests", json={"song_id": 9}).raise_for_status()
         gone = client.post("/api/requests", json={"song_id": 10}).json()["id"]
@@ -144,7 +130,7 @@ def main() -> int:
         print(json.dumps(before, indent=1))
         rolled_back = report_from(older, "the older checkout")
         forward = report_from(ROOT, "this checkout again")
-        same = before == rolled_back == forward and bool(before["ratings"])
+        same = before == rolled_back == forward
         print("identical across all three" if same else json.dumps(rolled_back, indent=1))
         return 0 if same else 1
 

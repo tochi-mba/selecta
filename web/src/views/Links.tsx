@@ -15,6 +15,7 @@ import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { TermHint } from '../ui/Glossary';
 import { LinkTabs, SearchField } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
+import { RelationshipMap } from './RelationshipMap';
 import { ViewProps } from './shared';
 
 const HARMONIC_OWNER = 'harmonic-discoveries';
@@ -546,6 +547,7 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
               {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
             </p>
           )}
+          {flagOn('discover.relationship_map') && data && <RelationshipMap links={data.links} />}
           <div className="link-grid">{worked.map(card)}</div>
           {didnt.length > 0 && (
             <details className="didnt">

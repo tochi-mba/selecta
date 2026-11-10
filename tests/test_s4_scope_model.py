@@ -88,13 +88,13 @@ class ScopedWrites(RuleBasedStateMachine):
         if 0 <= at < len(self.model[scope]):
             self.model[scope].pop(at)
 
-    @rule(data=st.data(), source=st.integers(0, 6), target=st.integers(0, 6))
-    def move(self, data, source, target):
+    @rule(data=st.data(), source=st.integers(0, 6), to=st.integers(0, 6))
+    def move(self, data, source, to):
         scope = self._scope(data, [d for d in self.model if d is not None])
         items = self.model[scope]
-        mix.move_song(self.conn, source, target, scope)
-        if 0 <= source < len(items) and 0 <= target < len(items) and source != target:
-            items.insert(target, items.pop(source))
+        mix.move_song(self.conn, source, to, scope)
+        if 0 <= source < len(items) and 0 <= to < len(items) and source != to:
+            items.insert(to, items.pop(source))
 
     @rule(draft=consumes(drafts))
     def delete(self, draft):

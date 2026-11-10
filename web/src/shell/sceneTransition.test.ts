@@ -7,7 +7,8 @@ import { changeScene, sceneTransitionsSupported, sceneTransitionsWanted } from '
 /** SF-0208-07: the optional page cross-fade is feature-detected, and anything unsupported or
  * unwanted gets the instant change it always had. */
 
-type Doc = Document & { startViewTransition?: (update: () => void) => unknown };
+type Doc = { startViewTransition?: unknown };
+const doc = () => document as unknown as Doc;
 
 function fakeWindow(reduced: boolean): Window {
   return { matchMedia: () => ({ matches: reduced }) } as unknown as Window;
@@ -19,7 +20,7 @@ describe('optional scene transitions', () => {
     setPrefs({ ...DEFAULT_PREFS, motion: 'expressive' });
   });
   afterEach(() => {
-    delete (document as Doc).startViewTransition;
+    delete doc().startViewTransition;
     setPrefs(DEFAULT_PREFS);
     setFlags(null);
   });
@@ -33,7 +34,7 @@ describe('optional scene transitions', () => {
 
   it('uses the API when the browser has it and Expressive motion is chosen', () => {
     const start = vi.fn((update: () => void) => update());
-    (document as Doc).startViewTransition = start;
+    doc().startViewTransition = start;
     expect(sceneTransitionsSupported(document)).toBe(true);
     const update = vi.fn();
     changeScene(update, document, fakeWindow(false));
@@ -43,7 +44,7 @@ describe('optional scene transitions', () => {
 
   it('stays instant under reduced motion, Still or Subtle motion, or with the flag off', () => {
     const start = vi.fn((update: () => void) => update());
-    (document as Doc).startViewTransition = start;
+    doc().startViewTransition = start;
     expect(sceneTransitionsWanted(fakeWindow(true))).toBe(false);
     setPrefs({ ...DEFAULT_PREFS, motion: 'subtle' });
     expect(sceneTransitionsWanted(fakeWindow(false))).toBe(false);
@@ -61,7 +62,7 @@ describe('optional scene transitions', () => {
   });
 
   it('falls back to an instant change when the browser refuses to start one', () => {
-    (document as Doc).startViewTransition = () => { throw new Error('busy'); };
+    doc().startViewTransition = () => { throw new Error('busy'); };
     const update = vi.fn();
     changeScene(update, document, fakeWindow(false));
     expect(update).toHaveBeenCalledTimes(1);
@@ -69,12 +70,12 @@ describe('optional scene transitions', () => {
 
   it('changes the address before any animation, so navigation never waits on it', () => {
     let pending: (() => void) | null = null;
-    (document as Doc).startViewTransition = (update: () => void) => { pending = update; };
+    doc().startViewTransition = (update: () => void) => { pending = update; };
     window.history.replaceState({}, '', '/listen');
     navigate('/library');
     expect(window.location.pathname).toBe('/library');
     expect(pending).not.toBeNull();
-    pending!();
+    (pending as (() => void) | null)?.();
     window.history.replaceState({}, '', '/');
   });
 });

@@ -2,7 +2,7 @@
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** 5/5 Implemented (2026-11-10).
-- **Verified:** 1/5 (EX-0128-03 by automated fixtures, 2026-11-10).
+- **Verified:** 2/5 (EX-0128-02 and -03 by automated tests, 2026-11-10).
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P2 / Operations.
 - **Related:** ADR-0107, ADR-0064, not automatically superseded or verified.
@@ -31,7 +31,7 @@ Do not conflate source watching with uploads or suggest remote telemetry. Backgr
 ## New implementation status per task
 
 1. **EX-0128-01 - Prototype issue-first overview**. **Acceptance:** Users identify one operational blocker and solution. **Verification:** Uncoached recovery test. **Implementation: Implemented; Verified: No. Needs a person: uncoached recovery session.** Evidence: `NeedsYou` in `web/src/views/WorkshopPanels.tsx`.
-2. **EX-0128-02 - Preserve all job/source/storage operations**. **Acceptance:** Watch, scan, pause, budget and diagnostics accessible. **Verification:** Action parity/API contract. **Implementation: Implemented; Verified: No.** Open: one action-parity/API-contract test covering scan and pause/resume is still missing.
+2. **EX-0128-02 - Preserve all job/source/storage operations**. **Acceptance:** Watch, scan, pause, budget and diagnostics accessible. **Verification:** Action parity/API contract. **Implementation: Implemented; Verified: Yes (2026-11-10).** Evidence: `tests/test_ex_0128_operations_parity.py`, `web/src/views/s3-0064-workspace.test.tsx`, `web/src/views/Workshop.test.tsx`.
 3. **EX-0128-03 - Audit truth of job state labels**. **Acceptance:** Blocked, paused, queued and failed not conflated. **Verification:** Fault and stale response fixtures. **Implementation: Implemented; Verified: Yes (2026-11-10).** Evidence: `web/src/views/ex-0128-job-truth.test.tsx`, `web/src/views/Workshop.test.tsx`.
 4. **EX-0128-04 - Specify privacy-safe diagnostics**. **Acceptance:** Local file paths not leaked or uploaded. **Verification:** Manual privacy and network review. **Implementation: Implemented; Verified: No. Needs a person: manual privacy and network review.**
 5. **EX-0128-05 - Verify accessible layout**. **Acceptance:** Warnings and settings reachable at all widths. **Verification:** Both themes, 400% zoom and NVDA. **Implementation: Implemented; Verified: No. Needs a person: both themes, 400% zoom and NVDA.**

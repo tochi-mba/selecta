@@ -112,7 +112,7 @@ Implementing history: PR #23 (`84b8b5c`) plus later programmes (Unified finish U
 |---|---|---|---|---|
 | P0070 | Implemented | Draft is named and scoped on Edit | `Mix.test.tsx` "a draft on the Edit page" passed | MP-0287-07 pinned-bar check failed; rerun after layout work settles |
 | P0071 | Implemented | Row and connector columns align | MP-0287-01, MP-0287-02 passed | MP-0287-04 state marks failed |
-| P0072 | Open | No grouping test yet | - | Focused test for grouped secondary actions |
+| P0072 | Verified (automated) | Play and Move up/down stay on each row; Lock and Remove sit in one keyboard-opened More menu; every insertion target names where the song lands | new `web/src/views/polishEditorActions.test.tsx` 1/1 (`vitest run --pool=threads`); Playwright MP-0287-01, MP-0287-06 passed | - |
 | P0073 | Implemented | Selection follows the song through moves | MP-0287-05; `Mix.test.tsx` "the same stays selected when others move" passed | MP-0287-03 (320px keyboard/drag) and integration Undo test failed |
 | P0074 | Implemented | Pair named in every tab, legible narrow | MP-0288-01; `ufSeamInspector.test.tsx` 5/5 passed | MP-0288-06 (sheet covers CTA/focus) failed |
 | P0075 | Verified (automated) | Requested move, rendering, fallback and what really plays are separate words and states | `pnpm exec vitest run src/views/Mix.test.tsx src/views/editorMode.test.tsx` passed (Mix "keeps the move you asked for pressed...", "says nothing about a fallback...", "highlights the plan until something has landed", "says what you chose and what will really play", "does not present remembered failures as ongoing renders"; editorMode "keeping asked and played apart") | - |
@@ -166,3 +166,53 @@ Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-
 | P0057 | Implemented | Measured energy normalised to the mix's own range, labelled as not comparable | `polishPhase03Mixes.test.tsx` 4/4, `MixSetup.test.tsx` 3/3 | - |
 | P0058 | Implemented | No ready match vs failed search with Retry | `polishPhase03Mixes.test.tsx` | - |
 | P0059 | Implemented | Draft feedback; render line vs playback order | `Drafts.test.tsx` | - |
+
+## ADR-0041 task evidence (reconciled 2026-11-10, uncommitted working tree)
+
+Implementing history: PR #23 (`84b8b5c`) plus later Stem Studio work (S3-0059, GP-0261, FP-0266, Measured micro-polish MP-0289). Vitest: `Studio.test.tsx`, `StudioSafety.test.tsx`, `gp-0261-studio.test.tsx` and `src/audio/focus.test.tsx` passed in the 16-file run and reruns; new `web/src/views/polishStudioRecovery.test.tsx` 2/2 with `controls.test.tsx` (39/39 across both, `--pool=threads`). Playwright `mp-0289-stem-studio.e2e.ts`: only MP-0289-08 passed; MP-0289-01 to -07 failed because `.studio-cell` did not appear within 60 s on the loaded shared machine (spec also being edited by the micro-polish section). Screenshots: none reviewed by a person.
+
+| Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
+|---|---|---|---|---|
+| P0080 | Implemented | Every cell named for a screen reader | `Studio.test.tsx` "shows a square for every part of both songs" | MP-0289-01/-03/-06 rerun on a quiet machine |
+| P0081 | Implemented | Played square marked | `Studio.test.tsx` "marks the square being played" | MP-0289-02 measured state check |
+| P0082 | Verified (automated) | Preparing shows an estimate and keeps polling; failure named with Try again that reloads the same pair; missing stems marked unavailable | `polishStudioRecovery.test.tsx` P0082; `Studio.test.tsx` estimate, polling, failure words, missing stem; `StudioSafety.test.tsx` stem could not load | - |
+| P0083 | Verified (automated) | Studio says previewing pauses the main mix; play pauses it, Stop leaves it paused (the hint tells the person to resume from the main player); close and hidden tab release audio; failure gives the sound back | `polishStudioRecovery.test.tsx` P0083; `Studio.test.tsx` play/stop, close, hidden tab; `focus.test.tsx` 12 tests | Audible confirmation is P0088 |
+| P0084 | Implemented | Verbal separation of preview, arrange, fine-tune, restore, reset and Apply | `Studio.test.tsx` shapes, Start again, Put it back, fine tune, "nothing it does is final" | MP-0289-05 visual check |
+| P0085 | Verified (automated) | Working copy vs applied state said plainly; numbered pair named; save, failure and restore states shown | `StudioSafety.test.tsx` 8/8; `Studio.test.tsx` numbered pair, Apply, recovery | - |
+| P0086 | Verified (automated) | Failed Apply keeps local work; recovery rejects wrong-size or corrupt copies; storage-blocked warning | `StudioSafety.test.tsx`; `Studio.test.tsx`; Playwright MP-0289-08 passed | - |
+| P0087 | Open (Needs a person) | Keyboard reaches all 512 cells | `gp-0261-studio.test.tsx` 2/2 | Real touch device at narrow width; MP-0289-06 |
+| P0088 | Open (Needs a person) | Automated pair-keeping path passes | MP-0289-08 | Audible real-stem audition evidence |
+
+## ADR-0046 task evidence (reconciled 2026-11-10, uncommitted working tree)
+
+No task in this ADR is ticked: each needs a full candidate run, recorded hardware, real audio, participants or owner disposition. Automated facts gathered on 2026-11-10:
+
+| Task | Status | Result | Check run 2026-11-10 | Remaining |
+|---|---|---|---|---|
+| P0132 | Open | `e2e/visual.e2e.ts` captures review candidates only; no committed pixel baselines | `grep toHaveScreenshot web/e2e`: 0 | Deterministic baselines per surface, state, theme and width |
+| P0133 | Open (Needs a person) | - | - | Named reviewer compares differences |
+| P0134 | Open | Focused runs only (agents may not run full suites); focused Playwright 31/59 passed | 8-spec Playwright run, port 9050 | Full CI on the candidate SHA |
+| P0135 | Open (Needs a person) | - | - | Traces on recorded hardware |
+| P0136 | Open | Lab spec MP-0298-06 failed | `mp-0298-responsive-and-a11y.e2e.ts` | Fix and report labelled lab results |
+| P0137 | Open (Needs a person) | - | - | Actual audio evidence |
+| P0138 | Open | `integration.e2e.ts` 5/7 passed (two draft/current tests timed out) | Playwright | All recovery scenarios green together |
+| P0139 | Open (Needs a person) | - | - | Unguided participant tasks |
+| P0140 | Open (Needs a person) | - | - | Owner blocker review |
+| P0141 | Implemented | Rollback from this tree to `main` (`405cf7f`) and forward again: "identical across all three" for songs, settings, mix, seam settings, drafts, corrected tempo, export record and requests | `.venv\Scripts\python tests/rollback_check.py <git archive main src>` under the slot lock | Ratings are not yet in the harness |
+| P0142 | Open | Section entries updated 2026-11-10 | - | PR and verification links at final reconciliation |
+| P0143 | Open (Needs a person) | - | - | Release-candidate review and owner disposition |
+
+## ADR-0042 task evidence (reconciled 2026-11-10, uncommitted working tree)
+
+| Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
+|---|---|---|---|---|
+| P0089 | Implemented | One request vocabulary; `RequestTag` shared by Listen and Edit | `polishPhase03Listen.test.tsx` 7/7; `Requests.test.tsx` 51/51 | - |
+| P0090 | Implemented | Planned place named; waiting, unplaceable and failed apart | `Requests.test.tsx`; `RequestsJoining.test.tsx` (with `Links.test.tsx` 73 passed) | - |
+| P0092 | Implemented | Search, duplicates, cancel, retry, stale bridge, no match | `Requests.test.tsx`, `RequestsJoining.test.tsx` | - |
+| P0093 | Implemented | Word-pair cards, rating, failed-render retry | `Links.test.tsx`, `LinksRating.test.tsx` 1/1, `polishPhase03Listen.test.tsx` P0093 | - |
+| P0094 | Implemented | Loading vs no candidates vs failed; audition stage only after playback starts | `Links.test.tsx` | - |
+| P0095 | Implemented | Refused play is said, owner released, stage retryable | `polishPhase03Listen.test.tsx` P0095, `Links.test.tsx` | - |
+| P0096 | Implemented | Candidate/reviewed/prepared apart; Yes/No/Skip and revisiting | `Links.test.tsx` | - |
+| P0097 | Implemented | Current mix vs named draft destination; atomic `/mix/pair` | `Links.test.tsx` | - |
+| P0098 | Implemented | Competing requests, bridge rejection, playhead, stale cancel, duplicates | `Requests.test.tsx` | - |
+| P0099 | Implemented | New: pair being heard stays put through a background refresh | `polishPhase03Listen.test.tsx` P0099, `Links.test.tsx`, `LinksRating.test.tsx` | - |

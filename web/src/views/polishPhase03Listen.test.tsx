@@ -110,3 +110,25 @@ describe('P0089 one request vocabulary', () => {
     expect(screen.getByText('Requested')).toBeInTheDocument();
   });
 });
+
+describe('P0093 a word-pair transition that fails to render can be tried again', () => {
+  it('says what went wrong on the card and the move can be pressed again', async () => {
+    const { Links } = await import('./Links');
+    const link = { phrase: 'tonight', kind: 'x', a: 1, b: 2, artist_a: 'A', title_a: 'One', artist_b: 'B', title_b: 'Two', line_a: 'all tonight', line_b: 'tonight we go', moves: ['word_cut'], move: 'word_cut', state: { status: 'none', key: 'k' }, worked: true };
+    let fail = true;
+    fakeBackend({
+      'GET /links': { links: [link], prepared: 0, preparing: 0 },
+      'GET /drafts': { drafts: [], current: {}, out_of_room: false },
+      'POST /seams': () => (fail ? new Reply(500, { detail: 'Rendering that transition failed.' }) : { status: 'queued', key: 'k2' }),
+    });
+    const { container } = render(<Links {...({ setMixData: vi.fn(), setView: vi.fn(), notify: vi.fn(), status: status(), mix: [], tab: 'words' } as never)} />);
+    await screen.findByRole('button', { name: 'Add both to the mix' });
+    const move = () => container.querySelector<HTMLButtonElement>('button[aria-pressed]')!;
+    fireEvent.click(move());
+    expect(await screen.findByText('Rendering that transition failed.')).toBeInTheDocument();
+    expect(move()).toBeEnabled();
+    fail = false;
+    fireEvent.click(move());
+    await waitFor(() => expect(screen.queryByText('Rendering that transition failed.')).toBeNull());
+  });
+});

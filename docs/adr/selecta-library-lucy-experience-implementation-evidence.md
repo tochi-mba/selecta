@@ -1,6 +1,6 @@
 # Selecta - LX per-task implementation and independent evidence ledger
 
-**Status:** 26 Proposed ADRs (0340–0365); 208 LX tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Documentation only.
+**Status:** 26 Proposed ADRs (0340–0365); 196 LX tasks Not started; 0 In progress; 12 Implemented; 0 independently Verified. Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Documentation only.
 
 All evidence cells deliberately blank. No screenshots, browser runs, listening tests, source changes or independent reviews have been performed by this documentation PR. Recording a plausible test plan is not evidence.
 
@@ -166,14 +166,14 @@ All evidence cells deliberately blank. No screenshots, browser runs, listening t
 | LX-0359-06 | [ADR-0359](adr-0359-lucy-proposal-status-constraints-and-readiness.md) | Proposed | Not started | No | Unassigned | - | - | - |
 | LX-0359-07 | [ADR-0359](adr-0359-lucy-proposal-status-constraints-and-readiness.md) | Proposed | Not started | No | Unassigned | - | - | - |
 | LX-0359-08 | [ADR-0359](adr-0359-lucy-proposal-status-constraints-and-readiness.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0360-01 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0360-02 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0360-03 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0360-04 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0360-05 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0360-06 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0360-07 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0360-08 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Unassigned | - | - | - |
+| LX-0360-01 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: web/src/views/LucyLx.test.tsx 'LX-0360-01 and -02 numbered songs with each transition between its exact neighbours' passed 2026-11-10 (song number, title, artist, tempo, key and energy facts in one repeated row in LucySongs.tsx). Reviewer: none, paired 1/8/64-song screenshots by an independent reviewer still open. | - |
+| LX-0360-02 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: web/src/views/LucyLx.test.tsx 'LX-0360-01 and -02 numbered songs with each transition between its exact neighbours' passed 2026-11-10 (K-1 seam cards keyed by directed occurrence pair). Reviewer: none. | - |
+| LX-0360-03 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: web/src/views/LucyLx.test.tsx 'LX-0360-03 only measured energy makes a bar' passed 2026-11-10. Reviewer: none. | - |
+| LX-0360-04 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: web/src/views/LucyLx.test.tsx 'LX-0360-04, -05 and -07 buttons do every change by exact occurrence' passed 2026-11-10 (lock, move, remove and Ask are buttons, no drag-only action). Reviewer: none. | - |
+| LX-0360-05 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: web/src/views/LucyLx.test.tsx 'LX-0360-04, -05 and -07' and tests/test_lucy_store.py::test_diff_uses_occurrence_identity_not_titles_or_positions passed 2026-11-10. Reviewer: none. | - |
+| LX-0360-06 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: web/src/views/LucyLx.test.tsx 'LX-0360-06 planned versus made, tempo and key gap, and history stay distinct' passed 2026-11-10. Reviewer: none. | - |
+| LX-0360-07 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: web/src/views/LucyLx.test.tsx 'LX-0360-04, -05 and -07 ... focus stays on the moved song' passed 2026-11-10. Reviewer: none. | - |
+| LX-0360-08 | [ADR-0360](adr-0360-lucy-song-seam-timeline-and-contextual-editing.md) | Proposed | Not started | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Needs a person: novice and expert timeline usability study (describe opening, build and closing, locate a problem seam). Automated groundwork LX-0360-01 to -07 passed 2026-11-10. | - |
 | LX-0361-01 | [ADR-0361](adr-0361-lucy-revision-comparison-critiques-and-undo.md) | Proposed | Not started | No | Unassigned | - | - | - |
 | LX-0361-02 | [ADR-0361](adr-0361-lucy-revision-comparison-critiques-and-undo.md) | Proposed | Not started | No | Unassigned | - | - | - |
 | LX-0361-03 | [ADR-0361](adr-0361-lucy-revision-comparison-critiques-and-undo.md) | Proposed | Not started | No | Unassigned | - | - | - |
@@ -206,14 +206,14 @@ All evidence cells deliberately blank. No screenshots, browser runs, listening t
 | LX-0364-06 | [ADR-0364](adr-0364-library-lucy-shared-visual-language-and-accessibility.md) | Proposed | Not started | No | Unassigned | - | - | - |
 | LX-0364-07 | [ADR-0364](adr-0364-library-lucy-shared-visual-language-and-accessibility.md) | Proposed | Not started | No | Unassigned | - | - | - |
 | LX-0364-08 | [ADR-0364](adr-0364-library-lucy-shared-visual-language-and-accessibility.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0365-01 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0365-02 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0365-03 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0365-04 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0365-05 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0365-06 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0365-07 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Unassigned | - | - | - |
-| LX-0365-08 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Unassigned | - | - | - |
+| LX-0365-01 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: tests/test_lx_programme_status.py::test_decisions_stay_proposed_until_an_owner_records_a_dated_rationale passed 2026-11-10. Reviewer: none. | - |
+| LX-0365-02 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: tests/test_lx_programme_status.py::test_every_adr_owns_eight_unique_tasks_and_every_link_resolves passed 2026-11-10 (208 IDs, every link resolves). Reviewer: none. | - |
+| LX-0365-03 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: tests/test_lx_programme_status.py::test_every_task_carries_owner_pr_evidence_and_reviewer_fields passed 2026-11-10. Reviewer: none. | - |
+| LX-0365-04 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: tests/test_lx_programme_status.py::test_checklist_adrs_ledger_and_json_agree_on_every_task passed 2026-11-10 (a tick never stands for independent verification). Reviewer: none. | - |
+| LX-0365-05 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Implemented | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Evidence: tests/test_lx_programme_status.py::test_every_lx_adr_names_its_historical_owners_and_real_source_touchpoints passed 2026-11-10 against selecta-library-lucy-experience-overlap-and-parity.md. Reviewer: none, the source-owner overlap review by a person is still open. | - |
+| LX-0365-06 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Needs a person: named independent visual and AT review manifest (both themes, 320px and 400% zoom, real users, screen readers, device screenshots), signed. | - |
+| LX-0365-07 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Needs a person: real-player and 20k-scale benchmark evidence with real ready-only clips on named devices. | - |
+| LX-0365-08 | [ADR-0365](adr-0365-library-lucy-evidence-parity-and-release-gates.md) | Proposed | Not started | No | Claude checklist agent | feat/finish-checklists (working tree 2026-11-10) | Needs a person: signed owner plus independent GO/NO-GO release decision with rollback plan. | - |
 
 ## Required future evidence template
 

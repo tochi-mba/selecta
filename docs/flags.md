@@ -88,6 +88,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `editor` | **Editor.** Change a mix song by song: reorder, add, remove, swap and clear. |  |
 | `editor.suggestions` | **Song suggestions.** Songs suggested for a spot before you search, each saying how it would hand over. | `editor` |
 | `editor.locks` | **Locked songs.** A locked song stays where it is when the mix is rebuilt. | `editor` |
+| `editor.drag_preview` | **Move preview.** While a song is dragged, the transitions the drop would change are marked before it lands. | `editor` |
 | `seam_inspector` | **Transition inspector.** Pick the move for any transition, hear it, render it and see its checks. | `editor` |
 | `seam_inspector.exact_cues` | **Exact cues.** Choose the exact bars and phrase a transition leaves and lands on. | `seam_inspector` |
 | `stem_studio` | **Stem Studio.** Both songs' voice, drums, bass and melody on one grid, heard instantly. | `seam_inspector`, `stems` |
@@ -128,6 +129,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `discover.word_links` | **Word connections.** Lyric links between songs, where a word in one hands off to the same word in the next. | `lyrics.display` |
+| `discover.relationship_map` | **Connection map.** An optional map of the word connections found, drawing only the ones returned. | `discover.word_links` |
 | `discover.harmonic` | **Harmonic matches.** Songs that might share chords, with an audition in four steps. |  |
 
 ## Library

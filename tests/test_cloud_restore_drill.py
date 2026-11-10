@@ -119,15 +119,28 @@ def test_a_recovery_slower_than_an_hour_fails_the_drill(restored):
     assert report.markdown().startswith("# Restore drill: FAILED")
 
 
-@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def _bash() -> str | None:
+    """A working bash: Git's on Windows (System32's bash is WSL, often with no distro)."""
+    git = shutil.which("git")
+    if git:
+        for candidate in (Path(git).parents[1] / "bin" / "bash.exe",
+                          Path(git).parents[1] / "usr" / "bin" / "bash.exe"):
+            if candidate.is_file():
+                return str(candidate)
+    found = shutil.which("bash")
+    return found if found and "system32" not in found.lower() else None
+
+
+@pytest.mark.skipif(_bash() is None, reason="needs bash")
 @pytest.mark.parametrize("script", sorted((ROOT / "infra").rglob("*.sh")), ids=lambda p: p.name)
 def test_every_infra_shell_script_parses_and_stops_on_errors(script):
-    subprocess.run(["bash", "-n", str(script)], check=True)
+    subprocess.run([_bash(), "-n", str(script)], check=True)
     assert "set -euo pipefail" in script.read_text("utf-8")
 
 
 def test_the_drill_script_restores_first_then_runs_the_steps_timed_from_the_start():
     text = (ROOT / "infra" / "backup" / "restore_drill.sh").read_text("utf-8")
+    text = text.split("set -euo pipefail", 1)[1]  # the steps, not the header comment
     order = [text.index(part) for part in (
         'started="$(date -u +%s)"', "sha256sum --check", "pg_restore", "selecta db upgrade",
         "python -m selecta.ops.restore_drill --restore-started \"${started}\"")]

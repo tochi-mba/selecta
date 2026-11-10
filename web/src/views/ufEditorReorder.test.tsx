@@ -22,12 +22,12 @@ function Harness({ start, notify }: { start: MixItem[]; notify: (message: string
 
 const ready = (key: string) => seam('ready', key, { label: 'Blend', style: 'bass_swap_blend' });
 const start = songs(ready('a'), ready('b'));
-/** the server's answer to moving Song 3 to the top: the same occurrences in the new order */
+/** the server's answer to a move (the first song never has a transition into it): the same occurrences in the new order */
 const moved = (from: number, to: number): MixData => {
   const order = [...start];
   const [item] = order.splice(from, 1);
   order.splice(to, 0, item);
-  return { mix: order.map((song, position) => ({ ...song, position })), name: 'Test mix', can_undo: true } as unknown as MixData;
+  return { mix: order.map((song, position) => ({ ...song, position, seam: position === 0 ? null : song.seam ?? ready(`n${position}`) })), name: 'Test mix', can_undo: true } as unknown as MixData;
 };
 const titles = () => [...document.querySelectorAll('li.song[data-song-key]')].map((row) => row.querySelector('.song-select')?.textContent);
 

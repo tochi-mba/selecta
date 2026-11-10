@@ -1,7 +1,7 @@
 # ADR-0063: Library detail inspector, canonical readiness and protected corrections
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 7 of 8 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 1 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
@@ -26,16 +26,16 @@ Create one authoritative track-detail presentation and readiness projection. Sep
 
 - Refreshing song metadata must never silently overwrite manual correction or incorrectly invalidate unrelated draft work. Explain which derived transition data may need rerender after correction.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0063-01 - Not started.** Specify canonical track readiness from existing API fields and map each user-facing reason.
-2. **S3-0063-02 - Not started.** Build responsive song inspector with measured/effective BPM and key provenance.
-3. **S3-0063-03 - Not started.** Retain Double, Half, manual tempo, key override, reset, exclusions, priority and classification operations.
-4. **S3-0063-04 - Not started.** Validate inputs, preserve edit focus and never turn a stale measurement into a successful correction.
-5. **S3-0063-05 - Not started.** Protect user overrides during concurrent reanalysis, watcher updates and duplicate-title results.
-6. **S3-0063-06 - Not started.** Keep library and mix availability actions consistent with a single readiness computation.
-7. **S3-0063-07 - Not started.** Describe reversible overrides and possible downstream rerender effects.
-8. **S3-0063-08 - Not started.** Verify persistence, correct song identity, long metadata and missing-field fallbacks.
+1. **S3-0063-01 - Implemented.** Specify canonical track readiness from existing API fields and map each user-facing reason. **Evidence:** web/src/state/readiness.ts trackReadiness (one computation, used by Library, SongDetails, Mix, Drafts, Requests and the palette) with the reasons named in docs/adr/selecta-3-glossary.md 'States, and where each comes from'; web/src/state/readiness.test.ts 'shows failures before pending queue or rendering states' and 'never offers excluded music for manual mixing or analysis even with an old tempo'; web/src/views/Library.test.tsx 'gives the reason in the song’s details' and 'distinguishes analysed songs from mix-ready songs without promising rendered transitions' (passed 2026-11-10).
+2. **S3-0063-02 - In progress.** Build responsive song inspector with measured/effective BPM and key provenance. **Status:** In progress: the inspector shows measured and effective tempo and key with their source (web/src/views/LibraryLx.test.tsx 'a correction, the measurement and an unknown are labelled apart', passed 2026-11-10); the narrow-width browser check (web/e2e/lx-library.e2e.ts LX-0348-01 and LX-0348-05) has not been rerun in this session.
+3. **S3-0063-03 - Implemented.** Retain Double, Half, manual tempo, key override, reset, exclusions, priority and classification operations. **Evidence:** web/src/views/Library.test.tsx 'double and half fill in what was measured', 'saves what was typed, and says what’ll be made again', 'can go back to what was measured', 'music and not music can be switched, without touching the file' and 'lets the listener prioritize a song and shows the priority list'; tests/test_api_contracts.py test_it_can_be_put_back, test_one_part_can_be_changed_without_losing_the_other and test_setting_aside_is_reversible_and_touches_no_file; tests/test_library_lx.py test_never_play_and_set_aside_are_different_states_that_both_reverse (passed 2026-11-10).
+4. **S3-0063-04 - Implemented.** Validate inputs, preserve edit focus and never turn a stale measurement into a successful correction. **Evidence:** web/src/views/SongDetails.tsx moves focus to the error and keeps what was typed; web/src/views/Library.test.tsx 'shows what’s wrong with a value that isn’t allowed, and keeps it there' (no success notice on a refused save); tests/test_api_contracts.py test_nonsense_is_refused_and_nothing_changes, test_a_correction_leaves_what_was_measured_alone and test_a_song_that_is_not_there_says_so (passed 2026-11-10).
+5. **S3-0063-05 - Implemented.** Protect user overrides during concurrent reanalysis, watcher updates and duplicate-title results. **Evidence:** tests/test_library_edges.py test_a_correction_survives_reanalysis_a_folder_update_and_a_same_named_song; tests/test_api_contracts.py test_analysing_the_song_again_can_not_lose_it; tests/test_library_lx.py test_another_tab_changing_a_song_after_selection_refuses_the_whole_batch and test_a_batch_with_one_stale_entry_changes_nothing (passed 2026-11-10).
+6. **S3-0063-06 - Implemented.** Keep library and mix availability actions consistent with a single readiness computation. **Evidence:** web/src/state/readiness.ts is the single readiness computation imported by Library, SongDetails, Mix, CurrentMix, Drafts and Requests; web/src/views/Library.test.tsx 'preserves the same song actions, readiness reason and list while switching layouts'; web/src/views/LibraryLx.test.tsx 'a partly scanned library offers no playable action and explains readiness' and 'a missing file says where to look, and offers nothing that would play it'; web/src/state/readiness.test.ts 'never offers excluded music for manual mixing or analysis even with an old tempo' (passed 2026-11-10).
+7. **S3-0063-07 - Implemented.** Describe reversible overrides and possible downstream rerender effects. **Evidence:** web/src/views/Library.test.tsx 'saves what was typed, and says what’ll be made again' and 'can go back to what was measured'; web/src/views/LibraryLx.test.tsx 'a correction, the measurement and an unknown are labelled apart'; tests/test_api_contracts.py test_only_transitions_with_that_song_are_made_again and test_correcting_nothing_about_the_sound_makes_nothing_again (passed 2026-11-10).
+8. **S3-0063-08 - Implemented.** Verify persistence, correct song identity, long metadata and missing-field fallbacks. **Evidence:** tests/test_library_edges.py test_any_name_comes_back_exactly_as_it_is_and_can_be_searched_for, test_songs_with_the_same_name_are_kept_apart and test_songs_missing_things_still_turn_up_in_every_order; tests/test_api_contracts.py test_every_song_list_shows_a_correction; web/src/views/Library.test.tsx 'makes duplicate recording IDs visible in both rows and song details' and 'resolves a linked song by exact ID outside the current filter and page'; web/src/views/LibraryLx.test.tsx 'an unmeasured key is named, not a bare dash' and 'names the artist when only the title is shared, and the ID when title and artist are' (passed 2026-11-10).
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (7/8) | Task-by-task evidence on each item; 0 need a person, 1 still open |
 
 ## References
 
