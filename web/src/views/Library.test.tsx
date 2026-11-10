@@ -387,7 +387,7 @@ describe('correcting a song', () => {
     await open();
     await userEvent.click(screen.getByRole('button', { name: /Double measured tempo/ }));
     expect(screen.getByRole('spinbutton')).toHaveValue(160);
-    await userEvent.click(screen.getByRole('button', { name: /Halve measured tempo/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^Half measured/ }));
     expect(screen.getByRole('spinbutton')).toHaveValue(40);
   });
 
