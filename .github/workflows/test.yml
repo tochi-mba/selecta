@@ -103,11 +103,16 @@ jobs:
   cloud:
     # Cloud code on Linux against a real PostgreSQL: row locks, SKIP LOCKED, LISTEN/NOTIFY,
     # advisory locks and row-level security only exist there. The Windows shards run the same
-    # tests on SQLite. See docs/saas/18-test-plan.md.
-    name: Cloud / PostgreSQL
+    # tests on SQLite. See docs/saas/18-test-plan.md. Three shards, each under half its limit;
+    # verify combines their coverage and runs the gate.
+    name: Cloud / PostgreSQL (shard ${{ matrix.shard }}/3)
     needs: [lint]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:16
@@ -137,22 +142,22 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: uv sync --locked
       - name: Cloud tests on SQLite and PostgreSQL, with branch coverage
+        env:
+          SELECTA_TEST_SHARD: ${{ matrix.shard }}/3
+          COVERAGE_FILE: .coverage.cloud-${{ matrix.shard }}
         run: >-
           uv run pytest
           tests/test_cloud_*.py tests/test_worker_gateway_api.py tests/test_room_to_play.py
           tests/test_operation_identity.py tests/test_flags.py tests/test_flag_server.py
-          -q --cov=selecta --cov-branch --cov-report=json:cloud-coverage.json
-          --cov-report=term-missing:skip-covered --cov-fail-under=0
-      - name: Coverage gate (report only until the module tests land; then --enforce)
-        run: uv run python tests/coverage_gate.py cloud-coverage.json
-      - name: Keep the cloud coverage report
-        if: ${{ always() }}
+          -q --durations=15 --cov=selecta --cov-branch --cov-report= --cov-fail-under=0
+      - name: Upload this shard's coverage for verify
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: cloud-coverage
-          path: cloud-coverage.json
-          if-no-files-found: warn
-          retention-days: 14
+          name: cloud-coverage-${{ matrix.shard }}
+          path: .coverage.cloud-${{ matrix.shard }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
 
   web:
     name: Web / unit tests and production build
@@ -385,3 +390,22 @@ jobs:
         run: |
           uvx --from coverage==7.17.2 coverage combine
           uvx --from coverage==7.17.2 coverage report --fail-under=70
+      - name: Download every cloud shard's coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: cloud-coverage-*
+          path: cloud-coverage
+          merge-multiple: true
+      - name: Combine cloud coverage and run the gate (report only until the module tests land)
+        run: |
+          uvx --from coverage==7.17.2 coverage combine --data-file=cloud-coverage/.coverage cloud-coverage
+          uvx --from coverage==7.17.2 coverage json --data-file=cloud-coverage/.coverage -o cloud-coverage.json
+          uv run --no-project python tests/coverage_gate.py cloud-coverage.json
+      - name: Keep the cloud coverage report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cloud-coverage
+          path: cloud-coverage.json
+          if-no-files-found: warn
+          retention-days: 14

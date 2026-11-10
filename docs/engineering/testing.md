@@ -39,7 +39,27 @@ SQLite file, with these stand-ins:
 - Stripe: a fake Checkout and portal whose "payment" writes the entitlement snapshot after a delay;
 - Rooms: a synthetic song library and planner, and quiet audio at `/e2e/audio/{index}.wav`.
 
-Test controls are under `/test/...` and never exist outside this server. On Windows, if `uv` isn't
+Test controls are under `/test/...` and never exist outside this server. `/test/seed` takes a
+`plan` (`free` by default, or `standard` or `premium` as an expiring override), and
+`/test/flags/off {"user", "flags"}` switches features off for one test person with a real
+per-user targeting rule (an empty list clears them); `/test/flags/reset {"flags"}` clears every
+rule on those flags, for tests that change a flag for everyone (`tests/e2e_cloud_flags.py`).
+
+**The Cloud flag sweep** (`web/e2e-cloud/flags.cloud.ts`, part of `pnpm e2e:cloud`; run it alone
+with `pnpm e2e:cloud flags.cloud.ts`) holds the Cloud site to the local sweep's reflow contract.
+For every non-core, targetable feature that names a `cloud.*` surface in the registry, a new Free
+and a new Premium account (the Premium one with a room open) each have it switched off by rule,
+and every page it's on is opened at 375 and 1280 px: nothing may stick out sideways, no container
+or heading may be left empty, no word the registry gives the feature may show, no menu entry may
+lead to a page that's gone, and no route the feature owns may be asked (nor anything refused).
+It also runs everything off at once, the cloud defaults (lyric display off, SC-0406-03), a teaser
+pass (a plan-locked feature shows with its plan; a rule-off one is hidden), and a live pass (a
+feature switched off while its page is open closes up over `flags.changed`, without a reload). A
+static check fails if a cloud-only feature names no cloud surface and isn't listed with a reason.
+New Cloud pages go in the registry's `SURFACES` (`src/selecta/flags/__init__.py`) and the
+sweep's `SURFACES` map. `web/e2e-cloud/admin-flags.cloud.ts` applies each Flags page action
+(user, rollout, schedule, tier, kill switch, rollback) and checks history, alerts and the audit
+log. On Windows, if `uv` isn't
 on `PATH`, set `SELECTA_PYTHON` to the full path of the virtualenv's `python.exe`. CI runs the
 suite on Linux in the `Cloud E2E` job.
 
@@ -94,7 +114,7 @@ Four workflows live in `.github/workflows/`. `test.yml` runs on every pull reque
 | Lint (Linux) | Ruff, the file-length rule, and no live credential in any tracked file | |
 | Checklist evidence (Linux) | No ticked checklist box without `Evidence:` | |
 | Web (Linux) | Vitest and the production build | |
-| Cloud / PostgreSQL (Linux) | Cloud tests on SQLite and PostgreSQL, branch coverage, the coverage gate | Lint |
+| Cloud / PostgreSQL (Linux, 3 shards) | Cloud tests on SQLite and PostgreSQL with branch coverage; `verify` combines the shards and runs the coverage gate | Lint |
 | Python shards (Windows) | Every test on SQLite, 70% repository coverage | Lint |
 | Edge E2E and Flags (Windows) | Playwright on Edge, and the flag reflow sweep | Lint, Web |
 | Cloud E2E (Linux) | Every cloud browser test, on Edge, against the one cloud test server (`pnpm e2e:cloud`) | Lint, Web |
