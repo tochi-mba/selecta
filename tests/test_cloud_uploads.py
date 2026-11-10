@@ -16,10 +16,10 @@ from test_cloud_storage_fakes import FakeS3, Limits, Quota
 
 from selecta.persistence import transaction
 from selecta.storage.keys import original_key, staging_key
-from selecta.storage.names import MAX_DISPLAY_NAME
+from selecta.storage.names import MAX_DISPLAY_NAME, display_name
 from selecta.storage.objects import GiB, MiB, R2Error
 from selecta.storage.parts import PART_SIZE
-from selecta.storage.ports import PlanLimits
+from selecta.storage.ports import PlanLimits, QuotaExceeded
 from selecta.storage.schema import assets, upload_sessions
 from selecta.storage.uploads import (
     ACTIVE,
@@ -465,6 +465,41 @@ def test_a_retried_accept_after_a_lost_transaction_finds_the_copy(cloud_engine, 
     assert outcome.status is Status.ACCEPTED
 
 
+def _forget_reservation(engine, session_id: str) -> None:
+    with transaction(engine) as conn:
+        conn.execute(
+            sa.update(upload_sessions)
+            .where(upload_sessions.c.id == session_id)
+            .values(reservation_id=None)
+        )
+
+
+def test_a_session_without_a_recorded_reservation_settles_without_touching_quota(
+    cloud_engine, uploads, fake, quota
+):
+    accepted = completed(cloud_engine, uploads, fake, size=100)
+    aborted = one(cloud_engine, uploads, FileSpec("b.mp3", 100))
+    _forget_reservation(cloud_engine, accepted.id)
+    _forget_reservation(cloud_engine, aborted.id)
+    assert call(cloud_engine, uploads.accept, accepted.id, probe(100)).status is Status.ACCEPTED
+    assert call(cloud_engine, uploads.complete, aborted.id).status is Status.ABORTED
+    assert quota.commits == [] and quota.released == []
+
+
+def test_accept_never_records_an_asset_twice(cloud_engine, uploads, fake):
+    session = completed(cloud_engine, uploads, fake, size=100)
+    with transaction(cloud_engine) as conn:
+        conn.execute(
+            sa.insert(assets).values(
+                id=session.id, workspace_id=WS, original_key=original_key(WS, session.id),
+                size=100, sha256=DIGEST, format="flac", created_at=1.0,
+            )
+        )
+    assert call(cloud_engine, uploads.accept, session.id, probe(100)).status is Status.ACCEPTED
+    with transaction(cloud_engine) as conn:
+        assert conn.execute(sa.select(sa.func.count()).select_from(assets)).scalar_one() == 1
+
+
 def test_only_a_completed_upload_can_be_accepted(cloud_engine, uploads):
     session = one(cloud_engine, uploads, FileSpec("a.mp3", 100))
     with pytest.raises(InvalidState, match="uploading"):
@@ -673,6 +708,60 @@ def test_sizes_and_durations_are_said_plainly():
     assert _size_text(2_500_000_000) == "2.5 GB"
     assert _minutes_text(30) == "1 minute"
     assert _minutes_text(150) == "2 minutes"
+
+
+INJECTIONS = [
+    "'; DROP TABLE upload_sessions; --",
+    '" OR 1=1 --',
+    "Robert'); DELETE FROM assets; --",
+    "%' OR '1'='1",
+    "\\'; SELECT pg_sleep(10); --",
+    "x" * 5000,
+    "名前'--",
+    "\x00'; --",
+]
+
+
+@pytest.mark.parametrize("payload", INJECTIONS)
+def test_injection_payloads_in_file_details_are_stored_as_plain_text(cloud_engine, uploads,
+                                                                     payload):
+    other = one(cloud_engine, uploads, FileSpec("keep.mp3", 100), workspace=OTHER)
+    session = one(cloud_engine, uploads, FileSpec(payload, 100, payload, payload))
+    stored = call(cloud_engine, uploads.get, session.id)
+    assert stored.display_name == display_name(payload)
+    assert stored.content_type == "application/octet-stream"
+    assert stored.sha256 is None
+    assert count_sessions(cloud_engine) == 2
+    assert call(cloud_engine, uploads.get, other.id, workspace=OTHER).display_name == "keep.mp3"
+
+
+@pytest.mark.parametrize("payload", [p for p in INJECTIONS if "\x00" not in p])
+def test_injection_payloads_as_ids_find_nothing(cloud_engine, uploads, payload):
+    session = one(cloud_engine, uploads, FileSpec("a.mp3", 100))
+    with pytest.raises(SessionNotFound):
+        call(cloud_engine, uploads.get, payload)
+    with pytest.raises(SessionNotFound):
+        call(cloud_engine, uploads.complete, payload)
+    with pytest.raises(SessionNotFound):
+        call(cloud_engine, uploads.get, session.id, workspace=payload)
+    with transaction(cloud_engine) as conn:
+        assert uploads.active_sessions(conn, payload) == []
+    assert call(cloud_engine, uploads.get, session.id).status is Status.UPLOADING
+
+
+def test_a_nul_in_an_id_finds_nothing_on_sqlite(sqlite_engine, uploads):
+    with pytest.raises(SessionNotFound):
+        call(sqlite_engine, uploads.get, "\x00'; --")
+
+
+def test_quota_refusals_say_what_is_free_or_use_the_quota_packages_words():
+    assert str(QuotaExceeded("w", 10)) == "There isn't enough storage left for this file."
+    assert str(QuotaExceeded("w", 10, -5)) == (
+        "There isn't enough storage left for this file: it needs 10 bytes and 0 are free."
+    )
+    refused = QuotaExceeded("w", 10, 3, message="That needs 10 B, and 7 B of 10 B is in use.")
+    assert str(refused) == "That needs 10 B, and 7 B of 10 B is in use."
+    assert (refused.workspace_id, refused.requested, refused.available) == ("w", 10, 3)
 
 
 def test_plan_limits_come_from_the_workspace_each_time(cloud_engine, fake, quota):

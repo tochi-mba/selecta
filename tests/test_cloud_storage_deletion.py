@@ -8,9 +8,11 @@ deletes is settled by the unique (workspace, kind, ref) row.
 from __future__ import annotations
 
 import threading
+from types import SimpleNamespace
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.exc import IntegrityError
 from test_cloud_storage_fakes import FakeS3
 
@@ -205,6 +207,23 @@ def test_a_song_already_hidden_releases_nothing_more(library):
     assert delete(library, "song", "song-1").bytes_to_release == 0
 
 
+@pytest.mark.parametrize(
+    "payload",
+    ["'; DROP TABLE deletions; --", "song-1' OR '1'='1", '" OR 1=1 --', "x" * 5000],
+)
+def test_injection_payloads_as_refs_hide_nothing_and_leave_the_ledger_intact(library, payload):
+    delete(library, "song", "song-2")
+    with pytest.raises(LookupError):
+        delete(library, "song", payload)
+    with transaction(library) as conn:
+        assert not is_deleted(conn, WS, "song", payload)
+        assert not is_deleted(conn, payload, "song", "song-1")
+    assert not hidden(library, "song-1") and hidden(library, "song-2")
+    assert count(library, deletions) == 1
+    exported = delete(library, "export", payload[:64], size=1)
+    assert exported.deletion.ref == payload[:64]
+
+
 # -- races ------------------------------------------------------------------------------------
 
 
@@ -372,6 +391,32 @@ def test_physical_targets_are_built_from_ids_alone():
     assert all(value == [workspace_prefix(WS)] for value in prefixes.values())
 
 
+class RecordingConnection:
+    def __init__(self, dialect: str) -> None:
+        self.dialect = SimpleNamespace(name=dialect)
+        self.statements: list = []
+
+    def execute(self, statement) -> None:
+        self.statements.append(statement)
+
+
+@pytest.mark.parametrize(
+    ("name", "dialect"), [("sqlite", sqlite.dialect()), ("postgresql", postgresql.dialect())]
+)
+def test_mirror_events_are_inserted_once_per_event_key_on_each_database(name, dialect):
+    conn = RecordingConnection(name)
+    record = Deletion("d1", WS, DeletionKind.SONG, "song-1", 1, T0, T0 + 1)
+    ledger._queue_mirror(conn, record)
+    (statement,) = conn.statements
+    assert "ON CONFLICT (event_key) DO NOTHING" in str(statement.compile(dialect=dialect))
+
+
+def test_mirror_events_need_postgresql_or_sqlite():
+    record = Deletion("d1", WS, DeletionKind.SONG, "song-1", 1, T0, T0 + 1)
+    with pytest.raises(RuntimeError, match="PostgreSQL or SQLite"):
+        ledger._queue_mirror(RecordingConnection("mysql"), record)
+
+
 # -- the ledger and replay after a restore ----------------------------------------------------
 
 
@@ -447,6 +492,13 @@ def test_replay_keeps_the_later_completion_times(library):
         replay_after_restore(conn, [offsite])
         merged = read_ledger(conn)[0]
     assert merged.physical_done_at == restored.physical_done_at
+    assert merged.backup_done_at == T0 + 90 * DAY
+    later = Deletion(**{**record.__dict__, "physical_done_at": restored.physical_done_at + 5,
+                        "backup_done_at": T0 + 80 * DAY})
+    with transaction(library) as conn:
+        replay_after_restore(conn, [later])
+        merged = read_ledger(conn)[0]
+    assert merged.physical_done_at == restored.physical_done_at + 5
     assert merged.backup_done_at == T0 + 90 * DAY
 
 

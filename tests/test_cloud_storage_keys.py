@@ -235,6 +235,12 @@ def test_the_validator_refuses_values_that_are_not_text(not_text):
     assert not is_safe_key(not_text)  # type: ignore[arg-type]
 
 
+def test_keys_in_the_layouts_are_safe():
+    for key in (GOOD, export_key(WS, "e1"), staging_key("s1"),
+                derived_key(WS, "waves", HASH, "t1", "peaks.json")):
+        assert is_safe_key(key)
+
+
 def test_every_key_is_well_under_the_length_limit():
     longest = derived_key(
         "w" * 64, "k" * 32, HASH, "t" * 64, "n" * 64 + "." + "e" * 16 + "." + "f" * 16

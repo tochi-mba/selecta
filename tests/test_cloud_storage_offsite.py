@@ -21,6 +21,7 @@ from selecta.storage.offsite_ledger import (
     MAX_EVENT_BYTES,
     PREFIX,
     TombstoneLedgerError,
+    _canonical,
     _validated,
     drain_deletion_mirror,
     read_storage_tombstone_ledger,
@@ -208,6 +209,12 @@ def test_a_tampered_outbox_row_is_never_mirrored(library, tamper):
 def test_malformed_tombstone_events_are_refused(bad):
     with pytest.raises(TombstoneLedgerError):
         _validated(event(**bad))
+
+
+@pytest.mark.parametrize("value", [{"x": float("nan")}, {"x": object()}])
+def test_an_event_that_has_no_canonical_form_is_refused(value):
+    with pytest.raises(TombstoneLedgerError, match="canonically"):
+        _canonical(value)
 
 
 def test_a_missing_field_is_refused():
