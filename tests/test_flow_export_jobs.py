@@ -33,10 +33,14 @@ def _settle(client, job_id, *, leave=("preparing", "encoding", "cancelling")):
 def test_cancel_is_offered_only_while_waiting_and_really_stops(client, tmp_path, monkeypatch):
     _two_songs(tmp_path)
     monkeypatch.setattr(exports, "CHECK_EVERY_SECONDS", 0.01)
-    monkeypatch.setattr(SeamStore, "status", lambda _store, key: {"status": "rendering", "key": key})
+    monkeypatch.setattr(
+        SeamStore, "status", lambda _store, key: {"status": "rendering", "key": key}
+    )
     monkeypatch.setattr(SeamStore, "submit", lambda _store, _request: None)
     written = []
-    monkeypatch.setattr(mix, "export_snapshot", lambda *args: written.append(args) or {"seconds": 1})
+    monkeypatch.setattr(
+        mix, "export_snapshot", lambda *args: written.append(args) or {"seconds": 1}
+    )
 
     job = client.post("/api/exports/jobs").json()
     assert job["state"] == "preparing" and job["can_cancel"] is True
@@ -85,7 +89,9 @@ def test_no_room_fails_before_encoding_and_a_retry_keeps_the_same_snapshot(
     monkeypatch.setattr(SeamStore, "status", lambda _store, key: {"status": "ready", "key": key})
     monkeypatch.setattr(exports.shutil, "disk_usage", lambda _path: Usage(10, 10, 0))
     written = []
-    monkeypatch.setattr(mix, "export_snapshot", lambda *args: written.append(args) or {"seconds": 1})
+    monkeypatch.setattr(
+        mix, "export_snapshot", lambda *args: written.append(args) or {"seconds": 1}
+    )
 
     first = client.post("/api/exports/jobs").json()
     failed = _settle(client, first["id"])
@@ -134,7 +140,9 @@ def test_a_corrupt_file_or_full_disk_mid_write_is_reported_specifically(
 def test_a_failed_transition_names_the_pair_and_the_job_says_failed(client, tmp_path, monkeypatch):
     _two_songs(tmp_path)
     monkeypatch.setattr(
-        SeamStore, "status", lambda _store, key: {"status": "failed", "key": key, "error": "No beat."}
+        SeamStore,
+        "status",
+        lambda _store, key: {"status": "failed", "key": key, "error": "No beat."},
     )
     job = client.post("/api/exports/jobs").json()
     failed = _settle(client, job["id"])

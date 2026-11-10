@@ -27,10 +27,7 @@ SECTIONS = (
 
 
 def cited_paths(text: str) -> set[str]:
-    return {
-        path
-        for path in re.findall(r"`((?:web|src|tests|docs)/[^`\s]+\.[a-z]+)`", text)
-    }
+    return {path for path in re.findall(r"`((?:web|src|tests|docs)/[^`\s]+\.[a-z]+)`", text)}
 
 
 def test_every_section_is_there() -> None:
@@ -71,7 +68,16 @@ def test_the_research_protocol_covers_each_journey_and_keeps_joy_apart() -> None
     text = (ROOT / "docs" / "research" / "flow-research-protocol.md").read_text(encoding="utf-8")
     for task in ("SF-0240-01", "SF-0240-02", "SF-0240-04", "SF-0240-06", "SF-0240-07"):
         assert f"({task})" in text, task
-    for journey in ("First run", "First play", "First handoff", "Shape", "Reorder", "Audition", "Studio", "Export"):
+    for journey in (
+        "First run",
+        "First play",
+        "First handoff",
+        "Shape",
+        "Reorder",
+        "Audition",
+        "Studio",
+        "Export",
+    ):
         assert journey in text, journey
     assert "NVDA with Microsoft Edge" in text
     assert "never combined into one score" in text

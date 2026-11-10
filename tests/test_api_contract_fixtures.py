@@ -91,10 +91,15 @@ def _baseline():
 
 def test_the_shape_check_allows_additions_and_catches_removals():
     old = {"a": "str", "b": [{"c": "number"}], "d": "null"}
-    assert breaks(old, {"a": "str", "b": [{"c": "number", "new": "bool"}], "d": "str", "e": "str"}) == []
+    assert (
+        breaks(old, {"a": "str", "b": [{"c": "number", "new": "bool"}], "d": "str", "e": "str"})
+        == []
+    )
     assert breaks(old, {"b": []}) == ["$.a: field removed"]
     assert breaks(old, {"a": "number", "b": [{"c": "number"}]}) == ["$.a: was str, now number"]
-    assert breaks(old, {"a": "str", "b": {"c": "number"}}) == ["$.b: was a list, now {'c': 'number'}"]
+    assert breaks(old, {"a": "str", "b": {"c": "number"}}) == [
+        "$.b: was a list, now {'c': 'number'}"
+    ]
 
 
 def test_every_pre_redesign_route_is_still_offered(client):  # noqa: F811

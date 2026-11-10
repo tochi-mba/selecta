@@ -3,6 +3,7 @@
 Ranking is for discovery only. The song ID stays authoritative when a recording
 is selected, including covers, remixes and multiple editions of the same title.
 """
+
 from __future__ import annotations
 
 import re
@@ -32,9 +33,11 @@ def normalize_music(text: str) -> str:
 
 @lru_cache(maxsize=131072)
 def _closeness(needle: str, candidate: str) -> float:
-    """GP-0251-08: the same SequenceMatcher ratio, remembered per pair, so the words a 20,000-song
-    library repeats (artist names, common title words) are compared once per search, not per row.
-    quick_ratio() is a cheap upper bound, so the full comparison runs only for names that could pass."""
+    """Return the cached similarity score used by GP-0251-08.
+
+    Repeated words in a 20,000-song library are compared once per search, not per row.
+    ``quick_ratio`` avoids a full comparison for names that cannot meet the threshold.
+    """
     matcher = SequenceMatcher(None, needle, candidate, autojunk=False)
     return matcher.ratio() if matcher.quick_ratio() >= 0.84 else 0.0
 
@@ -58,8 +61,10 @@ def relevance(query: str, song_id: int, artist: str | None, title: str | None) -
     whole_word = bool(_ENDS_IN_A_SYMBOL.search(query))
 
     def starts(text: str) -> bool:
-        return text == needle or text.startswith(needle + " ") or (
-            not whole_word and text.startswith(needle)
+        return (
+            text == needle
+            or text.startswith(needle + " ")
+            or (not whole_word and text.startswith(needle))
         )
 
     def contains(text: str) -> bool:
@@ -86,8 +91,11 @@ def relevance(query: str, song_id: int, artist: str | None, title: str | None) -
     candidates = [name, creator]
     candidates.extend(token for token in tokens if abs(len(token) - len(needle)) <= 2)
     best = max(
-        (_closeness(needle, candidate)
-         for candidate in candidates if candidate and abs(len(candidate) - len(needle)) <= 3),
+        (
+            _closeness(needle, candidate)
+            for candidate in candidates
+            if candidate and abs(len(candidate) - len(needle)) <= 3
+        ),
         default=0.0,
     )
     if best >= 0.84:

@@ -1,4 +1,4 @@
-"""T0143: every preset, a sparse library, a failed build and a double click leave the music alone."""
+"""T0143: preset, sparse-library, failed-build and double-click safety."""
 
 from __future__ import annotations
 
@@ -87,7 +87,8 @@ def test_a_failed_build_changes_nothing_and_makes_no_empty_draft(client, monkeyp
 
 
 def test_a_second_click_on_a_changed_mix_is_refused_without_replacing_it(
-    client, monkeypatch  # noqa: F811
+    client,
+    monkeypatch,  # noqa: F811
 ):
     client.post("/api/mix/songs", json={"song_id": 1})
     monkeypatch.setattr(

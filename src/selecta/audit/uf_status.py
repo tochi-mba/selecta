@@ -78,27 +78,40 @@ def validate(root: Path) -> list[str]:
         record = tasks.get(task_id)
         where["JSON"] = (
             (record.get("implementation"), "Yes" if record.get("independently_verified") else "No")
-            if record else (None, None)
+            if record
+            else (None, None)
         )
-        for name, (impl, verified) in where.items():
+        for name, (impl, _verified) in where.items():
             if impl is None:
                 errors.append(f"{task_id}: missing from the {name}")
             elif impl not in STATES:
                 errors.append(f"{task_id}: unknown implementation state {impl!r} in the {name}")
         impls = {name: value[0] for name, value in where.items() if value[0] is not None}
         if len(set(impls.values())) > 1:
-            errors.append(f"{task_id}: implementation differs: " + ", ".join(f"{k}={v}" for k, v in impls.items()))
+            errors.append(
+                f"{task_id}: implementation differs: "
+                + ", ".join(f"{k}={v}" for k, v in impls.items())
+            )
         verifieds = {name: value[1] for name, value in where.items() if value[1] is not None}
         if len(set(verifieds.values())) > 1:
-            errors.append(f"{task_id}: independent verification differs: " + ", ".join(f"{k}={v}" for k, v in verifieds.items()))
+            errors.append(
+                f"{task_id}: independent verification differs: "
+                + ", ".join(f"{k}={v}" for k, v in verifieds.items())
+            )
         if task_id in checklist:
             impl, _, ticked, line = checklist[task_id]
             if ticked and impl != "Implemented":
                 errors.append(f"{task_id}: ticked in the checklist but implementation is {impl}")
             if ticked and not re.search(r"\*\*Evidence:\*\*\s*\S", line):
                 errors.append(f"{task_id}: ticked in the checklist without an Evidence field")
-        if record and record.get("independently_verified") and not (record.get("reviewer") and record.get("review_date")):
-            errors.append(f"{task_id}: independently verified in JSON without a named reviewer and date")
+        if (
+            record
+            and record.get("independently_verified")
+            and not (record.get("reviewer") and record.get("review_date"))
+        ):
+            errors.append(
+                f"{task_id}: independently verified in JSON without a named reviewer and date"
+            )
 
     summary = data.get("implementation_summary", {})
     counted = {state.replace(" ", "_"): 0 for state in STATES}
@@ -116,7 +129,11 @@ def main() -> int:
     errors = validate(root)
     for error in errors:
         print(f"ERROR: {error}")
-    print(f"Failed: {len(errors)} UF status disagreement(s)." if errors else "UF status records agree.")
+    print(
+        f"Failed: {len(errors)} UF status disagreement(s)."
+        if errors
+        else "UF status records agree."
+    )
     return 1 if errors else 0
 
 

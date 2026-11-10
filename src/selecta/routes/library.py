@@ -253,7 +253,8 @@ def add_routes(app, ctx) -> None:
                 for entry in body.entries:
                     existing = (
                         by_id[entry.id]["processing_priority"] == 100
-                        if is_priority else entry.id in current_never
+                        if is_priority
+                        else entry.id in current_never
                     )
                     if existing != entry.expected:
                         raise HTTPException(
@@ -368,7 +369,7 @@ def add_routes(app, ctx) -> None:
             # Keep explicit sort choices and cursor pagination intact.
             ranking = "music_relevance(s.id,s.artist,s.title)"
             if q:
-                # GP-0251-08: the count and the page ask about the same songs, so each is scored once.
+                # GP-0251-08: the count and page share one score per song.
                 scores: dict[int, int | None] = {}
 
                 def score(song_id: int, artist: str | None, title: str | None) -> int | None:
@@ -430,8 +431,7 @@ def add_routes(app, ctx) -> None:
                     or not isinstance(last, int)
                     or last <= 0
                     or (
-                        numeric
-                        and (isinstance(value, bool) or not isinstance(value, (int, float)))
+                        numeric and (isinstance(value, bool) or not isinstance(value, (int, float)))
                     )
                     or (not numeric and not isinstance(value, str))
                     or (isinstance(value, float) and not math.isfinite(value))

@@ -156,12 +156,22 @@ def test_a_correction_survives_reanalysis_a_folder_update_and_a_same_named_song(
     _add(conn, 1, "Twin", path="twin-a.flac")
     _add(conn, 2, "Twin", path="twin-b.flac")
     conn.commit()
-    assert client.post("/api/songs/1/correct", json={"bpm": 240.0, "camelot": "9B"}).status_code < 300
+    assert (
+        client.post("/api/songs/1/correct", json={"bpm": 240.0, "camelot": "9B"}).status_code < 300
+    )
     db.save_analysis(conn, 1, {"version": ANALYSIS_VERSION, "bpm": 118.0, "camelot": "4A"})
     db.upsert_song(
         conn,
-        {"path": "twin-a.flac", "folder": "f", "size": 2, "mtime": 9.0, "duration": 201.0,
-         "artist": "Someone", "title": "Twin", "is_music": 1},
+        {
+            "path": "twin-a.flac",
+            "folder": "f",
+            "size": 2,
+            "mtime": 9.0,
+            "duration": 201.0,
+            "artist": "Someone",
+            "title": "Twin",
+            "is_music": 1,
+        },
     )
     conn.commit()
     songs = {song["id"]: song for song in _everything(client)}

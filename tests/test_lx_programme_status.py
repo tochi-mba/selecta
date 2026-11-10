@@ -25,13 +25,17 @@ SECTION = re.compile(r"^## \[ADR-0(\d{3})\]\((adr-0\d{3}-[a-z0-9-]+\.md)\)")
 CHECK_LINE = re.compile(
     r"^- \[( |x)\] \*\*(LX-0(\d{3})-0[1-8]) - [^*]+\*\* \*\*Acceptance:\*\* .+? "
     r"\*\*Verification:\*\* .+? \*\*Implementation:\*\* ([^;]+); \*\*Independently Verified:\*\* "
-    r"(Yes|No); \*\*Owner:\*\* [^;]+; \*\*Implementing PR/SHA:\*\* [^;]+; \*\*Evidence/reviewer:\*\* .+$"
+    r"(Yes|No); \*\*Owner:\*\* [^;]+; \*\*Implementing PR/SHA:\*\* [^;]+; "
+    r"\*\*Evidence/reviewer:\*\* .+$"
 )
 ADR_LINE = re.compile(
-    r"^\d\. \*\*(LX-0\d{3}-0[1-8]) - [^*]+\*\* \*\*Acceptance:\*\* .+? \*\*Required verification:\*\* .+? "
+    r"^\d\. \*\*(LX-0\d{3}-0[1-8]) - [^*]+\*\* \*\*Acceptance:\*\* .+? "
+    r"\*\*Required verification:\*\* .+? "
     r"\*\*Implementation:\*\* ([^;]+); \*\*Independently Verified:\*\* (Yes|No);"
 )
-LEDGER_ROW = re.compile(r"^\| (LX-0(\d{3})-0[1-8]) \| \[ADR-0\d{3}\]\(([^)]+)\) \|([^|]*)\|([^|]*)\|([^|]*)\|")
+LEDGER_ROW = re.compile(
+    r"^\| (LX-0(\d{3})-0[1-8]) \| \[ADR-0\d{3}\]\(([^)]+)\) \|([^|]*)\|([^|]*)\|([^|]*)\|"
+)
 
 
 def checklist_tasks() -> dict[str, dict]:
@@ -48,8 +52,12 @@ def checklist_tasks() -> dict[str, dict]:
             ticked, task, number, state, verified = match.groups()
             assert int(number) == section, f"{task} sits under ADR-0{section}"
             assert task not in tasks, f"{task} is listed twice"
-            tasks[task] = {"ticked": ticked == "x", "implementation": state.strip(),
-                           "verified": verified == "Yes", "line": line}
+            tasks[task] = {
+                "ticked": ticked == "x",
+                "implementation": state.strip(),
+                "verified": verified == "Yes",
+                "line": line,
+            }
     return tasks
 
 
@@ -84,8 +92,19 @@ def test_every_task_carries_owner_pr_evidence_and_reviewer_fields():
         if LEDGER_ROW.match(line):
             assert line.count("|") == 10, f"ledger row needs nine columns: {line[:60]}"
     data = json.loads(STATUS.read_text(encoding="utf-8"))
-    fields = {"id", "title", "implementation", "independently_verified", "owner", "implementing_pr",
-              "implementing_sha", "evidence", "reviewer", "review_date", "platform"}
+    fields = {
+        "id",
+        "title",
+        "implementation",
+        "independently_verified",
+        "owner",
+        "implementing_pr",
+        "implementing_sha",
+        "evidence",
+        "reviewer",
+        "review_date",
+        "platform",
+    }
     for adr in data["adrs"]:
         for task in adr["tasks"]:
             assert fields <= set(task), task["id"]
@@ -96,14 +115,18 @@ def test_decisions_stay_proposed_until_an_owner_records_a_dated_rationale():
     decided = {adr["number"]: adr["decision"] for adr in data["adrs"]}
     assert sorted(decided) == list(NUMBERS)
     for number in NUMBERS:
-        line = next(line for line in adr_file(number).read_text(encoding="utf-8").splitlines()
-                    if line.startswith("- **Decision:**"))
+        line = next(
+            line
+            for line in adr_file(number).read_text(encoding="utf-8").splitlines()
+            if line.startswith("- **Decision:**")
+        )
         word = re.match(r"- \*\*Decision:\*\* (\w+)", line).group(1)
         assert word == decided[number], f"ADR-0{number} says {word}, JSON says {decided[number]}"
         if word != "Proposed":
             assert word in {"Accepted", "Rejected", "Superseded"}
             assert re.search(r"\d{4}-\d{2}-\d{2}", line) and re.search(r"[Oo]wner", line), (
-                f"ADR-0{number} left Proposed without a dated owner rationale")
+                f"ADR-0{number} left Proposed without a dated owner rationale"
+            )
     summary = data["decision_summary"]
     for word in ("Proposed", "Accepted", "Rejected", "Superseded"):
         assert summary[word] == sum(1 for value in decided.values() if value == word)
@@ -139,11 +162,18 @@ def test_checklist_adrs_ledger_and_json_agree_on_every_task():
             assert recorded[task]["evidence"], f"{task} is ticked with no evidence in the JSON"
         if seen["verified"]:
             assert recorded[task]["reviewer"] and recorded[task]["review_date"], (
-                f"{task} is verified with no named reviewer and date")
+                f"{task} is verified with no named reviewer and date"
+            )
     impl = data["implementation_summary"]
-    assert impl["Not_started"] == sum(1 for t in tasks.values() if t["implementation"] == "Not started")
-    assert impl["In_progress"] == sum(1 for t in tasks.values() if t["implementation"] == "In progress")
-    assert impl["Implemented"] == sum(1 for t in tasks.values() if t["implementation"] == "Implemented")
+    assert impl["Not_started"] == sum(
+        1 for t in tasks.values() if t["implementation"] == "Not started"
+    )
+    assert impl["In_progress"] == sum(
+        1 for t in tasks.values() if t["implementation"] == "In progress"
+    )
+    assert impl["Implemented"] == sum(
+        1 for t in tasks.values() if t["implementation"] == "Implemented"
+    )
     verified = data["independent_verification_summary"]
     assert verified["Yes"] == sum(1 for t in tasks.values() if t["verified"])
     assert verified["No"] == sum(1 for t in tasks.values() if not t["verified"])

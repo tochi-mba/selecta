@@ -83,6 +83,8 @@ select = ["E", "F", "I", "UP", "B"]
 "src/selecta/storage/api.py" = ["B008"]
 "src/selecta/planner/reel.py" = ["E501"]
 "src/selecta/planner/gridcheck.py" = ["E501"]
+"tests/test_gp_0260_handoff.py" = ["F811"]
+"tests/test_s2_mix_presets.py" = ["F811"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -7,7 +7,6 @@ import sqlite3
 import time
 
 import httpx
-
 from fastapi.testclient import TestClient
 
 import selecta.listening as listening
@@ -28,9 +27,7 @@ def study(tmp_path):
             ],
             seed=7,
         )
-        conn.execute(
-            "INSERT INTO listening_methods VALUES('study-ourMethod','SpectralBlend','v9')"
-        )
+        conn.execute("INSERT INTO listening_methods VALUES('study-ourMethod','SpectralBlend','v9')")
     return settings, client, trials
 
 
@@ -73,9 +70,7 @@ def test_a_lost_acknowledgement_retry_stores_the_answer_once(tmp_path):
     assert first.json() == again.json() == {"saved": True}
     assert rows(settings, "trial", "listener", "choice") == [(trials[0], "ana", "a")]
     # the same operation ID can't be reused to slip in a different answer
-    hijack = client.post(
-        f"/api/listening/{trials[0]}/response", json=answer("b"), headers=headers
-    )
+    hijack = client.post(f"/api/listening/{trials[0]}/response", json=answer("b"), headers=headers)
     assert hijack.status_code == 409
     assert rows(settings, "choice") == [("a",)]
 

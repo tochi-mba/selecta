@@ -8,8 +8,8 @@ import json
 
 from test_api_contracts import (  # noqa: F401 - pytest fixtures shared with the contract tests
     _somewhere_for_files,
-    client,
-    conn,
+    client,  # noqa: F811
+    conn,  # noqa: F811
     settings,
 )
 
@@ -31,7 +31,9 @@ def _pair(client, a, b, order, draft=None, operation=None):
     if operation:
         headers["x-operation-id"] = operation
     address = "/api/mix/pair" + (f"?draft={draft}" if draft else "")
-    return client.post(address, json={"a": a, "b": b, "move": "word_cut", "phrase": "night"}, headers=headers)
+    return client.post(
+        address, json={"a": a, "b": b, "move": "word_cut", "phrase": "night"}, headers=headers
+    )
 
 
 def test_the_pair_goes_in_source_then_destination_with_the_seam_on_the_destination(client, conn):
@@ -97,13 +99,24 @@ def test_hearing_and_answering_a_chord_match_never_changes_a_mix(client, conn):
     _fill(conn, 3, draft=draft)
     conn.execute(
         "INSERT INTO seam_book(id,song_a,song_b,kind,payload,score) VALUES(?,?,?,?,?,?)",
-        (40, 4, 5, "harmonic_sequence_candidate", json.dumps({"a_at": 1, "b_at": 2, "bars": 4}), 1.0),
+        (
+            40,
+            4,
+            5,
+            "harmonic_sequence_candidate",
+            json.dumps({"a_at": 1, "b_at": 2, "bars": 4}),
+            1.0,
+        ),
     )
     conn.commit()
     listed = client.get("/api/discoveries").json()
     assert [(row["song_a"], row["song_b"]) for row in listed] == [(4, 5)]
     for verdict in ("approved", "new", "rejected"):
-        assert client.post("/api/discoveries/40/review", json={"verdict": verdict}).status_code == 200
-    assert client.post("/api/discoveries/999/review", json={"verdict": "approved"}).status_code == 404
+        assert (
+            client.post("/api/discoveries/40/review", json={"verdict": verdict}).status_code == 200
+        )
+    assert (
+        client.post("/api/discoveries/999/review", json={"verdict": "approved"}).status_code == 404
+    )
     assert _order(client) == [1, 2]
     assert _order(client, draft) == [3]

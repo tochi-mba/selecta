@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 from selecta import jobs as engine_jobs
+from selecta.observability import tracing
 from selecta.persistence import new_id
 from selecta.scheduling.policy import WorkerCaps
 from selecta.storage.artifacts import ArtifactStore
@@ -152,9 +153,14 @@ class WorkerRunner:
     def run_claim(self, claim: Claim) -> RunResult:
         """Start and execute one already-claimed attempt, in the job's trace (ADR-0410)."""
         with tracing.job_span(
-            "worker.run", claim.job.id, service="worker",
-            **{"selecta.job_type": claim.job.type, "selecta.attempt_id": claim.attempt_id,
-               "selecta.pool": self.caps.pool},
+            "worker.run",
+            claim.job.id,
+            service="worker",
+            **{
+                "selecta.job_type": claim.job.type,
+                "selecta.attempt_id": claim.attempt_id,
+                "selecta.pool": self.caps.pool,
+            },
         ) as span:
             result = self._run_claim(claim)
             span.set_attribute("selecta.outcome", str(result.outcome))

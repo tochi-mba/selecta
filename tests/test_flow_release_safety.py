@@ -32,7 +32,16 @@ def home(tmp_path):
         conn.execute(
             "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
             "VALUES(?,?,?,?,?,?,?,?,1)",
-            (song_id, str(path), str(music), 68, 1.0, 200.0, f"Artist {song_id}", f"Song {song_id}"),
+            (
+                song_id,
+                str(path),
+                str(music),
+                68,
+                1.0,
+                200.0,
+                f"Artist {song_id}",
+                f"Song {song_id}",
+            ),
         )
         conn.execute(
             "INSERT INTO analysis(song_id,version,bpm,camelot) VALUES(?,?,?,?)",
@@ -75,7 +84,9 @@ def test_switching_every_optional_feature_off_and_back_changes_no_stored_music_o
     flags.use("minimal")
     assert client.get("/api/status").status_code == 200
     assert client.get("/api/mix").status_code == 200
-    assert client.get("/api/drafts").status_code == 403, "a switched-off feature is refused, not emptied"
+    assert client.get("/api/drafts").status_code == 403, (
+        "a switched-off feature is refused, not emptied"
+    )
 
     # and forward again: nothing was rewritten while it was off
     flags.use("")

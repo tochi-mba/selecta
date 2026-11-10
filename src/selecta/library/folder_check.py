@@ -56,7 +56,7 @@ def has_any_file(root: Path, look_at: int = MOST_FILES_LOOKED_AT) -> bool:
 
 
 # characters no Windows folder name can hold, so a typed address with them can't be a real one
-NOT_IN_A_PATH = set('<>|?*')
+NOT_IN_A_PATH = set("<>|?*")
 
 
 def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
@@ -66,7 +66,7 @@ def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
         return _answer("missing", "Enter the address of a folder on this PC.", text)
     invalid = _answer(
         "invalid",
-        "That isn't a full folder address. Start from the drive, like C:\Users\you\Music.",
+        r"That isn't a full folder address. Start from the drive, like C:\Users\you\Music.",
         text,
     )
     if NOT_IN_A_PATH & set(text) or "\0" in text:

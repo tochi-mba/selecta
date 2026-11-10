@@ -6,7 +6,10 @@ from pathlib import Path
 from selecta.audit.uf_status import validate
 
 ROOT = Path(__file__).resolve().parents[1]
-TAIL = "**Implementation:** {impl}; **Independently Verified:** {verified}; **Owner:** Unassigned; **Evidence/reviewer:** -."
+TAIL = (
+    "**Implementation:** {impl}; **Independently Verified:** {verified}; "
+    "**Owner:** Unassigned; **Evidence/reviewer:** -."
+)
 
 
 def build(
@@ -26,19 +29,28 @@ def build(
     yes = "Yes" if verified else "No"
     (adr / "selecta-unified-finish-implementation-checklist.md").write_text(
         f"- [{box}] **UF-0389-07 - Keep provenance.** {proof}"
-        + TAIL.format(impl=impl, verified=yes) + "\n",
+        + TAIL.format(impl=impl, verified=yes)
+        + "\n",
         encoding="utf-8",
     )
     (adr / "adr-0389-gates.md").write_text(
-        "7. **UF-0389-07 - Keep provenance.** " + TAIL.format(impl=adr_impl or impl, verified=yes) + "\n",
+        "7. **UF-0389-07 - Keep provenance.** "
+        + TAIL.format(impl=adr_impl or impl, verified=yes)
+        + "\n",
         encoding="utf-8",
     )
     (adr / "selecta-unified-finish-implementation-evidence.md").write_text(
-        f"| UF-0389-07 | ADR-0389 | Accepted | {ledger_impl or impl} | {yes} | Unassigned | - | - | - |\n",
+        f"| UF-0389-07 | ADR-0389 | Accepted | {ledger_impl or impl} | {yes} | "
+        "Unassigned | - | - | - |\n",
         encoding="utf-8",
     )
-    task = {"id": "UF-0389-07", "implementation": json_impl or impl, "independently_verified": verified,
-            "reviewer": reviewer, "review_date": "2026-11-10" if reviewer else None}
+    task = {
+        "id": "UF-0389-07",
+        "implementation": json_impl or impl,
+        "independently_verified": verified,
+        "reviewer": reviewer,
+        "review_date": "2026-11-10" if reviewer else None,
+    }
     summary = {"Not_started": 0, "In_progress": 0, "Implemented": 0}
     summary[(json_impl or impl).replace(" ", "_")] = 1
     (adr / "selecta-unified-finish-code-status.json").write_text(
@@ -66,8 +78,13 @@ def test_an_adr_that_moved_alone_is_caught(tmp_path: Path) -> None:
 
 
 def test_a_ledger_or_json_that_lags_is_caught(tmp_path: Path) -> None:
-    assert any("ledger=Not started" in e for e in validate(build(tmp_path / "a", ledger_impl="Not started")))
-    assert any("JSON=In progress" in e for e in validate(build(tmp_path / "b", json_impl="In progress")))
+    assert any(
+        "ledger=Not started" in e
+        for e in validate(build(tmp_path / "a", ledger_impl="Not started"))
+    )
+    assert any(
+        "JSON=In progress" in e for e in validate(build(tmp_path / "b", json_impl="In progress"))
+    )
 
 
 def test_a_tick_needs_implemented_and_evidence(tmp_path: Path) -> None:

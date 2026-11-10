@@ -52,12 +52,17 @@ def test_an_operation_id_links_the_request_to_its_outcome_and_its_replay(app_and
 def test_a_refused_operation_is_correlated_too(app_and_store):
     client, _, _ = app_and_store
     name = "correct-1700000000000-3"
-    refused = client.post("/api/songs/1/correct", json={"bpm": 900}, headers={"x-operation-id": name})
+    refused = client.post(
+        "/api/songs/1/correct", json={"bpm": 900}, headers={"x-operation-id": name}
+    )
     assert refused.status_code >= 400
     assert refused.headers["x-operation-id"] == name
-    assert {"kind": "correct", "status": refused.status_code, "repeat": False, "operation": name} in (
-        _operations(client)
-    )
+    assert {
+        "kind": "correct",
+        "status": refused.status_code,
+        "repeat": False,
+        "operation": name,
+    } in (_operations(client))
 
 
 def test_an_operation_id_that_could_carry_a_path_is_neither_echoed_nor_listed(app_and_store):

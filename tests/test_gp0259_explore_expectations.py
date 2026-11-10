@@ -85,7 +85,12 @@ def _one_genre_library(tmp_path, count=6):
     songs = []
     for i in range(count):
         song = song_from_track(tmp_path, f"a{i}", track, genre="Afrobeats")
-        song.id, song.artist, song.bpm, song.energy = i + 1, f"Artist {i}", 104.0 + i, 0.4 + i * 0.05
+        song.id, song.artist, song.bpm, song.energy = (
+            i + 1,
+            f"Artist {i}",
+            104.0 + i,
+            0.4 + i * 0.05,
+        )
         songs.append(song)
     return songs, traits_of(songs, {})
 
@@ -109,7 +114,12 @@ def test_gp0259_03_an_unavailable_idea_is_refused_by_the_build_route(client):  #
 
 
 def test_gp0259_07_cards_name_only_the_evidence_their_songs_were_measured_for():
-    assert evidence(BY_KEY["rap_run"]) == ["genre tags", "energy", "lyric themes", "how wordy the lyrics are"]
+    assert evidence(BY_KEY["rap_run"]) == [
+        "genre tags",
+        "energy",
+        "lyric themes",
+        "how wordy the lyrics are",
+    ]
     assert evidence(BY_KEY["throwbacks"]) == ["energy", "hook strength", "release year"]
     # a broad journey says nothing about genre or mood until it is bound to a family
     assert evidence(BY_KEY["slow_burn"]) == ["energy"]
