@@ -254,7 +254,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           )}
         </div>
         {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when Selecta is available.</Problem>}
-        {!cards && !cardsFailed && <Skeleton variant="vibes" lines={6} label="Finding compatible mix candidates" />}
+        {!cards && !cardsFailed && <Skeleton variant="vibes" lines={6} label="Finding compatible mix candidates" retry={() => setCardsAttempt((value) => value + 1)} />}
         {visibleGroups.map((group) => {
           const inGroup = ready.filter((card) => card.group === group);
           if (!inGroup.length) return null;

@@ -557,7 +557,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
       {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
-      {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" />}
+      {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
       {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">

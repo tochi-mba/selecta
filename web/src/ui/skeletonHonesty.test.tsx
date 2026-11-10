@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Skeleton } from './Skeleton';
 
@@ -16,14 +16,22 @@ const shell = fs.readFileSync(`${node.cwd()}/src/styles/shell.css`, 'utf8');
 afterEach(() => vi.useRealTimers());
 
 describe('honest placeholders', () => {
-  it('is a polite busy status with a name, then says it is still waiting after ten seconds', () => {
+  it('is a polite busy status with a name, then offers a real retry after ten seconds', () => {
     vi.useFakeTimers();
-    render(<Skeleton label="Loading songs" variant="library" />);
+    const retry = vi.fn();
+    render(<Skeleton label="Loading songs" variant="library" retry={retry} />);
     const status = screen.getByRole('status', { name: 'Loading songs' });
     expect(status).toHaveAttribute('aria-busy', 'true');
-    expect(screen.queryByText(/Still waiting for Selecta/)).toBeNull();
+    expect(screen.queryByText(/taking longer/)).toBeNull();
     act(() => { vi.advanceTimersByTime(10_000); });
-    expect(screen.getByText(/Still waiting for Selecta\. If the server has stopped, start it again\./)).toBeInTheDocument();
+    expect(screen.getByText(/taking longer than expected/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.queryByText(/taking longer/)).toBeNull();
+    act(() => { vi.advanceTimersByTime(9_999); });
+    expect(screen.queryByText(/taking longer/)).toBeNull();
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(screen.getByText(/taking longer than expected/)).toBeInTheDocument();
   });
 
   it('the breathing animation stops after a few cycles, and never runs with reduced motion', () => {

@@ -137,7 +137,7 @@ function SeamEditor(props: {
   };
 
   if (problem && !options) return <Problem retry={() => setAttempt((value) => value + 1)}>{problem}</Problem>;
-  if (!options) return <Skeleton variant="inspector" label="Working out what’s possible" />;
+  if (!options) return <Skeleton variant="inspector" label="Working out what’s possible" retry={() => setAttempt((value) => value + 1)} />;
 
   const move = options.moves.find((option) => option.name === requested) ?? options.moves.find((option) => option.name === inPlay);
   const blends = ['bass_swap_blend', 'filter_sweep'].includes(inPlay);

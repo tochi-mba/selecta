@@ -149,6 +149,27 @@
   "/api/requests": {
    "requests": []
   },
+  "/api/songs/1": {
+   "artist": "str",
+   "bar_times": [
+    "number"
+   ],
+   "beat_times": [
+    "number"
+   ],
+   "beats_per_bar": "number",
+   "bpm": "number",
+   "duration": "number",
+   "id": "number",
+   "key": "str",
+   "lines": [],
+   "lyric_status": "str",
+   "peaks": [
+    "number"
+   ],
+   "sections": [],
+   "title": "str"
+  },
   "/api/songs?state=all": [
    {
     "artist": "str",

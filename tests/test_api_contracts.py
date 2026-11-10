@@ -84,10 +84,25 @@ def client(settings, conn, tmp_path, monkeypatch):
 
     def load_song(_conn, _settings, song_id):
         return SimpleNamespace(
-            id=song_id, title=f"Song {song_id}", vocals_known=True, bpm=120.0, duration=200.0
+            id=song_id,
+            artist="Someone",
+            title=f"Song {song_id}",
+            vocals_known=True,
+            bpm=120.0,
+            camelot="8A",
+            duration=200.0,
+            bar_times=np.array([0.0, 2.0]),
+            beats=np.array([0.0, 0.5, 1.0, 1.5, 2.0]),
+            beats_per_bar=4,
+            sections=[],
+            lines=[],
         )
 
     monkeypatch.setattr("selecta.analysis.song.load_song", load_song)
+    monkeypatch.setattr(
+        "selecta.analysis.pipeline.load_features",
+        lambda _settings, _song_id: {"peaks": np.array([0, 128, 255], dtype=np.uint8)},
+    )
     monkeypatch.setattr("selecta.planner.reel.load_library", lambda _conn, _settings: [])
     monkeypatch.setattr(
         SeamStore, "submit", lambda self, request, **_k: {"status": "queued", "key": request.key}

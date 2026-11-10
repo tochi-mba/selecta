@@ -802,7 +802,7 @@ export function Now(props: ViewProps) {
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
           {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn’t load lyrics and song details.' : 'Couldn’t load this song’s details.'} Playback controls are still available.</Problem>}
-          {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />)}
+          {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" retry={() => setDetailAttempt((attempt) => attempt + 1)} />)}
         </div>
 
         <aside className="listen-side" aria-label="Coming up">
