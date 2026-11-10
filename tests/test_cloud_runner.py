@@ -147,6 +147,7 @@ def test_a_job_type_with_no_handler_fails_closed_as_an_engine_bug(store):
     assert store.job(job.id).error_class == ErrorClass.ENGINE_BUG
 
 
+@pytest.mark.invariants_off("its handler publishes under shared test keys")
 def test_outputs_published_by_the_handler_are_recorded_as_artifacts(store):
     store.enqueue(JobSpec("w1", "seam.render"))
 

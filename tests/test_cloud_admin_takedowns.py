@@ -43,6 +43,7 @@ def log(world, asset_id: str, who: str = "owner", workspace: str = "customer"):
                       work="Song Title by Artist")
 
 
+@pytest.mark.invariants_off("its asset rows use test keys outside w/{workspace}/")
 def test_a_notice_is_logged_with_its_deadline_and_audited(world):
     asset_id = add_asset(world)
     answer = log(world, asset_id)
@@ -56,6 +57,7 @@ def test_a_notice_is_logged_with_its_deadline_and_audited(world):
     assert [item["id"] for item in listed] == [notice["id"]]
 
 
+@pytest.mark.invariants_off("its asset rows use test keys outside w/{workspace}/")
 def test_acting_hides_the_asset_and_starts_its_deletion(world):
     asset_id = add_asset(world)
     notice = log(world, asset_id).json()["notice"]
@@ -76,6 +78,7 @@ def test_acting_hides_the_asset_and_starts_its_deletion(world):
     assert again.status_code == 400
 
 
+@pytest.mark.invariants_off("its asset rows use test keys outside w/{workspace}/")
 def test_a_rejected_notice_leaves_the_asset_alone(world):
     asset_id = add_asset(world)
     notice = log(world, asset_id).json()["notice"]
@@ -87,6 +90,7 @@ def test_a_rejected_notice_leaves_the_asset_alone(world):
     assert audit_actions(world.engine, action="legal.takedown.rejected")
 
 
+@pytest.mark.invariants_off("its asset rows use test keys outside w/{workspace}/")
 def test_repeated_valid_notices_suspend_uploads_until_lifted(world):
     for _ in range(2):
         notice = log(world, add_asset(world)).json()["notice"]
@@ -112,6 +116,7 @@ def test_repeated_valid_notices_suspend_uploads_until_lifted(world):
     assert audit_actions(world.engine, action="legal.uploads.restriction_lifted")
 
 
+@pytest.mark.invariants_off("its asset rows use test keys outside w/{workspace}/")
 def test_a_role_without_the_takedown_permission_is_denied_and_audited(world):
     asset_id = add_asset(world)
     answer = log(world, asset_id, who="auditor")
@@ -120,6 +125,7 @@ def test_a_role_without_the_takedown_permission_is_denied_and_audited(world):
     assert [row["actor_id"] for row in denied] == [world.users["auditor"]]
 
 
+@pytest.mark.invariants_off("its asset rows use test keys outside w/{workspace}/")
 def test_a_notice_must_name_an_asset_in_that_workspace(world):
     asset_id = add_asset(world, "customer2")
     answer = log(world, asset_id)

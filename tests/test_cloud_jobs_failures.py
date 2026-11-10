@@ -305,6 +305,7 @@ def test_a_retried_job_whose_prerequisite_still_failed_starts_blocked(store):
     assert store.retry("w1", seam.id).state == JobState.BLOCKED
 
 
+@pytest.mark.invariants_off("forces job states with raw SQL, bypassing the heads")
 def test_unblocking_a_workflow_whose_work_all_succeeded_finishes_it(store):
     """The contract of `retrying.unblock` for a workflow left blocked with nothing unfinished."""
     import sqlalchemy as sa

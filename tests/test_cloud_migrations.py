@@ -8,6 +8,7 @@ every revision one step at a time, so every `downgrade()` runs, not just the jum
 
 from __future__ import annotations
 
+import pytest
 import sqlalchemy as sa
 from alembic.script import ScriptDirectory
 from sqlalchemy.engine import Engine
@@ -132,6 +133,7 @@ def test_head_matches_the_declared_tables(cloud_engine):
     assert migrate.pending_changes(cloud_engine) == []
 
 
+@pytest.mark.invariants_off("ends with no tables to check")
 def test_every_revision_rolls_back_to_an_empty_database(cloud_engine):
     migrate.downgrade(cloud_engine, "base")
     assert migrate.current(cloud_engine) is None

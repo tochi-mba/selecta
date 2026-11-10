@@ -92,6 +92,7 @@ def test_a_cancel_requested_job_whose_worker_vanished_is_cancelled(store):
     assert (after.state, after.lease_generation) == (JobState.CANCELLED, 2)
 
 
+@pytest.mark.invariants_off("plants a superseded attempt with raw SQL")
 def test_an_attempt_already_superseded_is_closed_without_touching_the_job(store):
     job, claim = claimed(store)
     with transaction(store.engine) as connection:
@@ -102,6 +103,7 @@ def test_an_attempt_already_superseded_is_closed_without_touching_the_job(store)
     assert store.job(job.id).state == JobState.LEASED
 
 
+@pytest.mark.invariants_off("deletes a job under its live attempt")
 def test_an_attempt_whose_job_is_gone_is_left_for_the_next_pass(store):
     job, claim = claimed(store)
     with transaction(store.engine) as connection:

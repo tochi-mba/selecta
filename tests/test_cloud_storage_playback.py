@@ -161,6 +161,7 @@ def test_a_deleted_or_unknown_asset_is_not_found(client, cloud_engine):
     assert client.get("/api/assets/never/playback-url").status_code == 404
 
 
+@pytest.mark.invariants_off("plants an asset under a non-canonical key on purpose")
 def test_a_stored_key_that_is_not_the_canonical_one_is_never_signed(client, cloud_engine, fake):
     with transaction(cloud_engine) as conn:
         add_asset(conn, WS, "song-3", key=original_key(OTHER, "song-9"))
