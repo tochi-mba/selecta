@@ -28,7 +28,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, RowMapping
 
 from selecta.authz import audit, permissions
-from selecta.authz.errors import Forbidden, LastOwner, SelfApproval, StepUpRequired
+from selecta.authz.errors import Forbidden, InvalidScope, LastOwner, SelfApproval, StepUpRequired
 from selecta.authz.roles import (
     ROLE_PERMISSIONS,
     StaffRole,
@@ -146,9 +146,13 @@ def _assignments(rows: Iterable[RowMapping]) -> list[Assignment]:
     known = set(StaffRole)
     out = []
     for row in rows:
-        # A role retired from the code grants nothing, rather than crashing every check.
-        if row["role"] in known:
+        # A role or scope retired from the code grants nothing, rather than crashing every check.
+        if row["role"] not in known:
+            continue
+        try:
             out.append(Assignment.from_row(row))
+        except InvalidScope:
+            continue
     return out
 
 
@@ -288,6 +292,9 @@ def _session_problem(conn: Connection, actor: Actor, now: float) -> str | None:
         return "staff session has no start time"
     if started > now + CLOCK_LEEWAY:
         return "staff session starts in the future"
+    if actor.privileged_until - started > STAFF_SESSION_SECONDS + CLOCK_LEEWAY:
+        # Measured from the start too, so a session whose end keeps moving can't outlive an hour.
+        return "staff session lasts longer than an hour"
     revoked_before = conn.execute(
         sa.select(session_revocations.c.revoked_before).where(
             session_revocations.c.user_id == actor.user_id
