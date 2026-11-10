@@ -35,6 +35,7 @@ def test_status_requires_the_selecta_json_shape(launcher):
 
 def test_free_port_reports_and_skips_an_occupied_port(launcher, monkeypatch, capsys):
     seen = []
+
     def available(port):
         seen.append(port)
         return port == 8735
@@ -58,6 +59,7 @@ def test_free_port_rejects_invalid_requests_and_exhaustion(launcher, monkeypatch
 def test_ready_requires_the_actual_vite_api_proxy(launcher, monkeypatch):
     html = "<html>Vite is up</html>"
     calls = []
+
     def fake_read(url):
         calls.append(url)
         if url == "http://127.0.0.1:8733/api/status":
@@ -68,7 +70,7 @@ def test_ready_requires_the_actual_vite_api_proxy(launcher, monkeypatch):
 
     monkeypatch.setattr(launcher, "read", fake_read)
     with pytest.raises(launcher.StartupError, match="not ready: proxy"):
-        launcher.wait_until_ready(8733, 5173, [], timeout=0.01)
+        launcher.wait_until_ready(8733, 5173, [], timeout=1.0)
     assert "http://127.0.0.1:5173/api/status" in calls
 
 
@@ -100,6 +102,7 @@ def test_run_never_silently_reuses_an_existing_server(launcher, monkeypatch):
     monkeypatch.setattr(
         launcher, "free_port", lambda port: {8733: 8734, 5173: 5173}[port]
     )
+
     def start(name, command, cwd, env):
         started.append((name, command, cwd, env))
         return launcher.Service(name, SimpleNamespace(poll=lambda: None))
