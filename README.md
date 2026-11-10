@@ -34,7 +34,17 @@ macOS/Linux:             uv run python -x dev.cmd
 ```
 
 The launcher opens the site when ready, prints its local URL, and streams server and website logs
-as you develop. It checks the Python API **and** the website's proxy before announcing success.
+as you develop. It checks the API's health, the local SQLite schema, Vite, and the Vite-to-API
+proxy before announcing that the **development stack is online**. The full `/api/status` endpoint
+loads and summarises your music library and can take longer. Its first result is checked separately:
+if it's slow, the launcher warns you but still opens the website so you can debug it. The
+`--check` smoke test fails if this full summary does not answer.
+
+If you see `[WARNING] Library summary is slow or unavailable`, use the named `[STATUS]`
+steps in the API console to locate the blocker. After 10 seconds a watchdog prints the blocked
+stage; after 30 seconds it prints the Python stack. The `--isolated` option starts with a
+separate empty library and is useful for distinguishing slow existing data from an app defect.
+Frequent health probe access lines are hidden by default; `--verbose` restores them.
 Use `dev.cmd --check` for a startup smoke test, or `dev.cmd doctor` for prerequisites and
 troubleshooting. See [Working on Selecta](#working-on-selecta) below for all options.
 

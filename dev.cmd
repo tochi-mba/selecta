@@ -504,7 +504,9 @@ def run(options: argparse.Namespace) -> int:
                 "for the slow query, or use --isolated to compare an empty library.",
             )
             if options.check:
-                raise StartupError("Full-library /api/status smoke test failed; see the details above.")
+                raise StartupError(
+                    "Full-library /api/status smoke test failed; see the details above."
+                )
         if options.check:
             say("PASS", "Smoke test passed. Stopping the services started by this script.")
             return 0
@@ -516,7 +518,9 @@ def run(options: argparse.Namespace) -> int:
                 say("INFO", "Browser could not be opened. Copy the website URL above.")
         say("INFO", "Edit web/src for instant updates or src/selecta for API reloads.")
         say("INFO", "Press Ctrl+C or close this console to stop the services started here.")
-        say("INFO", "Use --verbose for extra Uvicorn diagnostics or --startup-timeout for slow disks.")
+        say(
+            "INFO", "Use --verbose for detailed Uvicorn logs or --startup-timeout for slow disks."
+        )
         last_heartbeat = time.monotonic()
         while True:
             check_exits(services)

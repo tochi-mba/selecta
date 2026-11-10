@@ -126,7 +126,9 @@ def create_app(
     def ready():
         """Local SQLite check without loading every song or transition."""
         if not settings.db_path.is_file():
-            return JSONResponse({"detail": "Local library database is not initialized"}, status_code=503)
+            return JSONResponse(
+                {"detail": "Local library database is not initialized"}, status_code=503
+            )
         try:
             connection = sqlite3.connect(
                 settings.db_path.resolve().as_uri() + "?mode=ro", uri=True, timeout=0.5
