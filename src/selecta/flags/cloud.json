@@ -44,6 +44,15 @@
       "modes": ["cloud"],
       "owner": "privacy"
     },
+    "account.lucy_settings": {
+      "label": "Lucy settings in Cloud",
+      "about": "Choose whether to use Lucy, its phases and what it may share; see this month's Lucy turns.",
+      "routes": ["GET /api/account/lucy", "PUT /api/account/lucy"],
+      "requires": ["lucy"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "lucy"
+    },
     "cloud.signups": {
       "label": "New accounts",
       "about": "Allow new Cloud users to complete account onboarding.",
@@ -113,9 +122,28 @@
       "modes": ["cloud"],
       "owner": "billing"
     },
+    "devices": {
+      "label": "Playback devices",
+      "about": "Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here.",
+      "routes": [
+        "POST /api/devices",
+        "GET /api/devices",
+        "PATCH /api/devices/{device_id}",
+        "POST /api/devices/{device_id}/sign-out",
+        "GET /api/playback/session",
+        "POST /api/playback/heartbeat",
+        "POST /api/playback/take-over",
+        "POST /api/playback/reconnect"
+      ],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "playback"
+    },
     "devices.remote_control": {
       "label": "Remote playback control",
       "about": "Control the account's active playback session from another device.",
+      "routes": ["POST /api/playback/commands"],
+      "requires": ["devices"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "playback"
@@ -123,6 +151,29 @@
     "rooms": {
       "label": "Rooms",
       "about": "Let Premium hosts share a request room with guests.",
+      "routes": [
+        "POST /api/rooms",
+        "GET /api/rooms/current",
+        "GET /api/rooms/{room_id}",
+        "PATCH /api/rooms/{room_id}/settings",
+        "POST /api/rooms/{room_id}/lock",
+        "POST /api/rooms/{room_id}/unlock",
+        "POST /api/rooms/{room_id}/code",
+        "POST /api/rooms/{room_id}/end",
+        "POST /api/rooms/{room_id}/requests/{request_id}/approve",
+        "POST /api/rooms/{room_id}/requests/{request_id}/pass",
+        "POST /api/rooms/{room_id}/guests/{guest_id}/approve",
+        "POST /api/rooms/{room_id}/guests/{guest_id}/remove",
+        "POST /api/rooms/{room_id}/guests/{guest_id}/ban",
+        "POST /api/guest/join",
+        "GET /api/guest/rooms/{room_id}",
+        "GET /api/guest/rooms/{room_id}/search",
+        "POST /api/guest/rooms/{room_id}/requests",
+        "DELETE /api/guest/rooms/{room_id}/requests/{request_id}",
+        "GET /api/guest/rooms/{room_id}/nicknames",
+        "PUT /api/guest/rooms/{room_id}/nickname",
+        "POST /api/guest/rooms/{room_id}/leave"
+      ],
       "modes": ["cloud"],
       "when_locked": "teaser",
       "kind": "release",
@@ -131,6 +182,10 @@
     "rooms.votes": {
       "label": "Room votes",
       "about": "Let room guests vote on song requests.",
+      "routes": [
+        "POST /api/guest/rooms/{room_id}/requests/{request_id}/vote",
+        "DELETE /api/guest/rooms/{room_id}/requests/{request_id}/vote"
+      ],
       "requires": ["rooms"],
       "modes": ["cloud"],
       "when_locked": "teaser",
@@ -140,6 +195,12 @@
     "rooms.display": {
       "label": "Room display",
       "about": "Pair a screen to show the room QR code and playback queue.",
+      "routes": [
+        "POST /api/rooms/{room_id}/displays",
+        "DELETE /api/rooms/{room_id}/displays",
+        "POST /api/display/pairings",
+        "GET /api/display/view"
+      ],
       "requires": ["rooms"],
       "modes": ["cloud"],
       "when_locked": "teaser",

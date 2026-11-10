@@ -118,14 +118,9 @@ def within_fifteen_percent(store, owners: dict[str, str], first: int) -> None:
 def wide(postgres_engine):
     """The same schema with a connection for every claimer (the default pool holds 15),
     closed afterwards so the server's client limit is free for the next test."""
-    from selecta.persistence import make_engine
+    from cloud_db import sibling_engine
 
-    with postgres_engine.connect() as connection:
-        path = connection.execute(sa.text("SHOW search_path")).scalar()
-    engine = make_engine(
-        postgres_engine.url.render_as_string(hide_password=False), pool_size=55, max_overflow=5,
-        connect_args={"options": f"-csearch_path={path}"},
-    )
+    engine = sibling_engine(postgres_engine, pool_size=55, max_overflow=5)
     yield engine
     engine.dispose()
 

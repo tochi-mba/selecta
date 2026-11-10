@@ -1,4 +1,10 @@
-"""Authenticated account data archive for Selecta Cloud."""
+"""Authenticated account data archive for Selecta Cloud.
+
+The ZIP holds every original (checked against its stored size and SHA-256), `settings.json` (the
+account, workspace, plan, feature opt-outs, Lucy choices and signed-in devices), `assets.json`,
+`mixes.json` and a manifest. Cloud doesn't store mix revisions yet, so `mixes.json` says so and
+carries what Cloud does keep about mixes: the workspace's playback session.
+"""
 
 from __future__ import annotations
 
@@ -18,13 +24,18 @@ from sqlalchemy import and_, select
 from sqlalchemy.engine import Engine
 from starlette.background import BackgroundTask
 
+from selecta.billing import plans, stripe_sync
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
+from selecta.lucy import cloud_settings as lucy_cloud
 from selecta.persistence import transaction
+from selecta.playback.schema import devices, playback_sessions
 from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets
 from selecta.storage.keys import Bucket, original_key
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.storage.schema import assets, upload_sessions
+
+MIXES_UNAVAILABLE = "Cloud mix revisions are not yet stored by this application version."
 
 
 def _safe_filename(name: str) -> str:
@@ -93,7 +104,35 @@ def install_routes(
                         user_flag_preferences.c.updated_at,
                     ).where(user_flag_preferences.c.user_id == principal.user.id)
                 ).mappings().all()
+                if not str(row["flag_id"]).startswith(lucy_cloud.PREFIX)
             ]
+            lucy_choices = lucy_cloud.choices(conn, principal.user.id)
+            entitlement = stripe_sync.effective_entitlement(conn, workspace.id)
+            plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
+            device_rows = [
+                dict(row)
+                for row in conn.execute(
+                    select(
+                        devices.c.id,
+                        devices.c.name,
+                        devices.c.kind,
+                        devices.c.created_at,
+                        devices.c.last_seen_at,
+                        devices.c.signed_out_at,
+                    )
+                    .where(devices.c.workspace_id == workspace.id)
+                    .order_by(devices.c.created_at, devices.c.id)
+                ).mappings().all()
+            ]
+            session = conn.execute(
+                select(
+                    playback_sessions.c.mix_revision_id,
+                    playback_sessions.c.song_index,
+                    playback_sessions.c.offset_ms,
+                    playback_sessions.c.state,
+                    playback_sessions.c.updated_at,
+                ).where(playback_sessions.c.workspace_id == workspace.id)
+            ).mappings().first()
 
         temp_dir = Path(tempfile.mkdtemp(prefix="selecta-account-export-"))
         archive_path = temp_dir / "selecta-account-export.zip"
@@ -186,7 +225,22 @@ def install_routes(
                         "kind": workspace.kind,
                         "created_at": workspace.created_at,
                     },
+                    "plan": {
+                        "id": plan.id,
+                        "version": plan.version,
+                        "label": plan.label,
+                        "source": entitlement.source,
+                    },
                     "feature_preferences": preferences,
+                    "lucy": lucy_choices,
+                    "devices": device_rows,
+                }
+                mixes = {
+                    "available": False,
+                    "reason": MIXES_UNAVAILABLE,
+                    "mixes": [],
+                    # What was last playing, so the export holds every mix fact Cloud keeps.
+                    "playback_session": dict(session) if session else None,
                 }
                 manifest = {
                     "schema_version": 1,
@@ -196,25 +250,14 @@ def install_routes(
                     "settings": "included in settings.json",
                     "mixes": {
                         "available": False,
-                        "reason": "Cloud mix data is not yet stored by this application version.",
+                        "reason": MIXES_UNAVAILABLE,
+                        "playback_session": "included in mixes.json",
                     },
                 }
                 archive.writestr("manifest.json", json.dumps(manifest, indent=2))
                 archive.writestr("settings.json", json.dumps(settings, indent=2))
                 archive.writestr("assets.json", json.dumps(exported_assets, indent=2))
-                archive.writestr(
-                    "mixes.json",
-                    json.dumps(
-                        {
-                            "available": False,
-                            "reason": (
-                                "Cloud mix data is not yet stored by this application version."
-                            ),
-                            "mixes": [],
-                        },
-                        indent=2,
-                    ),
-                )
+                archive.writestr("mixes.json", json.dumps(mixes, indent=2, default=str))
         except Exception:
             shutil.rmtree(temp_dir, ignore_errors=True)
             raise

@@ -89,6 +89,8 @@ class ClaimSession:
     def run(self) -> Claim | None:
         if self.pool in self.config.paused_pools:
             return None
+        if self.store.controls.claim_block(self.connection, self.pool, self.caps.worker_id):
+            return None
         backlogged = heads.backlogged_lanes(self.connection, self.pool)
         if not backlogged:
             return None
@@ -97,7 +99,11 @@ class ClaimSession:
             boosted = self._try_boost()
             if boosted is not None:
                 return boosted
-        speculative_ok = Lane.SPECULATIVE in backlogged and self._speculative_ok()
+        speculative_ok = (
+            Lane.SPECULATIVE in backlogged
+            and not self.store.controls.speculative_off(self.connection)
+            and self._speculative_ok()
+        )
         for lane in policy.choose_lanes(vtimes, backlogged, speculative_ok):
             claimed = self._try_lane(lane)
             if claimed is not None:

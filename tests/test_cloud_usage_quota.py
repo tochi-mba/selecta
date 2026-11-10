@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 
 import pytest
 import sqlalchemy as sa
+from cloud_db import sibling_engine
 from hypothesis import settings
 from hypothesis import strategies as st
 from hypothesis.stateful import (
@@ -26,7 +27,7 @@ from hypothesis.stateful import (
 from sqlalchemy.engine import Engine
 
 from selecta.billing.plans import GB, MB, plan_for
-from selecta.persistence import make_engine, transaction
+from selecta.persistence import transaction
 from selecta.usage import ledger, quota
 from selecta.usage.quota import QuotaExceeded, QuotaStatus, ReservationClosed, ReservationState
 from selecta.usage.schema import storage_reservations
@@ -444,11 +445,8 @@ def racing_engine(engine) -> Iterator[Engine]:
     if engine.dialect.name != "postgresql":
         yield engine
         return
-    with engine.connect() as conn:
-        schema = conn.execute(sa.text("SELECT current_schema()")).scalar_one()
-    racing = make_engine(
-        engine.url.render_as_string(hide_password=False),
-        connect_args={"options": f"-csearch_path={schema}"},
+    racing = sibling_engine(
+        engine,
         pool_size=RACE_CONNECTIONS,
         max_overflow=0,
         pool_timeout=300,

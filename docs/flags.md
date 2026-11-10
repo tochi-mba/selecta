@@ -190,13 +190,15 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `account.labs` | **Labs.** Opt into preview features that your plan is allowed to use. |  |
 | `account.deletion` | **Account deletion.** Request account removal and revoke active sessions. **Core:** People must always be able to request deletion of their account. |  |
 | `account.data_export` | **Account data export.** Download a portable copy of available account data and original files. **Core:** People must be able to take a copy of their personal data. |  |
+| `account.lucy_settings` | **Lucy settings in Cloud.** Choose whether to use Lucy, its phases and what it may share; see this month's Lucy turns. | `lucy` |
 | `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
 | `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
-| `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. |  |
+| `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
+| `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |
 | `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
 | `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |

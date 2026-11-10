@@ -5,6 +5,14 @@ removed afterwards), reports real units of work with `ctx.progress()`, calls `ct
 between steps, and publishes outputs through `ctx.artifacts`. It returns the job's result (small
 JSON, applied by the store inside the completing transaction) or a `JobOutput`.
 
+Files go in and out through one interface whatever the worker runs on (ADR-0397,
+docs/saas/10-audio-engine-in-cloud.md §10.1): `ctx.open_input(key)` gives a local path for a
+stored object, `ctx.publish(kind, input_hash, path, name)` stores a finished file under this
+attempt's own derived key and queues its manifest row, and `ctx.verify(key, size, sha256)` checks
+a stored object. The runner hands the context an `ArtifactStore`: `LocalArtifactStore` on the
+local app (the file is already on disk) or `R2ArtifactStore` for a worker that holds storage
+credentials. A gateway worker holds none, so the same three calls go through its signed URLs.
+
 Engine code that already calls `selecta.jobs.check_in()` needs no change: while a handler runs,
 that check is wired to this attempt, so it raises `selecta.jobs.Interrupted` when the attempt is
 cancelled, preempted, timed out or has lost its lease.
@@ -17,12 +25,15 @@ import re
 import threading
 import time
 import traceback
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
 from selecta import jobs as engine_jobs
+from selecta.storage.artifacts import ArtifactStore
+from selecta.storage.keys import UnsafeKey, derived_key, workspace_of
 from selecta.work.errors import StaleLease
 from selecta.work.model import ErrorClass, Job
 from selecta.work.ports import ArtifactOutput
@@ -121,6 +132,7 @@ class JobContext:
         output_prefix: str | None = None,
         input_downloader: Callable[[JobContext, str | int, Path | None], Path] | None = None,
         artifact_publisher: Callable[..., ArtifactOutput] | None = None,
+        artifact_store: ArtifactStore | None = None,
         clock: Callable[[], float] = time.monotonic,
     ):
         self.job = job
@@ -135,6 +147,8 @@ class JobContext:
         """Attempt-scoped derived-object prefix, when the gateway provides one."""
         self._input_downloader = input_downloader
         self._artifact_publisher = artifact_publisher
+        self.store = artifact_store
+        """Where inputs are read and outputs stored; None for a worker behind the gateway."""
         self._clock = clock
         self.last_progress_at: float | None = None
         """When the handler last reported progress, on `clock` (the runner's, so its watchdog
@@ -178,6 +192,73 @@ class JobContext:
         )
         self.artifacts.outputs.append(output)
         return output
+
+    def _own_key(self, key: str) -> str:
+        """Refuse a key from another workspace before any store is touched."""
+        try:
+            owner = workspace_of(key)
+        except UnsafeKey as error:
+            raise InputInvalid("The job names an object key Selecta doesn't use.") from error
+        if owner != self.job.workspace_id:
+            raise InputInvalid("The job names an object outside its own workspace.")
+        return key
+
+    def open_input(self, key: str) -> AbstractContextManager[Path]:
+        """A local path to a stored object of this job's workspace, for a `with` block.
+
+        On a store the file is the stored one (local) or a private download removed afterwards
+        (R2). Behind the gateway it's downloaded to scratch through the claim's signed URL.
+        """
+        self._own_key(key)
+        if self.store is not None:
+            return self.store.open_input(key)
+        if self._input_downloader is None:
+            raise RuntimeError("This worker context has no artifact store or input downloader.")
+        return self._downloaded(key)
+
+    @contextmanager
+    def _downloaded(self, key: str) -> Iterator[Path]:
+        path = self.download_input(key)
+        try:
+            yield path
+        finally:
+            path.unlink(missing_ok=True)
+
+    def publish(
+        self,
+        kind: str,
+        input_hash: str,
+        source: Path,
+        name: str,
+        *,
+        provenance: Mapping[str, Any] | None = None,
+        protected: bool = False,
+    ) -> ArtifactOutput:
+        """Store a finished file as this attempt's output and queue its manifest row.
+
+        The key is always `w/{workspace}/{kind}/{input_hash}/attempts/{attempt}/{name}`, so an
+        attempt can only write under its own prefix, and the row records the size and SHA-256
+        the store measured, which `complete` then checks again.
+        """
+        if self.store is None:
+            return self.publish_artifact(
+                kind, input_hash, source, name, provenance=provenance, protected=protected
+            )
+        try:
+            key = derived_key(self.job.workspace_id, kind, input_hash, self.attempt_id, name)
+        except UnsafeKey as error:
+            raise InputInvalid(str(error)) from None
+        size, sha256 = self.store.publish(key, Path(source))
+        output = ArtifactOutput(kind, input_hash, [key], sha256, size, provenance, protected)
+        self.artifacts.outputs.append(output)
+        return output
+
+    def verify(self, key: str, size: int, sha256: str) -> bool:
+        """True when the stored object has exactly this size and SHA-256."""
+        self._own_key(key)
+        if self.store is None:
+            raise RuntimeError("Only a worker with an artifact store can verify objects.")
+        return self.store.verify(key, size, sha256)
 
     def progress(self, done: float, total: float | None = None) -> None:
         """Real work units done (songs, windows, seconds of audio), never elapsed time."""

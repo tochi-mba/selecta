@@ -87,6 +87,9 @@ class KeyDetector:
     """S-KEY, downloaded once to the models folder and checked against a pinned hash."""
 
     def __init__(self, models_dir: Path):
+        from selecta.modes.models import require_model
+
+        require_model("skey")
         import torch
 
         from selecta.analysis.skey_model import VQT, ChromaNet

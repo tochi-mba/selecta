@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from selecta.persistence import make_engine
+from selecta.persistence import make_engine, migrate
 from selecta.work.enqueue import JobSpec
 from selecta.work.gateway_api import install_routes
 from selecta.work.store import JobStore
@@ -16,8 +16,8 @@ BOOTSTRAP = "test-worker-bootstrap-token-that-is-long-enough"
 @pytest.fixture
 def gateway(tmp_path):
     engine = make_engine(f"sqlite:///{tmp_path / 'gateway.sqlite'}")
+    migrate.upgrade(engine)
     store = JobStore(engine)
-    store.create_tables()
     app = FastAPI()
     install_routes(
         app,
@@ -361,8 +361,8 @@ def test_artifact_keys_inside_the_attempts_own_prefix_are_accepted(gateway):
 
 def test_output_slots_need_a_signer_that_answers_one_slot_per_name(tmp_path):
     engine = make_engine(f"sqlite:///{tmp_path / 'slots.sqlite'}")
+    migrate.upgrade(engine)
     store = JobStore(engine)
-    store.create_tables()
     answers = {"mode": "ok"}
 
     def sign(attempt, names):

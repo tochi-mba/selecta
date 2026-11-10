@@ -275,11 +275,3 @@ TABLES = (
     workers,
     leader_terms,
 )
-
-
-def create_tables(engine: sa.Engine) -> None:
-    """Create just these tables, for the simulator's checks and quick local scripts.
-
-    Real databases get them from the Alembic migrations in `selecta.persistence.migrate`.
-    """
-    metadata.create_all(engine, tables=list(TABLES))

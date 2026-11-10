@@ -236,6 +236,9 @@ class Aligner:
     """English first. Other languages score low here and so get no word cuts, for now."""
 
     def __init__(self, models_dir: str | None = None):
+        from selecta.modes.models import require_model
+
+        require_model("torchaudio.wav2vec2_asr_base_960h")
         import torch
         import torchaudio
 

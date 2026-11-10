@@ -105,10 +105,14 @@ def is_postgres(connection: Connection) -> bool:
 def transaction(engine: Engine, workspace_id: str | None = None) -> Iterator[Connection]:
     """One transaction, committed on success and rolled back on error.
 
-    With `workspace_id`, PostgreSQL's row-level security sees only that workspace's rows for the
-    rest of this transaction. Cross-workspace work (maintenance, admin) passes `None` and must use
-    a database role that is allowed to see everything.
+    With `workspace_id`, PostgreSQL's row-level security sees and writes only that workspace's
+    rows for the rest of this transaction, even if a query forgets its filter. Cross-workspace
+    work (maintenance, the scheduler, webhooks, sign-in) passes `None`: the policy treats a
+    transaction that names no workspace as a system transaction and lets it through. An empty
+    id would read as "no workspace" too, so it is refused rather than widening the scope.
     """
+    if workspace_id is not None and not workspace_id:
+        raise ValueError("workspace_id must be a workspace id or None, never empty")
     with engine.begin() as connection:
         if workspace_id is not None and is_postgres(connection):
             connection.execute(

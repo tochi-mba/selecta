@@ -107,3 +107,33 @@ class ApplyContext:
 ResultApplier = Callable[[Connection, Job, Any, ApplyContext], None]
 """Writes one job type's results (analysis rows, seam reports) inside the fenced transaction
 that marks the job succeeded. Raise `selecta.work.errors.ResultRejected` to refuse them."""
+
+
+class WorkControls(Protocol):
+    """Emergency controls and staff holds the store obeys (`selecta.admin.state` in the cloud).
+
+    Each method reads inside the store's own transaction. A reason string means "no".
+    """
+
+    def claim_block(self, connection: Connection, pool: str, worker_id: str | None) -> str | None:
+        """Why this worker may claim nothing in this pool right now, or None."""
+        ...
+
+    def speculative_off(self, connection: Connection) -> bool: ...
+
+    def admission_block(self, connection: Connection, pool: str, lane: str) -> str | None:
+        """Why new work for this pool and lane is refused right now, or None."""
+        ...
+
+
+class NoWorkControls:
+    """Local mode: there are no emergency controls on one person's machine."""
+
+    def claim_block(self, connection: Connection, pool: str, worker_id: str | None) -> str | None:
+        return None
+
+    def speculative_off(self, connection: Connection) -> bool:
+        return False
+
+    def admission_block(self, connection: Connection, pool: str, lane: str) -> str | None:
+        return None

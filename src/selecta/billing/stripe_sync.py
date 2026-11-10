@@ -373,6 +373,17 @@ def write_snapshot(
         computed_at=now, verified_at=now,
     )
     conn.execute(sa.insert(entitlement_snapshots).values(id=new_id(), **snapshot.__dict__))
+    # Tell the workspace's open pages, in the same transaction, so a page waiting on a checkout
+    # hears the moment the plan really changed (docs/saas/08-billing.md §8.2).
+    from selecta.work import outbox
+
+    outbox.emit(
+        conn,
+        "entitlement.changed",
+        workspace_id,
+        {"plan": snapshot.plan_id, "version": snapshot.version},
+        now,
+    )
     return snapshot, True
 
 

@@ -28,6 +28,7 @@ from selecta.work.errors import (
     StaleLease,
     UnknownJob,
 )
+from selecta.work.holds import STAFF_HOLD, STAFF_HOLD_REASON
 from selecta.work.model import (
     ACTIVE,
     TERMINAL,
@@ -383,6 +384,18 @@ def release(
         return finish_cancelled(connection, store, job, attempt, cost, now)
     close_attempt(connection, attempt, Outcome.RELEASED, now, cost)
     free_slot(connection, store, attempt, cost, now)
+    if attempt.cancel_reason == STAFF_HOLD_REASON:
+        # Staff quarantined it while it ran (`hold_for_staff`): it waits, out of line.
+        return set_state(
+            connection,
+            job,
+            S.BLOCKED,
+            now,
+            payload={"attempt_id": attempt_id, "reason": STAFF_HOLD},
+            attempt_count=max(job.attempt_count - 1, 0),
+            error_class=STAFF_HOLD,
+            error_detail="Held by staff for inspection.",
+        )
     job = set_state(
         connection,
         job,

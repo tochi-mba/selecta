@@ -6,7 +6,7 @@ import random
 
 import pytest
 
-from selecta.persistence import make_engine, transaction
+from selecta.persistence import make_engine, migrate, transaction
 from selecta.scheduling.policy import (
     Candidate,
     EligibilityContext,
@@ -27,10 +27,10 @@ from selecta.work.store import JobStore
 
 
 @pytest.fixture
-def store():
-    engine = make_engine("sqlite:///:memory:")
+def store(tmp_path):
+    engine = make_engine(f"sqlite:///{tmp_path / 'work.sqlite'}")
+    migrate.upgrade(engine)
     result = JobStore(engine, rng=random.Random(7))
-    result.create_tables()
     try:
         yield result
     finally:

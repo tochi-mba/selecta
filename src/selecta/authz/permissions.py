@@ -137,6 +137,12 @@ _DECLARED: tuple[Permission, ...] = (
     Permission("platform.incidents.manage", "Open, update and resolve incidents.", C),
     Permission("platform.deployments.approve", "Approve a production deployment.", D),
     Permission("audit.read", "Read and export the full audit log.", R),
+    Permission("legal.takedowns.read", "Read copyright takedown notices.", R),
+    Permission(
+        "legal.takedowns.manage",
+        "Log and decide takedown notices, and restrict or restore a repeat infringer's uploads.",
+        S,
+    ),
 )
 
 del R, C, S, D

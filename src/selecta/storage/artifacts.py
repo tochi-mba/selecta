@@ -11,7 +11,10 @@ Every key is checked against the layouts in `keys.py` before anything is touched
 decides the bucket, so a caller can't write an export into the originals bucket by mistake.
 
 `LocalArtifactStore` is the local app's: files under one folder. `R2ArtifactStore` is the
-cloud's: four private R2 buckets, with links that last at most 15 minutes.
+cloud's: four private R2 buckets, with links that last at most 15 minutes. Workers reach either
+through `JobContext.open_input`, `publish` and `verify` (`workers/context.py`), and
+`StoredOutputs` lets the job store check a finished attempt's outputs against the same store
+before it marks the job succeeded.
 """
 
 from __future__ import annotations
@@ -240,3 +243,33 @@ class R2ArtifactStore:
     def presign_put(self, key: str, ttl: int) -> str:
         bucket = self.buckets.for_key(key)
         return self.client.presign_put(bucket, key, _check_ttl(ttl, self.max_ttl))
+
+
+class StoredOutputs:
+    """The job store's output check (`work.ports.OutputVerifier`) for any `ArtifactStore`.
+
+    An output passes only when it names at least one key, every key is a derived key under the
+    workspace's own `{kind}/{input_hash}/attempts/` prefix, and each object has the size and
+    SHA-256 the worker reported. With several keys the size and checksum must describe each.
+    """
+
+    def __init__(self, store: ArtifactStore) -> None:
+        self.store = store
+
+    def verify(self, workspace_id: str, output) -> bool:
+        keys = output.keys if isinstance(output.keys, list) else [output.keys]
+        if not keys or output.size_bytes is None or not output.checksum:
+            return False
+        for key in keys:
+            try:
+                if (
+                    validate_key(key) is not Bucket.DERIVED
+                    or key.split("/", 2)[1] != workspace_id
+                    or f"/{output.kind}/{output.input_hash}/attempts/" not in key
+                ):
+                    return False
+            except (TypeError, ValueError):
+                return False
+            if not self.store.verify(key, int(output.size_bytes), str(output.checksum)):
+                return False
+        return True

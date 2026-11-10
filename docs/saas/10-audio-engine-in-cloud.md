@@ -6,6 +6,8 @@
 
 The engine keeps working on local files. A worker downloads inputs to a scratch directory, runs the existing functions (`analysis/pipeline.py`, `seam_making.py`, `stems.py`, `mix.py`), and uploads outputs through an `ArtifactStore` interface (`open_input(asset)`, `publish(attempt, path, kind)`, `verify`). Local mode's implementation is "the file is already here". This minimises changes to the DSP code.
 
+**Current implementation.** A handler gets the interface on its job context (`workers/context.py`): `ctx.open_input(key)` gives a local path for the length of a `with` block, `ctx.publish(kind, input_hash, path, name)` stores the file at the attempt's own key `w/{workspace}/{kind}/{input_hash}/attempts/{attempt}/{name}` and queues its manifest row with the size and SHA-256 the store measured, and `ctx.verify(key, size, sha256)` checks a stored object. Every key is checked against the job's own workspace first. `WorkerRunner(..., artifact_store=...)` chooses the store: `LocalArtifactStore` (the file is already in the local folder) or `R2ArtifactStore` (downloads to a private temporary folder) from `storage/artifacts.py`. A gateway worker holds no storage credentials, so the same calls go through its claim's signed URLs. `StoredOutputs(store)` is the job store's output check: before `complete` marks a job succeeded, each output must be a derived key under its workspace's `{kind}/{input_hash}/attempts/` prefix with the reported size and hash. Tests: `tests/test_cloud_worker_artifacts.py`.
+
 ### 10.2 CPU vs GPU
 
 | Stage | Where | Reason |
@@ -28,7 +30,7 @@ Workers are Linux images with models baked in at build time (pinned hashes), so 
 | wav2vec2 (torchaudio) | Lyric alignment | Code MIT, training data CC BY | Record attribution |
 | pedalboard, Rubber Band | DSP | GPL (Rubber Band also sells commercial licences) | Server-side use isn't distribution; the local edition stays GPL |
 
-A [`docs/saas/licence-register.md`](licence-register.md) lists every model and dependency, its licence, and whether it's allowed in cloud mode; CI fails if a model not on the register is loaded in cloud mode.
+A [`docs/saas/licence-register.md`](licence-register.md) lists every model and dependency, its licence, and whether it's allowed in cloud mode. In cloud mode every model loader calls `selecta.modes.models.require_model(id)` before reading weights, and it raises `ModelNotAllowed` unless the register's allowlist (`src/selecta/modes/model_allowlist.json`) marks the model `allowed`; S-KEY is blocked, so cloud analysis uses the chroma fallback, and Demucs is under review, so stems don't run in cloud mode yet. A test fails when the register and the allowlist disagree. Checking the worker images themselves is still to do.
 
 ### 10.4 Discovery and spare-time work under budgets
 

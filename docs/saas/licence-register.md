@@ -8,13 +8,13 @@ Package licences below were read from the installed package metadata on 2026-11-
 
 ## Models and weights
 
-| Model | Used for | Where | Licence | Cloud mode |
-|---|---|---|---|---|
-| S-KEY (Deezer) | Key detection | `src/selecta/analysis/key.py`, `analysis/skey_model.py` | Weights licensed for **non-commercial research only** (`skey_model.py:5-6`) | **Blocked.** Replace before any paid plan (see [§10.3](10-audio-engine-in-cloud.md#103-model-licences-release-blocker)) |
-| Beat This (CPJKU), `small0` / `final0` | Beats and downbeats | `src/selecta/analysis/beats.py` | MIT code and weights per the project; training data licences not stated | Allowed after confirming the LICENSE file and model card |
-| Demucs `htdemucs` | Stem separation | `src/selecta/stems.py` | Code MIT (package 4.1.0); weights licence not stated; trained partly on research datasets; original repo archived Jan 2025, maintained fork exists | **Review** |
-| wav2vec2 `WAV2VEC2_ASR_BASE_960H` (torchaudio) | Lyric alignment | `src/selecta/lyrics/align.py` | fairseq code MIT; LibriSpeech training data CC BY 4.0 | Allowed with attribution |
-| Claude models (Anthropic API) | Lucy | `src/selecta/lucy/providers.py` | Commercial API terms, not a weights licence | Allowed under Anthropic's commercial terms and DPA |
+| Model | Model id | Used for | Where | Licence | Cloud mode |
+|---|---|---|---|---|---|
+| S-KEY (Deezer) | `skey` | Key detection | `src/selecta/analysis/key.py`, `analysis/skey_model.py` | Weights licensed for **non-commercial research only** (`skey_model.py:5-6`) | **Blocked.** Replace before any paid plan (see [§10.3](10-audio-engine-in-cloud.md#103-model-licences-release-blocker)) |
+| Beat This (CPJKU), `small0` / `final0` | `beat_this.small0`, `beat_this.final0` | Beats and downbeats | `src/selecta/analysis/beats.py` | MIT code and weights per the project; training data licences not stated | Allowed after confirming the LICENSE file and model card |
+| Demucs `htdemucs` | `demucs.htdemucs` | Stem separation | `src/selecta/stems.py` | Code MIT (package 4.1.0); weights licence not stated; trained partly on research datasets; original repo archived Jan 2025, maintained fork exists | **Review** |
+| wav2vec2 `WAV2VEC2_ASR_BASE_960H` (torchaudio) | `torchaudio.wav2vec2_asr_base_960h` | Lyric alignment | `src/selecta/lyrics/align.py` | fairseq code MIT; LibriSpeech training data CC BY 4.0 | Allowed with attribution |
+| Claude models (Anthropic API) | - (an API, nothing is loaded) | Lucy | `src/selecta/lucy/providers.py` | Commercial API terms, not a weights licence | Allowed under Anthropic's commercial terms and DPA |
 
 Considered earlier and **not to be used** in cloud mode: Essentia models and library (AGPL / non-commercial models), madmom models (non-commercial), MuQ/SongFormer and ctc-forced-aligner (CC BY-NC), per `docs/research/music-analysis.md`.
 
@@ -61,7 +61,8 @@ Considered earlier and **not to be used** in cloud mode: Essentia models and lib
 
 1. A model or dependency without a row here doesn't ship in cloud mode.
 2. A row marked **Blocked** or **Review** blocks the paid launch until resolved.
-3. Planned enforcement (not built yet): cloud mode loads models only from an allowlist generated from this table, and a CI check fails when a cloud worker image contains a model not listed here.
+3. Cloud mode loads models only from the allowlist [`src/selecta/modes/model_allowlist.json`](../../src/selecta/modes/model_allowlist.json), the machine-readable copy of the models table: a row whose Cloud mode starts **Allowed** is `allowed`, **Review** is `review` and **Blocked** is `blocked`. Every loader (`analysis/key.py`, `analysis/beats.py`, `stems.py`, `lyrics/align.py`) calls `selecta.modes.models.require_model(id)` first, which in cloud mode raises `ModelNotAllowed` for anything not `allowed` or not listed, before any weights are read. Local mode is unchanged. `tests/test_cloud_model_allowlist.py` fails when this table and the allowlist disagree. Change both together.
+4. Still planned: a CI check that fails when a cloud worker image contains a model not listed here.
 
 ---
 

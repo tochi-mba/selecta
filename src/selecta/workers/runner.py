@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from selecta import jobs as engine_jobs
 from selecta.persistence import new_id
 from selecta.scheduling.policy import WorkerCaps
+from selecta.storage.artifacts import ArtifactStore
 from selecta.work.claims import Claim
 from selecta.work.errors import CompletionRejected, JobCancelled, StaleLease
 from selecta.work.model import AttemptOutcome, ErrorClass, Job, JobState
@@ -96,9 +97,12 @@ class WorkerRunner:
     """Poll one pool and execute jobs through the durable store.
 
     ``handlers`` is keyed by the server-owned catalogue job type. Unknown types fail closed as an
-    engine bug instead of being treated as successful no-ops. The runner does not register a
-    worker automatically, because enrollment credentials and registration belong to deployment
-    setup; call ``store.register_worker(caps)`` once before starting the loop.
+    engine bug instead of being treated as successful no-ops. ``artifact_store`` is what every
+    handler's ``ctx.open_input``, ``ctx.publish`` and ``ctx.verify`` use: the local folder on the
+    local app, R2 for a worker with storage credentials, or None behind the gateway. The runner
+    does not register a worker automatically, because enrollment credentials and registration
+    belong to deployment setup; call ``store.register_worker(caps)`` once before starting the
+    loop.
     """
 
     def __init__(
@@ -112,6 +116,7 @@ class WorkerRunner:
         idle_s: float = 0.5,
         clock: Callable[[], float] = time.monotonic,
         no_progress_s: float | None = None,
+        artifact_store: ArtifactStore | None = None,
     ) -> None:
         if caps.worker_id is None:
             raise ValueError("WorkerCaps.worker_id is required for a running worker.")
@@ -130,6 +135,7 @@ class WorkerRunner:
         self.heartbeat_s = heartbeat_s
         self.idle_s = idle_s
         self.clock = clock
+        self.artifact_store = artifact_store
         self.no_progress_s = no_progress_s
         """The watchdog stops a job that reports no progress for this long (None: never)."""
         self.live: dict[str, AttemptSignals] = {}
@@ -180,6 +186,7 @@ class WorkerRunner:
                 output_prefix=claim.output_prefix,
                 input_downloader=getattr(self.store, "download_input", None),
                 artifact_publisher=getattr(self.store, "publish_artifact", None),
+                artifact_store=self.artifact_store,
                 clock=self.clock,
             )
             self.live[claim.attempt_id] = signals

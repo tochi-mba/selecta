@@ -85,7 +85,7 @@ dangerous_actions = sa.Table(
     sa.Column("proposer_id", Id, nullable=False),
     sa.Column("resource_type", sa.String(64), nullable=False),
     sa.Column("resource_id", sa.String(128)),
-    sa.Column("workspace_id", Id),
+    sa.Column("workspace_id", Id, index=True),
     sa.Column("support_case_id", sa.String(64)),
     sa.Column("two_person", sa.Boolean, nullable=False, default=False),
     sa.Column("created_at", Epoch, nullable=False),

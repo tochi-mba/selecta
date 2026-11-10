@@ -145,6 +145,9 @@ def prune_cache(settings: Settings, keep: set[str] | None = None) -> None:
 
 def run_demucs(wav: Path, out_dir: Path) -> Path:
     """Run Demucs from this environment, wherever the app was started from."""
+    from selecta.modes.models import require_model
+
+    require_model("demucs.htdemucs")
     command = [
         sys.executable,
         "-m",

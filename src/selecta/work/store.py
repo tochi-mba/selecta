@@ -47,11 +47,13 @@ from selecta.work.ports import (
     Entitlements,
     FlagGate,
     LocalEntitlements,
+    NoWorkControls,
     OutputVerifier,
     ResultApplier,
     TrustOutputs,
+    WorkControls,
 )
-from selecta.work.schema import create_tables, fair_heads, job_attempts, jobs
+from selecta.work.schema import fair_heads, job_attempts, jobs
 from selecta.work.sql import WOKEN, take_woken
 from selecta.work.state import read_job
 
@@ -76,6 +78,7 @@ class JobStore:
         flags: FlagGate | None = None,
         verifier: OutputVerifier | None = None,
         appliers: dict[str, ResultApplier] | None = None,
+        controls: WorkControls | None = None,
         rng: random.Random | None = None,
         batch: int = 200,
     ):
@@ -86,6 +89,8 @@ class JobStore:
         self.flags: FlagGate = flags or AllFlagsOn()
         self.verifier: OutputVerifier = verifier or TrustOutputs()
         self.appliers: dict[str, ResultApplier] = dict(appliers or {})
+        self.controls: WorkControls = controls or NoWorkControls()
+        """Emergency controls and staff holds; the cloud passes `admin.state.DbWorkControls`."""
         self.rng = rng or random.Random()
         self.batch = batch
         self._wakers: list[Waker] = []
@@ -94,9 +99,6 @@ class JobStore:
         self._lanes_ready = False
 
     # --- plumbing ---
-
-    def create_tables(self) -> None:
-        create_tables(self.engine)
 
     def add_waker(self, waker: Waker) -> None:
         with self._lock:
@@ -216,6 +218,9 @@ class JobStore:
             if lane == Lane.SPECULATIVE:
                 since = now - now % DAY_S if day_start is None else day_start
                 used = self._speculative_used(connection, spec.workspace_id, since, now)
+            blocked = self.controls.admission_block(connection, kind.pool, str(lane))
+        if blocked is not None:
+            return admission.Admission(admission.Verdict.REFUSE, blocked)
         return admission.admit(
             self.config,
             job_type=spec.type,

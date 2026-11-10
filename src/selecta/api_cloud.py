@@ -49,15 +49,18 @@ from selecta.identity.tokens import (
     authkit_verifier,
 )
 from selecta.identity.workos import WorkOSClient
+from selecta.lucy import cloud_settings as lucy_cloud_settings
 from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
+from selecta.rooms import wiring as rooms_wiring
+from selecta.rooms.cloud_ports import RoomPorts
 from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.routes import cloud_export as cloud_export_routes
 from selecta.routes import cloud_proxy as cloud_proxy_routes
 from selecta.storage import api as storage_api
 from selecta.storage import playback_api as playback_api
-from selecta.usage import quota
+from selecta.usage import meters, quota
 from selecta.work.schema import outbox_events
 
 
@@ -243,6 +246,7 @@ def create_cloud_app(
     engine: Engine | None = None,
     verifier: Verifier | None = None,
     workos: WorkOSClient | None = None,
+    room_ports: RoomPorts | None = None,
 ) -> FastAPI:
     """Create the cloud API without starting any local-mode threads or touching local music.
 
@@ -282,7 +286,14 @@ def create_cloud_app(
         allow_origins=list(settings.allowed_origins),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Workspace-ID", "X-Operation-ID"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "Idempotency-Key",
+            "Last-Event-ID",
+            "X-Workspace-ID",
+            "X-Operation-ID",
+        ],
         expose_headers=["X-Request-ID"],
         max_age=600,
     )
@@ -406,6 +417,7 @@ def create_cloud_app(
             entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             storage = quota.usage(conn, principal.workspace.id)
+            usage = meters.meters(conn, principal.workspace.id, plan, principal.user.timezone)
             now = db_now(conn)
             preferences = flag_rules.user_preferences(conn, principal.user.id)
             decisions = targeting.decide_all(
@@ -433,12 +445,19 @@ def create_cloud_app(
             },
             "entitlement": {
                 "plan": plan.id,
+                "plan_label": plan.label,
                 "plan_version": plan.version,
                 "source": entitlement.source,
+                "snapshot_version": entitlement.snapshot_version,
                 "storage_limit_bytes": storage.limit_bytes,
                 "storage_used_bytes": storage.used_bytes,
                 "storage_state": storage.state.value,
             },
+            "usage": usage,
+            "billing": {
+                "consent_version": os.environ.get("SELECTA_CHECKOUT_CONSENT_VERSION", "").strip(),
+            },
+            "lucy": {"tier": meters.lucy_tier(plan)},
             "features": decisions.snapshot(),
             "feature_locks": dict(decisions.locks),
             "feature_rule_version": decisions.version,
@@ -575,9 +594,19 @@ def create_cloud_app(
         buckets=storage_api.buckets(),
     )
 
+    lucy_cloud_settings.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
     cloud_proxy_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         object_client_factory=storage_api.r2_client, buckets=storage_api.buckets(),
+    )
+
+    # Devices, the playback session, Rooms, guests and displays (ADR-0415, ADR-0416). Tests and
+    # the browser-test server pass `room_ports` with a song library; see `rooms.cloud_ports`.
+    rooms_wiring.install(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache, allowed_origins=settings.allowed_origins, ports=room_ports,
     )
 
     flag_guard.assert_cloud_api_routes_owned(app)

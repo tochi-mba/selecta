@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from selecta.work import dependents, heads
 from selecta.work.enqueue import JobSpec, _live_duplicate, values_for
 from selecta.work.errors import UnknownJob
+from selecta.work.holds import STAFF_HOLD
 from selecta.work.model import TERMINAL, UNSUCCESSFUL, Job, JobState, lookup
 from selecta.work.schema import job_dependencies, jobs
 from selecta.work.sql import insert_ignore
@@ -132,7 +133,7 @@ def unblock(connection: Connection, job_ids: list[str], now: float) -> None:
     stack = list(job_ids)
     while stack:
         job = lock_job(connection, stack.pop())
-        if job.state != S.BLOCKED:
+        if job.state != S.BLOCKED or job.error_class == STAFF_HOLD:
             continue
         states = [state for _, state in _prerequisites(connection, job.id)]
         workflow = lookup(job.type).workflow

@@ -48,6 +48,9 @@ class BeatTracker:
     """Loads the model once, since a run over the library reuses it thousands of times."""
 
     def __init__(self, checkpoint: str = "small0"):
+        from selecta.modes.models import require_model
+
+        require_model(f"beat_this.{checkpoint}")
         from beat_this.inference import Audio2Beats
 
         self.checkpoint = checkpoint
