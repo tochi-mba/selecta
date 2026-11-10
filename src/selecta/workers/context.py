@@ -121,6 +121,7 @@ class JobContext:
         output_prefix: str | None = None,
         input_downloader: Callable[[JobContext, str | int, Path | None], Path] | None = None,
         artifact_publisher: Callable[..., ArtifactOutput] | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ):
         self.job = job
         self.attempt_id = attempt_id
@@ -134,10 +135,12 @@ class JobContext:
         """Attempt-scoped derived-object prefix, when the gateway provides one."""
         self._input_downloader = input_downloader
         self._artifact_publisher = artifact_publisher
+        self._clock = clock
         self.last_progress_at: float | None = None
-        """Monotonic time of the last progress report; None until the handler reports any."""
+        """When the handler last reported progress, on `clock` (the runner's, so its watchdog
+        can compare); None until the handler reports any."""
         self._report = report_progress
-        self._sent_at = 0.0
+        self._sent_at = -PROGRESS_EVERY_S
         self._lock = threading.Lock()
 
     def download_input(self, selector: str | int, destination: Path | None = None) -> Path:
@@ -178,7 +181,7 @@ class JobContext:
 
     def progress(self, done: float, total: float | None = None) -> None:
         """Real work units done (songs, windows, seconds of audio), never elapsed time."""
-        moment = time.monotonic()
+        moment = self._clock()
         with self._lock:
             self.last_progress_at = moment
             if moment - self._sent_at < PROGRESS_EVERY_S:
