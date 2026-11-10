@@ -7,6 +7,12 @@
 - `workspace_members`: a user's role in a workspace, one row per pair.
 - `session_revocations`: tokens issued before `revoked_before` are refused, which signs a user out
   of every device within one access-token lifetime.
+- `revoked_sessions`: AuthKit session ids (`sid`) whose access tokens are refused at once, from
+  "sign out everywhere", a password reset or WorkOS's `session.revoked` webhook.
+- `workos_events`: each WorkOS webhook event id, stored once, so a redelivery is not processed
+  twice. Only the id, type and outcome are kept: never the payload, which holds personal data.
+- `privileged_sessions`: a staff member's admin-console session (§7A.5), at most an hour long,
+  tied to the AuthKit session it was started from. `authorize()` builds its `Actor` from this row.
 """
 
 from __future__ import annotations
@@ -35,6 +41,8 @@ users = sa.Table(
     sa.Column("age_confirmed", sa.Boolean, nullable=False, default=False),
     sa.Column("created_at", Epoch, nullable=False),
     sa.Column("deleted_at", Epoch),
+    # Set by staff (`accounts.suspend`): the person can still sign out, export and delete.
+    sa.Column("suspended_at", Epoch),
     sa.UniqueConstraint("auth_subject"),
     sa.Index("ix_users_email", "email"),
 )
@@ -112,4 +120,54 @@ session_revocations = sa.Table(
     metadata,
     sa.Column("user_id", Id, sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
     sa.Column("revoked_before", Epoch, nullable=False),
+)
+
+# A WorkOS session id is not one of our UUIDs, so it gets room of its own.
+SessionId = sa.String(255)
+PRIVILEGED_SESSION_SECONDS = 3600
+WORKOS_EVENT_STATUSES = ("received", "processed", "ignored", "failed")
+
+revoked_sessions = sa.Table(
+    "revoked_sessions",
+    metadata,
+    sa.Column("sid", SessionId, primary_key=True),
+    # Null when WorkOS revoked a session of someone who hasn't finished onboarding.
+    sa.Column("user_id", Id, sa.ForeignKey("users.id", ondelete="CASCADE")),
+    sa.Column("revoked_at", Epoch, nullable=False),
+    sa.Column("reason", sa.String(64), nullable=False),
+    sa.Index("ix_revoked_sessions_user_id", "user_id"),
+)
+
+workos_events = sa.Table(
+    "workos_events",
+    metadata,
+    sa.Column("id", Id, primary_key=True),
+    sa.Column("event_id", sa.String(255), nullable=False),
+    sa.Column("type", sa.String(128), nullable=False),
+    sa.Column("received_at", Epoch, nullable=False),
+    sa.Column("processed_at", Epoch),
+    sa.Column("status", sa.String(16), nullable=False),
+    sa.Column("error", sa.String(255)),
+    sa.UniqueConstraint("event_id"),
+    sa.CheckConstraint(_one_of("status", WORKOS_EVENT_STATUSES), name="status"),
+)
+
+privileged_sessions = sa.Table(
+    "privileged_sessions",
+    metadata,
+    sa.Column("id", Id, primary_key=True),
+    sa.Column("user_id", Id, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    sa.Column("workos_sid", SessionId, nullable=False),
+    sa.Column("issued_at", Epoch, nullable=False),
+    sa.Column("mfa_at", Epoch, nullable=False),
+    sa.Column("expires_at", Epoch, nullable=False),
+    sa.Column("revoked_at", Epoch),
+    sa.Column("revoke_reason", sa.String(64)),
+    # The database itself refuses a session longer than an hour, whatever the code asks for.
+    sa.CheckConstraint(
+        f"expires_at > issued_at AND expires_at <= issued_at + {PRIVILEGED_SESSION_SECONDS}",
+        name="at_most_an_hour",
+    ),
+    sa.Index("ix_privileged_sessions_user_id", "user_id"),
+    sa.Index("ix_privileged_sessions_workos_sid", "workos_sid"),
 )
