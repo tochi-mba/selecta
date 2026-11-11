@@ -144,3 +144,19 @@ def test_every_runtime_dependency_added_since_the_baseline_is_audited():
     added = sorted(set(package.get("dependencies", {})) - baseline)
     text = doc("selecta-3-privacy.md").split("## New dependencies", 1)[1].split("\n## ", 1)[0]
     assert [name for name in added if f"`{name}`" not in text] == []
+
+
+def test_severity_delivery_order_and_gates_are_written_down():
+    """S3-0075-06, S3-0076-01 and S3-0076-07: severity, phase order and per-PR gates."""
+    baseline = doc("selecta-3-baseline.md").split("## How issues are judged", 1)[1]
+    for level in ("| P0 ", "| P1 ", "| P2 "):
+        assert level in baseline, level
+    roadmap = doc("selecta-3-roadmap.md").split("## Dependency gates and staged delivery", 1)[1]
+    for phase in range(8):
+        assert f"### Phase {phase} - " in roadmap, phase
+    matrix = doc("selecta-3-verification-matrix.md")
+    gates = matrix.split("## Quality gates by implementation PR")[1]
+    gates = gates.split("\n## ", 1)[0]
+    assert len(re.findall(r"^\d+\. ", gates, re.M)) >= 8
+    routes = doc("selecta-3-routes.md")
+    assert "## Going back: the kill switch" in routes and "?ui=classic" in routes
