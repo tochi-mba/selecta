@@ -101,6 +101,8 @@ test('MI-0140-08 every route, dialog, sheet and the command palette leave one Au
       const last = window.audioTrace.samples[window.audioTrace.samples.length - 1];
       return { wall: performance.now(), audio: last?.audio ?? -1, contexts: window.audioTrace.made, state: last?.state ?? 'none' };
     });
+    // Listen draws its seek strip a moment after its title; the time is read once a readout is there
+    await expect.poll(() => shownSeconds(page), { message: `${where}: no time shown`, timeout: 5_000 }).toBeGreaterThanOrEqual(0);
     steps.push({ where, ...reading, shown: await shownSeconds(page) });
   };
   const nav = page.getByRole('navigation', { name: 'Main' });

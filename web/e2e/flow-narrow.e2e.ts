@@ -34,7 +34,7 @@ test('at 320px the inspector and the mini-player are both reachable while the mu
   await expect(pause).toBeInViewport();
   const box = await pause.boundingBox();
   expect(box).not.toBeNull();
-  const top = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent ?? '', { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 });
+  const top = await page.evaluate(({ x, y }) => { const hit = document.elementFromPoint(x, y)?.closest('button'); return hit?.getAttribute('aria-label') ?? hit?.textContent ?? ''; }, { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 });
   expect(top).toContain('Pause');
   expect(await page.evaluate(() => window.audioSpy.contexts.map((context) => context.state))).toEqual(['running']);
 });

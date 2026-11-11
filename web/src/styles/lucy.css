@@ -7,7 +7,7 @@
 
 /* the head */
 .lucy-head { display: grid; gap: var(--space-2); margin-bottom: var(--space-4); }
-.lucy-title { display: flex; align-items: flex-start; gap: var(--space-3); }
+.lucy-title { display: flex; align-items: flex-start; gap: var(--icon-gap); } /* MP-0273-02: the mark sits the icon gap from its own words */
 .lucy-mark { flex: none; margin-top: var(--space-3); color: var(--text-soft); }
 .lucy-title .display.small { margin: 0; }
 .lucy-title .lede { margin: var(--space-1) 0 0; }

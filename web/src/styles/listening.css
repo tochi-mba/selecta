@@ -466,4 +466,6 @@
   .now.stage .handoff { padding: var(--space-2) var(--space-4); margin: 0.5vh 0 1.5vh; }
   .now.stage .countdown-track { height: clamp(16px, 4vh, 32px); }
   .now.stage .countdown-number strong { font-size: clamp(1.8rem, 6vh, 3rem); }
+  /* the sung line sizes to the height too, so a two-line lyric still fits a 600px-tall window */
+  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(7vw, 9vh), 6rem); }
 }

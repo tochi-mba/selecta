@@ -225,6 +225,8 @@ export function Shell({
   const first = useRef(true);
   const [popped, setPopped] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  // MP-0282-04: on a phone the Workspace warning is a dot on More, not one more button in the top bar
+  const attention = jobAttention(useJobsStatus().jobs);
   const prefs = usePrefs();
   const on = useFlags();
   useKeyboardInset();
@@ -294,8 +296,9 @@ export function Shell({
                   <Icon name={workspace.icon} />
                   <span className="nav-label">{workspace.label}</span>
                 </PageLink>
-                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
+                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
                   <Icon name={workspace.icon} />
+                  {attention > 0 && <span className="nav-attention" aria-hidden="true" />}
                   <span className="nav-label">More</span>
                 </button>
               </li>

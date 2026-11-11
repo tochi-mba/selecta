@@ -167,6 +167,11 @@ a.button:hover { border-color: var(--text); }
     font-size: 0.75rem;
   }
   .nav-more-mobile[aria-current='page'] { color: var(--text); background: var(--surface-control); }
+  /* MP-0282-04: the Workspace warning arriving after the page has drawn would add a sixth button to the
+     top bar and rewrap the page's name, pushing the whole page down. On a phone it is a dot on More. */
+  .nav-more-mobile { position: relative; }
+  .nav-attention { position: absolute; top: var(--space-2); left: calc(50% + 8px); width: 8px; height: 8px; border-radius: 50%; background: var(--status-warning); }
+  .context-button.health-attention { display: none; }
   /* MP-0274-05: each destination fills the scrolling tab list edge to edge, so its focus ring is drawn
      inside the target; drawn outside, the list's own overflow would cut it off on every side */
   .nav li a:focus-visible, .nav-more-mobile:focus-visible { outline-offset: -4px; }
