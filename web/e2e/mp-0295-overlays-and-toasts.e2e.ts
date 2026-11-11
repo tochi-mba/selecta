@@ -97,7 +97,8 @@ test('MP-0295-02 primary, cancel and destructive choices fit short windows at on
     await settle(page);
     const reading = await dialog.evaluate((panel) => {
       const foot = panel.querySelector('.overlay-foot')!;
-      const buttons = [...foot.querySelectorAll('button')].map((button) => ({ text: button.textContent, className: button.className, box: button.getBoundingClientRect().toJSON() }));
+      // the words on screen: an action that works keeps its working words in the button, hidden, to hold its width
+      const buttons = [...foot.querySelectorAll('button')].map((button) => ({ text: (button.querySelector('.action-labels > :not([aria-hidden="true"])') ?? button).textContent, className: button.className, box: button.getBoundingClientRect().toJSON() }));
       return { buttons, foot: foot.getBoundingClientRect().toJSON(), panel: panel.getBoundingClientRect().toJSON() };
     });
     const at = `${viewport.width}x${viewport.height}`;
@@ -243,17 +244,19 @@ test('MP-0295-06 delete, clear, replace and restore name exactly what they act o
 
 test('MP-0295-07 an open software keyboard leaves the dialog action reachable and pushes chrome aside', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
+  await page.route('**/api/folders/check*', (route) => route.fulfill({ json: { ok: true, kind: 'ok', reason: '' } }));
+  await page.route('**/api/folders', (route) => route.fulfill({ json: { folders: [{ path: 'D:\\Synthetic', available: false, songs: 3 }], watch_every: 60 } }));
   await page.goto('/listen');
   const play = page.locator('.now .transport .primary');
   await play.click();
   await expect(play).toHaveText('Pause', { timeout: 30_000 });
   await page.getByRole('link', { name: 'Library' }).first().click();
   await expect(page.locator('.mini')).toBeVisible();
+  // client-side to the folders, so the music, the mini-player and the notice are all still on screen
+  // (a reload starts a new page with none of them, leaving nothing for the keyboard to push aside)
+  await page.evaluate(() => { window.history.pushState({}, '', '/workshop/sources'); window.dispatchEvent(new PopStateEvent('popstate')); });
   await showProblem(page);
-  await page.goto('/workshop/sources');
-  await page.route('**/api/folders/check*', (route) => route.fulfill({ json: { ok: true, kind: 'ok', reason: '' } }));
-  await page.route('**/api/folders', (route) => route.fulfill({ json: { folders: [{ path: 'D:\\Synthetic', available: false, songs: 3 }], watch_every: 60 } }));
-  await page.reload();
+  await expect(page.locator('.mini')).toBeVisible();
   await page.getByRole('button', { name: 'Find moved folder' }).click();
   const dialog = page.getByRole('dialog', { name: 'Re-link a moved music folder' });
   const field = dialog.getByLabel('New local folder address');

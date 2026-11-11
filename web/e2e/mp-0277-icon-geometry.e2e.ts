@@ -145,6 +145,8 @@ test('MP-0277-03 icon-to-words gaps hold in default, wrapped and busy states', a
   for (const width of WIDTHS) {
     await open(page, '/mix/current/edit', width);
     const move = page.locator('.timeline [data-move="down"]').first();
+    // boxes are read in the viewport, and the click scrolls a button below the fold into view first
+    await move.scrollIntoViewIfNeeded();
     const before = await move.locator('svg').boundingBox();
     let release = () => {};
     const held = new Promise<void>((resolve) => { release = resolve; });

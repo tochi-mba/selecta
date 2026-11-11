@@ -101,7 +101,8 @@ async function withStudio(page: Page, cells: number) {
   const lanes = { vocals: row, drums: row, bass: row, other: row };
   const shape = { a: lanes, b: lanes };
   const stem = await (await page.request.get('/api/songs/1/audio')).body();
-  await page.route('**/api/mix/1/studio*', (route) => (route.request().method() === 'GET'
+  // the Studio opens its session with a POST to /mix/1/studio (tune and use have their own routes)
+  await page.route('**/api/mix/1/studio*', (route) => (/\/mix\/1\/studio(\?|$)/.test(route.request().url())
     ? route.fulfill({ json: { status: 'ready', key: `s3-${cells}`, cells, seconds: 8, bars: cells * 2, start_shape: shape, shape } })
     : route.fallback()));
   await page.route('**/api/mix/1/options*', async (route) => {

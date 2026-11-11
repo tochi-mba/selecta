@@ -185,6 +185,10 @@ test('LX-0355-01, -03, -05 and LX-0356-01 panes split only when both stay readab
       await sheet.getByRole('searchbox', { name: 'Search conversations' }).fill('LX e2e');
       await expect(sheet.getByRole('link', { name: /LX e2e/ }).first()).toBeVisible();
       expect(await widths()).toEqual(seen);
+      // SearchField's contract (docs/adr/completion/components.md): the first Escape clears the search,
+      // the next one hands Escape back and the sheet closes
+      await page.keyboard.press('Escape');
+      await expect(sheet.getByRole('searchbox', { name: 'Search conversations' })).toHaveValue('');
       await page.keyboard.press('Escape');
       await expect(sheet).toHaveCount(0);
     }

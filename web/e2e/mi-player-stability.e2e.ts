@@ -183,6 +183,10 @@ test('MI-0140-08 every route, dialog, sheet and the command palette leave one Au
   await go('Listen', /Morning Light/);
   await expect(pause(page)).toBeVisible();
 
+  // a fast machine walks every step in under ten seconds; the music plays on until the session is long
+  // enough to measure the audio clock against the wall clock
+  await expect.poll(() => page.evaluate(() => performance.now()), { timeout: 20_000 }).toBeGreaterThan(steps[0].wall + 11_000);
+  await mark('Listen, after a while');
   const trace = await page.evaluate(() => window.audioTrace);
   const firstRunning = trace.states.findIndex((entry) => entry.state === 'running');
   const report = { steps, made: trace.made, states: trace.states, sources: trace.sources, samples: trace.samples.length };

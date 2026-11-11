@@ -246,6 +246,13 @@ a.button:hover { border-color: var(--text); }
      narrow bar keeps only where you are */
   .crumbs li:not(:last-child) { display: none; }
   .crumbs li + li::before { content: none; }
+  /* MP-0280-04: each context button stays one 44px target whatever its count says, so a request or new
+     activity arriving never takes width from the page's name (which then broke one letter to a line and
+     squeezed the editor at 320px); the count sits on the icon's corner instead */
+  .context-actions .context-button { position: relative; }
+  .context-actions .context-button .count { position: absolute; top: var(--space-hair); right: var(--space-hair); min-width: 0; padding-inline: var(--space-hair); border-radius: var(--radius-pill); background: var(--surface); font-size: var(--text-xs); }
+  /* and the name breaks between words wherever a word fits */
+  .crumbs li { overflow-wrap: break-word; }
 }
 
 .mini {

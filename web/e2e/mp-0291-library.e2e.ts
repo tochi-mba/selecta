@@ -87,7 +87,7 @@ test('MP-0291-03 comfortable and compact rows stay readable with safe targets', 
       const reading = await page.locator('.library-rows .song-row').first().evaluate((row) => {
         const title = row.querySelector('.song-open b')!;
         const facts = row.querySelector('.song-columns')!;
-        // a checkbox's target is its whole label (operations.css gives that the 44px), not the 20px box drawn inside it
+        // a checkbox's target is its whole label (operations.css gives that the 44px), not the smaller box drawn inside it
         const targets = [...row.querySelectorAll('button, input')].filter((element) => (element as HTMLElement).offsetParent !== null).map((element) => (element.matches('input[type=checkbox]') ? element.closest('label') ?? element : element).getBoundingClientRect());
         return {
           height: row.getBoundingClientRect().height,
