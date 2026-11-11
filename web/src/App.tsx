@@ -531,6 +531,12 @@ export function App() {
         case 'search':
           event.preventDefault();
           navigate('/library');
+          // The shortcut is an action, not just a route: when Library is already open it
+          // must still put the person in the search box. Defer until navigation has painted
+          // so the same path also works from every other page.
+          window.setTimeout(() => {
+            document.querySelector<HTMLInputElement>('input[type="search"][aria-label="Search your library"]')?.focus();
+          }, 0);
           break;
       }
     };

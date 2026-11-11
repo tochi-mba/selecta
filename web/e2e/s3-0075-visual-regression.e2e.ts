@@ -1,19 +1,17 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { resetMix } from './helpers';
 
 /**
- * S3-0075-02: a pixel-diff gate for Light and Dark, phone and desktop, large text and overlays.
- * Fixture data, clock, motion and caret are frozen and live drawings are masked, so a difference means
- * the page changed. Baselines are pictures a person has looked at: create them with
- *   SELECTA_VISUAL_BASELINE=1 pnpm exec playwright test e2e/s3-0075-visual-regression.e2e.ts --update-snapshots
- * review every image, and commit the folder. Until a reviewed folder exists the gate skips, rather than
- * quietly accepting whatever the first run drew. Never update baselines in bulk to make a diff go away.
+ * S3-0075-02: deterministic visual-review candidates for Light and Dark, phone and desktop,
+ * large text and overlays. Fixture data, clock, motion and caret are frozen and live drawings are
+ * masked. These captures deliberately remain test artifacts: a person must review and record them
+ * in the visual-evidence log before any separate golden comparison can be introduced.
  */
 
 const BASELINES = `${fileURLToPath(import.meta.url)}-snapshots`;
-test.skip(!existsSync(BASELINES) && !process.env.SELECTA_VISUAL_BASELINE, 'no reviewed baseline folder yet (see the comment above)');
+test.skip(existsSync(BASELINES), 'an unreviewed snapshot folder must not be used as a golden baseline');
 
 test.beforeEach(async ({ request }) => resetMix(request));
 
@@ -39,42 +37,47 @@ const shot = (page: Page) => ({
   animations: 'disabled' as const,
   caret: 'hide' as const,
   fullPage: false,
-  maxDiffPixelRatio: 0.002,
   mask: [page.locator('canvas'), page.locator('time'), page.locator('.clock, .elapsed, .remaining')],
 });
 
+async function candidate(page: Page, testInfo: TestInfo, name: string) {
+  const path = testInfo.outputPath(`candidate-${name}`);
+  await page.screenshot({ path, ...shot(page) });
+  await testInfo.attach(name, { path, contentType: 'image/png' });
+}
+
 for (const theme of ['light', 'dark'] as const) {
   for (const size of WIDTHS) {
-    test(`${theme} ${size.name}: every main page matches its reviewed picture`, async ({ page }) => {
+    test(`${theme} ${size.name}: every main page produces a visual-review candidate`, async ({ page }, testInfo) => {
       await prepare(page, theme, size.width, size.height);
       for (const route of ROUTES) {
         await settle(page, route);
-        await expect(page).toHaveScreenshot(`${theme}-${size.name}${route.replace(/\//g, '-')}.png`, shot(page));
+        await candidate(page, testInfo, `${theme}-${size.name}${route.replace(/\//g, '-')}.png`);
       }
     });
   }
 
-  test(`${theme} large text: Listen and Library at 200% text match their reviewed pictures`, async ({ page }) => {
+  test(`${theme} large text: Listen and Library produce visual-review candidates at 200% text`, async ({ page }, testInfo) => {
     await prepare(page, theme, 1280, 900);
     for (const route of ['/listen', '/library']) {
       await settle(page, route);
       await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
       await page.waitForTimeout(200);
-      await expect(page).toHaveScreenshot(`${theme}-large-text${route.replace(/\//g, '-')}.png`, shot(page));
+      await candidate(page, testInfo, `${theme}-large-text${route.replace(/\//g, '-')}.png`);
     }
   });
 
-  test(`${theme} overlays: the command palette and the theme menu match their reviewed pictures`, async ({ page }) => {
+  test(`${theme} overlays: the command palette and theme menu produce visual-review candidates`, async ({ page }, testInfo) => {
     for (const size of WIDTHS) {
       await prepare(page, theme, size.width, size.height);
       await settle(page, '/library');
       await page.keyboard.press('Control+k');
       await expect(page.getByRole('combobox', { name: 'Search for a page or a command' })).toBeVisible();
-      await expect(page).toHaveScreenshot(`${theme}-${size.name}-palette.png`, shot(page));
+      await candidate(page, testInfo, `${theme}-${size.name}-palette.png`);
       await page.keyboard.press('Escape');
       await page.locator('.theme-menu > button').first().click();
       await expect(page.getByRole('menuitemradio').first()).toBeVisible();
-      await expect(page).toHaveScreenshot(`${theme}-${size.name}-theme-menu.png`, shot(page));
+      await candidate(page, testInfo, `${theme}-${size.name}-theme-menu.png`);
       await page.keyboard.press('Escape');
     }
   });

@@ -161,6 +161,10 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-timeline .skeleton-seam { min-height: 96px; margin-left: var(--space-2); padding: var(--space-3) var(--space-snug); border-left: 2px solid var(--border); align-content: center; }
 .skeleton-timeline .skeleton-seam .skeleton-region { height: 24px; }
 .skeleton-timeline .skeleton-seam .skeleton-action { width: 96px; height: var(--control-height); margin-top: 0; }
+@media (max-width: 620px) {
+  /* The real phone row wraps its metadata and actions below the title. Reserve that geometry too. */
+  .skeleton-timeline .skeleton-song { min-height: 144px; }
+}
 .skeleton-inspector .skeleton-unit { min-height: 240px; }
 .skeleton-metrics .skeleton-content { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .skeleton-metrics .skeleton-unit { min-height: 110px; padding: var(--space-4); }

@@ -47,9 +47,8 @@ test('GP-0260-04 a word search survives typing, reload, adding a pair and Back',
   await expect.poll(async () => (await (await request.get('/api/mix')).json()).mix.map((item: { song_id: number }) => item.song_id)).toEqual([3, 4, 1, 2]);
 
   // with the editor on, adding to the current mix opens Edit; Back must land on the same search
-  if (!new URL(page.url()).pathname.startsWith('/discover')) {
-    await page.goBack();
-  }
+  await expect(page).toHaveURL(/\/mix\/current\/edit$/);
+  await page.goBack();
   await expect(page).toHaveURL(/\/discover\?q=night$/);
   await expect(search(page)).toHaveValue('night');
   await expect(page.locator('.link-card').first().locator('.phrase')).toContainText('all night');

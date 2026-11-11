@@ -53,6 +53,11 @@ button[aria-pressed='true'] .soft { color: inherit; }
 .stack > * + * { margin-top: var(--space-4); }
 .wide { margin-bottom: var(--space-3); }
 
+/* Translated and user-authored words must be allowed to wrap inside the page instead of defining
+   its minimum width. Controls keep their target size while long labels take another line. */
+.page :is(p, b, label, button, a.button) { min-width: 0; overflow-wrap: anywhere; }
+.page :is(button, a.button) { max-width: 100%; white-space: normal; }
+
 
 .page { max-width: 880px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--page-end); }
 .display {

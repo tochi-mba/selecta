@@ -20,6 +20,7 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.listen` | local | `web/src/views/Now.tsx` | Listen display choices (spectrum shape and the like) | Listen |
 | `selecta.setUp` | local | `web/src/App.tsx` | That first-run setup has been finished | Onboarding |
 | `selecta.startedAMix` | local | `web/src/views/Setup.tsx` | That a first mix has been started | Onboarding |
+| `selecta.firstHandoffSeen` | local | `web/src/views/FirstHandoff.tsx` | That the first handoff explanation has been seen, so it is not shown again | Onboarding |
 | `selecta.mixLength` | local | `web/src/views/Mixes.tsx` | The last chosen mix length | Make a Mix |
 | `selecta.recentDraft` | local | `web/src/views/Mix.tsx`, `web/src/views/MyMixes.tsx` | The draft last edited and its order, for the way back | My Mixes |
 | `selecta.inspectorWidth` | local | `web/src/views/Mix.tsx` | Inspector width, clamped 320 to 520 px | Arrangement editor |

@@ -8,7 +8,14 @@ import { resetMix, rewriteJson } from './helpers';
  * so a control the keyboard can't reach fails the walk. A person still has to judge whether the walk
  * is comfortable; that part is P0126 in the polish checklist.
  */
-test.beforeEach(async ({ request }) => resetMix(request));
+test.beforeEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: 'all' } });
+  await resetMix(request);
+});
+
+test.afterEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: '' } });
+});
 
 /** Presses Tab until `target` has focus, as someone without a mouse would, or fails. */
 async function tabTo(page: Page, target: Locator, most = 120) {

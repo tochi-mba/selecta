@@ -147,6 +147,7 @@ a.button:hover { border-color: var(--text); }
     font-size: 0.75rem;
     white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
   }
   .nav li a i { font-size: 1.05rem; line-height: 1; }
   .nav-context { display: none; }

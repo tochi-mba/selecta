@@ -46,6 +46,12 @@ node_modules/
 web/dist/
 *.tsbuildinfo
 
+# Browser and end-to-end test output
+/.tmp-e2e/
+/web/test-results/
+/web/playwright-report/
+/web/blob-report/
+
 # Tools and OS
 .DS_Store
 Thumbs.db

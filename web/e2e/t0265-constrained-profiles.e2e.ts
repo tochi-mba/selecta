@@ -24,9 +24,16 @@ const lastSeam = async (page: Page) => {
 };
 
 async function startARender(page: Page) {
-  await page.request.post('/api/mix/songs', { data: { song_id: 5 } });
   await page.request.post('/api/mix/render');
 }
+
+test.beforeEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: 'all' } });
+});
+
+test.afterEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: '' } });
+});
 
 test('T0265 a 100-song Edit on a slowed CPU during a render: moves stay under 500 ms and focus stays put', async ({ page, request }) => {
   test.setTimeout(400_000);

@@ -224,8 +224,12 @@ function Overlay({
       const replacement = !before?.isConnected && beforeKey
         ? document.querySelector<HTMLElement>(`[data-focus-key="${CSS.escape(beforeKey)}"]`)
         : null;
-      if (before?.isConnected && before !== document.body) before.focus();
-      else if (replacement) replacement.focus();
+      // Restoring focus must not also restore the browser's idea of where the
+      // opener ought to be. The sheet locks body scrolling while it is open;
+      // a plain focus() after unlocking can scroll a long Library back to the
+      // opener even though that row is already visible at the preserved place.
+      if (before?.isConnected && before !== document.body) before.focus({ preventScroll: true });
+      else if (replacement) replacement.focus({ preventScroll: true });
       else document.getElementById('content')?.focus({ preventScroll: true });
     };
   }, []);

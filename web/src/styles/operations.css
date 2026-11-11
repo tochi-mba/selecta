@@ -93,7 +93,13 @@
 .interface-choices .choice { display: flex; width: fit-content; max-width: 100%; }
 .sources-add { align-items: flex-end; }
 .sources-add .field { flex: 1 1 280px; }
-.folder-list b { unicode-bidi: plaintext; }
+.folder-list li, .folder-list li > div { min-width: 0; }
+.folder-list b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  unicode-bidi: plaintext;
+}
 /* MP-0291-06: the song sheet's facts read as one table, every value starting on the same line,
    so what's in use and what was measured sit straight under each other */
 .song-facts.song-facts-table { grid-template-columns: max-content minmax(0, 1fr); column-gap: var(--space-3); }
@@ -113,6 +119,11 @@
 .export-job-actions a { overflow-wrap: anywhere; min-width: 0; }
 
 /* A blind study: the two versions are laid out exactly alike */
+.study-setup {
+  display: grid;
+  gap: var(--space-4);
+}
+.study-setup > * { margin-top: 0; }
 .study-setup .field input { max-width: 480px; }
 .study-progress { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
 .study-now { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }

@@ -72,7 +72,9 @@ for (const display of DISPLAYS) {
       for (const path of PAGES) {
         await page.goto(path);
         await expect(page.getByRole('navigation', { name: 'Main' }).first()).toBeAttached();
-        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 30_000 });
+        // The development control gallery deliberately displays busy controls and skeleton examples.
+        // Wait only for real page work, leaving those static examples available to the candidate shot.
+        await expect(page.locator('[aria-busy="true"]:not(.control-gallery *)')).toHaveCount(0, { timeout: 30_000 });
         await shot(page, info, taken, `${at}-${slug(path)}`, display.width, scheme);
       }
       expect(taken).toHaveLength(PAGES.length);

@@ -13,7 +13,14 @@ import { PAGES, resetMix, rewriteJson } from './helpers';
  * them on the owner's documented hardware.
  */
 
-test.beforeEach(async ({ request }) => resetMix(request, [1, 2, 3]));
+test.beforeEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: 'all' } });
+  await resetMix(request, [1, 2, 3]);
+});
+
+test.afterEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: '' } });
+});
 
 async function heap(cdp: CDPSession) {
   await cdp.send('HeapProfiler.collectGarbage');

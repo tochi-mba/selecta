@@ -427,10 +427,20 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
     let gradientHeight = 0;
     const history: number[][] = [];
     let lastDraw = -Infinity;
+    let drewReducedFrame = false;
     const draw = (timestamp = 0) => {
       // nothing to look at while the tab is hidden, and the music mustn't pay for it
       if (document.hidden || !visible) {
         history.length = 0;
+        frame = 0;
+        return;
+      }
+      // ResizeObserver and visibility wakes can arrive more than once after
+      // reduced motion is enabled. Paint one real analyser frame, then keep
+      // that exact bitmap until a meaningful dependency (theme, mode, size)
+      // recreates this effect. Otherwise those wakes make a supposedly still
+      // visualizer sample fresh analyser data and visibly animate it.
+      if (reduceMotion && drewReducedFrame) {
         frame = 0;
         return;
       }
@@ -467,6 +477,7 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       if (!active) history.length = 0;
       const levels = frequencyLevels(spectrum, spectrumLevelCount(width, ratio, spectrumShape));
       paintFrequencyFrame(context, width, height, levels, spectrumShape, { accent, soft, gradient }, history);
+      if (reduceMotion) drewReducedFrame = true;
       if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
     };
     const wake = () => {

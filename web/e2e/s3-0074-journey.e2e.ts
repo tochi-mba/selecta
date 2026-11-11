@@ -8,7 +8,14 @@ import { allRendered, audioClock, resetMix, rewriteJson, spyOnAudio } from './he
  * splits stems (as mp-0289 does). It proves the steps join up; it says nothing about how anything sounds.
  */
 
-test.beforeEach(async ({ request }) => resetMix(request));
+test.beforeEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: 'all' } });
+  await resetMix(request);
+});
+
+test.afterEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: '' } });
+});
 
 async function withStudio(page: Page) {
   const row = [1, 1, 1, 1, 0, 0, 0, 0];
@@ -47,7 +54,7 @@ test('folder to FLAC: scan, play, edit, request, stems and export join up (S3-00
   const clock = (await audioClock(page))[0];
   await expect.poll(async () => (await audioClock(page))[0], { timeout: 20_000 }).toBeGreaterThan(clock);
   await play.click();
-  await expect(play).toHaveText('Play');
+  await expect(play).toHaveText('Resume');
 
   // 3. edit: move a song, then undo it
   await page.goto('/mix/current/edit');
