@@ -87,6 +87,9 @@
 /* Pseudo-localised diagnostic strings must break instead of widening a phone viewport. */
 .workspace .diagnostic-facts :is(p, b, .hint),
 .workspace .diagnostic-facts li { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+/* The self-service fault explanation is a flex child: cap it before lengthy translations wrap. */
+.workspace .what-went-wrong .needs-you-list li > :is(p, .status) { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+.workspace .what-went-wrong .needs-you-list li p b { overflow-wrap: anywhere; }
 .needs-you-list, .diagnostic-facts, .export-jobs { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .needs-you-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); padding-block: var(--space-2); border-bottom: 1px solid var(--border); }
 .needs-you .status, .diagnostic-facts .status, .export-job .status { white-space: normal; }
