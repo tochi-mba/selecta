@@ -1,7 +1,7 @@
 # ADR-0033: Polish baseline, complete state inventory and evidence governance
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress: 5/10 tasks Implemented with evidence on 2026-11-10 (P0001, P0002, P0003, P0006, P0008); P0004 and P0010 need a person; P0005, P0007 and P0009 open. See [the polish evidence ledger](polish-implementation-evidence.md).
+- **Implementation status:** In progress: 8/10 tasks Implemented with evidence (P0001, P0002, P0003, P0006, P0008 on 2026-11-10; P0005, P0007, P0009 on 2026-11-11); P0004 and P0010 need a person. See [the polish evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 0 - Baseline and scope
@@ -55,6 +55,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
 | 2026-11-10 | Accepted | In progress (5/10) | Reconciled against current code; P0001, P0002, P0003, P0006, P0008 ticked with tests run that day; independent verification still pending |
+| 2026-11-11 | Accepted | In progress (8/10) | P0005 T-to-P map (`completion/t-to-p-map.md`), P0007 findings register and P0009 entry for every task, each proven by `tests/test_polish_governance.py` |
 
 ## References
 

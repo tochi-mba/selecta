@@ -2,7 +2,7 @@
 
 - **Programme implementation status:** PR #23 merged (`84b8b5cbadf7204bf526e8932124b5c4890e2c44`); original per-task evidence remains unreconciled and independently unverified.
 - **Date:** 2026-11-06
-- **Tasks completed:** 43 / 143
+- **Tasks completed:** 94 / 143
 - **Runtime verification:** none claimed by this planning PR.
 - **Implementing PR and commits:** PR #23 (`84b8b5c`) for the original work; the 2026-11-10/11 reconciliation and new work are on branch `feat/finish-checklists` (WIP commits from `a31bc2e`, coordinator-committed), and each section below names its own tests and runs. The final PR link is added at P0142. Inherited T work: [completion/t-to-p-map.md](completion/t-to-p-map.md) (P0005).
 
@@ -16,10 +16,10 @@ Documentation/link/file-length checks on this PR validate the plan's structure o
 
 | ADR | Task range | Implementation | Evidence |
 |---|---|---|---|
-| [ADR-0033](adr-0033-polish-baseline-and-governance.md) | P0001–P0010 | In progress (5/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0033](adr-0033-polish-baseline-and-governance.md) | P0001–P0010 | In progress (8/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0034](adr-0034-polish-visual-system.md) | P0011–P0020 | In progress (9/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0035](adr-0035-polish-components-and-feedback.md) | P0021–P0031 | In progress (8/11) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0036](adr-0036-polish-loading-and-skeletons.md) | P0032–P0043 | In progress (3/12) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0036](adr-0036-polish-loading-and-skeletons.md) | P0032–P0043 | In progress (4/12) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0037](adr-0037-polish-onboarding-and-readiness.md) | P0044–P0051 | Not started | No implementation or runtime verification |
 | [ADR-0038](adr-0038-polish-mixes-and-drafts.md) | P0052–P0060 | Not started | No implementation or runtime verification |
 | [ADR-0039](adr-0039-polish-listen-and-shell.md) | P0061–P0069 | Not started | No implementation or runtime verification |
@@ -29,7 +29,7 @@ Documentation/link/file-length checks on this PR validate the plan's structure o
 | [ADR-0043](adr-0043-polish-library-and-workshop.md) | P0100–P0111 | In progress: 10/12 ticked (P0100-P0102, P0105-P0111) | Per-task entries below (2026-11-10/11) |
 | [ADR-0044](adr-0044-polish-language-and-motion.md) | P0112–P0120 | Implemented (9/9) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0045](adr-0045-polish-responsive-accessibility.md) | P0121–P0131 | In progress: 2/11 ticked (P0124, P0127) | Per-task entries below (2026-11-10/11) |
-| [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | In progress: 0/12 ticked; P0141 rollback check passes except ratings | Per-task entries below (2026-11-10/11) |
+| [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | In progress: 1/12 ticked (P0141) | Per-task entries below (2026-11-10/11) |
 
 ## Required per-task evidence when implementation begins
 
@@ -133,11 +133,11 @@ Implementing history: PR #23 (`84b8b5c`) plus later programmes (Unified finish U
 | P0002 | Implemented | Route/overlay/special-state inventory and `mp-0272-surface-inventory.json` | `test_polish_governance.py` P0002; `mpSurfaceInventory.test.ts` passed | - |
 | P0003 | Implemented | Every surface x state cell filled or explained; three reasons added this pass | `test_polish_governance.py` P0003 | Named reviewer read-through |
 | P0004 | Open (Needs a person) | Candidate paired captures only | - | Capture review by a named reviewer |
-| P0005 | Open | No T-to-P mapping | - | Cross-programme mapping |
+| P0005 | Implemented | 42 open T tasks and 18 parity rows mapped to P tasks with a no-double-counting rule in `completion/t-to-p-map.md` | `pytest tests/test_polish_governance.py -q -p no:cacheprovider` 8 passed 2026-11-11 (P0005 test) | Owner read-through |
 | P0006 | Implemented | Three role scripts with errors, recovery and walking tests | `test_polish_governance.py` P0006 | Dry run with people |
-| P0007 | Open | No severity register for all findings | - | Findings register |
+| P0007 | Implemented | P0007 findings register below: PF-01 to PF-20, each P0/P1/P2 with location, impact, acceptance check and status | `test_polish_governance.py` P0007 test, passed 2026-11-11 | Owner severity review (P0140) |
 | P0008 | Implemented | Decision vs implementation status separated in all 14 ADRs | `test_polish_governance.py` P0008 | - |
-| P0009 | Open (in progress) | Entries for this section exist | - | Other sections' entries |
+| P0009 | Implemented | Every P0001-P0143 has an entry row; header names PR #23 and the branch commits; ticks agree with entries | `test_polish_governance.py` P0009 test, passed 2026-11-11 | Final PR link (P0142) |
 | P0010 | Open (Needs a person) | Automated invariant suites exist | - | Owner release disposition |
 
 Addendum to ADR-0035 (2026-11-10): P0022 stays open (MP-0279-02/03/04/06/07 failed in a shared-machine Playwright run of `web/e2e/mp-0279-component-gallery.e2e.ts` against `dist-saas-p1`, port 9042; MP-0279-01 and -05 passed). P0029 Implemented: `toastsCoalesce.test.tsx`, `gp-0257-comfort.test.tsx`, `toastPriority.test.tsx`, `polish-loading.test.tsx` passed.
@@ -149,13 +149,13 @@ Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-
 | Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
 | P0032-P0034, P0036 | Open (built, not proven) | Content-shaped variants exist and are used | MP-0297-01 failed | Green geometry measurement |
-| P0035 | Open (partly built) | Inspector skeleton only; no Edit timeline consumer | - | Timeline skeleton in Edit |
+| P0035 | Implemented; browser check pending | Timeline placeholder is song rows with transitions between them at the timeline's 84px/96px heights; inspector keeps its panel | `pnpm exec vitest run src/ui/polishTimelineSkeleton.test.tsx` 4/4 passed 2026-11-11 | `web/e2e/polish-p0035-timeline-skeleton.e2e.ts` geometry run |
 | P0037 | Open (partly proven) | Request identity and refresh rules | `async.test.tsx` passed; MP-0297-03 failed | Green end-to-end refresh check |
-| P0038 | Open | 120ms reveal delay chosen | - | Measured flicker study |
+| P0038 | Implemented; browser check pending | Bars revealed only after 120ms (`REVEAL_AFTER_MS`, `--motion-fast`) in every motion setting, space reserved at once, content never held back. Fake-clock table: answers at 0, 40, 80, 119 and 120ms show no placeholder; 200, 500 and 2000ms show it for 80, 380 and 1880ms; no flashes | `src/ui/polishReveal.test.tsx` P0038 2/2 passed 2026-11-11 | `web/e2e/polish-p0038-reveal.e2e.ts` in Edge, both motion settings |
 | P0039 | Implemented | Theme-aware, bounded, reduced-motion-still, hidden bars, one announcement | `skeletonHonesty.test.tsx` 2/2 | - |
 | P0040 | Implemented | Real stages and honest wait words, no fabricated percentages | `workState.test.ts`, `jobs.test.ts`, `lib.test.ts` | - |
 | P0041 | Implemented | Slow and failed retrieval are honest with Retry, incl. Listen details and inspector checks | `pnpm exec vitest run src/views/polish-loading.test.tsx`: 3/3 | - |
-| P0042 | Open (partly proven) | Stale/out-of-order/failed refresh and de-duplicated announcements | `async.test.tsx`, `gp-0257-comfort.test.tsx` | Delayed/partial/retried flash tests |
+| P0042 | Implemented | Immediate, delayed, partial, failed/retried, stale and out-of-order answers recorded frame by frame: no placeholder after content, no older answer shown, one placeholder per wait, one announcement | `pnpm exec vitest run src/ui/polishReveal.test.tsx src/ui/polishTimelineSkeleton.test.tsx src/ui/skeletonHonesty.test.tsx` (slot lock, 1 worker): 15/15 passed 2026-11-11; `async.test.tsx`, `gp-0257-comfort.test.tsx` 2026-11-10 | - |
 | P0043 | Open | Layout stability not measured green | MP-0297-01/03 failed | Green measurement |
 
 ## ADR-0038 task evidence (reconciled 2026-11-10, uncommitted working tree)
@@ -190,11 +190,11 @@ Implementing history: PR #23 (`84b8b5c`) plus later Stem Studio work (S3-0059, G
 
 ## ADR-0046 task evidence (reconciled 2026-11-10, uncommitted working tree)
 
-No task in this ADR is ticked: each needs a full candidate run, recorded hardware, real audio, participants or owner disposition. Automated facts gathered on 2026-11-10:
+P0141 is ticked (rollback check with ratings, 2026-11-11); every other task needs a full candidate run, recorded hardware, real audio, participants or owner disposition. Automated facts gathered on 2026-11-10:
 
 | Task | Status | Result | Check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
-| P0132 | Open | `e2e/visual.e2e.ts` captures review candidates only; no committed pixel baselines | `grep toHaveScreenshot web/e2e`: 0 | Deterministic baselines per surface, state, theme and width |
+| P0132 | Implemented; browser check pending | `web/e2e/polish-p0132-baselines.e2e.ts`: `toHaveScreenshot` for every PAGES route and Library loading/empty/failed/recovered, light and dark, 375 and 1440px; fixed clock, reduced motion, documented masks | not run (BUILD FIRST) | Generate with `--update-snapshots`, commit, then P0133 review |
 | P0133 | Open (Needs a person) | - | - | Named reviewer compares differences |
 | P0134 | Open | Focused runs only (agents may not run full suites); focused Playwright 31/59 passed | 8-spec Playwright run, port 9050 | Full CI on the candidate SHA |
 | P0135 | Open (Needs a person) | - | - | Traces on recorded hardware |
@@ -203,8 +203,8 @@ No task in this ADR is ticked: each needs a full candidate run, recorded hardwar
 | P0138 | Open | `integration.e2e.ts` 5/7 passed (two draft/current tests timed out) | Playwright | All recovery scenarios green together |
 | P0139 | Open (Needs a person) | - | - | Unguided participant tasks |
 | P0140 | Open (Needs a person) | - | - | Owner blocker review |
-| P0141 | Implemented | Rollback from this tree to `main` (`405cf7f`) and forward again: "identical across all three" for songs, settings, mix, seam settings, drafts, corrected tempo, export record and requests | `.venv\Scripts\python tests/rollback_check.py <git archive main src>` under the slot lock | Ratings are not yet in the harness |
-| P0142 | Open | Section entries updated 2026-11-10 | - | PR and verification links at final reconciliation |
+| P0141 | Implemented | Rollback to `main` (`405cf7f`) and forward again: "nothing lost"; songs, steering, mix, seam settings, drafts, corrected tempo, export record, requests, ratings (liked 1, disliked 1) and rated seams identical | `.venv\Scripts\python tests/rollback_check.py <git archive main src>` under the slot lock, exit 0, 2026-11-11 | - |
+| P0142 | Open | Section entries updated 2026-11-10/11; every task has an entry (P0009); inherited mapping in `completion/t-to-p-map.md` | - | PR and verification links at final reconciliation |
 | P0143 | Open (Needs a person) | - | - | Release-candidate review and owner disposition |
 
 ## ADR-0039 task evidence (reconciled 2026-11-10/11, uncommitted working tree)
@@ -272,7 +272,7 @@ All runs are Edge (Chromium) on the shared Windows laptop and are simulated, not
 | P0128 | Open (Needs a person) | - | - | NVDA and VoiceOver journeys |
 | P0129 | Implemented | - | MP-0288-06 failed | Rerun overlay-arbitration on a quiet machine |
 | P0130 | Implemented | RTL/CJK/duplicate names readable | `Mix.test.tsx` metadata stress test | Forced colours failed; motion spec not run |
-| P0131 | Open | Failures recorded per surface in this ledger | - | Resolve the failures; human checks pending |
+| P0131 | Open (in progress) | Failures classified per surface in the P0007 findings register; PF-05 and PF-20 resolved | `test_polish_governance.py` P0007 test | Resolve open findings on quiet reruns; human checks pending |
 
 ## P0007 findings register (2026-11-11)
 

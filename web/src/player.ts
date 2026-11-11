@@ -37,6 +37,9 @@ const SAVE_EVERY = 5;
 const RESTART_WITHIN = 4;
 const SOUND_KEY = 'selecta.sound';
 const WAKE_WAIT_MS = 3000;
+const SEAM_POLL_FIRST = 1000;
+const SEAM_POLL_MOST = 5000;
+const SEAM_POLL_NEAR_END = 30;
 
 function savedSound(): { volume: number; muted: boolean } {
   try {
@@ -103,7 +106,11 @@ export class SetPlayer {
   private holdingSound = false;
   private watchedState: SeamState | null = null;
   private stateRead: AbortController | null = null;
-  private stateReadAt = -Infinity;
+  // MI-0162-05: the imminent seam is read again after a growing wait (1 s rising to 5 s), back to the
+  // first read at once when the seam changes, and never more than 1 s apart near the song's end.
+  private seamPollKey: string | null = null;
+  private seamPollReads = 0;
+  private seamPollDone = -Infinity;
   private requested = new Set<string>();
   private fallenBack = new Set<number>();
   private savedAt = 0;
@@ -316,7 +323,8 @@ export class SetPlayer {
     this.stateRead?.abort();
     this.stateRead = null;
     this.watchedState = null;
-    this.stateReadAt = -Infinity;
+    this.seamPollKey = null;
+    this.seamPollReads = 0;
     if (this.current && this.context) {
       const elapsed = Math.max(0, this.context.currentTime - this.current.startedAt);
       this.heard.set(this.current.songId, (this.heard.get(this.current.songId) ?? 0) + elapsed);
@@ -554,11 +562,18 @@ export class SetPlayer {
 
   /** Watch only the imminent seam, independently of the slower whole-mix UI poll. */
   private watchSeam(current: Current, nextItem: MixItem, seam: SeamState) {
-    if (seam.status === 'ready' || seam.status === 'failed' || this.stateRead
-      || performance.now() - this.stateReadAt < 100) return;
+    if (seam.status === 'ready' || seam.status === 'failed' || this.stateRead) return;
+    if (seam.key !== this.seamPollKey) {
+      this.seamPollKey = seam.key;
+      this.seamPollReads = 0;
+    }
+    if (this.seamPollReads > 0) {
+      const grown = Math.min(SEAM_POLL_FIRST * 1.6 ** (this.seamPollReads - 1), SEAM_POLL_MOST);
+      const nearEnd = current.duration - this.songTime() < SEAM_POLL_NEAR_END;
+      if (performance.now() - this.seamPollDone < (nearEnd ? SEAM_POLL_FIRST : grown)) return;
+    }
     const controller = new AbortController();
     this.stateRead = controller;
-    this.stateReadAt = performance.now();
     const timeout = window.setTimeout(() => controller.abort(), 2000);
     void fetch(`/api/seams/${encodeURIComponent(seam.key)}`, { signal: controller.signal, cache: 'no-store' })
       .then(async (response) => {
@@ -580,6 +595,9 @@ export class SetPlayer {
       .finally(() => {
         window.clearTimeout(timeout);
         if (this.stateRead === controller) this.stateRead = null;
+        if (this.seamPollKey !== seam.key) return;
+        this.seamPollReads += 1;
+        this.seamPollDone = performance.now();
       });
   }
 

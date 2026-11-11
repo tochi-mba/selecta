@@ -33,8 +33,9 @@ class Counter:
 
 
 def service(engine, lock=None, *tasks: Task, holder: str | None = None) -> Service:
-    return Service(engine, lock, Plan(list(tasks)), schedule=Schedule(**FAST), tick_s=0.05,
-                   holder=holder)
+    return Service(
+        engine, lock, Plan(list(tasks)), schedule=Schedule(**FAST), tick_s=0.05, holder=holder
+    )
 
 
 def test_each_task_runs_on_its_own_interval(sqlite_engine):
@@ -50,10 +51,25 @@ def test_each_task_runs_on_its_own_interval(sqlite_engine):
 def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite_engine):
     plan = cloud_plan(sqlite_engine, env={})
     names = {task.name for task in plan.tasks}
-    assert names == {"actions", "reservations", "lucy_runs", "flag_previews", "admin_metrics",
-                     "usage_reconcile"}
-    assert set(plan.disabled) == {"stripe_events", "stripe_reconcile", "storage_deletions",
-                                  "account_deletions", "rooms", "derived_eviction"}
+    assert names == {
+        "actions",
+        "reservations",
+        "lucy_runs",
+        "flag_previews",
+        "admin_metrics",
+        "usage_reconcile",
+        "export_expiry",
+    }
+    assert set(plan.disabled) == {
+        "stripe_events",
+        "stripe_reconcile",
+        "storage_deletions",
+        "account_deletions",
+        "rooms",
+        "derived_eviction",
+        "autoscale",
+    }
+    assert "SELECTA_MODAL_APP" in plan.disabled["autoscale"]
     assert "SELECTA_STRIPE_SECRET_KEY" in plan.disabled["stripe_events"]
     copy = Service(sqlite_engine, None, plan, schedule=Schedule(**FAST))
     done = copy.loop.run_once(moment=0.0)
@@ -63,14 +79,30 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
 
 def test_secrets_switch_the_external_tasks_on(sqlite_engine, monkeypatch):
     monkeypatch.setattr("selecta.billing.stripe_sync.load_price_map", lambda: {"price": "x"})
-    env = {"SELECTA_STRIPE_SECRET_KEY": "sk_test_x", "SELECTA_WORKOS_API_KEY": "workos_x",
-           "SELECTA_R2_BUCKET_DELETION_LEDGER": "ledger", "SELECTA_ROOMS_PEPPER": "p" * 32,
-           "SELECTA_R2_ACCOUNT_ID": "acct", "SELECTA_R2_ACCESS_KEY_ID": "key",
-           "SELECTA_R2_SECRET_ACCESS_KEY": "secret"}
+    env = {
+        "SELECTA_STRIPE_SECRET_KEY": "sk_test_x",
+        "SELECTA_WORKOS_API_KEY": "workos_x",
+        "SELECTA_R2_BUCKET_DELETION_LEDGER": "ledger",
+        "SELECTA_ROOMS_PEPPER": "p" * 32,
+        "SELECTA_R2_ACCOUNT_ID": "acct",
+        "SELECTA_R2_ACCESS_KEY_ID": "key",
+        "SELECTA_R2_SECRET_ACCESS_KEY": "secret",
+        "SELECTA_MODAL_APP": "selecta-workers",
+        "SELECTA_MODAL_TOKEN_ID": "ak-x",
+        "SELECTA_MODAL_TOKEN_SECRET": "as-x",
+    }
     plan = cloud_plan(sqlite_engine, env=env)
     assert plan.disabled == {}
-    assert {"stripe_events", "stripe_reconcile", "storage_deletions", "account_deletions",
-            "rooms", "derived_eviction"} <= {task.name for task in plan.tasks}
+    assert {
+        "stripe_events",
+        "stripe_reconcile",
+        "storage_deletions",
+        "account_deletions",
+        "rooms",
+        "derived_eviction",
+        "export_expiry",
+        "autoscale",
+    } <= {task.name for task in plan.tasks}
 
 
 def test_a_task_that_raises_does_not_stop_the_others(sqlite_engine, caplog):
@@ -138,8 +170,7 @@ def test_sigterm_stops_the_service_within_a_tick_and_releases_leadership(sqlite_
             signal.signal(sig, handler)
 
 
-def test_a_failing_tick_is_logged_and_the_service_keeps_going(sqlite_engine, monkeypatch,
-                                                              caplog):
+def test_a_failing_tick_is_logged_and_the_service_keeps_going(sqlite_engine, monkeypatch, caplog):
     copy = service(sqlite_engine)
     calls = []
 
@@ -162,8 +193,10 @@ def test_the_command_needs_the_cloud_database(monkeypatch):
 
 
 def test_a_direct_maintenance_url_wins_over_the_pooled_one():
-    env = {"SELECTA_DATABASE_URL": "postgresql://pooled/db",
-           "SELECTA_MAINTENANCE_DATABASE_URL": "postgresql://direct/db"}
+    env = {
+        "SELECTA_DATABASE_URL": "postgresql://pooled/db",
+        "SELECTA_MAINTENANCE_DATABASE_URL": "postgresql://direct/db",
+    }
     assert maintain.database_url(env) == "postgresql://direct/db"
     with pytest.raises(ValueError):
         maintain.database_url({"SELECTA_DATABASE_URL": "sqlite:///x"})
@@ -175,9 +208,18 @@ def test_usage_drift_becomes_one_alert_and_nothing_is_fixed(sqlite_engine):
     from selecta.usage.schema import quota_state
 
     with transaction(sqlite_engine) as conn:
-        conn.execute(quota_state.insert().values(
-            workspace_id=new_id(), plan_id="free", plan_version=1, limit_bytes=10**10,
-            committed_bytes=999, reserved_bytes=0, state="ok", updated_at=db_now(conn)))
+        conn.execute(
+            quota_state.insert().values(
+                workspace_id=new_id(),
+                plan_id="free",
+                plan_version=1,
+                limit_bytes=10**10,
+                committed_bytes=999,
+                reserved_bytes=0,
+                state="ok",
+                updated_at=db_now(conn),
+            )
+        )
     with transaction(sqlite_engine) as conn:
         assert maintain.usage_reconciliation(conn) >= 1
     with sqlite_engine.connect() as conn:

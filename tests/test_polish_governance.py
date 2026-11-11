@@ -186,8 +186,5 @@ def test_p0009_every_task_has_an_evidence_entry_and_ticks_match_it() -> None:
         if box == "x":
             assert re.match(r"(Implemented|Verified)", status), (task, status)
         else:
-            # an open ledger entry never sits beside a ticked box, and a partial task stays unticked
-            assert not status.startswith("Verified (automated)") or "Needs" in status, (
-                task,
-                status,
-            )
+            # a task the ledger calls verified is ticked; partial work stays open on both
+            assert not status.startswith("Verified"), (task, status)
