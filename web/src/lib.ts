@@ -9,6 +9,8 @@ export const clock = (seconds: number | null | undefined): string => {
 
 export const length = (seconds: number): string => {
   const minutes = Math.round(seconds / 60);
+  // SF-0245-06: a few seconds of music is not "0 min"
+  if (minutes < 1 && seconds > 0) return 'under 1 min';
   if (minutes < 60) return `${minutes} min`;
   const rest = minutes % 60;
   return rest ? `${Math.floor(minutes / 60)} hr ${rest} min` : `${Math.floor(minutes / 60)} hr`;
