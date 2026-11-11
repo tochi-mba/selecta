@@ -17,6 +17,7 @@ import { seamFamily, SongMotif } from '../ui/MusicObjects';
 import { RequestsContext, RequestTag, waitingRequestCount } from './Requests';
 import { frequencyLevels, paintFrequencyFrame, SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape } from './spectrumVisuals';
 import { ViewProps } from './shared';
+import { FirstHandoff } from './FirstHandoff';
 
 /** Fit the complete music title to its actual column, not the viewport.
  * Keep it in the accessibility tree and allow more lines at extreme zoom. */
@@ -809,6 +810,7 @@ export function Now(props: ViewProps) {
                 <VolumeControl player={player} now={now} />
               </div>
               {now.notice && <p className="notice" role="status">{now.notice}</p>}
+              <FirstHandoff now={now} mix={mix} />
             </>
           )}
 

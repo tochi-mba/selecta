@@ -90,6 +90,10 @@ button[aria-disabled='true'] { cursor: progress; }
 .readiness-steps { list-style: none; padding: 0; display: grid; gap: var(--space-3); margin-block: var(--space-5); }
 .readiness-steps li { display: grid; grid-template-columns: 1fr auto; gap: var(--space-3); padding-block: var(--space-3); border-bottom: 1px solid var(--border); }
 .readiness-steps strong { font-variant-numeric: tabular-nums; }
+/* CI-0178-04 and CI-0178-05: the real connections found while preparing, and the first hand-off note */
+.scan-reveals ul { padding-inline-start: var(--space-5); margin-block: var(--space-2); }
+.first-handoff { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); }
+.first-handoff p { margin: 0; flex: 1 1 16rem; }
 .field-help { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
 .field > .warn { margin: 0; }
 .view-options { margin-block: var(--space-4); }

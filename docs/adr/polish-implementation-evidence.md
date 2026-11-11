@@ -4,6 +4,7 @@
 - **Date:** 2026-11-06
 - **Tasks completed:** 43 / 143
 - **Runtime verification:** none claimed by this planning PR.
+- **Implementing PR and commits:** PR #23 (`84b8b5c`) for the original work; the 2026-11-10/11 reconciliation and new work are on branch `feat/finish-checklists` (WIP commits from `a31bc2e`, coordinator-committed), and each section below names its own tests and runs. The final PR link is added at P0142. Inherited T work: [completion/t-to-p-map.md](completion/t-to-p-map.md) (P0005).
 
 ## Evidence boundary
 

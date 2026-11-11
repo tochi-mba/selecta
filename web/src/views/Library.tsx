@@ -2,15 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, get, LibraryPage, LibrarySong, MixData, post, problemKind } from '../api';
 import { Gate, useFlags, visible } from '../flags';
-import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
+import { analysisWords, askedToAnalyse } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
-import { orderOf, trackReadiness } from '../state/readiness';
+import { orderOf } from '../state/readiness';
 import { operationId } from '../state/async';
-import { Action, Dialog, Menu, Problem, Skeleton, Status } from '../ui/controls';
-import { Icon } from '../ui/Icon';
-import { SongMotif } from '../ui/MusicObjects';
+import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { SearchField } from '../ui/primitives';
+import { LibraryRow, LibraryRowActions } from './LibraryRow';
 import { ViewProps } from './shared';
 import { SongDetails } from './SongDetails';
 
@@ -284,7 +283,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       setRows((before) => {
         if (!before) return pages[0].songs;
         const fresh = new Map(pages.flatMap((page) => page.songs).map((song) => [song.id, song]));
-        return before.map((song) => fresh.get(song.id) ?? song);
+        // MI-0162-04: an unchanged song keeps its object, so its memoized row does not re-render, and a
+        // refresh that changed nothing keeps the list itself
+        let changed = false;
+        const merged = before.map((song) => {
+          const latestSong = fresh.get(song.id);
+          if (!latestSong || JSON.stringify(latestSong) === JSON.stringify(song)) return song;
+          changed = true;
+          return latestSong;
+        });
+        return changed ? merged : before;
       });
     }).catch(() => { if (mine === asked.current) setFailed(true); });
   }, [url, rows?.length, searching]);
@@ -482,6 +490,27 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     }
     return shared;
   }, [rows]);
+  // MI-0162-04: rows get one stable set of actions that always run the newest handlers, and plain facts,
+  // so a status, mix or jobs poll re-renders only the rows whose own facts changed.
+  const latest = useRef({ toggleBatch, requestStart, analyse, add, setPriority, never, songAsked, now });
+  latest.current = { toggleBatch, requestStart, analyse, add, setPriority, never, songAsked, now };
+  const rowActions = useMemo<LibraryRowActions>(() => ({
+    toggle: (id, range) => latest.current.toggleBatch(id, range),
+    open: (id) => {
+      if (latest.current.songAsked !== null) setAddressQuery({ song: null });
+      setOpened(id);
+    },
+    start: (song) => latest.current.requestStart(song),
+    analyse: (song) => latest.current.analyse(song),
+    add: (song, playNext) => latest.current.add(song, playNext ? latest.current.now.position + 1 : undefined),
+    priority: (song) => latest.current.setPriority(song),
+    never: (song) => latest.current.never(song),
+  }), []);
+  const linePlaces = useMemo(() => {
+    const places = new Map<number, number>();
+    line.forEach((id, place) => { if (!places.has(id)) places.set(id, place); });
+    return places;
+  }, [status.analysing]);
   const { counts } = status;
   const compact = preferences.density === 'compact';
   const on = useFlags();
@@ -613,65 +642,15 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </div>
       )}
       <ul ref={listRef} className={`rows library-rows ${cardLayout ? 'library-cards' : ''}`} aria-busy={searching}>
-        {committedRows?.map((song) => {
-          const facts = trackReadiness(song);
-          const already = inMix.has(song.id);
-          const title = song.title ?? 'Untitled';
-          const duplicate = duplicateIds.has(song.id);
-          const name = duplicate ? `${title} (song ${song.id})` : title;
-          const spoken = duplicate || !sharedTitles.has(title) ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
-          return (
-            <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''} ${selectedIdSet.has(song.id) ? 'selected' : ''}`}>
-              <div className="song-name">
-                {batch && filter !== 'set_aside' && <label className="library-batch-check">
-                  <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
-                    checked={selectedIdSet.has(song.id)} disabled={searching || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
-                    // a failed refresh holds the choice without disabling the box, so focus stays on it (MP-0297-03)
-                    aria-disabled={failed || undefined}
-                    onChange={(event) => { if (!failed) toggleBatch(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
-                </label>}
-                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
-                  <SongMotif songId={song.id} /><b dir="auto" title={title}>{title}</b>
-                </button>
-                <span dir="auto" title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
-                {duplicate && <small className="library-recording-id">Recording {song.id}</small>}
-                {query && song.match && <small className="hint" aria-label={`Search match: ${song.match}`}>{song.match}</small>}
-              </div>
-              <small className="facts song-columns">
-                <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
-                {/* LX-0344-03: an unknown key says so, rather than leaving a bare dash */}
-                <span>{song.camelot ?? (song.bpm !== null ? 'Key unknown' : 'No key yet')}</span>
-                <span>{clock(song.duration)}</span>
-                {on('lyrics.lookup') && song.lyric_status === 'synced' && <span>lyrics</span>}
-              </small>
-              <div className="song-readiness">
-                <Status kind={facts.kind}>{facts.words}</Status>
-                {facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}
-              </div>
-              <div className="song-actions">
-                {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => requestStart(song)}>Start a mix</Action>}
-                {facts.canAnalyse && (
-                  <Action disabled={line.includes(song.id)} working="Asking…" run={() => analyse(song)}>
-                    {song.readiness?.status === 'needs_attention' && !line.includes(song.id) ? 'Try analysing again' : analysingWords(line, song.id)}
-                    {status.eta?.line[song.id] !== undefined && `, ${etaWords(status.eta.line[song.id])}`}
-                  </Action>
-                )}
-                {((!facts.setAside && (on('library.priority') || on('library.never_play'))) || facts.canAdd) && (
-                  <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
-                    {facts.canAdd && <Action role="menuitem" disabled={already || searching} run={() => add(song)} title="Puts it at the end of the current mix. Nothing starts playing.">{already ? 'Already in current mix' : 'Add to current mix'}</Action>}
-                    {facts.canAdd && now.phase !== 'idle' && <Action role="menuitem" disabled={already || searching} run={() => add(song, now.position + 1)} title="Puts it straight after the song playing now. What's playing carries on.">Play next in current mix</Action>}
-                    {!facts.setAside && on('library.priority') && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
-                      {song.priority ? 'Priority: on' : 'Prioritize'}
-                    </Action>}
-                    {!facts.setAside && on('library.never_play') && <Action role="menuitemcheckbox" aria-checked={song.never} run={() => never(song)} title="Selecta won’t pick this when it builds a mix">
-                      {song.never ? 'Never: on' : 'Never play'}
-                    </Action>}
-                  </Menu>
-                )}
-              </div>
-            </li>
-          );
-        })}
+        {committedRows?.map((song) => (
+          <LibraryRow key={song.id} song={song} page={pageBySong.current.get(song.id) ?? 0} actions={rowActions}
+            selectable={batch && filter !== 'set_aside'} selected={selectedIdSet.has(song.id)}
+            selectionFull={selectedIdSet.size >= 200} searching={searching} failed={failed} building={building}
+            duplicate={duplicateIds.has(song.id)} sharedTitle={sharedTitles.has(song.title ?? 'Untitled')}
+            inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}
+            linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
+            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority')} neverFlag={on('library.never_play')} />
+        ))}
       </ul>
       {pageProblem && <p role="alert" className="warn">{pageProblem}</p>}
       {next && <Action className="library-more" disabled={searching} working="Loading…" run={more}>{pageProblem ? 'Retry showing more songs' : 'Show more songs'}</Action>}

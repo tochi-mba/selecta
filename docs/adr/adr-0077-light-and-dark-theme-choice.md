@@ -1,7 +1,7 @@
 # ADR-0077: Choosing light or dark
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 3 of 6 tasks implemented with automated evidence on 2026-11-11; 1 need a person; 2 still open
+- **Implementation status:** In progress: 5 of 6 tasks implemented with automated evidence on 2026-11-11; 1 need a person; 0 still open
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 2 - Foundations

@@ -5,6 +5,7 @@ import { analysisWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Status as StatusMark } from '../ui/controls';
 import { words } from '../copy';
+import { ScanReveals } from './ScanReveals';
 
 /** Getting from nothing to a first mix takes three steps. Which one you're on comes from what the
  * server says is true, so it can't claim more than has happened. */
@@ -76,6 +77,7 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
         {ready} of {counts.music} songs have the vocal or instrumental cues needed for mixes. Audio analysis is complete for {counts.analysed};
         {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'}
       </p>
+      <ScanReveals ready={ready} lyrics={counts.lyrics} />
       {reading && <p role="status"><StatusMark kind="working">Still reading your folder{scan.folder ? `: ${scan.folder}` : ''}</StatusMark></p>}
       {scan.status === 'failed' && <p className="warn" role="alert">{scan.error ?? 'Reading that folder didn’t finish.'} What was already found is kept.</p>}
       {scan.status === 'cancelled' && <p role="status" className="hint">Reading that folder was stopped. What was already found is kept, and you can read it again from Sources.</p>}

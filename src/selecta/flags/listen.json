@@ -52,6 +52,11 @@
       "surfaces": ["listen"],
       "words": ["Why this transition?"]
     },
+    "listen.first_handoff": {
+      "label": "First hand-off note",
+      "about": "Once the first finished transition has really been heard, a small note names the two songs it joined. It can be dismissed and never comes back.",
+      "surfaces": ["listen"]
+    },
     "listen.media_keys": {
       "label": "Media keys",
       "about": "The computer's media keys and lock screen control playback."

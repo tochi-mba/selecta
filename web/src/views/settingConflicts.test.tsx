@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SetPlayer } from '../player';
 import { fakeBackend, Reply, status } from '../test/backend';
+import { MixSetup } from './MixSetup';
 import { Workshop } from './Workshop';
 
 /* Selecta 2.0 T0096 (ADR-0028): a storage limit changed in another window is shown, not overwritten. */
@@ -46,5 +47,24 @@ describe('T0096 setting conflicts', () => {
     expect(await screen.findByText(/changed somewhere else to 8\.0 GB/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('slider')).toHaveValue('8'));
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
+  });
+});
+
+describe('T0096 steering conflicts', () => {
+  it('an energy arc save says which arc it replaces, and a newer one from elsewhere is adopted', async () => {
+    const newer = [90, 80, 70, 60, 50];
+    const calls = fakeBackend({
+      'POST /steer': () => new Reply(409, { detail: 'That setting was changed somewhere else, so it wasn’t changed here. It now shows the newer choice.', code: 'setting_changed' }),
+      'GET /status': status({ steering: { ...status().steering, energy_arc: newer } }),
+    });
+    render(<MixSetup status={status()} mix={[]} refreshStatus={() => {}} notify={() => {}} onClose={() => {}} />);
+    const start = screen.getByRole('spinbutton', { name: 'Energy arc start numeric value' }) as HTMLInputElement;
+    fireEvent.change(start, { target: { value: '10' } });
+    await waitFor(() => expect(calls.some((call) => call.path === '/steer')).toBe(true));
+    const sent = calls.find((call) => call.path === '/steer')!.body as { action: string; expected: unknown };
+    expect(sent.action).toBe('energy_arc');
+    expect(sent).toHaveProperty('expected', null);
+    expect(await screen.findByText(/changed somewhere else/)).toBeInTheDocument();
+    await waitFor(() => expect(start.valueAsNumber).toBe(90));
   });
 });

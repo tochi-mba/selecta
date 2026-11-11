@@ -1,13 +1,36 @@
 import { useEffect, useState } from 'react';
-import { DraftList, get, MixData } from '../api';
+import { DraftList, get, MixData, MixItem } from '../api';
 import { useFlags } from '../flags';
-import { orderOf } from '../state/readiness';
+import { occurrenceKeys, orderOf } from '../state/readiness';
 import { CurrentMix, NoCurrentMix } from './CurrentMix';
 import { Drafts } from './Drafts';
+import { selectInEditor } from './Mix';
 import { ViewProps } from './shared';
 
 const RECENT_DRAFT_KEY = 'selecta.recentDraft';
-type RecentDraft = { id: number; name: string; order: string };
+/** GP-0255-01: what can be returned to, and where its authority lives. The draft is known by its ID and
+ * exact song order, the only things this browser keeps. Each song by its occurrence in that order, and
+ * each transition by the two occurrences it joins, are worked out fresh from the server's copy, never
+ * stored, so a return can't reach a song or transition that has since moved or gone. */
+type WaitingTransition = { a: string; b: string; from: string; into: string; why: string };
+type RecentDraft = { id: number; name: string; order: string; waiting: WaitingTransition[] };
+
+/** The transitions in a draft that still need someone, from the server's own state. */
+export function transitionsWaiting(mix: MixItem[]): WaitingTransition[] {
+  const keys = occurrenceKeys(mix);
+  return mix.flatMap((item, index) => {
+    if (index === 0) return [];
+    const state = item.seam?.state;
+    const why = item.seam?.too_soon
+      ? 'its timing needs fixing'
+      : state?.status === 'failed'
+        ? 'it couldn’t be made'
+        : !state || state.status === 'none'
+          ? 'it hasn’t been rendered yet'
+          : null;
+    return why ? [{ a: keys[index - 1], b: keys[index], from: mix[index - 1].title, into: item.title, why }] : [];
+  });
+}
 
 /** An optional return shortcut. Trust the server's exact order, never a stored title,
  * selected transition, or optimistic snapshot from a previous browser session. */
@@ -35,7 +58,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
         if (!active) return;
         const draft = list.drafts.find((item) => item.id === target.id);
         if (draft && orderOf(detail.mix) === target.order) {
-          setRecent({ id: draft.id, name: draft.name, order: target.order });
+          setRecent({ id: draft.id, name: draft.name, order: target.order, waiting: transitionsWaiting(detail.mix) });
         } else {
           window.localStorage.removeItem(RECENT_DRAFT_KEY);
         }
@@ -43,7 +66,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
     return () => { active = false; };
   }, []);
 
-  const continueEditing = async () => {
+  const continueEditing = async (transition?: WaitingTransition) => {
     if (!recent || checking) return;
     setChecking(true);
     setProblem('');
@@ -54,6 +77,9 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
         try { window.localStorage.removeItem(RECENT_DRAFT_KEY); } catch { /* storage disabled */ }
         setProblem('This draft changed since your last visit. Open it from the draft list to review the latest version.');
         return;
+      }
+      if (transition) {
+        selectInEditor(player, `draft:${recent.id}`, { kind: 'seam', a: transition.a, b: transition.b, from: transition.from, into: transition.into });
       }
       openDraft?.(recent.id);
     } catch {
@@ -80,6 +106,23 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
           </button>
           <button onClick={forget}>Forget shortcut</button>
         </div>
+        {!!recent.waiting.length && (
+          <div className="stack">
+            <h3>Transitions waiting on you</h3>
+            <ul className="continue-transitions">
+              {recent.waiting.slice(0, 3).map((transition) => (
+                <li key={`${transition.a}>${transition.b}`}>
+                  <span>{transition.from} into {transition.into}: {transition.why}.</span>{' '}
+                  <button disabled={checking} onClick={() => void continueEditing(transition)}
+                    aria-label={`Open the transition from ${transition.from} into ${transition.into}`}>
+                    Open this transition
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {recent.waiting.length > 3 && <p className="hint">and {recent.waiting.length - 3} more in the draft.</p>}
+          </div>
+        )}
       </section>}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {mix.length > 0

@@ -1,7 +1,7 @@
 # ADR-0073: Rendering performance, 20k-track scale, 100-song edits and animation budgets
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 0 of 8 tasks implemented with automated evidence on 2026-11-11; 0 need a person; 8 still open
+- **Implementation status:** In progress: 0 of 8 tasks implemented with automated evidence on 2026-11-11; 0 need a person; 8 still open (7 built with a browser check pending)
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul

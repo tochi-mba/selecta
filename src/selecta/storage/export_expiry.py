@@ -108,7 +108,7 @@ def expire_workspace(
                 size=int(row.size_bytes or 0),
                 quota=_QuotaRelease(),
             )
-            expired.append(Expired(workspace_id, row.id, plan_id, days, made.bytes_released))
+            expired.append(Expired(workspace_id, row.id, plan_id, days, made.bytes_to_release))
             stored = row._mapping["keys"]
             keys += stored if isinstance(stored, list) else [stored]
         if rows:

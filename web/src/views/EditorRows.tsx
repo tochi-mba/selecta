@@ -343,6 +343,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
   && before.playing === after.playing
   && before.selected === after.selected
   && before.over === after.over
+  && before.moving === after.moving
   && before.item.position === after.item.position
   && before.item.song_id === after.item.song_id
   && before.item.title === after.item.title

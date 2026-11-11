@@ -38,11 +38,11 @@ The first 30 rows retain their *original proposal* states and have not been reco
 | [ADR-0070 - System vocabulary, understandable explanations and restrained motion](adr-0070-content-explanations-feedback-and-motion.md) | Accepted | In progress | 6/8 | Task evidence on each checklist item (2026-11-11); 1 need a person, 1 open |
 | [ADR-0071 - Frontend domain boundaries, additive APIs and route compatibility](adr-0071-api-route-schema-compatibility.md) | Accepted | In progress | 7/8 | Task evidence on each checklist item (2026-11-11); 1 need a person, 0 open |
 | [ADR-0072 - Local-first privacy, file access, installed PWA and theme integration](adr-0072-local-privacy-pwa-security.md) | Accepted | In progress | 6/8 | Task evidence on each checklist item (2026-11-11); 1 need a person, 1 open |
-| [ADR-0073 - Rendering performance, 20k-track scale, 100-song edits and animation budgets](adr-0073-performance-profiling-and-visual-budget.md) | Accepted | In progress | 0/8 | Task evidence on each checklist item (2026-11-11); 0 need a person, 8 open |
-| [ADR-0074 - Full test architecture, invariants and concurrent edge-case matrix](adr-0074-testing-matrix-contract-and-races.md) | Accepted | In progress | 4/10 | Task evidence on each checklist item (2026-11-11); 2 need a person, 4 open |
-| [ADR-0075 - Visual regression, usability research and observable release acceptance](adr-0075-visual-research-evidence-and-release-gates.md) | Accepted | In progress | 2/9 | Task evidence on each checklist item (2026-11-11); 5 need a person, 2 open |
+| [ADR-0073 - Rendering performance, 20k-track scale, 100-song edits and animation budgets](adr-0073-performance-profiling-and-visual-budget.md) | Accepted | In progress | 0/8 | Task evidence on each checklist item (2026-11-11); 0 need a person, 8 open (7 with a browser check pending) |
+| [ADR-0074 - Full test architecture, invariants and concurrent edge-case matrix](adr-0074-testing-matrix-contract-and-races.md) | Accepted | In progress | 6/10 | Task evidence on each checklist item (2026-11-11); 3 need a person, 1 open (1 with a browser check pending) |
+| [ADR-0075 - Visual regression, usability research and observable release acceptance](adr-0075-visual-research-evidence-and-release-gates.md) | Accepted | In progress | 2/9 | Task evidence on each checklist item (2026-11-11); 5 need a person, 2 open (1 with a browser check pending) |
 | [ADR-0076 - Incremental migration, rollout controls, rollback and delivery order](adr-0076-incremental-migration-rollback-and-go-no-go.md) | Accepted | In progress | 7/9 | Task evidence on each checklist item (2026-11-11); 2 need a person, 0 open |
-| [ADR-0077 - Choosing light or dark](adr-0077-light-and-dark-theme-choice.md) | Accepted | In progress | 3/6 | Task evidence on each checklist item (2026-11-11); 1 need a person, 2 open |
+| [ADR-0077 - Choosing light or dark](adr-0077-light-and-dark-theme-choice.md) | Accepted | In progress | 5/6 | Task evidence on each checklist item (2026-11-11); 1 need a person, 0 open |
 
 ## Required future item record
 

@@ -66,11 +66,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(0);
   skeletonMounts = 0;
-  const observer = new MutationObserver((records) => {
-    for (const record of records) {
-      for (const added of record.addedNodes) {
-        if (added instanceof HTMLElement && (added.matches('.skeleton') || added.querySelector('.skeleton'))) skeletonMounts += 1;
-      }
+  // each distinct placeholder element counts once, however React inserted it
+  const seen = new WeakSet<Element>();
+  const observer = new MutationObserver(() => {
+    for (const skeleton of document.querySelectorAll('.skeleton')) {
+      if (!seen.has(skeleton)) { seen.add(skeleton); skeletonMounts += 1; }
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
@@ -193,7 +193,8 @@ describe('P0042 response timing without flashes or repeated words', () => {
     expect(screen.getByText(/May be out of date/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     await act(async () => { answers[2].resolve(['One', 'Two']); });
-    expect(shown(frames)).toEqual(['placeholder', 'content:One', 'stale content:One', 'content:One,Two']);
+    // while the retry runs the answer is shown as refreshing (unmarked), never as a placeholder
+    expect(shown(frames)).toEqual(['placeholder', 'content:One', 'stale content:One', 'content:One', 'content:One,Two']);
     expect(flashes(frames)).toBe(0);
   });
 

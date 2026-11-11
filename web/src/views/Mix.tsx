@@ -32,6 +32,21 @@ type Selection =
 // transition across browser reloads or sharing it between app instances.
 const selectionByPlayer = new WeakMap<ViewProps['player'], Map<string, Selection | null>>();
 
+/** GP-0255-01: open the editor on an exact object, in this session only. My Mixes uses it to return to a
+ * transition it has just checked against the server; nothing about it is stored in the browser. */
+export function selectInEditor(player: ViewProps['player'], scope: string, selection: Selection) {
+  let byScope = selectionByPlayer.get(player);
+  if (!byScope) {
+    byScope = new Map();
+    selectionByPlayer.set(player, byScope);
+  }
+  byScope.set(scope, selection);
+}
+
+export function selectedInEditor(player: ViewProps['player'], scope: string): Selection | null {
+  return selectionByPlayer.get(player)?.get(scope) ?? null;
+}
+
 /** Above this, rows skip being drawn until they're scrolled near. Everything stays in the page, so
  * focus, find-in-page and screen readers all carry on working, which virtualizing the list would break. */
 const LONG_MIX = 40;
