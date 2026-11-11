@@ -56,7 +56,10 @@ describe('UF-0381-05 timing edits are guarded and say they re-render', () => {
     const calls = fakeBackend({ 'GET /mix/2/options': options, 'POST /mix/2/seam': {}, 'POST /mix/2/render': {} });
     const headers: string[] = [];
     const fetch = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
-    const original = fetch.getMockImplementation()!;
+    const original = fetch.getMockImplementation() as (
+      url: string,
+      init?: RequestInit,
+    ) => Promise<Response>;
     fetch.mockImplementation(async (url: string, init?: RequestInit) => {
       if (init?.method === 'POST') headers.push(new Headers(init.headers).get('x-mix-order') ?? '');
       return original(url, init);

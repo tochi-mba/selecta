@@ -10,7 +10,9 @@ import { buildCommands, type CommandContext } from './commands';
 const HANDLERS = ['togglePause', 'next', 'jump', 'toggleStage', 'openRequests', 'openActivity', 'openHelp', 'undo', 'startAnalysis'] as const;
 
 function context(change: Partial<CommandContext> = {}) {
-  const spies = Object.fromEntries(HANDLERS.map((name) => [name, vi.fn()])) as Record<(typeof HANDLERS)[number], ReturnType<typeof vi.fn>>;
+  const spies = Object.fromEntries(
+    HANDLERS.map((name) => [name, vi.fn<() => void>()]),
+  ) as Record<(typeof HANDLERS)[number], ReturnType<typeof vi.fn<() => void>>>;
   const value: CommandContext = {
     hasMix: true, playing: true, active: true, hasNext: true, canUndo: true,
     undoScope: 'Current mix: Evening', readySongs: 8, songsLeftToAnalyse: 3, analysing: false,
