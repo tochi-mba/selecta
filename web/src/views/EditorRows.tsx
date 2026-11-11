@@ -145,6 +145,16 @@ const SONG_DRAG_TYPE = 'application/x-selecta-song-position';
 export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, actions }: SongRowProps) {
   const holding = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
   const [grabbed, setGrabbed] = useState(false);
+  // MI-0138-08: a removal is marked on its row at once, and the row only goes when the server has removed it
+  const [removing, setRemoving] = useState(false);
+  const removeSong = async () => {
+    setRemoving(true);
+    try {
+      await actions.current.remove(item, rowKey);
+    } finally {
+      setRemoving(false);
+    }
+  };
   const rowUnder = (event: PointerEvent<HTMLElement>) => document.elementFromPoint?.(event.clientX, event.clientY)?.closest<HTMLElement>('[data-song-key]') ?? null;
   const pressHandle = (event: PointerEvent<HTMLElement>) => {
     if (event.pointerType === 'mouse' || !event.isPrimary) return;
@@ -201,7 +211,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
   };
   return (
     <li
-      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''}`}
+      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''} ${removing ? 'pending' : ''}`}
+      aria-busy={removing || undefined}
       data-song-key={rowKey}
       data-position={item.position}
       onClick={(event) => { if (pickedTheRow(event)) actions.current.selectSong(rowKey); }}
@@ -265,6 +276,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         <RequestTag item={item} />
         {playing && <span className="story-tag playing"><Icon name="play" size="compact" /> Playing now</span>}
         {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" size="compact" /> Locked</span>}
+        {removing && <span className="status status-working" role="status">Removing…</span>}
       </div>
       <small className="facts">
         {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
@@ -295,7 +307,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
               <Icon name="lock" /> {item.locked ? 'Unlock' : 'Lock'}
             </Action>
           )}
-          <Action role="menuitem" className="destructive" aria-label={`Remove ${item.title}`} run={() => actions.current.remove(item, rowKey)}>
+          <Action role="menuitem" className="destructive" aria-label={`Remove ${item.title}`} run={removeSong}>
             <Icon name="trash" /> Remove
           </Action>
         </Menu>

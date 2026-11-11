@@ -9,7 +9,7 @@ import { useMixPath } from './mixScope';
  * song that can't go in yet says why, and how to get it ready. */
 export function Adder(props: {
   position: number;
-  onAdd: (song: Suggestion) => void;
+  onAdd: (song: Suggestion) => unknown;
   onClose: () => void;
   notify: (message: string) => void;
   line: number[];
@@ -21,6 +21,20 @@ export function Adder(props: {
   const at = useMixPath();
   const [failed, setFailed] = useState(false);
   const asked = useRef(0);
+  // MI-0138-08: the chosen song is marked at once, and only goes in when the server has added it
+  const [adding, setAdding] = useState<Suggestion | null>(null);
+  const addingNow = useRef(false);
+  const add = async (song: Suggestion) => {
+    if (addingNow.current) return;
+    addingNow.current = true;
+    setAdding(song);
+    try {
+      await onAdd(song);
+    } finally {
+      addingNow.current = false;
+      setAdding(null);
+    }
+  };
 
   const load = useCallback(() => {
     const mine = ++asked.current;
@@ -51,7 +65,7 @@ export function Adder(props: {
       onClose();
     }
     const first = songs?.find((song) => song.analysed);
-    if (event.key === 'Enter' && first) { event.preventDefault(); onAdd(first); }
+    if (event.key === 'Enter' && first) { event.preventDefault(); void add(first); }
   };
 
   return (
@@ -69,13 +83,14 @@ export function Adder(props: {
       </div>
       <p className="hint">{query ? 'Best fit first' : 'These would fit best here'}</p>
       {position >= 0 && <p className="hint adder-where">It goes in as number {position + 1}.</p>}
+      {adding && <p className="hint" role="status">Adding {adding.title}…</p>}
       {failed && <Problem retry={load}>Couldn’t find songs for this position. Try again.</Problem>}
       {songs === null && !failed && <Skeleton variant="library" lines={2} label="Finding what fits" />}
       {songs?.length === 0 && <p className="hint">Nothing matches that.</p>}
       <ul className="suggestions">
         {songs?.map((song) => (
           <li key={song.song_id}>
-            <button className="suggestion" disabled={!song.analysed} onClick={() => onAdd(song)}>
+            <button className="suggestion" disabled={!song.analysed} aria-busy={adding?.song_id === song.song_id || undefined} onClick={() => void add(song)}>
               <b>{song.title}</b>
               <span>{song.artist}</span>
               <small>{song.reason}</small>
