@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { audioClock, resetMix, spyOnAudio, rewriteJson } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio, rewriteJson } from './helpers';
 import { browserLine, installProbe, interactionsSince, mark } from './perf-probe';
 
 /**
@@ -10,22 +10,16 @@ import { browserLine, installProbe, interactionsSince, mark } from './perf-probe
  */
 const BUDGET = { interactionMs: 200, longTaskMs: 200 };
 
-/** Counts nodes matching `selector` that React takes out of the page, i.e. remounts. */
+/** Counts nodes matching `selector` that React takes out of the page, i.e. remounts. The nodes present
+ * now are remembered and any that later leave the document count. A keyed reorder moves a row with
+ * insertBefore, which a MutationObserver also reports as a removal, so removal records alone would count
+ * every move; a moved node is still connected, a remounted one is not. */
 async function countRemovals(page: Page, selector: string) {
   await page.evaluate((selector) => {
-    const state = window as unknown as { removed: number };
-    state.removed = 0;
-    new MutationObserver((records) => {
-      for (const record of records) {
-        for (const node of record.removedNodes) {
-          if (!(node instanceof Element)) continue;
-          state.removed += (node.matches(selector) ? 1 : 0) + node.querySelectorAll(selector).length;
-        }
-      }
-    }).observe(document.body, { childList: true, subtree: true });
+    (window as unknown as { tracked: Element[] }).tracked = [...document.querySelectorAll(selector)];
   }, selector);
 }
-const removed = (page: Page) => page.evaluate(() => (window as unknown as { removed: number }).removed);
+const removed = (page: Page) => page.evaluate(() => (window as unknown as { tracked: Element[] }).tracked.filter((node) => !node.isConnected).length);
 
 test('S3-0057-08 a 100-song timeline keeps audio, focus and scroll through moves, inside the interaction budget', async ({ page, request }) => {
   test.setTimeout(300_000);
@@ -37,7 +31,7 @@ test('S3-0057-08 a 100-song timeline keeps audio, focus and scroll through moves
   await page.goto('/listen');
   await page.getByRole('button', { name: 'Play', exact: true }).first().click();
   await expect.poll(async () => (await audioClock(page))[0] ?? 0).toBeGreaterThan(0.2);
-  const started = await page.evaluate(() => window.audioSpy.started.length);
+  const started = await soundsRestarted(page);
   const elements = await page.evaluate(() => document.querySelectorAll('audio').length);
 
   const began = Date.now();
@@ -78,7 +72,7 @@ test('S3-0057-08 a 100-song timeline keeps audio, focus and scroll through moves
     long_tasks_ms: moves.longTasks,
     rows_remounted: await removed(page),
     scroll_drift_px: Math.round(Math.abs(scrollAfter - scrollBefore)),
-    sounds_restarted: (await page.evaluate(() => window.audioSpy.started.length)) - started,
+    sounds_restarted: (await soundsRestarted(page)) - started,
     audio_elements_before: elements,
     audio_elements_after: await page.evaluate(() => document.querySelectorAll('audio').length),
   };
