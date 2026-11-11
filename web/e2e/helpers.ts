@@ -126,6 +126,6 @@ export async function rewriteJson(route: Route, edit: (body: any) => unknown) {
     const { 'content-length': _length, ...headers } = answer.headers();
     await route.fulfill({ status: answer.status(), headers, json: edit(body) });
   } catch (error) {
-    if (!/disposed|closed|already handled|Target page, context or browser/i.test(String(error))) throw error;
+    if (!/disposed|closed|Test ended|Test timeout|already handled|Target page, context or browser/i.test(String(error))) throw error;
   }
 }
