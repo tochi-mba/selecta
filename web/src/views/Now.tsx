@@ -394,7 +394,8 @@ function TransitionCountdown({
   );
 }
 
-function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape'] }) {
+/** Exported only so its frame use can be measured (GP-0257-05). */
+export function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape'] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
   // Its colours come from the page; theme and forced-colour changes repaint real analyser data.

@@ -16,15 +16,22 @@ async function withStudio(page: Page) {
   const lanes: Lanes = { vocals: row, drums: row, bass: row, other: row };
   const shape = { a: lanes, b: lanes };
   const stem = await (await page.request.get('/api/songs/1/audio')).body();
-  // whichever transition the first Change button opens: the session, not the position, is what's served
-  await page.route(/\/api\/mix\/\d+\/studio(\?|$)/, (route) =>
-    route.fulfill({ json: { status: 'ready', key: 'sf0246-8', cells: 8, seconds: 8, bars: 16, start_shape: shape, shape } }));
+  // one session per transition, so recovering the wrong transition's work would show
+  await page.route(/\/api\/mix\/\d+\/studio(\?|$)/, (route) => {
+    const position = /\/mix\/(\d+)\/studio/.exec(route.request().url())![1];
+    return route.fulfill({ json: { status: 'ready', key: `sf0246-${position}`, cells: 8, seconds: 8, bars: 16, start_shape: shape, shape } });
+  });
   await page.route(/\/api\/mix\/\d+\/options/, (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
   await page.route('**/api/studio/**', (route) => route.fulfill({ body: stem, contentType: 'audio/flac' }));
 }
 
+/** Opens the Studio for the first transition (Morning Light into Slow Tide). The editor remembers
+ * which transition was open, so the row is found by its songs and opened only if it isn't already. */
 async function openStudioHere(page: Page) {
-  await page.getByRole('button', { name: 'Change', exact: true }).first().click();
+  const row = page.locator('li.seam').filter({ has: page.getByRole('img', { name: /from Morning Light into Slow Tide/ }) });
+  if (!(await row.evaluate((node) => node.classList.contains('open')))) {
+    await row.getByRole('button', { name: 'Change', exact: true }).click();
+  }
   await page.getByRole('tab', { name: 'Studio' }).click();
   await page.getByRole('button', { name: 'Open the Studio' }).click();
   await expect(page.locator('.studio-cell').first()).toBeVisible({ timeout: 60_000 });

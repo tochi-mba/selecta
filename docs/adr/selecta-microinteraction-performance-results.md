@@ -23,7 +23,7 @@ Recorded with the fields of the reference hardware matrix in
 | Display / scale | headless viewport, device scale 1: 1440 x 900 (e2e spec), 1366 x 768 (bench) |
 | Power mode | plugged in (AC), Windows "Balanced" plan |
 | Audio device / buffer | nothing audible: headless Edge with `--mute-audio`; AudioContext facts are in the MI-0162-03 row |
-| Load from others | heavy and uncontrolled: about 25 other agents ran builds, pytest and Playwright on the same 4 cores at the same time; a browser test slot took 17 to 83 minutes to come free |
+| Load from others | heavy and uncontrolled: about 25 other agents ran builds, pytest and Playwright on the same 4 cores at the same time; waiting for one of the two shared browser-test slots took from under 2 minutes to over 2.5 hours |
 | Cache | every run starts a fresh server, database and browser profile (cold browser cache, warm OS file cache) |
 | Recording overhead | no DevTools trace; PerformanceObserver (longtask, long-animation-frame, event, resource) and requestAnimationFrame inside the page |
 | Theme / motion | system theme (light in headless); motion as stated per row |
@@ -123,7 +123,53 @@ interaction was 72 ms Event Timing or less (Editor Change 72, Make a Mix 48, Stu
 Lucy 40). Still pass: slowest Event Timing 200 ms (the Editor Change click, again with a 38.8 ms next paint
 and no long task), so animation was again not slower than still.
 
-RESULTS-03-PENDING
+## MI-0162-03: audio scheduling under load (automatable part)
+
+Command (from `web/`, inside the slot lock):
+
+```
+SELECTA_PYTHON=<repo>\.venv\Scripts\python.exe SELECTA_E2E_DIST=dist-ci-mi-b SELECTA_E2E_PORT=9135 \
+  pnpm exec playwright test e2e/mi-0162-performance.e2e.ts -g MI-0162-03 --output test-results-ci-mi-b
+```
+
+Test `MI-0162-03 a seam stays contiguous on the audio clock with a busy main thread, page changes and a
+render going`. The page's `AudioBufferSourceNode.start` and `stop` are wrapped (without changing them) to
+record, for every sound the player hands the Web Audio clock, when it was asked for, when it starts, where
+in its buffer, its length and every stop time. Mix: Morning Light then Slow Tide, with their transition
+rendered for real first. Then, all at once: Slow Tide's successor (Paper Moon) is added, which starts a
+real background render on the server; the page's main thread is kept busy (a 70 ms busy loop every 100 ms
+and a 250 ms task every second); "Jump to the transition" is pressed; and the listener goes to Library and
+types "paper", opens a Make a Mix card, opens the Editor, and returns to Listen. The load stays on until
+Slow Tide has played alone for 2 s past the crossfade.
+
+Run, 2026-11-11: **1 passed** (7.7 minutes, most of it the first render).
+
+| Reading | Value | Tolerance | Result |
+|---|---|---|---|
+| Clip start against Morning Light's planned cue (50.5 s into it) | 0 ms off | ≤ 1 ms | Pass |
+| Morning Light stops after the clip starts (30 ms fade, then 20 ms at zero gain) | 50.0 ms | 50 ± 1 ms | Pass: no gap, no extra overlap |
+| Slow Tide starts before the clip ends (the crossfade) | 30.0 ms | 30 ± 1 ms | Pass: no gap, no extra overlap |
+| Slow Tide's start offset against the plan (52.07 s minus the 30 ms fade) | 0 ms off | ≤ 1 ms | Pass |
+| Clip handed to the audio clock ahead of its start | 8,041 ms | > 0 | Pass |
+| Slow Tide handed to the audio clock ahead of its start | 49,978 ms | > 0 | Pass |
+| Audio clock seconds per wall-clock second over the whole window | 0.9992 | > 0.9 | Pass |
+| Fallback fade notice ("That seam wasn't ready in time") | absent | absent | Pass |
+| Main-thread load during the window: long tasks, total | 475 tasks, 42,760 ms | ≥ 10 tasks | load was real |
+| Slowest interaction during the load (Event Timing or next paint) | 344.6 ms | not budgeted | expected under a deliberately busy thread |
+| Background render of the next transition | queued at the jump, ready by the end | running during the window | yes |
+| Sounds started after the jump | 5 (song, clip, next song, then the next transition once it rendered) | - | recorded |
+| AudioContext | 44,100 Hz, base latency 10 ms, output latency 48 ms (headless, muted) | - | recorded |
+
+What this shows: the player schedules each seam on the audio clock ahead of time, so a main thread busy
+most of the time, page changes and a render on the server did not move the cue, open a gap or add
+overlap beyond the designed 30 ms crossfade. What it does not show: what a sound card actually played.
+`--mute-audio` headless Edge has no audible output, so a dropout in the audio thread itself under CPU
+load, or a device-level glitch, cannot be seen here.
+
+Earlier attempts on the same day timed out before measuring anything: waiting for four, then one,
+transition render(s) with the shared 280 s helper. One render took about 4.5 minutes on the loaded laptop
+(measured by hand against a fresh server), so the test now renders one transition and waits up to 9
+minutes for it. The budgets did not change.
 
 ## MI-0162-04: a 20,000-song Library
 
