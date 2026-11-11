@@ -9,6 +9,7 @@ import { Tabs } from '../ui/primitives';
 import { seamFacts, seamLayers } from '../ui/seam';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { MixScope, useMixPath } from './mixScope';
+import { useStickyClearance } from '../ui/useStickyClearance';
 import { Undo } from './shared';
 import { pairKey, rememberRender, SeamCompare } from './SeamCompare';
 import { Studio } from './Studio';
@@ -316,6 +317,8 @@ export function SeamInspector(props: {
   const scope = useContext(MixScope);
   const at = useMixPath();
   const [studio, setStudio] = useState(false);
+  const identity = useRef<HTMLDivElement>(null);
+  useStickyClearance(identity);
   const [canStudio, setCanStudio] = useState<SeamOptions['studio'] | null>(null);
   const position = item.position;
   const [capabilityError, setCapabilityError] = useState(false);
@@ -344,7 +347,7 @@ export function SeamInspector(props: {
   const shownTab = tabs.some((item) => item.id === tab) ? tab : 'listen';
   return (
     <div className="inspector">
-      <div className="inspector-identity">
+      <div className="inspector-identity" ref={identity}>
         <p className="inspector-pair"><SongMotif songId={previous.song_id} /><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <SongMotif songId={item.song_id} /><b>{item.title}</b></p>
         <p className="inspector-scope">
           <span className="inspector-number">Transition {position}</span>

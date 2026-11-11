@@ -154,6 +154,13 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
   }
 }
 
+/** GP-0262-07: how many requests are waiting, counted the same way by the Requests panel, Listen and
+ * the navigation. A pick counts from the moment it is pressed (every press shows straight away), and
+ * one whose save fails leaves every count together. */
+export function waitingRequestCount(rows: RequestRow[] | null | undefined): number {
+  return rows?.length ?? 0;
+}
+
 export type RequestsState = {
   requests: RequestRow[] | null;
   error: string;
@@ -800,7 +807,7 @@ export function RequestsPanel() {
     <section className="requests" aria-label="Song requests">
       <div className="requests-head">
         <h2>Requests</h2>
-        {!!requests?.length && <span className="hint">{requests.length} waiting</span>}
+        {waitingRequestCount(requests) > 0 && <span className="hint">{waitingRequestCount(requests)} waiting</span>}
       </div>
       <label htmlFor="request-song-search">Request a song</label>
       <div className="request-search">

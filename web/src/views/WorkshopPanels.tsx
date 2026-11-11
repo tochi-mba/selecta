@@ -1,6 +1,6 @@
 import { flagOn } from '../flags';
 import { LinkIfThere } from '../shell/PageLink';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { ApiError, FolderCheck, Folders, get, Jobs, post, Storage } from '../api';
 import { gb, storageWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -10,6 +10,7 @@ import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ViewProps } from './shared';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
 import { words } from '../copy';
+import { WhatWentWrong } from './WhatWentWrong';
 
 const GB = 1024 ** 3;
 
@@ -53,6 +54,7 @@ export function StoragePanel() {
   const confirmed = useRef<number | null>(null);
   const [saved, setSaved] = useState(true);
   const [problem, setProblem] = useState('');
+  const problemId = useId();
   const [wanted, setWanted] = useState<number | null>(null);
   // SF-0230-05: a limit below what's already kept removes files, so it waits for a yes
   const [pending, setPending] = useState<number | null>(null);
@@ -102,7 +104,12 @@ export function StoragePanel() {
     setSaved(false);
     const before = storage.cache_bytes;
     wait.current = window.setTimeout(() => {
-      const work = writeQueue.current.then(() => post<Storage>('/storage', { budget_gb: value }))
+      // T0096: say which limit this page last saw, so a newer one set in another window is
+      // reported instead of being silently replaced. Read at send time, after earlier writes.
+      const work = writeQueue.current.then(() => post<Storage>('/storage', {
+        budget_gb: value,
+        ...(confirmed.current !== null ? { expected_budget_bytes: Math.round(confirmed.current * GB) } : {}),
+      }))
         .then((answer) => {
           if (confirmedRemoval) {
             const gone = Math.max(before - answer.cache_bytes, 0);
@@ -126,6 +133,15 @@ export function StoragePanel() {
           budgetEditing.current = false;
           setSaved(true);
           if (confirmed.current !== null) setLimit(confirmed.current);
+          // changed in another window: show that newer limit rather than the stale one
+          if (error instanceof ApiError && error.code === 'setting_changed') {
+            void get<Storage>('/storage').then((data) => {
+              if (mine !== saves.current) return;
+              setStorage(data);
+              confirmed.current = data.budget_bytes / GB;
+              setLimit(confirmed.current);
+            }).catch(() => {});
+          }
         });
       writeQueue.current = work;
     }, confirmedRemoval ? 0 : 400);
@@ -165,6 +181,8 @@ export function StoragePanel() {
           step={0.1}
           value={Math.min(limit, largest)}
           onChange={(event) => move(Number(event.target.value))}
+          aria-invalid={problem ? true : undefined}
+          aria-describedby={problem ? problemId : undefined}
         />
       </label>
       {pending !== null && (
@@ -181,7 +199,7 @@ export function StoragePanel() {
       )}
       {!saved && !problem && <p className="hint" role="status">Saving…</p>}
       {saved && !problem && pending === null && <p className="hint" role="status">{reclaimed || `Saved: ${limit.toFixed(1)} GB.`}</p>}
-      {problem && <p className="warn" role="alert">{problem} The limit is still {limit.toFixed(1)} GB.</p>}
+      {problem && <p className="warn" role="alert" id={problemId}>{problem} The limit is still {limit.toFixed(1)} GB.</p>}
       {wanted !== null && <Action run={() => move(wanted)}>Retry saving budget</Action>}
       <p className="hint">
         {overBudget
@@ -323,8 +341,27 @@ type RelinkPreview = {
   verified: number;
   blocked: number;
   token: string | null;
-  candidates: { id: number; title: string | null; artist: string | null; status: string }[];
+  confirmed?: number;
+  needs_confirmation?: number;
+  references?: { current_mix: number; drafts: number; ratings: number; corrections: number; discoveries: number };
+  candidates: { id: number; title: string | null; artist: string | null; status: string; why?: string; can_confirm?: boolean }[];
 };
+
+/** GP-0252-03: what refers to the songs a relink moves, in words. Their IDs don't change, so it all stays. */
+export function relinkReferenceWords(references: NonNullable<RelinkPreview['references']>): string {
+  const parts = [
+    [references.current_mix, 'in your current mix', 'in your current mix'],
+    [references.drafts, 'draft uses them', 'drafts use them'],
+    [references.ratings, 'rating', 'ratings'],
+    [references.corrections, 'correction', 'corrections'],
+    [references.discoveries, 'discovery', 'discoveries'],
+  ] as const;
+  const said = parts
+    .filter(([count]) => count > 0)
+    .map(([count, one, many], index) => (index === 0 && one.startsWith('in ') ? `${count} ${count === 1 ? 'song' : 'songs'} ${one}` : `${count} ${count === 1 ? one : many}`));
+  if (!said.length) return 'Nothing else refers to these songs yet.';
+  return `Kept as they are: ${said.join(', ')}. Song IDs don’t change, so all of it keeps working.`;
+}
 
 export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status' | 'refreshStatus' | 'notify'>) {
   const [folder, setFolder] = useState('');
@@ -337,6 +374,8 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   const [relocation, setRelocation] = useState<RelinkPreview | null>(null);
   const [relinkProblem, setRelinkProblem] = useState('');
   const [checkingRelink, setCheckingRelink] = useState(false);
+  // GP-0252-04: song IDs the person has said are the same recording, though their details changed
+  const [sameRecording, setSameRecording] = useState<number[]>([]);
   const previewRelink = async () => {
     if (!relocate?.target.trim()) return;
     setCheckingRelink(true);
@@ -344,7 +383,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     setRelocation(null);
     try {
       setRelocation(await post<RelinkPreview>('/folders/relink/preview', {
-        old: relocate.old, new: relocate.target.trim(),
+        old: relocate.old, new: relocate.target.trim(), confirmed: sameRecording,
       }));
     } catch (error) {
       setRelinkProblem((error as Error).message);
@@ -355,7 +394,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   const confirmRelink = async () => {
     if (!relocate || !relocation?.token) return;
     try {
-      await post('/folders/relink', { old: relocate.old, new: relocate.target.trim(), token: relocation.token });
+      await post('/folders/relink', { old: relocate.old, new: relocate.target.trim(), token: relocation.token, confirmed: sameRecording });
       setRelocate(null);
       setRelocation(null);
       void refresh();
@@ -427,6 +466,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
                 setRelocate({ old: item.path, target: '' });
                 setRelocation(null);
                 setRelinkProblem('');
+                setSameRecording([]);
               }}>Find moved folder</button>}
               <button onClick={() => setConfirmUnwatch(item.path)}>Stop watching</button>
             </li>
@@ -456,15 +496,35 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
               setRelocate({ ...relocate, target: event.target.value });
               setRelocation(null);
               setRelinkProblem('');
+              setSameRecording([]);
             }} placeholder="Absolute path of the moved folder" />}
           </Field>
           <Action working="Checking recordings…" disabled={checkingRelink || !relocate.target.trim()} run={previewRelink}>Preview without changing anything</Action>
           {relocation && <>
             <p role="status">{relocation.verified} of {relocation.total} songs verified; {relocation.blocked} blocked.</p>
             {!!relocation.blocked && <p className="warn">No paths will change. Every song must pass verification. Check that the correct folder is selected.</p>}
-            {!!relocation.blocked && <ul>{relocation.candidates.filter((item) => item.status !== 'verified').slice(0, 12).map((item) =>
+            {!!relocation.blocked && <ul>{relocation.candidates.filter((item) => item.status !== 'verified' && !item.can_confirm).slice(0, 12).map((item) =>
               <li key={item.id}>{item.title ?? 'Untitled'} (ID {item.id}): {item.status.replaceAll('_', ' ')}</li>
             )}</ul>}
+            {relocation.references && <p className="hint">{relinkReferenceWords(relocation.references)}</p>}
+            {relocation.candidates.some((item) => item.can_confirm) && (
+              <fieldset className="relink-confirm">
+                <legend>These look different now. Only tick one if you know it is the same recording.</legend>
+                {relocation.candidates.filter((item) => item.can_confirm).slice(0, 50).map((item) => (
+                  <label key={item.id} className="check">
+                    <input
+                      type="checkbox"
+                      checked={sameRecording.includes(item.id)}
+                      onChange={(event) => setSameRecording((current) => event.target.checked
+                        ? [...current, item.id]
+                        : current.filter((song) => song !== item.id))}
+                    />
+                    {' '}Same recording: {item.title ?? 'Untitled'} (ID {item.id}). {item.why}.
+                  </label>
+                ))}
+                <Action working="Checking again…" disabled={checkingRelink} run={previewRelink}>Preview again with these answers</Action>
+              </fieldset>
+            )}
             {relocation.token && <p className="hint">Confirm only if this is the same recording collection. Exact song identities, ratings, drafts and analysis will be retained.</p>}
           </>}
         </Dialog>
@@ -532,6 +592,7 @@ export function safeDiagnostics(info: Record<string, unknown>): Record<string, u
     'api_version', 'analysis_version', 'python', 'platform',
     'worker_running', 'analysis_failures', 'mix_songs',
     'drafts_in_line', 'seam_records', 'typical_estimate_miss',
+    'scan_failed', 'folders_missing', 'storage_full',
   ] as const;
   const safe: Record<string, unknown> = {};
   for (const key of allowed) {
@@ -550,6 +611,20 @@ export function safeDiagnostics(info: Record<string, unknown>): Record<string, u
     }
     safe.songs = selected;
   }
+  // GP-0263: measured checks, copied only as the known booleans and counts
+  const known = (from: unknown, keys: string[], kind: 'boolean' | 'number') => {
+    if (!from || typeof from !== 'object' || Array.isArray(from)) return undefined;
+    const picked: Record<string, unknown> = {};
+    for (const key of keys) {
+      const value = (from as Record<string, unknown>)[key];
+      if (kind === 'boolean' ? typeof value === 'boolean' : typeof value === 'number' && Number.isFinite(value)) picked[key] = value;
+    }
+    return picked;
+  };
+  const checks = known(info.checks, ['ffmpeg', 'data_writable', 'disk_low'], 'boolean');
+  if (checks) safe.checks = checks;
+  const exports = known(info.exports, ['failed', 'failed_no_room', 'interrupted'], 'number');
+  if (exports) safe.exports = exports;
   if (Array.isArray(info.recent_operations)) {
     safe.recent_operations = info.recent_operations.slice(-20).flatMap((item) => {
       if (!item || typeof item !== 'object') return [];
@@ -586,6 +661,7 @@ export function Diagnostics() {
   return (
     <section className="panel stack">
       <h2>Diagnostics</h2>
+      {flagOn('workspace.self_service') && <WhatWentWrong info={info} />}
       <ul className="diagnostic-facts">
         {diagnosticFacts(info).map((fact) => <li key={fact.key}><Status kind={fact.kind}>{fact.words}</Status></li>)}
       </ul>

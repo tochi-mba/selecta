@@ -2,8 +2,9 @@
 
 - **Programme implementation status:** PR #23 merged (`84b8b5cbadf7204bf526e8932124b5c4890e2c44`); original per-task evidence remains unreconciled and independently unverified.
 - **Date:** 2026-11-06
-- **Tasks completed:** 43 / 143
+- **Tasks completed:** 94 / 143
 - **Runtime verification:** none claimed by this planning PR.
+- **Implementing PR and commits:** PR #23 (`84b8b5c`) for the original work; the 2026-11-10/11 reconciliation and new work are on branch `feat/finish-checklists` (WIP commits from `a31bc2e`, coordinator-committed), and each section below names its own tests and runs. The final PR link is added at P0142. Inherited T work: [completion/t-to-p-map.md](completion/t-to-p-map.md) (P0005).
 
 ## Evidence boundary
 
@@ -15,20 +16,20 @@ Documentation/link/file-length checks on this PR validate the plan's structure o
 
 | ADR | Task range | Implementation | Evidence |
 |---|---|---|---|
-| [ADR-0033](adr-0033-polish-baseline-and-governance.md) | P0001–P0010 | In progress (5/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0033](adr-0033-polish-baseline-and-governance.md) | P0001–P0010 | In progress (8/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0034](adr-0034-polish-visual-system.md) | P0011–P0020 | In progress (9/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0035](adr-0035-polish-components-and-feedback.md) | P0021–P0031 | In progress (8/11) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0036](adr-0036-polish-loading-and-skeletons.md) | P0032–P0043 | In progress (3/12) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0036](adr-0036-polish-loading-and-skeletons.md) | P0032–P0043 | In progress (4/12) | Per-task entries below, checks run 2026-11-10; independent verification pending |
 | [ADR-0037](adr-0037-polish-onboarding-and-readiness.md) | P0044–P0051 | Not started | No implementation or runtime verification |
 | [ADR-0038](adr-0038-polish-mixes-and-drafts.md) | P0052–P0060 | Not started | No implementation or runtime verification |
 | [ADR-0039](adr-0039-polish-listen-and-shell.md) | P0061–P0069 | Not started | No implementation or runtime verification |
-| [ADR-0040](adr-0040-polish-editor-and-inspector.md) | P0070–P0079 | Not started | No implementation or runtime verification |
-| [ADR-0041](adr-0041-polish-stem-studio.md) | P0080–P0088 | Not started | No implementation or runtime verification |
+| [ADR-0040](adr-0040-polish-editor-and-inspector.md) | P0070–P0079 | In progress: 4/10 ticked (P0072, P0075-P0077) | Per-task entries below (2026-11-10/11) |
+| [ADR-0041](adr-0041-polish-stem-studio.md) | P0080–P0088 | In progress: 4/9 ticked (P0082, P0083, P0085, P0086) | Per-task entries below (2026-11-10/11) |
 | [ADR-0042](adr-0042-polish-requests-and-discovery.md) | P0089–P0099 | Not started | No implementation or runtime verification |
-| [ADR-0043](adr-0043-polish-library-and-workshop.md) | P0100–P0111 | Not started | No implementation or runtime verification |
+| [ADR-0043](adr-0043-polish-library-and-workshop.md) | P0100–P0111 | In progress: 10/12 ticked (P0100-P0102, P0105-P0111) | Per-task entries below (2026-11-10/11) |
 | [ADR-0044](adr-0044-polish-language-and-motion.md) | P0112–P0120 | Implemented (9/9) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0045](adr-0045-polish-responsive-accessibility.md) | P0121–P0131 | Not started | No implementation or runtime verification |
-| [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | Not started | No implementation or runtime verification |
+| [ADR-0045](adr-0045-polish-responsive-accessibility.md) | P0121–P0131 | In progress: 2/11 ticked (P0124, P0127) | Per-task entries below (2026-11-10/11) |
+| [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | In progress: 1/12 ticked (P0141) | Per-task entries below (2026-11-10/11) |
 
 ## Required per-task evidence when implementation begins
 
@@ -52,12 +53,14 @@ Implementing history: PR #23 (`84b8b5c`) plus later programmes (Microinteraction
 | Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
 | P0021 | Implemented | Dev-only gallery `web/src/ui/ControlGallery.tsx` holds every listed family; links, chips, badges, rows and cards added in this pass | `pnpm exec vitest run src/ui/polish-components.test.tsx`: 8/8 passed | Named visual review |
+| P0022 | Open (measurement not green) | State contract in `completion/components.md` and the gallery | MP-0279-01 and -05 passed; MP-0279-02/03/04/06/07 failed (addendum below) | Green state measurement (findings PF-16) |
 | P0023 | Implemented | `Action` reserves both labels, `aria-busy`/`aria-disabled`, one run per press | `polish-components.test.tsx` P0023; `controls.test.tsx` (passed in an 11-file run) | - |
 | P0024 | Implemented | `Field` label/help/error wiring; form table in `completion/copy-audit.md` | `polish-components.test.tsx` P0024 | Screen-reader listen-through |
 | P0025 | Implemented | `Tabs` ARIA pattern with roving focus; route subpages are `LinkTabs` links | `polish-components.test.tsx` P0025 (2); `ufSeamInspector.test.tsx` arrow keys | Screen-reader listen-through |
 | P0026 | Implemented | Focus entry/trap/Escape/restore/nested inert; `overscroll-behavior: contain`; Studio working copy survives close/reopen | `controls.test.tsx`; `ex0122StudioParity.test.tsx`, `StudioSafety.test.tsx`: 168/169 passed in an 11-file vitest run (only failure: unrelated `Drafts.test.tsx` "large draft collections") | - |
 | P0027 | Open (Needs a person) | Pointer and keyboard pass | `controls.test.tsx` menu/tooltip; `Glossary.test.tsx` | Real touch device |
 | P0028 | Implemented | 5 Undo toasts: 3 shown, 5 undoable in Activity, the evicted one still runs | `polish-components.test.tsx` P0028 | - |
+| P0029 | Implemented | Failures actionable near their source; repeated connectivity notices de-duplicated; no notification storms | `toastsCoalesce.test.tsx`, `gp-0257-comfort.test.tsx`, `toastPriority.test.tsx`, `polish-loading.test.tsx` passed (addendum below) | - |
 | P0030 | Implemented | Destructive actions separated (trash icon + word), confirmation kept on deletion failure, Undo preserved | `destructiveIcons.test.ts`, `actionTierRegister.test.ts`, `Drafts.test.tsx` delete confirmation | - |
 | P0031 | Open (Needs a person) | Automated keyboard/visual checks only | as above | NVDA/Narrator pass, named visual reviewer |
 
@@ -103,6 +106,7 @@ All checks below are vitest files run on 2026-11-10 (`pnpm exec vitest run <file
 | P0048 | Implemented | Library, progress and sources stay reachable while preparing | `polishPhase03Start.test.tsx` P0048 | - |
 | P0049 | Implemented | Lookup sends only artist, title, album, duration; starts on folder add, new songs in added folders and `selecta lyrics`; nothing when `lyrics.lookup` is off; README reconciled | `tests/test_polish_phase03.py` (5), `localPrivacyCopy.test.ts` | - |
 | P0050 | Superseded | ADR-0126: native picker declined by the owner | - | - |
+| P0051 | Implemented | Retry, copied-in, removed, Unicode, restart and return visit keep setup progress | `pytest tests/test_scan.py` 27 passed; Playwright 2026-11-11, 25/26 passed (finishing first-run folder, MP-0282-06/08) | - |
 
 ## ADR-0040 task evidence (reconciled 2026-11-10, uncommitted working tree)
 
@@ -110,11 +114,11 @@ Implementing history: PR #23 (`84b8b5c`) plus later programmes (Unified finish U
 
 | Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
-| P0070 | Implemented | Draft is named and scoped on Edit | `Mix.test.tsx` "a draft on the Edit page" passed | MP-0287-07 pinned-bar check failed; rerun after layout work settles |
+| P0070 | Implemented | Draft is named and scoped on Edit; scope bar pinned for the whole editor (`.editor-head { display: contents; }`, `6f395ea`) | `Mix.test.tsx` "a draft on the Edit page" passed 2026-11-11 | Browser check pending: MP-0287-07 (2026-11-10 failure predates the fix) |
 | P0071 | Implemented | Row and connector columns align | MP-0287-01, MP-0287-02 passed | MP-0287-04 state marks failed |
 | P0072 | Verified (automated) | Play and Move up/down stay on each row; Lock and Remove sit in one keyboard-opened More menu; every insertion target names where the song lands | new `web/src/views/polishEditorActions.test.tsx` 1/1 (`vitest run --pool=threads`); Playwright MP-0287-01, MP-0287-06 passed | - |
-| P0073 | Implemented | Selection follows the song through moves | MP-0287-05; `Mix.test.tsx` "the same stays selected when others move" passed | MP-0287-03 (320px keyboard/drag) and integration Undo test failed |
-| P0074 | Implemented | Pair named in every tab, legible narrow | MP-0288-01; `ufSeamInspector.test.tsx` 5/5 passed | MP-0288-06 (sheet covers CTA/focus) failed |
+| P0073 | Implemented | Selection follows the song through moves | `Mix.test.tsx` "the same stays selected when others move" passed 2026-11-11 | Browser check pending: MP-0287-03 (spec drag fixed in `08de255`/`633e947`); integration "Undo knows which is which" (2026-11-10 run timed out in setup, load) |
+| P0074 | Implemented | Pair named in every tab, legible narrow; focus scrolls clear of the pinned identity (`web/src/ui/useStickyClearance.ts`, scroll-padding in `creation.css`) | `useStickyClearance.test.tsx` 5/5 and `ufSeamInspector.test.tsx` passed 2026-11-11 | Browser check pending: MP-0288-06 |
 | P0075 | Verified (automated) | Requested move, rendering, fallback and what really plays are separate words and states | `pnpm exec vitest run src/views/Mix.test.tsx src/views/editorMode.test.tsx` passed (Mix "keeps the move you asked for pressed...", "says nothing about a fallback...", "highlights the plan until something has landed", "says what you chose and what will really play", "does not present remembered failures as ongoing renders"; editorMode "keeping asked and played apart") | - |
 | P0076 | Verified (automated) | Invalid cues marked with reason and server choice kept; unavailable moves disabled with reasons; field errors tied to fields | `Mix.test.tsx` "an exact cue that cannot be used"; `ufSeamInspector.test.tsx` greyed-out moves; Playwright MP-0288-05 (both) passed | - |
 | P0077 | Verified (automated) | Late answers never switch the inspected pair; failed options loading shows an alert with Try again that reloads the same pair | new `web/src/views/polishInspectorLoad.test.tsx` 1/1; `Mix.test.tsx` "keeps the latest choice visible when an older server response refreshes the inspector"; Playwright MP-0288-07 passed | - |
@@ -129,11 +133,11 @@ Implementing history: PR #23 (`84b8b5c`) plus later programmes (Unified finish U
 | P0002 | Implemented | Route/overlay/special-state inventory and `mp-0272-surface-inventory.json` | `test_polish_governance.py` P0002; `mpSurfaceInventory.test.ts` passed | - |
 | P0003 | Implemented | Every surface x state cell filled or explained; three reasons added this pass | `test_polish_governance.py` P0003 | Named reviewer read-through |
 | P0004 | Open (Needs a person) | Candidate paired captures only | - | Capture review by a named reviewer |
-| P0005 | Open | No T-to-P mapping | - | Cross-programme mapping |
+| P0005 | Implemented | 42 open T tasks and 18 parity rows mapped to P tasks with a no-double-counting rule in `completion/t-to-p-map.md` | `pytest tests/test_polish_governance.py -q -p no:cacheprovider` 8 passed 2026-11-11 (P0005 test) | Owner read-through |
 | P0006 | Implemented | Three role scripts with errors, recovery and walking tests | `test_polish_governance.py` P0006 | Dry run with people |
-| P0007 | Open | No severity register for all findings | - | Findings register |
+| P0007 | Implemented | P0007 findings register below: PF-01 to PF-20, each P0/P1/P2 with location, impact, acceptance check and status | `test_polish_governance.py` P0007 test, passed 2026-11-11 | Owner severity review (P0140) |
 | P0008 | Implemented | Decision vs implementation status separated in all 14 ADRs | `test_polish_governance.py` P0008 | - |
-| P0009 | Open (in progress) | Entries for this section exist | - | Other sections' entries |
+| P0009 | Implemented | Every P0001-P0143 has an entry row; header names PR #23 and the branch commits; ticks agree with entries | `test_polish_governance.py` P0009 test, passed 2026-11-11 | Final PR link (P0142) |
 | P0010 | Open (Needs a person) | Automated invariant suites exist | - | Owner release disposition |
 
 Addendum to ADR-0035 (2026-11-10): P0022 stays open (MP-0279-02/03/04/06/07 failed in a shared-machine Playwright run of `web/e2e/mp-0279-component-gallery.e2e.ts` against `dist-saas-p1`, port 9042; MP-0279-01 and -05 passed). P0029 Implemented: `toastsCoalesce.test.tsx`, `gp-0257-comfort.test.tsx`, `toastPriority.test.tsx`, `polish-loading.test.tsx` passed.
@@ -145,13 +149,13 @@ Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-
 | Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
 | P0032-P0034, P0036 | Open (built, not proven) | Content-shaped variants exist and are used | MP-0297-01 failed | Green geometry measurement |
-| P0035 | Open (partly built) | Inspector skeleton only; no Edit timeline consumer | - | Timeline skeleton in Edit |
+| P0035 | Implemented; browser check pending | Timeline placeholder is song rows with transitions between them at the timeline's 84px/96px heights; inspector keeps its panel | `pnpm exec vitest run src/ui/polishTimelineSkeleton.test.tsx` 4/4 passed 2026-11-11 | `web/e2e/polish-p0035-timeline-skeleton.e2e.ts` geometry run |
 | P0037 | Open (partly proven) | Request identity and refresh rules | `async.test.tsx` passed; MP-0297-03 failed | Green end-to-end refresh check |
-| P0038 | Open | 120ms reveal delay chosen | - | Measured flicker study |
+| P0038 | Implemented; browser check pending | Bars revealed only after 120ms (`REVEAL_AFTER_MS`, `--motion-fast`) in every motion setting, space reserved at once, content never held back. Fake-clock table: answers at 0, 40, 80, 119 and 120ms show no placeholder; 200, 500 and 2000ms show it for 80, 380 and 1880ms; no flashes | `src/ui/polishReveal.test.tsx` P0038 2/2 passed 2026-11-11 | `web/e2e/polish-p0038-reveal.e2e.ts` in Edge, both motion settings |
 | P0039 | Implemented | Theme-aware, bounded, reduced-motion-still, hidden bars, one announcement | `skeletonHonesty.test.tsx` 2/2 | - |
 | P0040 | Implemented | Real stages and honest wait words, no fabricated percentages | `workState.test.ts`, `jobs.test.ts`, `lib.test.ts` | - |
 | P0041 | Implemented | Slow and failed retrieval are honest with Retry, incl. Listen details and inspector checks | `pnpm exec vitest run src/views/polish-loading.test.tsx`: 3/3 | - |
-| P0042 | Open (partly proven) | Stale/out-of-order/failed refresh and de-duplicated announcements | `async.test.tsx`, `gp-0257-comfort.test.tsx` | Delayed/partial/retried flash tests |
+| P0042 | Implemented | Immediate, delayed, partial, failed/retried, stale and out-of-order answers recorded frame by frame: no placeholder after content, no older answer shown, one placeholder per wait, one announcement | `pnpm exec vitest run src/ui/polishReveal.test.tsx src/ui/polishTimelineSkeleton.test.tsx src/ui/skeletonHonesty.test.tsx` (slot lock, 1 worker): 15/15 passed 2026-11-11; `async.test.tsx`, `gp-0257-comfort.test.tsx` 2026-11-10 | - |
 | P0043 | Open | Layout stability not measured green | MP-0297-01/03 failed | Green measurement |
 
 ## ADR-0038 task evidence (reconciled 2026-11-10, uncommitted working tree)
@@ -166,6 +170,7 @@ Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-
 | P0057 | Implemented | Measured energy normalised to the mix's own range, labelled as not comparable | `polishPhase03Mixes.test.tsx` 4/4, `MixSetup.test.tsx` 3/3 | - |
 | P0058 | Implemented | No ready match vs failed search with Retry | `polishPhase03Mixes.test.tsx` | - |
 | P0059 | Implemented | Draft feedback; render line vs playback order | `Drafts.test.tsx` | - |
+| P0060 | Implemented | Building/switching while playing, failures, stale answers, Undo, long names | `Mixes.test.tsx`, `Drafts.test.tsx`; Playwright 2026-11-11, 25/26 passed (MP-0283-07, MP-0286-01/07, MP-0280-04) | - |
 
 ## ADR-0041 task evidence (reconciled 2026-11-10, uncommitted working tree)
 
@@ -173,11 +178,11 @@ Implementing history: PR #23 (`84b8b5c`) plus later Stem Studio work (S3-0059, G
 
 | Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
-| P0080 | Implemented | Every cell named for a screen reader | `Studio.test.tsx` "shows a square for every part of both songs" | MP-0289-01/-03/-06 rerun on a quiet machine |
-| P0081 | Implemented | Played square marked | `Studio.test.tsx` "marks the square being played" | MP-0289-02 measured state check |
+| P0080 | Implemented | Every cell named for a screen reader; ruler and lane names pinned | `Studio.test.tsx` "shows a square for every part of both songs" passed 2026-11-11 | Browser check pending: MP-0289-01/-03/-06 (2026-11-10 failures were a spec mock bug, POST session not faked; fixed `c9d63d8`) |
+| P0081 | Implemented | Played square marked; focused square kept clear of pinned ruler/names (`.studio-grid` scroll-padding) | `Studio.test.tsx` "marks the square being played", `StudioSafety.test.tsx`, `useStickyClearance.test.tsx` passed 2026-11-11 | Browser check pending: MP-0289-02 |
 | P0082 | Verified (automated) | Preparing shows an estimate and keeps polling; failure named with Try again that reloads the same pair; missing stems marked unavailable | `polishStudioRecovery.test.tsx` P0082; `Studio.test.tsx` estimate, polling, failure words, missing stem; `StudioSafety.test.tsx` stem could not load | - |
 | P0083 | Verified (automated) | Studio says previewing pauses the main mix; play pauses it, Stop leaves it paused (the hint tells the person to resume from the main player); close and hidden tab release audio; failure gives the sound back | `polishStudioRecovery.test.tsx` P0083; `Studio.test.tsx` play/stop, close, hidden tab; `focus.test.tsx` 12 tests | Audible confirmation is P0088 |
-| P0084 | Implemented | Verbal separation of preview, arrange, fine-tune, restore, reset and Apply | `Studio.test.tsx` shapes, Start again, Put it back, fine tune, "nothing it does is final" | MP-0289-05 visual check |
+| P0084 | Implemented | Verbal separation of preview, arrange, fine-tune, restore, reset and Apply | `Studio.test.tsx` shapes, Start again, Put it back, fine tune, "nothing it does is final" passed 2026-11-11 | Browser check pending: MP-0289-05 (2026-11-10 failure was the spec mock bug) |
 | P0085 | Verified (automated) | Working copy vs applied state said plainly; numbered pair named; save, failure and restore states shown | `StudioSafety.test.tsx` 8/8; `Studio.test.tsx` numbered pair, Apply, recovery | - |
 | P0086 | Verified (automated) | Failed Apply keeps local work; recovery rejects wrong-size or corrupt copies; storage-blocked warning | `StudioSafety.test.tsx`; `Studio.test.tsx`; Playwright MP-0289-08 passed | - |
 | P0087 | Open (Needs a person) | Keyboard reaches all 512 cells | `gp-0261-studio.test.tsx` 2/2 | Real touch device at narrow width; MP-0289-06 |
@@ -185,11 +190,11 @@ Implementing history: PR #23 (`84b8b5c`) plus later Stem Studio work (S3-0059, G
 
 ## ADR-0046 task evidence (reconciled 2026-11-10, uncommitted working tree)
 
-No task in this ADR is ticked: each needs a full candidate run, recorded hardware, real audio, participants or owner disposition. Automated facts gathered on 2026-11-10:
+P0141 is ticked (rollback check with ratings, 2026-11-11); every other task needs a full candidate run, recorded hardware, real audio, participants or owner disposition. Automated facts gathered on 2026-11-10:
 
 | Task | Status | Result | Check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
-| P0132 | Open | `e2e/visual.e2e.ts` captures review candidates only; no committed pixel baselines | `grep toHaveScreenshot web/e2e`: 0 | Deterministic baselines per surface, state, theme and width |
+| P0132 | Implemented; browser check pending | `web/e2e/polish-p0132-baselines.e2e.ts`: `toHaveScreenshot` for every PAGES route and Library loading/empty/failed/recovered, light and dark, 375 and 1440px; fixed clock, reduced motion, documented masks | not run (BUILD FIRST) | Generate with `--update-snapshots`, commit, then P0133 review |
 | P0133 | Open (Needs a person) | - | - | Named reviewer compares differences |
 | P0134 | Open | Focused runs only (agents may not run full suites); focused Playwright 31/59 passed | 8-spec Playwright run, port 9050 | Full CI on the candidate SHA |
 | P0135 | Open (Needs a person) | - | - | Traces on recorded hardware |
@@ -198,9 +203,23 @@ No task in this ADR is ticked: each needs a full candidate run, recorded hardwar
 | P0138 | Open | `integration.e2e.ts` 5/7 passed (two draft/current tests timed out) | Playwright | All recovery scenarios green together |
 | P0139 | Open (Needs a person) | - | - | Unguided participant tasks |
 | P0140 | Open (Needs a person) | - | - | Owner blocker review |
-| P0141 | Implemented | Rollback from this tree to `main` (`405cf7f`) and forward again: "identical across all three" for songs, settings, mix, seam settings, drafts, corrected tempo, export record and requests | `.venv\Scripts\python tests/rollback_check.py <git archive main src>` under the slot lock | Ratings are not yet in the harness |
-| P0142 | Open | Section entries updated 2026-11-10 | - | PR and verification links at final reconciliation |
+| P0141 | Implemented | Rollback to `main` (`405cf7f`) and forward again: "nothing lost"; songs, steering, mix, seam settings, drafts, corrected tempo, export record, requests, ratings (liked 1, disliked 1) and rated seams identical | `.venv\Scripts\python tests/rollback_check.py <git archive main src>` under the slot lock, exit 0, 2026-11-11 | - |
+| P0142 | Open | Section entries updated 2026-11-10/11; every task has an entry (P0009); inherited mapping in `completion/t-to-p-map.md` | - | PR and verification links at final reconciliation |
 | P0143 | Open (Needs a person) | - | - | Release-candidate review and owner disposition |
+
+## ADR-0039 task evidence (reconciled 2026-11-10/11, uncommitted working tree)
+
+| Task | Status | Acceptance and result | Automated check run | Remaining |
+|---|---|---|---|---|
+| P0061 | Implemented | Identity, transport, next song first; view options disclosed and remembered | `Now.test.tsx` with `NowFlow`, `listenSeek`, `player` 79 passed (2026-11-10) | - |
+| P0062 | Implemented | Transport stable across states | Playwright 2026-11-11, 25/26 passed (MP-0284-02, MP-0281-03) | - |
+| P0063 | Implemented | Next song vs Jump to the transition in label, icon, tooltip, help | `polishPhase03Listen.test.tsx` P0063 | - |
+| P0064 | Implemented | Missing, untimed, instrumental, no beat grid, failed details, last song | `lyricHonesty.test.tsx` 4/4, `Now.test.tsx`, `polishPhase03Listen.test.tsx` P0064 | - |
+| P0065 | Implemented | Next-song changes never move the transport; made/planned said | Playwright 2026-11-11, 25/26 passed (MP-0281-03, MP-0284-05); `listenNextUp.test.tsx` 3/3 | - |
+| P0066 | Implemented | New spec: seek, seam marker and countdown units in words at 100/200/400% | Playwright 2026-11-11, 25/26 passed (`polish-p0066-listen-zoom.e2e.ts`) | - |
+| P0067 | Implemented | Rail, phone bar, mini-player, overlays and focus | Playwright 2026-11-11, 25/26 passed (MP-0280-06/07, MP-0281-05..08, finishing overlap) | - |
+| P0068 | Implemented | Fullscreen refusal, restored preferences, reduced motion | Playwright 2026-11-11, 25/26 passed (finishing fullscreen refused + reduced motion, listen fullscreen, MP-0284-07/08) | - |
+| P0069 | Open (Needs a person) | Automated parts pass except media keys (timed out waiting for renders under load) | Playwright 2026-11-11, 25/26 passed (MP-0280-07, one tab plays) | Installed-app layout and hardware media keys by a person; rerun media keys |
 
 ## ADR-0042 task evidence (reconciled 2026-11-10, uncommitted working tree)
 
@@ -232,3 +251,52 @@ Implementing history: PR #23 (`84b8b5c`) plus Library/Lucy (LX), Selecta 3.0 Lib
 | P0105 | Verified (automated) | Overview leads with repairs; sections share one rhythm; keyboard repair path | `Workshop.test.tsx`; MP-0293-01/02/05/07/08 | MP-0293-03/04/06 layout checks failing |
 | P0106 | Verified (automated) | Control gallery only in development (or VITE_SELECTA_GALLERY=1) builds, folded under Diagnostics | new `web/src/views/polishWorkshopShowcase.test.tsx` P0106 (2); production bundle `dist-saas-p3/assets/*.js` has 0 `control-gallery` | - |
 | P0107 | Verified (automated) | Budget, cache, free disk and untouched music named apart; refused save shows the confirmed limit and Retry; older save never overrides a newer choice | `polishWorkshopShowcase.test.tsx` P0107/P0111 (3); `Workshop.test.tsx` protected stems, really-saved value | MP-0293-04 geometry failing |
+| P0108 | Verified (automated) | Export stages named distinctly; file offered only when it exists; snapshot pinned to the exact mix and revision; cancel only while waiting; job survives restart | `.venv\Scripts\python -m pytest tests/test_export_validation.py tests/test_export_retry.py tests/test_flow_export_jobs.py tests/test_diagnostics_operations.py tests/test_scan.py::test_an_unplugged_drive_has_not_changed tests/test_request_routes.py::test_an_unplugged_folder_loses_nothing tests/test_mix_mixes.py::test_storage_says_what_can_be_remade_and_keeps_the_limit_possible tests/test_mix_mixes.py::test_cache_pruning_keeps_stems_for_priority_songs_even_over_budget tests/test_s4_folder_input.py tests/test_listening.py -q -p no:cacheprovider` 45 passed; `ExportJobs.test.tsx`; `Mix.test.tsx` "saving as a file"; MP-0294-01 | MP-0294-02/03/04 row-geometry check failed |
+| P0109 | Verified (automated) | A finished FLAC is decoded frame by frame and a wrong or bad file can never be reported ready; retry keeps the same snapshot; a failed transition names its pair | same pytest run (`test_export_validation.py`, `test_export_retry.py`, `test_flow_export_jobs.py`); `Mix.test.tsx` "says so if what's left can't be made" | Listening to an exported file is P0137 |
+| P0110 | Verified (automated) | Unfinished answers restored per study; failed save stays on its trial; both versions must be heard; nothing unblinds | `Listening.test.tsx` 5/5; `ListeningStudyFlow.test.tsx`; `tests/test_listening.py`; MP-0294-07, MP-0294-08 | MP-0294-05/06 layout checks failed |
+| P0111 | Verified (automated) | Unplugged folders lose nothing; worker stop/restart and storage-limit blocks reported; full disk named; stale storage writes ignored; diagnostics carry no paths | same pytest run (45 passed); `polishWorkshopShowcase.test.tsx` stale write; `Workshop.test.tsx` diagnostics | - |
+
+## ADR-0045 task evidence (reconciled 2026-11-10/11, uncommitted working tree)
+
+All runs are Edge (Chromium) on the shared Windows laptop and are simulated, not real-device. Playwright `mp-0298-responsive-and-a11y.e2e.ts` on 2026-11-10: MP-0298-01, -03, -05, -07 passed; -02 and -06 failed. 2026-11-11 rerun: both `flow-forced-colors.e2e.ts` tests failed, and 5 of 6 `integration.e2e.ts` tests that ran failed under heavy load. The rerun was stopped before `motion-preference`, `overlay-arbitration`, `mp-0287`, `mp-0288` and `mp-0289` ran.
+
+| Task | Status | Acceptance and result | Automated check | Remaining |
+|---|---|---|---|---|
+| P0121 | Open (Needs a person) | - | - | Owner agrees support matrix |
+| P0122 | Open (Needs a person) | 320 to 3840px, both sides of 620/760 and short landscape hold | MP-0298-01 passed | Safe areas and virtual keyboards on real devices |
+| P0123 | Open (Needs a person) | Emulated zoom spec failed | MP-0298-02 failed | Real 200%/400% browser zoom and text resizing |
+| P0124 | Verified (automated) | Every target is at least 24px or a documented WCAG exception; primary touch targets reach 44px | MP-0298-03 passed | - |
+| P0125 | Implemented | Text 4.5:1, large 3:1, field edges 3:1 in both themes | MP-0298-05 passed | Forced-colour focus/selection checks failed |
+| P0126 | Open (Needs a person) | Automated keyboard parts pass | `ListeningStudyFlow.test.tsx`, `gp-0261-studio.test.tsx`, MP-0293-08 | Full manual keyboard-only journeys |
+| P0127 | Verified (automated) | Sliders, seek, energy arc, tabs, grid and resize separator follow their keyboard and value patterns | `listenSeek.test.tsx`, `Mixes.test.tsx`, `ufSeamInspector.test.tsx`, `polish-components.test.tsx`, `Studio.test.tsx`, `gp-0261-studio.test.tsx`, `inspectorResize.test.tsx`, `Workshop.test.tsx` (vitest, passed) | - |
+| P0128 | Open (Needs a person) | - | - | NVDA and VoiceOver journeys |
+| P0129 | Implemented | - | MP-0288-06 failed | Rerun overlay-arbitration on a quiet machine |
+| P0130 | Implemented | RTL/CJK/duplicate names readable | `Mix.test.tsx` metadata stress test | Forced colours failed; motion spec not run |
+| P0131 | Open (in progress) | Failures classified per surface in the P0007 findings register; PF-05 and PF-20 resolved | `test_polish_governance.py` P0007 test | Resolve open findings on quiet reruns; human checks pending |
+
+## P0007 findings register (2026-11-11)
+
+Classifies every failure or gap recorded above, plus the copy findings in [completion/copy-audit.md](completion/copy-audit.md), as **P0** (integrity or essential-access blocker), **P1** (task, recovery or misleading-state problem) or **P2** (consistency or detail defect), each with a location, impact and acceptance check. Checked by `tests/test_polish_governance.py::test_p0007_findings_register_classifies_every_finding`. "Unconfirmed" means the only evidence is a failed run on the overloaded shared laptop: the failure stays recorded at the severity it would have if real. A finding closes only when its check passes and the run is named here. Human checks are not findings; they stay pending on their own lines (P0121-P0123, P0126, P0128, P0133, P0135, P0137, P0139, P0140, P0143). Inherited T work is mapped in [completion/t-to-p-map.md](completion/t-to-p-map.md) (P0005).
+
+| ID | Severity | Surface / location | Finding | Impact | Acceptance check | Status | Tasks |
+|---|---|---|---|---|---|---|---|
+| PF-01 | P0 | Edit inspector sheet at 320px, `web/src/views/Mix.tsx` | MP-0288-06 failed: the narrow sheet or resized rail may cover the call to action or focus | Keyboard users could lose sight of focus (WCAG 2.4.11) | `web/e2e/mp-0288-seam-inspector.e2e.ts` MP-0288-06 | Open, unconfirmed (2026-11-10) | P0074, P0129 |
+| PF-02 | P0 | Forced colours, `web/src/styles/polish.css` | Both forced-colour tests failed on 2026-11-11 | Focus or selection could vanish in high contrast | `web/e2e/flow-forced-colors.e2e.ts` | Open, unconfirmed (2026-11-11) | P0125, P0130 |
+| PF-03 | P0 | Browser zoom, app-wide | Emulated 200%/400% zoom MP-0298-02 failed | Content could be cut off when zoomed | `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` MP-0298-02 | Open, unconfirmed (2026-11-10) | P0123 |
+| PF-04 | P0 | Edit undo scope, `web/src/views/Mix.tsx` | Draft-while-current-plays Undo test timed out | If real, Undo could act on the wrong mix | `web/e2e/integration.e2e.ts` Undo scope test; `web/src/views/Mix.test.tsx` scope tests pass | Open, unconfirmed (timeout) | P0073, P0078, P0138 |
+| PF-05 | P0 | Rollback, `tests/rollback_check.py` | Ratings were not proven to survive a rollback | Good/Bad ratings could be lost unnoticed | `tests/rollback_check.py` against `main` | Resolved 2026-11-11: "nothing lost", ratings and rated seams identical | P0141 |
+| PF-06 | P1 | Edit pinned bar, `web/src/views/Mix.tsx` | MP-0287-07 failed: name, current/draft and view may scroll away | People may lose which mix they edit | `web/e2e/mp-0287-editor-rows.e2e.ts` MP-0287-07 | Open, unconfirmed | P0070 |
+| PF-07 | P1 | Edit reorder at 320px, `web/src/views/EditorRows.tsx` | MP-0287-03 failed: keyboard and drag move at 320px | Reordering may be hard on a phone | `web/e2e/mp-0287-editor-rows.e2e.ts` MP-0287-03 | Open, unconfirmed | P0073 |
+| PF-08 | P1 | Stem Studio grid, `web/src/views/Studio.tsx` | MP-0289-01 to -07 failed: `.studio-cell` never appeared in 60 s | Labels, states and narrow width unmeasured | `web/e2e/mp-0289-stem-studio.e2e.ts` MP-0289-01 to -07 | Open, unconfirmed | P0080, P0081, P0084, P0087 |
+| PF-09 | P1 | Library correction, `web/src/views/Library.tsx` | MP-0291-06 failed: correction, error and the way back | Query or focus may be lost after an error | `web/e2e/mp-0291-library.e2e.ts` MP-0291-06 | Open, unconfirmed | P0103 |
+| PF-10 | P1 | Library at 20,000 songs, `web/src/views/Library.tsx` | MP-0291-07 failed | Large libraries may jump | `web/e2e/mp-0291-library.e2e.ts` MP-0291-07 | Open, unconfirmed | P0104 |
+| PF-11 | P1 | Background refresh, `web/src/state/async.ts` | MP-0297-03 failed: selection, focus, playback through a refresh | A refresh could move focus | `web/e2e/mp-0297-loading-and-recovery.e2e.ts` MP-0297-03 | Open, unconfirmed | P0037, P0043 |
+| PF-12 | P1 | Integrated recovery, `web/e2e/integration.e2e.ts` | Two draft/current scenarios timed out | Recovery not proven end to end | `web/e2e/integration.e2e.ts` | Open, unconfirmed | P0138 |
+| PF-13 | P2 | Placeholders, `web/src/ui/Skeleton.tsx` | MP-0297-01 failed: placeholder vs loaded geometry | Content may shift on arrival | `web/e2e/mp-0297-loading-and-recovery.e2e.ts` MP-0297-01 | Open, unconfirmed | P0032, P0033, P0034, P0036, P0043 |
+| PF-14 | P2 | Edit timeline placeholder, `web/src/ui/Skeleton.tsx` | Opening a draft showed generic bars, not song rows with transitions between them | Timeline jumped from bars to rows | `web/src/ui/polishTimelineSkeleton.test.tsx`; `web/e2e/polish-p0035-timeline-skeleton.e2e.ts` | Built 2026-11-11; browser geometry pending | P0035 |
+| PF-15 | P2 | Edit row marks, `web/src/views/EditorRows.tsx` | MP-0287-04 failed: selected, focused, locked, playing, pending marks | Marks may be ambiguous | `web/e2e/mp-0287-editor-rows.e2e.ts` MP-0287-04 | Open, unconfirmed | P0071 |
+| PF-16 | P2 | Component states, `web/src/ui/ControlGallery.tsx` | MP-0279-02/03/04/06/07 failed | State styles may differ between families | `web/e2e/mp-0279-component-gallery.e2e.ts` | Open, unconfirmed | P0022 |
+| PF-17 | P2 | Lab budgets | MP-0298-06 failed: layout shift, paint, interaction delay | Budgets not reported green | `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` MP-0298-06 | Open, unconfirmed | P0136 |
+| PF-18 | P2 | Short-load reveal, `web/src/ui/Skeleton.tsx` | No measurement showed a quick answer never flashes a placeholder | Possible flicker on fast loads | `web/src/ui/polishReveal.test.tsx`; `web/e2e/polish-p0038-reveal.e2e.ts` | Built 2026-11-11; browser measurement pending | P0038, P0042 |
+| PF-19 | P2 | Visual baselines, `web/e2e/visual.e2e.ts` | Review candidates only; no committed pixel baselines | Visual regressions caught only by people | `web/e2e/polish-p0132-baselines.e2e.ts` | Built 2026-11-11; baselines not yet generated | P0132, P0133 |
+| PF-20 | P2 | Copy, `docs/adr/completion/copy-audit.md` | Copy findings, each with a severity, fixed in the audit | Inconsistent words | `web/src/ui/Glossary.test.tsx`, `web/src/shell/actionTierRegister.test.ts` | Resolved (P0113, 2026-11-10) | P0113 |

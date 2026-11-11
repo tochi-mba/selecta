@@ -39,7 +39,10 @@ test('SF-0217-04 the next-mix default and this mix’s own choices stay apart th
   expect(mixAfter.mix.map((item: { song_id: number }) => item.song_id)).toEqual(mixBefore.mix.map((item: { song_id: number }) => item.song_id));
   expect(mixAfter.mix[1].seam.settings).toEqual(mixBefore.mix[1].seam.settings);
   expect(mixAfter.mix[1].seam.settings.move).toBe('cut_on_one');
-  expect(await (await request.get(`/api/mix?draft=${draft.id}`)).json()).toEqual(draftBefore);
+  const draftAfter = await (await request.get(`/api/mix?draft=${draft.id}`)).json();
+  // ETA is a live estimate, not persisted draft data; it may change during the browser test.
+  expect({ ...draftAfter, eta: undefined }).toEqual({ ...draftBefore, eta: undefined });
+  expect(draftAfter.eta.seams).toBe(draftBefore.eta.seams);
 
   await request.post('/api/steer', { data: { action: 'mix_language', value: 'balanced' } });
   await request.delete(`/api/drafts/${draft.id}`);
@@ -176,6 +179,7 @@ test('SF-0221-07 in a hundred-song mix the inspector keeps its pair while other 
   await page.keyboard.press('ArrowDown');
   await expect(page.locator('.timeline .song').nth(10)).toContainText('Stress 010');
   await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.timeline .song').nth(9)).toContainText('Stress 010');
   await page.keyboard.press('ArrowUp');
   await expect(page.locator('.timeline .song').nth(8)).toContainText('Stress 010');
   await expect(side).toContainText('Stress 060');
@@ -189,8 +193,11 @@ test('SF-0221-07 in a hundred-song mix the inspector keeps its pair while other 
 // SF-0222-07: dragging in the editor while the mix plays: frames stay smooth and the audio clock keeps
 // moving with no sound restarted or stopped.
 test('SF-0222-07 dragging a song while the mix plays leaves playback alone', async ({ page, request }) => {
+  test.setTimeout(420_000);
   await installProbe(page);
   await spyOnAudio(page);
+  // two songs, one transition: enough to play across a seam, and quick to render on a busy machine
+  await resetMix(request, [1, 2]);
   await allRendered(request);
   await page.goto('/listen');
   await page.getByRole('button', { name: /^(Play|Resume from)/ }).click();

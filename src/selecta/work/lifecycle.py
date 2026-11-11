@@ -218,6 +218,10 @@ def record_failure(
         heads.job_queued(connection, job.pool, job.lane, job.workspace_id, job.est_cost_s, now)
     elif decision.state in (S.FAILED, S.QUARANTINED, S.BLOCKED):
         after_unsuccessful(connection, job, now)
+    if decision.state == S.QUARANTINED:
+        from selecta.observability import metrics
+
+        metrics.add("selecta_jobs_quarantined_total")
     return job
 
 

@@ -83,8 +83,9 @@ export async function resetMix(request: APIRequestContext, songs = [1, 2, 3, 4])
   }
 }
 
-/** Wait until every transition in the current mix has actually been rendered. */
-export async function allRendered(request: APIRequestContext) {
+/** Wait until every transition in the current mix has actually been rendered. The first renders on a fresh
+ * server can outlast the default on a loaded machine, so a test that comes first may wait longer. */
+export async function allRendered(request: APIRequestContext, timeout = 280_000) {
   await request.post('/api/mix/render');
   await expect
     .poll(
@@ -94,7 +95,7 @@ export async function allRendered(request: APIRequestContext) {
           .slice(1)
           .filter((item) => item.seam?.state.status !== 'ready').length;
       },
-      { timeout: 280_000, intervals: [2000] },
+      { timeout, intervals: [2000] },
     )
     .toBe(0);
 }

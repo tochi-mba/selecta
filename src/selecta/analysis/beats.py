@@ -81,7 +81,9 @@ def regularize(beats: np.ndarray) -> np.ndarray:
             continue
         steps = int(round(gap / period))
         if steps >= 2:
-            out.extend(out[-1] + gap * k / steps for k in range(1, steps))
+            # fix the start first: a generator reading out[-1] would see each beat it just added
+            last = out[-1]
+            out.extend(last + gap * k / steps for k in range(1, steps))
         out.append(float(beat))
     return np.asarray(out, dtype=np.float64)
 

@@ -11,6 +11,7 @@ import { describeRoute, shownRoute } from './shell/manifest';
 import { PageLink, Shell } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
+import { watchLowPower } from './ui/lowPower';
 import { orderOf } from './state/readiness';
 import { shortcutFor, shortcutsOn } from './state/shortcuts';
 import { openGlossary } from './state/glossaryRequests';
@@ -29,10 +30,11 @@ import { Mix } from './views/Mix';
 import { Mixes } from './views/Mixes';
 import { MyMixes } from './views/MyMixes';
 import { Now } from './views/Now';
-import { RequestsContext, RequestsPanel, useRequests } from './views/Requests';
+import { RequestsContext, RequestsPanel, waitingRequestCount, useRequests } from './views/Requests';
 import { Start } from './views/Start';
 import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
+import { prefetchLibrary } from './views/libraryPrefetch';
 import type { Undo, View } from './views/shared';
 
 // Lucy is optional and only loaded when someone opens it, so it costs Make a Mix nothing.
@@ -89,6 +91,9 @@ export function App() {
   const [stageFallback, setStageFallback] = useState(false);
   const preferences = usePrefs();
   useEffect(() => readFlagFromAddress(window.location.search), []);
+  // SF-0235-08: lower decorative motion on a device that can't keep up (not under unit tests,
+  // where a frame loop would only spin).
+  useEffect(() => (import.meta.env.MODE === 'test' ? undefined : watchLowPower()), []);
   const mix = data.mix;
   const mixRef = useRef<MixItem[]>([]);
   mixRef.current = mix;
@@ -142,16 +147,20 @@ export function App() {
   const draftRef = useRef(draftId);
   draftRef.current = draftId;
   const draftMixRef = useRef<MixItem[]>([]);
+  // as with the current mix, an edit (or a move shown before its answer) is newer than a read already on its way
+  const draftChanges = useRef(0);
   const setDraftMix = useCallback((next: MixData) => {
+    draftChanges.current += 1;
     draftMixRef.current = next.mix;
     setDraftData(next);
   }, []);
   const refreshDraft = useCallback(() => {
     const asked = draftRef.current;
     if (asked === null) return;
+    const seen = draftChanges.current;
     get<MixData>(`/mix?draft=${asked}`)
       .then((next) => {
-        if (draftRef.current !== asked) return;
+        if (draftRef.current !== asked || seen !== draftChanges.current) return;
         setDraftMix(next);
         setDraftGone(false);
       })
@@ -294,6 +303,8 @@ export function App() {
   }), [player]);
 
   useEffect(() => {
+    // MI-0162-04: opened on the Library, its first rows are asked for now, not after status and the mix
+    if (window.location.pathname === '/library') prefetchLibrary(window.location.search);
     void refreshStatus();
     const seen = mixChanges.current;
     get<MixData>('/mix')
@@ -421,6 +432,14 @@ export function App() {
     document.addEventListener('fullscreenchange', change);
     return () => document.removeEventListener('fullscreenchange', change);
   }, []);
+  // The Stage belongs to Listen. Going to another page while it is open (Back, a link, a shortcut)
+  // leaves it, and the browser's fullscreen with it, instead of keeping that page fullscreen (T0128).
+  useEffect(() => {
+    if (route.page === 'listen' || !stageRef.current) return;
+    setStage(false);
+    setStageFallback(false);
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+  }, [route.page]);
   useEffect(() => {
     setToastsQuiet(stage);
     if (stage) return;
@@ -512,6 +531,12 @@ export function App() {
         case 'search':
           event.preventDefault();
           navigate('/library');
+          // The shortcut is an action, not just a route: when Library is already open it
+          // must still put the person in the search box. Defer until navigation has painted
+          // so the same path also works from every other page.
+          window.setTimeout(() => {
+            document.querySelector<HTMLInputElement>('input[type="search"][aria-label="Search your library"]')?.focus();
+          }, 0);
           break;
       }
     };
@@ -566,7 +591,7 @@ export function App() {
     undo: undoNewest,
   };
   const nothingToHear = route.page === 'listen' && !mix.length;
-  const waitingRequests = requests.requests?.filter((request) => request.id > 0).length ?? 0;
+  const waitingRequests = waitingRequestCount(requests.requests);
   const counts = status.counts;
   const editingDraft = draftId !== null;
   const draftLoaded = editingDraft && draftData?.draft?.id === draftId;
@@ -643,7 +668,7 @@ export function App() {
               <PageLink to="/mixes/mine" className="button primary">See my mixes</PageLink>
             </main>
           )}
-          {route.page === 'edit' && draftId !== null && !draftGone && !draftData && <main className="page" aria-busy="true"><Skeleton variant="timeline" label="Opening your draft" /></main>}
+          {route.page === 'edit' && draftId !== null && !draftGone && !draftData && <main className="page mix" id="main" aria-busy="true"><Skeleton variant="timeline" label="Opening your draft" /></main>}
           {route.page === 'edit' && draftId !== null && !draftGone && draftData && (
             <MixScope.Provider value={draftId}>
               <Mix

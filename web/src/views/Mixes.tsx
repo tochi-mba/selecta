@@ -74,7 +74,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     // nothing plays or changes until the server has said which mix it made
     if (buildingNow.current) return;
     buildingNow.current = true;
-    setBuilding(key);
+    // which control is working: Play is the idea's key, Shape first adds :open, Save draft adds :draft
+    setBuilding(open ? `${key}:open` : key);
     setProblem('');
     const expected = order ?? orderOf(mix);
     const signature = JSON.stringify([key, songs, expected, open]);
@@ -114,7 +115,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const keepAsDraft = async (key: string) => {
     if (buildingNow.current) return;
     buildingNow.current = true;
-    setBuilding(key);
+    setBuilding(`${key}:draft`);
     setProblem('');
     const signature = JSON.stringify([key, songs, 'draft']);
     const operation = operations.current.get(signature) ?? operationId('draft');
@@ -203,8 +204,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <div className="row wrap">
           <Action
             className="primary big"
-            disabled={!hero?.ready || (!!building && building !== 'pick')}
-            busy={building === 'pick'}
+            disabled={!hero?.ready || (!!building && !building.startsWith('pick'))}
+            busy={building.startsWith('pick')}
             working="Building…"
             title={replacing ? `Replaces ${mixName}, which you can undo` : undefined}
             run={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
@@ -313,9 +314,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                     {/* MP-0274-04: the actions close the card, so Play and Shape first share one line across a row of
                         cards however a name, summary or this disclosure wraps */}
                     <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
-                      <Action className="primary" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
-                      {on('editor') && <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
-                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
+                      <Action className="primary" disabled={!!building && building !== card.key} busy={building === card.key} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
+                      {on('editor') && <Action className="quiet" disabled={!!building && building !== `${card.key}:open`} busy={building === `${card.key}:open`} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
+                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building && building !== `${card.key}:draft`} busy={building === `${card.key}:draft`} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
                     </div>
                   </article>
                 ))}

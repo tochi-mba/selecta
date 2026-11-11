@@ -11,6 +11,7 @@
     "e2e:flags": "playwright test -c playwright.flags.config.ts",
     "e2e:mp": "playwright test -c playwright.mp.config.ts",
     "e2e:cloud": "playwright test -c playwright.cloud.config.ts",
+    "e2e:baseline": "playwright test e2e/visual-baseline.e2e.ts --update-snapshots=all",
     "build:cloud-e2e": "vite build -c vite.cloud-e2e.config.ts && vite build -c vite.cloud-e2e-authkit.config.ts"
   },
   "dependencies": {

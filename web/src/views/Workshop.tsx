@@ -10,6 +10,7 @@ import { PageLink } from '../shell/PageLink';
 import { ThemeChoices } from '../ui/ThemeChoice';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { ControlGallery } from '../ui/ControlGallery';
+import { keepFullMotion, useLowPower } from '../ui/lowPower';
 import { Action, Skeleton, Status } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { ExportJobs } from './ExportJobs';
@@ -23,6 +24,7 @@ import { words } from '../copy';
  * any of it can be switched back, including the older navigation if the new one ever gets in the way. */
 function InterfaceChoices() {
   const preferences = usePrefs();
+  const lowPower = useLowPower();
   return (
     <section className="panel stack interface-choices">
       <h2>Interface</h2>
@@ -40,6 +42,12 @@ function InterfaceChoices() {
           ))}
         </div>
         <p className="hint">Still stops decorative movement. Your computer’s reduced-motion setting always takes priority.</p>
+        {lowPower && (
+          <p className="hint" role="status">
+            Movement is resting because this device was struggling to keep up. Nothing is hidden.{' '}
+            <button type="button" className="quiet" onClick={keepFullMotion}>Use full motion here</button>
+          </p>
+        )}
       </fieldset>
       )}
       <label className="choice">

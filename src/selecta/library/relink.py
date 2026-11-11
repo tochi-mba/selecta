@@ -3,6 +3,7 @@
 A relink changes only paths of verified records, never file bytes or song IDs.
 The preview and commit share validation and a fingerprint of the candidate set.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -32,7 +33,67 @@ def _local_root(value: str, must_exist: bool) -> Path:
     return candidate.resolve(strict=must_exist)
 
 
-def preview_relink(conn: sqlite3.Connection, old: str, new: str) -> dict:
+def _references(conn: sqlite3.Connection, ids: set[int]) -> dict[str, int]:
+    """GP-0252-03: what else points at these songs. A relink keeps every ID, so all of it keeps
+    working, and the preview says so in numbers rather than asking someone to take it on trust."""
+    if not ids:
+        return {"current_mix": 0, "drafts": 0, "ratings": 0, "corrections": 0, "discoveries": 0}
+    marks = ",".join("?" * len(ids))
+    values = sorted(ids)
+    in_drafts = 0
+    for (items,) in conn.execute("SELECT items FROM drafts"):
+        try:
+            songs = [
+                item.get("song_id") if isinstance(item, dict) else item[0]
+                for item in json.loads(items or "[]")
+            ]
+            if any(song is not None and int(song) in ids for song in songs):
+                in_drafts += 1
+        except (TypeError, ValueError, LookupError):
+            continue
+
+    def count(sql: str, twice: bool = False) -> int:
+        return int(conn.execute(sql, values + values if twice else values).fetchone()[0])
+
+    return {
+        "current_mix": count(f"SELECT COUNT(*) FROM queue WHERE song_id IN ({marks})"),  # noqa: S608
+        "drafts": in_drafts,
+        "ratings": count(
+            f"SELECT COUNT(*) FROM ratings WHERE song_a IN ({marks}) OR song_b IN ({marks})",
+            twice=True,
+        ),  # noqa: S608
+        "corrections": count(f"SELECT COUNT(*) FROM song_overrides WHERE song_id IN ({marks})"),  # noqa: S608
+        "discoveries": count(
+            f"SELECT COUNT(*) FROM seam_book WHERE song_a IN ({marks}) OR song_b IN ({marks})",
+            twice=True,
+        ),  # noqa: S608
+    }
+
+
+def _why_different(row: sqlite3.Row, size: int, tags: dict) -> str:
+    """In plain words, what doesn't match, so a person can decide whether it is the same
+    recording."""
+    reasons = []
+    if size != row["size"]:
+        reasons.append("the file size changed")
+    if abs(tags["duration"] - row["duration"]) > 1.5:
+        reasons.append(f"its length differs by {abs(tags['duration'] - row['duration']):.0f} s")
+    if normalize_music(tags.get("title") or "") != normalize_music(row["title"] or ""):
+        reasons.append(f"its title now reads “{tags.get('title') or 'nothing'}”")
+    if normalize_music(tags.get("artist") or "") != normalize_music(row["artist"] or ""):
+        reasons.append(f"its artist now reads “{tags.get('artist') or 'nothing'}”")
+    return ", ".join(reasons) or "its details changed"
+
+
+def preview_relink(
+    conn: sqlite3.Connection, old: str, new: str, confirmed: list[int] | None = None
+) -> dict:
+    """GP-0252-04: a recording whose file is readable but whose size, length or tags changed is
+    never
+    assumed to be the same one. It is shown with what differs, and only a person's explicit yes for
+    that exact song ID lets it through. Missing, unsafe, unreadable or colliding files never
+    can be."""
+    yes = {int(song) for song in confirmed or []}
     old_root = _local_root(old, must_exist=False)
     new_root = _local_root(new, must_exist=True)
     if old_root == new_root or old_root.is_dir():
@@ -41,9 +102,8 @@ def preview_relink(conn: sqlite3.Connection, old: str, new: str) -> dict:
     if old_root not in watched:
         raise RelinkError("Only a previously watched music folder can be re-linked.")
     rows = [
-        row for row in conn.execute(
-            "SELECT id,path,size,duration,title,artist FROM songs ORDER BY id"
-        )
+        row
+        for row in conn.execute("SELECT id,path,size,duration,title,artist FROM songs ORDER BY id")
         if Path(row["path"]).is_relative_to(old_root)
     ]
     if not rows:
@@ -58,6 +118,7 @@ def preview_relink(conn: sqlite3.Connection, old: str, new: str) -> dict:
         target = new_root / relative
         state = "verified"
         stat = None
+        why = None
         if (
             not target.is_file()
             or target.is_symlink()
@@ -70,15 +131,18 @@ def preview_relink(conn: sqlite3.Connection, old: str, new: str) -> dict:
             try:
                 stat = target.stat()
                 tags = read_file(target)
-                if (
-                    stat.st_size != row["size"] or tags is None
+                if tags is None:
+                    state = "unreadable"
+                elif (
+                    stat.st_size != row["size"]
                     or abs(tags["duration"] - row["duration"]) > 1.5
                     or normalize_music(tags.get("title") or "")
                     != normalize_music(row["title"] or "")
                     or normalize_music(tags.get("artist") or "")
                     != normalize_music(row["artist"] or "")
                 ):
-                    state = "identity_not_verified"
+                    why = _why_different(row, stat.st_size, tags)
+                    state = "confirmed_by_you" if row["id"] in yes else "identity_not_verified"
             except OSError:
                 state = "unreadable"
         entry = {
@@ -87,12 +151,21 @@ def preview_relink(conn: sqlite3.Connection, old: str, new: str) -> dict:
             "artist": row["artist"],
             "status": state,
         }
+        if why:
+            entry["why"] = why
+            entry["can_confirm"] = True
         candidates.append(entry)
-        if state == "verified" and stat is not None:
-            accepted.append({
-                "id": row["id"], "old": row["path"], "new": str(target),
-                "size": stat.st_size, "mtime": stat.st_mtime_ns,
-            })
+        if state in {"verified", "confirmed_by_you"} and stat is not None:
+            accepted.append(
+                {
+                    "id": row["id"],
+                    "old": row["path"],
+                    "new": str(target),
+                    "size": stat.st_size,
+                    "mtime": stat.st_mtime_ns,
+                    "confirmed": state == "confirmed_by_you",
+                }
+            )
     # Never expose an unsafe/partly identified remap as a commit-able preview.
     token = hashlib.sha256(json.dumps(accepted, sort_keys=True).encode("utf-8")).hexdigest()
     return {
@@ -101,15 +174,22 @@ def preview_relink(conn: sqlite3.Connection, old: str, new: str) -> dict:
         "total": len(rows),
         "verified": len(accepted),
         "blocked": len(rows) - len(accepted),
+        "confirmed": sum(entry["confirmed"] for entry in accepted),
+        "needs_confirmation": sum(
+            entry["status"] == "identity_not_verified" for entry in candidates
+        ),
+        "references": _references(conn, {row["id"] for row in rows}),
         "candidates": candidates,
         "token": token if len(accepted) == len(rows) else None,
     }
 
 
-def commit_relink(conn: sqlite3.Connection, old: str, new: str, token: str) -> dict:
+def commit_relink(
+    conn: sqlite3.Connection, old: str, new: str, token: str, confirmed: list[int] | None = None
+) -> dict:
     if len(token) != 64:
         raise RelinkError("Preview this move before confirming it.")
-    preview = preview_relink(conn, old, new)
+    preview = preview_relink(conn, old, new, confirmed)
     if not preview["token"] or preview["token"] != token:
         raise RelinkError("The folder or its recordings changed. Preview it again.")
     old_root = Path(preview["from"])
@@ -118,7 +198,7 @@ def commit_relink(conn: sqlite3.Connection, old: str, new: str, token: str) -> d
     # can change recorded paths or IDs between preview and commit.
     try:
         conn.execute("BEGIN IMMEDIATE")
-        refreshed = preview_relink(conn, old, new)
+        refreshed = preview_relink(conn, old, new, confirmed)
         if refreshed["token"] != token:
             raise RelinkError("The library changed. Preview it again.")
         for row in conn.execute("SELECT id,path FROM songs").fetchall():

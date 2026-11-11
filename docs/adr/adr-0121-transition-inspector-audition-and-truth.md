@@ -2,7 +2,7 @@
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Implemented (5/5 new tasks, 2026-11-10, uncommitted on `feat/finish-checklists`).
-- **Independent verification:** Automated verification 3/5 (EX-0121-02, -04, -05 on 2026-11-10); EX-0121-01 needs a person, EX-0121-03 needs its browser fault-injection E2E.
+- **Independent verification:** Automated verification 4/5 (EX-0121-02, -04, -05 on 2026-11-10; EX-0121-03 on 2026-11-11); EX-0121-01 needs a person.
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P0 / Creator.
 - **Related ADRs:** ADR-0101, ADR-0093; does not silently supersede earlier decisions.
@@ -32,7 +32,7 @@ No new render-generation endpoint is authorized; audio previews must use one own
 
 1. **EX-0121-01 - Design human-first status summary**. Acceptance: Requested vs actual rendered vs heard never conflated. Required verification: Real audio and loading-state comprehension. **Implementation: Implemented; Verified: No. Needs a person: real-audio and loading-state comprehension. Evidence: `web/src/views/ex0121SeamInspector.test.tsx`.**
 2. **EX-0121-02 - Map all detailed controls**. Acceptance: No seam choice or explanation silently removed. Required verification: Options/cues parity and keyboard audit. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: `web/src/views/ex0121SeamInspector.test.tsx`, `web/src/views/ufSeamInspector.test.tsx`.**
-3. **EX-0121-03 - Specify failure and fallback behaviors**. Acceptance: Unrendered/failed transitions never appear as playable. Required verification: Fault-injection E2E. **Implementation: Implemented; Verified: No (component fault injection passes in `web/src/views/ex0121SeamInspector.test.tsx`; browser E2E pending).**
+3. **EX-0121-03 - Specify failure and fallback behaviors**. Acceptance: Unrendered/failed transitions never appear as playable. Required verification: Fault-injection E2E. **Implementation: Implemented; Verified: Yes (automated, 2026-11-11). Evidence: `web/e2e/ex-0121-seam-faults.e2e.ts`, `web/src/views/ex0121SeamInspector.test.tsx`.**
 4. **EX-0121-04 - Feasibility-check previous/new audition**. Acceptance: Decision names matching render identity or explicitly declines feature. Required verification: Engine review and focus collision tests. **Implementation: Implemented (decision below); Verified: Yes (automated, 2026-11-10). Evidence: `web/src/audio/focus.test.tsx`, `web/src/views/ex0121SeamInspector.test.tsx`.**
 5. **EX-0121-05 - Guard ratings and mutation scope**. Acceptance: Feedback and edit actions never attach to later seam. Required verification: Late response, reorder and preview races. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: `web/src/views/ex0121SeamInspector.test.tsx`, `web/src/views/Mix.test.tsx`.**
 

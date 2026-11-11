@@ -13,9 +13,10 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from selecta import db, flags, jobs, mix
+from selecta import db, flags, jobs, mix, self_service
 from selecta.api_common import (
     API_FEATURES,
     API_VERSION,
@@ -48,6 +49,20 @@ class RelinkRequest(BaseModel):
     old: str
     new: str
     token: str | None = None
+    # GP-0252-04: song IDs a person said are the same recording, though their details changed
+    confirmed: list[int] = []
+
+
+# T0096: steering actions that replace a setting outright, and the setting each one replaces.
+STEERING_SETTINGS = {
+    "wordplay": "wordplay",
+    "flash": "flash",
+    "mix_language": "mix_language",
+    "stems": "stems",
+    "energy_arc": "energy_arc",
+    "take_me_to": "target",
+    "length_mode": "length_mode",
+}
 
 
 def add_routes(app, ctx) -> None:
@@ -182,6 +197,27 @@ def add_routes(app, ctx) -> None:
         wanted = int(body.budget_gb * 1024**3)
         if wanted < MIN_CACHE_BYTES:
             raise HTTPException(400, "The limit can't go below 0.5 GB.")
+        # T0096: another window may have changed the limit since this page read it. Say so
+        # rather than silently replacing the newer choice.
+        current = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        # T0094: a retry whose first try already landed (its reply lost, or the server restarted)
+        # finds the limit it asked for, which is a success to repeat rather than a conflict.
+        already = current == min(wanted, largest_cache_bytes(settings))
+        if (
+            body.expected_budget_bytes is not None
+            and body.expected_budget_bytes != current
+            and not already
+        ):
+            return JSONResponse(
+                {
+                    "detail": f"The storage limit was changed somewhere else to "
+                    f"{current / 1024**3:.1f} GB, so it wasn't changed here. "
+                    "Choose again if you still want a different limit.",
+                    "code": "setting_changed",
+                    "budget_bytes": current,
+                },
+                status_code=409,
+            )
         settings.set_storage_budget(min(wanted, largest_cache_bytes(settings)))
         prune_cache(settings)
         return storage()
@@ -196,8 +232,10 @@ def add_routes(app, ctx) -> None:
         return Response(
             data,
             media_type="application/zip",
-            headers={"Content-Disposition": 'attachment; filename="selecta-local-backup.zip"',
-                     "Cache-Control": "no-store"},
+            headers={
+                "Content-Disposition": 'attachment; filename="selecta-local-backup.zip"',
+                "Cache-Control": "no-store",
+            },
         )
 
     async def _read_backup(request: Request) -> bytes:
@@ -269,7 +307,7 @@ def add_routes(app, ctx) -> None:
         _relink_from_local_browser(request)
         try:
             with connect() as conn:
-                return preview_relink(conn, body.old, body.new)
+                return preview_relink(conn, body.old, body.new, body.confirmed)
         except RelinkError as problem:
             raise HTTPException(400, str(problem)) from problem
 
@@ -278,7 +316,7 @@ def add_routes(app, ctx) -> None:
         _relink_from_local_browser(request)
         try:
             with connect() as conn:
-                return commit_relink(conn, body.old, body.new, body.token or "")
+                return commit_relink(conn, body.old, body.new, body.token or "", body.confirmed)
         except RelinkError as problem:
             raise HTTPException(409, str(problem)) from problem
 
@@ -364,7 +402,12 @@ def add_routes(app, ctx) -> None:
             ).fetchone()[0]
             line = len(mix.line_order(conn))
             mix_songs = len(mix._items(conn))
+            from selecta.library.scan import library_folders
+
+            missing = sum(not folder.is_dir() for folder in library_folders(conn))
         worker = store._worker
+        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        scan = background.scan if isinstance(background.scan, dict) else {}
         return {
             "api_version": API_VERSION,
             "analysis_version": ANALYSIS_VERSION,
@@ -378,11 +421,39 @@ def add_routes(app, ctx) -> None:
             "drafts_in_line": line,
             "seam_records": len(store.remembered().clean),
             "typical_estimate_miss": store.clock.accuracy().get("typical_miss"),
+            # GP-0263: measured now, booleans and counts only
+            "checks": self_service.local_checks(settings.home),
+            "exports": self_service.export_outcomes(settings.home),
+            "scan_failed": scan.get("status") == "failed",
+            "folders_missing": missing,
+            "storage_full": cache_bytes(settings) >= limit,
         }
 
     @app.post("/api/steer")
     def steering(body: SteerRequest) -> dict:
         with connect() as conn:
+            # T0096: a setting replaced outright (not nudged like more/less) is checked against
+            # what the page last saw, so another window's newer choice is reported, not lost.
+            field = STEERING_SETTINGS.get(body.action)
+            if field and "expected" in body.model_fields_set:
+                now = getattr(get_steering(conn), field)
+                # no destination may be stored as None and sent as "" (or the other way round)
+                both_empty = field == "target" and not now and not body.expected
+                # T0094: a retry whose first try already landed finds its own value: not a conflict
+                if field == "target":
+                    already = str(now or "") == str(body.value or "")
+                else:
+                    already = now == body.value
+                if now != body.expected and not both_empty and not already:
+                    return JSONResponse(
+                        {
+                            "detail": "That setting was changed somewhere else, so it wasn't "
+                            "changed here. It now shows the newer choice.",
+                            "code": "setting_changed",
+                            "steering": get_steering(conn).__dict__,
+                        },
+                        status_code=409,
+                    )
             try:
                 return steer(conn, body.action, body.value).__dict__
             except ValueError as problem:

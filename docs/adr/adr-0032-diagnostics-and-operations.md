@@ -1,7 +1,7 @@
 # ADR-0032: Privacy-safe diagnostics and truthful background-job feedback
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress ([#22](https://github.com/tochi-mba/selecta/pull/22))
+- **Implementation status:** Implemented (T0243-T0249 all ticked on 2026-11-11, [#22](https://github.com/tochi-mba/selecta/pull/22)); not yet Verified
 - **Proposed:** 2026-11-06
 - **Delivery phase:** 10–13
 - **Scope:** Implemented in [#22](https://github.com/tochi-mba/selecta/pull/22). See its status above and the evidence file for anything left.
@@ -44,6 +44,7 @@ Implementation may move to **In progress** only when a linked implementation PR 
 | 2026-11-06 | Proposed | Not started | Documentation-only plan |
 | 2026-11-06 | Proposed | In progress | [#22](https://github.com/tochi-mba/selecta/pull/22), with evidence in [implementation-evidence.md](implementation-evidence.md) |
 | 2026-11-08 | Accepted | In progress | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-11 | Accepted | Implemented | Operation ids now tie each request to its outcome in Diagnostics; `tests/test_diagnostics_operations.py`, `web/src/diagnosticsOperations.test.ts` |
 
 ## References
 

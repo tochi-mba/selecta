@@ -84,16 +84,28 @@
 
 /* Workspace */
 .workspace .metrics strong { font-variant-numeric: tabular-nums; }
+/* Pseudo-localised diagnostic strings must break instead of widening a phone viewport. */
+.workspace .diagnostic-facts :is(p, b, .hint),
+.workspace .diagnostic-facts li { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+/* The self-service fault explanation is a flex child: cap it before lengthy translations wrap. */
+.workspace .what-went-wrong .needs-you-list li > :is(p, .status) { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+.workspace .what-went-wrong .needs-you-list li p b { overflow-wrap: anywhere; }
 .needs-you-list, .diagnostic-facts, .export-jobs { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .needs-you-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); padding-block: var(--space-2); border-bottom: 1px solid var(--border); }
-.needs-you .status, .diagnostic-facts .status, .export-job .status { white-space: normal; }
+.needs-you .status, .what-went-wrong .status, .diagnostic-facts .status, .export-job .status { white-space: normal; }
 /* CI-0180-01: whether the library can be mixed, then the one thing to do first, marked by words and weight */
 .needs-you .library-health { margin: 0; font-weight: 600; }
 .needs-you-list li.needs-you-first { font-weight: 600; }
 .interface-choices .choice { display: flex; width: fit-content; max-width: 100%; }
 .sources-add { align-items: flex-end; }
 .sources-add .field { flex: 1 1 280px; }
-.folder-list b { unicode-bidi: plaintext; }
+.folder-list li, .folder-list li > div { min-width: 0; }
+.folder-list b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  unicode-bidi: plaintext;
+}
 /* MP-0291-06: the song sheet's facts read as one table, every value starting on the same line,
    so what's in use and what was measured sit straight under each other */
 .song-facts.song-facts-table { grid-template-columns: max-content minmax(0, 1fr); column-gap: var(--space-3); }
@@ -113,6 +125,11 @@
 .export-job-actions a { overflow-wrap: anywhere; min-width: 0; }
 
 /* A blind study: the two versions are laid out exactly alike */
+.study-setup {
+  display: grid;
+  gap: var(--space-4);
+}
+.study-setup > * { margin-top: 0; }
 .study-setup .field input { max-width: 480px; }
 .study-progress { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
 .study-now { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }

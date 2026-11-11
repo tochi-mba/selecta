@@ -1,14 +1,14 @@
 # ADR-0076: Incremental migration, rollout controls, rollback and delivery order
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 7 of 9 tasks implemented with automated evidence on 2026-11-11; 2 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 7 - Verification
 - **Extends existing decisions:** ADR-0030, ADR-0033, ADR-0046
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0076-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,17 +26,17 @@ Deliver Selecta 3.0 through dependency-gated, reviewable PRs with reversible fro
 
 - Rollback must preserve original songs, metadata overrides, drafts, ratings, settings, request state and exports. Release candidates demonstrate no loss of data or audio fidelity and are validated on actual supported installed-app workflows.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0076-01 - Not started.** Establish dependency graph, implementation PR boundaries and minimum reviewable migration slices.
-2. **S3-0076-02 - Not started.** Assign ownership of each ADR and exact feature-parity/test mapping.
-3. **S3-0076-03 - Not started.** Define old/new navigation coexistence, feature flags and required kill-switch conditions.
-4. **S3-0076-04 - Not started.** Enforce zero unapproved backend schema, engine or privacy change as part of visual-only PRs.
-5. **S3-0076-05 - Not started.** Implement rollback rehearsal with realistic local data, drafts, request jobs and long mixes.
-6. **S3-0076-06 - Not started.** Reconcile existing polish programme tasks without rewriting historical completion.
-7. **S3-0076-07 - Not started.** Require build/unit/Python/E2E/visual/security/a11y/audio gates appropriate to each slice.
-8. **S3-0076-08 - Not started.** Record manual release sign-off, accepted limitations and go/no-go for integrated release.
-9. **S3-0076-09 - Not started.** Update all S3 statuses, roadmap and evidence after actual implementation rather than pre-emptively.
+1. **S3-0076-01 - Implemented.** Establish dependency graph, implementation PR boundaries and minimum reviewable migration slices. **Evidence:** docs/adr/selecta-3-roadmap.md 'Dependency gates and staged delivery' (phases 0 to 7 with their gates); tests/test_s3_docs_contracts.py test_severity_delivery_order_and_gates_are_written_down (passed 2026-11-11).
+2. **S3-0076-02 - Implemented.** Assign ownership of each ADR and exact feature-parity/test mapping. **Evidence:** docs/adr/selecta-3-parity-matrix.md (each feature-parity row and each unverified T and P task mapped to its S3 decisions) held by tests/test_s3_parity_task_map.py test_every_unchecked_older_task_is_mapped_under_its_own_section; ownership rules in docs/adr/selecta-3-baseline.md 'How work moves and who decides' (passed 2026-11-11).
+3. **S3-0076-03 - Implemented.** Define old/new navigation coexistence, feature flags and required kill-switch conditions. **Evidence:** docs/adr/selecta-3-routes.md 'Going back: the kill switch' (?ui=classic and the Workspace switch over the same pages); src/selecta/flags/*.json kill switches held by tests/test_flags.py; web/src/flags.test.tsx 'sends classic Discover to whichever of its pages is there'; web/src/sfCompat.test.ts (passed 2026-11-11).
+4. **S3-0076-04 - Needs a person.** Enforce zero unapproved backend schema, engine or privacy change as part of visual-only PRs. **Status:** Needs a person: checking that each visual-only PR carries no unapproved backend schema, engine or privacy change is a reviewer's call on that PR
+5. **S3-0076-05 - Implemented.** Implement rollback rehearsal with realistic local data, drafts, request jobs and long mixes. **Evidence:** tests/rollback_check.py run against the Selecta 3.0 merge (3b01dc1, exported with git archive) on 2026-11-11: a home made by this checkout with a draft, a tempo correction, mix settings, two ratings, a request and a finished export record was read by the older build and then by this one again, reporting 'this checkout again sees exactly the same' and 'nothing lost' (passed 2026-11-11).
+6. **S3-0076-06 - Implemented.** Reconcile existing polish programme tasks without rewriting historical completion. **Evidence:** older T and P ticks are left as they were and mapped, not rewritten, by docs/adr/selecta-3-parity-matrix.md, held by tests/test_s3_parity_task_map.py test_each_task_is_mapped_once_to_real_s3_decisions_and_claims_nothing_complete; src/selecta/audit/checklist_evidence.py keeps every checked task's evidence (passed 2026-11-11).
+7. **S3-0076-07 - Implemented.** Require build/unit/Python/E2E/visual/security/a11y/audio gates appropriate to each slice. **Evidence:** docs/adr/selecta-3-verification-matrix.md 'Quality gates by implementation PR'; .github/workflows/test.yml runs the build, unit, Python, browser, every-feature-off, contrast and evidence gates; tests/test_s3_docs_contracts.py test_severity_delivery_order_and_gates_are_written_down (passed 2026-11-11).
+8. **S3-0076-08 - Needs a person.** Record manual release sign-off, accepted limitations and go/no-go for integrated release. **Status:** Needs a person: the owner's release sign-off, accepted limitations and go or no-go for the integrated release
+9. **S3-0076-09 - Implemented.** Update all S3 statuses, roadmap and evidence after actual implementation rather than pre-emptively. **Evidence:** statuses for ADR-0063 to ADR-0077 recorded from tests run on 2026-11-11, with person-only work left open; src/selecta/audit/checklist_evidence.py passes over this checklist (passed 2026-11-11).
 
 ## Preservation and integration constraints
 

@@ -1,7 +1,7 @@
 # ADR-0057: Safe timeline editor, insertion, reorder and stable identity
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 8 of 9 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 1 still open
+- **Implementation status:** In progress: 9 of 9 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
@@ -35,7 +35,7 @@ Create a focused three-region editor: mix-scoped header, fluid timeline and cont
 5. **S3-0057-05 - Implemented.** Preserve lock, remove, insert, play-from-here, render, retry, jump-to-problem and scoped Undo. **Evidence:** web/src/views/Mix.test.tsx 'sends every change to the draft' (lock), 'plays through the draft, from the top or from any song', 'sends one request and every badge changes straight away' (render) and 'opens the first transition that failed, on Change, and names that pair' (jump to problem); web/e2e/flows.e2e.ts 'editing: move with the buttons, undo it, and remove a song' (passed 2026-11-10).
 6. **S3-0057-06 - Implemented.** Connect inspector selection to stable pair identity and prevent stale selection from editing a new pair. **Evidence:** web/src/views/Mix.test.tsx 'plays the exact render, and the same stays selected when others move', 'keeps each mix scope’s exact selection separate when the mounted editor switches scope' and 'never confuses two different drafts with identical songs and transition keys' (passed 2026-11-10).
 7. **S3-0057-07 - Implemented.** Handle request ghost rows and pending bridges without presenting them as playable timeline items. **Evidence:** web/src/views/Mix.test.tsx 'show up faded in the timeline at the place they’re going', 'take over from the transition they’ll replace, which comes back if they’re cancelled' and 'aren’t shown on a draft, since requests only join what’s playing' (passed 2026-11-10).
-8. **S3-0057-08 - In progress.** Profile and optimize 100-song timeline without remounting audio or losing focus/scroll position. **Status:** In progress: long mixes switch to the compact .timeline.long layout in web/src/views/Mix.tsx, but no 100-song profile has been recorded.
+8. **S3-0057-08 - Implemented.** Profile and optimize 100-song timeline without remounting audio or losing focus/scroll position. **Evidence:** web/e2e/s3-profiles.e2e.ts 'S3-0057-08 a 100-song timeline keeps audio, focus and scroll through moves, inside the interaction budget' (passed 2026-11-10, Edge on a shared 4-core i7-10510U laptop: 100 songs opened in 1759 ms in the compact .timeline.long layout of web/src/views/Mix.tsx, 10 keyboard moves with next paint p50 9.4 ms and worst 21.2 ms against a 200 ms budget, no long tasks, 0 rows remounted, focus kept on the moved song, scroll drift 308 px, 0 sounds restarted while playing). No optimisation was needed at this size.
 9. **S3-0057-09 - Implemented.** Add conflict, second-tab, background render, deleted-row and draft/current isolation tests. **Evidence:** web/e2e/flows.e2e.ts 'a change to a mix that’s moved on stops, says so, and touches nothing' and 'a draft that’s been deleted is explained, and never quietly swapped for another mix'; web/e2e/integration.e2e.ts 'editing a draft while the current mix plays: neither touches the other, and Undo knows which is which'; web/e2e/listen.e2e.ts 'only one tab plays at a time'; web/src/views/Mix.test.tsx 'stop and catch up if the mix has moved on' (passed 2026-11-10).
 
 ## Preservation and integration constraints
@@ -67,6 +67,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 | 2026-11-10 | Accepted | In progress (8/9) | Task-by-task evidence on each item; 0 need a person, 1 still open |
+| 2026-11-11 | Accepted | In progress (9/9) | S3-0057-08 100-song timeline profile recorded within budget |
 
 ## References
 

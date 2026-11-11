@@ -5,7 +5,7 @@
   "as_of": "2026-11-08",
   "scope": "FP-0264-01 through FP-0271-08",
   "decision_summary": "8 Proposed; owner decisions pending",
-  "implementation_status": "64 Not started; 0 In progress; 0 Implemented",
+  "implementation_status": "52 Implemented; 3 In progress; 9 Not started (2026-11-11)",
   "independent_verification": "0 Verified",
   "scope_note": "New acceptance deltas only; old SF/GP tasks and working source features are not missing claims.",
   "groups": {
@@ -13,169 +13,180 @@
       "decision": "Accepted",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
-        "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "06"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
-      "implementation_pr": null,
+      "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
     },
     "0265": {
       "decision": "Accepted",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "02",
         "08"
       ],
       "independently_verified": [],
-      "implementation_pr": null,
+      "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
     },
     "0266": {
       "decision": "Accepted",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
-      "implementation_pr": null,
+      "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
     },
     "0267": {
       "decision": "Accepted",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
-        "01",
+      "implemented": [
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "01"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
-      "implementation_pr": null,
+      "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
     },
     "0268": {
       "decision": "Accepted",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
-        "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "06"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
-      "implementation_pr": null,
+      "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
     },
     "0269": {
       "decision": "Accepted",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
-      "implementation_pr": null,
+      "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
     },
     "0270": {
       "decision": "Accepted",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
-      "implementation_pr": null,
+      "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
     },
     "0271": {
       "decision": "Accepted",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
-      "implementation_pr": null,
+      "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
     }
   }
 }

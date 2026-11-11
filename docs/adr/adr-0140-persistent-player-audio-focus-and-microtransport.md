@@ -1,7 +1,7 @@
 # ADR-0140 - Persistent mini-player, audio-focus handoff and frictionless microtransport
 
 - **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
-- **Implementation:** 7/8 Implemented, 0/8 In progress, 1 Not started (source-level, PR #31).
+- **Implementation:** 8/8 Implemented, 0/8 In progress, 0 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Playback shell.
@@ -41,7 +41,7 @@ Prefer semantic, truthful feedback over cosmetic animation; static UI is better 
 5. **MI-0140-05 - Design volume/mute feedback.** Acceptance: Slider and icon communicate mute, 0 volume and restore distinctly. Required verification: Keyboard/AT and device media-key review. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/shell/Shell.tsx`, `web/src/player.ts`; `web/src/player.test.ts`, `web/src/audio/focus.test.tsx`; independent checks pending.**
 6. **MI-0140-06 - Audit keyboard and media-session parity.** Acceptance: Global shortcuts, mini controls, headphones and media keys target same engine. Required verification: Browser device matrix. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: global shortcuts, mini-player controls and Media Session handlers share `SetPlayer` in `web/src/App.tsx` and `web/src/shell/Shell.tsx`; physical device matrix remains open.**
 7. **MI-0140-07 - Specify disconnected experience.** Acceptance: Already buffered audio continues when possible; stale state is marked. Required verification: Server loss/recovery and stale-status test. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: buffer-preserving stale/offline banner and recovery flow in `web/src/App.tsx`/`web/src/player.ts`; server-loss device review remains open.**
-8. **MI-0140-08 - Measure player stability.** Acceptance: Route/modal interactions do not cause audio dropout or extra AudioContext. Required verification: Long-session trace and captured audio. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: -; evidence: -.**
+8. **MI-0140-08 - Measure player stability.** Acceptance: Route/modal interactions do not cause audio dropout or extra AudioContext. Required verification: Long-session trace and captured audio. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: feat/finish-checklists @ `49dd09a`; evidence: `web/e2e/mi-player-stability.e2e.ts` (MI-0140-08 every route, dialog, sheet and the command palette leave one AudioContext running and the sound unbroken) passed on 2026-11-11: across a 29-step walk of routes, dialogs, sheets, the command palette and Back/Forward, exactly one AudioContext is made, it never changes state once running, its clock keeps pace with the wall clock, something is always scheduled to sound, no song restarts and shown time never goes backwards. Needs a person: a captured recording of the real audio output over a long session, listened to for dropouts.**
 
 ## Shared invariants and negative cases
 

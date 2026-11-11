@@ -1,7 +1,7 @@
 # ADR-0036: Content-shaped skeletons and truthful asynchronous state transitions
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress: 3/12 tasks Implemented with evidence on 2026-11-10 (P0039-P0041); P0032-P0038, P0042, P0043 open (geometry and refresh measurements not green; Edit timeline skeleton missing). See [the polish evidence ledger](polish-implementation-evidence.md).
+- **Implementation status:** In progress: 4/12 tasks Implemented with evidence (P0039-P0041 on 2026-11-10, P0042 on 2026-11-11); P0035 (Edit timeline skeleton) and P0038 (120ms reveal policy, fake-clock measurement) built with browser checks pending; P0032-P0034, P0036, P0037, P0043 open (geometry and refresh measurements not green). See [the polish evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 2 - Shared components and loading
@@ -57,6 +57,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
 | 2026-11-10 | Accepted | In progress (3/12) | Reconciled against current code; P0039-P0041 ticked with tests run that day; independent verification still pending |
+| 2026-11-11 | Accepted | In progress (4/12) | P0042 ticked (`web/src/ui/polishReveal.test.tsx`); timeline skeleton (P0035) and reveal delay (P0038) built, browser specs written but not run |
 
 ## References
 

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { audioOwner } from '../audio/focus';
-import { fakeBackend } from '../test/backend';
+import { fakeBackend, Reply } from '../test/backend';
 import { Listening } from './Listening';
 
 /**
@@ -26,6 +26,54 @@ beforeEach(() => {
   });
 });
 afterEach(() => vi.restoreAllMocks());
+
+describe('S3-0066 setup and the one-trial layout', () => {
+  it('each setup field is labelled and required, Open waits for all three, and a bad code or an empty study says so (S3-0066-01)', async () => {
+    fakeBackend({ 'GET /listening': (_body: unknown, url: string) => (url.includes('empty') ? [] : new Reply(404, { detail: 'Not Found' })) });
+    render(<Listening />);
+    const open = screen.getByRole('button', { name: 'Open study' });
+    for (const name of ['Study code', 'Listener nickname', 'Listening setup']) {
+      expect(screen.getByLabelText(name)).toBeRequired();
+    }
+    expect(screen.getByText('The code you were given for this study.')).toBeInTheDocument();
+    expect(open).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Study code'), { target: { value: 'wrong' } });
+    fireEvent.change(screen.getByLabelText('Listener nickname'), { target: { value: 'ear' } });
+    expect(open).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Listening setup'), { target: { value: '   ' } });
+    expect(open).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Listening setup'), { target: { value: 'headphones' } });
+    expect(open).toBeEnabled();
+    fireEvent.click(open);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this listening study. Check the study code and try again.');
+    fireEvent.change(screen.getByLabelText('Study code'), { target: { value: 'empty' } });
+    fireEvent.click(open);
+    expect(await screen.findByText('No trials are registered for this study code.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('one comparison at a time, with A and B built the same way and the same labels on every trial (S3-0066-02)', async () => {
+    fakeBackend({ 'GET /listening': [{ id: 't1' }, { id: 't2' }], 'POST /listening/t1/response': {} });
+    const { container } = render(<Listening />);
+    await open();
+    const shape = () => [...container.querySelectorAll('.study-version')].map((version) => ({
+      heading: version.querySelector('h3')?.textContent,
+      audio: version.querySelectorAll('audio[controls]').length,
+      grades: version.querySelectorAll('input[type="radio"]').length,
+      issues: version.querySelectorAll('input[type="checkbox"]').length,
+    }));
+    expect(container.querySelectorAll('.study-trial')).toHaveLength(1);
+    expect(screen.getByText('Comparison 1 of 2')).toBeInTheDocument();
+    const first = shape();
+    expect(first.map((version) => version.heading)).toEqual(['Version A', 'Version B']);
+    expect(first[0]).toEqual({ ...first[1], heading: 'Version A' });
+    expect(first[0].audio).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Cannot judge' }));
+    expect(await screen.findByText('Comparison 2 of 2')).toBeInTheDocument();
+    expect(container.querySelectorAll('.study-trial')).toHaveLength(1);
+    expect(shape()).toEqual(first);
+  });
+});
 
 describe('S3-0066 one owner and an announced clip', () => {
   it('says which version is playing, and starting B stops A through the one audio owner (S3-0066-04)', async () => {

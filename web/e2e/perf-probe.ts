@@ -20,6 +20,10 @@ export type FrameWindow = {
   longTasks: number[];
   longFrames: LongFrame[];
   animations: number;
+  /** When each long task started, in ms from the start of the window. */
+  longTaskAt: number[];
+  /** API responses that finished inside the window: path and ms from the start of the window. */
+  apiDone: string[];
 };
 
 declare global {
@@ -124,6 +128,10 @@ export async function frameWindow(page: Page, ms: number, during: 'idle' | { scr
       longTasks: window.mi0162.longTasks.filter((task) => inside(task.start)).map((task) => Math.round(task.duration)),
       longFrames: window.mi0162.longFrames.filter((frame) => inside(frame.start)).map((frame) => ({ ...frame, duration: Math.round(frame.duration), blocking: Math.round(frame.blocking) })),
       animations,
+      longTaskAt: window.mi0162.longTasks.filter((task) => inside(task.start)).map((task) => Math.round(task.start - begun)),
+      apiDone: (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+        .filter((entry) => entry.name.includes('/api/') && inside(entry.responseEnd))
+        .map((entry) => `${new URL(entry.name).pathname} @${Math.round(entry.responseEnd - begun)}`),
     };
   }, { ms, during });
 }
@@ -152,6 +160,22 @@ export async function interactionsSince(page: Page, from: number) {
   };
 }
 
+/** API requests whose path matches `match` that started after `from`: when each started and ended,
+ * in ms after `from`, so a slow result can be split into waiting, server and rendering time. */
+export async function apiSince(page: Page, from: number, match: string) {
+  return page.evaluate(({ from, match }) => (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+    .filter((entry) => entry.name.includes(match) && entry.startTime >= from)
+    .map((entry) => ({ url: entry.name.replace(location.origin, '').slice(0, 80), start: Math.round(entry.startTime - from), end: Math.round(entry.responseEnd - from) })), { from, match });
+}
+
+/** Navigation milestones of the current page, in ms from navigation start. */
+export async function navigationTimes(page: Page) {
+  return page.evaluate(() => {
+    const [entry] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    return entry ? { response_end: Math.round(entry.responseEnd), dom_content_loaded: Math.round(entry.domContentLoadedEventEnd), load: Math.round(entry.loadEventEnd) } : null;
+  });
+}
+
 /** Wall-clock milliseconds for an action to show its result, measured from the test runner. */
 export async function timed(act: () => Promise<unknown>, done: () => Promise<unknown>) {
   const started = Date.now();
@@ -162,7 +186,11 @@ export async function timed(act: () => Promise<unknown>, done: () => Promise<unk
 
 /** The machine line every measured result carries. */
 export async function browserLine(page: Page) {
-  const agent = await page.evaluate(() => navigator.userAgent);
-  const edge = /Edg\/([\d.]+)/.exec(agent)?.[1] ?? 'unknown';
+  // the user agent string is reduced to 157.0.0.0; the full build comes from the client hints
+  const edge = await page.evaluate(async () => {
+    const hints = (navigator as unknown as { userAgentData?: { getHighEntropyValues(keys: string[]): Promise<{ fullVersionList?: { brand: string; version: string }[] }> } }).userAgentData;
+    const list = hints ? (await hints.getHighEntropyValues(['fullVersionList'])).fullVersionList ?? [] : [];
+    return list.find((brand) => /edge/i.test(brand.brand))?.version ?? /Edg\/([\d.]+)/.exec(navigator.userAgent)?.[1] ?? 'unknown';
+  });
   return `shared 4-core Intel i7-10510U laptop, no GPU (integrated Intel UHD, headless), Windows 11, Edge ${edge}`;
 }

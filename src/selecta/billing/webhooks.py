@@ -327,6 +327,11 @@ def process_event(
         _mark(conn, row["id"], EventStatus.FAILED, now, error)
         return ProcessResult(event_id, EventStatus.FAILED.value, tuple(touched), error)
     _mark(conn, row["id"], EventStatus.PROCESSED, now, None)
+    if touched and row["received_at"] is not None:
+        from selecta.observability import metrics
+
+        metrics.observe("selecta_webhook_to_entitlement_seconds",
+                        max(float(now) - float(row["received_at"]), 0.0))
     return ProcessResult(event_id, EventStatus.PROCESSED.value, tuple(touched))
 
 

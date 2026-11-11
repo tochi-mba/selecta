@@ -7,7 +7,9 @@
 # database or storage credentials: they talk to the worker gateway (SELECTA_WORKER_GATEWAY_URL)
 # with a bootstrap token and touch storage only through signed URLs.
 
-FROM python:3.12.10-slim-bookworm
+# The base is pinned by its multi-arch index digest (Docker Hub, read 2026-11-11) so a re-pushed
+# tag can't change the image; bump the tag and the digest together.
+FROM python:3.12.10-slim-bookworm@sha256:fd95fa221297a88e1cf49c55ec1828edd7c5a428187e67b5d1805692d11588db
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

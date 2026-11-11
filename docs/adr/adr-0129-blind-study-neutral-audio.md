@@ -2,7 +2,7 @@
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** 4/5 Implemented; 1 Not started (2026-11-10).
-- **Verified:** 1/5 (EX-0129-04, 2026-11-10).
+- **Verified:** 2/5 (EX-0129-03 and -04, 2026-11-10/11).
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P1 / Operations.
 - **Related:** ADR-0109, ADR-0066, not automatically superseded or verified.
@@ -32,7 +32,7 @@ Do not change randomization, normalization, study data model or reports through 
 
 1. **EX-0129-01 - Audit all method leakage**. **Acceptance:** No method/renderer names visible or announced. **Verification:** Screenreader, DOM and protocol audit. **Implementation: Implemented; Verified: No. Needs a person: screen-reader pass.** Evidence: `tests/test_ex_0129_study_integrity.py`, MP-0294-07.
 2. **EX-0129-02 - Design balanced A/B interface**. **Acceptance:** Equal control treatment and order clarity. **Verification:** Counterbalanced human pilot. **Implementation: Implemented; Verified: No. Needs a person: counterbalanced human pilot.**
-3. **EX-0129-03 - Separate listening, grading and save**. **Acceptance:** Missing ratings and submissions explained. **Verification:** Study form validation E2E. **Implementation: Implemented; Verified: No.** Open: MP-0294-05/-06 E2E needs a green rerun.
+3. **EX-0129-03 - Separate listening, grading and save**. **Acceptance:** Missing ratings and submissions explained. **Verification:** Study form validation E2E. **Implementation: Implemented; Verified: Yes (2026-11-11).** Evidence: MP-0294-05 to -08 (14 passed), `web/src/views/Listening.test.tsx`, `ListeningStudyFlow.test.tsx`.
 4. **EX-0129-04 - Preserve once-only identity**. **Acceptance:** Retry/race cannot double-submit or misattribute answer. **Verification:** API and delayed response tests. **Implementation: Implemented; Verified: Yes (2026-11-10).** Evidence: `tests/test_ex_0129_study_integrity.py` (5 passed).
 5. **EX-0129-05 - Verify with real blind sessions**. **Acceptance:** Method remains hidden and ratings recorded accurately. **Verification:** Named listener/protocol reviewer. **Implementation: Not started; Verified: No. Needs a person: named listener and protocol reviewer.**
 

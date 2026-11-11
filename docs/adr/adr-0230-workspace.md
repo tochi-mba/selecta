@@ -1,7 +1,7 @@
 # ADR-0230 - Workspace for truthful analysis, source health, storage and diagnostics
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (4/8 Implemented, 1/8 In progress, 3/8 Not started or needing a person; updated 2026-11-10).
+- **Implementation:** In progress (5/8 Implemented, 0/8 In progress, 3/8 needing a person; updated 2026-11-11).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P1 / Workspace.
@@ -28,7 +28,7 @@ Keep operations calm and transparent. Show distinct job stages and privacy bound
 
 No invented progress percentage, dangerous delete wording, hidden filesystem effects or noisy modal interruption. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist - 4/8 Implemented, 0/8 Verified
+## Implementation checklist - 5/8 Implemented, 0/8 Verified
 
 1. **SF-0230-01 - Define Workspace information hierarchy.** **Acceptance:** Health, source, analysis and storage are findable. **Required verification:** Operator findability test. **Implementation:** Needs a person: operator findability test; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 2. **SF-0230-02 - Design health summary.** **Acceptance:** Actionable issues above passive metrics. **Required verification:** Known-fault fixtures. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent r2k; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/sfFlowWorkspace.test.tsx` 'puts every known fault, with its fix, above the metrics and the job list' (storage full, too few ready songs, failed transition, failed song, paused analysis, missing folder; DOM order needs-you, metrics, jobs) passed (2026-11-10).
@@ -36,7 +36,7 @@ No invented progress percentage, dangerous delete wording, hidden filesystem eff
 4. **SF-0230-04 - Refine source management.** **Acceptance:** Paths, errors and safe removal consequences explicit. **Required verification:** Filesystem safety E2E. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/Workshop.test.tsx` 'show folders, and whether each can be found'; `tests/test_api_contracts.py::test_folders_say_whether_they_can_be_found`, `::test_stopping_watching_touches_nothing_else`; `tests/test_folder_relink.py` (2026-11-10).
 5. **SF-0230-05 - Design storage maintenance.** **Acceptance:** Preview, confirmation and accurate reclaim result. **Required verification:** Cancel/failure tests. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent r2k; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/WorkshopPanels.tsx` StoragePanel: a limit below what is kept shows a removal preview and waits for a yes; the result reports the real amount from the server; `web/src/views/sfFlowWorkspace.test.tsx` 'previews, and Keep cancels without sending anything', 'removes only after a yes, and reports the real amount from the server', 'a failed removal says nothing was removed, and the limit goes back', 'raising the limit removes nothing, so it saves without asking' (passed); `web/src/views/Workshop.test.tsx` (12 passed) (2026-11-10).
 6. **SF-0230-06 - Make diagnostics usable.** **Acceptance:** Logs and identifiers locally safe with clear export actions. **Required verification:** Privacy review. **Implementation:** Needs a person: privacy review of diagnostics. Automated part: `web/e2e/flows.e2e.ts` 'Workshop tells the truth ... diagnostics hold nothing private' and `tests/test_api_contracts.py::test_diagnostics_have_no_paths_or_song_names` pass; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **SF-0230-07 - Protect background calm.** **Acceptance:** Job updates never steal focus or auto-play. **Required verification:** Audio/attention E2E. **Implementation:** In progress: no audio/attention E2E yet proves job updates never steal focus or auto-play; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0230-07 - Protect background calm.** **Acceptance:** Job updates never steal focus or auto-play. **Required verification:** Audio/attention E2E. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent r3j; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/e2e/sf-flow-create.e2e.ts` 'SF-0230-07 job updates never steal focus or start playback'; run 2026-11-11 (dist-r3j).
 8. **SF-0230-08 - Test operational recovery.** **Acceptance:** Users recover a stuck source without wrong action. **Required verification:** Scenario study. **Implementation:** Needs a person: scenario study recovering a stuck source; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
@@ -47,5 +47,5 @@ Preserve original local music; intentional Pause and one audio owner; disclosed 
 
 - **Depends on:** ADR-0156/0180/0128; ADR-0198/0199 and cross-cutting UI foundation.
 - **Next:** owner decision → prototypes → source-level implementation PR → regression tests → independent visual, access, audio and device evidence → release gate.
-- **Now:** Accepted; 2/8 Implemented (2026-11-10); 0/8 independently Verified; no implementing PR/SHA.
+- **Now:** Accepted; 5/8 Implemented (2026-11-11); 0/8 independently Verified; no implementing PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

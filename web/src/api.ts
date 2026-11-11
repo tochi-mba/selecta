@@ -249,12 +249,40 @@ export function problemKind(error: unknown): ProblemKind {
   return 'server';
 }
 
+/** T0094: when a change got no answer at all (the server stopped, restarted or the connection
+ * dropped), it is sent again with the same operation id after these pauses. The server keeps the
+ * first answer to every operation on disk, so a change that did land comes back as its first
+ * answer instead of happening twice. Tests turn the pauses off in src/test/setup.ts. */
+let mutationRetryDelays: readonly number[] = [500, 1500];
+export function setMutationRetryDelays(delays: readonly number[]) {
+  mutationRetryDelays = delays;
+}
+
+/** A fresh id for one change, safe for the server to echo and list (`kind-random`). */
+export function newOperationId(kind = 'op'): string {
+  const random = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  return `${kind}-${random}`;
+}
+
 export async function send<T>(path: string, init?: RequestInit): Promise<T> {
   // Reads have a recovery deadline. Never abort a mutation and imply it did not happen.
   const controller = !init?.method || init.method === 'GET' ? new AbortController() : null;
   const timeout = controller ? window.setTimeout(() => controller.abort(), 20000) : null;
+  const resendable = init?.method === 'POST' && !!operationOf(init);
   try {
-  const response = await fetch(`/api${path}`, controller ? { ...init, signal: controller.signal } : init);
+  let response: Response;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      response = await fetch(`/api${path}`, controller ? { ...init, signal: controller.signal } : init);
+      break;
+    } catch (error) {
+      // only "nothing answered": a refusal or an error reply is an answer and is never resent
+      if (!resendable || !(error instanceof TypeError) || attempt >= mutationRetryDelays.length) throw error;
+      await new Promise((done) => window.setTimeout(done, mutationRetryDelays[attempt]));
+    }
+  }
   if (!response.ok) {
     // a page can tell a missing route from anything else, because an older server won't have new ones
     let detail = response.status === 404 ? 'Not Found' : response.status >= 500 ? SERVER_FAILED_WORDS : 'Selecta couldn’t do that. Try again.';
@@ -268,7 +296,8 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* the status text will do */
     }
-    throw new ApiError(detail, response.status, code, operationOf(init));
+    // an id post() made up only for resending is not one a page can look up in Diagnostics (T0244)
+    throw new ApiError(detail, response.status, code, init && madeUpIds.has(init) ? '' : operationOf(init));
   }
   return await response.json();
   } catch (error) {
@@ -283,12 +312,24 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const get = <T,>(path: string) => send<T>(path);
 
-export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) =>
-  send<T>(path, {
+/** T0068: raw bytes from the local server (song and stem audio, seam clips, backups), which the JSON
+ * helpers above do not carry. Callers check `ok` themselves, because each says its own words. */
+export const fetchBytes = (path: string, init?: RequestInit): Promise<Response> =>
+  init ? fetch(`/api${path}`, init) : fetch(`/api${path}`);
+
+/** Requests whose operation id post() made up, rather than the page choosing it. */
+const madeUpIds = new WeakSet<RequestInit>();
+
+export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) => {
+  const init: RequestInit = {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...headers },
+    // T0094: every change carries an operation id, so resending it after a lost answer is safe
+    headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
     body: JSON.stringify(body ?? {}),
-  });
+  };
+  if (!headers || !('x-operation-id' in headers)) madeUpIds.add(init);
+  return send<T>(path, init);
+};
 
 export const del = <T,>(path: string, headers?: Record<string, string>) => send<T>(path, { method: 'DELETE', headers });
 

@@ -1,12 +1,12 @@
 import { type PointerEvent, useEffect, useRef, useState } from 'react';
-import { get, MixItem, post, SongRow, Status } from '../api';
+import { ApiError, get, MixItem, post, SongRow, Status } from '../api';
 import { flagOn, useFlags } from '../flags';
 import { Action, Dialog, Problem } from '../ui/controls';
-import { EnergyHorizon, FeelDiagram } from '../ui/MusicObjects';
+import { EnergyHorizon, FeelDiagram, HORIZON_STOPS, measuredHorizon } from '../ui/MusicObjects';
 import { SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
 
-const ARC_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'];
+const ARC_STOPS = HORIZON_STOPS;
 const DEFAULT_ARC = [62, 72, 100, 85, 68];
 const ARC_PRESETS = [
   { label: 'Build to a peak', values: [35, 50, 65, 85, 100] },
@@ -15,7 +15,8 @@ const ARC_PRESETS = [
 ] as const;
 
 const FEEL_WORDS: Record<string, string> = { balanced: 'Each mix chooses its feel', seamless: 'Smooth blends', punchy: 'Punchy changes' };
-const STEM_WORDS: Record<string, string> = { never: 'no stem moves', sometimes: 'stem moves sometimes', often: 'stem moves often' };
+// S31-0081-05: this line shows on the featured pick, so it says what happens rather than the DJ term "stem"
+const STEM_WORDS: Record<string, string> = { never: 'no part-by-part moves', sometimes: 'part-by-part moves sometimes', often: 'part-by-part moves often' };
 
 /** How the next mix will get built, in one line, so it can be seen without opening anything. */
 export function buildSummary(steering: Status['steering']): string {
@@ -27,22 +28,6 @@ export function buildSummary(steering: Status['steering']): string {
     flagOn('mixes.shaping.destination') && (steering.target ? `ending on ${steering.target_label ?? 'your chosen song'}` : 'Selecta chooses the ending'),
   ];
   return parts.filter(Boolean).join(' · ');
-}
-
-/** The energy each song in a mix actually has, on that mix's own scale, from its quietest song to its
- * most energetic. It's a different scale from the shape someone asks for, so the two are never drawn
- * on one chart as if they could be compared number for number. */
-function achievedArc(mix: MixItem[]): number[] | null {
-  const known = mix.map((item) => item.energy).filter((energy): energy is number => typeof energy === 'number');
-  // A gap is unknown, not a quieter song or an invitation to interpolate across it.
-  if (mix.length < 2 || known.length !== mix.length) return null;
-  const low = Math.min(...known);
-  const high = Math.max(...known);
-  const span = high - low || 1;
-  return ARC_STOPS.map((_, index) => {
-    const at = Math.round((index / (ARC_STOPS.length - 1)) * (known.length - 1));
-    return Math.round(((known[at] - low) / span) * 100);
-  });
 }
 
 /** How the next mix gets built. It stays out of the way until someone wants it. */
@@ -72,6 +57,9 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
   // only the last thing moved gets saved, and an answer to an older save can't move it back
   const arcSaves = useRef(0);
   const drawing = useRef<{ id: number; previous: number[] | null } | null>(null);
+  // SF-0243-02/03: a stroke in progress is a sketch. Nothing is saved until the finger or mouse lets
+  // go, and Escape, a cancelled pointer or leaving the page puts the shape back as it was.
+  const [drawingNow, setDrawingNow] = useState(false);
   const arcWrites = useRef(0);
   const savedArc = useRef(JSON.stringify(status.steering.energy_arc));
   const steerQueue = useRef<Promise<void>>(Promise.resolve());
@@ -82,17 +70,26 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
   const destinationVersion = useRef(0);
   const destinationConfirmed = useRef(destination);
 
+  const changedElsewhere = (error: unknown) => error instanceof ApiError && error.code === 'setting_changed';
+  const newerSteering = async () => {
+    const fresh = await get<Status>('/status').catch(() => null);
+    refreshStatus();
+    return fresh?.steering ?? status.steering;
+  };
   // The server accepts one steering write at a time. Sending them in order means an
   // older slow reply cannot overwrite the last choice, including when the user revises
   // the same setting before the first request finishes.
-  const enqueueSteer = (action: string, value: string | number[] | null): Promise<void> => {
+  // T0096: `seen` is read when the write is actually sent, so it is what the page last saw saved,
+  // and a newer choice made in another window is reported instead of being silently replaced.
+  const enqueueSteer = (action: string, value: string | number[] | null, seen?: () => unknown): Promise<void> => {
     const work = steerQueue.current.then(async () => {
-      await post('/steer', { action, value });
+      await post('/steer', seen ? { action, value, expected: seen() } : { action, value });
     });
     steerQueue.current = work.catch(() => {});
     return work;
   };
   useEffect(() => {
+    if (drawingNow) return;
     const snapshot = JSON.stringify(energyArc);
     const mine = ++arcSaves.current;
     // Reverting to the previously saved value still needs a write if another,
@@ -104,7 +101,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
     setArcSaving(true);
     const timer = window.setTimeout(() => {
       arcWrites.current += 1;
-      void enqueueSteer('energy_arc', energyArc)
+      void enqueueSteer('energy_arc', energyArc, () => (savedArc.current ? JSON.parse(savedArc.current) : null))
         .then(() => {
           savedArc.current = snapshot;
           if (mine !== arcSaves.current) return;
@@ -116,11 +113,29 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
           if (mine !== arcSaves.current) return;
           setArcSaving(false);
           setProblem(error.message);
+          if (changedElsewhere(error)) void newerSteering().then((steering) => {
+            savedArc.current = JSON.stringify(steering.energy_arc);
+            setEnergyArc(steering.energy_arc);
+          });
         })
         .finally(() => { arcWrites.current -= 1; });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [energyArc, refreshStatus, arcAttempt]);
+  }, [energyArc, refreshStatus, arcAttempt, drawingNow]);
+
+  useEffect(() => {
+    if (!drawingNow) return;
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || !drawing.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setEnergyArc(drawing.current.previous);
+      drawing.current = null;
+      setDrawingNow(false);
+    };
+    window.addEventListener('keydown', escape, true);
+    return () => window.removeEventListener('keydown', escape, true);
+  }, [drawingNow]);
 
   useEffect(() => {
     const query = destinationQuery.trim();
@@ -149,7 +164,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
     const mine = ++languageVersion.current;
     setMixLanguage(value);
     try {
-      await enqueueSteer('mix_language', value);
+      await enqueueSteer('mix_language', value, () => languageConfirmed.current);
       languageConfirmed.current = value;
       if (mine === languageVersion.current) {
         setProblem('');
@@ -159,6 +174,11 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
       if (mine === languageVersion.current) {
         setMixLanguage(languageConfirmed.current);
         setProblem((error as Error).message);
+        if (changedElsewhere(error)) {
+          const steering = await newerSteering();
+          languageConfirmed.current = steering.mix_language;
+          if (mine === languageVersion.current) setMixLanguage(steering.mix_language);
+        }
       }
     }
   };
@@ -166,7 +186,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
     const mine = ++stemsVersion.current;
     setStemFrequency(value);
     try {
-      await enqueueSteer('stems', value);
+      await enqueueSteer('stems', value, () => stemsConfirmed.current);
       stemsConfirmed.current = value;
       if (mine === stemsVersion.current) {
         setProblem('');
@@ -176,6 +196,11 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
       if (mine === stemsVersion.current) {
         setStemFrequency(stemsConfirmed.current);
         setProblem((error as Error).message);
+        if (changedElsewhere(error)) {
+          const steering = await newerSteering();
+          stemsConfirmed.current = steering.stems;
+          if (mine === stemsVersion.current) setStemFrequency(steering.stems);
+        }
       }
     }
   };
@@ -184,7 +209,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
     const next = song ? { id: String(song.id), label: `${song.title ?? 'Untitled'} - ${song.artist ?? 'Unknown artist'}` } : null;
     setDestination(next);
     try {
-      await enqueueSteer('take_me_to', next?.id ?? '');
+      await enqueueSteer('take_me_to', next?.id ?? '', () => destinationConfirmed.current?.id ?? null);
       destinationConfirmed.current = next;
       if (mine === destinationVersion.current) {
         setProblem('');
@@ -197,13 +222,21 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
       if (mine === destinationVersion.current) {
         setDestination(destinationConfirmed.current);
         setProblem((error as Error).message);
+        if (changedElsewhere(error)) {
+          const steering = await newerSteering();
+          const newer = steering.target
+            ? { id: steering.target, label: steering.target_label ?? `Song ${steering.target}` }
+            : null;
+          destinationConfirmed.current = newer;
+          if (mine === destinationVersion.current) setDestination(newer);
+        }
       }
     }
   };
 
   const arcSaved = JSON.stringify(energyArc) === savedArc.current;
   const arcPreview = energyArc ?? DEFAULT_ARC;
-  const achieved = achievedArc(mix);
+  const achieved = measuredHorizon(mix);
   const updateStop = (index: number, value: number) => {
     const next = [...arcPreview];
     next[index] = Math.round(Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0)));
@@ -290,11 +323,13 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
         <EnergyHorizon
           values={arcPreview}
           source="intention"
+          provisional={drawingNow}
           onPointerDown={(event) => {
             // Ignore explicitly secondary pointers; legacy/synthetic pointer events
             // may omit isPrimary or button, but still provide usable coordinates.
             if (event.isPrimary === false || event.button > 0 || drawing.current) return;
             drawing.current = { id: event.pointerId, previous: energyArc ? [...energyArc] : null };
+            setDrawingNow(true);
             event.currentTarget.setPointerCapture?.(event.pointerId);
             drawArcAt(event);
           }}
@@ -305,25 +340,29 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
             if (drawing.current?.id !== event.pointerId) return;
             drawArcAt(event);
             drawing.current = null;
+            setDrawingNow(false);
             if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
           }}
           onPointerCancel={(event) => {
             if (drawing.current?.id !== event.pointerId) return;
             setEnergyArc(drawing.current.previous);
             drawing.current = null;
+            setDrawingNow(false);
           }}
           onLostPointerCapture={(event) => {
             if (drawing.current?.id !== event.pointerId) return;
             setEnergyArc(drawing.current.previous);
             drawing.current = null;
+            setDrawingNow(false);
           }}
         />
         <p className="hint" role="status">
-          {arcSaving ? 'Saving your shape…'
+          {drawingNow ? 'Drawing. Nothing is saved until you let go, and Escape puts the shape back.'
+            : arcSaving ? 'Saving your shape…'
             : !arcSaved ? 'Your change was not saved. Try again; the previous setting is still on the server.'
               : energyArc === null ? 'Each mix uses its own shape.' : 'This is the shape you asked for, saved.'}
         </p>
-        {!arcSaved && !arcSaving && <button type="button" onClick={() => setArcAttempt((value) => value + 1)}>Try saving the shape again</button>}
+        {!arcSaved && !arcSaving && !drawingNow && <button type="button" onClick={() => setArcAttempt((value) => value + 1)}>Try saving the shape again</button>}
         <div className="energy-arc-stops">
           {ARC_STOPS.map((stop, index) => (
             <label key={stop}>

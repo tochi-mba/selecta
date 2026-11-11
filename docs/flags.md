@@ -44,6 +44,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `listen.handoff_phrase` | **Shared words at the hand-off.** While a finished word transition plays, the countdown names the words the two songs share. | `listen.beat_countdown` |
 | `listen.steering` | **Change the next song.** Bigger, Calmer and Something else for whatever plays next. |  |
 | `listen.why_transition` | **Why this transition?.** Explains the move chosen for the coming transition. |  |
+| `listen.first_handoff` | **First hand-off note.** Once the first finished transition has really been heard, a small note names the two songs it joined. It can be dismissed and never comes back. |  |
 | `listen.media_keys` | **Media keys.** The computer's media keys and lock screen control playback. |  |
 
 ## Make a Mix
@@ -86,6 +87,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `editor` | **Editor.** Change a mix song by song: reorder, add, remove, swap and clear. |  |
+| `editor.energy_horizon` | **Start-to-finish horizon.** Story view draws the same five-stop energy horizon as the mix builder, measured from this mix or draft's own songs. | `editor` |
 | `editor.suggestions` | **Song suggestions.** Songs suggested for a spot before you search, each saying how it would hand over. | `editor` |
 | `editor.locks` | **Locked songs.** A locked song stays where it is when the mix is rebuilt. | `editor` |
 | `editor.drag_preview` | **Move preview.** While a song is dragged, the transitions the drop would change are marked before it lands. | `editor` |
@@ -131,6 +133,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 |---|---|---|
 | `discover.word_links` | **Word connections.** Lyric links between songs, where a word in one hands off to the same word in the next. | `lyrics.display` |
 | `discover.relationship_map` | **Connection map.** An optional map of the word connections found, drawing only the ones returned. | `discover.word_links` |
+| `discover.scan_reveals` | **Connections found while preparing.** While the first songs are being prepared, the newest word connections the library has really found are named, and nothing is shown until there is one. | `discover.word_links` |
 | `discover.harmonic` | **Harmonic matches.** Songs that might share chords, with an audition in four steps. |  |
 
 ## Library
@@ -140,6 +143,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `library.batch` | **Batch actions.** Select several songs and act on them at once. |  |
 | `library.priority` | **Priority songs.** Songs analysed first, whose stems are kept when the cache is cleared. |  |
 | `library.never_play` | **Never play.** Songs Selecta won't pick when it builds a mix. |  |
+| `library.related_links` | **Connected songs.** A song's details list the word connections found for it, each marked heard and kept or still a candidate. | `discover.word_links` |
 | `library.corrections` | **Corrections.** Fix a song's measured tempo, or say whether it's music. |  |
 | `library.capability_readiness` | **Readiness by capability.** Song details say separately whether a song can play, join mixes, have stems split and show timed lyrics. |  |
 | `library.card_view` | **Card view.** The Library as cards instead of a list. |  |
@@ -167,6 +171,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `workspace.backup` | **Local backup.** Back up the library's data and restore it on the next start. |  |
 | `workspace.diagnostics` | **Diagnostics.** The raw details of what Selecta is doing, for when something goes wrong. |  |
 | `workspace.library_health` | **Library health.** Overview says whether the library can be mixed or what blocks it, and which one thing to do first. |  |
+| `workspace.self_service` | **What went wrong.** Faults Selecta has measured on this PC, each with its confirmed or possible cause and a scoped way to put it right. | `workspace.diagnostics` |
 
 ## Across the app
 
@@ -178,6 +183,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `app.glossary` | **Music terms.** Plain explanations of the music words Selecta uses, and the small ? beside them. |  |
 | `app.theme_choice` | **Theme choice.** Light, dark or match this computer. |  |
 | `app.motion_choice` | **Motion choice.** Still, subtle or expressive movement. The computer's reduced-motion setting always wins. |  |
+| `app.auto_low_motion` | **Lower motion on a struggling device.** When frames keep arriving late, decorative movement switches to Still for this visit. Nothing is hidden, and Workspace can bring full motion back. |  |
 | `app.classic_nav` | **Classic navigation.** The older navigation labels over the same pages, with ?ui=classic as a way back. |  |
 | `app.scene_transitions` | **Page cross-fades.** With Expressive motion, pages cross-fade where the browser supports it; otherwise they change at once. | `app.motion_choice` |
 | `app.install` | **Install as an app.** Chrome and Edge can install Selecta as its own window. |  |
@@ -207,6 +213,9 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
 | `cloud.tracing` | **Job tracing.** OpenTelemetry spans across the API, worker gateway, workers and storage, one trace per job with its id as a span attribute. |  |
+| `cloud.metrics` | **Service metrics.** OpenTelemetry metrics the SLOs and alerts read: lost jobs, webhook-to-entitlement time, queue age, quarantines, spend ceilings, audit writes, reconciliation drift, backups and the maintenance leader. |  |
+| `cloud.export_expiry` | **Export expiry.** The maintenance leader deletes finished exports when their plan's retention runs out (Free 7 days, Standard 30, Premium 90) and gives their bytes back to the quota. |  |
+| `cloud.autoscale` | **Worker autoscaling.** The maintenance leader sizes each worker pool from the queue and asks the configured launcher (Modal) to start or stop workers. |  |
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |

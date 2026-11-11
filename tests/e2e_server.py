@@ -163,6 +163,37 @@ def _add_song(conn, settings: Settings, music: Path, number: int, song: tuple) -
         conn.execute("INSERT INTO lyrics(song_id,status) VALUES(?,?)", (song_id, "instrumental"))
 
 
+# MP-0272-03: with SELECTA_E2E_STEMS=1 the Studio can open for the mix's first transition. Stems
+# stay set to never for planning; this only fills the stem cache that separating would have filled,
+# so the Studio lays out its grid without the big model. Each "stem" is a quieter copy of the
+# window.
+STEMS = os.environ.get("SELECTA_E2E_STEMS") == "1"
+
+
+def seed_studio_stems(conn, settings: Settings, a_id: int, b_id: int) -> list[Path]:
+    """Write the four cached stems for both windows the Studio would separate for a into b."""
+    from selecta.analysis.song import load_song
+    from selecta.stems import _window_folder
+    from selecta.studio import _windows, find_placement
+
+    a, b = load_song(conn, settings, a_id), load_song(conn, settings, b_id)
+    place = find_placement(a, b)
+    if place is None:
+        raise ValueError(f"songs {a_id} and {b_id} can't share a Studio grid")
+    folders = []
+    for song, (start, length) in zip((a, b), _windows(a, b, place), strict=True):
+        source = Path(song.path)
+        folder = _window_folder(settings, source, start, length)
+        folder.mkdir(parents=True, exist_ok=True)
+        audio, rate = sf.read(source, always_2d=True, dtype="float32")
+        first = max(0, int(start * rate))
+        window = audio[first : first + int(length * rate)]
+        for lane, gain in (("vocals", 0.3), ("drums", 0.4), ("bass", 0.3), ("other", 0.3)):
+            sf.write(folder / f"{lane}.wav", window * gain, rate, subtype="PCM_16")
+        folders.append(folder)
+    return folders
+
+
 def build(home: Path) -> Settings:
     settings = Settings(home)
     settings.ensure_dirs()
@@ -197,8 +228,11 @@ def build(home: Path) -> Settings:
     # splitting stems needs the big model, which isn't what these tests are about
     steer(conn, "stems", "never")
     conn.commit()
-    for song_id in STRESS_MIX if STRESS else (1, 2, 3, 4):
+    order = STRESS_MIX if STRESS else (1, 2, 3, 4)
+    for song_id in order:
         mix.add_song(conn, song_id)
+    if STEMS:
+        seed_studio_stems(conn, settings, order[0], order[1])
     conn.close()
     (home / "built.json").write_text(json.dumps({"songs": len(SONGS)}), "utf-8")
     return settings

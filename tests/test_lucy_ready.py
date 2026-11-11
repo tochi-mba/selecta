@@ -5,6 +5,7 @@ commit (ADR-0317, 0318, 0319, LU-335-03)."""
 from __future__ import annotations
 
 import json
+import re
 import shutil
 
 from lucy_helpers import (
@@ -19,7 +20,7 @@ from lucy_helpers import (
 
 from selecta import db, mix
 from selecta.config import Settings
-from selecta.lucy import readiness
+from selecta.lucy import intent, readiness
 from selecta.planner.ready import ReadyEdge, _compatible
 from selecta.seam_kinds import SeamRequest, request_from
 from selecta.seams import SeamStore
@@ -61,7 +62,40 @@ def test_no_route_reports_real_limits_and_never_relaxes(lucy, lucy_home):
     assert snap["proposal"] is None  # nothing proposed rather than a quietly shorter mix
     text = reply(snap)["content"]
     assert "longest connected run of already-ready transitions is 6 songs" in text
-    assert "make it 6 songs" in text
+    assert "say “make 6 songs, only transitions that are already ready”" in text
+
+
+def test_a_shorter_offer_keeps_an_immovable_end_song(lucy, lucy_home):
+    """LX-0359-06: an infeasible strict plan offers only a shorter mix that keeps the person's own
+    end song and rules, or relaxing the rule, as whole requests, and builds nothing until they
+    choose. Each plan reads only its own words, so the offers quote complete requests."""
+    ready_chain(lucy_home)
+    cid = new_conversation(lucy)
+    asked = "make 9 songs, end with Last Call, only transitions that are already ready"
+    snap = say(lucy, cid, asked)
+    assert snap["proposal"] is None
+    text = reply(snap)["content"]
+    offered = re.search(r"I can make a (\d+)-song mix", text)
+    assert offered, text
+    size = int(offered.group(1))
+    fewer = f"make {size} songs, end with Last Call, only transitions that are already ready"
+    relaxed = "make 9 songs, end with Last Call, you can render new ones"
+    assert f"say “{fewer}”" in text, text
+    assert f"say “{relaxed}”" in text
+    chosen = current(say(lucy, cid, fewer))
+    # the offer was a promise the plan keeps: that many songs, ending on Last Call, all ready
+    assert len(song_ids(chosen)) == size and song_ids(chosen)[-1] == 12
+    assert set(zip(song_ids(chosen), song_ids(chosen)[1:], strict=False)) <= set(CHAIN)
+    assert chosen["snapshot"]["ready_only"] is True
+    # the relaxed offer keeps the count and the end song and swaps only the strict rule
+    kept = {(rule.kind, rule.value) for rule in intent.parse(relaxed)}
+    assert kept == {("count", 9), ("end_with", "Last Call"), ("prefer_ready", True)}
+    # nothing reaches Morning Light, so no shorter mix can end there: only relaxing is offered
+    snap = say(lucy, new_conversation(lucy), "make 9 songs, end with Morning Light, only "
+                                             "transitions that are already ready")
+    assert snap["proposal"] is None
+    text = reply(snap)["content"]
+    assert "-song mix" not in text and "you can render new ones" in text
 
 
 def test_reversed_pairs_and_history_never_count_as_ready(lucy, lucy_home):

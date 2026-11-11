@@ -107,29 +107,39 @@ for (const outcome of ['answered', 'refused'] as const) {
     expect(held.count, 'a second press made a second mix').toBe(1);
   });
 
-  test(`MI-0138-08 Replace and play, with music playing, is acknowledged once the dialog closes (${outcome})`, async ({ page }) => {
-    await page.goto('/listen');
-    const transport = page.locator('.now .transport .primary');
-    await transport.click();
-    await expect(transport).toHaveText('Pause', { timeout: 30_000 });
-    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Make a Mix', exact: true }).click();
-    const play = page.locator('.hero button.primary');
-    await play.click();
-    const dialog = page.getByRole('dialog', { name: /^Replace / });
-    await expect(dialog).toBeVisible();
-    const held = await holdBack(page, '**/api/vibes/*/build*', 'POST', outcome);
-    await arm(page, '.hero button.primary[aria-busy="true"]');
-    await dialog.getByRole('button', { name: 'Replace and play' }).click();
-    await acknowledged(page, 'Replace and play', outcome);
-    expect(held.answered).toBe(false);
-    await expect(page).toHaveURL(/\/mixes$/);
-    if (outcome === 'answered') {
-      await expect(page).toHaveURL(/\/listen$/, { timeout: 30_000 });
-    } else {
-      await expect(page.getByRole('alert').filter({ hasText: REFUSED })).toBeVisible({ timeout: DELAY * 3 });
-      await expect(play).not.toHaveAttribute('aria-busy', 'true');
-    }
-  });
+  // With music playing, Play and Shape first ask first; the dialog closes, so the control that opened it
+  // is the one that says it's working: the quick pick's Play, or an idea card's Shape first
+  for (const { from, opener, confirm, busy, lands } of [
+    { from: 'the quick pick', opener: '.hero button.primary', confirm: 'Replace and play', busy: '.hero button.primary[aria-busy="true"]', lands: /\/listen$/ },
+    { from: 'an idea card', opener: 'article .card-actions button.quiet:not(.save-draft)', confirm: 'Replace and edit', busy: 'article .card-actions button.quiet[aria-busy="true"]', lands: /\/mix\/current\/edit$/ },
+  ]) {
+    test(`MI-0138-08 ${confirm} from ${from}, with music playing, is acknowledged once the dialog closes (${outcome})`, async ({ page }) => {
+      await page.goto('/listen');
+      const transport = page.locator('.now .transport .primary');
+      await transport.click();
+      await expect(transport).toHaveText('Pause', { timeout: 30_000 });
+      await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Make a Mix', exact: true }).click();
+      const button = page.locator(opener).first();
+      await button.click();
+      const dialog = page.getByRole('dialog', { name: /^Replace / });
+      await expect(dialog).toBeVisible();
+      const held = await holdBack(page, '**/api/vibes/*/build*', 'POST', outcome);
+      await arm(page, busy, 'Building…');
+      await dialog.getByRole('button', { name: confirm }).click();
+      await acknowledged(page, `${confirm} from ${from}`, outcome);
+      expect(held.answered).toBe(false);
+      await expect(page).toHaveURL(/\/mixes$/);
+      // only the pressed idea says it's working; nothing else claims the same build
+      await expect(page.locator('main [aria-busy="true"]')).toHaveCount(1);
+      if (outcome === 'answered') {
+        await expect(page).toHaveURL(lands, { timeout: 30_000 });
+      } else {
+        await expect(page.getByRole('alert').filter({ hasText: REFUSED })).toBeVisible({ timeout: DELAY * 3 });
+        await expect(button).not.toHaveAttribute('aria-busy', 'true');
+      }
+      expect(held.count).toBe(1);
+    });
+  }
 
   test(`MI-0138-08 moving a song in the editor is acknowledged on the button and settles to the server's order (${outcome})`, async ({ page }) => {
     await page.goto('/mix/current/edit');

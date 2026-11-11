@@ -6,13 +6,13 @@ This ledger combines measured acceptance runs with the latest live-library snaps
 
 | What | Evidence | Known limits |
 |---|---|---|
-| Library scan and filter | 1,389 files in 5 s: 707 songs, 614 set aside, 68 duplicates | An override can only be set in the database |
+| Library scan and filter | 1,389 files in 5 s: 707 songs, 614 set aside, 68 duplicates | Historical: an override once needed the database. Song details now sets and clears it (`POST /api/songs/{id}/correct`, checked 2026-11-11) |
 | Fast analysis, resumable | 187 of 707 songs done. Tempos match known values. Start and pause from the Workshop | The other 520 take about 3.5 hours at about 25 s each. Key accuracy is unchecked by ear |
 | Lyric lookup | 583 of 707 songs have line-synced lyrics | English gets word timing. Other languages rarely pass the check |
 | Web app | Build a mix, reorder, lock, swap, edit any seam, hear it, rate it, export it. All views fit a 375 px phone with no sideways scroll. The Mixes view has a five-stop energy curve that can be drawn or adjusted with sliders, saved, and reset to each mix's own shape. Fullscreen Stage mode is already available | Folder entry is typed, not picked |
 | Playing a set | Gapless Web Audio from finished audio. A real seam played through in the browser, with lyrics, the song strip, and current-word focus following playback. Word focus uses a line-level timing estimate intended only for display | Not yet run for a full set or evaluated against sung-word ground truth. Stem artifacts and mix quality still need listening |
 | Set export | A 3.6-minute mix saved in 5 s and downloaded | Every seam must be rendered first |
-| Draft mixes | Edit a mix without touching what's playing. Saves as you go, with its own undo. Playing one trades places with the current mix, and undo restores both. Saved mixes become drafts. Tested through the routes and pages, and on a copy of the real library | Library and Words pages still add to the current mix only |
+| Draft mixes | Edit a mix without touching what's playing. Saves as you go, with its own undo. Playing one trades places with the current mix, and undo restores both. Saved mixes become drafts. Tested through the routes and pages, and on a copy of the real library | Library and Words pages still add to the current mix only. Updated 2026-11-11: Library still adds to the current mix only; Discover word and harmony links can now go into a draft too |
 | Render line | Prioritized drafts render after the current mix and ahead of everything else, in an order you can change. On real songs, the current mix rendered first and the first draft in line started by itself. A line seam stops for the current mix or if its mix changes | Pauses at the storage limit, and says so |
 | Arranging from stems | Strip and land: measures each stem square by square, searches for the best arrangement, renders, checks and repairs. On the seam the listener shaped and rated Good, the search lands on exactly what they made, without being told | One rated example so far, so the scoring weights are starting values. Whether other pairs sound good needs ears |
 | Seam Studio | Both songs' stems on one grid, heard instantly. Selecta can arrange it or fine tune yours, and says what changed. Real session: split, grid, play, use, undo. A shaped seam was rated Good by the listener | Two-bar squares only |
@@ -82,7 +82,7 @@ whether the stems and tails sound natural on these songs.
 
 ## Mixes
 
-Sixteen mixes under four headings: the moment, the mood, the sound and the journey, plus Selecta's pick. Each one reads lyrics, key, tempo, energy, genre and year against the rest of the library, and says which songs belong most, not just which are allowed.
+Twenty-five mixes under four headings: the moment, the mood, the sound and the journey, plus Selecta's pick (there were sixteen when the measurements below were taken; recounted from `planner/vibes.py` on 2026-11-11). Each one reads lyrics, key, tempo, energy, genre and year against the rest of the library, and says which songs belong most, not just which are allowed.
 
 | What | Measured on the real library, 3 builds of each mix, 510 seams |
 |---|---|
@@ -147,7 +147,7 @@ Packaged desktop apps quietly redirect AppData to a private copy, so one library
 
 Temporal discovery progress (6 November): audio search stores eight-bar ordered harmonic-sequence candidates across offsets and fixed transpositions, including exact source start times for audition. Sequence tests cover reordered-profile rejection, held/silent/invalid windows, transposition and offsets. Search tests cover persistence and limits. The `/api/discoveries` routes and `web/src/views/Links.tsx` expose harmonic candidates, audio auditions and saved reviews. UI tests cover advancing after a review, preparing the next pair, skipping without rating, and pausing the mix during auditions. These are implementation checks; full-library precision, runtime, melody-contour verification and stem consonance still need evidence. Candidates are not automatic-set approvals.
 
-The blind-comparison infrastructure exists in `src/selecta/listening.py`, `/api/listening`, and the Workshop's `Listening` component. It stores hidden condition assignments, prepared audio, preferences and optional quality grades. Tests cover loudness preparation, invalid audio, hidden identities, missing responses and failed saves. Reopening a study now clears prior quality scores. None of this establishes a listening-test win: the original plan still requires about 60 stratified pairs, baseline comparisons, human responses and a measured bad-transition rate. Missing grades must remain missing rather than count as good transitions.
+The blind-comparison infrastructure exists in `src/selecta/listening.py`, `/api/listening`, and the Workshop's `Listening` component. It stores hidden condition assignments, prepared audio, preferences and optional quality grades. Tests cover loudness preparation, invalid audio, hidden identities, missing responses and failed saves. Reopening the same study now restores unfinished quality grades, and opening a different study starts clean (updated 2026-11-11; it used to clear them every time). None of this establishes a listening-test win: the original plan still requires about 60 stratified pairs, baseline comparisons, human responses and a measured bad-transition rate. Missing grades must remain missing rather than count as good transitions.
 
 ## Not built or not yet demonstrated
 
@@ -175,7 +175,7 @@ Measured on 6 November, with a library synthesized by `tests/e2e_server.py`, in 
 | Pages at every size | No sideways scroll on any page from 320 px to 4K, in landscape, or at widths equal to 200% and 400% zoom | A real on-screen keyboard wasn't tried |
 | Automatic accessibility checks | Every page passes axe's WCAG 2.2 AA rules in both themes at desktop and phone width | Automatic checks only. NVDA and VoiceOver haven't been tried |
 | A large library | 20,000 songs all reachable by paging, with the slowest page under 2 s | Measured in tests with made-up rows, not a real 20,000-song scan |
-| Going back a version | The previous version (`911c981`) opened a library made by this one and saw the same mix, drafts, settings and songs, and this version then opened it again with nothing lost. `tests/test_upgrade.py` covers opening an older library and restoring a copy of the folder | Rehearsed once by hand on a made-up library. Ratings weren't part of it. The older version ignores corrections while it runs |
+| Going back a version | The previous version (`911c981`) opened a library made by this one and saw the same mix, drafts, settings and songs, and this version then opened it again with nothing lost. `tests/test_upgrade.py` covers opening an older library and restoring a copy of the folder | Rehearsed on a made-up library. On 2026-11-11 `tests/rollback_check.py` rehearsed it again with a Good and a Bad rating, which all three reads kept. The older version has no export jobs and ignores corrections while it runs |
 | Nothing leaves this computer | Every page's requests stay on this computer | Lyric lookups by the server still go to lrclib.net unless turned off |
 
 Each task in the Selecta 2.0 tracker is listed in [implementation-evidence.md](adr/implementation-evidence.md), including what's only partly done.

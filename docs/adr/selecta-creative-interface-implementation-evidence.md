@@ -1,6 +1,6 @@
 # Selecta - creative-interface implementation and independent evidence ledger
 
-**20 Accepted ADRs; 2026-11-10: 96 Implemented, 7 In progress, 33 Need a person, 4 Not started, 0 independently Verified.** Evidence for each implemented task is on its checklist line; dispositions are cross-checked in [the source baseline](selecta-creative-interface-source-baseline.md). A docs-only PR is not implementation evidence.
+**20 Accepted ADRs; 2026-11-11: 106 Implemented, 1 In progress, 33 Need a person, 0 Not started, 0 independently Verified.** Evidence for each implemented task is on its checklist line; dispositions are cross-checked in [the source baseline](selecta-creative-interface-source-baseline.md). A docs-only PR is not implementation evidence.
 
 | CI task | ADR | Implementation | Independently Verified | Owner | Implementing PR / SHA | Evidence / reviewer |
 |---|---|---|---|---|---|---|
@@ -32,7 +32,7 @@
 | CI-0168-05 | [ADR-0168](adr-0168-expressive-mix-selection-and-reveal.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0168-06 | [ADR-0168](adr-0168-expressive-mix-selection-and-reveal.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0168-07 | [ADR-0168](adr-0168-expressive-mix-selection-and-reveal.md) | Needs a person: uncoached task completion and hesitation counts | No | Unassigned | - | - |
-| CI-0169-01 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | In progress: the five-stop EnergyHorizon is the builder’s shape (web/src/views/MixSetup.tsx); drafts and the editor show measured energy (EnergyOverview, EnergyThumb), not the same five-stop form | No | Unassigned | - | - |
+| CI-0169-01 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
 | CI-0169-02 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0169-03 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0169-04 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
@@ -82,7 +82,7 @@
 | CI-0175-06 | [ADR-0175](adr-0175-requests-and-consented-route-visualization.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0175-07 | [ADR-0175](adr-0175-requests-and-consented-route-visualization.md) | Needs a person: uncoached real-audio request study | No | Unassigned | - | - |
 | CI-0176-01 | [ADR-0176](adr-0176-lyric-harmonic-connection-explorer.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
-| CI-0176-02 | [ADR-0176](adr-0176-lyric-harmonic-connection-explorer.md) | Not started: there is no bounded song-neighbour graph; web/src/views/Links.tsx lists phrase and chord pairs as cards | No | Unassigned | - | - |
+| CI-0176-02 | [ADR-0176](adr-0176-lyric-harmonic-connection-explorer.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
 | CI-0176-03 | [ADR-0176](adr-0176-lyric-harmonic-connection-explorer.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0176-04 | [ADR-0176](adr-0176-lyric-harmonic-connection-explorer.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0176-05 | [ADR-0176](adr-0176-lyric-harmonic-connection-explorer.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
@@ -92,14 +92,14 @@
 | CI-0177-02 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-03 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-04 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (built 2026-11-10: focused test added for existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
-| CI-0177-05 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Not started: song details show no validated related songs or candidate connections | No | Unassigned | - | - |
+| CI-0177-05 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
 | CI-0177-06 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-07 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Needs a person: scroll, frame and zoom measurements on a large collection and an assistive technology review | No | Unassigned | - | - |
 | CI-0178-01 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0178-02 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0178-03 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
-| CI-0178-04 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Not started: no new-musical-possibility reveal during the first scan | No | Unassigned | - | - |
-| CI-0178-05 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Not started: no first-seam reward moment | No | Unassigned | - | - |
+| CI-0178-04 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
+| CI-0178-05 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
 | CI-0178-06 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0178-07 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Needs a person: observed first-use task metrics and interviews | No | Unassigned | - | - |
 | CI-0179-01 | [ADR-0179](adr-0179-my-mixes-drafts-and-render-line-presence.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
@@ -109,7 +109,7 @@
 | CI-0179-05 | [ADR-0179](adr-0179-my-mixes-drafts-and-render-line-presence.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0179-06 | [ADR-0179](adr-0179-my-mixes-drafts-and-render-line-presence.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0179-07 | [ADR-0179](adr-0179-my-mixes-drafts-and-render-line-presence.md) | Needs a person: timed multi-draft retrieval task | No | Unassigned | - | - |
-| CI-0180-01 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | In progress: Workspace “What needs you” reflects real counts but can list several actions rather than one most relevant next action; a glance review needs a person | No | Unassigned | - | - |
+| CI-0180-01 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
 | CI-0180-02 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0180-03 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0180-04 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
@@ -139,7 +139,7 @@
 | CI-0183-07 | [ADR-0183](adr-0183-responsive-accessibility-and-performance.md) | Needs a person: named screen reader, touch and low-vision tester signs the exact SHA | No | Unassigned | - | - |
 | CI-0184-01 | [ADR-0184](adr-0184-research-status-and-release-governance.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0184-02 | [ADR-0184](adr-0184-research-status-and-release-governance.md) | Needs a person: owner review of PR slicing and rollback plans | No | Unassigned | - | features sit behind flags in src/selecta/flags and docs/flags.md |
-| CI-0184-03 | [ADR-0184](adr-0184-research-status-and-release-governance.md) | In progress: the crosswalk names the tests for each task, but not every task has state, viewport and negative-case coverage | No | Unassigned | - | - |
+| CI-0184-03 | [ADR-0184](adr-0184-research-status-and-release-governance.md) | In progress: coverage matrix built; 86 ticked tasks still have a gap; Needs a person: the coverage matrix review | No | Unassigned | - | docs/adr/selecta-creative-interface-coverage-matrix.md |
 | CI-0184-04 | [ADR-0184](adr-0184-research-status-and-release-governance.md) | Needs a person: real uncoached listener, creator and expert tasks with raw denominators | No | Unassigned | - | - |
 | CI-0184-05 | [ADR-0184](adr-0184-research-status-and-release-governance.md) | Needs a person: study bias review with real media | No | Unassigned | - | - |
 | CI-0184-06 | [ADR-0184](adr-0184-research-status-and-release-governance.md) | Needs a person: old/new/old rollback rehearsal with isolated data and real audio | No | Unassigned | - | - |

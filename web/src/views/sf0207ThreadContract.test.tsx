@@ -18,7 +18,7 @@ const VIEWS = fs.readdirSync(`${SOURCE}views/`)
   .map((name) => `views/${name}`);
 
 /** The routes each object is promised on (Listen, Edit, Inspector, Library, Requests, Studio, Lucy). */
-const MOTIF_SURFACES = ['views/Now.tsx', 'views/EditorRows.tsx', 'views/SeamInspector.tsx', 'views/Library.tsx',
+const MOTIF_SURFACES = ['views/Now.tsx', 'views/EditorRows.tsx', 'views/SeamInspector.tsx', 'views/LibraryRow.tsx',
   'views/Requests.tsx', 'views/Studio.tsx', 'views/LucySongs.tsx', 'views/SongDetails.tsx'];
 const SEAM_SURFACES = ['views/EditorRows.tsx', 'views/SeamInspector.tsx'];
 

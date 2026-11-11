@@ -1,14 +1,14 @@
 # ADR-0073: Rendering performance, 20k-track scale, 100-song edits and animation budgets
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 0 of 8 tasks implemented with automated evidence on 2026-11-11; 0 need a person; 8 still open (7 built with a browser check pending)
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0017, ADR-0029, ADR-0046
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0073-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Profile before optimizing, set measurable interactive responsiveness budgets and
 
 - Stop hidden/reduced-motion visualizers, avoid unnecessary row remounts, memoize only based on measured bottlenecks and keep large async data/animation out of audio control state. Lazy-load heavy workspaces only if navigation remains smooth.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0073-01 - Not started.** Capture baseline bundle, memory, mount, navigation, interaction and audio timing measurements.
-2. **S3-0073-02 - Not started.** Create deterministic 20k-library, 100-song-timeline, 64-cell Studio and background-load fixtures.
-3. **S3-0073-03 - Not started.** Profile long-list and panel interactions before deciding on virtualization or state architecture changes.
-4. **S3-0073-04 - Not started.** Define frame/interaction budgets and layout-shift acceptance based on measured devices.
-5. **S3-0073-05 - Not started.** Audit spectrum/lyrics animations under hidden tabs, reduced motion and low power.
-6. **S3-0073-06 - Not started.** Optimize loading splits and render boundaries without altering audio scheduling semantics.
-7. **S3-0073-07 - Not started.** Run memory/cleanup tests for repeated Studio, inspectors, overlays and preview mounts.
-8. **S3-0073-08 - Not started.** Track performance regression thresholds in CI where deterministic and manually when hardware-specific.
+1. **S3-0073-01 - In progress.** Capture baseline bundle, memory, mount, navigation, interaction and audio timing measurements. **Status:** Implemented; browser check pending (web/e2e/s3-0073-baseline-and-memory.e2e.ts 'S3-0073-01 baseline: bundle, heap, DOM, first mount and navigation for every page', written 2026-11-11, writes one record of bundle size, JS heap, DOM size, first mount and navigation per page). Interaction, layout-shift and audio-timing numbers already exist (web/e2e/s3-profiles.e2e.ts S3-PROFILE lines, docs/adr/selecta-microinteraction-performance-results.md). Needs a person: record the baseline on the owner's documented hardware.
+2. **S3-0073-02 - Implemented.** Create deterministic 20k-library, 100-song-timeline, 64-cell Studio and background-load fixtures. **Status:** Implemented; browser check pending (web/e2e/s3-profiles.e2e.ts 'S3-0057-08 a 100-song timeline...' and 'S3-0059-08 the Studio grid answers within budget during a background render...', web/e2e/mp-0289-stem-studio.e2e.ts 'MP-0289-01 ... all 64 cells line up'). The 20k library with background analysis writes is proven: tests/test_s3_library_profile.py test_twenty_thousand_songs_page_quickly_while_analysis_writes_in_the_background and tests/test_library_edges.py test_twenty_thousand_songs_are_all_reachable_and_a_page_stays_quick (passed 2026-11-11); tests/scale_server.py builds 20k songs with a 100-song mix.
+3. **S3-0073-03 - Implemented.** Profile long-list and panel interactions before deciding on virtualization or state architecture changes. **Status:** Implemented; browser check pending (web/e2e/s3-profiles.e2e.ts panel profiles for the 100-song timeline and the Studio grid). The long-list profile ran: tests/test_s3_library_profile.py pages 20k songs idle and under background writes and prints both profiles (passed 2026-11-11); docs/adr/completion/performance.md records the decision it guards (pagination, not virtualization).
+4. **S3-0073-04 - Implemented.** Define frame/interaction budgets and layout-shift acceptance based on measured devices. **Status:** Implemented; browser check pending (web/e2e/mp-0298-responsive-and-a11y.e2e.ts 'MP-0298-06 (lab part) layout shift, largest paint and interaction delay stay inside budget' and web/e2e/s3-profiles.e2e.ts, which enforce INP 200 ms, CLS 0.1 and no long task over 200 ms). Budgets are written in docs/adr/completion/performance.md; the 20k server budget is enforced by tests/test_s3_library_profile.py (passed 2026-11-11). Needs a person: confirm the budgets against measurements on the owner's documented hardware.
+5. **S3-0073-05 - Implemented.** Audit spectrum/lyrics animations under hidden tabs, reduced motion and low power. **Status:** Implemented; browser check pending (web/e2e/mp-0296-motion.e2e.ts 'MP-0296-06 Still and reduced motion remove decorative movement while the music data keeps updating' and 'MP-0296-07 the visualizer draws at most 15 frames a second while playing and nothing while hidden'). Needs a person: a low-power (battery saver) device check.
+6. **S3-0073-06 - In progress.** Optimize loading splits and render boundaries without altering audio scheduling semantics. **Status:** In progress: Lucy, Cloud and the admin area are lazily loaded chunks (web/src/App.tsx, web/src/RuntimeApp.tsx, web/src/cloud/CloudApp.tsx; seen in the 2026-11-11 vite build) and seam scheduling is unchanged (web/src/audio/transportEdges.test.ts), but no before-and-after load measurement shows an optimisation
+7. **S3-0073-07 - Implemented.** Run memory/cleanup tests for repeated Studio, inspectors, overlays and preview mounts. **Status:** Implemented; browser check pending (web/e2e/s3-0073-baseline-and-memory.e2e.ts 'S3-0073-07 repeated Studio, inspector, preview, palette and route mounts leave nothing growing', written 2026-11-11: after a warm-up, 12 rounds may not keep growing the garbage-collected heap, DOM nodes or event listeners, read through the browser's DevTools protocol). Unmount cleanup is unit-tested: web/src/ui/useVisiblePoll.test.tsx, web/src/audio/mediaSession.test.ts, web/src/audio/focus.test.tsx 'leaving the page lets the sound go'.
+8. **S3-0073-08 - In progress.** Track performance regression thresholds in CI where deterministic and manually when hardware-specific. **Status:** Implemented for the deterministic part; browser check pending (MP-0298-06, web/e2e/s3-profiles.e2e.ts, web/e2e/s3-0073-baseline-and-memory.e2e.ts run in the Edge E2E job of .github/workflows/test.yml); tests/test_s3_library_profile.py runs in the Python job (passed 2026-11-11). Needs a person: the hardware-specific manual measurements.
 
 ## Preservation and integration constraints
 

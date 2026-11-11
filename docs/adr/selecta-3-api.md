@@ -50,6 +50,23 @@ Reads, all retry-safe, with stale answers ignored by the caller: `/status`, `/mi
 
 Settings have no conflict check because they're single values on one machine, and the last confirmed value is what's shown. This is what's left of T0096, and it's deliberate.
 
+### Other writes the local app makes
+
+Added to the inventory on 2026-11-10. `web/src/s3-0071-api-inventory.test.ts` fails if a local page calls an address this file doesn't name. Cloud, admin and Lucy calls have their own clients and ADRs.
+
+| Write | Identity | Stale guard | Retry after a lost reply |
+|---|---|---|---|
+| `POST /scan`, `POST /scan/cancel` | The folder, or the running scan | The server runs one scan at a time | Safe: a second scan finds nothing new, and cancelling twice is harmless |
+| `POST /library/check` | None | | Safe: it only looks for new songs |
+| `POST /analysis/start` | None | | Safe: it starts analysis only if none is running |
+| `POST /library/batch` | Exact song ids with the values the page showed | The whole batch is refused if any id or value changed | Refused the same way, so nothing applies twice by surprise |
+| `POST /vibes/pick/build` | The starting song, with `x-mix-order` | Refused if the mix changed since the page read it | Refused the same way, and the page re-reads |
+| `POST /mix/clear` | Current mix | | Remembered for Undo, and clearing twice is harmless |
+| `POST /playback/skip` | Song id, with heard time | Times must be finite and non-negative | Records one more skip, used only as a local signal |
+| `POST /requests/consider` | The current order and playhead | The server re-reads the request list | Safe: it only re-plans waiting requests |
+| `POST /folders/relink` | Old and new folder, with the preview's token | 409 if the preview no longer matches | Refused the same way |
+| `POST /folders/stop-watching` | Folder path | | Safe: the folder is simply not watched, and no file is touched |
+
 ## Fields that may be missing
 
 An older server, or a mid-upgrade one, can leave these out. Pages must cope:

@@ -1,7 +1,7 @@
 # ADR-0169 - Energy Horizon, tactile shaping and destination scope
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** 5/7 Implemented, 1/7 In progress, 1/7 Need a person, 0/7 Not started (2026-11-10).
+- **Implementation:** 6/7 Implemented, 0/7 In progress, 1/7 Need a person, 0/7 Not started (2026-11-10).
 - **Independent verification:** No (0/7).
 - **Programme/date/baseline:** Selecta creative-interface synthesis; 2026-11-08; main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd.
 - **Priority / phase:** P0 / Create.
@@ -34,9 +34,9 @@ This is a **new, unimplemented design and acceptance delta**. Similar existing s
 
 Preserve the current restrained layout when a richer animation does not measurably improve comprehension, creative control or delight. A preview or graphic is illustrative until connected to actual source data. No fake waveform, beat, word timing, quality score, cover art, render status, autoplay sound or processing percentage. Every animated or direct-manipulation state requires an accessible static/keyboard equivalent.
 
-## Implementation checklist - 5/7 Implemented, 0/7 Verified
+## Implementation checklist - 6/7 Implemented, 0/7 Verified
 
-1. **CI-0169-01 - Design reusable five-stop horizon.** **Acceptance:** Same semantic start/finish form works in builder/draft/editor. **Required verification:** Responsive and state specimens. **Implementation:** In progress: the five-stop EnergyHorizon is the builder’s shape (web/src/views/MixSetup.tsx); drafts and the editor show measured energy (EnergyOverview, EnergyThumb), not the same five-stop form; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+1. **CI-0169-01 - Design reusable five-stop horizon.** **Acceptance:** Same semantic start/finish form works in builder/draft/editor. **Required verification:** Responsive and state specimens. **Implementation:** Implemented (built 2026-11-11); **Verified:** No; **Owner:** Unassigned; **PR/SHA:** feat/finish-checklists (uncommitted); **Evidence:** HORIZON_STOPS, measuredHorizon and MixHorizon in web/src/ui/MusicObjects.tsx, shared by the builder (web/src/views/MixSetup.tsx) and the editor Story view for the current mix and drafts (web/src/views/EditorStory.tsx, scope from web/src/views/Mix.tsx) behind flag editor.energy_horizon; web/src/views/ciEnergyHorizon.test.tsx all 5 tests; web/src/views/MixSetup.test.tsx, web/src/ui/MusicObjects.test.tsx, web/src/views/Mix.test.tsx (vitest, passed 2026-11-11); responsive specimens still need a person.
 2. **CI-0169-02 - Specify finger/stylus drawing precision.** **Acceptance:** Pointer capture, scroll behaviour and cancellation are deterministic. **Required verification:** Touch and stylus trace tests. **Implementation:** Implemented (existing code credited); **Verified:** No; **Owner:** Unassigned; **PR/SHA:** feat/finish-checklists (uncommitted); **Evidence:** web/src/views/MixSetup.test.tsx "cancels an interrupted pointer stroke without leaving a half-drawn energy choice"; touch-action none on .energy-horizon.intention in web/src/styles/music-objects.css (vitest, passed 2026-11-10); stylus trace still needs a person.
 3. **CI-0169-03 - Preserve numeric and keyboard equivalence.** **Acceptance:** Every point editable at 400% zoom without SVG interaction. **Required verification:** NVDA and keyboard tests. **Implementation:** Implemented (existing code credited); **Verified:** No; **Owner:** Unassigned; **PR/SHA:** feat/finish-checklists (uncommitted); **Evidence:** web/src/views/MixSetup.test.tsx "keeps numeric input, slider and drawn stops on the same exact preference values" (vitest, passed 2026-11-10); web/e2e/pages.e2e.ts zoom overflow (Playwright, passed 2026-11-10); NVDA still needs a person.
 4. **CI-0169-04 - Separate intended and measured arc scales.** **Acceptance:** No misleading comparison or invented song energy. **Required verification:** Data and copy validation. **Implementation:** Implemented (existing code credited); **Verified:** No; **Owner:** Unassigned; **PR/SHA:** feat/finish-checklists (uncommitted); **Evidence:** web/src/ui/MusicObjects.test.tsx "keeps requested and measured energy explicitly separate, with no invented measurement" (vitest, passed 2026-11-10).
@@ -52,5 +52,5 @@ Preserve single audio owner, manual Pause, original audio files, disclosed LRCLI
 
 - **Depends on:** ADR-0143, ADR-0111, ADR-0150; reconcile old task implementation rather than claiming it incomplete.
 - **Next sequence:** owner decision → object/state prototype → explicit test fixtures → scoped implementation PR → separate human/AT/audio/performance review → recorded GO/NO-GO.
-- **Now:** Decision Accepted; Implementation 5/7 Implemented (1 in progress, 1 need a person) on feat/finish-checklists, 2026-11-10; Independently Verified No.
+- **Now:** Decision Accepted; Implementation 6/7 Implemented (0 in progress, 1 need a person) on feat/finish-checklists, 2026-11-10; Independently Verified No.
 - [Roadmap](selecta-creative-interface-roadmap.md) · [140-task checklist](selecta-creative-interface-implementation-checklist.md) · [Evidence](selecta-creative-interface-implementation-evidence.md) · [Parity](selecta-creative-interface-feature-parity.md) · [Interaction matrix](selecta-creative-interface-interaction-matrix.md) · [Verification](selecta-creative-interface-verification-matrix.md) · [Gates](selecta-creative-interface-release-gates.md).

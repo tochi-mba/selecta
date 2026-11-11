@@ -7,7 +7,13 @@ import { allRendered, PAGES, resetMix } from './helpers';
  * made by the local server during a folder scan, never by the page.
  */
 
-test.beforeEach(async ({ request }) => resetMix(request));
+// Two songs make one transition: the preview needs only that one rendered, and starting the render
+// before the walk through the pages keeps the wait short on a loaded machine (the earlier four-song
+// version spent its whole 280 s budget rendering three transitions before checking any request).
+test.beforeEach(async ({ request }) => {
+  await resetMix(request, [1, 2]);
+  await request.post('/api/mix/render');
+});
 
 test('first screen, navigation, playback and a preview make no request beyond this computer (S3-0072-08)', async ({ page, request }) => {
   const elsewhere: string[] = [];

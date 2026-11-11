@@ -33,7 +33,24 @@ def _minutes(value: dict) -> str:
     return f"about {low}–{high} minutes"
 
 
-def describe_outcome(value: dict) -> str:
+def _rephrase(asked: str, count: int | None = None, relax: bool = False) -> str | None:
+    """The person's own request with only the song count changed, or the ready-only rule
+    swapped for permission to render, so every other rule they gave still applies."""
+    text = asked.strip().rstrip(".!?")
+    if count is not None:
+        text, changed = intent.COUNT.subn(lambda match: f"{count} {match.group(2)}", text, 1)
+        if not changed:
+            return None
+    if relax:
+        text, changed = re.subn(r"[,;]?\s*(?:" + intent.READY_ONLY.pattern + r")[^,.;!?]*", "",
+                                text, count=1, flags=re.I)
+        if not changed:
+            return None
+        text = text.strip(" ,;") + ", you can render new ones"
+    return text
+
+
+def describe_outcome(value: dict, asked: str = "") -> str:
     """Plain sentences from a planning result. Only facts the result contains."""
     status = value.get("status")
     if status == "ok":
@@ -67,11 +84,18 @@ def describe_outcome(value: dict) -> str:
     details = value.get("details") or {}
     lines = [message]
     if status == "no_route":
+        # Each plan reads only its own words, so an offer quotes a whole request that keeps the
+        # person's other rules (LX-0359-06); a bare "make it 6 songs" would quietly drop them.
         shorter = details.get("shorter")
+        fewer = _rephrase(asked, count=shorter["songs"]) if shorter and asked else None
         if shorter:
             lines.append(f"I can make a {shorter['songs']}-song mix from ready transitions right "
-                         f"now; say “make it {shorter['songs']} songs” for that.")
-        lines.append("Or say “you can render new ones” and I’ll allow new transitions.")
+                         "now that keeps your other rules; say "
+                         + (f"“{fewer}” for that." if fewer else
+                            f"your request again with {shorter['songs']} songs for that."))
+        relaxed = _rephrase(asked, relax=True) if asked else None
+        lines.append(f"Or say “{relaxed}” and I’ll allow new transitions." if relaxed else
+                     "Or say “you can render new ones” and I’ll allow new transitions.")
     elif status == "clarify":
         for item in details.get("clarify", []) + [{"options": details.get("options", [])}]:
             for option in (item.get("options") or [])[:6]:
@@ -156,7 +180,7 @@ async def respond(ctx: Any, say: Say, run_plan: RunPlan) -> None:
         result = await run_plan({"steps": steps})
         if await _say_step_failures(result, say):
             return
-        await say(describe_outcome(_value(result, "plan") or {}))
+        await say(describe_outcome(_value(result, "plan") or {}, text))
         return
     await say("Changing that… ")
     result = await run_plan({"steps": [{"id": "revise", "op": "proposals.revise",

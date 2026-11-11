@@ -56,6 +56,12 @@ class TermFence:
             raise LostLeadership(f"Maintenance term {self.term} has been replaced by {current}.")
 
 
+def _renewed() -> None:
+    from selecta.observability import metrics
+
+    metrics.set_gauge("selecta_maintenance_leader_renewed_timestamp_seconds", time.time())
+
+
 class Leadership:
     """Who runs maintenance. `acquire()` returns the new term, or None if another process leads."""
 
@@ -99,6 +105,7 @@ class Leadership:
                 sa.select(leader_terms.c.term).where(leader_terms.c.name == self.name)
             ).scalar_one()
         log.info("Maintenance leader %s took term %s", self.holder, self.term)
+        _renewed()
         return self.term
 
     def _try_lock(self) -> bool:
@@ -144,6 +151,7 @@ class Leadership:
         except LostLeadership:
             self.term = None
             return False
+        _renewed()
         return True
 
     def fence(self) -> TermFence:

@@ -1,5 +1,5 @@
 import { flagOn } from '../flags';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { LibrarySong, post } from '../api';
 import { clock } from '../lib';
 import { capabilities } from '../state/capabilities';
@@ -7,6 +7,7 @@ import { trackReadiness } from '../state/readiness';
 import { Action, Sheet, Status } from '../ui/controls';
 import { Field } from '../ui/primitives';
 import { SongMotif } from '../ui/MusicObjects';
+import { SongRelated } from './SongRelated';
 import { ViewProps } from './shared';
 
 const LOWEST_TEMPO = 40;
@@ -73,6 +74,13 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
     lastSaved.current = { bpm: savedBpm, key: savedKey };
   }, [savedBpm, savedKey]);
 
+  // The alert only exists after React commits the failed-save state. Focus it at that
+  // point, not in a separate animation frame that may never run on a busy or hidden tab.
+  // LX-0349-06: preserve edited fields and put keyboard focus on the failure.
+  useLayoutEffect(() => {
+    if (problem) problemBox.current?.focus();
+  }, [problem]);
+
   /** Whether it really worked, because nothing may be reported as saved if it wasn't. */
   const send = async (body: Record<string, unknown>, said: string): Promise<boolean> => {
     setProblem('');
@@ -83,8 +91,6 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       return true;
     } catch (error) {
       setProblem((error as Error).message || 'That didn’t save. What you typed is still here.');
-      // LX-0349-06: focus moves to what went wrong; what was typed stays in the fields
-      window.requestAnimationFrame(() => problemBox.current?.focus());
       return false;
     }
   };
@@ -139,6 +145,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
         <div><dt>Key measured</dt><dd>{song.detected_camelot ?? 'Not measured yet'}</dd></div>
         {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>}
       </dl>
+      {flagOn('library.related_links') && <SongRelated song={song} />}
       {flagOn('library.corrections') && (
       <section className="stack">
         <h3>Correct it</h3>

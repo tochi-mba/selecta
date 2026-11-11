@@ -196,6 +196,7 @@ describe('Pick a feeling', () => {
       value: () => ({ left: 0, top: 0, width: 100, height: 40 }),
     });
     fireEvent.pointerDown(drawing, { clientX: 50, clientY: 4, pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0 });
+    fireEvent.pointerUp(drawing, { clientX: 50, clientY: 4, pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0 });
     expect(middle).toHaveValue('100');
     await waitFor(() => {
       expect(

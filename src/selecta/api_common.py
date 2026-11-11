@@ -112,10 +112,15 @@ class FreshFiles(StaticFiles):
 class SteerRequest(BaseModel):
     action: str
     value: str | int | list[StrictInt] | None = None
+    # T0096: what the page last saw for the setting it is replacing (null is a real value, so
+    # whether it was sent at all is read from model_fields_set). Older pages leave it out.
+    expected: str | int | list[StrictInt] | None = None
 
 
 class StorageRequest(BaseModel):
     budget_gb: float
+    # T0096: the limit the page last saw. Older pages that don't send it still work.
+    expected_budget_bytes: int | None = None
 
 
 class BuildRequest(BaseModel):

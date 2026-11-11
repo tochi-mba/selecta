@@ -167,8 +167,9 @@ test('MI-0140-08 every route, dialog, sheet and the command palette leave one Au
   const help = page.getByRole('button', { name: 'Keyboard shortcuts' }).first();
   if (await help.count()) await dialog(() => help.click(), /Keyboard shortcuts/);
 
-  const lucy = await page.request.get('/api/flags').then((answer) => answer.json()).then((flags) => JSON.stringify(flags).includes('"lucy"')).catch(() => false);
-  if (lucy) {
+  // the server says which features this build has in /api/status; Lucy is a page of its own when it's on
+  const status = await (await page.request.get('/api/status')).json();
+  if (status.flags?.lucy === true) {
     await command(/Make a mix with Lucy/);
     await expect(page).toHaveURL(/\/mixes\/lucy/);
     await mark('Lucy');

@@ -37,7 +37,7 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `warning` | Needs attention, blocked or a failed check | standard, compact | `shell/Shell.tsx`, `ui/controls.tsx`, `views/Mix.tsx`, `views/SeamInspector.tsx` | The link `aria-label`, button words or status words |
 | `clock` | Queued status mark | compact | `ui/controls.tsx` | The status words |
 | `minus` | Unavailable status mark | compact | `ui/controls.tsx` | The status words |
-| `more` | Open a row's menu | standard | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/Library.tsx`, `views/LucyHistory.tsx` | Hidden words in the trigger, and `title` |
+| `more` | Open a row's menu | standard | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LibraryRow.tsx`, `views/LucyHistory.tsx` | Hidden words in the trigger, and `title` |
 | `help` | Keyboard shortcuts | standard | `shell/Shell.tsx` | `aria-label` and `title` |
 | `up` | Move up; collapse a disclosure | standard, toolbar | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/LucySongs.tsx` | `aria-label` and `title`, or the disclosure words |
 | `down` | Move down; expand a disclosure or menu | standard, toolbar, compact | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx` | `aria-label` and `title`, or the disclosure or menu words |

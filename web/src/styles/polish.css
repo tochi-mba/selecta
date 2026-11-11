@@ -90,6 +90,10 @@ button[aria-disabled='true'] { cursor: progress; }
 .readiness-steps { list-style: none; padding: 0; display: grid; gap: var(--space-3); margin-block: var(--space-5); }
 .readiness-steps li { display: grid; grid-template-columns: 1fr auto; gap: var(--space-3); padding-block: var(--space-3); border-bottom: 1px solid var(--border); }
 .readiness-steps strong { font-variant-numeric: tabular-nums; }
+/* CI-0178-04 and CI-0178-05: the real connections found while preparing, and the first hand-off note */
+.scan-reveals ul { padding-inline-start: var(--space-5); margin-block: var(--space-2); }
+.first-handoff { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); }
+.first-handoff p { margin: 0; flex: 1 1 16rem; }
 .field-help { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
 .field > .warn { margin: 0; }
 .view-options { margin-block: var(--space-4); }
@@ -122,6 +126,8 @@ button[aria-disabled='true'] { cursor: progress; }
 /* Placeholder layout mirrors the content without pretending to contain waveform data. */
 .skeleton { display: block; padding-block: var(--space-4); }
 .skeleton-content { display: grid; gap: var(--space-4); animation: skeleton-reveal var(--motion-reveal) var(--motion-ease) both; animation-delay: var(--motion-fast); }
+/* P0038: space reserved at once, bars shown only after REVEAL_AFTER_MS (Skeleton.tsx), in every motion setting */
+.skeleton[data-revealed='false'] .skeleton-content { visibility: hidden; }
 .skeleton-unit { display: grid; gap: var(--space-3); min-width: 0; }
 .skeleton i { width: 100%; height: 16px; border-radius: var(--radius-mark); margin: 0; background: var(--surface-control); }
 .skeleton i:nth-child(2n) { width: 100%; }
@@ -144,7 +150,24 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-library .skeleton-meta { grid-column: 2; grid-row: 1; width: 80%; }
 .skeleton-listen .skeleton-unit { min-height: 260px; }
 .skeleton-listen .skeleton-region { height: 120px; }
-.skeleton-timeline .skeleton-unit { border-left: 2px solid var(--border); padding: var(--space-4); }
+/* P0035: song rows and the transitions hanging between them, at the timeline's own row heights
+   (creation.css .timeline.long intrinsic sizes: 84px songs, 96px transitions). */
+.skeleton-timeline .skeleton-content { gap: 0; }
+.skeleton-timeline .skeleton-song { grid-template-columns: var(--control-height) minmax(0, 1fr) auto; column-gap: var(--space-3); row-gap: var(--space-2); align-items: center; min-height: 84px; padding: var(--row-pad) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.skeleton-timeline .skeleton-grip { grid-row: 1 / span 2; width: var(--control-height); height: var(--control-height); }
+.skeleton-timeline .skeleton-song .skeleton-title { grid-column: 2; grid-row: 1; }
+.skeleton-timeline .skeleton-song .skeleton-detail { grid-column: 2; grid-row: 2; width: 48%; }
+.skeleton-timeline .skeleton-song .skeleton-meta { grid-column: 3; grid-row: 1; width: 72px; }
+.skeleton-timeline .skeleton-seam { min-height: 96px; margin-left: var(--space-2); padding: var(--space-3) var(--space-snug); border-left: 2px solid var(--border); align-content: center; }
+.skeleton-timeline .skeleton-seam .skeleton-region { height: 24px; }
+.skeleton-timeline .skeleton-seam .skeleton-action { width: 96px; height: var(--control-height); margin-top: 0; }
+@media (max-width: 620px) {
+  /* The real phone row wraps its metadata and actions below the title. Reserve that geometry too. */
+  .skeleton-timeline .skeleton-song { min-height: 144px; }
+  /* At phone width a transition stacks its name, its wrapped actions and its compact diagram.
+     The real unrendered row measures 192px at 375px, so reserve that. */
+  .skeleton-timeline .skeleton-seam { min-height: 192px; }
+}
 .skeleton-inspector .skeleton-unit { min-height: 240px; }
 .skeleton-metrics .skeleton-content { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .skeleton-metrics .skeleton-unit { min-height: 110px; padding: var(--space-4); }

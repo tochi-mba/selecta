@@ -1,5 +1,5 @@
 import { APIRequestContext, BrowserContext, expect, Page, test } from '@playwright/test';
-import { allRendered, resetMix, rewriteJson } from './helpers';
+import { resetMix, rewriteJson } from './helpers';
 import { browserLine, frameWindow, installProbe, interactionsSince, mark, type FrameWindow } from './perf-probe';
 
 /**
@@ -260,11 +260,14 @@ async function busyMainThread(page: Page) {
 }
 
 test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thread, page changes and a render going', async ({ page, request }) => {
-  test.setTimeout(420_000);
+  // one real render takes about 4.5 minutes on the shared laptop when it is busy, so wait up to 9
+  test.setTimeout(900_000);
   await recordSchedule(page);
   await installProbe(page);
-  await resetMix(request);
-  await allRendered(request);
+  // two songs, so only one transition has to render first on a loaded machine
+  await resetMix(request, [1, 2]);
+  await request.post('/api/mix/render');
+  await expect.poll(async () => (await (await request.get('/api/mix')).json()).mix[1]?.seam?.state.status, { timeout: 540_000, intervals: [3000] }).toBe('ready');
   await page.setViewportSize(VIEWPORT);
   await page.goto('/listen');
   await expect(page.locator('h1.display')).toHaveText('Morning Light');
@@ -277,9 +280,9 @@ test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thr
 
   // Load: a song added at the end starts a real background render on the server, the page's main
   // thread is kept about 70% busy with a 250 ms task every second, and the listener moves around.
-  await request.post('/api/mix/songs', { data: { song_id: 5 } });
+  await request.post('/api/mix/songs', { data: { song_id: 3 } });
   await request.post('/api/mix/render');
-  const renderAtJump = ((await (await request.get('/api/mix')).json()).mix as { seam: { state: { status: string } } | null }[])[4]?.seam?.state.status ?? 'none';
+  const renderAtJump = ((await (await request.get('/api/mix')).json()).mix as { seam: { state: { status: string } } | null }[])[2]?.seam?.state.status ?? 'none';
   await busyMainThread(page);
   const from = await mark(page);
   const wallBegun = Date.now();
@@ -305,7 +308,7 @@ test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thr
   const [clockEnded] = await page.evaluate(() => window.mi0162Audio.contexts.map((context) => context.currentTime));
   const wallEnded = Date.now();
   await page.evaluate(() => window.mi0162Load?.stop());
-  const renderAfter = ((await (await request.get('/api/mix')).json()).mix as { seam: { state: { status: string } } | null }[])[4]?.seam?.state.status ?? 'none';
+  const renderAfter = ((await (await request.get('/api/mix')).json()).mix as { seam: { state: { status: string } } | null }[])[2]?.seam?.state.status ?? 'none';
   const load = await interactionsSince(page, from);
   const sources = await page.evaluate(() => window.mi0162Audio.sources);
   const [song, clip, after] = sources.slice(earlier);
@@ -327,6 +330,10 @@ test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thr
     slowest_interaction_ms: Math.max(load.eventTimingWorstMs, load.nextPaintWorstMs),
     render_at_jump: renderAtJump,
     render_after: renderAfter,
+    audio: await page.evaluate(() => {
+      const [context] = window.mi0162Audio.contexts;
+      return { sample_rate: context.sampleRate, base_latency_ms: Math.round(context.baseLatency * 1000 * 10) / 10, output_latency_ms: Math.round((context.outputLatency ?? 0) * 1000 * 10) / 10 };
+    }),
   };
   console.log(`MI-0162 ${JSON.stringify({ test: 'MI-0162-03', machine: await browserLine(page), tolerance_ms: 1, reading })}`);
 

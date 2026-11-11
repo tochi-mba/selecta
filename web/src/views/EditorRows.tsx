@@ -1,10 +1,11 @@
-import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useRef, useState } from 'react';
+import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useEffect, useRef, useState } from 'react';
 import { MixItem, post } from '../api';
 import { flagOn, useFlags } from '../flags';
 import { clock, etaWords, seamStatusWords } from '../lib';
 import { Action, announce, Menu } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
+import { useStickyClearance } from '../ui/useStickyClearance';
 import { useMixPath } from './mixScope';
 import { RequestTag, useRequestComing } from './Requests';
 
@@ -133,6 +134,9 @@ type SongRowProps = {
   playing: boolean;
   selected: boolean;
   over: boolean;
+  /** SF-0243-02: this song's move has been sent and the server hasn't answered yet. The row stays
+   * where it was, marked as moving, until the answer says where it really is. */
+  moving?: boolean;
   actions: RefObject<RowActions>;
 };
 
@@ -142,7 +146,7 @@ const SONG_DRAG_TYPE = 'application/x-selecta-song-position';
 /** One song in the timeline. Only the handle starts a drag, so scrolling a long mix on a phone can't
  * pick a song up by accident. A mouse drags it the ordinary way, a finger or pen uses pointer events,
  * and the arrow keys and the Move buttons do the same job without dragging at all. */
-export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, actions }: SongRowProps) {
+export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, moving = false, actions }: SongRowProps) {
   const holding = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
   const [grabbed, setGrabbed] = useState(false);
   // MI-0138-08: a removal is marked on its row at once, and the row only goes when the server has removed it
@@ -170,6 +174,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     if (!started.moved) {
       if (Math.hypot(event.clientX - started.x, event.clientY - started.y) < 8) return;
       started.moved = true;
+      setDragging(true);
       actions.current.dragFrom(rowKey);
     }
     actions.current.dragOver(rowUnder(event)?.dataset.songKey ?? null);
@@ -181,6 +186,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     const started = holding.current;
     if (!started || started.id !== event.pointerId) return;
     holding.current = null;
+    setDragging(false);
     const target = started.moved ? rowUnder(event) : null;
     actions.current.dragOver(null);
     actions.current.dragFrom(null);
@@ -188,6 +194,23 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
       void actions.current.move(item.position, Number(target.dataset.position), 'drag');
     }
   };
+  // SF-0243-03: Escape during a finger or pen drag drops nothing: the song stays where it was
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    if (!dragging) return;
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || !holding.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      holding.current = null;
+      setDragging(false);
+      actions.current.dragOver(null);
+      actions.current.dragFrom(null);
+      announce(`Put ${item.title} back where it was.`);
+    };
+    window.addEventListener('keydown', escape, true);
+    return () => window.removeEventListener('keydown', escape, true);
+  }, [dragging, actions, item.title]);
   const handleKeys = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === ' ' || event.key === 'Enter') {
       event.preventDefault();
@@ -211,8 +234,9 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
   };
   return (
     <li
-      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''} ${removing ? 'pending' : ''}`}
-      aria-busy={removing || undefined}
+      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''} ${removing || moving ? 'pending' : ''}`}
+      aria-busy={removing || moving || undefined}
+      data-moving={moving || undefined}
       data-song-key={rowKey}
       data-position={item.position}
       onClick={(event) => { if (pickedTheRow(event)) actions.current.selectSong(rowKey); }}
@@ -260,8 +284,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         onPointerDown={pressHandle}
         onPointerMove={moveHandle}
         onPointerUp={releaseHandle}
-        onPointerCancel={() => { holding.current = null; actions.current.dragOver(null); actions.current.dragFrom(null); }}
-        onLostPointerCapture={() => { holding.current = null; actions.current.dragOver(null); actions.current.dragFrom(null); }}
+        onPointerCancel={() => { holding.current = null; setDragging(false); actions.current.dragOver(null); actions.current.dragFrom(null); }}
+        onLostPointerCapture={() => { holding.current = null; setDragging(false); actions.current.dragOver(null); actions.current.dragFrom(null); }}
       >
         <Icon name="grip" />
       </span>
@@ -276,7 +300,6 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         <RequestTag item={item} />
         {playing && <span className="story-tag playing"><Icon name="play" size="compact" /> Playing now</span>}
         {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" size="compact" /> Locked</span>}
-        {removing && <span className="status status-working" role="status">Removing…</span>}
       </div>
       <small className="facts">
         {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
@@ -312,6 +335,9 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
           </Action>
         </Menu>
       </div>
+      {/* below the actions, so the status line never pushes the pressed control (MP-0277-03) */}
+      {removing && <span className="status status-working song-status" role="status">Removing…</span>}
+      {moving && !removing && <span className="status status-working song-status" role="status">Moving…</span>}
     </li>
   );
 }, (before, after) => before.rowKey === after.rowKey
@@ -319,6 +345,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
   && before.playing === after.playing
   && before.selected === after.selected
   && before.over === after.over
+  && before.moving === after.moving
   && before.item.position === after.item.position
   && before.item.song_id === after.item.song_id
   && before.item.title === after.item.title
@@ -351,9 +378,11 @@ export function SongInspector(props: {
   onSeamOut: () => void;
 }) {
   const { item, hasIn, hasOut, onPlay, onAddAfter, onSeamIn, onSeamOut } = props;
+  const identity = useRef<HTMLDivElement>(null);
+  useStickyClearance(identity);
   return (
     <div className="inspector">
-      <div className="inspector-identity">
+      <div className="inspector-identity" ref={identity}>
         <p className="inspector-pair"><b>{item.title}</b></p>
         <p className="song-detail-artist">{item.artist}</p>
         <RequestTag item={item} />

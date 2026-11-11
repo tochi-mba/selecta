@@ -103,7 +103,7 @@
 | GP-0260-01 | [ADR-0260](adr-0260-discovery-to-create.md) | Not started | No | Unassigned | - | - |
 | GP-0260-02 | [ADR-0260](adr-0260-discovery-to-create.md) | Not started | No | Unassigned | - | - |
 | GP-0260-03 | [ADR-0260](adr-0260-discovery-to-create.md) | Not started | No | Unassigned | - | - |
-| GP-0260-04 | [ADR-0260](adr-0260-discovery-to-create.md) | Not started | No | Unassigned | - | - |
+| GP-0260-04 | [ADR-0260](adr-0260-discovery-to-create.md) | Implemented | No | Checklist agent x3-c | - | 2026-11-11 web/e2e/gp-0260-back-state.e2e.ts: 3 passed in Edge (search across typing, reload, adding a pair and Back; Back/Forward between searches; chord-match tab on Back) |
 | GP-0260-05 | [ADR-0260](adr-0260-discovery-to-create.md) | Not started | No | Unassigned | - | - |
 | GP-0260-06 | [ADR-0260](adr-0260-discovery-to-create.md) | Not started | No | Unassigned | - | - |
 | GP-0260-07 | [ADR-0260](adr-0260-discovery-to-create.md) | Not started | No | Unassigned | - | - |

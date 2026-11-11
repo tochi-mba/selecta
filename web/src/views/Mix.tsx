@@ -18,6 +18,7 @@ import { ExportPanel } from './ExportPanel';
 import { MixScope, useMixPath } from './mixScope';
 import { ComingSongs } from './Requests';
 import { InspectorTab, SeamInspector } from './SeamInspector';
+import { draftShown, movedLocally } from './optimisticMove';
 import { ViewProps } from './shared';
 
 /** A transition is known by the two songs it's between, and a song by which time it appears in the mix,
@@ -31,6 +32,21 @@ type Selection =
 // was selected for each scope without persisting a potentially stale
 // transition across browser reloads or sharing it between app instances.
 const selectionByPlayer = new WeakMap<ViewProps['player'], Map<string, Selection | null>>();
+
+/** GP-0255-01: open the editor on an exact object, in this session only. My Mixes uses it to return to a
+ * transition it has just checked against the server; nothing about it is stored in the browser. */
+export function selectInEditor(player: ViewProps['player'], scope: string, selection: Selection) {
+  let byScope = selectionByPlayer.get(player);
+  if (!byScope) {
+    byScope = new Map();
+    selectionByPlayer.set(player, byScope);
+  }
+  byScope.set(scope, selection);
+}
+
+export function selectedInEditor(player: ViewProps['player'], scope: string): Selection | null {
+  return selectionByPlayer.get(player)?.get(scope) ?? null;
+}
 
 /** Above this, rows skip being drawn until they're scrolled near. Everything stays in the page, so
  * focus, find-in-page and screen readers all carry on working, which virtualizing the list would break. */
@@ -134,6 +150,8 @@ export function Mix(props: ViewProps) {
   const [name, setName] = useState(mixName);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<string | null>(null);
+  // SF-0243-02: the song whose move is on its way to the server (shown as moving, not yet moved)
+  const [movingKey, setMovingKey] = useState<string | null>(null);
   // CI-0173-02: while a song is carried over another, mark the transitions that drop would replace
   const dropPreview = useMemo(() => {
     if (!flagOn('editor.drag_preview') || !dragFrom || !dragOver) return null;
@@ -374,19 +392,30 @@ export function Mix(props: ViewProps) {
       return;
     }
     moving.current = true;
+    setMovingKey(keys[from]);
     const words = how === 'up' ? `Moved ${moved.title} up.` : how === 'down' ? `Moved ${moved.title} down.` : 'Moved that song.';
     if (how !== 'drag') focusAfter.current = { key: keys[from], how };
+    // MI-0162-05: a draft shows the move at once and keeps the server's answer when it comes. The request
+    // still carries the order the server knows (`guard`), and a refusal puts the draft back as it was.
+    // The current mix waits for the server, because the player schedules its seams from it.
+    const shownBefore = draftId !== null ? draftShown(mix, mixName, canUndo, draftId, draftPlace, mixEta) : null;
+    if (shownBefore) setMixData({ ...shownBefore, mix: movedLocally(mix, from, to) });
     try {
       await act(post<MixData>(at('/mix/move'), { source: from, target: to }, guard), words);
       announce(`Moved ${moved.title} to number ${to + 1} of ${mix.length}.`);
     } catch (error) {
       focusAfter.current = null;
+      if (shownBefore) {
+        if (how !== 'drag') focusAfter.current = { key: keys[from], how };
+        setMixData(shownBefore);
+      }
       if (how === 'up' || how === 'down') throw error;
       // the row goes back where it was, because nothing actually moved
       setProblem((error as Error).message);
       refreshMix();
     } finally {
       moving.current = false;
+      setMovingKey(null);
       setDragOver(null);
       setDragFrom(null);
     }
@@ -764,6 +793,7 @@ export function Mix(props: ViewProps) {
           onSelectSong={selectSongAt}
           onEditSong={editSong}
           onEditSeam={editSeam}
+          scope={inDraft ? 'draft' : 'current'}
         />
       )}
 
@@ -801,6 +831,7 @@ export function Mix(props: ViewProps) {
                   playing={!inDraft && now.phase !== 'idle' && now.position === index}
                   selected={selectedSongIndex === index}
                   over={dragOver === keys[index]}
+                  moving={movingKey === keys[index]}
                   actions={rowActions}
                 />
                 {!inDraft && <ComingSongs afterSongId={item.song_id} />}

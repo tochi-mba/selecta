@@ -129,6 +129,27 @@
       "kind": "ops",
       "owner": "platform"
     },
+    "cloud.metrics": {
+      "label": "Service metrics",
+      "about": "OpenTelemetry metrics the SLOs and alerts read: lost jobs, webhook-to-entitlement time, queue age, quarantines, spend ceilings, audit writes, reconciliation drift, backups and the maintenance leader.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    },
+    "cloud.export_expiry": {
+      "label": "Export expiry",
+      "about": "The maintenance leader deletes finished exports when their plan's retention runs out (Free 7 days, Standard 30, Premium 90) and gives their bytes back to the quota.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "storage"
+    },
+    "cloud.autoscale": {
+      "label": "Worker autoscaling",
+      "about": "The maintenance leader sizes each worker pool from the queue and asks the configured launcher (Modal) to start or stop workers.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    },
     "billing.webhooks": {
       "label": "Billing updates",
       "about": "Accept signed subscription state changes from Stripe.",

@@ -192,7 +192,13 @@ describe('the Flags page', () => {
     await command('Apply: Off for everyone', 'incident');
     expect(await screen.findByText('Saved as version 7.')).toBeInTheDocument();
     await command('Restore version 4', 'back to before');
-    await waitFor(() => expect(last('/api/admin/flags/rollback')?.body).toEqual({ version: 4, reason: 'back to before' }));
+    await waitFor(() => expect(last('/api/admin/flags/rollback')?.body).toEqual({ version: 4, reason: 'back to before', before: false }));
+  });
+
+  it("undoes a version, including a flag's first change", async () => {
+    await openRooms();
+    await command('Undo version 4', 'never meant it');
+    await waitFor(() => expect(last('/api/admin/flags/rollback')?.body).toEqual({ version: 4, reason: 'never meant it', before: true }));
   });
 
   it('explains what a user sees and why', async () => {

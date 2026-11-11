@@ -53,6 +53,9 @@ const NO_SURFACE: Partial<Record<FlagId, string>> = {
   'account.labs': 'The Labs settings page is not built yet (SC-0414-09); only the API exists.',
   'cloud.signups': 'Decided before anyone is signed in: onboarding answers flag_off.',
   'cloud.tracing': 'Server-side OpenTelemetry job spans, with no person-facing Cloud page.',
+  'cloud.metrics': 'Server-side service telemetry consumed by SLOs and alerts, with no person-facing Cloud page.',
+  'cloud.export_expiry': 'Server-side maintenance sweep for retained exports, with no person-facing Cloud page.',
+  'cloud.autoscale': 'Server-side maintenance task that sizes worker pools, with no person-facing Cloud page.',
   'lucy.deep_plan': 'No control on the site: the server decides it for each Lucy turn.',
 };
 

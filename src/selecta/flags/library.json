@@ -22,6 +22,12 @@
       "surfaces": ["library", "overlay.song_details"],
       "words": ["Never play"]
     },
+    "library.related_links": {
+      "label": "Connected songs",
+      "about": "A song's details list the word connections found for it, each marked heard and kept or still a candidate.",
+      "requires": ["discover.word_links"],
+      "surfaces": ["overlay.song_details"]
+    },
     "library.corrections": {
       "label": "Corrections",
       "about": "Fix a song's measured tempo, or say whether it's music.",

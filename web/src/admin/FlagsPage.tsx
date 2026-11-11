@@ -87,9 +87,9 @@ function FlagDetail({ api, flag, can, onChanged }: { api: AdminFetch; flag: Flag
       : `This is a broad change, so it waits: it runs after ${when(done.execute_after)} unless cancelled (action ${done.action_id?.slice(0, 8)}).`);
     setImpact(null); await history.reload(); onChanged();
   };
-  const rollback = async (version: number, reason: string) => {
-    const done = await api<Outcome>('/admin/flags/rollback', post({ version, reason }));
-    setOutcome(done.applied ? `Restored as version ${done.version}.` : `The rollback is broad, so it waits until ${when(done.execute_after)}.`);
+  const rollback = async (version: number, reason: string, before = false) => {
+    const done = await api<Outcome>('/admin/flags/rollback', post({ version, reason, before }));
+    setOutcome(done.applied ? `${before ? 'Undone' : 'Restored'} as version ${done.version}.` : `The rollback is broad, so it waits until ${when(done.execute_after)}.`);
     await history.reload(); onChanged();
   };
   const previewSelf = async (on: boolean, reason: string) => { await api(`/admin/flags/${flag.id}/preview`, post({ on, reason })); setOutcome(on ? 'On for your account only.' : 'Your preview is off.'); };
@@ -130,7 +130,9 @@ function FlagDetail({ api, flag, can, onChanged }: { api: AdminFetch; flag: Flag
       <DataTable caption="Rule versions" rows={history.data?.versions ?? []} rowKey={(v) => String(v.version)} empty="No changes yet."
         columns={[{ key: 'version', label: 'Version', numeric: true }, { key: 'change', label: 'Change' }, { key: 'rules', label: 'Rules', render: (v) => v.rules.map(describe).join('; ') || 'none' },
           { key: 'author', label: 'By' }, { key: 'reason', label: 'Why' }, { key: 'created_at', label: 'When', render: (v) => when(v.created_at) },
-          { key: 'rollback', label: 'Rollback', render: (v) => can('flags.rules.propose') && v.change !== 'preview_on' && v.change !== 'preview_off' ? <Command label={`Restore version ${v.version}`} run={(r) => rollback(v.version, r)} /> : null }]} />
+          { key: 'rollback', label: 'Rollback', render: (v) => can('flags.rules.propose') && v.change !== 'preview_on' && v.change !== 'preview_off' ? <>
+            <Command label={`Restore version ${v.version}`} run={(r) => rollback(v.version, r)} />
+            <Command label={`Undo version ${v.version}`} run={(r) => rollback(v.version, r, true)} /></> : null }]} />
     </Panel>
   );
 }

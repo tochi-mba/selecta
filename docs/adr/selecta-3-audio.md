@@ -40,16 +40,18 @@ Each press of play in `usePreview` has a session number. `onended`, `onerror` an
 
 ## Every place that makes sound
 
-| Place | How | Owner |
-|---|---|---|
-| Listen, mini-player, media keys | `SetPlayer`, Web Audio | The mix |
-| Inspector, word connection preview, coming seam | `AudioPreview`, `<audio controls>` | One id per preview |
-| Bridge transition previews | `usePreview`, one shared `Audio` element | One id per panel |
-| Harmonic matches | `<audio>` in `Links.tsx` | `harmonic-discoveries` |
-| Stem Studio | `StemDeck`, its own Web Audio context | `studio-<position>-<song>` |
-| Blind study A and B | `<audio controls>` in `Listening.tsx` | `listening-a`, `listening-b` |
+| Place | Source file | How | Owner |
+|---|---|---|---|
+| Listen, mini-player, media keys | `web/src/player.ts` | `SetPlayer`, Web Audio | The mix |
+| Inspector, word connection preview, coming seam | `web/src/ui/AudioPreview.tsx` | `<audio controls>` | One id per preview |
+| Bridge transition previews | `web/src/audio/focus.ts` | `usePreview`, one shared `Audio` element | One id per panel |
+| Harmonic matches | `web/src/views/Links.tsx` | `<audio>` | `harmonic-discoveries` |
+| Stem Studio | `web/src/views/Studio.tsx`, `web/src/studio.ts` | `StemDeck`, its own Web Audio context | `studio-<position>-<song>` |
+| Blind study A and B | `web/src/views/Listening.tsx` | `<audio controls>` | `listening-<trial>-a`, `listening-<trial>-b` |
+| A phone or other device chosen as the speaker (later Cloud work) | `web/src/devices/PlayingBar.tsx`, `web/src/devices/audioSpeaker.ts` | One `<audio>` element on that device | The device lease: a device that loses it fades out, so only one device plays |
+| Cloud library player (Cloud mode only) | `web/src/cloud/Library.tsx` | One `<audio controls>` | The Cloud page, which has no local mix player beside it |
 
-Export makes no sound. Its result is a downloaded file.
+Export makes no sound. Its result is a downloaded file. `tests/test_s3_docs_contracts.py` fails if a file under `web/src` starts sound (`takeAudio(`, `new Audio(`, `<audio`, `new AudioContext(`) and isn't named in this table (audit rerun 2026-11-11).
 
 ## When audio fails
 

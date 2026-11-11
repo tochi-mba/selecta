@@ -84,7 +84,7 @@ test('seeking while paused stays paused', async ({ page }) => {
 
 test('Next and Previous go song by song, however fast they’re pressed', async ({ page }) => {
   await play(page);
-  const next = page.getByRole('button', { name: 'Next song' });
+  const next = page.getByRole('button', { name: 'Next song', exact: true });
   await next.click();
   await expect(title(page)).toHaveText('Slow Tide');
   await page.getByRole('button', { name: 'Previous song' }).click();
@@ -138,7 +138,7 @@ test('seeking past the way out still gets to the next song', async ({ page, requ
 
 test('the end of the mix comes to a stop, and it can be played again', async ({ page }) => {
   await play(page);
-  const next = page.getByRole('button', { name: 'Next song' });
+  const next = page.getByRole('button', { name: 'Next song', exact: true });
   for (const song of ['Slow Tide', 'Paper Moon', 'Neon Rain']) {
     await next.click();
     await expect(title(page)).toHaveText(song);

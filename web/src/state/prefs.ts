@@ -77,7 +77,16 @@ export function setPrefs(change: Partial<Prefs>) {
   const next = { ...prefs(), ...change };
   current = next;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
+    // SF-0241-04: keep choices this build doesn't know (a newer build's), so rolling back and
+    // forward again loses none of them
+    let stored: unknown = null;
+    try {
+      stored = JSON.parse(window.localStorage.getItem(KEY) ?? '{}');
+    } catch {
+      stored = null;
+    }
+    const kept = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+    window.localStorage.setItem(KEY, JSON.stringify({ ...kept, ...next }));
   } catch {
     // it holds until the page is closed, and that's all
   }

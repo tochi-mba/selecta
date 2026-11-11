@@ -19,6 +19,10 @@ depends on a cron somebody forgot:
 | `rooms` | 60 s | End expired rooms and purge guest data |
 | `usage_reconcile` | 24 h | Ledger vs rollups and storage; drift becomes an alert, never a fix |
 | `derived_eviction` | 10 min | Workspaces over their derived-data budget (`storage.eviction`) |
+| `export_expiry` | 1 h | Exports past their plan's retention (`storage.export_expiry`) |
+| `autoscale` | 30 s | Size each worker pool and tell the launcher (`work.autoscale_leader`) |
+| `queue_metrics`, `lost_jobs`, `backup_freshness` | 15 s, 10 min, 10 min | The SLO and alert
+  series only the leader sees (`observability.leader_metrics`) |
 
 Tasks that need a secret it doesn't have (Stripe, WorkOS, the deletion-ledger bucket, the room
 pepper) are left out, and the start-up log names each one and the setting it needs.
@@ -89,12 +93,19 @@ def usage_reconciliation(conn: Connection) -> int:
     from selecta.usage.reconcile import reconcile
 
     report = reconcile(conn)
+    from selecta.observability import metrics
+
+    metrics.set_gauge("selecta_reconciliation_drift", len(report.drifts), check="usage")
     if not report.ok:
         alerts.raise_alert(
-            conn, "usage.reconciliation_drift",
+            conn,
+            "usage.reconciliation_drift",
             f"Usage reconciliation found {len(report.drifts)} differences.",
-            metadata={"first": str(report.first), "last": str(report.last),
-                      "drifts": report.lines()[:50]},
+            metadata={
+                "first": str(report.first),
+                "last": str(report.last),
+                "drifts": report.lines()[:50],
+            },
         )
     return len(report.drifts)
 
@@ -125,8 +136,10 @@ def _eviction(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
         client = storage_api.r2_client()
         try:
             objects = _DerivedObjects(client, storage_api.buckets().derived)
-            return [eviction.evict(engine, workspace, objects).workspace_id
-                    for workspace in eviction.over_budget(engine)]
+            return [
+                eviction.evict(engine, workspace, objects).workspace_id
+                for workspace in eviction.over_budget(engine)
+            ]
         finally:
             getattr(client, "close", lambda: None)()
 
@@ -145,10 +158,12 @@ def _billing(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
             plan.disabled[name] = "set SELECTA_STRIPE_SECRET_KEY and SELECTA_STRIPE_PRICES"
         return
     client = HttpStripeClient(key, api_version=env.get("SELECTA_STRIPE_API_VERSION"))
-    plan.tasks.append(Task("stripe_events", 60.0,
-                           lambda _f: drain_stripe_events(engine, client, prices)))
-    plan.tasks.append(Task("stripe_reconcile", DAY_S,
-                           lambda _f: reconcile_stripe_billing(engine, client, prices)))
+    plan.tasks.append(
+        Task("stripe_events", 60.0, lambda _f: drain_stripe_events(engine, client, prices))
+    )
+    plan.tasks.append(
+        Task("stripe_reconcile", DAY_S, lambda _f: reconcile_stripe_billing(engine, client, prices))
+    )
 
 
 def _storage(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
@@ -181,7 +196,8 @@ def _deletions(engine: Engine, env: Mapping[str, str], plan: Plan, bucket: str) 
     workos_key = env.get("SELECTA_WORKOS_API_KEY", "").strip()
     if not stripe_key or not workos_key:
         plan.disabled["account_deletions"] = (
-            "set SELECTA_STRIPE_SECRET_KEY and SELECTA_WORKOS_API_KEY")
+            "set SELECTA_STRIPE_SECRET_KEY and SELECTA_WORKOS_API_KEY"
+        )
         return
     from selecta.billing.stripe_sync import load_price_map
     from selecta.billing.webhooks import HttpStripeClient
@@ -194,13 +210,16 @@ def _deletions(engine: Engine, env: Mapping[str, str], plan: Plan, bucket: str) 
         client = storage_api.r2_client()
         try:
             effects = AccountDeletionEffects(
-                engine, JobStore(engine),
+                engine,
+                JobStore(engine),
                 HttpStripeClient(stripe_key, api_version=env.get("SELECTA_STRIPE_API_VERSION")),
-                client, price_map=load_price_map(),
+                client,
+                price_map=load_price_map(),
                 ledger_writer=R2DeletionLedgerWriter(client, bucket),
                 identity=HttpWorkOSUserDeleter(
-                    workos_key, api_base=env.get("SELECTA_WORKOS_API_BASE",
-                                                 "https://api.workos.com")),
+                    workos_key,
+                    api_base=env.get("SELECTA_WORKOS_API_BASE", "https://api.workos.com"),
+                ),
                 buckets=storage_api.buckets(),
             )
             steps = 0
@@ -226,9 +245,16 @@ def _rooms(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
     from selecta.rooms.service import Rooms
 
     ports = RoomPorts()
-    rooms = Rooms(engine, pepper, catalog=ports.catalog, planner=ports.planner,
-                  plans=CloudPlans(engine), speakers=CloudSpeakers(engine),
-                  now_playing=ports.now_playing, events=OutboxRoomEvents())
+    rooms = Rooms(
+        engine,
+        pepper,
+        catalog=ports.catalog,
+        planner=ports.planner,
+        plans=CloudPlans(engine),
+        speakers=CloudSpeakers(engine),
+        now_playing=ports.now_playing,
+        events=OutboxRoomEvents(),
+    )
 
     def sweep(_fence: TermFence) -> object:
         ended = rooms.expire_rooms()
@@ -236,6 +262,49 @@ def _rooms(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
         return len(ended)
 
     plan.tasks.append(Task("rooms", 60.0, sweep))
+
+
+def _flag_on(flag_id: str) -> bool:
+    from selecta import flags
+
+    try:
+        return flags.on(flag_id)
+    except KeyError:
+        return False
+
+
+def _export_expiry(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
+    """Exports past their plan's retention; their derived objects go too when R2 is set."""
+    from selecta.storage import export_expiry
+
+    needed = ("SELECTA_R2_ACCOUNT_ID", "SELECTA_R2_ACCESS_KEY_ID", "SELECTA_R2_SECRET_ACCESS_KEY")
+    has_r2 = all(env.get(name, "").strip() for name in needed)
+
+    def sweep(_fence: TermFence) -> object:
+        if not _flag_on(export_expiry.FLAG):
+            return 0
+        if not has_r2:
+            return len(export_expiry.expire_exports(engine))
+        from selecta.storage import api as storage_api
+
+        client = storage_api.r2_client()
+        try:
+            objects = _DerivedObjects(client, storage_api.buckets().derived)
+            return len(export_expiry.expire_exports(engine, objects.delete))
+        finally:
+            getattr(client, "close", lambda: None)()
+
+    plan.tasks.append(Task("export_expiry", 3_600.0, sweep))
+
+
+def _autoscale(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
+    from selecta.work import autoscale_leader
+
+    task = autoscale_leader.maintenance_task(engine, env)
+    if isinstance(task, str):
+        plan.disabled["autoscale"] = task
+    else:
+        plan.tasks.append(task)
 
 
 def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
@@ -246,20 +315,37 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _storage(engine, env, plan)
     _rooms(engine, env, plan)
     _eviction(engine, env, plan)
+    _export_expiry(engine, env, plan)
+    _autoscale(engine, env, plan)
+    from selecta.observability import leader_metrics
+
+    made, off = leader_metrics.tasks(engine, env)
+    plan.tasks += made
+    plan.disabled.update(off)
     return plan
 
 
 class Service:
     """One copy of the maintenance service. `run()` blocks until `stop()` or a signal."""
 
-    def __init__(self, engine: Engine, lock_connection: Connection | None, plan: Plan, *,
-                 schedule: Schedule | None = None, tick_s: float = 1.0,
-                 holder: str | None = None) -> None:
+    def __init__(
+        self,
+        engine: Engine,
+        lock_connection: Connection | None,
+        plan: Plan,
+        *,
+        schedule: Schedule | None = None,
+        tick_s: float = 1.0,
+        holder: str | None = None,
+    ) -> None:
         self.engine = engine
         self.plan = plan
         self.loop = MaintenanceLoop(
-            JobStore(engine), Leadership(engine, lock_connection=lock_connection, holder=holder),
-            schedule, tasks=plan.tasks, tick_s=tick_s,
+            JobStore(engine),
+            Leadership(engine, lock_connection=lock_connection, holder=holder),
+            schedule,
+            tasks=plan.tasks,
+            tick_s=tick_s,
         )
         self.stopping = threading.Event()
 
@@ -293,16 +379,22 @@ def database_url(env: Mapping[str, str] | None = None) -> str:
     """The maintenance role's direct URL. Session advisory locks don't survive a
     transaction-mode pooler, so prefer `SELECTA_MAINTENANCE_DATABASE_URL` when one is in front."""
     env = os.environ if env is None else env
-    url = (env.get("SELECTA_MAINTENANCE_DATABASE_URL") or env.get("SELECTA_DATABASE_URL")
-           or "").strip()
+    url = (
+        env.get("SELECTA_MAINTENANCE_DATABASE_URL") or env.get("SELECTA_DATABASE_URL") or ""
+    ).strip()
     if not url.startswith(("postgresql://", "postgresql+psycopg://")):
-        raise ValueError("Set SELECTA_DATABASE_URL (or SELECTA_MAINTENANCE_DATABASE_URL) to the "
-                         "Cloud PostgreSQL database.")
+        raise ValueError(
+            "Set SELECTA_DATABASE_URL (or SELECTA_MAINTENANCE_DATABASE_URL) to the "
+            "Cloud PostgreSQL database."
+        )
     return url
 
 
 def main(tick_s: float = 1.0) -> None:
     """`selecta maintain`: build everything from the environment and run until stopped."""
+    from selecta.observability import metrics
+
+    metrics.configure_from_environment("maintenance")
     engine = make_engine(database_url())
     lock = engine.connect()
     service = Service(engine, lock, cloud_plan(engine), tick_s=tick_s)

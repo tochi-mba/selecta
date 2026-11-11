@@ -108,14 +108,30 @@ export function buildCommands(context: CommandContext): Command[] {
   return visible([...places, ...playback, ...actions, ...drafts]);
 }
 
+// GP-0251-06: the same folding as the Library's own search (src/selecta/library/relevance.py
+// normalize_music), so "cafe" finds "Café" here too. Only for comparing: labels are shown as they are.
+const UNDECOMPOSED: Record<string, string> = { ø: 'o', æ: 'ae', œ: 'oe', ł: 'l', đ: 'd', ð: 'd', þ: 'th', ı: 'i', ŋ: 'n' };
+
+export function foldForSearch(text: string): string {
+  const plain = text
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[øæœłđðþıŋ]/g, (letter) => UNDECOMPOSED[letter])
+    .replace(/\p{M}+/gu, '');
+  return plain
+    .replace(/\b(?:featuring|feat|ft)\b/g, 'feat')
+    .replace(/[^\p{L}\p{N}_]+/gu, ' ')
+    .trim();
+}
+
 /** The best matches first. Each word has to appear somewhere. */
 export function matchCommands(commands: Command[], query: string): Command[] {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = foldForSearch(query).split(/\s+/).filter(Boolean);
   if (!words.length) return commands;
   return commands
     .map((command) => {
-      const label = command.label.toLowerCase();
-      const text = `${label} ${command.keywords ?? ''} ${command.group}`.toLowerCase();
+      const label = foldForSearch(command.label);
+      const text = `${label} ${foldForSearch(`${command.keywords ?? ''} ${command.group}`)}`;
       if (!words.every((word) => text.includes(word))) return null;
       return { command, score: label.startsWith(words[0]) ? 0 : label.includes(words[0]) ? 1 : 2 };
     })

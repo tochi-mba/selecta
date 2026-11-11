@@ -28,7 +28,7 @@ The current labels minimize retraining; a new dashboard adds an unnecessary step
 
 Naming change is an unverified hypothesis; the implementation must keep old addresses canonical or provide tested aliases and no audio interruption. Preserve original audio, routes, preferences, local security, current/draft/revision identity, scoped Undo, consented atomic bridges, full Stem Studio controls, blind study and decodable frozen-revision FLAC. No backend/audio/schema changes are implicitly approved.
 
-## Implementation tasks (all Not started / Not verified)
+## Implementation tasks (status per task below, 2026-11-11)
 
 1. **EX-0115-01 - Evaluate navigation terminology.** Acceptance: Uncoached users find Play, create, edit, library and operations. Verification: First-time label and destination task test. **Implementation: Implemented (2026-11-10); Verified: No. Needs a person: uncoached label and destination test.**
 2. **EX-0115-02 - Map every route and alias.** Acceptance: Old URLs, search params and deep links retain their meaning. Verification: Browser history/refresh/404 E2E. **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-10).**

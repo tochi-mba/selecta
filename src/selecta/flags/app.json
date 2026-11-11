@@ -34,6 +34,11 @@
       "about": "Still, subtle or expressive movement. The computer's reduced-motion setting always wins.",
       "surfaces": ["workshop"]
     },
+    "app.auto_low_motion": {
+      "label": "Lower motion on a struggling device",
+      "about": "When frames keep arriving late, decorative movement switches to Still for this visit. Nothing is hidden, and Workspace can bring full motion back.",
+      "surfaces": ["workshop"]
+    },
     "app.classic_nav": {
       "label": "Classic navigation",
       "about": "The older navigation labels over the same pages, with ?ui=classic as a way back.",

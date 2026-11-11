@@ -9,8 +9,9 @@ Covers S3-0072-01, S3-0072-02, S3-0072-03, S3-0072-05, S3-0072-06, S3-0072-07, S
 | Lyric lookup | `lrclib.net` | After a folder is added, when new songs arrive, and on `selecta lyrics` | Artist, title, album and duration. Never audio, never a path |
 | Key model | `raw.githubusercontent.com` (S-KEY, pinned commit, checked against a pinned hash) | Once, on first analysis | A plain download. Nothing about your library is sent |
 | Stem model | The Demucs model's own host, through `demucs` | Once, on first separation | A plain download. Nothing about your library is sent |
+| Lucy, with a remote provider (added later by the Lucy programme) | `api.anthropic.com` or `api.openai.com`, or a URL you set | Only after you choose a remote provider and give consent; the built-in provider sends nothing | The conversation and the song details Lucy needs. The key stays on the server (`src/selecta/lucy/settings.py`, ADR-0330) |
 
-Nothing else goes anywhere: no analytics, telemetry, remote fonts, icons or scripts. Copy on the first screen and in Sources says the lyric lookup part out loud, and the wording matches the table above. An automated browser test records every request during navigation and fails on any that isn't to the local server.
+Rechecked on 2026-11-11 against every remote address in `src/selecta` (`tests/test_s3_docs_contracts.py`); Cloud hosts belong to Cloud mode and its own docs. Nothing else goes anywhere: no analytics, telemetry, remote fonts, icons or scripts. Copy on the first screen and in Sources says the lyric lookup part out loud, and the wording matches the table above. An automated browser test records every request during navigation and fails on any that isn't to the local server.
 
 "Your audio stays on this PC" is the claim the app makes, and it's accurate. It deliberately doesn't claim "nothing leaves this PC", which wouldn't be.
 
@@ -44,6 +45,8 @@ A native dialog opened by the server would work but needs its own review: it ope
 ## New dependencies
 
 None were added for this work: no runtime dependency, no UI library, no font and no CDN. `package.json` runtime dependencies are unchanged. New features use the platform: `<dialog>`-style overlays built on existing code, `inert`, `visualViewport` and `BroadcastChannel`.
+
+Audit on 2026-11-10: two runtime dependencies have been added since, both by the Cloud programme. `@noble/hashes` 2.4.0 (MIT) hashes upload parts in the browser and makes no request. `@workos-inc/authkit-react` 0.16.3 (MIT) signs a Cloud listener in through WorkOS, which is a remote host, and is covered by [Cloud authentication](../saas/07a-authentication.md). Both are imported only under `web/src/cloud/`, which `RuntimeApp.tsx` loads lazily in Cloud mode, so the built local page never loads them: in a local build they sit only in the `CloudRoot` chunk. `web/e2e/s3-0072-local-requests.e2e.ts` and `web/e2e/pages.e2e.ts` 'the page only ever talks to this computer' fail on any request from the local app that isn't to the local server.
 
 There's no Content Security Policy header today. Nothing here needs external sources, so one could be added later without changing the app, as its own reviewed change.
 

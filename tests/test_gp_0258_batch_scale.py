@@ -1,7 +1,8 @@
 """GP-0258-08: exact-scope batch actions stay quick and exact in a 20,000-song library.
 
 A full 200-song batch (the most one batch may name) changes exactly those songs, its Undo puts back
-exactly those songs, and paging the Library around it stays responsive. Timings are measured on a
+exactly those songs, and paging the Library by its cursor around it stays responsive.
+Timings are measured on a
 shared 4-core laptop under load, so the bounds are generous; the printed numbers are the evidence.
 """
 
@@ -29,14 +30,20 @@ def test_gp_0258_08_a_full_batch_in_a_twenty_thousand_song_library(tmp_path):
     connection.commit()
     client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
 
-    pages = []
-    for offset in range(0, 20):
-        started = time.perf_counter()
-        answer = client.get(
-            "/api/library", params={"state": "all", "limit": 100, "q": f"Song {offset}"}
-        )
-        pages.append(time.perf_counter() - started)
-        assert answer.status_code == 200
+    # page through the Library the way the list does, by its cursor, before and after the batch
+    def browse() -> list[float]:
+        took, after = [], None
+        for _ in range(20):
+            params = {"state": "all", "limit": 100, **({"after": after} if after else {})}
+            started = time.perf_counter()
+            answer = client.get("/api/library", params=params)
+            took.append(time.perf_counter() - started)
+            assert answer.status_code == 200
+            after = answer.json()["next"]
+            assert after
+        return took
+
+    pages = browse()
     chosen = list(range(5000, 20000, 75))[:200]
     entries = [{"id": n, "expected": False} for n in chosen]
     started = time.perf_counter()
@@ -58,11 +65,12 @@ def test_gp_0258_08_a_full_batch_in_a_twenty_thousand_song_library(tmp_path):
     undone = time.perf_counter() - started
     left = connection.execute("SELECT COUNT(*) FROM songs WHERE processing_priority > 0")
     assert left.fetchone()[0] == 0
+    pages += browse()
     p95 = statistics.quantiles(pages, n=20)[-1]
     print(
         f"GP-0258-08: {SONGS} songs, 200-song batch {batch * 1000:.0f} ms, "
         f"undo {undone * 1000:.0f} ms, "
-        f"search page p95 {p95 * 1000:.0f} ms"
+        f"library page p95 {p95 * 1000:.0f} ms"
     )
     connection.close()
     assert batch < 3.0 and undone < 3.0

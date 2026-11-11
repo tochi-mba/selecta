@@ -83,6 +83,7 @@ wins, and the row says which.
 | `max-width: 1040px` | `styles/polish.css` | vibe skeleton follows the two-column vibe cards |
 | `max-width: 1024px` | `styles/operations.css` | Library columns fold into name/facts/readiness with actions beside; column head hidden (wins over `style.css` `.song-row` by specificity) |
 | `max-width: 850px` | `styles/polish.css` | Make a Mix paths stack |
+| `min-width: 768px` | `styles/listening.css` | render queue names and move buttons use consistent columns once the list has room |
 | `min-width: 761px` | `styles/shell.css` | the side rail |
 | `max-width: 760px` | `styles/tokens.css` | shell geometry: no rail offset, bottom bar and smaller header |
 | `max-width: 760px` | `styles/shell.css` | bottom bar, More drawer, context actions, overlays become sheets, keyboard yield |

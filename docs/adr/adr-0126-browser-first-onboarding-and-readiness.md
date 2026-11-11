@@ -1,8 +1,8 @@
 # ADR-0126 - Browser-first onboarding and readiness, without desktop packaging
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** Not started (0/5 newly defined EX tasks).
-- **Verified:** No (0/5 independent acceptance).
+- **Implementation:** Implemented 4/5 new tasks (2026-11-10, uncommitted on `feat/finish-checklists`).
+- **Verified:** Automated verification 2/5 on 2026-11-10; open items name a person or a pending run in the checklist.
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P1 / Listener.
 - **Related:** ADR-0096, ADR-0106, ADR-0134, not automatically superseded or verified.
@@ -30,11 +30,11 @@ Do not falsely claim that current browser UI can access arbitrary filesystem pat
 
 ## New implementation status per task
 
-1. **EX-0126-01 - Improve local path guidance**. **Acceptance:** Folder path entry understandable on current server. **Verification:** First-use/invalid path comprehension test. **Implementation: Not started; Verified: No.**
-2. **EX-0126-02 - Clarify readiness and first mix**. **Acceptance:** Ready tracks are usable while others analyze. **Verification:** Partial and complete readiness E2E. **Implementation: Not started; Verified: No.**
-3. **EX-0126-03 - Specify failure/recovery states**. **Acceptance:** No music, cancelled scan, server down and bad path distinct. **Verification:** Fault/permission fixtures. **Implementation: Not started; Verified: No.**
-4. **EX-0126-04 - Audit current network/privacy copy**. **Acceptance:** Local files and LRCLIB metadata lookup represented accurately. **Verification:** Source/API and disclosure review. **Implementation: Not started; Verified: No.**
-5. **EX-0126-05 - Enforce excluded platform scope**. **Acceptance:** No desktop packaging/native picker or SaaS feature introduced. **Verification:** PR path/dependency checklist. **Implementation: Not started; Verified: No.**
+1. **EX-0126-01 - Improve local path guidance**. **Acceptance:** Folder path entry understandable on current server. **Verification:** First-use/invalid path comprehension test. **Implementation: Implemented; Verified: No. Needs a person: first-use and invalid-path comprehension test with a new user. Evidence: see checklist.**
+2. **EX-0126-02 - Clarify readiness and first mix**. **Acceptance:** Ready tracks are usable while others analyze. **Verification:** Partial and complete readiness E2E. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
+3. **EX-0126-03 - Specify failure/recovery states**. **Acceptance:** No music, cancelled scan, server down and bad path distinct. **Verification:** Fault/permission fixtures. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
+4. **EX-0126-04 - Audit current network/privacy copy**. **Acceptance:** Local files and LRCLIB metadata lookup represented accurately. **Verification:** Source/API and disclosure review. **Implementation: Implemented (audit); Verified: No. Needs a person: owner disclosure decision on whether the glossary line "nothing else about your music is sent anywhere" should also mention these model downloads. Evidence: see checklist.**
+5. **EX-0126-05 - Enforce excluded platform scope**. **Acceptance:** No desktop packaging/native picker or SaaS feature introduced. **Verification:** PR path/dependency checklist. **Implementation: Superseded in part; Verified: No. Superseded by ADR-0391: Selecta Cloud (a SaaS) is now an accepted goal, so the "no SaaS feature" exclusion no longer holds; the desktop-packaging and native-picker exclusions still hold. Evidence: see checklist.**
 
 ## Independent verification
 

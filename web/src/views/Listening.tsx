@@ -20,6 +20,8 @@ export function Listening() {
   const [trials, setTrials] = useState<{ id: string }[] | null>(null);
   const [index, setIndex] = useState(0);
   const [error, setError] = useState('');
+  // T0043: a study that can't be opened is a problem with the code typed, so it sits under that field
+  const [codeProblem, setCodeProblem] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const operation = useRef(false);
@@ -63,6 +65,7 @@ export function Listening() {
     operation.current = true;
     setLoading(true);
     setError('');
+    setCodeProblem('');
     try {
       const rows = await get<{ id: string }[]>(`/listening?study=${encodeURIComponent(study)}`);
       quiet();
@@ -81,8 +84,11 @@ export function Listening() {
       setIndex(valid ? restored!.index : 0);
       setHeard(valid && Array.isArray(restored!.heard) ? restored!.heard : []);
       setQuality(valid && restored!.quality && typeof restored!.quality === 'object' ? restored!.quality : {});
-    } catch {
-      setError('Could not load this listening study. Check the study code and try again.');
+    } catch (failure) {
+      // Invalid codes are tied to their field. A server outage belongs after the Open study action.
+      const words = 'Could not load this listening study. Check the study code and try again.';
+      if (failure instanceof ApiError && failure.status >= 400 && failure.status < 500) setCodeProblem(words);
+      else setError(words);
     } finally { operation.current = false; setLoading(false); }
   };
 
@@ -143,7 +149,7 @@ export function Listening() {
       <h2 id="study-title">Blind listening study</h2>
       <p>Compare two versions without seeing how either was made. Listen to both, then choose your preference. A tie and “cannot judge” are both real answers. One person’s ear on one setup says something about that comparison, and doesn’t prove a version is better for everyone.</p>
       <form className="stack study-setup" onSubmit={(event) => void load(event)}>
-        <Field label="Study code" help="The code you were given for this study.">
+        <Field label="Study code" help="The code you were given for this study." error={codeProblem || undefined}>
           {(field) => <input {...field} value={study} onChange={(event) => setStudy(event.target.value)} required />}
         </Field>
         <Field label="Listener nickname" help="Any name you’ll use again, so your answers stay together.">

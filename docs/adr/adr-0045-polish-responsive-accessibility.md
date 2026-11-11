@@ -1,7 +1,7 @@
 # ADR-0045: Responsive workspace finish and complete accessible task journeys
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-10/11 reconciliation: 2 of 11 tasks ticked (P0124, P0127); P0125, P0129 and P0130 implemented but their browser checks failed; P0131 open; P0121-P0123, P0126 and P0128 need a person. See the [evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 6 - Responsive and accessibility verification

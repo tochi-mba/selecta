@@ -1,9 +1,11 @@
 """S4-0095-10: a model-based check that writes stay in the scope they were made in.
 
 Hypothesis drives random sequences of edits to the current mix and to several drafts (add, remove,
-move, delete a draft, play a draft) and compares the real library after every step with a plain
+move, add a two-song bridge, delete a draft, play a draft) and compares the real library
+after every step with a plain
 Python model. The invariants: an edit to one scope never changes any other scope, playing a draft
-swaps it in whole and keeps what was playing as a draft, and nothing is lost or duplicated.
+swaps it in whole and keeps what was playing as a draft, a bridge lands whole (both songs side by
+side with its transition) or not at all, and nothing is lost or duplicated.
 """
 
 from __future__ import annotations
@@ -95,6 +97,27 @@ class ScopedWrites(RuleBasedStateMachine):
         mix.move_song(self.conn, source, to, scope)
         if 0 <= source < len(items) and 0 <= to < len(items) and source != to:
             items.insert(to, items.pop(source))
+
+    @rule(data=st.data(), a=st.sampled_from(list(SONGS)), b=st.sampled_from(list(SONGS)))
+    def pair(self, data, a, b):
+        """A bridge goes in whole or not at all: both songs side by side with their transition."""
+        scope = self._scope(data, [d for d in self.model if d is not None])
+        items = self.model[scope]
+        try:
+            first, into = mix.add_pair(self.conn, a, b, {"move": "echo_out"}, scope)
+        except ValueError:
+            assert a == b or (a in items and b in items)
+            return
+        if b in items:
+            items.insert(items.index(b), a)
+        elif a in items:
+            items.insert(items.index(a) + 1, b)
+        else:
+            items += [a, b]
+        placed = mix.read_mix(self.conn, self.store, scope)
+        assert into == first + 1
+        assert (placed[first]["song_id"], placed[into]["song_id"]) == (a, b)
+        assert placed[into]["seam"]["settings"]["move"] == "echo_out"
 
     @rule(draft=consumes(drafts))
     def delete(self, draft):

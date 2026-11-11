@@ -21,6 +21,7 @@ export default defineConfig({
     timeout: 300_000, // twenty synthesized songs on a busy 4-core laptop
     stdout: 'ignore',
     stderr: 'pipe',
-    env: { SELECTA_E2E_STRESS: '1' },
+    // SELECTA_E2E_STEMS: cached stems for the first transition, so 'fx.studio.open' can open the Studio
+    env: { SELECTA_E2E_STRESS: '1', SELECTA_E2E_STEMS: '1' },
   },
 });

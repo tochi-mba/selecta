@@ -384,8 +384,8 @@ def _plan_ready(conn, app, lib, rules, pool, count, name) -> Outcome:
     }
     if best is None:
         if longest >= 2 and longest < count:
-            shorter = readiness.plan_path(inv, longest, starts[0], None, allowed)
-            if shorter["ids"]:
+            shorter = _shorter_ready(inv, min(longest, count - 1), starts, ends, allowed, pool)
+            if shorter:
                 snap = build_snapshot(lib, shorter["ids"], [e.settings for e in shorter["edges"]],
                                       rules, ready_only=True, title=name, variant="shorter")
                 details["shorter"] = {"songs": len(shorter["ids"]),
@@ -406,6 +406,22 @@ def _plan_ready(conn, app, lib, rules, pool, count, name) -> Outcome:
     if problems:
         return Outcome("conflict", message=" ".join(problems), details={"problems": problems})
     return Outcome("ok", [snap], details=details)
+
+
+def _shorter_ready(inv, most: int, starts, ends, allowed, pool) -> dict | None:
+    """The longest ready-only route that still keeps every start, end and must-include rule
+    (LX-0359-06), so offering "make it N songs" is a promise the next plan can keep."""
+    for size in range(most, 1, -1):
+        for start in starts:
+            for end in ends:
+                if start is not None and start not in allowed or end is not None and end not in \
+                        allowed:
+                    continue
+                found = readiness.plan_path(inv, size, start, end, allowed,
+                                            max_steps=20000 // (len(starts) * len(ends)))
+                if found["ids"] and set(pool.required) <= set(found["ids"]):
+                    return found
+    return None
 
 
 def _vibe_for(name: str, pool: Pool, rules: list[Constraint]):

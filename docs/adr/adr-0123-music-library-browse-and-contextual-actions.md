@@ -1,8 +1,8 @@
 # ADR-0123 - Library: music-first browsing and contextual actions
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/5 new tasks).
-- **Independent verification:** Not verified (0/5).
+- **Implementation status:** Implemented 5/5 new tasks (2026-11-10, uncommitted on `feat/finish-checklists`).
+- **Independent verification:** Automated verification 3/5 on 2026-11-10; open items name a person or a pending run in the checklist.
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P1 / Collection.
 - **Related ADRs:** ADR-0105, ADR-0106; does not silently supersede earlier decisions.
@@ -30,11 +30,11 @@ Do not infer artist or song readiness from unavailable metadata; avoid loss of k
 
 ## New implementation tasks and evidence
 
-1. **EX-0123-01 - Design song row information hierarchy**. Acceptance: Identity and availability readable with long/missing/duplicate tags. Required verification: Both-theme responsive visual review. **Implementation: Not started; Verified: No.**
-2. **EX-0123-02 - Crosswalk all existing row actions**. Acceptance: Every operation accessible by mouse, touch and keyboard. Required verification: Control inventory and E2E. **Implementation: Not started; Verified: No.**
-3. **EX-0123-03 - Preserve URL and deep paging**. Acceptance: Filtering and Back/Forward do not reset context. Required verification: 20k source fixture navigation. **Implementation: Not started; Verified: No.**
-4. **EX-0123-04 - Polish song details and corrections**. Acceptance: Effective vs measured values and validation always clear. Required verification: Correction error, focus, Undo tests. **Implementation: Not started; Verified: No.**
-5. **EX-0123-05 - Measure 20k responsiveness**. Acceptance: Fast enough scrolling and input without focus drops. Required verification: Hardware/frame time/DOM profile. **Implementation: Not started; Verified: No.**
+1. **EX-0123-01 - Design song row information hierarchy**. Acceptance: Identity and availability readable with long/missing/duplicate tags. Required verification: Both-theme responsive visual review. **Implementation: Implemented; Verified: No. Needs a person: named both-theme responsive visual review of the song rows. Evidence: see checklist.**
+2. **EX-0123-02 - Crosswalk all existing row actions**. Acceptance: Every operation accessible by mouse, touch and keyboard. Required verification: Control inventory and E2E. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
+3. **EX-0123-03 - Preserve URL and deep paging**. Acceptance: Filtering and Back/Forward do not reset context. Required verification: 20k source fixture navigation. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
+4. **EX-0123-04 - Polish song details and corrections**. Acceptance: Effective vs measured values and validation always clear. Required verification: Correction error, focus, Undo tests. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
+5. **EX-0123-05 - Measure 20k responsiveness**. Acceptance: Fast enough scrolling and input without focus drops. Required verification: Hardware/frame time/DOM profile. **Implementation: Implemented; Verified: No. Needs a person: frame-time and DOM profile on the owner's real hardware with a 20k library. Evidence: see checklist.**
 
 ## EX-0123-02 row action crosswalk (2026-11-10)
 

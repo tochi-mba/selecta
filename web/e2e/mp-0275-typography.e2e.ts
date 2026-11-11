@@ -568,6 +568,39 @@ for (const zoom of [2, 4]) {
   });
 }
 
+test('MP-0275-07 text-only zoom: the browser text size scales the type, and 200% neither clips nor covers', async ({ page, request }) => {
+  await resetMix(request, [1, 2, 3, 5]);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const sizes = () => page.evaluate(() => {
+    const px = (selector: string) => { const element = document.querySelector(selector); return element ? parseFloat(getComputedStyle(element).fontSize) : null; };
+    return { root: px('html'), body: px('body'), title: px('main h1'), hint: px('main .hint, main .lede') };
+  });
+  await open(page, '/mixes');
+  const normal = await sizes();
+  // the default look is unchanged: 16px body text at the browser's default text size
+  expect(normal.root).toBe(16);
+  expect(normal.body).toBe(16);
+  // A person's text size setting is the root's starting size, which rem resolves against; a user
+  // stylesheet setting it to 200% is the same thing, and Playwright cannot reach the setting itself.
+  const larger = async () => { await page.addStyleTag({ content: 'html { font-size: 200% !important; }' }); };
+  await larger();
+  const twice = await sizes();
+  expect(twice.root).toBe(32);
+  expect(twice.body, 'body text follows the text size').toBe(32);
+  expect(twice.hint!, 'secondary text follows the text size').toBeGreaterThanOrEqual(normal.hint! * 1.9);
+  expect(twice.title!, 'titles grow too').toBeGreaterThan(normal.title!);
+  for (const route of ['/listen', '/library', '/mix/current/edit', '/mixes', '/mixes/mine']) {
+    await open(page, route);
+    await larger();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    expect((await sizes()).body, `${route} body at 200% text`).toBe(32);
+    const found = await zoomDefects(page);
+    expect(found.overflow, `${route} scrolls sideways at 200% text`).toBeLessThanOrEqual(1);
+    expect(found.defects, `${route} at 200% text`).toEqual([]);
+    expect(await coveredControls(page), `${route} controls covered at 200% text`).toEqual([]);
+  }
+});
+
 /** Glyph boxes for parts of a name inside an element. */
 async function glyphs(page: Page, selector: string, parts: string[]) {
   return page.locator(selector).first().evaluate((element, wanted) => {

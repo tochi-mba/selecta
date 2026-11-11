@@ -31,6 +31,7 @@ from selecta.api_common import (
 from selecta.backup import BackupError, activate_pending_restore
 from selecta.config import Settings, load_settings
 from selecta.flags import guard as flag_guard
+from selecta.operation_log import FinishedOperations
 from selecta.routes.discover import add_routes as discover_routes
 from selecta.routes.edit import add_routes as edit_routes
 from selecta.routes.exports import add_routes as exports_routes
@@ -90,7 +91,8 @@ def create_app(
 
     # Operation names are not permission to replay an unrelated command. Bind
     # each name to the exact route and body that first used it.
-    finished_operations: dict[str, tuple[int, bytes, str]] = {}
+    # Kept on disk too, so a retry after a restart gets the first answer (T0256).
+    finished_operations = FinishedOperations(settings.home / "operations", OPERATIONS_KEPT)
 
     running_operations: dict[str, asyncio.Event] = {}
     active_fingerprints: dict[str, str] = {}
@@ -182,9 +184,7 @@ def create_app(
                     {"detail": "That operation ID already belongs to a different action."},
                     status_code=409,
                 )
-            recent_operations.append(
-                {"kind": kind, "status": known[0], "repeat": True, **traced}
-            )
+            recent_operations.append({"kind": kind, "status": known[0], "repeat": True, **traced})
             return Response(
                 known[1], status_code=known[0], media_type="application/json", headers=echo
             )
@@ -197,9 +197,7 @@ def create_app(
                 {"kind": kind, "status": response.status_code, "repeat": False, **traced}
             )
             if response.status_code < 500:
-                finished_operations[operation] = (response.status_code, body, fingerprint)
-                while len(finished_operations) > OPERATIONS_KEPT:
-                    del finished_operations[next(iter(finished_operations))]
+                finished_operations.remember(operation, (response.status_code, body, fingerprint))
         finally:
             running_operations.pop(operation).set()
             active_fingerprints.pop(operation, None)

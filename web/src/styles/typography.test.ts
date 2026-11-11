@@ -65,12 +65,27 @@ describe('stable numbers (MP-0275-05)', () => {
 
 describe('international names (MP-0275-08)', () => {
   it('Library and editor song names resolve their own direction', () => {
-    expect(read('views/Library.tsx')).toMatch(/<b dir="auto" title=\{title\}>/);
-    expect(read('views/Library.tsx')).toMatch(/<span dir="auto" title=\{song\.artist/);
+    expect(read('views/LibraryRow.tsx')).toMatch(/<b dir="auto" title=\{title\}>/);
+    expect(read('views/LibraryRow.tsx')).toMatch(/<span dir="auto" title=\{song\.artist/);
     expect(read('views/EditorRows.tsx')).toMatch(/<b dir="auto" title=\{item\.title\}>/);
   });
 
   it('no stylesheet makes CJK or long names unbreakable', () => {
     for (const file of FILES) expect(read(file), file).not.toMatch(/word-break:\s*keep-all/);
+  });
+});
+
+describe('text-only zoom (MP-0275-07)', () => {
+  it('the page text starts from the root size, so the browser text size setting scales it', () => {
+    expect(read('style.css')).toMatch(/body \{[^}]*font: var\(--text-md\)\/1\.5 var\(--body\);/);
+    // the default look is unchanged: --text-md is 1rem, 16px at the browser's default text size
+    expect(tokens).toMatch(/--text-md:\s*1rem;/);
+  });
+
+  it('no app stylesheet fixes a font size in px, which text-only zoom could not scale', () => {
+    for (const file of FILES) {
+      const fixed = [...read(file).matchAll(/(?:^|[;{\s])font(?:-size)?:\s*([^;}]*\d(?:\.\d+)?px[^;}]*)/gm)].map((match) => match[1].trim());
+      expect(fixed, file).toEqual([]);
+    }
   });
 });

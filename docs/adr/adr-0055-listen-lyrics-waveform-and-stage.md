@@ -1,14 +1,14 @@
 # ADR-0055: Calm Listen experience, accurate waveform, lyrics and Stage
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 8 of 9 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 1 still open
+- **Implementation status:** In progress: 9 of 9 tasks implemented with automated evidence on 2026-11-11; 0 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 3 - Core journeys
 - **Extends existing decisions:** ADR-0006, ADR-0008, ADR-0009, ADR-0027, ADR-0039
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -33,7 +33,7 @@ Make song identity and transport visually dominant, show upcoming and transition
 3. **S3-0055-03 - Implemented.** Specify upcoming card with requested/actual transition distinction and real readiness. **Evidence:** TransitionTruth in web/src/views/Now.tsx; web/src/ui/MusicObjects.test.tsx 'uses the rendered move rather than disguising a fallback as the selected technique' and 'never calls an automatic unrendered transition a confirmed technique'; web/src/views/Now.test.tsx 'uses chronological seconds when the next handoff has no valid beat grid' (passed 2026-11-10).
 4. **S3-0055-04 - Implemented.** Preserve Bigger/Calmer/Something else with confirmation, changed plan display and failure recovery. **Evidence:** web/src/views/Now.test.tsx 'blocks overlapping steering presses until the first server change finishes' and 'keeps the planned next song, says what went wrong, and can be pressed again' (passed 2026-11-10).
 5. **S3-0055-05 - Implemented.** Design lyrics focus with word, line, untimed, instrumental and no-lyrics fallbacks. **Evidence:** noLyricsWords and Lyrics in web/src/views/Now.tsx; web/src/views/Now.test.tsx 'follows the current playback time and keeps the lyric punctuation', 'keeps line lyrics visible when word timing is unavailable', 'labels untimed lyrics as untimed' and 'says why for a %s song, and invents no timing' (instrumental, not looked up, failed, none) (passed 2026-11-10).
-6. **S3-0055-06 - In progress.** Preserve spectrum with reduced-motion and hidden-page performance budgets. **Status:** In progress: reduced motion is proven (web/e2e/finishing.e2e.ts 'with reduced motion nothing keeps moving by itself, on any page') and paint is capped (web/src/views/spectrumEdgeCases.test.ts 'the pin count is capped so wide canvases cannot overload paint'); the hidden-tab stop and 15 fps throttle in web/src/views/Now.tsx have no test yet.
+6. **S3-0055-06 - Implemented.** Preserve spectrum with reduced-motion and hidden-page performance budgets. **Evidence:** reduced motion: web/e2e/finishing.e2e.ts 'with reduced motion nothing keeps moving by itself, on any page'; hidden page and the 15 frames a second cap in web/src/views/Now.tsx MusicVisualizer: web/e2e/creative-visualizers.e2e.ts 'each horizontal mode paints measured audio, goes blank on pause and stops while hidden' (no more than 34 paints in 2 s, none while hidden, audio clock still running); paint cap: web/src/views/spectrumEdgeCases.test.ts (passed 2026-11-11).
 7. **S3-0055-07 - Implemented.** Redesign Stage for large-screen legibility, fullscreen denial, exit and restoration. **Evidence:** web/e2e/finishing.e2e.ts 'fullscreen refused: the lyrics still fill the page, Escape gets out, focus comes back, and the music never stops'; web/e2e/listen.e2e.ts 'lyrics follow the song, and the fullscreen view keeps everything working'; web/e2e/pages.e2e.ts 'nothing goes wider than the window, from the smallest phone to 4K' (large-screen legibility as judged by a person is not claimed) (passed 2026-11-10).
 8. **S3-0055-08 - Implemented.** Retain exact Good/Bad rating scope and 'Why this transition?' layered explanations. **Evidence:** web/src/views/Now.test.tsx 'rates the transition that just played, by its key, and explains what was measured'; web/src/views/Mix.test.tsx 'posts to that seam alone, and shows the saved rating again after a remount' (passed 2026-11-10).
 9. **S3-0055-09 - Implemented.** Test transport during navigation, seek, pause, preview, end-of-set and multi-tab takeover. **Evidence:** web/e2e/listen.e2e.ts 'moving around the app leaves the music alone, and the mini-player follows', 'seeking while paused stays paused', 'a preview takes the sound, and gives it back when it’s done', 'the end of the mix comes to a stop, and it can be played again' and 'only one tab plays at a time' (passed 2026-11-10).

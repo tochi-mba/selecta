@@ -19,6 +19,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# seam keys of two made-up rated transitions, and the rating each was given
+RATED = {"rollback-good-seam": "good", "rollback-bad-seam": "bad"}
+
+# What an older build is known to read differently without losing it, as docs/acceptance.md records
+OLDER_LIMITS = {"corrected_bpm": "it ignores tempo corrections while it runs"}
+
 
 def read_everything(home: Path) -> dict:
     """What a person would look for, as this checkout's own server reports it."""
@@ -34,8 +40,16 @@ def read_everything(home: Path) -> dict:
         drafts = client.get("/api/drafts").json()["drafts"]
         draft = client.get(f"/api/mix?draft={drafts[0]['id']}").json() if drafts else None
         song = client.get("/api/songs/3").json()
-        jobs = client.get("/api/exports/jobs").json()["jobs"]
+        try:
+            jobs = client.get("/api/exports/jobs").json()["jobs"]
+        except Exception:  # an older build without export jobs, such as pre-overhaul 911c981
+            jobs = None
         requests = client.get("/api/requests").json()["requests"]
+        remembered = client.get("/api/memory").json()
+        rated = {
+            key: json.loads((home / "seam-history" / f"{key}.json").read_text("utf-8"))["rating"]
+            for key in RATED
+        }
         return {
             "code_from": str(Path(sys.modules["selecta"].__file__).parent.parent.parent),
             "report": {
@@ -46,8 +60,15 @@ def read_everything(home: Path) -> dict:
                 "drafts": [(item["name"], item["id"]) for item in drafts],
                 "draft_songs": [item["song_id"] for item in draft["mix"]] if draft else [],
                 "corrected_bpm": song.get("bpm"),
-                "export_jobs": [(job["id"], job["state"], job["name"]) for job in jobs],
+                "export_jobs": (
+                    None
+                    if jobs is None
+                    else [(job["id"], job["state"], job["name"]) for job in jobs]
+                ),
                 "requests": sorted((row["id"], row["song_id"]) for row in requests),
+                # T0273: a Good and a Bad, as the server's own memory of them counts them
+                "ratings": {"liked": remembered["liked"], "disliked": remembered["disliked"]},
+                "rated_seams": rated,
             },
         }
 
@@ -72,6 +93,19 @@ def save_things(home: Path) -> None:
         client.post("/api/requests", json={"song_id": 9}).raise_for_status()
         gone = client.post("/api/requests", json={"song_id": 10}).json()["id"]
         client.delete(f"/api/requests/{gone}").raise_for_status()
+        # two finished seams, rated through the server the way the page rates them
+        for (key, rating), (a, b) in zip(RATED.items(), ((1, 2), (2, 3)), strict=True):
+            finished = settings.renders_dir / "seams" / key
+            finished.mkdir(parents=True, exist_ok=True)
+            state = {
+                "status": "ready",
+                "key": key,
+                "passed": True,
+                "style": "bass_swap_blend",
+                "request": {"a": a, "b": b, "move": "bass_swap_blend"},
+            }
+            (finished / "seam.json").write_text(json.dumps(state), "utf-8")
+            client.post(f"/api/seams/{key}/rate", json={"rating": rating}).raise_for_status()
     # a job's record, as a finished export leaves it
     jobs = home / "exports" / "jobs"
     jobs.mkdir(parents=True, exist_ok=True)
@@ -130,8 +164,21 @@ def main() -> int:
         print(json.dumps(before, indent=1))
         rolled_back = report_from(older, "the older checkout")
         forward = report_from(ROOT, "this checkout again")
-        same = before == rolled_back == forward
-        print("identical across all three" if same else json.dumps(rolled_back, indent=1))
+        # A feature the older build never had (None) can't be read by it, but it must survive the
+        # trip: this checkout has to see it again afterwards, exactly as before.
+        unknown = sorted(key for key, value in rolled_back.items() if value is None)
+        differs = sorted(
+            key for key in before if key not in unknown and before[key] != rolled_back.get(key)
+        )
+        if unknown:
+            print(f"the older checkout doesn't have: {', '.join(unknown)}")
+        for key in differs:
+            why = OLDER_LIMITS.get(key, "NOT EXPECTED")
+            print(f"the older checkout reads {key} differently ({why}): {rolled_back.get(key)}")
+        again = "exactly the same" if before == forward else "A CHANGE"
+        print(f"this checkout again sees {again}")
+        same = before == forward and all(key in OLDER_LIMITS for key in differs)
+        print("nothing lost" if same else json.dumps(forward, indent=1))
         return 0 if same else 1
 
 

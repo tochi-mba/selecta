@@ -2,6 +2,8 @@
 
 /* Setup */
 .setup .lede { max-width: 66ch; }
+/* Start and the folder field share the same height when alongside each other. */
+.start .field .row > input, .start .field .row > button { height: 44px; min-height: 44px; }
 .setup-scan { display: grid; gap: var(--space-2); justify-items: start; }
 .setup-scan p { margin: 0; overflow-wrap: anywhere; }
 .setup-explain { margin-block: var(--space-4); }
@@ -80,9 +82,11 @@
 .vibe-card-facts { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); color: var(--text-soft); font-size: var(--text-sm); }
 .vibe-card-facts span + span::before { content: '·'; margin-right: var(--space-3); }
 .vibe-card > .vibe-card-detail { margin-top: auto; }
-.vibe-card .card-actions { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; gap: var(--space-2); margin-top: var(--space-1); }
+.vibe-card .card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: var(--space-2); margin-top: var(--space-1); }
 /* when one label wraps, both buttons take its height and keep their words centred: one top, one bottom */
 .vibe-card .card-actions > * { width: 100%; display: inline-flex; align-items: center; justify-content: center; }
+.vibe-card .card-actions .action-labels { min-width: 0; }
+.vibe-card .card-actions .action-labels > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 /* Play on its own, when there's no Shape first in this build, takes the whole row */
 .vibe-card .card-actions[data-count='1'] { grid-template-columns: minmax(0, 1fr); }
 .vibe-card .card-actions .save-draft { grid-column: 1 / -1; width: fit-content; padding-inline: 0; border-color: transparent; color: var(--text-soft); }
@@ -284,7 +288,12 @@
 .line-buttons { display: inline-flex; flex-wrap: wrap; gap: var(--space-1); }
 .line-place { font-variant-numeric: tabular-nums; }
 /* every place takes the room of the longest ("10th in line"), so the names share one column (MP-0286-05) */
-.line-place { flex: none; min-width: 7em; }
+.line-place { flex: 0 0 9.5em; width: 9.5em; }
+@media (min-width: 768px) {
+  .line-controls { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) auto; }
+  .line-name { min-width: 0; }
+  .line-buttons { justify-self: end; }
+}
 
 /* Requests */
 .request-cancel { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-height); padding: var(--space-1) var(--space-snug); font-size: var(--text-sm); }
@@ -440,7 +449,7 @@
   margin-block: var(--space-4);
   border-top: 1px solid var(--border);
 }
-.listen-next-steering h3 { margin: 0; font-size: var(--text-md); }
+.listen-next-steering h2 { margin: 0; font-size: var(--text-md); }
 .listen-next-steering .steer {
   display: grid;
   /* wide enough that each label (and its working label) stays on one line, so a steering button is

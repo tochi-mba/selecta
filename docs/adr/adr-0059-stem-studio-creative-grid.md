@@ -1,14 +1,14 @@
 # ADR-0059: Full Stem Studio workstation, grid interaction and commit safety
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 7 of 9 tasks implemented with automated evidence on 2026-11-10; 1 need a person; 1 still open
+- **Implementation status:** In progress: 8 of 9 tasks implemented with automated evidence on 2026-11-11; 1 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 4 - Creation workspaces
 - **Extends existing decisions:** ADR-0016, ADR-0007, ADR-0041
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -35,7 +35,7 @@ Make Studio a responsive focused workspace with permanent pair identity, aligned
 5. **S3-0059-05 - Implemented.** Separate dirty local shape, recovered local draft, backend committed shape and rendered audio status. **Evidence:** web/src/views/Studio.test.tsx 'ignores a corrupted local grid and safely uses the server shape', 'recovers a valid uncommitted grid for the same transition', 'starts from the shape already chosen when coming back to a seam' and 'nothing it does is final until “Apply to this transition”' (passed 2026-11-10).
 6. **S3-0059-06 - Implemented.** Make Apply revision-checked and never attach a saved shape to an old or different pair. **Evidence:** web/src/views/Studio.test.tsx 'a mix that moved on refuses the shape, and it stays here to try again'; tests/test_studio.py test_a_different_shape_is_a_different_seam and test_a_saved_shape_comes_back_in_the_request (passed 2026-11-10).
 7. **S3-0059-07 - Implemented.** Handle partial stem availability, loading/error, preview failure and close during processing. **Evidence:** web/src/views/Studio.test.tsx 'marks that lane unavailable, ignores presses on it, and leaves the other lanes working', 'says how long the stems will take while they are split, and that the mix keeps playing', 'if using it fails, the shape is still there to try again', 'explains when Selecta can’t arrange these two, and keeps the grid as it is' and 'closing lets go of the audio' (passed 2026-11-10).
-8. **S3-0059-08 - In progress.** Profile interaction responsiveness during background render and suppress excessive grid remounts. **Status:** In progress: no interaction-responsiveness profile during a background render has been recorded.
+8. **S3-0059-08 - Implemented.** Profile interaction responsiveness during background render and suppress excessive grid remounts. **Evidence:** web/e2e/s3-profiles.e2e.ts 'S3-0059-08 the Studio grid answers within budget during a background render and never remounts its cells' (prints an S3-PROFILE line) (passed 2026-11-11).
 9. **S3-0059-09 - Needs a person.** Exercise all cell positions, solo combinations, and playback interruptions with real audio evidence. **Status:** Needs a person: real-audio evidence for every cell position, solo combination and playback interruption; the automated cell and solo behaviour passes in web/src/views/Studio.test.tsx.
 
 ## Preservation and integration constraints
