@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { audioClock, resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * ADR-0269 (docs/engineering/action-tier-register.md), in a real browser:
@@ -23,7 +23,7 @@ test('disclosures keep the route, mix, audio and focus as they were (FP-0269-06)
   await page.goto('/listen');
   await page.getByRole('button', { name: /^(Play|Resume from)/ }).first().click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible({ timeout: 30_000 });
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   const mix = await mixSnapshot(page);
   const title = await page.locator('.now h1, .now .display').first().innerText();
 
@@ -63,7 +63,7 @@ test('disclosures keep the route, mix, audio and focus as they were (FP-0269-06)
     await expect(more).toBeFocused();
   }
 
-  expect(await soundsStarted(page), 'nothing restarted').toBe(started);
+  expect(await soundsRestarted(page), 'nothing restarted').toBe(started);
   const clock = (await audioClock(page))[0];
   await expect.poll(async () => (await audioClock(page))[0], { message: 'still playing' }).toBeGreaterThan(clock);
   expect(await mixSnapshot(page), 'current mix unchanged').toBe(mix);

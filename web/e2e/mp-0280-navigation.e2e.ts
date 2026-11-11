@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { audioClock, resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * ADR-280 navigation rail, breadcrumbs and phone bar, measured from the real stylesheet in Edge against
@@ -269,7 +269,7 @@ test('MP-0280-07 history, older addresses, drafts and playback survive moving ar
   await page.locator('.now .transport .primary').click();
   await expect(page.locator('.now .transport .primary')).toHaveText('Pause', { timeout: 30_000 });
   const contexts = await page.evaluate(() => window.audioSpy.contexts.length);
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   const made = await (await request.post('/api/drafts', { data: { name: 'Route keeper' } })).json();
   try {
     for (const [name, path] of [['Library', '/library'], ['Make a Mix', '/mixes'], ['My Mixes', '/mixes/mine']] as const) {
@@ -286,7 +286,7 @@ test('MP-0280-07 history, older addresses, drafts and playback survive moving ar
     await expect(page.locator('.editor-scope')).toHaveClass(/is-draft/);
     // the music never restarted and no second player was made
     expect(await page.evaluate(() => window.audioSpy.contexts.length)).toBe(contexts);
-    expect(await soundsStarted(page), 'a sound restarted while moving around').toBe(started);
+    expect(await soundsRestarted(page), 'a sound restarted while moving around').toBe(started);
     const [first] = await audioClock(page);
     await page.waitForTimeout(500);
     const [later] = await audioClock(page);

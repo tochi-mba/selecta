@@ -60,6 +60,11 @@ export async function spyOnAudio(page: Page) {
 }
 
 export const soundsStarted = (page: Page) => page.evaluate(() => window.audioSpy.started.length);
+/** Sounds started straight away: a song (re)starting, never a transition the player has queued
+ * up ahead of its cue. A rendered seam is planned as soon as it is ready (its clip and the next song
+ * are scheduled for later), so counting every start would call that look-ahead a restart whenever
+ * an earlier test happened to render the same pair. */
+export const soundsRestarted = (page: Page) => page.evaluate(() => window.audioSpy.started.filter((sound) => sound.when <= sound.at + 0.25).length);
 export const audioClock = (page: Page) => page.evaluate(() => window.audioSpy.contexts.map((context) => context.currentTime));
 export const audioStates = (page: Page) => page.evaluate(() => window.audioSpy.contexts.map((context) => context.state));
 

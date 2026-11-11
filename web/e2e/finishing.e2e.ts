@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, Page, test } from '@playwright/test';
-import { allRendered, audioClock, PAGES, resetMix, soundsStarted, spyOnAudio, stickingOut } from './helpers';
+import { allRendered, audioClock, PAGES, resetMix, soundsRestarted, spyOnAudio, stickingOut } from './helpers';
 
 /** The awkward sequences from the Selecta 3.1 verification matrix, in a real browser against a real
  * server. Each name says what has to stay true. None of this says how anything sounds or whether
@@ -124,7 +124,7 @@ test('a slow search can’t replace a newer one, and typing keeps its place', as
 test('changing the theme while playing starts nothing again, and the title bar follows', async ({ page }) => {
   await spyOnAudio(page);
   await startPlaying(page);
-  const before = await soundsStarted(page);
+  const before = await soundsRestarted(page);
   const clockBefore = (await audioClock(page))[0];
   for (const theme of ['Dark', 'Light', 'Match this computer']) {
     await page.locator('.theme-menu > button').click();
@@ -136,7 +136,7 @@ test('changing the theme while playing starts nothing again, and the title bar f
       await expect.poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map((bar) => bar.content))).toEqual(['#100f0c', '#100f0c']);
     }
   }
-  expect(await soundsStarted(page)).toBe(before);
+  expect(await soundsRestarted(page)).toBe(before);
   await expect.poll(async () => (await audioClock(page))[0]).toBeGreaterThan(clockBefore);
   await page.reload();
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
@@ -168,7 +168,7 @@ test('fullscreen refused: the lyrics still fill the page, Escape gets out, focus
   });
   await startPlaying(page);
   await page.getByText('DJ controls', { exact: true }).click();
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   const open = page.getByRole('button', { name: 'Fullscreen lyrics' });
   await open.focus();
   await open.press('Enter');
@@ -178,7 +178,7 @@ test('fullscreen refused: the lyrics still fill the page, Escape gets out, focus
   await expect(page.locator('.now.stage')).toHaveCount(0);
   await expect(open).toBeFocused();
   await expect(playButton(page)).toHaveText('Pause');
-  expect(await soundsStarted(page)).toBe(started);
+  expect(await soundsRestarted(page)).toBe(started);
 });
 
 for (const [width, height] of [[1280, 860], [375, 812]]) {

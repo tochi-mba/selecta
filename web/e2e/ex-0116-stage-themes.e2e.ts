@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * EX-0116-04: Stage in both themes, with reduced motion, at the smallest phone size and at
@@ -23,7 +23,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.locator('.lyrics')).toBeVisible();
     await playButton(page).click();
     await expect(playButton(page)).toHaveText('Pause', { timeout: 30_000 });
-    const started = await soundsStarted(page);
+    const started = await soundsRestarted(page);
     await page.keyboard.press('f');
     await expect(page.locator('.now.stage')).toBeVisible();
 
@@ -38,6 +38,6 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.locator('.now.stage')).toHaveCount(0);
     await expect(playButton(page)).toHaveText('Pause');
     await expect(playButton(page)).toBeInViewport();
-    expect(await soundsStarted(page), 'nothing restarted').toBe(started);
+    expect(await soundsRestarted(page), 'nothing restarted').toBe(started);
   });
 }

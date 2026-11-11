@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { audioClock, resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * ADR-0285 Stage, the fullscreen lyric view: gutters, lyric size, the quiet heading, the visualiser and
@@ -132,7 +132,7 @@ test('MP-0285-05 Escape, F and a tap on Exit all leave Stage, focus comes back, 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await spyOnAudio(page);
   await stage(page, 375, 812);
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   const exit = page.getByRole('button', { name: 'Exit fullscreen' });
   await expect(exit).toBeVisible();
   const box = (await exit.boundingBox())!;
@@ -156,7 +156,7 @@ test('MP-0285-05 Escape, F and a tap on Exit all leave Stage, focus comes back, 
   await expect(page.locator('.now.stage')).toBeVisible();
   await page.keyboard.press('f');
   await expect(page.locator('.now.stage')).toHaveCount(0);
-  expect(await soundsStarted(page), 'nothing restarted').toBe(started);
+  expect(await soundsRestarted(page), 'nothing restarted').toBe(started);
   await context.close();
 });
 

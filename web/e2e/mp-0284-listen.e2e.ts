@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { allRendered, audioClock, resetMix, shownTime, soundsStarted, spyOnAudio } from './helpers';
+import { allRendered, audioClock, resetMix, shownTime, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * ADR-0284 Listen: song identity, transport, song strip, lyrics, the coming transition, steering, the
@@ -212,7 +212,7 @@ test('MP-0284-07 all fifteen visualisers draw only from the live analyser, in on
   const choose = page.getByRole('combobox', { name: 'Audio visualizer style' });
   const values = await choose.locator('option').evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
   expect(values.length, 'fifteen modes').toBe(15);
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   const ink = () => page.locator('canvas.music-visualizer').evaluate((canvas) => {
     const element = canvas as HTMLCanvasElement;
     const data = element.getContext('2d')!.getImageData(0, 0, element.width, element.height).data;
@@ -231,7 +231,7 @@ test('MP-0284-07 all fifteen visualisers draw only from the live analyser, in on
     expect(Math.abs(read.width - frame.width), `${value}: same frame width`).toBeLessThanOrEqual(1);
     expect(Math.abs(read.height - frame.height), `${value}: same frame height`).toBeLessThanOrEqual(1);
   }
-  expect(await soundsStarted(page), 'changing visualiser restarts nothing').toBe(started);
+  expect(await soundsRestarted(page), 'changing visualiser restarts nothing').toBe(started);
   // paused, there is no signal: the canvas is cleared rather than drawn from anything made up
   await playButton(page).click();
   await expect(playButton(page)).toHaveText('Resume');
@@ -254,13 +254,13 @@ test('MP-0284-07 all fifteen visualisers draw only from the live analyser, in on
     await page.getByRole('menuitemradio', { name: theme }).click();
     await expect(playButton(page)).toHaveText('Pause');
   }
-  expect(await soundsStarted(page), 'theme changes restart nothing').toBe(started);
+  expect(await soundsRestarted(page), 'theme changes restart nothing').toBe(started);
 });
 
 test('MP-0284-08 moving around and changing what is shown never restarts the music or undoes Pause', async ({ page }) => {
   await listen(page);
   await play(page);
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   await djControls(page);
   await page.getByRole('button', { name: 'Lyrics focus' }).click();
   await page.getByRole('button', { name: 'Lyrics focus' }).click();
@@ -271,7 +271,7 @@ test('MP-0284-08 moving around and changing what is shown never restarts the mus
     await expect(page.locator('main#main')).toBeVisible();
   }
   await expect(playButton(page)).toHaveText('Pause');
-  expect(await soundsStarted(page), 'nothing restarted').toBe(started);
+  expect(await soundsRestarted(page), 'nothing restarted').toBe(started);
   const clock = (await audioClock(page))[0];
   await expect.poll(async () => (await audioClock(page))[0]).toBeGreaterThan(clock + 0.3);
   // Pause holds through the same journey
@@ -287,5 +287,5 @@ test('MP-0284-08 moving around and changing what is shown never restarts the mus
   await page.waitForTimeout(1500);
   await expect(playButton(page)).toHaveText('Resume');
   expect(await shownTime(page), 'still where it paused').toBe(paused);
-  expect(await soundsStarted(page), 'nothing started while paused').toBe(started);
+  expect(await soundsRestarted(page), 'nothing started while paused').toBe(started);
 });

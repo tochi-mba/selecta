@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { audioClock, resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * ADR-0270 (docs/engineering/layer-precedence.md), in a real browser:
@@ -35,7 +35,7 @@ test('keyboard and Stage hide the mini-player without touching the music (FP-027
   await page.getByRole('link', { name: 'Library' }).first().click();
   const mini = page.locator('.mini');
   await expect(mini).toBeVisible();
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
 
   for (const flag of ['keyboard', 'stage'] as const) {
     const before = (await audioClock(page))[0];
@@ -43,11 +43,11 @@ test('keyboard and Stage hide the mini-player without touching the music (FP-027
     await expect(mini).toBeHidden();
     // the clock keeps running while the player is out of sight, and nothing new was started
     await expect.poll(async () => (await audioClock(page))[0], { message: `${flag}: clock` }).toBeGreaterThan(before + 0.3);
-    expect(await soundsStarted(page), `${flag}: no restart`).toBe(started);
+    expect(await soundsRestarted(page), `${flag}: no restart`).toBe(started);
     await page.evaluate((name) => { delete document.documentElement.dataset[name]; }, flag);
     await expect(mini).toBeVisible();
     await expect(mini).toHaveAttribute('aria-label', /Now playing|Playing transition/);
-    expect(await soundsStarted(page), `${flag}: no restart on return`).toBe(started);
+    expect(await soundsRestarted(page), `${flag}: no restart on return`).toBe(started);
   }
 });
 

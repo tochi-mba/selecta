@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { audioClock, resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * ADR-281 persistent mini-player and fixed chrome, measured from the real stylesheet in Edge against the
@@ -275,7 +275,7 @@ test('MP-0281-08 changing page or theme keeps one audio owner, and Pause stays p
   await spyOnAudio(page);
   await playingOnLibrary(page);
   const contexts = await page.evaluate(() => window.audioSpy.contexts.length);
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   const nav = page.getByRole('navigation', { name: 'Main' });
   const tour = async () => {
     for (const name of ['Make a Mix', 'My Mixes', 'Library']) {
@@ -294,17 +294,17 @@ test('MP-0281-08 changing page or theme keeps one audio owner, and Pause stays p
   await tour();
   // no second player was made, and nothing restarted the song
   expect(await page.evaluate(() => window.audioSpy.contexts.length), 'audio contexts after moving around').toBe(contexts);
-  expect(await soundsStarted(page), 'sounds restarted by moving around').toBe(started);
+  expect(await soundsRestarted(page), 'sounds restarted by moving around').toBe(started);
   expect(await page.locator('audio, video').count(), 'a media element appeared').toBe(0);
 
   // a deliberate Pause holds across pages and themes
   await page.locator('.mini .round').click();
   await expect(page.locator('.mini .round')).toHaveAccessibleName('Resume');
   const [paused] = await audioClock(page);
-  const startedPaused = await soundsStarted(page);
+  const startedPaused = await soundsRestarted(page);
   await tour();
   await expect(page.locator('.mini .round')).toHaveAccessibleName('Resume');
-  expect(await soundsStarted(page), 'a sound started while paused').toBe(startedPaused);
+  expect(await soundsRestarted(page), 'a sound started while paused').toBe(startedPaused);
   const states = await page.evaluate(() => window.audioSpy.contexts.map((context) => context.state));
   const [later] = await audioClock(page);
   // paused means the clock is held or the context is suspended

@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
-import { audioClock, resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * ADR-0286 My Mixes: current and draft cards, metadata, inline rename, draft actions, the render line,
@@ -229,10 +229,10 @@ test('MP-0286-07 Copy, Delete, Undo and Play each touch exactly the draft or cur
   expect(await ids(request, one.id)).toEqual([5, 6]);
   expect(await ids(request)).toEqual([1, 2, 3, 4]);
   // Play the second Twin: it becomes current, and what was current is kept as a draft
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   await page.locator('.draft-list .draft', { has: page.locator(`#draft-${two.id}`) }).getByRole('button', { name: /^Play / }).click();
   await expect.poll(() => ids(request)).toEqual([7, 8]);
-  await expect.poll(async () => (await soundsStarted(page)) > started).toBe(true);
+  await expect.poll(async () => (await soundsRestarted(page)) > started).toBe(true);
   const kept = (await (await request.get('/api/drafts')).json()).drafts as Made[];
   const keptIds = await Promise.all(kept.map((item) => ids(request, item.id)));
   expect(keptIds, 'the old current mix was kept').toContainEqual([1, 2, 3, 4]);

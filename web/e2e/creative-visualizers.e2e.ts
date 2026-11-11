@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { audioClock, resetMix, spyOnAudio, soundsStarted } from './helpers';
+import { audioClock, resetMix, spyOnAudio, soundsRestarted } from './helpers';
 
 test.beforeEach(async ({ request }) => {
   await resetMix(request);
@@ -26,7 +26,7 @@ test('all thirteen additional horizontal visualizers are selectable without rest
   await page.goto('/listen');
   await page.getByRole('button', { name: /^(Play|Resume from)/ }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   const dj = page.locator('details.view-options');
   if (!await dj.evaluate((element) => (element as HTMLDetailsElement).open)) {
     await dj.locator(':scope > summary').click();
@@ -51,7 +51,7 @@ test('all thirteen additional horizontal visualizers are selectable without rest
     await expect(page.getByRole('img', { name: label + ' - actual mixed-audio frequency levels' })).toBeVisible();
     await expect(choose).toHaveValue(value);
   }
-  expect(await soundsStarted(page)).toBe(started);
+  expect(await soundsRestarted(page)).toBe(started);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect(page.getByRole('img', { name: 'Audio frequency visualizer paused' })).toBeVisible();
 });

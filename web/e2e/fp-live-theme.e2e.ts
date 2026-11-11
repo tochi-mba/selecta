@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { audioClock, resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * FP final polish: what a theme change may and may not touch, in a real browser.
@@ -70,7 +70,7 @@ test('a theme change while playing repaints the spectrum and leaves music, style
   if (!await dj.evaluate((element) => (element as HTMLDetailsElement).open)) await dj.locator(':scope > summary').click();
   const style = page.getByRole('combobox', { name: 'Audio visualizer style' });
   await style.selectOption('skyline');
-  const started = await soundsStarted(page);
+  const started = await soundsRestarted(page);
   const title = await page.locator('.now h1, .now .display').first().innerText();
 
   for (const [pick, bright] of [['Dark', true], ['Light', false], ['Dark', true]] as const) {
@@ -81,7 +81,7 @@ test('a theme change while playing repaints the spectrum and leaves music, style
       .toSatisfy((value: number) => value >= 0 && (bright ? value > 0.45 : value < 0.3));
     await expect(style).toHaveValue('skyline');
     await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
-    expect(await soundsStarted(page)).toBe(started);
+    expect(await soundsRestarted(page)).toBe(started);
     await expect.poll(async () => (await audioClock(page))[0]).toBeGreaterThan(clock);
     expect(await page.locator('.now h1, .now .display').first().innerText()).toBe(title);
   }
@@ -97,7 +97,7 @@ test('a theme change while playing repaints the spectrum and leaves music, style
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect.poll(() => paintLuminance(page)).toSatisfy((value: number) => value >= 0 && value < 0.3);
-  expect(await soundsStarted(page)).toBe(started);
+  expect(await soundsRestarted(page)).toBe(started);
 });
 
 test('a theme change keeps the measured energy, the chosen song and the seams in the Editor (FP-0266-02)', async ({ page }) => {
