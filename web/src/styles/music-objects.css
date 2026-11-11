@@ -13,7 +13,10 @@
 .song-select { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
 .song-select b { overflow-wrap: anywhere; }
 .song-open { display: inline-flex; align-items: center; gap: var(--space-hair); max-width: 100%; text-align: start; }
-.song-open b { min-width: 0; overflow-wrap: anywhere; }
+/* the title takes its own ink rather than inheriting the button's: a button's colour fades over
+   --motion-fast, so on a theme switch an inherited title would sit at the old theme's ink on the new
+   background for a moment, near 1:1 contrast (LX-0351-06) */
+.song-open b { min-width: 0; overflow-wrap: anywhere; color: var(--text); }
 .inspector-pair .song-motif, .studio-pair .song-motif { width: 25px; height: 25px; margin-right: var(--space-1); }
 .studio-pair .song-motif { vertical-align: middle; }
 .coming .song-name b .song-motif { width: 22px; height: 22px; }
