@@ -164,7 +164,7 @@
 
 - [x] T0092 - Distinguish validation, 404/missing item, conflict, offline, storage limit and render failure states.
 - [x] T0093 - Retain last safe snapshots on server loss; never replace them with false empty data.
-- [ ] T0094 - Define server-reconnect, retry and idempotent recovery for every durable mutation.
+- [x] T0094 - Define server-reconnect, retry and idempotent recovery for every durable mutation. **Evidence (2026-11-11):** `web/src/api.ts` gives every change an operation id and resends one that got no answer with the same id (0.5 s, 1.5 s); the server keeps first answers on disk (`src/selecta/operation_log.py`), so a resend after a restart is not applied twice. `web/src/mutationRecovery.test.ts` 5 passed; `tests/test_restart_during_mutation.py`, `tests/test_restart_mid_work.py`, `tests/test_setting_conflicts.py` 16 passed.
 - [x] T0095 - Implement active audio owner/takeover policy across multiple app tabs/windows.
 - [x] T0096 - Show conflicts rather than silently overwriting newer mix, cue, request or setting state. **Evidence (2026-11-11):** `x-mix-order` guards mix/seam/cue edits and requests answer 409 with reasons; storage limit and steering settings now carry what the page last saw and answer 409 `setting_changed` (`src/selecta/routes/system.py`, `web/src/views/WorkshopPanels.tsx`, `web/src/views/MixSetup.tsx`). `tests/test_setting_conflicts.py` 8 passed, `web/src/views/settingConflicts.test.tsx` 3 passed.
 - [ ] T0097 - Test backend stop/restart during edit, request, export and storage update; test tab sleep/wake. **Implementation:** Implemented; browser check pending (`web/e2e/t0097-tab-sleep.e2e.ts`). Restarts proven by `tests/test_restart_mid_work.py` (4 passed, 2026-11-11).

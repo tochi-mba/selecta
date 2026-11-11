@@ -27,8 +27,9 @@ def world(cloud_engine):
 
 
 def change(world, action: str, who: str = "owner", flag: str = FLAG, **params):
-    return world.post(f"/api/admin/flags/{flag}/change", who, action=action, reason="test",
-                      params=params)
+    return world.post(
+        f"/api/admin/flags/{flag}/change", who, action=action, reason="test", params=params
+    )
 
 
 def rules_of(world, flag: str = FLAG) -> list[str]:
@@ -49,8 +50,9 @@ def test_a_kill_switch_is_instant_audited_and_alerted(world):
 
 
 def test_switching_a_feature_off_for_a_whole_tier_waits_as_a_broad_change(world):
-    preview = world.post(f"/api/admin/flags/{FLAG}/impact", action="off_for_tier",
-                         params={"plan": "free"})
+    preview = world.post(
+        f"/api/admin/flags/{FLAG}/impact", action="off_for_tier", params={"plan": "free"}
+    )
     assert preview.json()["broad"] is True
     queued = change(world, "off_for_tier", plan="free").json()
     assert queued["applied"] is False and queued["action_id"]
@@ -73,8 +75,12 @@ def test_impact_preview_counts_accounts_by_plan_and_lists_dependents(world):
 def test_one_account_is_a_per_workspace_override_and_many_need_the_rules_power(world):
     one = change(world, "off_for_users", "support", user_ids=[world.users["customer"]])
     assert one.json()["applied"] is True, one.text
-    many = change(world, "off_for_users", "support",
-                  user_ids=[world.users["customer"], world.users["customer2"]])
+    many = change(
+        world,
+        "off_for_users",
+        "support",
+        user_ids=[world.users["customer"], world.users["customer2"]],
+    )
     assert (many.status_code, many.json()["detail"]["code"]) == (403, "forbidden")
     assert audit_actions(world.engine, action="flags.rules.propose", result="deny")
 
@@ -106,8 +112,30 @@ def test_a_small_rollout_and_a_schedule_apply_at_once_and_rollback_restores(worl
     back = world.post("/api/admin/flags/rollback", version=rollout["version"], reason="undo")
     assert back.json()["applied"] is True
     assert rules_of(world) == ["percentage"]
-    assert world.get("/api/admin/flags/history", flag_id=FLAG).json()["versions"][0]["reason"] \
+    assert (
+        world.get("/api/admin/flags/history", flag_id=FLAG)
+        .json()["versions"][0]["reason"]
         .startswith("rollback to version")
+    )
+
+
+def test_undo_restores_what_was_in_effect_before_even_a_first_change(world):
+    first = change(world, "rollout", percent=0, plans=["premium"]).json()
+    later = time.time() + 3600
+    second = change(world, "schedule", **{"from": later, "on": True, "plans": ["premium"]}).json()
+    assert rules_of(world) == ["schedule", "percentage"]
+    back = world.post(
+        "/api/admin/flags/rollback", version=second["version"], reason="oops", before=True
+    )
+    assert back.json()["applied"] is True, back.text
+    assert rules_of(world) == ["percentage"]
+    back = world.post(
+        "/api/admin/flags/rollback", version=first["version"], reason="oops", before=True
+    )
+    assert back.json()["applied"] is True, back.text
+    assert rules_of(world) == []
+    latest = world.get("/api/admin/flags/history", flag_id=FLAG).json()["versions"][0]
+    assert latest["reason"].startswith(f"undo version {first['version']}")
 
 
 def test_the_trace_explains_every_flag_for_one_account(world):

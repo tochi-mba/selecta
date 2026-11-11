@@ -58,8 +58,9 @@ def relevance(query: str, song_id: int, artist: str | None, title: str | None) -
 
 
 @lru_cache(maxsize=131072)
-def _prepared(title: str, artist: str) -> tuple[str, str, frozenset[str], dict[int, tuple[str,
-...]]]:
+def _prepared(
+    title: str, artist: str
+) -> tuple[str, str, frozenset[str], dict[int, tuple[str, ...]]]:
     """One song's names as search compares them, worked out once per process, not per search:
     the title, the artist, every word of either, and those words by length (MI-0162-04)."""
     name = normalize_music(title)
@@ -93,6 +94,7 @@ def _ranker(query: str) -> Callable[[int, str | None, str | None], int | None]:
     # matches are not fuzzy-searched; a typo must not silently select a cover.
     size = len(needle)
     fuzzy = 4 <= size <= 72
+    lengths = range(size - 2, size + 3)
     close: dict[str, float] = {}
     letters = frozenset(needle)
 
@@ -118,18 +120,22 @@ def _ranker(query: str) -> Callable[[int, str | None, str | None], int | None]:
         if by_id and needle == str(song_id):
             return 0
         name, creator, tokens, by_length = _prepared(title or "", artist or "")
-        if needle == name:
-            return 10
-        if needle == creator:
-            return 20
-        if starts(name):
-            return 30
-        if contains(name):
-            return 35
-        if starts(creator):
-            return 40
-        if contains(creator):
-            return 45
+        # every title or artist match below contains the query, so one test rules them all out
+        in_name = needle in name
+        in_creator = needle in creator
+        if in_name or in_creator:
+            if needle == name:
+                return 10
+            if needle == creator:
+                return 20
+            if in_name and starts(name):
+                return 30
+            if in_name and contains(name):
+                return 35
+            if in_creator and starts(creator):
+                return 40
+            if in_creator and contains(creator):
+                return 45
         if several and all(word in tokens for word in words):
             return 50
         if not fuzzy:
@@ -138,7 +144,7 @@ def _ranker(query: str) -> Callable[[int, str | None, str | None], int | None]:
         for candidate in (name, creator):
             if candidate and abs(len(candidate) - size) <= 3:
                 best = max(best, closeness(candidate))
-        for length in range(size - 2, size + 3):
+        for length in lengths:
             for token in by_length.get(length, ()):
                 best = max(best, closeness(token))
         if best >= 0.84:
