@@ -261,9 +261,7 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
     let code = '';
     try {
       const body = await response.json();
-      // a framework's bare "Internal Server Error" says nothing a listener can use; keep ours
-      const generic = response.status >= 500 && body.detail === 'Internal Server Error';
-      detail = typeof body.detail === 'string' && !generic ? body.detail : detail;
+      detail = typeof body.detail === 'string' ? body.detail : detail;
       code = body.code ?? '';
     } catch {
       /* the status text will do */

@@ -80,7 +80,7 @@ test('LX-0340-05 LX-0344-01 LX-0345-03 duplicate titles stay bound to their reco
       // same title, different artist: every control names the artist, and the checkbox the ID
       const row = rows(page).filter({ has: page.getByRole('button', { name: `Details for Same Name by ${artist}` }) });
       await expect(row).toHaveCount(1);
-      await expect(row.getByText(artist)).toBeVisible();
+      await expect(row.getByText(artist, { exact: true })).toBeVisible();
       await expect(row.getByRole('button', { name: `More actions for Same Name by ${artist}` })).toHaveCount(1);
       await expect(row.getByRole('checkbox')).toHaveAccessibleName(`Select recording Same Name by ${artist}, ID ${id}`);
       // title and artist never sit on top of each other
@@ -338,7 +338,7 @@ test('LX-0346-06 LX-0349-05 the More menu works by keyboard and touch, and Never
   await expect(row).toHaveCount(0);
   await page.getByRole('button', { name: 'Set aside', exact: true }).click();
   await page.getByRole('button', { name: 'Details for Last Call' }).click();
-  await expect(page.getByRole('dialog').getByText('Set aside', { exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog').getByText('Set aside', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'This is music' }).click();
   await page.getByRole('button', { name: 'Let Selecta decide' }).click();
   await page.keyboard.press('Escape');
