@@ -251,7 +251,7 @@ a.button:hover { border-color: var(--text); }
      one letter to a line and squeezed the editor at 320px). The count still sits after its icon, centred on
      it, in a slot held for two tabular digits even before one arrives; tighter padding keeps the pair
      about one target wide */
-  .context-actions .context-counted { justify-content: flex-start; gap: var(--space-1); padding-inline: var(--space-1); }
+  .context-actions .context-counted { justify-content: flex-start; padding-inline: var(--space-1); }
   .context-actions .context-counted .count { font-size: var(--text-xs); }
   .context-actions .context-counted:not(:has(.count))::after { content: ''; flex: none; inline-size: 2ch; font: 700 var(--text-xs) var(--mono); }
   /* and the name breaks between words wherever a word fits */
