@@ -119,10 +119,34 @@ const overlayStack: HTMLElement[] = [];
 
 /** Only the top overlay can be reached. Everything underneath it is inert: the page, and any overlay
  * this one opened on top of. */
+const chromeInert = new Set<Element>();
+/** A sheet that keeps the shell's chrome (SF-0203-06) leaves the tab bar and the mini-player live: everything
+ * else in the page goes inert, one branch at a time, so the player stays reachable beside it. */
+const KEPT_CHROME = '.nav, .mini';
 function syncInert() {
   const top = overlayStack[overlayStack.length - 1];
   const root = document.getElementById('root');
-  if (top) root?.setAttribute('inert', '');
+  for (const node of chromeInert) node.removeAttribute('inert');
+  chromeInert.clear();
+  const kept = top?.dataset.keepsChrome === 'true' && root ? [...root.querySelectorAll(KEPT_CHROME)] : [];
+  if (top && kept.length && root) {
+    root.removeAttribute('inert');
+    const path = new Set<Element>();
+    for (const node of kept) for (let at: Element | null = node; at && at !== root; at = at.parentElement) path.add(at);
+    for (const branch of path) {
+      if (kept.includes(branch)) continue;
+      for (const sibling of branch.children) {
+        if (path.has(sibling) || sibling.hasAttribute('inert')) continue;
+        sibling.setAttribute('inert', '');
+        chromeInert.add(sibling);
+      }
+    }
+    for (const child of root.children) {
+      if (path.has(child) || child.hasAttribute('inert')) continue;
+      child.setAttribute('inert', '');
+      chromeInert.add(child);
+    }
+  } else if (top) root?.setAttribute('inert', '');
   else root?.removeAttribute('inert');
   for (const item of overlayStack) {
     if (item === top) item.removeAttribute('inert');
@@ -151,12 +175,15 @@ function Overlay({
   kind,
   children,
   footer,
+  keepsChrome,
 }: {
   title: string;
   onClose: () => void;
   kind: 'dialog' | 'sheet' | 'drawer' | 'workspace';
   children: ReactNode;
   footer?: ReactNode;
+  /** stops above the tab bar and mini-player and leaves them working, for a side task beside the music */
+  keepsChrome?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
@@ -226,8 +253,8 @@ function Overlay({
     }
   };
   return createPortal(
-    <div ref={holder} className={`overlay overlay-${kind}`} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div ref={panel} className="overlay-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
+    <div ref={holder} className={`overlay overlay-${kind}${keepsChrome ? ' overlay-keeps-chrome' : ''}`} data-keeps-chrome={keepsChrome ? 'true' : undefined} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={panel} className="overlay-panel" role="dialog" aria-modal={keepsChrome ? undefined : 'true'} aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
           <button className="overlay-close" aria-label={`Close ${title}`} title={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
@@ -254,7 +281,7 @@ export function Workspace(props: { title: string; onClose: () => void; children:
   return <Overlay kind="workspace" {...props} />;
 }
 
-export function Sheet(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
+export function Sheet(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; keepsChrome?: boolean }) {
   return <Overlay kind="sheet" {...props} />;
 }
 
