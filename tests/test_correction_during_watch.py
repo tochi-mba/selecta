@@ -32,6 +32,7 @@ def _song(conn, folder, song_id, title, analysed=True):
 @pytest.fixture
 def setup(tmp_path, monkeypatch):
     settings = Settings(tmp_path / "home")
+    settings.home.mkdir()
     music = tmp_path / "music"
     music.mkdir()
     conn = db.connect(settings.db_path)

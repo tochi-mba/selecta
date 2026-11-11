@@ -327,7 +327,8 @@ html {
   --motion-overlay: 160ms;
   --motion-slow: 180ms;
 }
-:root[data-motion='still'] {
+:root[data-motion='still'],
+:root[data-low-power='auto'] {
   --motion-feedback: 0ms;
   --motion-fast: 0ms;
   --motion-reveal: 0ms;
@@ -338,7 +339,10 @@ html {
 /* CSS animations not based on motion tokens also respect Still and the OS setting. */
 :root[data-motion='still'] *,
 :root[data-motion='still'] *::before,
-:root[data-motion='still'] *::after {
+:root[data-motion='still'] *::after,
+:root[data-low-power='auto'] *,
+:root[data-low-power='auto'] *::before,
+:root[data-low-power='auto'] *::after {
   animation: none !important;
   transition: none !important;
   scroll-behavior: auto !important;

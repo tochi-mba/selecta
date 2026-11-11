@@ -11,6 +11,7 @@ import { describeRoute, shownRoute } from './shell/manifest';
 import { PageLink, Shell } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
+import { watchLowPower } from './ui/lowPower';
 import { orderOf } from './state/readiness';
 import { shortcutFor, shortcutsOn } from './state/shortcuts';
 import { openGlossary } from './state/glossaryRequests';
@@ -89,6 +90,9 @@ export function App() {
   const [stageFallback, setStageFallback] = useState(false);
   const preferences = usePrefs();
   useEffect(() => readFlagFromAddress(window.location.search), []);
+  // SF-0235-08: lower decorative motion on a device that can't keep up (not under unit tests,
+  // where a frame loop would only spin).
+  useEffect(() => (import.meta.env.MODE === 'test' ? undefined : watchLowPower()), []);
   const mix = data.mix;
   const mixRef = useRef<MixItem[]>([]);
   mixRef.current = mix;

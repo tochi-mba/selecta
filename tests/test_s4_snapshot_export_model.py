@@ -83,7 +83,7 @@ class SnapshotExport(RuleBasedStateMachine):
     def _everything(self):
         return {
             scope: [
-                (item["song_id"], item["seam"]["state"]["key"])
+                (item["song_id"], (item.get("seam") or {}).get("state", {}).get("key"))
                 for item in mix.read_mix(self.conn, self.store, scope)
             ]
             for scope in (None, self.draft)

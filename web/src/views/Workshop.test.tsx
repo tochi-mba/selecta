@@ -48,7 +48,7 @@ describe('the storage slider', () => {
     fireEvent.change(slider, { target: { value: '5' } });
     expect(screen.getByText('5.0 GB')).toBeInTheDocument();
     expect(calls.some((call) => call.method === 'POST')).toBe(false);
-    await waitFor(() => expect(calls.find((call) => call.method === 'POST')?.body).toEqual({ budget_gb: 5 }));
+    await waitFor(() => expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({ budget_gb: 5 }));
   });
 
   it('explains what’s used in plain words', async () => {

@@ -103,7 +103,12 @@ export function StoragePanel() {
     setSaved(false);
     const before = storage.cache_bytes;
     wait.current = window.setTimeout(() => {
-      const work = writeQueue.current.then(() => post<Storage>('/storage', { budget_gb: value }))
+      // T0096: say which limit this page last saw, so a newer one set in another window is
+      // reported instead of being silently replaced. Read at send time, after earlier writes.
+      const work = writeQueue.current.then(() => post<Storage>('/storage', {
+        budget_gb: value,
+        ...(confirmed.current !== null ? { expected_budget_bytes: Math.round(confirmed.current * GB) } : {}),
+      }))
         .then((answer) => {
           if (confirmedRemoval) {
             const gone = Math.max(before - answer.cache_bytes, 0);
@@ -127,6 +132,15 @@ export function StoragePanel() {
           budgetEditing.current = false;
           setSaved(true);
           if (confirmed.current !== null) setLimit(confirmed.current);
+          // changed in another window: show that newer limit rather than the stale one
+          if (error instanceof ApiError && error.code === 'setting_changed') {
+            void get<Storage>('/storage').then((data) => {
+              if (mine !== saves.current) return;
+              setStorage(data);
+              confirmed.current = data.budget_bytes / GB;
+              setLimit(confirmed.current);
+            }).catch(() => {});
+          }
         });
       writeQueue.current = work;
     }, confirmedRemoval ? 0 : 400);

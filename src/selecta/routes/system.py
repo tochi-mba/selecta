@@ -49,6 +49,8 @@ class RelinkRequest(BaseModel):
     old: str
     new: str
     token: str | None = None
+    # GP-0252-04: song IDs a person said are the same recording, though their details changed
+    confirmed: list[int] = []
 
 
 def add_routes(app, ctx) -> None:
@@ -211,8 +213,10 @@ def add_routes(app, ctx) -> None:
         return Response(
             data,
             media_type="application/zip",
-            headers={"Content-Disposition": 'attachment; filename="selecta-local-backup.zip"',
-                     "Cache-Control": "no-store"},
+            headers={
+                "Content-Disposition": 'attachment; filename="selecta-local-backup.zip"',
+                "Cache-Control": "no-store",
+            },
         )
 
     async def _read_backup(request: Request) -> bytes:
@@ -284,7 +288,7 @@ def add_routes(app, ctx) -> None:
         _relink_from_local_browser(request)
         try:
             with connect() as conn:
-                return preview_relink(conn, body.old, body.new)
+                return preview_relink(conn, body.old, body.new, body.confirmed)
         except RelinkError as problem:
             raise HTTPException(400, str(problem)) from problem
 
@@ -293,7 +297,7 @@ def add_routes(app, ctx) -> None:
         _relink_from_local_browser(request)
         try:
             with connect() as conn:
-                return commit_relink(conn, body.old, body.new, body.token or "")
+                return commit_relink(conn, body.old, body.new, body.token or "", body.confirmed)
         except RelinkError as problem:
             raise HTTPException(409, str(problem)) from problem
 

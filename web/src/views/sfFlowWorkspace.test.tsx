@@ -76,7 +76,7 @@ describe('SF-0230-05 storage maintenance', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove up to 1.5 GB' }));
     // the server kept priority stems, so less went than the preview's upper bound, and it says so
     expect(await screen.findByText('Removed 1.3 GB. Selecta now keeps 1.2 GB it can make again.')).toBeInTheDocument();
-    expect(calls.filter((call) => call.method === 'POST').map((call) => call.body)).toEqual([{ budget_gb: 1 }]);
+    expect(calls.filter((call) => call.method === 'POST').map((call) => (call.body as { budget_gb: number }).budget_gb)).toEqual([1]);
   });
 
   it('a failed removal says nothing was removed, and the limit goes back', async () => {
@@ -93,6 +93,6 @@ describe('SF-0230-05 storage maintenance', () => {
     show('storage');
     fireEvent.change(await screen.findByRole('slider'), { target: { value: '5' } });
     expect(screen.queryByRole('group', { name: 'Before anything is removed' })).toBeNull();
-    await waitFor(() => expect(calls.find((call) => call.method === 'POST')?.body).toEqual({ budget_gb: 5 }));
+    await waitFor(() => expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({ budget_gb: 5 }));
   });
 });
