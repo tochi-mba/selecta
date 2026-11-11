@@ -32,8 +32,11 @@ const looks = (shot: Shot) => [shot.outline, shot.outlineWidth, shot.shadow, sho
 async function keyboardFocus(page: Page, control: Locator) {
   await control.evaluate((element) => {
     // only what Tab can reach, so a disabled neighbour never swallows the focus call
-    const all = [...document.querySelectorAll<HTMLElement>('button, a[href], input, select, summary, [tabindex="0"]')].filter((item) => item === element || (!(item as HTMLButtonElement).disabled && item.getClientRects().length > 0));
-    all[all.indexOf(element as HTMLElement) - 1]?.focus();
+    const all = [...document.querySelectorAll<HTMLElement>('button, a[href], input, select, summary, [tabindex="0"]')].filter((item) => item === element || (!(item as HTMLButtonElement).disabled && item.tabIndex >= 0 && item.getClientRects().length > 0));
+    // a tab is reached through its list's one Tab stop, so start just before the list
+    const stop = element.getAttribute('role') === 'tab' ? element.closest('[role="tablist"]')!.querySelector<HTMLElement>('[role="tab"]')! : element as HTMLElement;
+    const before = all.filter((item) => item !== element || item === stop);
+    before[before.indexOf(stop) - 1]?.focus();
   });
   await page.keyboard.press('Tab');
   // a tab list has one Tab stop (roving tabindex, ARIA APG); a keyboard user reaches the other tabs with the arrows
