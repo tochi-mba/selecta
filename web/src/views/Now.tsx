@@ -512,12 +512,16 @@ function noLyricsWords(status: string | null | undefined): string {
 }
 
 function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail; time: number; focus?: boolean; canBrowse?: boolean }) {
-  const [reading, setReading] = useState(false);
+  // Reading belongs to the song it was opened on, so a new song follows again. It's derived, not reset
+  // in an effect: a mount effect that ran after a quick first press would undo that press.
+  const [readingId, setReadingId] = useState<number | null>(null);
+  const reading = readingId === detail.id;
+  // and once another song is shown it is forgotten, so coming back to this one follows again
+  if (readingId !== null && !reading) setReadingId(null);
   // On a phone the first screen is the song and its words, and anything to press starts below it, so
   // nothing sits half hidden behind the player at whatever height the phone is (listening.css). The
   // button comes after the words there, in the page as well as on screen, so Tab meets it where it is.
   const phone = useMediaQuery('(max-width: 760px)');
-  useEffect(() => setReading(false), [detail.id]);
   const lines = detail.lines;
   const starts = useMemo(() => lines.map((line) => line.start), [lines]);
   // Audio ticks many times per second; a long lyric sheet should not be
@@ -538,7 +542,7 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
       ? 'Word highlights follow stored lyric alignment; timing may be approximate.'
       : 'Line-timed lyrics; individual word timing unavailable.';
   const browse = canBrowse && (
-    <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReading(!reading)}>
+    <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReadingId(reading ? null : detail.id)}>
       {reading ? 'Resume lyric follow' : 'Read all lyrics'}
     </button>
   );
