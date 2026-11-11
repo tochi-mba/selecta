@@ -68,9 +68,7 @@ def test_each_mi_has_one_coherent_implementation_and_verification_status():
         not_started = 8 - len(implemented) - len(in_progress)
         count_text = f"{len(implemented)}/8 Implemented, {len(in_progress)}/8 In progress"
 
-        heading = re.search(
-            rf"^## \[ADR-{adr}[^\n]+\n\n([^\n]+)", checklist, flags=re.MULTILINE
-        )
+        heading = re.search(rf"^## \[ADR-{adr}[^\n]+\n\n([^\n]+)", checklist, flags=re.MULTILINE)
         assert heading, f"missing ADR-{adr} checklist section"
         assert count_text in heading.group(1)
 
@@ -108,12 +106,12 @@ def test_each_mi_has_one_coherent_implementation_and_verification_status():
 
     assert sum(counts.values()) == 240
     assert counts == {
-        "Implemented": 211,
-        "In progress": 4,
-        "Not started": 25,
+        "Implemented": 213,
+        "In progress": 3,
+        "Not started": 24,
     }
-    assert len(re.findall(r"^- \[x\] \*\*MI-", checklist, flags=re.MULTILINE)) == 211
-    assert "**211/240 source implementation boxes checked" in checklist
+    assert len(re.findall(r"^- \[x\] \*\*MI-", checklist, flags=re.MULTILINE)) == 213
+    assert "**213/240 source implementation boxes checked" in checklist
 
 
 def test_release_gate_and_roadmap_do_not_claim_independent_approval():

@@ -588,24 +588,28 @@
     "0162": {
       "implemented": [
         "01",
+        "02",
+        "03",
         "06",
         "07"
       ],
       "in_progress": [
-        "02",
-        "03",
         "04",
-        "05"
+        "05",
+        "08"
       ],
       "source": [
         "docs/adr/selecta-microinteraction-verification-protocols.md",
         "web/src/views/Now.tsx",
         "web/src/styles/tokens.css",
-        "web/src/shell/Shell.tsx"
+        "web/src/shell/Shell.tsx",
+        "docs/adr/selecta-microinteraction-performance-results.md"
       ],
       "tests": [
         "web/src/views/Now.test.tsx",
-        "web/src/shell/Shell.test.tsx"
+        "web/src/shell/Shell.test.tsx",
+        "web/e2e/mi-0162-performance.e2e.ts",
+        "web/bench/mi-0162-scale.bench.ts"
       ]
     },
     "0163": {

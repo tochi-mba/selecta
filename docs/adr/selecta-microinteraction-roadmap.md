@@ -1,6 +1,6 @@
 # Selecta - immersive UI/UX, microinteraction and animation roadmap
 
-**Planning baseline:** main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (2026-11-07, merged PR #30). **Current PR #31:** 30 Accepted ADRs; **211 source-level Implemented, 4 In progress, 25 Not started**, 0 independently Verified. This programme extends but does not silently supersede ADR-0114–0134 or older programmes.
+**Planning baseline:** main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (2026-11-07, merged PR #30). **Current PR #31:** 30 Accepted ADRs; **213 source-level Implemented, 3 In progress, 24 Not started**, 0 independently Verified. This programme extends but does not silently supersede ADR-0114–0134 or older programmes.
 
 ## Product experience contract
 
@@ -37,10 +37,10 @@ Selecta is a locally running autonomous DJ with optional precision creation. The
 | [ADR-0159](adr-0159-overlays-toasts-activity-and-recovery-choreography.md) | Dialogs, drawers, toasts, Activity and recoverable mistakes | Shared feedback | P0 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
 | [ADR-0160](adr-0160-responsive-touch-gestures-and-small-screen-music.md) | Responsive gestures: thumb reach, safe-area geometry, keyboard occlusion and zoom | Responsive | P0 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
 | [ADR-0161](adr-0161-accessible-sensory-choice-and-cognitive-comfort.md) | Accessible sensory choice, cognitive comfort and non-motion equivalents | Accessibility | P0 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
-| [ADR-0162](adr-0162-motion-performance-and-audio-continuity-budgets.md) | Animation performance budgets, audio continuity and long-session stability | Performance | P0 | Accepted | 3/8 Implemented; 4/8 In progress; 1/8 Not started | No (0/8) |
+| [ADR-0162](adr-0162-motion-performance-and-audio-continuity-budgets.md) | Animation performance budgets, audio continuity and long-session stability | Performance | P0 | Accepted | 5/8 Implemented; 3/8 In progress; 0/8 Not started | No (0/8) |
 | [ADR-0163](adr-0163-musical-microcopy-trust-and-emotional-tone.md) | Musical microcopy, consent, explanations and the personality of a good DJ | Product language | P1 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
 | [ADR-0164](adr-0164-research-gates-visual-proof-and-release-governance.md) | Visual and audible proof, interaction research, rollback and release governance | Verification | P0 | Accepted | 6/8 Implemented; 0/8 In progress; 2/8 Not started | No (0/8) |
-| **Total** | **30 independent new decisions** | | | **30 Accepted** | **211 Implemented; 4 In progress; 25 Not started** | **0/240 Verified** |
+| **Total** | **30 independent new decisions** | | | **30 Accepted** | **213 Implemented; 3 In progress; 24 Not started** | **0/240 Verified** |
 
 ## Delivery sequence (dependencies, not a promised schedule)
 
