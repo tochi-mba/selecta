@@ -112,7 +112,7 @@ def test_every_remote_address_the_local_server_calls_is_disclosed():
         for host in re.findall(r"https://([a-z0-9-]+(?:\.[a-z0-9-]+)+)", source):
             if host not in {"github.com", "127.0.0.1", "localhost"} and "example" not in host:
                 remote.add(host)
-    assert "lrclib.net" in remote
+    assert {"lrclib.net"} <= remote  # exact host names, not a substring of a URL
     undisclosed = sorted(host for host in remote if f"`{host}`" not in text)
     # WorkOS and Stripe are Cloud-mode hosts, documented under docs/saas,
     # never reached by the local app.
