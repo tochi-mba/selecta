@@ -149,7 +149,8 @@ test('MP-0281-03 time ticking, the next song and a long title never move the con
         const nodes = [...element.childNodes].filter((node): node is Text => node.nodeType === Node.TEXT_NODE);
         nodes.forEach((node, index) => { node.data = index === 0 ? text : ''; });
       };
-      write(document.querySelector('.mini-song b')!, 'An extraordinarily long song title that keeps going well past any sensible width (Extended Club Remix)');
+      // long enough to overflow even the 1440px bar's song slot
+      write(document.querySelector('.mini-song b')!, 'An extraordinarily long song title that keeps going well past any sensible width (Extended Club Remix) '.repeat(3).trim());
       write(document.querySelector('.mini-song span')!, 'A Very Long Collective Name featuring Several Other Artists · 12:34 / 59:59');
       const song = document.querySelector<HTMLElement>('.mini-song b')!;
       return song.scrollWidth > song.clientWidth;

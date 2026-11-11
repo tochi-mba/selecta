@@ -80,7 +80,8 @@ test('MP-0280-01 the open rail is 212px and its brand, rows and current marker s
       // the brand word starts on the same edge as the row icons
       expect(Math.abs(found.brandContentLeft - first.icon.left), `${where}: brand off the row edge`).toBeLessThanOrEqual(1);
       // the current page is marked across the same box as every other row, so the marker lines up
-      const current = found.links.filter((link) => link.current === 'page' || link.current === 'true');
+      // the page itself; while editing, its parent section (My Mixes) also says aria-current="true" (Shell.test.tsx)
+      const current = found.links.filter((link) => link.current === 'page');
       expect(current.length, `${where}: one current row`).toBe(1);
       expect(current[0].fill, `${where}: current row has a marker fill`).not.toBe('rgba(0, 0, 0, 0)');
       expect(found.nav.right - first.box.right, `${where}: right inset`).toBeCloseTo(first.box.left - found.nav.left, 0);

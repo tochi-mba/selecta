@@ -114,7 +114,10 @@ test('MP-0285-04 the visualiser and countdown stay smaller than the lyrics and k
     await stage(page, width, height);
     const read = await page.evaluate(() => {
       const box = (selector: string) => document.querySelector(selector)?.getBoundingClientRect() ?? null;
-      const order = [...document.querySelectorAll('.stage .listen-identity, .stage .music-visualizer, .stage .handoff, .stage .lyrics')].map((element) => [element.className.split(' ')[0], element.getBoundingClientRect().top]);
+      // in the order they should read down the screen (the markup keeps the countdown with the side column)
+      const order = ['.stage .listen-identity', '.stage .music-visualizer', '.stage .handoff', '.stage .lyrics']
+        .map((selector) => document.querySelector(selector)).filter((element): element is Element => !!element)
+        .map((element) => [element.className.split(' ')[0], element.getBoundingClientRect().top]);
       return { canvas: box('.stage .music-visualizer'), handoff: box('.stage .handoff'), lyrics: box('.stage .lyrics'), order, countdown: document.querySelector('.stage .countdown-number strong') ? parseFloat(getComputedStyle(document.querySelector('.stage .countdown-number strong')!).fontSize) : null, sung: parseFloat(getComputedStyle(document.querySelector('.stage .lyrics p')!).fontSize) };
     });
     const where = `${width}x${height}`;

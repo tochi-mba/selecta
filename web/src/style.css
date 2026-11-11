@@ -60,7 +60,9 @@ button[aria-pressed='true'] .soft { color: inherit; }
   margin: 0 0 var(--space-snug);
   overflow-wrap: anywhere;
 }
-.display.small { font: var(--type-page); letter-spacing: -.025em; }
+/* the heavy face's glyphs reach a little past its tight line box; the padding holds them, and the margin
+   gives that room back, so a long wrapped name reads whole without the box being cut (MP-0280-04) */
+.display.small { font: var(--type-page); letter-spacing: -.025em; padding-bottom: 0.15em; margin-bottom: calc(var(--space-snug) - 0.15em); }
 .artist { color: var(--soft); font-size: 1.15rem; margin: 0 0 var(--space-5); }
 
 .panel { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-5); margin: var(--space-4) 0; }
