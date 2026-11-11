@@ -36,6 +36,8 @@ async function keyboardFocus(page: Page, control: Locator) {
     all[all.indexOf(element as HTMLElement) - 1]?.focus();
   });
   await page.keyboard.press('Tab');
+  // a tab list has one Tab stop (roving tabindex, ARIA APG); a keyboard user reaches the other tabs with the arrows
+  for (let step = 0; step < 5 && await control.getAttribute('role') === 'tab' && !(await control.evaluate((element) => element === document.activeElement)); step++) await page.keyboard.press('ArrowRight');
   await expect(control).toBeFocused();
 }
 
@@ -133,7 +135,7 @@ test('MP-0279-03 disabled, busy, error and retry states keep the controls’ ali
   for (const item of firstLine) expect(Math.abs(item.top - heights[0].top), `${item.name}: off the line`).toBeLessThanOrEqual(0.5);
 
   // busy: the Save action keeps its box while it works, then returns
-  const save = gallery.locator('button:has(> .action-labels)'); // found by shape, as its name changes while it works
+  const save = gallery.locator('section').first().locator('button:has(> .action-labels)'); // found by shape, as its name changes while it works (the problem's Try again is the other one)
   const rest = await snapshot(save);
   await save.click();
   await expect(save).toHaveAttribute('aria-busy', 'true');
@@ -281,7 +283,7 @@ test('MP-0279-07 reduced and still motion keep every state’s feedback without 
     await page.keyboard.press('Enter');
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('Enter');
-    const save = gallery.locator('button:has(> .action-labels)'); // found by shape, as its name changes while it works
+    const save = gallery.locator('section').first().locator('button:has(> .action-labels)'); // found by shape, as its name changes while it works (the problem's Try again is the other one)
     await save.click();
     await expect(save).toHaveAttribute('aria-busy', 'true');
     await expect(gallery.getByText('Saved locally for this demonstration.')).toBeVisible();

@@ -149,9 +149,6 @@
   background: var(--surface-raised);
   border-bottom: 1px solid var(--border);
 }
-/* in a short window (400% zoom, a phone on its side) a pinned identity would cover the very tabs it
-   scrolls to, so there it scrolls with the panel (MP-0298-02) */
-@media (max-height: 479px) { .inspector-identity { position: static; } }
 .overlay-sheet .overlay-body:has(.inspector-identity) { padding-top: 0; }
 .inspector-identity p { margin: 0; }
 .inspector-identity .inspector-pair { padding-bottom: 0; border-bottom: 0; }

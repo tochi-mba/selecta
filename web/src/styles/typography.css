@@ -31,4 +31,6 @@
    lines there and covered the page's own controls, so on a short screen it scrolls with the page. */
 @media (max-height: 420px) {
   .editor-scope { position: static; }
+  /* MP-0298-02: likewise the transition's pinned identity, which covered the very tabs it scrolls to */
+  .inspector-identity { position: static; }
 }
