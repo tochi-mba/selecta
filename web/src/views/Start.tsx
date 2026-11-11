@@ -91,7 +91,7 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
       <h1 className="display">Where’s your music?</h1>
       <p className="lede">
         Selecta reads the folder, sets aside anything that isn’t music, and works out how your songs fit
-        together. {words().startAudioStays}
+        together. {words().startAudioStays} Your original files are never moved or changed.
         {flagOn('lyrics.lookup') && ' Adding a folder starts lyric lookup: artist, title, album and duration are sent to LRCLIB to find lyrics.'}
       </p>
       <form onSubmit={(event) => void start(event)} className="stack">
