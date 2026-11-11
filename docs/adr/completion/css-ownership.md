@@ -98,6 +98,7 @@ wins, and the row says which.
 | `max-width: 560px` | `style.css` | Listen handoff countdown stacks |
 | `max-width: 560px` | `styles/shell.css` | job list one column, phone seam indent |
 | `max-width: 520px` | `style.css` | steering, destination and energy-arc stops one column; request rows |
+| `max-width: 520px` | `styles/foundation.css` | setup steps: a finished step shows only its tick, so the steps take one line (MP-0282-07) |
 | `max-width: 520px` | `styles/listening.css` | energy-arc stop labels |
 | `max-width: 420px` | `styles/listening.css` | Listen view inner padding |
 | `max-width: 420px` | `styles/lucy.css` | Lucy song actions wrap |

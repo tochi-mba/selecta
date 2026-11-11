@@ -579,7 +579,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </section>
       )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
-      {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.{serverFault && ' Something went wrong inside Selecta, not your connection.'}</Problem>}
+      {failed && committedRows === null && <Problem retry={load}><span>Couldn’t load your library. Your songs are fine.</span>{serverFault && <span className="library-fault"> Something went wrong inside Selecta, not your connection.</span>}</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
       {committedRows?.length === 0 && !failed && (

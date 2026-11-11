@@ -68,6 +68,6 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
 .setup-steps li.done::before { content: '✓'; color: var(--status-ready); border-color: var(--status-ready); }
 /* MP-0282-07: on a phone a finished step is just its tick (its name is still read out), so the steps
    take one line and the next action stays in the first screen */
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .setup-steps li.done .setup-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
