@@ -204,8 +204,9 @@ test('MP-0294-05 the A and B arms carry equal weight, in the same order every ti
     expect(b.controls, `${at}: arm controls`).toBe(a.controls);
     // A comes first, reading left to right or top to bottom
     expect(a.top < b.top || (Math.abs(a.top - b.top) <= 1 && a.left < b.left), `${at}: A comes first`).toBe(true);
+    // the words shown: an Action keeps its hidden working label (Saving…) in the same cell (MP-0297-04)
     const choices = await study.locator('.study-choices button').evaluateAll((buttons) => buttons.map((button) => ({
-      text: button.textContent, className: button.className, width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height,
+      text: (button as HTMLElement).innerText.trim(), className: button.className, width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height,
       weight: getComputedStyle(button).fontWeight, background: getComputedStyle(button).backgroundColor,
     })));
     expect(choices.map((choice) => choice.text)).toEqual(['Prefer A', 'Prefer B', 'No preference', 'Cannot judge']);

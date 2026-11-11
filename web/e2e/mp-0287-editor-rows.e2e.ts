@@ -118,7 +118,11 @@ test('MP-0287-04 selected, focused, locked, playing and pending each have their 
     if (await lock.count()) await lock.click();
     else await page.keyboard.press('Escape');
   }
+  // reached by the keyboard, as a keyboard user would, so :focus-visible draws the ring after the clicks above
   await rows.nth(3).locator('.grip').focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(rows.nth(3).locator('.grip')).toBeFocused();
   const look = await rows.evaluateAll((songs) => songs.map((song) => {
     const style = getComputedStyle(song);
     return {
