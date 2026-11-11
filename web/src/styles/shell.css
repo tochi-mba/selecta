@@ -460,8 +460,9 @@ button[data-working]::after {
 @media (prefers-reduced-motion: reduce) { .edit-inspector { scroll-behavior: auto; } }
 .inspector-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .inspector-pair { overflow-wrap: anywhere; margin: var(--space-2) 0; }
-.inspector-tabs { display: flex; gap: var(--space-1); margin: var(--space-3) 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.inspector-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-soft); padding: var(--space-2) var(--space-3); }
+/* MP-0288-02: four equal tabs on one row at every width, so none drops to a second line in a phone's sheet */
+.inspector-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--space-1); margin: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.inspector-tabs button { min-width: 0; background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-soft); padding: var(--space-2) var(--space-1); overflow-wrap: anywhere; }
 .inspector-tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--selected); }
 .inspector .preview { width: 100%; }
 .inspector .status { white-space: normal; }
