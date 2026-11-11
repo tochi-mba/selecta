@@ -1,7 +1,7 @@
 # ADR-0036: Content-shaped skeletons and truthful asynchronous state transitions
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
+- **Implementation status:** In progress: 3/12 tasks Implemented with evidence on 2026-11-10 (P0039-P0041); P0032-P0038, P0042, P0043 open (geometry and refresh measurements not green; Edit timeline skeleton missing). See [the polish evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 2 - Shared components and loading
@@ -56,6 +56,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
+| 2026-11-10 | Accepted | In progress (3/12) | Reconciled against current code; P0039-P0041 ticked with tests run that day; independent verification still pending |
 
 ## References
 

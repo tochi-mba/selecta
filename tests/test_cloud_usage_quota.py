@@ -419,6 +419,7 @@ def test_an_upload_accepted_after_a_downgrade_can_take_the_workspace_over(cloud_
     assert usage(cloud_engine).read_only
 
 
+@pytest.mark.invariants_off("its quota row names a test plan whose limit the override replaces")
 def test_an_entitlement_override_sets_its_own_limit(cloud_engine):
     after = set_plan(cloud_engine, FREE, limit_bytes=25 * GB)
     assert (after.plan_id, after.limit_bytes) == ("free", 25 * GB)

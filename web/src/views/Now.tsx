@@ -4,6 +4,7 @@ import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
+import { playLabel, SEAM_LABEL, songArtist, songTitle, transportClock } from '../audio/transportWords';
 import { orderOf } from '../state/readiness';
 import { Action, announce, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
 import { useShownTheme } from '../state/prefs';
@@ -12,7 +13,7 @@ import { Icon } from '../ui/Icon';
 import { useMediaQuery } from '../ui/useMediaQuery';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
-import { SongMotif } from '../ui/MusicObjects';
+import { seamFamily, SongMotif } from '../ui/MusicObjects';
 import { RequestsContext, RequestTag } from './Requests';
 import { frequencyLevels, paintFrequencyFrame, SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape } from './spectrumVisuals';
 import { ViewProps } from './shared';
@@ -28,20 +29,36 @@ function TrackTitle({ title, songId, stage }: { title: string; songId?: number; 
     const fit = () => {
       const width = node.clientWidth;
       if (!width) return;
-      const maximum = Math.min(stage ? 40 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095)));
-      const minimum = 22;
+      // MP-0275-03: a complete title wins over shrinking. The floor is a token (--title-floor, 24px),
+      // so a long title wraps onto more lines at a readable size instead of being squeezed smaller.
+      const minimum = Number.parseFloat(getComputedStyle(node).getPropertyValue('--title-floor')) || 24;
+      const maximum = Math.max(minimum, Math.min(stage ? 40 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095))));
       let low = minimum;
       let high = maximum;
-      // A two-line budget prevents a long featured credit from burying
-      // playback controls. Extremely long titles remain fully visible.
+      node.style.paddingBlockStart = '';
+      // GP-0248-02: the large song motif sits on the first line and can be taller than it. It isn't a
+      // line of text, so it must not count against the line budget and drive every title to the floor.
+      const motif = node.querySelector('.song-motif')?.getBoundingClientRect().height ?? 0;
+      const line = (size: number) => size * (Number.parseFloat(getComputedStyle(node).lineHeight) / size || 1.08);
+      // GP-0248-03/05: on Listen the title owns a fixed slot, two lines at the largest size, so a
+      // three-line title is set smaller instead of dominating, and Play/Pause and the seek bar stay in
+      // the same place as songs change. Stage keeps its three-line budget. Titles too long for the
+      // slot at the floor stay whole and simply take more room.
+      node.style.fontSize = `${maximum}px`;
+      const slot = stage ? null : line(maximum) * 2 + Math.max(0, motif - line(maximum));
       for (let index = 0; index < 9; index += 1) {
         const size = (low + high) / 2;
         node.style.fontSize = `${size}px`;
         const height = node.getBoundingClientRect().height;
-        if (height <= size * 2.28 || !height) low = size;
+        const fits = slot === null ? height - Math.max(0, motif - line(size)) <= size * 3.4 : height <= slot; // not a hair over, or Play and the seek bar slip a pixel (GP-0248-05)
+        if (fits || !height) low = size;
         else high = size;
       }
       node.style.fontSize = `${low}px`;
+      if (slot !== null) {
+        const used = node.getBoundingClientRect().height;
+        if (used && used < slot) node.style.paddingBlockStart = `${slot - used}px`;
+      }
     };
     fit();
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
@@ -191,7 +208,7 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}
       aria-valuenow={Math.round(safeTime)}
-      aria-valuetext={unavailable ? 'Duration unknown' : `${clock(safeTime)} of ${clock(duration)}`}
+      aria-valuetext={unavailable ? 'Duration unknown' : `${transportClock(safeTime)} of ${transportClock(duration)}, ${transportClock(duration - safeTime)} left`}
       aria-disabled={locked || undefined}
       aria-describedby={locked ? noteId : undefined}
       onPointerDown={beginSeek}
@@ -232,8 +249,10 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       {seekPreview !== null && (
         <b className="scrub-ghost" style={{ left: `${percent(seekPreview)}%` }} aria-hidden="true" />
       )}
-      <span className="time">
-        {seekPreview === null ? clock(safeTime) : `Seek to ${clock(seekPreview)}`} / {unavailable ? 'unknown duration' : clock(duration)}
+      {/* MP-0274-03: room for the longest reading this song can show, "duration / duration", so the clock
+          never widens and nudges the separator when 9:59 becomes 10:00 */}
+      <span className="time" style={{ minWidth: `${(unavailable ? 0 : clock(duration).length * 2) + 3}ch` }}>
+        {seekPreview === null ? transportClock(safeTime) : `Seek to ${transportClock(seekPreview)}`} / {unavailable ? 'unknown duration' : transportClock(duration)}
       </span>
     </div>
     <p className="hint seek-note" id={noteId}>{unavailable ? unavailableWords : seekBlocked ? CANT_SEEK : ' '}</p>
@@ -300,6 +319,7 @@ function TransitionCountdown({
   ready,
   inSeam,
   switchAt,
+  phrase,
 }: {
   detail: SongDetail;
   time: number;
@@ -309,6 +329,8 @@ function TransitionCountdown({
   ready: boolean;
   inSeam: boolean;
   switchAt?: number;
+  /** The shared phrase, passed only when the rendered move really is a word hand-off on it (SF-0213-05). */
+  phrase?: string;
 }) {
   const beatsPerBar = detail.beats_per_bar ?? 4;
   if (!nextTitle) {
@@ -324,6 +346,7 @@ function TransitionCountdown({
         <div className="handoff-title"><span className="eyebrow">Transition in progress</span><b>{nextTitle}</b></div>
         {currentTitle && <p className="handoff-pair" dir="auto"><span>From <b>{currentTitle}</b></span><span>Into <b>{nextTitle}</b></span></p>}
         {switchAt !== undefined && switchAt > 0 && <div className="handoff-progress"><i style={{ width: `${progress * 100}%` }} /></div>}
+        {phrase && <p className="handoff-phrase" dir="auto">On the shared words “{phrase}”</p>}
         <span className="handoff-caption">The next song is entering</span>
       </section>
     );
@@ -357,7 +380,7 @@ function TransitionCountdown({
             {index === 0 && <i style={{ width: `${countdown.barProgress * 100}%` }} />}
           </span>
         ))}
-        <b />
+        <i className="countdown-end" />
       </div>
       <div className="countdown-meta">
         {countdown.aligned && <span>Bar {countdown.barNumber} · </span>}
@@ -489,12 +512,16 @@ function noLyricsWords(status: string | null | undefined): string {
 }
 
 function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail; time: number; focus?: boolean; canBrowse?: boolean }) {
-  const [reading, setReading] = useState(false);
+  // Reading belongs to the song it was opened on, so a new song follows again. It's derived, not reset
+  // in an effect: a mount effect that ran after a quick first press would undo that press.
+  const [readingId, setReadingId] = useState<number | null>(null);
+  const reading = readingId === detail.id;
+  // and once another song is shown it is forgotten, so coming back to this one follows again
+  if (readingId !== null && !reading) setReadingId(null);
   // On a phone the first screen is the song and its words, and anything to press starts below it, so
   // nothing sits half hidden behind the player at whatever height the phone is (listening.css). The
   // button comes after the words there, in the page as well as on screen, so Tab meets it where it is.
   const phone = useMediaQuery('(max-width: 760px)');
-  useEffect(() => setReading(false), [detail.id]);
   const lines = detail.lines;
   const starts = useMemo(() => lines.map((line) => line.start), [lines]);
   // Audio ticks many times per second; a long lyric sheet should not be
@@ -515,7 +542,7 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
       ? 'Word highlights follow stored lyric alignment; timing may be approximate.'
       : 'Line-timed lyrics; individual word timing unavailable.';
   const browse = canBrowse && (
-    <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReading(!reading)}>
+    <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReadingId(reading ? null : detail.id)}>
       {reading ? 'Resume lyric follow' : 'Read all lyrics'}
     </button>
   );
@@ -691,8 +718,10 @@ export function Now(props: ViewProps) {
       const data = await post<MixData>(`/mix/${place}/swap?direction=${direction}`, undefined, { 'x-mix-order': orderOf(mix) });
       setMixData(data);
       const after = data.mix[place];
-      setChanged(after && before && after.title !== before ? { from: before, to: after.title, id: after.song_id } : null);
-      notify(`Next up: ${after?.title}.`, true);
+      const swapped = !!(after && before && after.title !== before);
+      setChanged(swapped ? { from: before, to: after.title, id: after.song_id } : null);
+      // S4-0098-07: the server taking the request is not the same as a different song being chosen.
+      notify(swapped ? `Next up: ${after?.title}.` : `Nothing else fits there, so ${before ?? 'the next song'} stays next.`, true);
     } catch (error) {
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       setProblem((error as Error).message);
@@ -703,6 +732,11 @@ export function Now(props: ViewProps) {
   };
 
   const seam = next?.seam?.state;
+  // SF-0213-05: a shared phrase is shown only for a finished word move that didn't fall back, so a
+  // planned or substituted transition never claims wordplay it doesn't have.
+  const provenPhrase = next?.seam && seam?.status === 'ready' && !seam.fell_back && seamFamily(seam.style) === 'words'
+    ? next.seam.settings.phrase || undefined
+    : undefined;
   const idle = now.phase === 'idle';
   const resumable = idle && now.songTime > 1;
   const names = status.moves ?? {};
@@ -710,7 +744,7 @@ export function Now(props: ViewProps) {
     now.phase === 'loading'
       ? 'Loading'
       : now.inSeam
-        ? `Mixing into ${next?.title ?? 'the next song'}`
+        ? `${SEAM_LABEL}, mixing into ${next?.title ?? 'the next song'}`
         : now.phase === 'paused'
           ? `Paused · ${mixName}`
           : mixName;
@@ -745,27 +779,19 @@ export function Now(props: ViewProps) {
         <div className="listen-main">
           <header className="listen-identity">
             <p className="eyebrow">{eyebrow}</p>
-            <TrackTitle title={item?.title ?? 'Untitled'} songId={item?.song_id} stage={stage} />
+            <TrackTitle title={songTitle(item)} songId={item?.song_id} stage={stage} />
             {item && <RequestTag item={item} />}
-            <p className="artist" dir="auto">{item?.artist ?? 'Unknown artist'}</p>
+            <p className="artist" dir="auto">{songArtist(item)}</p>
           </header>
 
           {!stage && (
             <>
               <div className="transport">
-                {withKey('Previous song (P)', <button aria-label="Previous song" disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>)}
+                {withKey('Previous song (P)', <button aria-label="Previous song" title={keys ? undefined : 'Previous song'} disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>)}
                 <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
-                  {now.phase === 'playing'
-                    ? 'Pause'
-                    : now.phase === 'loading'
-                      ? 'Loading…'
-                      : now.phase === 'paused'
-                        ? 'Resume'
-                        : resumable
-                          ? `Resume from ${clock(now.songTime)}`
-                          : 'Play'}
+                  {resumable ? `Resume from ${transportClock(now.songTime)}` : playLabel(now.phase)}
                 </button>
-                {withKey('Go straight to the next song (Shift+N)', <button aria-label="Next song" aria-keyshortcuts={keys ? 'Shift+N' : undefined} disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>)}
+                {withKey('Go straight to the next song (Shift+N)', <button aria-label="Next song" title={keys ? undefined : 'Next song'} aria-keyshortcuts={keys ? 'Shift+N' : undefined} disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>)}
               </div>
               <div className="transport-more">
                 {withKey('Shortcut: N', (
@@ -782,7 +808,7 @@ export function Now(props: ViewProps) {
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
           {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn’t load lyrics and song details.' : 'Couldn’t load this song’s details.'} Playback controls are still available.</Problem>}
-          {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" />)}
+          {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" retry={() => setDetailAttempt((attempt) => attempt + 1)} />)}
         </div>
 
         <aside className="listen-side" aria-label="Coming up">
@@ -796,6 +822,7 @@ export function Now(props: ViewProps) {
               ready={now.nextReady}
               inSeam={now.inSeam}
               switchAt={seam?.switch_at}
+              phrase={on('listen.handoff_phrase') ? provenPhrase : undefined}
             />
           )}
 
@@ -919,7 +946,7 @@ export function Now(props: ViewProps) {
       {stage && (
         <div className="stage-controls">
           {stageFallback && <p className="hint stage-notice" role="status">Your browser didn’t allow fullscreen, so this fills the page instead. Press Escape to go back.</p>}
-          <button onClick={() => void player.togglePause()} disabled={now.phase === 'loading'}>{now.phase === 'playing' ? 'Pause' : 'Play'}</button>
+          <button onClick={() => void player.togglePause()} disabled={now.phase === 'loading'}>{playLabel(now.phase)}</button>
           <button className="exit-stage" onClick={toggleStage}>Exit fullscreen</button>
         </div>
       )}

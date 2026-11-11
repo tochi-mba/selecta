@@ -424,6 +424,76 @@ def test_onboarding_fails_closed_when_workos_is_unreachable(world):
     assert user_row(world) is None
 
 
+# ---- Google sign-in reaches an existing account only through WorkOS's verified-email link
+#
+# WorkOS links a Google identity to an existing user only when the email is verified, and then
+# signs it in as that same user (same subject). Selecta keys accounts by subject alone and never
+# joins two by matching emails, so an unlinked identity can never reach someone else's account.
+
+
+def test_a_google_sign_in_workos_linked_by_verified_email_opens_the_existing_account(world):
+    world.fake.add_user(USER, "listener@example.test", verified=True)
+    first = onboard(world, "password", sid="session_password")
+
+    # Signing in with Google: WorkOS matched the verified email and answered with the same user.
+    google = onboard(world, "google", sid="session_google", email="listener@example.test")
+    account = world.http.get("/api/account", headers=world.tokens.issue("google", sid="s_g"))
+
+    assert google["created"] is False
+    assert (google["user_id"], google["workspace_id"]) == (first["user_id"], first["workspace_id"])
+    assert account.status_code == 200, account.text
+    with world.engine.connect() as conn:
+        rows = conn.execute(
+            sa.select(users.c.id).where(users.c.email == "listener@example.test")
+        ).all()
+    assert len(rows) == 1
+
+
+def test_a_google_identity_with_an_unverified_email_gets_no_account_and_never_the_existing_one(
+    world,
+):
+    world.fake.add_user(USER, "listener@example.test", verified=True)
+    existing = onboard(world, "password")
+    # WorkOS did not link it (the email isn't verified), so it is a different user.
+    world.fake.add_user("user_02GOOGLE", "listener@example.test", verified=False)
+    # Even a token claiming a verified email counts for nothing: only WorkOS's answer does.
+    headers = world.tokens.issue("google", "user_02GOOGLE", email="listener@example.test")
+
+    onboarding = world.http.post(
+        "/api/onboarding/complete", headers=headers, json={"age_confirmed": True}
+    )
+    account = world.http.get("/api/account", headers=headers)
+    into_theirs = world.http.get(
+        "/api/account", headers=headers | {"X-Workspace-ID": existing["workspace_id"]}
+    )
+
+    assert (onboarding.status_code, onboarding.json()["detail"]["code"]) == (
+        403, "verified_email_required")
+    assert (account.status_code, account.json()["detail"]["code"]) == (409, "not_onboarded")
+    assert into_theirs.status_code == 409
+    assert user_row(world, "user_02GOOGLE") is None
+    assert user_row(world).id == existing["user_id"]
+
+
+def test_selecta_never_joins_two_identities_by_email_on_its_own(world):
+    world.fake.add_user(USER, "listener@example.test", verified=True)
+    existing = onboard(world, "password")
+    # A second WorkOS user with the same email that WorkOS chose not to link stays separate.
+    world.fake.add_user("user_03OTHER", "listener@example.test", verified=True)
+
+    other = onboard(world, "other", "user_03OTHER")
+    named = world.http.get(
+        "/api/account",
+        headers=world.tokens.issue("other", "user_03OTHER")
+        | {"X-Workspace-ID": existing["workspace_id"]},
+    )
+
+    assert other["created"] is True
+    assert other["user_id"] != existing["user_id"]
+    assert other["workspace_id"] != existing["workspace_id"]
+    assert (named.status_code, named.json()["detail"]["code"]) == (404, "workspace_not_found")
+
+
 # ---- the per-request check
 
 

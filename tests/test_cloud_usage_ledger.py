@@ -105,6 +105,7 @@ def test_compute_and_cost_can_be_fractions(cloud_engine):
 # Append-only
 
 
+@pytest.mark.invariants_off("appends a repeated ledger entry to show the ledger only grows")
 def test_the_ledger_only_ever_grows(cloud_engine):
     record(cloud_engine, Kind.STORAGE_BYTES, 500, ref="upload-1")
     before = rows(cloud_engine)

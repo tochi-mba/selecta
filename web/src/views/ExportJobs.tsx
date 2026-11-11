@@ -49,7 +49,6 @@ function Row({ job }: { job: ExportJob }) {
       </Status>
       {job.state === 'preparing' && job.quiet_seconds > 600 && <p><Status kind="blocked">Nothing has finished for a while. Rendering may be waiting on your current mix or on storage room.</Status></p>}
       {job.error && <p className="warn">{job.error}</p>}
-      {job.state === 'expired' && <p className="hint">The file isn’t in Selecta’s exports folder any more, so it can’t be downloaded.</p>}
       <details className="export-snapshot">
         <summary>View frozen export contents ({job.songs.length} songs, {job.seams.length} transitions)</summary>
         <p className="hint">
@@ -66,6 +65,9 @@ function Row({ job }: { job: ExportJob }) {
           </ul>
         )}
       </details>
+      {/* MP-0294-02/04: why the file has gone sits with its recovery, under the contents, so the
+          contents summary holds the same place in every state */}
+      {job.state === 'expired' && <p className="hint">The file isn’t in Selecta’s exports folder any more, so it can’t be downloaded.</p>}
       <div className="row wrap export-job-actions">
         {job.state === 'ready' && <a href={`/api/exports/${encodeURIComponent(job.name)}`} download>download {job.name}</a>}
         {job.state === 'ready' && job.seconds != null && <small className="soft">{length(job.seconds)} long</small>}

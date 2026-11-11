@@ -70,9 +70,11 @@ export function showToast(message: string, options: { undo?: Toast['undo']; tone
   if (quiet && tone !== 'problem') return -activity;
   const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity };
   const all = [...toasts, toast];
-  // room is made from the oldest with no Undo first. One with an Undo can go too, because Activity has it
+  // room is made from the oldest with no Undo first. One with an Undo can go too, because Activity has it.
+  // UF-0371-07: routine news goes before a problem, so background completions never push an error away.
   while (all.length > SHOWN) {
-    const spare = all.findIndex((item) => !item.undo);
+    const routine = all.findIndex((item) => !item.undo && item.tone !== 'problem');
+    const spare = routine >= 0 ? routine : all.findIndex((item) => !item.undo);
     all.splice(spare < 0 ? 0 : spare, 1);
   }
   toasts = all;
@@ -171,7 +173,7 @@ function ToastRow({ toast }: { toast: Toast }) {
           title={canUndo(toast.activity) ? undefined : 'Undo the newer change first; this stays in Activity'}
         >{undoing ? 'Undoing…' : 'Undo'}</button>
       )}
-      <button className="toast-close" aria-label="Dismiss" onClick={() => { restoreFocus(); dismissToast(toast.id); }}><Icon name="close" /></button>
+      <button className="toast-close" aria-label="Dismiss" title="Dismiss" onClick={() => { restoreFocus(); dismissToast(toast.id); }}><Icon name="close" /></button>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 # ADR-0044: Consistent product vocabulary, truthful explanations and restrained motion
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
+- **Implementation status:** Implemented: 9/9 tasks Implemented with evidence on 2026-11-10 (P0112-P0120); screen-reader listen-through not claimed. See [the polish evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 1 - Visual foundations and language
@@ -53,6 +53,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
+| 2026-11-10 | Accepted | In progress (9/9) | Reconciled against current code; P0112-P0120 ticked with tests run that day; independent verification still pending |
 
 ## References
 

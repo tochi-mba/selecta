@@ -2,6 +2,7 @@ import { flagOn } from '../flags';
 import { useEffect, useRef, useState } from 'react';
 import { LibrarySong, post } from '../api';
 import { clock } from '../lib';
+import { capabilities } from '../state/capabilities';
 import { trackReadiness } from '../state/readiness';
 import { Action, Sheet, Status } from '../ui/controls';
 import { Field } from '../ui/primitives';
@@ -23,6 +24,20 @@ export function tempoProblem(text: string): string {
 export function keyProblem(text: string): string {
   if (!text.trim() || KEY_SHAPE.test(text.trim())) return '';
   return 'Key has to be like 8A or 11B.';
+}
+
+/** LX-0348-04: what can usefully be done about a song's state, true to what Selecta can actually do. */
+export function nextStep(status: string | undefined): string {
+  switch (status) {
+    case 'needs_attention': return 'Try analysing it again from its row in the Library. If it fails again the file may be damaged; replacing it with a good copy can help.';
+    case 'missing': return 'Put the file back where it was, or check your music folders in Workshop. Selecta never moves or deletes your files.';
+    case 'queued': return 'Nothing to do: it’s in line and will be analysed in the background.';
+    case 'processing': return 'Nothing to do: it’s being analysed now.';
+    case 'excluded': return 'Turn off Never play to let mixes pick it again.';
+    case 'set_aside': return 'If this is music, it can be counted as music again; your file was never touched.';
+    case 'analysed_incomplete': return 'It can still be added to a mix by hand.';
+    default: return '';
+  }
 }
 
 const lyricWords = (status: string | null) => (status === 'synced' ? 'Timed' : status === 'instrumental' ? 'Instrumental' : status ? 'Not timed' : 'Not looked up yet');
@@ -47,6 +62,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
   const [problem, setProblem] = useState('');
   const bpmBox = useRef<HTMLInputElement>(null);
   const keyBox = useRef<HTMLInputElement>(null);
+  const problemBox = useRef<HTMLParagraphElement>(null);
   const facts = trackReadiness(song);
 
   // the server has a newer answer, and nothing typed here is waiting to be saved
@@ -66,7 +82,9 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       notify(answer.redone ? `${said} ${answer.redone} transition${answer.redone === 1 ? '' : 's'} with this song will be made again.` : said);
       return true;
     } catch (error) {
-      setProblem((error as Error).message);
+      setProblem((error as Error).message || 'That didn’t save. What you typed is still here.');
+      // LX-0349-06: focus moves to what went wrong; what was typed stays in the fields
+      window.requestAnimationFrame(() => problemBox.current?.focus());
       return false;
     }
   };
@@ -105,7 +123,15 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       </div>
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       {facts.reason && <p className="hint">{facts.reason}</p>}
-      <dl className="song-facts">
+      {nextStep(song.readiness?.status) && <p className="hint song-next-step">{nextStep(song.readiness?.status)}</p>}
+      {flagOn('library.capability_readiness') && (
+        <dl className="song-facts song-capabilities" aria-label="What it’s ready for">
+          {capabilities(song, { lyrics: flagOn('lyrics.lookup') }).map((item) => (
+            <div key={item.name}><dt>{item.name}</dt><dd><Status kind={item.kind}>{item.words}</Status></dd></div>
+          ))}
+        </dl>
+      )}
+      <dl className="song-facts song-facts-table">
         <div><dt>Length</dt><dd>{clock(song.duration)}</dd></div>
         <div><dt>Tempo in use</dt><dd>{song.bpm ? `${Math.round(song.bpm)} BPM` : 'Not measured yet'}{song.override_bpm ? ' (your correction)' : ''}</dd></div>
         <div><dt>Tempo measured</dt><dd>{detectedTempo ? `${detectedTempo} BPM` : 'Not measured yet'}</dd></div>
@@ -136,7 +162,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           {detectedTempo && (
             <div className="row">
               <button type="button" aria-label={`Double measured tempo to ${Math.round((song.detected_bpm ?? 0) * 2)} BPM`} onClick={() => useMeasuredTempo(2)}>Double measured</button>
-              <button type="button" aria-label={`Half measured — set tempo to ${Math.round((song.detected_bpm ?? 0) / 2)} BPM`} onClick={() => useMeasuredTempo(0.5)}>Half measured</button>
+              <button type="button" aria-label={`Half measured - set tempo to ${Math.round((song.detected_bpm ?? 0) / 2)} BPM`} onClick={() => useMeasuredTempo(0.5)}>Half measured</button>
             </div>
           )}
         </div>
@@ -152,7 +178,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
             />
           )}
         </Field>
-        {problem && <p className="warn" role="alert">{problem}</p>}
+        {problem && <p className="warn" role="alert" tabIndex={-1} ref={problemBox}>{problem}</p>}
         <div className="row wrap">
           <Action className="primary" working="Saving…" disabled={bpm === savedBpm && camelot === savedKey} run={saveCorrection}>
             Save correction

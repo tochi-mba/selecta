@@ -9,8 +9,9 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "e2e:flags": "playwright test -c playwright.flags.config.ts",
+    "e2e:mp": "playwright test -c playwright.mp.config.ts",
     "e2e:cloud": "playwright test -c playwright.cloud.config.ts",
-    "build:cloud-e2e": "vite build -c vite.cloud-e2e.config.ts"
+    "build:cloud-e2e": "vite build -c vite.cloud-e2e.config.ts && vite build -c vite.cloud-e2e-authkit.config.ts"
   },
   "dependencies": {
     "@noble/hashes": "^2.4.0",
@@ -27,6 +28,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^26.6.6",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "jsdom": "^31.0.0",

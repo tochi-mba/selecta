@@ -10,8 +10,9 @@ import { PageLink } from '../shell/PageLink';
 import { Adder } from './Adder';
 import { RenameDraft } from './Drafts';
 import { AddGap, MoveHow, RowActions, SeamUnlessReplaced, SongInspector, SongLine } from './EditorRows';
+import { affectedSeams, newNeighbours } from './dropPreview';
 import { EditorHeader, MixSwitcher } from './EditorHeader';
-import { EditorMode, useEditorMode } from './editorMode';
+import { EDITOR_MODES, EditorMode, useEditorMode } from './editorMode';
 import { EditorStory, EnergyDisclosure, ViewSwitch } from './EditorStory';
 import { ExportPanel } from './ExportPanel';
 import { MixScope, useMixPath } from './mixScope';
@@ -41,7 +42,9 @@ const MAX_INSPECTOR_WIDTH = 520;
 
 function savedInspectorWidth(): number {
   try {
-    const saved = Number(window.localStorage.getItem(INSPECTOR_WIDTH_KEY));
+    const raw = window.localStorage.getItem(INSPECTOR_WIDTH_KEY);
+    // nothing saved reads as 0 to Number(), which would clamp a first visit to the minimum
+    const saved = raw === null || raw.trim() === '' ? Number.NaN : Number(raw);
     return Number.isFinite(saved) ? Math.min(Math.max(saved, MIN_INSPECTOR_WIDTH), MAX_INSPECTOR_WIDTH) : 380;
   } catch {
     return 380;
@@ -130,6 +133,20 @@ export function Mix(props: ViewProps) {
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState(mixName);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [dragFrom, setDragFrom] = useState<string | null>(null);
+  // CI-0173-02: while a song is carried over another, mark the transitions that drop would replace
+  const dropPreview = useMemo(() => {
+    if (!flagOn('editor.drag_preview') || !dragFrom || !dragOver) return null;
+    const from = keys.indexOf(dragFrom);
+    const to = keys.indexOf(dragOver);
+    const seams = new Set(affectedSeams(from, to, mix.length));
+    if (!seams.size) return null;
+    const { before, after } = newNeighbours(mix, from, to);
+    const place = before && after ? `between ${before.title} and ${after.title}`
+      : after ? `at the start, before ${after.title}` : `at the end, after ${before?.title}`;
+    const change = seams.size === 1 ? 'One transition changes' : `${seams.size} transitions change`;
+    return { seams, words: `Dropping ${mix[from].title} here puts it ${place}. ${change}.` };
+  }, [dragFrom, dragOver, keys, mix]);
   // Multiple pointer/keyboard drops must not race each other against the
   // same order guard and then steal focus with an obsolete server response.
   const moving = useRef(false);
@@ -149,6 +166,9 @@ export function Mix(props: ViewProps) {
 
   const resizeInspector = (next: number) => {
     const safe = Math.min(Math.max(Math.round(next), MIN_INSPECTOR_WIDTH), MAX_INSPECTOR_WIDTH);
+    // GP-0250-05: a narrower timeline rewraps its rows, so the selected song or transition is
+    // brought back into view (nearest edge, focus untouched) after the resize lays out.
+    reveal.current = reveal.current ?? 'scroll';
     setInspectorWidth(safe);
     try { window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(safe)); } catch { /* it remains in memory */ }
   };
@@ -217,6 +237,18 @@ export function Mix(props: ViewProps) {
     target?.focus();
     target?.scrollIntoView?.({ block: 'nearest' });
   }, [order]);
+
+  // UF-0381-08: closing the side inspector hands focus back to the exact row it was opened from.
+  const closeInspector = () => {
+    const was = selected;
+    setSelected(null);
+    if (!was) return;
+    const quoted = (value: string) => value.replace(/["\\]/g, '\\$&');
+    const selector = was.kind === 'seam'
+      ? `[data-seam="${quoted(seamKeyOf(was.a, was.b))}"] .seam-name`
+      : `[data-song-key="${quoted(was.key)}"] [data-handle]`;
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>(selector)?.focus());
+  };
 
   const selectSeamAt = (index: number) => {
     setGone('');
@@ -356,6 +388,7 @@ export function Mix(props: ViewProps) {
     } finally {
       moving.current = false;
       setDragOver(null);
+      setDragFrom(null);
     }
   };
 
@@ -416,6 +449,7 @@ export function Mix(props: ViewProps) {
       selectSeamAt(index);
     },
     dragOver: setDragOver,
+    dragFrom: setDragFrom,
     refresh: refreshMix,
   };
 
@@ -424,13 +458,26 @@ export function Mix(props: ViewProps) {
     notify(`Rendering ${waiting} seam${waiting === 1 ? '' : 's'}, in order, ahead of everything else.`);
   };
 
+  // MI-0138-08: Save copy says Saving at once, and the form only closes once the draft exists
+  const [savingCopy, setSavingCopy] = useState(false);
+  const savingCopyNow = useRef(false);
   const saveMix = async (event: FormEvent) => {
     event.preventDefault();
     const clean = name.trim();
-    if (!clean) return;
-    const made = await post<{ name: string }>('/drafts', { name: clean, copy_current: true }, guard);
-    setNaming(false);
-    notify(`Saved a copy as a draft: ${made.name}. It’s in My Mixes.`);
+    if (!clean || savingCopyNow.current) return;
+    savingCopyNow.current = true;
+    setSavingCopy(true);
+    setProblem('');
+    try {
+      const made = await post<{ name: string }>('/drafts', { name: clean, copy_current: true }, guard);
+      setNaming(false);
+      notify(`Saved a copy as a draft: ${made.name}. It’s in My Mixes.`);
+    } catch (error) {
+      setProblem((error as Error).message);
+    } finally {
+      savingCopyNow.current = false;
+      setSavingCopy(false);
+    }
   };
 
   const prioritize = async (take: boolean) => {
@@ -534,7 +581,7 @@ export function Mix(props: ViewProps) {
   const adder = (anchor: string) => (
     <Adder
       position={placeOf(anchor)}
-      onAdd={(song) => void addSong(song, anchor)}
+      onAdd={(song) => addSong(song, anchor)}
       onClose={() => setAdding(null)}
       notify={notify}
       line={line}
@@ -690,6 +737,7 @@ export function Mix(props: ViewProps) {
         switcher={<MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} />}
         actions={actions}
         view={<ViewSwitch mode={mode} onChange={chooseMode} />}
+        viewName={EDITOR_MODES.find((option) => option.id === mode)?.label}
       />
       {renameForm}
       {deleteConfirmation}
@@ -697,7 +745,7 @@ export function Mix(props: ViewProps) {
       {naming && (
         <form className="row" onSubmit={saveMix}>
           <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
-          <button className="primary" disabled={!name.trim()}>Save copy</button>
+          <button className="primary" disabled={!name.trim()} aria-busy={savingCopy || undefined}>{savingCopy ? 'Saving…' : 'Save copy'}</button>
           <button type="button" onClick={() => setNaming(false)}>Cancel</button>
         </form>
       )}
@@ -728,6 +776,7 @@ export function Mix(props: ViewProps) {
         {mix.length > 1 && <EnergyDisclosure items={mix} selectedIndex={selectedSongIndex} playingIndex={playingIndex} onSelect={selectSongAt} />}
 
         <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`} style={inspecting && !narrow ? { '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties : undefined}>
+          {dropPreview && <p className="drop-preview" role="status">{dropPreview.words}</p>}
           <ol className={`timeline density ${mix.length > LONG_MIX ? 'long' : ''}`} onDragOver={scrollWhileDragging}>
             {mix.map((item, index) => (
               <FragmentRow key={keys[index]}>
@@ -742,6 +791,7 @@ export function Mix(props: ViewProps) {
                     guard={guard}
                     open={selectedIndex === index}
                     actions={rowActions}
+                    affected={dropPreview?.seams.has(index) ?? false}
                   />
                 )}
                 <SongLine
@@ -777,7 +827,7 @@ export function Mix(props: ViewProps) {
               <aside ref={inspector} className="edit-inspector" aria-label={seamInspector ? 'This transition' : 'This song'}>
                 <div className="inspector-head">
                   <h2>{seamInspector ? 'Transition' : 'Song'}</h2>
-                  <button aria-label="Close" onClick={() => setSelected(null)}><Icon name="close" /></button>
+                  <button aria-label="Close" title="Close" onClick={closeInspector}><Icon name="close" /></button>
                 </div>
                 {seamInspector || songInspector}
               </aside>
@@ -786,7 +836,7 @@ export function Mix(props: ViewProps) {
         </div>
       </section>
       {inspecting && narrow && mode !== 'story' && (
-        <Sheet title={seamInspector ? 'Transition' : 'Song'} onClose={() => setSelected(null)}>{seamInspector || songInspector}</Sheet>
+        <Sheet title={seamInspector ? 'Transition' : 'Song'} onClose={() => setSelected(null)} keepsChrome>{seamInspector || songInspector}</Sheet>
       )}
     </main>
   );

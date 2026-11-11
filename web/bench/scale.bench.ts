@@ -112,6 +112,22 @@ test('measure', async ({ page, request }) => {
     ...await report(page),
   };
 
+  // The command palette looking songs up in the same big library (SF-0244-07). Each lookup is timed
+  // from typing to the first song result for exactly those words.
+  const lookups: number[] = [];
+  await page.keyboard.press('Control+k');
+  const paletteBox = page.getByRole('combobox', { name: 'Search for a page or a command' });
+  await expect(paletteBox).toBeFocused();
+  for (const words of ['golden', 'river 7', 'velvet echo', 'mirror 41']) {
+    lookups.push(await timed(page, () => paletteBox.fill(words), () => expect(page.getByRole('option', { name: new RegExp(`^Song: .*${words.split(' ')[0]}`, 'i') }).first()).toBeVisible({ timeout: 30_000 })));
+  }
+  results.palette_songs = {
+    lookup_ms_median: percentile(lookups, 0.5),
+    lookup_ms_worst: percentile(lookups, 1),
+    options_shown: await page.getByRole('option').count(),
+  };
+  await page.keyboard.press('Escape');
+
   // A hundred songs in the editor, with the render worker going
   await request.post('/api/mix/render');
   started = Date.now();

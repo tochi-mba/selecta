@@ -1,7 +1,7 @@
 # ADR-0242 - Music-native microcopy, state language and non-patronizing feedback
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Implementation:** In progress (1/8 Implemented, 1/8 In progress, 6/8 Not started; 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P1 / Content.
@@ -28,16 +28,16 @@ Use conversational but precise musical language. Simple user intent first, techn
 
 No exaggerated intelligence claims, promise of guaranteed perfect transition or vague success when work is still processing. Preserve a proven reliable interface when a proposed artistic treatment cannot demonstrate improved user outcomes. This docs-only decision does not implement remote services, SaaS, telemetry, accounts or changes to music files.
 
-## Implementation checklist - 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 1/8 Implemented, 0/8 Verified
 
 1. **SF-0242-01 - Define voice and terminology.** **Acceptance:** Action nouns and music terms consistent across routes. **Required verification:** Content inventory. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-2. **SF-0242-02 - Separate request and result labels.** **Acceptance:** Requested move never labeled rendered. **Required verification:** Status copy fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0242-02 - Separate request and result labels.** **Acceptance:** Requested move never labeled rendered. **Required verification:** Status copy fixtures. **Implementation:** Implemented; a requested or proposed move is never labelled rendered or joined; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/src/ui/MusicObjects.test.tsx` 'never calls an automatic unrendered transition a confirmed technique', 'shows only returned ordered route songs, and never implies a proposed path has joined'; `web/src/views/Requests.test.tsx` 'says requested', 'says which request a bridge is for'; passed 2026-11-10.
 3. **SF-0242-03 - Write truthful preparation states.** **Acceptance:** Scan/analyze/render/export text specific. **Required verification:** Async state review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-4. **SF-0242-04 - Clarify action consequence.** **Acceptance:** Save, Play, Replace and Undo scopes explicit. **Required verification:** User prediction test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0242-04 - Clarify action consequence.** **Acceptance:** Save, Play, Replace and Undo scopes explicit. **Required verification:** User prediction test. **Implementation:** In progress; Needs a person: a user prediction test of Save, Play, Replace and Undo scope. Automated part passed 2026-11-10: `web/src/ui/CommandPalette.test.tsx` 'shows exact Undo scope but refuses an unavailable mutation', `web/src/shell/commands.test.ts` 'names the exact mix for Undo and refuses unloaded draft actions'; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 5. **SF-0242-05 - Develop precise error messages.** **Acceptance:** Cause and safe next action available. **Required verification:** Fault injection review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 6. **SF-0242-06 - Support compact labels.** **Acceptance:** Narrow screens retain meaning and accessible names. **Required verification:** 320px/AT checks. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 7. **SF-0242-07 - Audit multilingual and RTL support.** **Acceptance:** Strings wrap without relying on English word lengths. **Required verification:** Localization stress fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0242-08 - Measure comprehension.** **Acceptance:** Users understand what changed and what happens next. **Required verification:** Uncoached task study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0242-08 - Measure comprehension.** **Acceptance:** Users understand what changed and what happens next. **Required verification:** Uncoached task study. **Implementation:** Not started; Needs a person: an uncoached task study of whether people understand what changed and what happens next; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 
@@ -47,5 +47,5 @@ Preserve one player and intentional Pause, unchanged local audio and LRCLIB meta
 
 - **Depends on:** ADR-0138/0182/0159; new ADR-0198/0199 and corresponding programme checklist.
 - **Next:** owner acceptance → design review → focused implementing PR with tests → independent audio, accessibility, visual and hardware acceptance → release decision.
-- **Now:** Accepted; 0/8 Implemented, 0/8 independently Verified; no implementing PR/SHA.
+- **Now:** Decision Accepted; Implementation 1/8 (2026-11-10); Independently Verified No; implementing branch feat/finish-checklists.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

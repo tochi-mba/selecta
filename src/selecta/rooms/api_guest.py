@@ -11,7 +11,8 @@ code until the host confirms it, then the room's display view, and nothing else.
 
 Guests and displays see the room's name and songs, never the host. Codes and tokens are never
 logged, put in an error or a URL. Joins and actions are rate-limited per IP, guest and room
-(`rooms.limits`) in front of the room's own request limits.
+(`rooms.limits`) in front of the room's own request limits, and an address that keeps missing
+codes is locked out of joining (`rooms.guessing`).
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from pydantic import BaseModel, Field
 
 from selecta import flags
 from selecta.persistence import transaction
-from selecta.rooms import limits
+from selecta.rooms import guessing, limits
 from selecta.rooms.api_common import (
     check_origin,
     client_ip,
@@ -86,6 +87,8 @@ def install_routes(
     limiter: limits.Limiter,
 ) -> None:
     origins = tuple(allowed_origins)
+    guard = guessing.JoinGuard(limiter, lambda: rooms().engine)
+    app.state.rooms_join_guard = guard
 
     def hit(name: str, key: str, window: limits.Window) -> None:
         try:
@@ -96,14 +99,31 @@ def install_routes(
     def ip_hash(request: Request) -> str:
         return rooms().hash_ip(client_ip(request))
 
+    def stranger(address: str) -> None:
+        """A request with no valid guest token for its room. Enough of them from one address
+        and it is turned away before the database for a while, so a flood of made-up tokens
+        costs one lookup each only up to the limit."""
+        if limiter.count("stranger", address, limits.STRANGERS_PER_IP) >= (
+            limits.STRANGERS_PER_IP.limit
+        ):
+            limiter.lock("stranger", address, limits.STRANGERS_PER_IP.seconds)
+
     def guest(request: Request, room_id: str) -> tuple[str, GuestRef]:
         """The guest token for this room, checked to belong to it."""
         token = request.cookies.get(GUEST_COOKIE, "")
+        address = ip_hash(request)
+        try:
+            limiter.check_lock("stranger", address)
+        except limits.Limited as error:
+            raise too_many(error) from error
         try:
             ref = resolve_guest(rooms(), token)
         except RoomError as error:
+            if error.refusal is Refusal.NOT_A_GUEST:
+                stranger(address)
             raise refusal(error) from error
         if ref.room_id != room_id:
+            stranger(address)
             raise refusal(RoomError(Refusal.NOT_A_GUEST))
         return token, ref
 
@@ -134,10 +154,15 @@ def install_routes(
     def join_room(body: JoinBody, request: Request, response: Response) -> dict[str, Any]:
         check_origin(request, origins)
         address = ip_hash(request)
-        hit("join", address, limits.JOIN_PER_IP)
+        try:
+            guard.admit(address)
+        except limits.Limited as error:
+            raise too_many(error) from error
         try:
             joined = rooms().join(body.code, address)
         except RoomError as error:
+            if error.refusal in guessing.MISSES:
+                guard.missed(address)
             raise refusal(error) from error
         response.set_cookie(
             GUEST_COOKIE,

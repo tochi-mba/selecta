@@ -26,7 +26,7 @@ This chapter covers load, chaos and release gates. Module-by-module correctness 
 
 Every run ends with a **reconciliation audit**: stuck jobs, unreleased reservations, orphaned objects, ledger vs inventory drift, entitlement vs Stripe drift. A run that "looked fine" but leaves drift fails.
 
-**The checker today.** `selecta.audit.invariants` checks, from the database, invariants 1 to 7 and 9 after a test or a scenario: `check(connection, accepted=..., store=...)` returns every `Violation` with its invariant number, and `assert_clean(engine)` raises listing them all. It reads jobs, attempts, dependencies, fair-share heads, artifacts (and, given an `ArtifactStore`, the stored objects), assets, quota rows, reservations, the storage ledger and entitlement overrides. Invariants 8 and 10 can't be read from the database and stay with the AI gateway's and the site's own tests (`invariants.NOT_CHECKED`). The job state-machine test checks every invariant when each random history ends, and every race test checks them after its race (`tests/test_cloud_jobs_stateful.py`, `tests/test_cloud_jobs_races.py`); `tests/test_cloud_invariants.py` plants a violation for each check. Ledger-against-rollup drift is the usage reconciler's (`usage.reconcile`, §5.3).
+**The checker today.** `selecta.audit.invariants` checks, from the database, invariants 1 to 7 and 9 after a test or a scenario: `check(connection, accepted=..., store=...)` returns every `Violation` with its invariant number, and `assert_clean(engine)` raises listing them all. It reads jobs, attempts, dependencies, fair-share heads, artifacts (and, given an `ArtifactStore`, the stored objects), assets, quota rows, reservations, the storage ledger and entitlement overrides. Invariants 8 and 10 can't be read from the database and stay with the AI gateway's and the site's own tests (`invariants.NOT_CHECKED`). The job state-machine test checks every invariant when each random history ends, and every race test checks them after its race (`tests/test_cloud_jobs_stateful.py`, `tests/test_cloud_jobs_races.py`); `tests/test_cloud_invariants.py` plants a violation for each check. Every cloud test now ends with the same check: the `cloud_engine`, `sqlite_engine` and `postgres_engine` fixtures (`tests/cloud_db.py`) run `assert_clean` on their database after each test that passed, so a test that leaves drift fails in every CI job that runs it (the Windows shards on SQLite, the Linux `Cloud / PostgreSQL` job on both); a test that breaks an invariant on purpose says so with `@pytest.mark.invariants_off(reason)`. Ledger-against-rollup drift is the usage reconciler's (`usage.reconcile`, §5.3).
 
 ### 15.3 Tools
 
@@ -52,6 +52,8 @@ Every run ends with a **reconciliation audit**: stuck jobs, unreleased reservati
 | L4 Extreme | 100,000 simulated sessions, 10M jobs | Control-plane limits: claim latency, index health, SSE fan-out |
 | L5 Absurd | 1M accounts, 100M historical jobs | Partitioning, query plans, admin aggregates |
 | L6 Catastrophe | L3 load plus combined failures | Recovery and correctness under chaos |
+
+**The ladder and the catastrophe suite today.** `tests/load/ladder.py` holds the rungs L1 to L4 and the §15.6 thresholds once, as data, writes `tests/load/ladder.json` for the k6 staging script `tests/load/k6/ladder.js`, runs a rung against any base URL (`python tests/load/ladder.py run --level L1 --base-url ... --tokens ...`) and judges a saved report (`check`); `tests/test_load_ladder.py` keeps the numbers in step with the tables here and runs a scaled-down L1 against the real cloud app. `tests/load/k6/rooms.js` is the Rooms stampede, vote-rate and code-guessing run for staging. `tests/test_cloud_catastrophe.py` runs L6 combinations locally, scaled down, with fault injection into the real services and the reconciliation audit at the end. The full-size rungs and L6 at L3 load need staging.
 
 ### 15.5 Scenario catalogue (each becomes a named automated test)
 
@@ -105,7 +107,7 @@ Every run ends with a **reconciliation audit**: stuck jobs, unreleased reservati
 | When | What |
 |---|---|
 | Every PR | Unit, simulator (fixed seeds + a random seed), state-machine properties, migration check, file-length rule |
-| Merge to `main` | Linux integration (Postgres, MinIO), worker image smoke, Playwright on both modes |
+| Merge to `main` | Linux integration (Postgres, an S3 server such as SeaweedFS), worker image smoke, Playwright on both modes |
 | Nightly (staging) | L1–L2 load, lease races, chaos subset, reconciliation audit |
 | Weekly | L3 + catastrophe subset, real-audio benchmark, cost report |
 | Before releases | Full ladder to L4, security suite, DR drill, Lucy evaluation |

@@ -1,14 +1,14 @@
 # ADR-0053: Guided onboarding, secure folder selection and time to first mix
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 7 of 8 tasks implemented with automated evidence on 2026-11-10; 1 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 3 - Core journeys
 - **Extends existing decisions:** ADR-0018, ADR-0025, ADR-0037
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0053-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Replace first run with three task-oriented stages: Connect music, Prepare librar
 
 - A returning user with temporarily unreachable server must see reconnect, not a destructive first-run wizard. Failed setup never erases an already imported library.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0053-01 - Not started.** Prototype novice setup with a clear privacy explanation and a short, readable staged interface.
-2. **S3-0053-02 - Not started.** Evaluate installed-app/native folder selection and implement only if server path acquisition is secure; retain paste-path validation.
-3. **S3-0053-03 - Not started.** Specify source-path failure states: non-existent, inaccessible, duplicate, symlink, disconnected drive and unsupported file.
-4. **S3-0053-04 - Not started.** Provide real scan and readiness progress with stage-specific explanation of analysis, lyrics and optional stems.
-5. **S3-0053-05 - Not started.** Enable correct first playable mix as soon as backend readiness permits; do not pretend unready tracks are ready.
-6. **S3-0053-06 - Not started.** Support canceled/retried/interrupted scan, server restart, background watcher and adding further folders later.
-7. **S3-0053-07 - Not started.** Separate new-user onboarding from offline/partial state of an existing user.
-8. **S3-0053-08 - Not started.** Conduct unguided first-run tasks and record actual completion and confusion evidence.
+1. **S3-0053-01 - Implemented.** Prototype novice setup with a clear privacy explanation and a short, readable staged interface. **Evidence:** web/src/views/Setup.tsx; web/e2e/finishing.e2e.ts 'a first run says what leaves this PC before anything is sent'; web/src/App.test.tsx 'asks where the music is before anything else' (passed 2026-11-10).
+2. **S3-0053-02 - Implemented.** Evaluate installed-app/native folder selection and implement only if server path acquisition is secure; retain paste-path validation. **Evidence:** evaluated in docs/adr/selecta-3-privacy.md section 'Choosing a folder' (a browser handle is not a server path, so no picker); paste-path validation in src/selecta/library/folder_check.py; tests/test_selecta3_changes.py test_folder_preflight_keeps_existing_library_unchanged; tests/test_api_contracts.py test_folders_say_whether_they_can_be_found; web/e2e/finishing.e2e.ts 'a folder that can’t be used says why and what to try, nothing is read, and another can be tried straight away' (passed 2026-11-10).
+3. **S3-0053-03 - Implemented.** Specify source-path failure states: non-existent, inaccessible, duplicate, symlink, disconnected drive and unsupported file. **Evidence:** src/selecta/library/folder_check.py kinds (missing, not a folder, unreadable, already added, inside added, no audio; symlinks resolved); tests/test_selecta3_changes.py test_folder_preflight_keeps_existing_library_unchanged; tests/test_scan.py test_an_unplugged_drive_has_not_changed and test_other_kinds_of_file_are_ignored; tests/test_folder_relink.py test_a_symbolic_link_target_is_refused (passed 2026-11-10).
+4. **S3-0053-04 - Implemented.** Provide real scan and readiness progress with stage-specific explanation of analysis, lyrics and optional stems. **Evidence:** web/e2e/finishing.e2e.ts 'the first run says which stage it’s at, from what the server says, and each can go wrong on its own' (passed 2026-11-10).
+5. **S3-0053-05 - Implemented.** Enable correct first playable mix as soon as backend readiness permits; do not pretend unready tracks are ready. **Evidence:** web/src/views/Setup.test.tsx 'offers the first mix as soon as enough songs are ready while analysis continues' and 'does not promise a playable mix before the real readiness threshold' (passed 2026-11-10).
+6. **S3-0053-06 - Implemented.** Support canceled/retried/interrupted scan, server restart, background watcher and adding further folders later. **Evidence:** tests/test_selecta3_changes.py test_stopping_scan_before_listing_does_not_write_partial_music; tests/test_scan.py test_a_new_song_is_noticed_and_brought_in, test_folders_scanned_on_purpose_are_remembered and test_an_empty_folder_never_wipes_the_library; tests/test_recovery.py test_recovery_preserves_extra_columns_and_refuses_overwrite (passed 2026-11-10).
+7. **S3-0053-07 - Implemented.** Separate new-user onboarding from offline/partial state of an existing user. **Evidence:** web/src/App.test.tsx 'asks where the music is before anything else' (new user) and 'says so rather than showing an empty mix in silence' (existing user); web/src/shell/Shell.test.tsx 'says so across the top, and what’s on screen stays' (passed 2026-11-10).
+8. **S3-0053-08 - Needs a person.** Conduct unguided first-run tasks and record actual completion and confusion evidence. **Status:** Needs a person: unguided first-run sessions with real participants, recording completion and confusion.
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (7/8) | Task-by-task evidence on each item; 1 need a person, 0 still open |
 
 ## References
 

@@ -84,10 +84,25 @@ def client(settings, conn, tmp_path, monkeypatch):
 
     def load_song(_conn, _settings, song_id):
         return SimpleNamespace(
-            id=song_id, title=f"Song {song_id}", vocals_known=True, bpm=120.0, duration=200.0
+            id=song_id,
+            artist="Someone",
+            title=f"Song {song_id}",
+            vocals_known=True,
+            bpm=120.0,
+            camelot="8A",
+            duration=200.0,
+            bar_times=np.array([0.0, 2.0]),
+            beats=np.array([0.0, 0.5, 1.0, 1.5, 2.0]),
+            beats_per_bar=4,
+            sections=[],
+            lines=[],
         )
 
     monkeypatch.setattr("selecta.analysis.song.load_song", load_song)
+    monkeypatch.setattr(
+        "selecta.analysis.pipeline.load_features",
+        lambda _settings, _song_id: {"peaks": np.array([0, 128, 255], dtype=np.uint8)},
+    )
     monkeypatch.setattr("selecta.planner.reel.load_library", lambda _conn, _settings: [])
     monkeypatch.setattr(
         SeamStore, "submit", lambda self, request, **_k: {"status": "queued", "key": request.key}
@@ -692,6 +707,30 @@ def test_stopping_watching_touches_nothing_else(client, conn, tmp_path):
     answer = client.post("/api/folders/stop-watching", json={"folder": "Z:/gone"}).json()
     assert [folder["path"] for folder in answer["folders"]] == [str(tmp_path)]
     assert client.get("/api/library", params={"state": "all"}).json()["total"] == before
+
+
+def test_stopping_watching_leaves_every_music_file_byte_for_byte(client, conn, tmp_path):
+    """S4-0106-09: a filesystem snapshot before and after shows Stop watching deletes nothing."""
+    music = tmp_path / "Music"
+    (music / "Album").mkdir(parents=True)
+    files = {"one.flac": b"fLaC-one", "Album/two.mp3": b"ID3-two", "cover.jpg": b"jpg"}
+    for name, data in files.items():
+        (music / name).write_bytes(data)
+
+    def snapshot():
+        return {
+            path.relative_to(music).as_posix(): (path.read_bytes(), path.stat().st_mtime_ns)
+            for path in sorted(music.rglob("*"))
+            if path.is_file()
+        }
+
+    db.set_preference(conn, "library_folders", [str(music)])
+    conn.commit()
+    before = snapshot()
+    answer = client.post("/api/folders/stop-watching", json={"folder": str(music)}).json()
+    assert str(music) not in [folder["path"] for folder in answer["folders"]]
+    assert snapshot() == before
+    assert sorted(path.name for path in music.iterdir()) == ["Album", "cover.jpg", "one.flac"]
 
 
 # ---- real addresses

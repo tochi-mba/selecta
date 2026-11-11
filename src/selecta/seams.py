@@ -34,6 +34,16 @@ from selecta.planner.choose import choose_transition
 from selecta.planner.memory import RULES_VERSION, SeamMemory
 from selecta.planner.wordreel import CannotTrust, modes_for, ride_lines
 from selecta.render.engine import Rendered, SongCache, in_context
+from selecta.scheduling.policy import (
+    LATER,
+    LINE,
+    MIX,
+    PREPARING,
+    REQUEST,
+    URGENT,
+    Lane,
+    from_rank,
+)
 from selecta.seam_kinds import (
     CHECK_WORDS,
     MOVES,
@@ -129,15 +139,23 @@ __all__ = [
 
 IDLE_CHECK_SECONDS = 3.0
 
-MEMORY_SECONDS = 5.0
+MEMORY_SECONDS = 300.0
+STATUS_MEMORY_SECONDS = 300.0
+# Status polls never enumerate transition files; background refreshes are infrequent.
 
 """How far past its limit each forgiving check can go, in its own units."""
 
 MIX_CHECK_SECONDS = 2.0
 
 # who goes first: what's about to be heard, a song someone asked for once whatever plays before it
-# is done, the rest of the mix, mixes in the render line, other requests, then spare time
-URGENT, REQUEST, MIX, LINE, LATER, PREPARING = range(6)
+# is done, the rest of the mix, mixes in the render line, other requests, then spare time. The ranks
+# are the scheduling policy's own (ADR-0395, docs/saas/04-queue-and-scheduling.md 4A.5), so local
+# mode and the cloud agree on each rank's lane and urgency.
+
+
+def _spare_time(rank: int) -> bool:
+    """Is work at this rank speculative? Spare-time renders run without the render priority."""
+    return from_rank(rank)[0] == Lane.SPECULATIVE
 
 
 def _unlink_after_readers(path: Path) -> None:
@@ -194,6 +212,12 @@ class SeamStore:
         self.window_totals: dict[str, int] = {}
         self._quote: float | None = None
         self._remembered: tuple[float, SeamMemory] | None = None
+        self._memory_scan_lock = threading.Lock()
+        self._memory_refresh_lock = threading.Lock()
+        self._memory_refresh: threading.Thread | None = None
+        self._memory_refresh_started = float("-inf")
+        self._memory_revision = 0
+        self._history_stamp: int | None = None
         self._records: dict[Path, tuple[tuple[int, int], dict]] = {}
         self._asked_by_requests: set[str] = set()
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
@@ -208,7 +232,12 @@ class SeamStore:
                     previous.get("status") in {"ready", "failed"}
                     and previous.get("key") == meta.parent.name
                 ):
-                    self._remember(previous)
+                    # Startup recovery only: successful workers already wrote the
+                    # history when they completed. Do not rewrite thousands of
+                    # identical records on each launch (or clobber newer ratings).
+                    history = settings.home / "seam-history" / f"{previous['key']}.json"
+                    if not history.exists() or meta.stat().st_mtime_ns > history.stat().st_mtime_ns:
+                        self._remember(previous)
             except (OSError, ValueError):
                 continue
 
@@ -226,6 +255,13 @@ class SeamStore:
             json.dump(state, stream)
         try:
             temporary.replace(target)
+            # Internal writes must be reflected immediately, independent of the
+            # longer cache TTL used to avoid expensive Windows disk walks.
+            self._memory_revision += 1
+            # Keep a usable last-known count while refreshing stale history.
+            if self._remembered is not None:
+                self._remembered = (0.0, self._remembered[1])
+            self._memory_refresh_started = float("-inf")
         finally:
             temporary.unlink(missing_ok=True)
 
@@ -446,31 +482,117 @@ class SeamStore:
             self._requested = deque(item for item in self._requested if item[0].key not in gone)
             self._request_keys -= gone
 
-    def remembered(self, fresh: bool = False) -> SeamMemory:
-        """Everything finished seams have shown, including ones the render cache has cleared. It's
-        kept for a few seconds, since suggestions ask for it with every key pressed."""
+    def _current_history_stamp(self) -> int:
+        """An O(1) hint for updates from the separately running render worker."""
+        try:
+            return (self.settings.home / "seam-history").stat().st_mtime_ns
+        except OSError:
+            return 0
+
+    def remembered_count(self) -> tuple[int, bool]:
+        """Non-blocking status count; refresh transition history on one background thread.
+
+        The first request may return zero with pending=True, not a false claim
+        that an empty library has no history. Subsequent requests use the latest
+        snapshot while a slow refresh is in progress.
+        """
         now = time.monotonic()
-        if not fresh and self._remembered and now - self._remembered[0] < MEMORY_SECONDS:
-            return self._remembered[1]
-        states: dict[str, dict] = {}
-        histories = (self.settings.home / "seam-history").glob("*.json")
-        records: dict[Path, tuple[tuple[int, int], dict]] = {}
-        for meta in [*self.root.glob("*/seam.json"), *histories]:
-            try:
-                facts = meta.stat()
-                stamp = (facts.st_mtime_ns, facts.st_size)
-                known = self._records.get(meta)
-                state = (
-                    known[1] if known and known[0] == stamp else json.loads(meta.read_text("utf-8"))
+        snapshot = self._remembered
+        pending = (
+            snapshot is None
+            or now - snapshot[0] >= STATUS_MEMORY_SECONDS
+            or self._history_stamp != self._current_history_stamp()
+        )
+        if pending:
+            with self._memory_refresh_lock:
+                thread = self._memory_refresh
+                if (
+                    (thread is None or not thread.is_alive())
+                    and now - self._memory_refresh_started >= STATUS_MEMORY_SECONDS
+                ):
+                    self._memory_refresh_started = now
+                    thread = threading.Thread(
+                        target=self._refresh_memory, name="selecta-transition-memory", daemon=True
+                    )
+                    self._memory_refresh = thread
+                    thread.start()
+        return (len(snapshot[1].clean) if snapshot else 0, pending)
+
+    def _refresh_memory(self) -> None:
+        try:
+            self.remembered(fresh=True)
+        except Exception:
+            # A background failure must not prevent the API responding; next
+            # polling interval can retry and the regular memory path still raises.
+            import logging
+
+            logging.getLogger(__name__).exception("Refreshing transition memory failed")
+
+    def remembered(self, fresh: bool = False) -> SeamMemory:
+        """Load complete seam history only when needed; serialize expensive scans."""
+        snapshot = self._remembered
+        now = time.monotonic()
+        if (
+            not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS
+            and self._history_stamp == self._current_history_stamp()
+        ):
+            return snapshot[1]
+        with self._memory_scan_lock:
+            snapshot = self._remembered
+            now = time.monotonic()
+            if (
+                not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS
+                and self._history_stamp == self._current_history_stamp()
+            ):
+                return snapshot[1]
+            revision = self._memory_revision
+            history_before = self._current_history_stamp()
+            scan_started = time.monotonic()
+            last_report = scan_started
+            dev = os.environ.get("SELECTA_DEV_STARTUP") == "1"
+            if dev:
+                print("[MEMORY] Indexing saved transitions in the background...", flush=True)
+            states: dict[str, dict] = {}
+            records: dict[Path, tuple[tuple[int, int], dict]] = {}
+            histories = (self.settings.home / "seam-history").glob("*.json")
+            for meta in [*self.root.glob("*/seam.json"), *histories]:
+                try:
+                    facts = meta.stat()
+                    stamp = (facts.st_mtime_ns, facts.st_size)
+                    known = self._records.get(meta)
+                    state = (
+                        known[1]
+                        if known and known[0] == stamp
+                        else json.loads(meta.read_text("utf-8"))
+                    )
+                except (OSError, ValueError):
+                    continue
+                records[meta] = (stamp, state)
+                states.setdefault(state.get("key", str(meta)), state)
+                if dev and time.monotonic() - last_report >= 10:
+                    elapsed = time.monotonic() - scan_started
+                    print(f"[MEMORY] Indexed {len(records)} files in {elapsed:.0f}s...", flush=True)
+                    last_report = time.monotonic()
+            memory = SeamMemory.from_states(states.values())
+            self._records = records
+            # Writes that arrived during the scan force another refresh, rather
+            # than treating a potentially stale snapshot as recently valid.
+            history_after = self._current_history_stamp()
+            stamp = (
+                time.monotonic()
+                if revision == self._memory_revision and history_before == history_after
+                else 0.0
+            )
+            self._history_stamp = history_after
+            self._remembered = (stamp, memory)
+            if dev:
+                elapsed = time.monotonic() - scan_started
+                print(
+                    f"[MEMORY] Indexed {len(records)} files; {len(memory.clean)} clean "
+                    f"transitions in {elapsed:.1f}s.",
+                    flush=True,
                 )
-            except (OSError, ValueError):
-                continue
-            records[meta] = (stamp, state)  # a file that hasn't changed needn't be read again
-            states.setdefault(state.get("key", str(meta)), state)
-        self._records = records
-        memory = SeamMemory.from_states(states.values())
-        self._remembered = (now, memory)
-        return memory
+            return memory
 
     def forget_unfinished(self) -> None:
         """Anything marked as under way was cut off when the last worker stopped."""
@@ -612,8 +734,8 @@ class SeamStore:
         while True:
             request = self._next_job()
             self._running_is_stale = False
-            jobs.set_render_priority(self._running_rank != PREPARING)
-            jobs.mark_mix_rendering(self.settings.home, self._running_rank != PREPARING)
+            jobs.set_render_priority(not _spare_time(self._running_rank))
+            jobs.mark_mix_rendering(self.settings.home, not _spare_time(self._running_rank))
             self._sign_renewed_at = time.monotonic()
             self._mark_rendering(request)
             self.memory = self.remembered(fresh=True)

@@ -5,16 +5,19 @@
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
-  margin-right: 6px;
+  margin-right: var(--space-dense);
   vertical-align: middle;
-  color: var(--selected);
+  color: var(--motif);
 }
 .song-motif.large { width: clamp(40px, 5vw, 68px); height: clamp(40px, 5vw, 68px); margin-inline-end: .3em; }
-.song-select { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.song-select { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
 .song-select b { overflow-wrap: anywhere; }
-.song-open { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; text-align: start; }
-.song-open b { min-width: 0; overflow-wrap: anywhere; }
-.inspector-pair .song-motif, .studio-pair .song-motif { width: 25px; height: 25px; margin-right: 3px; }
+.song-open { display: inline-flex; align-items: center; gap: var(--space-hair); max-width: 100%; text-align: start; }
+/* the title takes its own ink rather than inheriting the button's: a button's colour fades over
+   --motion-fast, so on a theme switch an inherited title would sit at the old theme's ink on the new
+   background for a moment, near 1:1 contrast (LX-0351-06) */
+.song-open b { min-width: 0; overflow-wrap: anywhere; color: var(--text); }
+.inspector-pair .song-motif, .studio-pair .song-motif { width: 25px; height: 25px; margin-right: var(--space-1); }
 .studio-pair .song-motif { vertical-align: middle; }
 .coming .song-name b .song-motif { width: 22px; height: 22px; }
 .now .display .song-motif { color: var(--playing); }
@@ -23,7 +26,7 @@
    Planned is dashed, rendered is solid; failures always retain their label. */
 .music-seam-diagram {
   display: grid;
-  gap: 3px;
+  gap: var(--grid-beat-gap);
   padding: var(--space-2) var(--space-3);
   min-width: 0;
   border: 1px solid var(--border);
@@ -48,15 +51,15 @@
   overflow: hidden;
 }
 .music-seam-lines > i { display: block; position: absolute; }
-.music-seam-lines .outgoing { top: 4px; left: 0; width: 48%; height: 8px; border-radius: 5px; background: var(--selected); }
-.music-seam-lines .incoming { bottom: 4px; right: 0; width: 48%; height: 8px; border-radius: 5px; background: var(--status-request); }
+.music-seam-lines .outgoing { top: 4px; left: 0; width: 48%; height: 8px; border-radius: var(--radius-mark); background: var(--motif); }
+.music-seam-lines .incoming { bottom: 4px; right: 0; width: 48%; height: 8px; border-radius: var(--radius-mark); background: var(--status-request); }
 .music-seam-diagram.overlap .outgoing,
 .music-seam-diagram.words .outgoing,
 .music-seam-diagram.stems .outgoing { width: 70%; }
 .music-seam-diagram.overlap .incoming,
 .music-seam-diagram.words .incoming,
 .music-seam-diagram.stems .incoming { width: 70%; }
-.music-seam-diagram.overlap .outgoing { background: repeating-linear-gradient(90deg, var(--selected) 0 12px, transparent 12px 16px); }
+.music-seam-diagram.overlap .outgoing { background: repeating-linear-gradient(90deg, var(--motif) 0 12px, transparent 12px 16px); }
 .music-seam-diagram.words .word-tie {
   top: 10px; left: 35%; width: 30%; height: 10px; border-block: 2px solid var(--text);
   border-radius: 40%;
@@ -84,7 +87,7 @@
 .music-route.preparing { border-style: dotted; }
 .music-route.ready { border-style: solid; }
 .music-route ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.music-route li { display: flex; align-items: center; gap: 4px; flex: 1 1 155px; min-width: 0; max-width: 100%; padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.music-route li { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 155px; min-width: 0; max-width: 100%; padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .music-route li + li::before { content: '→'; font-weight: 700; color: var(--text-soft); }
 .music-route li.wanted { border-color: var(--selected); }
 .music-route li span { min-width: 0; overflow-wrap: anywhere; }
@@ -113,14 +116,14 @@
 .energy-overview { margin-block: var(--space-4); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 0; }
 .energy-overview-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin-bottom: var(--space-2); }
 .energy-overview-head small { color: var(--text-soft); overflow-wrap: anywhere; }
-.energy-overview ol { display: flex; align-items: end; gap: 2px; margin: 0; padding: 0 0 5px; list-style: none; min-height: 74px; overflow-x: auto; scrollbar-gutter: stable; }
+.energy-overview ol { display: flex; align-items: end; gap: var(--grid-bar-gap); margin: 0; padding: 0 0 var(--space-1); list-style: none; min-height: 74px; overflow-x: auto; scrollbar-gutter: stable; }
 .energy-overview li { flex: 1 0 22px; min-width: 22px; max-width: 52px; }
-.energy-overview button { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 72px; min-height: 72px; padding: 3px; background: var(--surface-control); border: 1px solid var(--border); border-radius: 3px; }
+.energy-overview button { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 72px; min-height: 72px; padding: 3px; background: var(--surface-control); border: 1px solid var(--border); border-radius: var(--radius-hair); }
 /* A definite container height is essential: percentage-height data bars otherwise
    collapse to their 3px minimum and falsely look identical in every mix. */
 .energy-overview button[aria-current='true'] { border: 2px solid var(--selected); background: var(--surface-selected); }
 .energy-overview button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.energy-overview-bar { display: block; width: 100%; min-height: 3px; background: var(--status-ready); border-radius: 2px 2px 0 0; }
+.energy-overview-bar { display: block; width: 100%; min-height: 3px; background: var(--status-ready); border-radius: var(--radius-hair) var(--radius-hair) 0 0; }
 .energy-overview-unknown { color: var(--text-soft); align-self: center; }
 .studio-diff { padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .studio-diff summary { cursor: pointer; min-height: 40px; font-weight: 600; }
@@ -130,6 +133,7 @@
 .studio-playhead { font-variant-numeric: tabular-nums; color: var(--text-soft); font-size: var(--text-sm); }
 .handoff-pair { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .handoff-pair b { unicode-bidi: plaintext; overflow-wrap: anywhere; }
+.handoff-phrase { margin: 0; font-style: italic; overflow-wrap: anywhere; unicode-bidi: plaintext; }
 @media (forced-colors: active) {
   .energy-overview-bar { background: Highlight; }
   .energy-overview button[aria-current='true'] { border-color: Highlight; }
@@ -169,7 +173,7 @@
   background: var(--surface-raised);
   contain-intrinsic-size: auto 240px;
 }
-.library-rows .song-row.selected { background: var(--surface-selected); box-shadow: inset 3px 0 0 var(--edge-selected); }
+.library-rows .song-row.selected { background: var(--surface-selected); box-shadow: inset var(--marker) 0 0 var(--edge-selected); }
 .library-rows .song-row.selected:focus-within { outline: 2px solid var(--edge-focus); outline-offset: 2px; }
 .library-rows.library-cards .song-row.selected { border-color: var(--edge-selected); }
 .library-rows.library-cards .song-row:focus-within { content-visibility: visible; border-color: var(--selected); }
@@ -178,7 +182,7 @@
 .library-rows.library-cards .song-why { display: block; }
 :root[data-density='compact'] .library-rows .song-why { display: block; }
 .library-rows.library-cards .song-columns { white-space: normal; }
-.vibe-card .vibe-motif { width: 100%; max-width: 210px; height: 74px; margin-bottom: var(--space-2); color: var(--selected); }
+.vibe-card .vibe-motif { width: 100%; max-width: 210px; height: 74px; margin-bottom: var(--space-2); color: var(--motif); }
 .vibe-motif.sound { color: var(--status-request); }
 .vibe-motif.mood { color: var(--status-ready); }
 .vibe-motif.journey { color: var(--text-soft); }
@@ -190,6 +194,34 @@
 /* Musical identity changes with the exact returned track sequence, including
    reorder. It intentionally does not pretend to be a measured waveform. */
 .mix-identity { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
-.mix-signature { display: block; width: clamp(130px, 25vw, 240px); max-width: 100%; height: 48px; color: var(--selected); }
+.mix-signature { display: block; width: clamp(130px, 25vw, 240px); max-width: 100%; height: 48px; color: var(--motif); }
 .mix-identity small { font-size: var(--text-xs); }
+/* SF-0206-04: the same sleeve, smaller, on each draft in My Mixes. */
+.mix-signature.compact { width: clamp(72px, 18vw, 120px); height: 28px; }
 @media (forced-colors: active) { .mix-signature { color: CanvasText; } }
+
+/* CI-0179-04: one segment per transition. Ready is solid, a failure is striped and waiting is hollow,
+   so the three read apart without colour, and forced colours keep the same shapes. */
+.draft-progress.draft-seams { display: flex; gap: 1px; height: 6px; background: none; }
+.draft-progress.draft-seams i { flex: 1 1 0; min-width: 1px; height: 100%; border-radius: var(--radius-hair); background: var(--surface-control); }
+.draft-progress.draft-seams i.ready { background: var(--ok); }
+.draft-progress.draft-seams i.failed { background: repeating-linear-gradient(135deg, var(--status-failed) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 0 1px var(--status-failed); }
+.draft-progress.draft-seams i.waiting { background: none; box-shadow: inset 0 0 0 1px var(--status-working); }
+@media (forced-colors: active) {
+  .draft-progress.draft-seams i.ready { background: CanvasText; }
+  .draft-progress.draft-seams i.failed { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 4px); box-shadow: inset 0 0 0 1px CanvasText; }
+  .draft-progress.draft-seams i.waiting, .draft-progress.draft-seams i.other { background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+}
+
+/* CI-0169-05: how two songs overlap for each transition feel, as an illustration of the preference. */
+.feel-diagram { display: block; width: 96px; height: 38px; margin-top: var(--space-1); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.feel-diagram .feel-out { stroke: var(--motif); }
+.feel-diagram .feel-into { stroke: var(--text-soft); stroke-dasharray: 4 2; }
+/* CI-0168-04: the asked-for length as a share of the longest choice, never as minutes. */
+.length-scale { display: inline-block; align-self: center; width: 72px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-control); overflow: hidden; }
+.length-scale i { display: block; height: 100%; background: var(--motif); transition: width var(--motion-fast) var(--motion-ease); }
+@media (forced-colors: active) {
+  .feel-diagram .feel-out, .feel-diagram .feel-into { stroke: CanvasText; }
+  .length-scale { border: 1px solid CanvasText; }
+  .length-scale i { background: CanvasText; }
+}

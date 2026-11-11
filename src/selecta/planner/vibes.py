@@ -311,7 +311,7 @@ VIBES: tuple[Vibe, ...] = (
     Vibe(
         "sunday",
         "Sunday morning",
-        "Easy and warm, in major keys, with nothing in a hurry.",
+        "Easy and warm, leaning to major keys, with nothing in a hurry.",
         lambda s, t: (
             t.energy <= 0.45
             and t.felt <= 125
@@ -587,6 +587,49 @@ def eligible(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> li
     ]
 
 
+# GP-0259-07: what a card may say it was chosen by. Read from the code of the idea's own tests, so
+# a card never names evidence (a mood, a genre) that its songs were not actually measured for.
+EVIDENCE_WORDS = {
+    "family": "genre tags",
+    "felt": "tempo",
+    "energy": "energy",
+    "about": "lyric themes",
+    "hook": "hook strength",
+    "wordy": "how wordy the lyrics are",
+    "minor": "major or minor key",
+    "year": "release year",
+    "seasonal": "seasonal tags",
+}
+
+
+def _names_read(fn: Callable, seen: set[int] | None = None) -> set[str]:
+    seen = seen if seen is not None else set()
+    code = getattr(fn, "__code__", None)
+    if code is None or id(code) in seen:
+        return set()
+    seen.add(id(code))
+    names: set[str] = set()
+    pending = [code]
+    while pending:
+        current = pending.pop()
+        names.update(current.co_names)
+        pending.extend(const for const in current.co_consts if hasattr(const, "co_names"))
+    for cell in getattr(fn, "__closure__", None) or ():
+        if callable(cell.cell_contents):
+            names |= _names_read(cell.cell_contents, seen)
+    return names
+
+
+def evidence(vibe: Vibe) -> list[str]:
+    """The measured song facts this idea chooses and ranks its songs by, in plain words."""
+    names = _names_read(vibe.fits) | _names_read(vibe.belongs)
+    if vibe.family:
+        names.add("family")
+    if vibe.arc:
+        names.add("energy")  # every energy shape is planned from measured energy
+    return [words for name, words in EVIDENCE_WORDS.items() if name in names]
+
+
 def belonging(name: str, songs: list[SongInfo], traits: dict[int, Traits]) -> dict[int, float]:
     """How much each song suits the mix of this name, 0 to 1, for choosing what to add to it. Songs
     that fit start at a half. A mix someone made themselves has no such opinion."""
@@ -607,8 +650,13 @@ def _blurb(vibe: Vibe) -> str:
     return vibe.blurb.replace(", with a word hand-off or two", "")
 
 
-def describe(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> dict:
-    """What a mix's card shows. Everything on it is read from the songs that would really play."""
+def describe(
+    vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits], language: str | None = None
+) -> dict:
+    """What a mix's card shows. Everything on it is read from the songs that would really play.
+
+    ``language`` is the listener's saved transition feel, which a build uses instead of the idea's
+    own (GP-0259-01), so the card's moves line names the moves the build will really plan."""
     found = eligible(vibe, songs, traits)
     artists: list[str] = []
     for song in sorted(found, key=lambda s: -vibe.belongs(s, traits[s.id])):
@@ -629,7 +677,8 @@ def describe(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> di
         "needs": max(MIN_SONGS - len(found), 0),
         "artists": artists,
         "tempo": [round(float(np.percentile(felt, p))) for p in (10, 90)] if felt else None,
-        "moves": MOVE_WORDS[vibe.language],
+        "moves": MOVE_WORDS.get(language or vibe.language, MOVE_WORDS[vibe.language]),
+        "basis": evidence(vibe),
         "seconds": sum(song.duration for song in found) * PLAYED_SHARE,
     }
 

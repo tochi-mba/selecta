@@ -1,0 +1,52 @@
+# Phone alerts that aren't SLO burn rates (docs/saas/14-operations.md, "Alerts to your phone").
+# Each links a runbook in docs/operations/ (tests/test_cloud_slos.py enforces it). The burn-rate
+# alerts for each SLO are generated from slos.yaml.
+alerts:
+  - name: SelectaApiDown
+    expr: sum(up{job="selecta-api"}) == 0 or absent(up{job="selecta-api"})
+    for: 2m
+    severity: page
+    summary: No API instance is answering.
+    runbook: docs/operations/api-down.md
+  - name: SelectaOldestInteractiveJobOld
+    expr: max(selecta_oldest_queued_seconds{lane="interactive"}) > 120
+    for: 2m
+    severity: page
+    summary: The oldest interactive job has waited more than 2 minutes.
+    runbook: docs/operations/oldest-interactive-job.md
+  - name: SelectaJobsQuarantined
+    expr: sum(increase(selecta_jobs_quarantined_total[15m])) > 0
+    for: 0m
+    severity: page
+    summary: Jobs were quarantined.
+    runbook: docs/operations/jobs-quarantined.md
+  - name: SelectaSpendCeilingHit
+    expr: sum by (ceiling) (increase(selecta_spend_ceiling_hits_total[10m])) > 0
+    for: 0m
+    severity: page
+    summary: An AI or compute spend ceiling refused work.
+    runbook: docs/operations/spend-ceiling.md
+  - name: SelectaAuditWritesStopped
+    expr: sum(rate(selecta_audit_writes_total[15m])) == 0 and sum(rate(traces_spanmetrics_calls_total{service="selecta-api", span_name=~"POST .*"}[15m])) > 0
+    for: 15m
+    severity: page
+    summary: Mutations are happening but no audit rows are being written.
+    runbook: docs/operations/audit-writes-stopped.md
+  - name: SelectaReconciliationDrift
+    expr: max by (check) (selecta_reconciliation_drift) > 0
+    for: 30m
+    severity: ticket
+    summary: Usage, storage or billing reconciliation found a difference.
+    runbook: docs/operations/reconciliation-drift.md
+  - name: SelectaBackupFailed
+    expr: time() - max(selecta_backup_last_success_timestamp_seconds) > 26 * 3600
+    for: 0m
+    severity: page
+    summary: No successful nightly backup in 26 hours.
+    runbook: docs/operations/backup-failed.md
+  - name: SelectaMaintenanceLeaderMissing
+    expr: time() - max(selecta_maintenance_leader_renewed_timestamp_seconds) > 60
+    for: 2m
+    severity: page
+    summary: No maintenance copy holds the leader term.
+    runbook: docs/operations/maintenance-service-down.md

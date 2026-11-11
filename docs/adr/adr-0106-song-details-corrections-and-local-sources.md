@@ -1,7 +1,7 @@
 # ADR-0106: Song Details, measured-versus-corrected metadata, classification and safe source management
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/10 implemented)
+- **Implementation status:** Implemented (10/10 implemented, 0 in progress; source reconciliation 2026-11-10, branch feat/finish-checklists)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -29,18 +29,18 @@ Divide Song Details into Overview, Musical analysis, Corrections, Selecta behavi
 - Readiness details include specific blockers and actionable analysis steps.
 - Watched folder Source operations remain separated from source-file deletion; never suggest stopping watch deletes originals.
 
-## Detailed implementation work - all Not started
+## Detailed implementation work
 
-1. **S4-0106-01 - Redesign Song Details section hierarchy and accessibility.** Acceptance: Relevant identity/readiness easy before technical metadata. Required verification: Readiness variants and NVDA reading order. **Implementation: Not started; Verified: No.**
-2. **S4-0106-02 - Preserve measured, override and effective BPM/key distinction.** Acceptance: UI never mislabels manual value as measured. Required verification: Half/double/blank/reset and server validation tests. **Implementation: Not started; Verified: No.**
-3. **S4-0106-03 - Harden correction constraints and input errors.** Acceptance: Out-of-range and malformed Camelot values retain draft input. Required verification: Boundary, locale decimal and invalid text tests. **Implementation: Not started; Verified: No.**
-4. **S4-0106-04 - Expose downstream analysis/transition effects without overclaiming.** Acceptance: User knows edits may trigger rerender without fake guarantee. Required verification: Dependent render invalidation contract tests. **Implementation: Not started; Verified: No.**
-5. **S4-0106-05 - Preserve prioritize/exclude/never/play/music classification.** Acceptance: Actions remain scoped to exact song ID. Required verification: Duplicate-name and conflicting updates tests. **Implementation: Not started; Verified: No.**
-6. **S4-0106-06 - Design analysed/partial/failed/unsuitable readiness explanation.** Acceptance: No false ready from missing beat or key fields. Required verification: Readiness state decision table tests. **Implementation: Not started; Verified: No.**
-7. **S4-0106-07 - Preserve Library context after closing Song Details.** Acceptance: Search page and focused song restored where valid. Required verification: Back/Forward and deletion focus tests. **Implementation: Not started; Verified: No.**
-8. **S4-0106-08 - Represent watched, missing and disconnected sources separately.** Acceptance: Unavailable drive is not interpreted as deleted audio. Required verification: Disconnect/reconnect/path change fixtures. **Implementation: Not started; Verified: No.**
-9. **S4-0106-09 - Verify folder removal semantics and local-file safety.** Acceptance: Stop watch never deletes user music. Required verification: Filesystem snapshot backend contract tests. **Implementation: Not started; Verified: No.**
-10. **S4-0106-10 - Maintain local-first privacy in diagnostics/copy actions.** Acceptance: No accidental private paths in sharing surfaces. Required verification: Redaction, permissions and text injection tests. **Implementation: Not started; Verified: No.**
+1. **S4-0106-01 - Redesign Song Details section hierarchy and accessibility.** Acceptance: Relevant identity/readiness easy before technical metadata. Required verification: Readiness variants and NVDA reading order. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/views/SongDetails.tsx; Library.test.tsx 'gives the reason in the song's details'. Needs a person: NVDA reading-order review.
+2. **S4-0106-02 - Preserve measured, override and effective BPM/key distinction.** Acceptance: UI never mislabels manual value as measured. Required verification: Half/double/blank/reset and server validation tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Library.test.tsx 'double and half fill in what was measured', 'can go back to what was measured'. Needs a person: independent review.
+3. **S4-0106-03 - Harden correction constraints and input errors.** Acceptance: Out-of-range and malformed Camelot values retain draft input. Required verification: Boundary, locale decimal and invalid text tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Library.test.tsx 'shows what's wrong with a value that isn't allowed, and keeps it there'. Needs a person: locale-decimal review.
+4. **S4-0106-04 - Expose downstream analysis/transition effects without overclaiming.** Acceptance: User knows edits may trigger rerender without fake guarantee. Required verification: Dependent render invalidation contract tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Library.test.tsx 'saves what was typed, and says what'll be made again'; integration.e2e.ts 'a correction made while the page is open shows up, and only touches its own transitions'. Needs a person: independent review.
+5. **S4-0106-05 - Preserve prioritize/exclude/never/play/music classification.** Acceptance: Actions remain scoped to exact song ID. Required verification: Duplicate-name and conflicting updates tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: Library.test.tsx 'music and not music can be switched, without touching the file', 'shows exact current flags before confirming a batch edit'. Needs a person: independent review.
+6. **S4-0106-06 - Design analysed/partial/failed/unsuitable readiness explanation.** Acceptance: No false ready from missing beat or key fields. Required verification: Readiness state decision table tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: readiness.test.ts; test_library_edges.py 'a_song_analysis_gave_up_on_says_so_rather_than_looking_ready'; Library.test.tsx 'distinguishes analysed songs from mix-ready songs'. Needs a person: independent review.
+7. **S4-0106-07 - Preserve Library context after closing Song Details.** Acceptance: Search page and focused song restored where valid. Required verification: Back/Forward and deletion focus tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/ui/controls.tsx Dialog returns focus by data-focus-key; Library.tsx keeps search and page in the URL; web/e2e/flows.e2e.ts 'dialogs give focus back'. Needs a person: Back/Forward and deletion focus review.
+8. **S4-0106-08 - Represent watched, missing and disconnected sources separately.** Acceptance: Unavailable drive is not interpreted as deleted audio. Required verification: Disconnect/reconnect/path change fixtures. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: test_library_edges.py 'a_song_whose_file_has_moved_says_so'; tests/test_folder_relink.py; web/src/views/Workshop.test.tsx 'show folders, and whether each can be found'. Needs a person: real drive disconnect and reconnect.
+9. **S4-0106-09 - Verify folder removal semantics and local-file safety.** Acceptance: Stop watch never deletes user music. Required verification: Filesystem snapshot backend contract tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: src/selecta/routes/system.py stop_watching only edits the preference; tests/test_api_contracts.py 'stopping_watching_touches_nothing_else' and new 'stopping_watching_leaves_every_music_file_byte_for_byte'. Needs a person: independent review.
+10. **S4-0106-10 - Maintain local-first privacy in diagnostics/copy actions.** Acceptance: No accidental private paths in sharing surfaces. Required verification: Redaction, permissions and text injection tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: tests/test_api_contracts.py 'diagnostics_have_no_paths_or_song_names'; Workshop.test.tsx 'show diagnostics with nothing personal in them'; flows.e2e.ts 'diagnostics hold nothing private'. Needs a person: privacy review.
 
 ## Required negative cases and regression strategy
 
@@ -69,6 +69,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | Implemented (10/10) | Not verified | Source reconciliation against current code with focused tests run 2026-11-10; every task still needs independent verification |
 
 ## Related documents
 

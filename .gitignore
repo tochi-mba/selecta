@@ -57,3 +57,7 @@ Thumbs.db
 
 # Local PostgreSQL for tests (docs/engineering/testing.md)
 .pgdata/
+
+# Temporary Git merge objects created by restricted-workspace tooling
+_gitmerge*
+

@@ -6,6 +6,7 @@ import { Shape } from '../studio';
 import { Studio } from './Studio';
 
 const deck = vi.hoisted(() => ({
+  lost: undefined as string[] | undefined,
   made: [] as { shape: unknown; setShape: ReturnType<typeof vi.fn>; play: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn>; solo: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn>; load: ReturnType<typeof vi.fn>; onCell: (cell: number) => void }[],
 }));
 
@@ -20,7 +21,7 @@ vi.mock('../studio', async (actual) => {
       stop = vi.fn();
       solo = vi.fn();
       close = vi.fn();
-      load = vi.fn(async () => {});
+      load = vi.fn(async () => deck.lost);
       onCell: (cell: number) => void = () => {};
       constructor(_seconds: number, _cells: number, shape: unknown) {
         this.shape = shape;
@@ -351,6 +352,29 @@ describe('the seam studio', () => {
     expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
   });
 
+  it('a fine tune answer that comes back after a stroke keeps the stroke and says so', async () => {
+    open();
+    const backend = globalThis.fetch;
+    let release: () => void = () => {};
+    const held = new Promise<void>((done) => { release = done; });
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.endsWith('/studio/tune')) return backend(url, init);
+      await held;
+      return new Response(JSON.stringify({ shape: shape(1, 1), changes: ['Brought every part in.'] }), { status: 200 });
+    }));
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await screen.findByRole('button', { name: 'Fine tuning…' });
+    fireEvent.click(cell);
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    await act(async () => release());
+    expect(await screen.findByText('You changed the grid while Selecta was working, so your version stays.')).toBeInTheDocument();
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    expect(await square('Song 2 bass, square 2')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByText('Brought every part in.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
   it('explains when Selecta can’t arrange these two, and keeps the grid as it is', async () => {
     open();
     const cell = await square('Song 1 voice, square 1');
@@ -382,6 +406,28 @@ describe('Studio representation parity', () => {
     expect(boxes[1]).toHaveAttribute('data-cell', '0-1');
     fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
     expect(await square('Song 1 voice, square 2')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('keeps every square, solo and mode the same through Light, Dark and System (FP-0266-07)', async () => {
+    const { setPrefs } = await import('../state/prefs');
+    open();
+    fireEvent.click(await square('Song 1 voice, square 2'));
+    fireEvent.click(await square('Song 2 drums, square 8'));
+    const cells = () => screen.getAllByRole('button', { name: /, bars? [0-9]/i }).map((cell) => `${cell.getAttribute('aria-label')}=${cell.getAttribute('aria-pressed')}`);
+    const before = cells();
+    expect(before).toHaveLength(64);
+    for (const theme of ['light', 'dark', 'system'] as const) {
+      act(() => setPrefs({ theme }));
+      expect(cells()).toEqual(before);
+      fireEvent.click(screen.getByRole('button', { name: 'Detailed list' }));
+      const boxes = screen.getAllByRole('checkbox');
+      expect(boxes).toHaveLength(64);
+      expect(boxes[1]).not.toBeChecked();
+      fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+      expect(cells()).toEqual(before);
+    }
+    // the shape sent to the deck is the edited one, untouched by any theme change
+    expect(deck.made.at(-1)?.setShape).toHaveBeenCalled();
   });
 });
 
@@ -437,4 +483,27 @@ describe('Studio pointer painting', () => {
     }
   });
 
+});
+
+// S3-0059-07: a stem that couldn't be loaded is named unavailable and can't be edited, while the rest still works
+describe('a studio with a stem missing', () => {
+  afterEach(() => {
+    deck.lost = undefined;
+    deck.made.length = 0;
+    window.localStorage.removeItem('selecta.studio.abc');
+  });
+
+  it('marks that lane unavailable, ignores presses on it, and leaves the other lanes working', async () => {
+    deck.lost = ['b_bass'];
+    open();
+    const [lost] = await screen.findAllByRole('button', { name: /^Song 2 bass, bars? 1\D.*unavailable$/i });
+    expect(lost).toHaveAttribute('aria-disabled', 'true');
+    const before = lost.getAttribute('aria-pressed');
+    fireEvent.click(lost);
+    expect(lost).toHaveAttribute('aria-pressed', before);
+    const voice = await square('Song 1 voice, square 1');
+    expect(voice).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(voice);
+    expect(voice).toHaveAttribute('aria-pressed', 'false');
+  });
 });

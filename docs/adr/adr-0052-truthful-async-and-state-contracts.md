@@ -1,14 +1,14 @@
 # ADR-0052: Truthful asynchronous state, optimistic mutations and recovery
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 8 of 8 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 2 - Foundations
 - **Extends existing decisions:** ADR-0005, ADR-0028, ADR-0036
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0052-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Create domain-specific typed view models and a common state contract. Separate i
 
 - Components consume centrally normalized readiness and error models. Every individual state includes its allowable actions and announcement policy; disabled actions explain blockers when useful.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0052-01 - Not started.** Inventory initial, populated, empty, partial, refreshing, saving, offline, failed, recovered and unavailable states by route and operation.
-2. **S3-0052-02 - Not started.** Define typed result discriminants and canonical mapping for analysis, song readiness, seams, requests, drafts and export.
-3. **S3-0052-03 - Not started.** Implement request cancellation/ignore-stale policies keyed by resource identity and revision.
-4. **S3-0052-04 - Not started.** Standardize optimistic transaction IDs, rollback, idempotency and server reconciliation.
-5. **S3-0052-05 - Not started.** Build content-shaped skeletons plus explicit delayed/stalled/retry states that preserve geometry.
-6. **S3-0052-06 - Not started.** Provide actionable error boundaries and reconnect behavior without claiming success prematurely.
-7. **S3-0052-07 - Not started.** Specify accessible status announcements that do not produce incessant screen-reader chatter.
-8. **S3-0052-08 - Not started.** Create tests for server disconnect/restart, partial response, out-of-order messages, double click and missing payload fields.
+1. **S3-0052-01 - Implemented.** Inventory initial, populated, empty, partial, refreshing, saving, offline, failed, recovered and unavailable states by route and operation. **Evidence:** docs/adr/selecta-3-baseline.md 'States by surface' (first load, empty, partial, refreshing, failed, server gone, recovered per surface); web/src/shell/mpSurfaceInventory.test.ts 'every entry names an owner that exists, a known fixture and an honest state denominator' (passed 2026-11-10).
+2. **S3-0052-02 - Implemented.** Define typed result discriminants and canonical mapping for analysis, song readiness, seams, requests, drafts and export. **Evidence:** web/src/state/readiness.ts, web/src/state/jobs.ts and web/src/ui/seam.ts; web/src/state/readiness.test.ts 'does not call a cached but cut-off seam ready for a continuous mix' and 'shows failures before pending queue or rendering states'; web/src/state/jobs.test.ts 'never crashes the app for an incomplete status from a different server version' (passed 2026-11-10).
+3. **S3-0052-03 - Implemented.** Implement request cancellation/ignore-stale policies keyed by resource identity and revision. **Evidence:** web/src/state/async.ts; web/src/state/async.test.tsx 'ignores an old response that completes after a newer request' and 'never shows the previous key after switching, even before effects finish'; web/src/views/Library.test.tsx 'only the newest search counts, however the answers arrive'; web/src/views/Mixes.test.tsx 'ignores an older answer that arrives after the newer search, and can be cleared' (passed 2026-11-10).
+4. **S3-0052-04 - Implemented.** Standardize optimistic transaction IDs, rollback, idempotency and server reconciliation. **Evidence:** x-operation-id and x-mix-order guards; tests/test_operation_identity.py test_operation_id_deduplicates_only_the_exact_command; web/src/views/Requests.test.tsx 'a request appears the moment it’s picked, before the server answers', 'a pick that fails only takes itself back' and 'a slow poll can’t bring back something just cancelled'; web/src/views/Drafts.test.tsx 'does not let an older, delayed refresh undo a confirmed render-line change' (passed 2026-11-10).
+5. **S3-0052-05 - Implemented.** Build content-shaped skeletons plus explicit delayed/stalled/retry states that preserve geometry. **Evidence:** web/src/ui/Skeleton.tsx; web/e2e/finishing.e2e.ts 'pages hold their shape while they load, even when every answer is slow' (passed 2026-11-10).
+6. **S3-0052-06 - Implemented.** Provide actionable error boundaries and reconnect behavior without claiming success prematurely. **Evidence:** web/e2e/flows.e2e.ts 'it says so, keeps what’s on screen, and recovers by itself' and 'a change that couldn’t be sent says so, and nothing pretends it happened'; web/src/shell/Shell.test.tsx 'says so across the top, and what’s on screen stays' (passed 2026-11-10).
+7. **S3-0052-07 - Implemented.** Specify accessible status announcements that do not produce incessant screen-reader chatter. **Evidence:** web/e2e/finishing.e2e.ts 'playing doesn’t flood a screen reader: the song is said once, and the clock never is'; web/src/ui/controls.test.tsx 'problems are announced as problems' (passed 2026-11-10).
+8. **S3-0052-08 - Implemented.** Create tests for server disconnect/restart, partial response, out-of-order messages, double click and missing payload fields. **Evidence:** web/e2e/flows.e2e.ts 'it says so, keeps what’s on screen, and recovers by itself'; web/src/state/jobs.test.ts 'never crashes the app for an incomplete status from a different server version'; web/src/views/Mixes.test.tsx 'does not misreport zero mix-ready songs when an older server omits that count'; web/src/state/async.test.tsx 'ignores an old response that completes after a newer request'; web/src/ui/controls.test.tsx 'can’t be pressed twice while it’s going' (passed 2026-11-10).
 
 ## Preservation and integration constraints
 
@@ -65,6 +65,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (8/8) | Task-by-task evidence on each item; 0 need a person, 0 still open |
 
 ## References
 

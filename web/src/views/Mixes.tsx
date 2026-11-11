@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, get, MixData, post, VibeCard } from '../api';
-import { useFlags } from '../flags';
+import { flagOn, useFlags } from '../flags';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { useLocationText } from '../router';
 import { orderOf } from '../state/readiness';
@@ -11,7 +11,7 @@ import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
 import { buildSummary, MixSetup } from './MixSetup';
-import { VibeMotif } from '../ui/MusicObjects';
+import { LengthScale, VibeMotif } from '../ui/MusicObjects';
 import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
 import { ViewProps } from './shared';
@@ -21,10 +21,28 @@ const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 
 type Asked = { key: string; name: string; open: boolean; order?: string };
 
+// EX-0117-02: the chosen length is kept in this browser, like the other shaping choices,
+// so a new visit starts where the listener left it. Anything unexpected falls back to 30 min.
+const LENGTH_KEY = 'selecta.mixLength';
+function rememberedLength(): number {
+  if (!flagOn('mixes.shaping.remember_length')) return SET_LENGTHS[0].songs;
+  try {
+    const saved = Number(window.localStorage.getItem(LENGTH_KEY));
+    return SET_LENGTHS.some((option) => option.songs === saved) ? saved : SET_LENGTHS[0].songs;
+  } catch {
+    return SET_LENGTHS[0].songs;
+  }
+}
+function rememberLength(songs: number) {
+  if (!flagOn('mixes.shaping.remember_length')) return;
+  try { window.localStorage.setItem(LENGTH_KEY, String(songs)); } catch { /* not remembered is fine */ }
+}
+
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
 export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus }: ViewProps) {
   const [cards, setCards] = useState<VibeCard[] | null>(null);
-  const [songs, setSongs] = useState(12);
+  const [songs, setSongsState] = useState(rememberedLength);
+  const setSongs = (next: number) => { setSongsState(next); rememberLength(next); };
   const [building, setBuilding] = useState('');
   const buildingNow = useRef(false);
   const hereNow = useRef(true);
@@ -131,7 +149,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const readinessAvailable = Number.isFinite(counts.ready);
   const readyCount = counts.ready;
-  // a mix that's playing or paused is what would be replaced, so that's when to ask
+  // a mix that's playing or paused is what would be replaced, so that's when to ask (EX-0117-04: idle builds straight away)
   const replacing = mix.length > 0 && now.phase !== 'idle';
   const ask = (asked: Asked) => {
     const choice = { ...asked, order: orderOf(mix) };
@@ -164,25 +182,29 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   return (
     <main className="page mixes" id="main">
       {firstMix && <SetupSteps stage="listen" />}
-      {firstMix && (
-        <p className="notice" role="status">
-          Your library now has enough ready songs to make a first mix. Nothing starts playing until you choose Play.
-        </p>
-      )}
       <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
-        <p className="eyebrow">Quick Play · {firstMix ? 'Your library is ready' : 'Tap and play'}</p>
+        {/* MP-0282-07: on the first run the notice under Play already says the library is ready */}
+        {!firstMix && <p className="eyebrow">Quick Play · Tap and play</p>}
         <h2 id="mix-quick-title" className="mix-path-label">Listen now, shape later</h2>
         <h3 className="display">{hero?.name ?? 'Selecta’s pick'}</h3>
+        {/* MP-0283-01: what the pick can draw on sits between its name and its description, on the same edge as Play */}
+        {hero && hero.songs > 0 && (
+          <p className="vibe-card-facts mix-quick-facts">
+            <span>{hero.songs} matching songs</span>
+            <span>About {length(hero.seconds)} of matching source songs</span>
+          </p>
+        )}
         <p className="lede">{hero?.blurb ?? 'The strongest run it can find through your library.'}</p>
         <div className="row wrap">
           <Action
             className="primary big"
-            disabled={!hero?.ready || !!building}
+            disabled={!hero?.ready || (!!building && building !== 'pick')}
+            busy={building === 'pick'}
             working="Building…"
             title={replacing ? `Replaces ${mixName}, which you can undo` : undefined}
             run={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
@@ -195,9 +217,16 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                 About {option.label}
               </button>
             ))}
+            <LengthScale songs={songs} most={SET_LENGTHS[SET_LENGTHS.length - 1].songs} />
           </div>
           {shaping && <button aria-label="Customize: Shape this mix (optional)" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>
+        {/* MP-0282-07: the first-run reassurance sits under Play, so Play stays in the first screen on a phone */}
+        {firstMix && (
+          <p className="notice" role="status">
+            Your library now has enough ready songs to make a first mix. Nothing starts playing until you choose Play.
+          </p>
+        )}
         {hero && !hero.ready && <p className="hint">{hero.name} needs {hero.needs} more mix-ready {hero.needs === 1 ? 'song' : 'songs'} before it can play.</p>}
         {shaping && <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>}
         <p className="hint">
@@ -246,7 +275,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           )}
         </div>
         {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when Selecta is available.</Problem>}
-        {!cards && !cardsFailed && <Skeleton variant="vibes" lines={6} label="Finding compatible mix candidates" />}
+        {!cards && !cardsFailed && <Skeleton variant="vibes" lines={6} label="Finding compatible mix candidates" retry={() => setCardsAttempt((value) => value + 1)} />}
         {visibleGroups.map((group) => {
           const inGroup = ready.filter((card) => card.group === group);
           if (!inGroup.length) return null;
@@ -261,22 +290,18 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                       <h3>{card.name}</h3>
                       {card.tempo && <span className="vibe-tempo">{card.tempo[0]}–{card.tempo[1]} BPM</span>}
                     </div>
-                    {card.family && <p className="vibe-scope"><Icon name="circle" /> Stays within {card.family}</p>}
+                    {card.family && <p className="vibe-scope"><Icon name="circle" size="compact" /> Stays within {card.family}</p>}
                     <p className="vibe-card-summary">{card.blurb}</p>
                     <div className="vibe-card-facts" aria-label={`${card.songs} matching songs, about ${length(card.seconds)} of matching source audio`}>
                       <span>{card.songs} matching songs</span>
                       <span>About {length(card.seconds)} of matching source songs</span>
-                    </div>
-                    <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
-                      <Action className="primary" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
-                      {on('editor') && <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
-                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
                     </div>
                     <details className="vibe-card-detail">
                       <summary>Why {card.name}? More details</summary>
                       <p>{card.blurb}</p>
                       <p className="artists"><span>Draws from</span> {card.artists.join(', ') || 'your mix-ready songs'}</p>
                       <p className="how">{card.moves}</p>
+                      {!!card.basis?.length && <p className="vibe-basis">Chosen by {listed(card.basis)}, measured from your songs. The name and words describe the aim, not a label on every song.</p>}
                       <p className="hint">Planning preference, not a promised song order or transition quality. Play replaces the current mix after confirmation{on('editor') ? '; Shape first opens the new mix for editing' : ''}{on('drafts') ? '; Save draft leaves playback unchanged' : ''}. The generated result depends on available recordings and cues.</p>
                       {on('lucy') && (
                         <>
@@ -285,6 +310,13 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                         </>
                       )}
                     </details>
+                    {/* MP-0274-04: the actions close the card, so Play and Shape first share one line across a row of
+                        cards however a name, summary or this disclosure wraps */}
+                    <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
+                      <Action className="primary" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
+                      {on('editor') && <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
+                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
+                    </div>
                   </article>
                 ))}
               </div>
@@ -321,7 +353,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </section>
       )}
 
-      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} onClose={() => setCustomizing(false)} />}
+      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} songs={songs} onSongs={setSongs} onClose={() => setCustomizing(false)} />}
       {confirming && (
         <Dialog
           title={`Replace ${mixName}?`}

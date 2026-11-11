@@ -1,7 +1,7 @@
 # ADR-0080: Make controls, asynchronous states, recovery and Undo dependable
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
+- **Implementation status:** In progress: 10 Implemented (automated), 0 In progress, 0 need a person only (2026-11-10 reconciliation); 0/10 Verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 1 - cross-cutting interaction foundations
@@ -23,16 +23,16 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0080-01 - Define shared initial/empty/partial/refresh/error/offline/recovery presentation rules.** Acceptance: Each state includes visible facts, allowed actions, focus/announcement behaviour and next step.
-2. **S31-0080-02 - Review skeleton geometry for every high-traffic content surface.** Acceptance: Placeholders match real content structure and do not cause large avoidable layout jumps.
-3. **S31-0080-03 - Unify busy and duplicate-submit behaviour.** Acceptance: One action has immediate feedback, prevents duplicate mutations, and remains recoverable after timeout or failure.
-4. **S31-0080-04 - Audit global toast, Activity and scoped Undo lifetimes.** Acceptance: Burst messages never make the only undo inaccessible; undo never targets a newer or different mix.
-5. **S31-0080-05 - Review all dialog, drawer, sheet, menu and tooltip focus paths.** Acceptance: Escape, Tab, trigger-return, focus restore, outside click and stacked overlay behaviour match expected patterns.
-6. **S31-0080-06 - Audit stale-response reconciliation and persistent data survival.** Acceptance: Late search, poll, request, render or edit response cannot overwrite the latest user action.
-7. **S31-0080-07 - Make error text specific and actionable.** Acceptance: Every meaningful failure states what failed, what remains safe and how to retry or recover.
-8. **S31-0080-08 - Review command palette and shortcut discoverability.** Acceptance: Disabled commands explain why; typed search, pointer selection, arrow keys and keyboard shortcut opt-out work.
-9. **S31-0080-09 - Review accessible announcements for non-chattering progress.** Acceptance: Song/page/action outcome is announced once; clocks, polling and repeated progress do not flood live regions.
-10. **S31-0080-10 - Test rapid user input while the server is slow or disconnected.** Acceptance: No silent lost clicks, fabricated success, duplicate request, or focus reset during reconnect.
+1. **S31-0080-01 - Define shared initial/empty/partial/refresh/error/offline/recovery presentation rules.** Acceptance: Each state includes visible facts, allowed actions, focus/announcement behaviour and next step. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/state/async.test.tsx` (keeps the last good answer only for a failed refresh); `Library.test.tsx` ("not being able to load isn't the same as having no songs"); `Drafts.test.tsx`, `Links.test.tsx` load-failure cases passed. **Needs a person:** review the presentation of each state on each surface.
+2. **S31-0080-02 - Review skeleton geometry for every high-traffic content surface.** Acceptance: Placeholders match real content structure and do not cause large avoidable layout jumps. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("pages hold their shape while they load, even when every answer is slow") passed. **Needs a person:** visual review of skeleton geometry.
+3. **S31-0080-03 - Unify busy and duplicate-submit behaviour.** Acceptance: One action has immediate feedback, prevents duplicate mutations, and remains recoverable after timeout or failure. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/ui/controls.test.tsx` ("shows it's working from the moment it's pressed", "can't be pressed twice", "says what went wrong, and can be pressed again"); `Now.test.tsx` ("blocks overlapping steering presses") passed. **Needs a person:** owner review for Verified; timeout/reconnect check on a device.
+4. **S31-0080-04 - Audit global toast, Activity and scoped Undo lifetimes.** Acceptance: Burst messages never make the only undo inaccessible; undo never targets a newer or different mix. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/ui/controls.test.tsx` ("a passing message can't push out something with an Undo", "keeps older Undo blocked"); `toastsCoalesce.test.tsx`; `Shell.test.tsx` ("undoes the mix it was about") passed. **Needs a person:** owner review for Verified; manual cross-mix Undo with a delayed server.
+5. **S31-0080-05 - Review all dialog, drawer, sheet, menu and tooltip focus paths.** Acceptance: Escape, Tab, trigger-return, focus restore, outside click and stacked overlay behaviour match expected patterns. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/ui/controls.test.tsx` dialog/menu/tooltip focus, Escape, nested inert and restore cases passed. **Needs a person:** keyboard and screen-reader walkthrough of every overlay.
+6. **S31-0080-06 - Audit stale-response reconciliation and persistent data survival.** Acceptance: Late search, poll, request, render or edit response cannot overwrite the latest user action. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `async.test.tsx`; `Library.test.tsx` ("only the newest search counts"); `Requests.test.tsx` ("a slow poll can't bring back something just cancelled"); `Mix.test.tsx` latest choice; `web/e2e/finishing.e2e.ts` slow search; `web/e2e/integration.e2e.ts` late cancelled request passed. **Needs a person:** owner review for Verified; multi-tab stale matrix.
+7. **S31-0080-07 - Make error text specific and actionable.** Acceptance: Every meaningful failure states what failed, what remains safe and how to retry or recover. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `controls.test.tsx` ("says what went wrong"); `Studio.test.tsx` ("explains a failure") passed; copy audit in `docs/adr/completion/copy-audit.md`. **Needs a person:** review of every failure message for what failed, what is safe and how to recover.
+8. **S31-0080-08 - Review command palette and shortcut discoverability.** Acceptance: Disabled commands explain why; typed search, pointer selection, arrow keys and keyboard shortcut opt-out work. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/ui/CommandPalette.test.tsx`, `web/src/state/shortcuts.test.ts`; `web/e2e/finishing.e2e.ts` ("the command palette says why a command can't run") passed. **Needs a person:** owner review for Verified.
+9. **S31-0080-09 - Review accessible announcements for non-chattering progress.** Acceptance: Song/page/action outcome is announced once; clocks, polling and repeated progress do not flood live regions. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("playing doesn't flood a screen reader"); `toastsCoalesce.test.tsx` passed. **Needs a person:** NVDA/Edge session confirming outcomes are announced once.
+10. **S31-0080-10 - Test rapid user input while the server is slow or disconnected.** Acceptance: No silent lost clicks, fabricated success, duplicate request, or focus reset during reconnect. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("two quick seam changes on a slow server"); `web/src/RuntimeApp.test.tsx` passed. **Needs a person:** disconnect/reconnect on a device.
 
 ## Required adverse cases and evidence
 
@@ -56,6 +56,7 @@ The owner accepted this decision on 2026-11-08. Every S31 task remains **Not sta
 |---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Original documentation-only finishing plan |\n| 2026-11-07 | Proposed | In progress | Selected UI/test code now on PR #25; complete verification still outstanding |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress | Every task re-checked against current code; 10 Implemented (automated), 0 In progress, 0 need a person only (2026-11-10 reconciliation); focused Vitest, pytest and Edge runs named per task; 0/10 Verified |
 
 ## Related documents
 

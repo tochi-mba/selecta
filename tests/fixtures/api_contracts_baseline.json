@@ -1,0 +1,726 @@
+{
+ "responses": {
+  "/api/discoveries": [],
+  "/api/drafts": {
+   "current": {
+    "eta": {
+     "high": "number",
+     "late": "bool",
+     "low": "number",
+     "seconds": "number"
+    },
+    "left": "number",
+    "name": "str",
+    "songs": "number"
+   },
+   "drafts": [],
+   "out_of_room": "bool"
+  },
+  "/api/links": {
+   "eta": "number",
+   "links": [],
+   "prepared": "number",
+   "preparing": "number"
+  },
+  "/api/listening?study=contract": [],
+  "/api/memory": {
+   "clean": "number",
+   "disliked": "number",
+   "failed": "number",
+   "liked": "number",
+   "tried": "number",
+   "warned": "number"
+  },
+  "/api/memory/ratings": {
+   "patterns": {
+    "audit": {
+     "clean": [
+      "number"
+     ],
+     "warned": [
+      "number"
+     ]
+    },
+    "beat grid": {
+     "0.8 or above": [
+      "number"
+     ],
+     "below 0.8": [
+      "number"
+     ]
+    },
+    "key distance": {
+     "5 or more": [
+      "number"
+     ],
+     "under 5": [
+      "number"
+     ]
+    },
+    "move": {
+     "bass_swap_blend": [
+      "number"
+     ],
+     "delay_throw": [
+      "number"
+     ],
+     "echo_out": [
+      "number"
+     ],
+     "phrase_roll": [
+      "number"
+     ],
+     "tempo_ramp": [
+      "number"
+     ],
+     "vocal_ride": [
+      "number"
+     ],
+     "word_blend": [
+      "number"
+     ],
+     "word_cut": [
+      "number"
+     ]
+    },
+    "overlap length": {
+     "12 bars": [
+      "number"
+     ],
+     "16 bars": [
+      "number"
+     ],
+     "4 bars": [
+      "number"
+     ],
+     "8 bars": [
+      "number"
+     ]
+    },
+    "overlap tempo gap": {
+     "over 8%": [
+      "number"
+     ],
+     "within 4%": [
+      "number"
+     ],
+     "within 8%": [
+      "number"
+     ]
+    },
+    "phrase roll tempo gap": {
+     "over 10%": [
+      "number"
+     ],
+     "within 10%": [
+      "number"
+     ]
+    }
+   },
+   "ratings": [
+    {
+     "a": "str",
+     "asked": "str",
+     "b": "str",
+     "bars": "number",
+     "gap": "number",
+     "good": "bool",
+     "grid": "number",
+     "home": "str",
+     "keys": "number",
+     "move": "str",
+     "note": "str",
+     "passed": "bool",
+     "seconds": "number"
+    }
+   ]
+  },
+  "/api/mix": {
+   "can_undo": "bool",
+   "eta": {
+    "high": "number",
+    "late": "bool",
+    "low": "number",
+    "seams": "number",
+    "seconds": "number"
+   },
+   "mix": [],
+   "name": "str"
+  },
+  "/api/requests": {
+   "requests": []
+  },
+  "/api/songs/1": {
+   "artist": "str",
+   "bar_times": [
+    "number"
+   ],
+   "beat_times": [
+    "number"
+   ],
+   "beats_per_bar": "number",
+   "bpm": "number",
+   "duration": "number",
+   "id": "number",
+   "key": "str",
+   "lines": [],
+   "lyric_status": "str",
+   "peaks": [
+    "number"
+   ],
+   "sections": [],
+   "title": "str"
+  },
+  "/api/songs?state=all": [
+   {
+    "artist": "str",
+    "bpm": "number",
+    "camelot": "str",
+    "duration": "number",
+    "energy": "null",
+    "genre": "null",
+    "grid_confidence": "null",
+    "id": "number",
+    "is_music": "number",
+    "lyric_status": "str",
+    "never": "bool",
+    "priority": "bool",
+    "processing_priority": "number",
+    "title": "str"
+   }
+  ],
+  "/api/status": {
+   "analysing": [],
+   "analysis_running": "bool",
+   "api": {
+    "features": [
+     "str"
+    ],
+    "version": "number"
+   },
+   "counts": {
+    "analysed": "number",
+    "lyrics": "number",
+    "music": "number",
+    "ready": "number",
+    "set_aside": "number",
+    "total": "number"
+   },
+   "eta": {
+    "accuracy": {
+     "jobs": "number",
+     "typical_miss": "null"
+    },
+    "analysis": {
+     "after_mix": "bool",
+     "high": "number",
+     "late": "bool",
+     "low": "number",
+     "seconds": "number",
+     "songs": "number"
+    },
+    "jobs": {
+     "audition": "number",
+     "auto": "number",
+     "bass_swap_blend": "number",
+     "cut_on_one": "number",
+     "delay_throw": "number",
+     "echo_out": "number",
+     "export_per_song": "number",
+     "filter_sweep": "number",
+     "phrase_roll": "number",
+     "reverb_wash": "number",
+     "stem_arrange": "number",
+     "stem_intertwine": "number",
+     "stem_studio": "number",
+     "stem_window": "number",
+     "studio_session": "number",
+     "tempo_ramp": "number",
+     "vocal_ride": "number",
+     "word_blend": "number",
+     "word_cut": "number",
+     "word_exchange": "number"
+    },
+    "line": {}
+   },
+   "flags": {
+    "account.data_export": "bool",
+    "account.deletion": "bool",
+    "account.identity": "bool",
+    "account.identity_sync": "bool",
+    "account.labs": "bool",
+    "account.lucy_settings": "bool",
+    "admin.console": "bool",
+    "analysis.time_estimates": "bool",
+    "app.activity": "bool",
+    "app.classic_nav": "bool",
+    "app.command_palette": "bool",
+    "app.glossary": "bool",
+    "app.install": "bool",
+    "app.motion_choice": "bool",
+    "app.shortcuts": "bool",
+    "app.theme_choice": "bool",
+    "billing.checkout": "bool",
+    "billing.portal": "bool",
+    "billing.webhooks": "bool",
+    "cloud.operations": "bool",
+    "cloud.signups": "bool",
+    "cloud.tracing": "bool",
+    "cloud.uploads": "bool",
+    "core.analysis": "bool",
+    "core.library": "bool",
+    "core.local_server": "bool",
+    "core.make_a_mix": "bool",
+    "core.mix_undo": "bool",
+    "core.playback": "bool",
+    "core.upgrade_backup": "bool",
+    "core.workspace": "bool",
+    "devices": "bool",
+    "devices.remote_control": "bool",
+    "discover.harmonic": "bool",
+    "discover.word_links": "bool",
+    "drafts": "bool",
+    "editor": "bool",
+    "editor.locks": "bool",
+    "editor.suggestions": "bool",
+    "export": "bool",
+    "learning.memory": "bool",
+    "library.batch": "bool",
+    "library.card_view": "bool",
+    "library.corrections": "bool",
+    "library.folder_watching": "bool",
+    "library.folders": "bool",
+    "library.never_play": "bool",
+    "library.priority": "bool",
+    "library.relink": "bool",
+    "listen.beat_countdown": "bool",
+    "listen.handoff_phrase": "bool",
+    "listen.lyrics": "bool",
+    "listen.media_keys": "bool",
+    "listen.stage": "bool",
+    "listen.steering": "bool",
+    "listen.visualizers": "bool",
+    "listen.why_transition": "bool",
+    "listen.word_focus": "bool",
+    "listening_study": "bool",
+    "lucy": "bool",
+    "lucy.commit": "bool",
+    "lucy.deep_plan": "bool",
+    "lucy.listening_history": "bool",
+    "lucy.memory": "bool",
+    "lucy.proposals": "bool",
+    "lucy.remote_providers": "bool",
+    "lucy.voice": "bool",
+    "lyrics.display": "bool",
+    "lyrics.lookup": "bool",
+    "lyrics.word_timing": "bool",
+    "mixes.genre_variants": "bool",
+    "mixes.ideas": "bool",
+    "mixes.seasonal": "bool",
+    "mixes.shaping": "bool",
+    "mixes.shaping.destination": "bool",
+    "mixes.shaping.energy_arc": "bool",
+    "mixes.shaping.feel": "bool",
+    "mixes.shaping.stem_moves": "bool",
+    "mixes.wordplay_showcase": "bool",
+    "move.bass_swap_blend": "bool",
+    "move.call_and_response": "bool",
+    "move.cut": "bool",
+    "move.delay_throw": "bool",
+    "move.echo_out": "bool",
+    "move.filter_sweep": "bool",
+    "move.intertwined_stems": "bool",
+    "move.phrase_roll": "bool",
+    "move.reverb_wash": "bool",
+    "move.strip_and_land": "bool",
+    "move.tempo_ramp": "bool",
+    "move.vocal_ride": "bool",
+    "move.word_blend": "bool",
+    "move.word_cut": "bool",
+    "mymixes.continue_working": "bool",
+    "ratings": "bool",
+    "render.repair": "bool",
+    "render.spare_time": "bool",
+    "render_line": "bool",
+    "requests": "bool",
+    "requests.bridges": "bool",
+    "rooms": "bool",
+    "rooms.display": "bool",
+    "rooms.votes": "bool",
+    "seam_inspector": "bool",
+    "seam_inspector.exact_cues": "bool",
+    "stem_studio": "bool",
+    "stem_studio.auto_arrange": "bool",
+    "stems": "bool",
+    "tools.old_planner": "bool",
+    "tools.reels": "bool",
+    "tools.set_mix": "bool",
+    "tools.stem_preview": "bool",
+    "workspace.backup": "bool",
+    "workspace.diagnostics": "bool",
+    "workspace.storage": "bool"
+   },
+   "mix_rendering": "bool",
+   "mixes_in_line": "number",
+   "moves": {
+    "auto": "str",
+    "bass_swap_blend": "str",
+    "cut_on_one": "str",
+    "delay_throw": "str",
+    "echo_out": "str",
+    "filter_sweep": "str",
+    "phrase_roll": "str",
+    "reverb_wash": "str",
+    "stem_arrange": "str",
+    "stem_intertwine": "str",
+    "stem_studio": "str",
+    "tempo_ramp": "str",
+    "vocal_ride": "str",
+    "word_blend": "str",
+    "word_cut": "str",
+    "word_exchange": "str"
+   },
+   "new_songs": "null",
+   "queue": [],
+   "scan": {
+    "status": "str"
+   },
+   "steering": {
+    "energy": "number",
+    "energy_arc": "null",
+    "flash": "str",
+    "length_mode": "str",
+    "mix_language": "str",
+    "stems": "str",
+    "target": "null",
+    "target_label": "null",
+    "wordplay": "str"
+   },
+   "transitions_ready": "number"
+  },
+  "/api/storage": {
+   "budget_bytes": "number",
+   "cache_bytes": "number",
+   "free_bytes": "number",
+   "kept_bytes": "number",
+   "largest_budget_bytes": "number",
+   "smallest_budget_bytes": "number",
+   "total_bytes": "number",
+   "used_bytes": "number"
+  },
+  "/api/vibes": [
+   {
+    "artists": [],
+    "basis": [
+     "str"
+    ],
+    "blurb": "str",
+    "family": "null",
+    "group": "str",
+    "key": "str",
+    "moves": "str",
+    "name": "str",
+    "needs": "number",
+    "ready": "bool",
+    "seconds": "number",
+    "songs": "number",
+    "tempo": "null"
+   }
+  ]
+ },
+ "routes": [
+  [
+   "get",
+   "/api/status"
+  ],
+  [
+   "get",
+   "/api/storage"
+  ],
+  [
+   "post",
+   "/api/storage"
+  ],
+  [
+   "post",
+   "/api/scan"
+  ],
+  [
+   "post",
+   "/api/library/check"
+  ],
+  [
+   "post",
+   "/api/analysis/start"
+  ],
+  [
+   "post",
+   "/api/analysis/stop"
+  ],
+  [
+   "post",
+   "/api/songs/{song_id}/priority"
+  ],
+  [
+   "post",
+   "/api/songs/{song_id}/never"
+  ],
+  [
+   "get",
+   "/api/songs"
+  ],
+  [
+   "get",
+   "/api/songs/{song_id}"
+  ],
+  [
+   "get",
+   "/api/songs/{song_id}/audio"
+  ],
+  [
+   "get",
+   "/api/discoveries"
+  ],
+  [
+   "post",
+   "/api/discoveries/{discovery_id}/hear"
+  ],
+  [
+   "get",
+   "/api/discoveries/{discovery_id}/hear/{step}"
+  ],
+  [
+   "post",
+   "/api/mix/{position}/studio"
+  ],
+  [
+   "post",
+   "/api/mix/{position}/studio/tune"
+  ],
+  [
+   "get",
+   "/api/studio/{key}/{side}/{lane}"
+  ],
+  [
+   "post",
+   "/api/mix/{position}/studio/use"
+  ],
+  [
+   "post",
+   "/api/discoveries/{discovery_id}/review"
+  ],
+  [
+   "get",
+   "/api/listening"
+  ],
+  [
+   "get",
+   "/api/listening/{trial}/{option}/audio"
+  ],
+  [
+   "post",
+   "/api/listening/{trial}/response"
+  ],
+  [
+   "post",
+   "/api/playback/skip"
+  ],
+  [
+   "post",
+   "/api/steer"
+  ],
+  [
+   "post",
+   "/api/plan"
+  ],
+  [
+   "get",
+   "/api/mix"
+  ],
+  [
+   "get",
+   "/api/drafts"
+  ],
+  [
+   "post",
+   "/api/drafts"
+  ],
+  [
+   "post",
+   "/api/drafts/restore"
+  ],
+  [
+   "post",
+   "/api/drafts/{draft}/name"
+  ],
+  [
+   "post",
+   "/api/drafts/{draft}/duplicate"
+  ],
+  [
+   "delete",
+   "/api/drafts/{draft}"
+  ],
+  [
+   "post",
+   "/api/drafts/{draft}/play"
+  ],
+  [
+   "post",
+   "/api/drafts/{draft}/line"
+  ],
+  [
+   "delete",
+   "/api/drafts/{draft}/line"
+  ],
+  [
+   "post",
+   "/api/drafts/{draft}/line/move"
+  ],
+  [
+   "get",
+   "/api/vibes"
+  ],
+  [
+   "post",
+   "/api/vibes/{key}/build"
+  ],
+  [
+   "post",
+   "/api/mix/build"
+  ],
+  [
+   "post",
+   "/api/mix/undo"
+  ],
+  [
+   "post",
+   "/api/mix/clear"
+  ],
+  [
+   "post",
+   "/api/mix/{position}/leave-later"
+  ],
+  [
+   "post",
+   "/api/requests/consider"
+  ],
+  [
+   "post",
+   "/api/requests/{request_id}/bridges"
+  ],
+  [
+   "post",
+   "/api/requests/{request_id}/bridge"
+  ],
+  [
+   "post",
+   "/api/requests/{request_id}/hear"
+  ],
+  [
+   "post",
+   "/api/requests/{request_id}/add"
+  ],
+  [
+   "post",
+   "/api/requests/insert"
+  ],
+  [
+   "get",
+   "/api/requests"
+  ],
+  [
+   "post",
+   "/api/requests"
+  ],
+  [
+   "delete",
+   "/api/requests/{request_id}"
+  ],
+  [
+   "post",
+   "/api/mix/songs"
+  ],
+  [
+   "delete",
+   "/api/mix/songs/{position}"
+  ],
+  [
+   "post",
+   "/api/mix/move"
+  ],
+  [
+   "get",
+   "/api/mix/suggest"
+  ],
+  [
+   "post",
+   "/api/songs/{song_id}/analyse"
+  ],
+  [
+   "post",
+   "/api/mix/{position}/lock"
+  ],
+  [
+   "post",
+   "/api/mix/{position}/swap"
+  ],
+  [
+   "get",
+   "/api/mix/{position}/options"
+  ],
+  [
+   "post",
+   "/api/mix/{position}/seam"
+  ],
+  [
+   "post",
+   "/api/mix/{position}/render"
+  ],
+  [
+   "post",
+   "/api/mix/render"
+  ],
+  [
+   "post",
+   "/api/mix/export"
+  ],
+  [
+   "get",
+   "/api/exports/{name}"
+  ],
+  [
+   "post",
+   "/api/seams"
+  ],
+  [
+   "get",
+   "/api/seams/{key}"
+  ],
+  [
+   "get",
+   "/api/seams/{key}/clip"
+  ],
+  [
+   "get",
+   "/api/seams/{key}/preview"
+  ],
+  [
+   "post",
+   "/api/seams/{key}/rate"
+  ],
+  [
+   "get",
+   "/api/memory"
+  ],
+  [
+   "get",
+   "/api/memory/ratings"
+  ],
+  [
+   "get",
+   "/api/links"
+  ]
+ ],
+ "source": "main 911c981 src/selecta/api.py; responses captured 2026-11-10 against the test_api_contracts library"
+}

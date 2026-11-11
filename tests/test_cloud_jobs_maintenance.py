@@ -92,6 +92,7 @@ def test_a_cancel_requested_job_whose_worker_vanished_is_cancelled(store):
     assert (after.state, after.lease_generation) == (JobState.CANCELLED, 2)
 
 
+@pytest.mark.invariants_off("plants a superseded attempt with raw SQL")
 def test_an_attempt_already_superseded_is_closed_without_touching_the_job(store):
     job, claim = claimed(store)
     with transaction(store.engine) as connection:
@@ -102,6 +103,7 @@ def test_an_attempt_already_superseded_is_closed_without_touching_the_job(store)
     assert store.job(job.id).state == JobState.LEASED
 
 
+@pytest.mark.invariants_off("deletes a job under its live attempt")
 def test_an_attempt_whose_job_is_gone_is_left_for_the_next_pass(store):
     job, claim = claimed(store)
     with transaction(store.engine) as connection:
@@ -314,14 +316,14 @@ def test_the_loop_runs_each_task_when_it_falls_due(sqlite_engine, clock):
         ))
     done = loop.run_once(moment=0.0)
     assert done["reaped"] == [claim.attempt_id]
-    assert done["retried"] == 0 and done["preempted"] == []
+    assert done["retried"] == 0 and done["preempted"] == [] and done["materialised"] == 0
     assert [d.workspace_id for d in done["reconciled"]] == ["ghost"]
     assert differences == done["reconciled"]
     assert "rebased" in done and done["pruned"] == 0
     assert loop.run_once(moment=1.0) == {}
-    assert set(loop.run_once(moment=5.0)) == {"reaped", "retried", "preempted"}
+    assert set(loop.run_once(moment=5.0)) == {"reaped", "retried", "preempted", "materialised"}
     assert set(loop.run_once(moment=3_600.0)) == {
-        "reaped", "retried", "preempted", "reconciled", "rebased", "pruned"
+        "reaped", "retried", "preempted", "materialised", "reconciled", "rebased", "pruned"
     }
 
 

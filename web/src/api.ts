@@ -67,6 +67,8 @@ export type DraftInfo = {
   eta: Eta | null;
   to_render: number;
   missing: number;
+  /** The draft's songs in order, for its Mix Sleeve. An older server doesn't send it. */
+  song_ids?: number[];
 };
 
 export type DraftList = {
@@ -174,6 +176,8 @@ export type VibeCard = {
   tempo: [number, number] | null;
   moves: string;
   seconds: number;
+  /** GP-0259-07: the measured song facts this idea chooses by; older servers omit it */
+  basis?: string[];
 };
 
 export type Suggestion = {
@@ -202,13 +206,25 @@ export type Storage = {
 export class ApiError extends Error {
   status: number;
   code: string;
+  /** T0244: the request's own operation id, the same one Diagnostics lists beside its outcome. */
+  operation: string;
 
-  constructor(message: string, status: number, code = '') {
+  constructor(message: string, status: number, code = '', operation = '') {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.operation = operation;
   }
+}
+
+/** The operation id a request was sent with, if it had one. */
+function operationOf(init?: RequestInit): string {
+  const headers = init?.headers;
+  if (!headers) return '';
+  if (headers instanceof Headers) return headers.get('x-operation-id') ?? '';
+  if (Array.isArray(headers)) return headers.find(([name]) => name.toLowerCase() === 'x-operation-id')?.[1] ?? '';
+  return (headers as Record<string, string>)['x-operation-id'] ?? '';
 }
 
 /** What a stopped server looks like to someone using the app, wherever it comes up. It doesn't say
@@ -245,12 +261,14 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
     let code = '';
     try {
       const body = await response.json();
-      detail = typeof body.detail === 'string' ? body.detail : detail;
+      // a framework's bare "Internal Server Error" says nothing a listener can use; keep ours
+      const generic = response.status >= 500 && body.detail === 'Internal Server Error';
+      detail = typeof body.detail === 'string' && !generic ? body.detail : detail;
       code = body.code ?? '';
     } catch {
       /* the status text will do */
     }
-    throw new ApiError(detail, response.status, code);
+    throw new ApiError(detail, response.status, code, operationOf(init));
   }
   return await response.json();
   } catch (error) {
@@ -342,7 +360,7 @@ export type ExportJob = {
 /** What Selecta can say about a folder before reading it, from GET /api/folders/check. */
 export type FolderCheck = {
   ok: boolean;
-  kind: 'ok' | 'missing' | 'not_a_folder' | 'no_access' | 'already_added' | 'inside_added' | 'no_audio';
+  kind: 'ok' | 'missing' | 'invalid' | 'not_a_folder' | 'no_access' | 'already_added' | 'inside_added' | 'empty' | 'no_audio';
   reason: string;
   path: string;
   audio_files: number | null;

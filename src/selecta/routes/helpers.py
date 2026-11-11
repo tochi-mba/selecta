@@ -162,6 +162,9 @@ def add_routes(app, ctx) -> None:
             "eta": eta,
             "to_render": round(own),
             "missing": max(stored - len(items), 0),
+            # The returned song order makes a draft's Mix Sleeve reflect what it
+            # really holds (SF-0206-04).
+            "song_ids": [item["song_id"] for item in items],
         }
 
     def drafts_payload(conn: sqlite3.Connection) -> dict:

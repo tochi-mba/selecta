@@ -6,6 +6,9 @@ import hashlib
 import os
 import shutil
 import sys
+import threading
+import time
+import traceback
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -58,54 +61,98 @@ def add_routes(app, ctx) -> None:
     songs_in_line = ctx.songs_in_line
     store = ctx.store
 
+    status_calls = 0
+
     @app.get("/api/status")
     def status() -> dict:
-        with connect() as conn:
-            songs, _ = library_now(conn)
-            counts = _counts(conn)
-            counts["ready"] = len(songs)
-            steering = get_steering(conn).__dict__
-            target_song = (
-                conn.execute(
-                    "SELECT artist,title FROM songs WHERE id=?", (steering["target"],)
-                ).fetchone()
-                if steering["target"]
-                else None
-            )
-            steering["target_label"] = (
-                f"{target_song['artist'] or 'Unknown artist'} - "
-                f"{target_song['title'] or 'Untitled'}"
-                if target_song
-                else None
-            )
-            return {
-                "counts": counts,
-                "steering": steering,
-                "queue": queue(conn),
-                "moves": {name: label for name, (label, _) in moves_on().items()},
-                "analysis_running": bool(
-                    background.analysis and background.analysis.poll() is None
-                ),
-                "analysing": songs_in_line(conn),
-                "mix_rendering": jobs.mix_is_rendering(settings.home),
-                "mixes_in_line": len(mix.line_order(conn)),
-                "transitions_ready": len(store.remembered().clean),
-                "api": {"version": API_VERSION, "features": API_FEATURES},
-                "flags": flags.snapshot(),
-                "eta": {
-                    "analysis": analysis_left(
-                        conn,
-                        bool(background.analysis and background.analysis.poll() is None),
-                        jobs.mix_is_rendering(settings.home),
-                        rendering_ahead(conn),
+        nonlocal status_calls
+        status_calls += 1
+        tracing = os.environ.get("SELECTA_DEV_STARTUP") == "1" and status_calls <= 3
+        start = time.monotonic()
+        stage = ["Starting status handler"]
+        finished = threading.Event()
+
+        def mark(message: str) -> None:
+            stage[0] = message
+            if tracing:
+                print(f"[STATUS] +{time.monotonic() - start:.1f}s {message}", flush=True)
+
+        if tracing:
+            handler_thread = threading.get_ident()
+
+            def watchdog() -> None:
+                if finished.wait(10):
+                    return
+                print(f"[STATUS] Still busy after 10s: {stage[0]}", flush=True)
+                if finished.wait(20):
+                    return
+                frame = sys._current_frames().get(handler_thread)
+                if frame:
+                    stack = "".join(traceback.format_stack(frame)[-14:])
+                    print(f"[STATUS] Python stack at 30s:\n{stack}", flush=True)
+
+            threading.Thread(target=watchdog, daemon=True).start()
+
+        try:
+            mark("Opening local SQLite connection")
+            with connect() as conn:
+                mark("SQLite connection opened")
+                mark("Loading analysed-song library and computing traits")
+                songs, _ = library_now(conn)
+                mark(f"Library loaded: {len(songs)} ready songs")
+                mark("Reading database counts and mix state")
+                counts = _counts(conn)
+                counts["ready"] = len(songs)
+                steering = get_steering(conn).__dict__
+                target_song = (
+                    conn.execute(
+                        "SELECT artist,title FROM songs WHERE id=?", (steering["target"],)
+                    ).fetchone()
+                    if steering["target"]
+                    else None
+                )
+                steering["target_label"] = (
+                    f"{target_song['artist'] or 'Unknown artist'} - "
+                    f"{target_song['title'] or 'Untitled'}"
+                    if target_song
+                    else None
+                )
+                mark("Reading the cached transition count without filesystem scans")
+                transitions_ready, transitions_indexing = store.remembered_count()
+                mark("Assembling queue, background jobs and estimates")
+                result = {
+                    "counts": counts,
+                    "steering": steering,
+                    "queue": queue(conn),
+                    "moves": {name: label for name, (label, _) in moves_on().items()},
+                    "analysis_running": bool(
+                        background.analysis and background.analysis.poll() is None
                     ),
-                    "line": analysis_line_left(conn, songs_in_line(conn)),
-                    "jobs": store.clock.recent(),
-                    "accuracy": store.clock.accuracy(),
-                },
-                "scan": background.scan,
-                "new_songs": background.found,
-            }
+                    "analysing": songs_in_line(conn),
+                    "mix_rendering": jobs.mix_is_rendering(settings.home),
+                    "mixes_in_line": len(mix.line_order(conn)),
+                    "transitions_ready": transitions_ready,
+                    "transitions_indexing": transitions_indexing,
+                    "api": {"version": API_VERSION, "features": API_FEATURES},
+                    "flags": flags.snapshot(),
+                    "eta": {
+                        "analysis": analysis_left(
+                            conn,
+                            bool(background.analysis and background.analysis.poll() is None),
+                            jobs.mix_is_rendering(settings.home),
+                            rendering_ahead(conn),
+                        ),
+                        "line": analysis_line_left(conn, songs_in_line(conn)),
+                        "jobs": store.clock.recent(),
+                        "accuracy": store.clock.accuracy(),
+                    },
+                    "scan": background.scan,
+                    "new_songs": background.found,
+                }
+                mark("Status snapshot complete")
+                return result
+        finally:
+            finished.set()
 
     @app.get("/api/storage")
     def storage() -> dict:

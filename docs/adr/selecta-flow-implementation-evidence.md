@@ -4,286 +4,286 @@
 
 | SF task | ADR | Implementation | Independently Verified | Owner | Implementing PR / SHA | Evidence / reviewer |
 |---|---|---|---|---|---|---|
-| SF-0198-01 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | - | - |
-| SF-0198-02 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | - | - |
-| SF-0198-03 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | - | - |
-| SF-0198-04 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | - | - |
-| SF-0198-05 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | - | - |
-| SF-0198-06 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | - | - |
-| SF-0198-07 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | - | - |
-| SF-0198-08 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started | No | Unassigned | - | - |
-| SF-0199-01 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | - | - |
-| SF-0199-02 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | - | - |
-| SF-0199-03 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | - | - |
-| SF-0199-04 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | - | - |
-| SF-0199-05 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | - | - |
-| SF-0199-06 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | - | - |
-| SF-0199-07 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | - | - |
-| SF-0199-08 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started | No | Unassigned | - | - |
-| SF-0200-01 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | - | - |
-| SF-0200-02 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | - | - |
-| SF-0200-03 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | - | - |
-| SF-0200-04 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | - | - |
-| SF-0200-05 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | - | - |
-| SF-0200-06 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | - | - |
-| SF-0200-07 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | - | - |
-| SF-0200-08 | [ADR-0200](adr-0200-art-direction.md) | Not started | No | Unassigned | - | - |
-| SF-0201-01 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | - | - |
-| SF-0201-02 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | - | - |
-| SF-0201-03 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | - | - |
-| SF-0201-04 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | - | - |
-| SF-0201-05 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | - | - |
-| SF-0201-06 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | - | - |
-| SF-0201-07 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | - | - |
-| SF-0201-08 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started | No | Unassigned | - | - |
-| SF-0202-01 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | - | - |
-| SF-0202-02 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | - | - |
-| SF-0202-03 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | - | - |
-| SF-0202-04 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | - | - |
-| SF-0202-05 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | - | - |
-| SF-0202-06 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | - | - |
-| SF-0202-07 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | - | - |
-| SF-0202-08 | [ADR-0202](adr-0202-typography.md) | Not started | No | Unassigned | - | - |
-| SF-0203-01 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0203-02 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0203-03 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0203-04 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0203-05 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0203-06 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0203-07 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0203-08 | [ADR-0203](adr-0203-spatial-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0204-01 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | - | - |
-| SF-0204-02 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | - | - |
-| SF-0204-03 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | - | - |
-| SF-0204-04 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | - | - |
-| SF-0204-05 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | - | - |
-| SF-0204-06 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | - | - |
-| SF-0204-07 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | - | - |
-| SF-0204-08 | [ADR-0204](adr-0204-primitives.md) | Not started | No | Unassigned | - | - |
-| SF-0205-01 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | - | - |
-| SF-0205-02 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | - | - |
-| SF-0205-03 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | - | - |
-| SF-0205-04 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | - | - |
-| SF-0205-05 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | - | - |
-| SF-0205-06 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | - | - |
-| SF-0205-07 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | - | - |
-| SF-0205-08 | [ADR-0205](adr-0205-sensory-motion.md) | Not started | No | Unassigned | - | - |
-| SF-0206-01 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | - |
-| SF-0206-02 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | - |
-| SF-0206-03 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | - |
-| SF-0206-04 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | - |
-| SF-0206-05 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | - |
-| SF-0206-06 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | - |
-| SF-0206-07 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | - |
-| SF-0206-08 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | - |
-| SF-0207-01 | [ADR-0207](adr-0207-the-thread.md) | Not started | No | Unassigned | - | - |
-| SF-0207-02 | [ADR-0207](adr-0207-the-thread.md) | Not started | No | Unassigned | - | - |
-| SF-0207-03 | [ADR-0207](adr-0207-the-thread.md) | Not started | No | Unassigned | - | - |
-| SF-0207-04 | [ADR-0207](adr-0207-the-thread.md) | Not started | No | Unassigned | - | - |
-| SF-0207-05 | [ADR-0207](adr-0207-the-thread.md) | Not started | No | Unassigned | - | - |
-| SF-0207-06 | [ADR-0207](adr-0207-the-thread.md) | Not started | No | Unassigned | - | - |
-| SF-0207-07 | [ADR-0207](adr-0207-the-thread.md) | Not started | No | Unassigned | - | - |
-| SF-0207-08 | [ADR-0207](adr-0207-the-thread.md) | Not started | No | Unassigned | - | - |
-| SF-0208-01 | [ADR-0208](adr-0208-navigation.md) | Not started | No | Unassigned | - | - |
-| SF-0208-02 | [ADR-0208](adr-0208-navigation.md) | Not started | No | Unassigned | - | - |
-| SF-0208-03 | [ADR-0208](adr-0208-navigation.md) | Not started | No | Unassigned | - | - |
-| SF-0208-04 | [ADR-0208](adr-0208-navigation.md) | Not started | No | Unassigned | - | - |
-| SF-0208-05 | [ADR-0208](adr-0208-navigation.md) | Not started | No | Unassigned | - | - |
-| SF-0208-06 | [ADR-0208](adr-0208-navigation.md) | Not started | No | Unassigned | - | - |
-| SF-0208-07 | [ADR-0208](adr-0208-navigation.md) | Not started | No | Unassigned | - | - |
-| SF-0208-08 | [ADR-0208](adr-0208-navigation.md) | Not started | No | Unassigned | - | - |
-| SF-0209-01 | [ADR-0209](adr-0209-persistent-player.md) | Not started | No | Unassigned | - | - |
-| SF-0209-02 | [ADR-0209](adr-0209-persistent-player.md) | Not started | No | Unassigned | - | - |
-| SF-0209-03 | [ADR-0209](adr-0209-persistent-player.md) | Not started | No | Unassigned | - | - |
-| SF-0209-04 | [ADR-0209](adr-0209-persistent-player.md) | Not started | No | Unassigned | - | - |
-| SF-0209-05 | [ADR-0209](adr-0209-persistent-player.md) | Not started | No | Unassigned | - | - |
-| SF-0209-06 | [ADR-0209](adr-0209-persistent-player.md) | Not started | No | Unassigned | - | - |
-| SF-0209-07 | [ADR-0209](adr-0209-persistent-player.md) | Not started | No | Unassigned | - | - |
-| SF-0209-08 | [ADR-0209](adr-0209-persistent-player.md) | Not started | No | Unassigned | - | - |
-| SF-0210-01 | [ADR-0210](adr-0210-listening-theatre.md) | Not started | No | Unassigned | - | - |
-| SF-0210-02 | [ADR-0210](adr-0210-listening-theatre.md) | Not started | No | Unassigned | - | - |
-| SF-0210-03 | [ADR-0210](adr-0210-listening-theatre.md) | Not started | No | Unassigned | - | - |
-| SF-0210-04 | [ADR-0210](adr-0210-listening-theatre.md) | Not started | No | Unassigned | - | - |
-| SF-0210-05 | [ADR-0210](adr-0210-listening-theatre.md) | Not started | No | Unassigned | - | - |
-| SF-0210-06 | [ADR-0210](adr-0210-listening-theatre.md) | Not started | No | Unassigned | - | - |
-| SF-0210-07 | [ADR-0210](adr-0210-listening-theatre.md) | Not started | No | Unassigned | - | - |
-| SF-0210-08 | [ADR-0210](adr-0210-listening-theatre.md) | Not started | No | Unassigned | - | - |
-| SF-0211-01 | [ADR-0211](adr-0211-real-handoff.md) | Not started | No | Unassigned | - | - |
-| SF-0211-02 | [ADR-0211](adr-0211-real-handoff.md) | Not started | No | Unassigned | - | - |
-| SF-0211-03 | [ADR-0211](adr-0211-real-handoff.md) | Not started | No | Unassigned | - | - |
-| SF-0211-04 | [ADR-0211](adr-0211-real-handoff.md) | Not started | No | Unassigned | - | - |
-| SF-0211-05 | [ADR-0211](adr-0211-real-handoff.md) | Not started | No | Unassigned | - | - |
-| SF-0211-06 | [ADR-0211](adr-0211-real-handoff.md) | Not started | No | Unassigned | - | - |
-| SF-0211-07 | [ADR-0211](adr-0211-real-handoff.md) | Not started | No | Unassigned | - | - |
-| SF-0211-08 | [ADR-0211](adr-0211-real-handoff.md) | Not started | No | Unassigned | - | - |
-| SF-0212-01 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started | No | Unassigned | - | - |
-| SF-0212-02 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started | No | Unassigned | - | - |
-| SF-0212-03 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started | No | Unassigned | - | - |
-| SF-0212-04 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started | No | Unassigned | - | - |
-| SF-0212-05 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started | No | Unassigned | - | - |
-| SF-0212-06 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started | No | Unassigned | - | - |
-| SF-0212-07 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started | No | Unassigned | - | - |
-| SF-0212-08 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started | No | Unassigned | - | - |
-| SF-0213-01 | [ADR-0213](adr-0213-lyric-stage.md) | Not started | No | Unassigned | - | - |
-| SF-0213-02 | [ADR-0213](adr-0213-lyric-stage.md) | Not started | No | Unassigned | - | - |
-| SF-0213-03 | [ADR-0213](adr-0213-lyric-stage.md) | Not started | No | Unassigned | - | - |
-| SF-0213-04 | [ADR-0213](adr-0213-lyric-stage.md) | Not started | No | Unassigned | - | - |
-| SF-0213-05 | [ADR-0213](adr-0213-lyric-stage.md) | Not started | No | Unassigned | - | - |
-| SF-0213-06 | [ADR-0213](adr-0213-lyric-stage.md) | Not started | No | Unassigned | - | - |
-| SF-0213-07 | [ADR-0213](adr-0213-lyric-stage.md) | Not started | No | Unassigned | - | - |
-| SF-0213-08 | [ADR-0213](adr-0213-lyric-stage.md) | Not started | No | Unassigned | - | - |
-| SF-0214-01 | [ADR-0214](adr-0214-time-seek.md) | Not started | No | Unassigned | - | - |
-| SF-0214-02 | [ADR-0214](adr-0214-time-seek.md) | Not started | No | Unassigned | - | - |
-| SF-0214-03 | [ADR-0214](adr-0214-time-seek.md) | Not started | No | Unassigned | - | - |
-| SF-0214-04 | [ADR-0214](adr-0214-time-seek.md) | Not started | No | Unassigned | - | - |
-| SF-0214-05 | [ADR-0214](adr-0214-time-seek.md) | Not started | No | Unassigned | - | - |
-| SF-0214-06 | [ADR-0214](adr-0214-time-seek.md) | Not started | No | Unassigned | - | - |
-| SF-0214-07 | [ADR-0214](adr-0214-time-seek.md) | Not started | No | Unassigned | - | - |
-| SF-0214-08 | [ADR-0214](adr-0214-time-seek.md) | Not started | No | Unassigned | - | - |
-| SF-0215-01 | [ADR-0215](adr-0215-up-next.md) | Not started | No | Unassigned | - | - |
-| SF-0215-02 | [ADR-0215](adr-0215-up-next.md) | Not started | No | Unassigned | - | - |
-| SF-0215-03 | [ADR-0215](adr-0215-up-next.md) | Not started | No | Unassigned | - | - |
-| SF-0215-04 | [ADR-0215](adr-0215-up-next.md) | Not started | No | Unassigned | - | - |
-| SF-0215-05 | [ADR-0215](adr-0215-up-next.md) | Not started | No | Unassigned | - | - |
-| SF-0215-06 | [ADR-0215](adr-0215-up-next.md) | Not started | No | Unassigned | - | - |
-| SF-0215-07 | [ADR-0215](adr-0215-up-next.md) | Not started | No | Unassigned | - | - |
-| SF-0215-08 | [ADR-0215](adr-0215-up-next.md) | Not started | No | Unassigned | - | - |
-| SF-0216-01 | [ADR-0216](adr-0216-explore-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0216-02 | [ADR-0216](adr-0216-explore-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0216-03 | [ADR-0216](adr-0216-explore-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0216-04 | [ADR-0216](adr-0216-explore-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0216-05 | [ADR-0216](adr-0216-explore-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0216-06 | [ADR-0216](adr-0216-explore-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0216-07 | [ADR-0216](adr-0216-explore-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0216-08 | [ADR-0216](adr-0216-explore-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0217-01 | [ADR-0217](adr-0217-listening-compass.md) | Not started | No | Unassigned | - | - |
-| SF-0217-02 | [ADR-0217](adr-0217-listening-compass.md) | Not started | No | Unassigned | - | - |
-| SF-0217-03 | [ADR-0217](adr-0217-listening-compass.md) | Not started | No | Unassigned | - | - |
-| SF-0217-04 | [ADR-0217](adr-0217-listening-compass.md) | Not started | No | Unassigned | - | - |
-| SF-0217-05 | [ADR-0217](adr-0217-listening-compass.md) | Not started | No | Unassigned | - | - |
-| SF-0217-06 | [ADR-0217](adr-0217-listening-compass.md) | Not started | No | Unassigned | - | - |
-| SF-0217-07 | [ADR-0217](adr-0217-listening-compass.md) | Not started | No | Unassigned | - | - |
-| SF-0217-08 | [ADR-0217](adr-0217-listening-compass.md) | Not started | No | Unassigned | - | - |
-| SF-0218-01 | [ADR-0218](adr-0218-connection-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0218-02 | [ADR-0218](adr-0218-connection-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0218-03 | [ADR-0218](adr-0218-connection-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0218-04 | [ADR-0218](adr-0218-connection-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0218-05 | [ADR-0218](adr-0218-connection-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0218-06 | [ADR-0218](adr-0218-connection-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0218-07 | [ADR-0218](adr-0218-connection-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0218-08 | [ADR-0218](adr-0218-connection-gallery.md) | Not started | No | Unassigned | - | - |
-| SF-0219-01 | [ADR-0219](adr-0219-create-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0219-02 | [ADR-0219](adr-0219-create-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0219-03 | [ADR-0219](adr-0219-create-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0219-04 | [ADR-0219](adr-0219-create-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0219-05 | [ADR-0219](adr-0219-create-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0219-06 | [ADR-0219](adr-0219-create-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0219-07 | [ADR-0219](adr-0219-create-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0219-08 | [ADR-0219](adr-0219-create-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0220-01 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0220-02 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0220-03 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0220-04 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0220-05 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0220-06 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0220-07 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0220-08 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0221-01 | [ADR-0221](adr-0221-transition-inspector.md) | Not started | No | Unassigned | - | - |
-| SF-0221-02 | [ADR-0221](adr-0221-transition-inspector.md) | Not started | No | Unassigned | - | - |
-| SF-0221-03 | [ADR-0221](adr-0221-transition-inspector.md) | Not started | No | Unassigned | - | - |
-| SF-0221-04 | [ADR-0221](adr-0221-transition-inspector.md) | Not started | No | Unassigned | - | - |
-| SF-0221-05 | [ADR-0221](adr-0221-transition-inspector.md) | Not started | No | Unassigned | - | - |
-| SF-0221-06 | [ADR-0221](adr-0221-transition-inspector.md) | Not started | No | Unassigned | - | - |
-| SF-0221-07 | [ADR-0221](adr-0221-transition-inspector.md) | Not started | No | Unassigned | - | - |
-| SF-0221-08 | [ADR-0221](adr-0221-transition-inspector.md) | Not started | No | Unassigned | - | - |
-| SF-0222-01 | [ADR-0222](adr-0222-energy-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0222-02 | [ADR-0222](adr-0222-energy-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0222-03 | [ADR-0222](adr-0222-energy-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0222-04 | [ADR-0222](adr-0222-energy-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0222-05 | [ADR-0222](adr-0222-energy-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0222-06 | [ADR-0222](adr-0222-energy-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0222-07 | [ADR-0222](adr-0222-energy-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0222-08 | [ADR-0222](adr-0222-energy-composition.md) | Not started | No | Unassigned | - | - |
-| SF-0223-01 | [ADR-0223](adr-0223-studio-canvas.md) | Not started | No | Unassigned | - | - |
-| SF-0223-02 | [ADR-0223](adr-0223-studio-canvas.md) | Not started | No | Unassigned | - | - |
-| SF-0223-03 | [ADR-0223](adr-0223-studio-canvas.md) | Not started | No | Unassigned | - | - |
-| SF-0223-04 | [ADR-0223](adr-0223-studio-canvas.md) | Not started | No | Unassigned | - | - |
-| SF-0223-05 | [ADR-0223](adr-0223-studio-canvas.md) | Not started | No | Unassigned | - | - |
-| SF-0223-06 | [ADR-0223](adr-0223-studio-canvas.md) | Not started | No | Unassigned | - | - |
-| SF-0223-07 | [ADR-0223](adr-0223-studio-canvas.md) | Not started | No | Unassigned | - | - |
-| SF-0223-08 | [ADR-0223](adr-0223-studio-canvas.md) | Not started | No | Unassigned | - | - |
-| SF-0224-01 | [ADR-0224](adr-0224-studio-ai-diff.md) | Not started | No | Unassigned | - | - |
-| SF-0224-02 | [ADR-0224](adr-0224-studio-ai-diff.md) | Not started | No | Unassigned | - | - |
-| SF-0224-03 | [ADR-0224](adr-0224-studio-ai-diff.md) | Not started | No | Unassigned | - | - |
-| SF-0224-04 | [ADR-0224](adr-0224-studio-ai-diff.md) | Not started | No | Unassigned | - | - |
-| SF-0224-05 | [ADR-0224](adr-0224-studio-ai-diff.md) | Not started | No | Unassigned | - | - |
-| SF-0224-06 | [ADR-0224](adr-0224-studio-ai-diff.md) | Not started | No | Unassigned | - | - |
-| SF-0224-07 | [ADR-0224](adr-0224-studio-ai-diff.md) | Not started | No | Unassigned | - | - |
-| SF-0224-08 | [ADR-0224](adr-0224-studio-ai-diff.md) | Not started | No | Unassigned | - | - |
-| SF-0225-01 | [ADR-0225](adr-0225-requests-route.md) | Not started | No | Unassigned | - | - |
-| SF-0225-02 | [ADR-0225](adr-0225-requests-route.md) | Not started | No | Unassigned | - | - |
-| SF-0225-03 | [ADR-0225](adr-0225-requests-route.md) | Not started | No | Unassigned | - | - |
-| SF-0225-04 | [ADR-0225](adr-0225-requests-route.md) | Not started | No | Unassigned | - | - |
-| SF-0225-05 | [ADR-0225](adr-0225-requests-route.md) | Not started | No | Unassigned | - | - |
-| SF-0225-06 | [ADR-0225](adr-0225-requests-route.md) | Not started | No | Unassigned | - | - |
-| SF-0225-07 | [ADR-0225](adr-0225-requests-route.md) | Not started | No | Unassigned | - | - |
-| SF-0225-08 | [ADR-0225](adr-0225-requests-route.md) | Not started | No | Unassigned | - | - |
-| SF-0226-01 | [ADR-0226](adr-0226-library-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0226-02 | [ADR-0226](adr-0226-library-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0226-03 | [ADR-0226](adr-0226-library-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0226-04 | [ADR-0226](adr-0226-library-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0226-05 | [ADR-0226](adr-0226-library-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0226-06 | [ADR-0226](adr-0226-library-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0226-07 | [ADR-0226](adr-0226-library-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0226-08 | [ADR-0226](adr-0226-library-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0227-01 | [ADR-0227](adr-0227-song-identity.md) | Not started | No | Unassigned | - | - |
-| SF-0227-02 | [ADR-0227](adr-0227-song-identity.md) | Not started | No | Unassigned | - | - |
-| SF-0227-03 | [ADR-0227](adr-0227-song-identity.md) | Not started | No | Unassigned | - | - |
-| SF-0227-04 | [ADR-0227](adr-0227-song-identity.md) | Not started | No | Unassigned | - | - |
-| SF-0227-05 | [ADR-0227](adr-0227-song-identity.md) | Not started | No | Unassigned | - | - |
-| SF-0227-06 | [ADR-0227](adr-0227-song-identity.md) | Not started | No | Unassigned | - | - |
-| SF-0227-07 | [ADR-0227](adr-0227-song-identity.md) | Not started | No | Unassigned | - | - |
-| SF-0227-08 | [ADR-0227](adr-0227-song-identity.md) | Not started | No | Unassigned | - | - |
-| SF-0228-01 | [ADR-0228](adr-0228-my-mixes.md) | Not started | No | Unassigned | - | - |
-| SF-0228-02 | [ADR-0228](adr-0228-my-mixes.md) | Not started | No | Unassigned | - | - |
-| SF-0228-03 | [ADR-0228](adr-0228-my-mixes.md) | Not started | No | Unassigned | - | - |
-| SF-0228-04 | [ADR-0228](adr-0228-my-mixes.md) | Not started | No | Unassigned | - | - |
-| SF-0228-05 | [ADR-0228](adr-0228-my-mixes.md) | Not started | No | Unassigned | - | - |
-| SF-0228-06 | [ADR-0228](adr-0228-my-mixes.md) | Not started | No | Unassigned | - | - |
-| SF-0228-07 | [ADR-0228](adr-0228-my-mixes.md) | Not started | No | Unassigned | - | - |
-| SF-0228-08 | [ADR-0228](adr-0228-my-mixes.md) | Not started | No | Unassigned | - | - |
-| SF-0229-01 | [ADR-0229](adr-0229-first-run.md) | Not started | No | Unassigned | - | - |
-| SF-0229-02 | [ADR-0229](adr-0229-first-run.md) | Not started | No | Unassigned | - | - |
-| SF-0229-03 | [ADR-0229](adr-0229-first-run.md) | Not started | No | Unassigned | - | - |
-| SF-0229-04 | [ADR-0229](adr-0229-first-run.md) | Not started | No | Unassigned | - | - |
-| SF-0229-05 | [ADR-0229](adr-0229-first-run.md) | Not started | No | Unassigned | - | - |
-| SF-0229-06 | [ADR-0229](adr-0229-first-run.md) | Not started | No | Unassigned | - | - |
-| SF-0229-07 | [ADR-0229](adr-0229-first-run.md) | Not started | No | Unassigned | - | - |
-| SF-0229-08 | [ADR-0229](adr-0229-first-run.md) | Not started | No | Unassigned | - | - |
-| SF-0230-01 | [ADR-0230](adr-0230-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0230-02 | [ADR-0230](adr-0230-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0230-03 | [ADR-0230](adr-0230-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0230-04 | [ADR-0230](adr-0230-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0230-05 | [ADR-0230](adr-0230-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0230-06 | [ADR-0230](adr-0230-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0230-07 | [ADR-0230](adr-0230-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0230-08 | [ADR-0230](adr-0230-workspace.md) | Not started | No | Unassigned | - | - |
-| SF-0231-01 | [ADR-0231](adr-0231-export-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0231-02 | [ADR-0231](adr-0231-export-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0231-03 | [ADR-0231](adr-0231-export-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0231-04 | [ADR-0231](adr-0231-export-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0231-05 | [ADR-0231](adr-0231-export-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0231-06 | [ADR-0231](adr-0231-export-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0231-07 | [ADR-0231](adr-0231-export-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0231-08 | [ADR-0231](adr-0231-export-experience.md) | Not started | No | Unassigned | - | - |
-| SF-0232-01 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started | No | Unassigned | - | - |
-| SF-0232-02 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started | No | Unassigned | - | - |
+| SF-0198-01 | [ADR-0198](adr-0198-artistic-product-charter.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/shell/mpSurfaceInventory.test.ts` (MP-0272 surface inventory, passed 2026-11-10); `docs/adr/completion/journeys.md`; `docs/adr/completion/route-state-register.md` |
+| SF-0198-02 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a light/dark design critique and a five-second study to define and judge three scene modes |
+| SF-0198-03 | [ADR-0198](adr-0198-artistic-product-charter.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/selecta-flow-feature-parity.md`; `web/e2e/listen.e2e.ts` (17 tests incl. 'media keys do what they say', 'only one tab plays at a time'); `web/e2e/flows.e2e.ts` 'saving a mix as an audio file makes a real FLAC', 'drafts: make one, name it, fill it, and it stays apart from the current mix', 'requests: asking, then seeing it find a place, and cancelling for good'; `web/e2e/finishing.e2e.ts` 'the full Studio grid works at the smallest size'; `web/src/audio/focus.test.tsx`; all run 2026-11-10 |
+| SF-0198-04 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started; needs a person | No | Unassigned | - | Needs a person: real listening observation to set and judge attention and interruption budgets |
+| SF-0198-05 | [ADR-0198](adr-0198-artistic-product-charter.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/controls.test.tsx` 'scope-safe Undo history', 'Undo runs what that message was about'; `web/src/App.test.tsx` 'asks before replacing an active mix with a draft, and cancel leaves playback untouched'; `web/src/audio/focus.test.tsx` 'never restarts the mix after someone has pressed something themselves'; `web/e2e/listen.e2e.ts` 'Pause stops the clock, and Resume carries on from the same place'; run 2026-11-10 |
+| SF-0198-06 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started; needs a person | No | Unassigned | - | Needs a person: novice and DJ task tests with participants |
+| SF-0198-07 | [ADR-0198](adr-0198-artistic-product-charter.md) | Not started; needs a person | No | Unassigned | - | Needs a person: owner approval of art-first success metrics and a participant protocol |
+| SF-0198-08 | [ADR-0198](adr-0198-artistic-product-charter.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/router.test.tsx` (5 tests); `web/e2e/pages.e2e.ts` 'reloading any page stays on it', 'Back and Forward go where they should', 'addresses that go nowhere say so'; run 2026-11-10 |
+| SF-0199-01 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `git cat-file -t c3715b14` = commit and `git merge-base --is-ancestor c3715b14 HEAD` true on 2026-11-10; recorded in `docs/adr/adr-0199-historical-status-reconciliation.md` Reconciliation record |
+| SF-0199-02 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | In progress | No | Unassigned | - | the state matrix exists and is machine-checked (`web/src/shell/mpSurfaceInventory.test.ts`, passed 2026-11-10); a full screenshot capture run (`web/e2e/mp-baseline.mp.ts`, `web/e2e/paired-theme.e2e.ts`) was not done in this session |
+| SF-0199-03 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/adr-0199-historical-status-reconciliation.md` (Existing features versus new design outcomes, 2026-11-10); `docs/adr/selecta-flow-status-reconciliation.md` |
+| SF-0199-04 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/adr-0199-historical-status-reconciliation.md` Source test catalogue (2026-11-10) |
+| SF-0199-05 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/adr-0199-historical-status-reconciliation.md` Screen review protocol (2026-11-10); `docs/adr/completion/visual-evidence.md` |
+| SF-0199-06 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a real-hardware baseline (OS, browser, CPU/GPU, background load) recorded with a reproducible benchmark on the owner's machine |
+| SF-0199-07 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/adr-0199-historical-status-reconciliation.md` Known existing limitations (2026-11-10) |
+| SF-0199-08 | [ADR-0199](adr-0199-historical-status-reconciliation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `python src/selecta/audit/checklist_evidence.py` passed 2026-11-10; `tests/test_checklist_evidence.py` (6 passed) |
+| SF-0200-01 | [ADR-0200](adr-0200-art-direction.md) | Not started; needs a person | No | Unassigned | - | Needs a person: designers producing three directions as side-by-side responsive boards |
+| SF-0200-02 | [ADR-0200](adr-0200-art-direction.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a blind brand-comprehension study |
+| SF-0200-03 | [ADR-0200](adr-0200-art-direction.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a both-theme specimen review of surface, depth and grain |
+| SF-0200-04 | [ADR-0200](adr-0200-art-direction.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a five-second task comprehension study of editorial layouts |
+| SF-0200-05 | [ADR-0200](adr-0200-art-direction.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a design judgement that the look holds together with absent media |
+| SF-0200-06 | [ADR-0200](adr-0200-art-direction.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a screenshot contrast review that light and dark were each designed on their own terms |
+| SF-0200-07 | [ADR-0200](adr-0200-art-direction.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a review against a diverse real library for genre or mood assumptions |
+| SF-0200-08 | [ADR-0200](adr-0200-art-direction.md) | Not started; needs a person | No | Unassigned | - | Needs a person: owner approval of a direction, its criteria and rollback |
+| SF-0201-01 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/tokens.css`; `docs/adr/completion/theme-and-edges.md`; `web/src/styles/spacing-tokens.test.ts`, `typography.test.ts`, `css-ownership.test.ts` (passed 2026-11-10) |
+| SF-0201-02 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a dark specimen review in dim settings |
+| SF-0201-03 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a light specimen review |
+| SF-0201-04 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/controls.test.tsx` 'never rely on colour alone'; `web/src/ui/MusicObjects.test.tsx` 'keeps queued, rendering, failed and rendered Thread states distinct without inventing sound'; `web/e2e/flow-forced-colors.e2e.ts`; run 2026-11-10 |
+| SF-0201-05 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/pages.e2e.ts` 'every page passes the automatic accessibility checks in light', '... in dark', 'dialogs and drawers pass the automatic accessibility checks too'; run 2026-11-10 |
+| SF-0201-06 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/flow-forced-colors.e2e.ts` 'forced colours keep controls visible, and selection and focus distinct', 'forced colours keep the Listen transport and seek strip usable' (Edge, forced-colors emulated; 2026-11-10) |
+| SF-0201-07 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'changing the theme while playing starts nothing again, and the title bar follows', 'a manual theme and browser chrome agree before app JavaScript, even when the OS disagrees'; run 2026-11-10 |
+| SF-0201-08 | [ADR-0201](adr-0201-semantic-colour-themes.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a reviewer approving a screenshot gallery of every screen at mobile and desktop in both themes |
+| SF-0202-01 | [ADR-0202](adr-0202-typography.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/typography.test.ts` (MP-0275, passed 2026-11-10) |
+| SF-0202-02 | [ADR-0202](adr-0202-typography.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/typography.test.ts`; `web/e2e/pages.e2e.ts` 'nothing goes wider than the window, from the smallest phone to 4K', 'nothing goes wider than the window in landscape, or zoomed in as far as browsers go'; run 2026-11-10 |
+| SF-0202-03 | [ADR-0202](adr-0202-typography.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/typography.test.ts` 'time, BPM, percentage and count surfaces are tabular'; `web/src/styles/optical-alignment.test.ts`; run 2026-11-10 |
+| SF-0202-04 | [ADR-0202](adr-0202-typography.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'long, right-to-left and duplicate names stay readable and whole at the smallest size'; `web/src/styles/typography.test.ts` 'Library and editor song names resolve their own direction'; run 2026-11-10 |
+| SF-0202-05 | [ADR-0202](adr-0202-typography.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an AT and touch check that a truncated name is fully available |
+| SF-0202-06 | [ADR-0202](adr-0202-typography.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/flow-fonts.test.ts` (2 passed); `web/e2e/pages.e2e.ts` 'the page only ever talks to this computer'; run 2026-11-10 |
+| SF-0202-07 | [ADR-0202](adr-0202-typography.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a reading study of dialog and information copy |
+| SF-0202-08 | [ADR-0202](adr-0202-typography.md) | Not started; needs a person | No | Unassigned | - | Needs a person: design sign-off of type in both themes |
+| SF-0203-01 | [ADR-0203](adr-0203-spatial-composition.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/css-ownership.test.ts` (ADR-278, passed 2026-11-10) |
+| SF-0203-02 | [ADR-0203](adr-0203-spatial-composition.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/spacing-tokens.test.ts`; `web/e2e/spacing-rhythm.e2e.ts` 'MP-0273-01 spacing tokens resolve to the documented scale', 'MP-0273-04 headings keep a 12-48px rhythm'; run 2026-11-10 |
+| SF-0203-03 | [ADR-0203](adr-0203-spatial-composition.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/layer-precedence.test.ts`; `docs/engineering/layer-precedence.md`; `web/e2e/overlay-arbitration.e2e.ts` (dialog actions at each size, software keyboard); run 2026-11-10 |
+| SF-0203-04 | [ADR-0203](adr-0203-spatial-composition.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a visual critique of nested cards |
+| SF-0203-05 | [ADR-0203](adr-0203-spatial-composition.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/spacing-rhythm.e2e.ts` 'MP-0273-06 compact rows stay readable with 24px targets, 44px on touch'; run 2026-11-10 |
+| SF-0203-06 | [ADR-0203](adr-0203-spatial-composition.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/flow-narrow.e2e.ts` 'at 320px the inspector and the mini-player are both reachable while the music plays'; `web/e2e/finishing.e2e.ts` 'the full Studio grid works at the smallest size'; run 2026-11-10 |
+| SF-0203-07 | [ADR-0203](adr-0203-spatial-composition.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/flows.e2e.ts` 'focus is never hidden behind the bottom bar on a phone'; `web/e2e/overlay-arbitration.e2e.ts` 'software keyboard makes notification chrome yield'; `web/e2e/finishing.e2e.ts` 'with an on-screen keyboard up, what's being typed gets the room'; `web/e2e/pages.e2e.ts` zoom test; run 2026-11-10 |
+| SF-0203-08 | [ADR-0203](adr-0203-spatial-composition.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'pages hold their shape while they load, even when every answer is slow'; `web/e2e/integration.e2e.ts` 'a hundred quick looks at a page never lose what's on it'; run 2026-11-10 |
+| SF-0204-01 | [ADR-0204](adr-0204-primitives.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/completion/components.md`; `web/src/ui/ControlGallery.tsx`; `web/src/ui/controls.test.tsx` 'a button that takes time' (5 tests), 'states'; run 2026-11-10 |
+| SF-0204-02 | [ADR-0204](adr-0204-primitives.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a usability test that each page's primary action is unique and reachable |
+| SF-0204-03 | [ADR-0204](adr-0204-primitives.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an NVDA icon audit |
+| SF-0204-04 | [ADR-0204](adr-0204-primitives.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'a folder that can't be used says why and what to try', 'a slow search can't replace a newer one, and typing keeps its place'; `web/e2e/flows.e2e.ts` 'a change that couldn't be sent says so'; run 2026-11-10 |
+| SF-0204-05 | [ADR-0204](adr-0204-primitives.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/controls.test.tsx` 'things on top of the page', 'a menu', 'a tooltip'; `web/e2e/flows.e2e.ts` 'keyboard alone gets from the top of the page to the content, and dialogs give focus back'; run 2026-11-10 |
+| SF-0204-06 | [ADR-0204](adr-0204-primitives.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/flow-forced-colors.e2e.ts` 'forced colours keep controls visible, and selection and focus distinct' (2026-11-10) |
+| SF-0204-07 | [ADR-0204](adr-0204-primitives.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/controls.test.tsx` 'Undo confirmation timing', 'says so if undoing fails'; `web/e2e/finishing.e2e.ts` 'two quick seam changes on a slow server: the last one wins, and Undo shows what's really there'; run 2026-11-10 |
+| SF-0204-08 | [ADR-0204](adr-0204-primitives.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an independent visual review of all primitive states in both themes |
+| SF-0205-01 | [ADR-0205](adr-0205-sensory-motion.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/motion-tokens.test.ts` (ADR-296, passed 2026-11-10); `docs/engineering/motion-inventory.md` |
+| SF-0205-02 | [ADR-0205](adr-0205-sensory-motion.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/styles/motion-tokens.test.ts`; `web/e2e/motion-preference.e2e.ts`; run 2026-11-10 |
+| SF-0205-03 | [ADR-0205](adr-0205-sensory-motion.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/motion-preference.e2e.ts` 'motion intensity is local and OS reduced-motion always wins'; `web/src/views/Now.test.tsx` 'keeps visual intensity independent from playback and remembers the choice'; run 2026-11-10 |
+| SF-0205-04 | [ADR-0205](adr-0205-sensory-motion.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/useReducedMotion.test.tsx` 'honours the operating system even when Expressive is selected'; `web/e2e/finishing.e2e.ts` 'with reduced motion nothing keeps moving by itself, on any page'; run 2026-11-10 |
+| SF-0205-05 | [ADR-0205](adr-0205-sensory-motion.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/spectrumVisuals.test.ts` (16 tests); `web/e2e/listen.e2e.ts` 'Play makes real sound, on a clock that really moves', 'a transition takes over exactly where it was planned, with no gap'; run 2026-11-10 |
+| SF-0205-06 | [ADR-0205](adr-0205-sensory-motion.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/listen.e2e.ts` 'Next and Previous go song by song, however fast they're pressed'; `web/e2e/integration.e2e.ts` 'a hundred quick looks at a page never lose what's on it'; `web/e2e/finishing.e2e.ts` 'fullscreen refused: ... Escape gets out, focus comes back'; run 2026-11-10 |
+| SF-0205-07 | [ADR-0205](adr-0205-sensory-motion.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a real-hardware CPU/GPU and power profile |
+| SF-0205-08 | [ADR-0205](adr-0205-sensory-motion.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a counterbalanced participant study of comfort and delight |
+| SF-0206-01 | [ADR-0206](adr-0206-music-artwork.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'gives idea groups distinct, stable abstract motifs without pretending to show album art', 'keeps requested and measured energy explicitly separate'; run 2026-11-10 |
+| SF-0206-02 | [ADR-0206](adr-0206-music-artwork.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'gives one library ID the same decorative motif without depending on titles or artwork'; run 2026-11-10 |
+| SF-0206-03 | [ADR-0206](adr-0206-music-artwork.md) | Not started | No | Unassigned | - | Selecta reads no embedded or remote cover art today, so there is no cover media to harden; motifs stand in (SF-0206-02) |
+| SF-0206-04 | [ADR-0206](adr-0206-music-artwork.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/sf0206MixSleeve.test.tsx` 'the compact sleeve draws the same strokes as the full one', 'a draft in My Mixes wears the sleeve the current mix would wear for the same song order'; `tests/test_drafts.py::test_the_list_says_where_each_draft_has_got_to` (song_ids); run 2026-11-10 |
+| SF-0206-05 | [ADR-0206](adr-0206-music-artwork.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a theme-gallery review of a limited art-family system |
+| SF-0206-06 | [ADR-0206](adr-0206-music-artwork.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/pages.e2e.ts` 'the page only ever talks to this computer'; run 2026-11-10 |
+| SF-0206-07 | [ADR-0206](adr-0206-music-artwork.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a responsive legibility review (no text sits over artwork today) |
+| SF-0206-08 | [ADR-0206](adr-0206-music-artwork.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'keeps a mix unique to its returned song order without claiming a waveform'; `web/src/views/CurrentMix.test.tsx`; `web/e2e/integration.e2e.ts` 'editing a draft while the current mix plays: neither touches the other'; run 2026-11-10 |
+| SF-0207-01 | [ADR-0207](adr-0207-the-thread.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'uses the rendered move rather than disguising a fallback', 'never calls an automatic unrendered transition a confirmed technique', 'keeps queued, rendering, failed and rendered Thread states distinct'; run 2026-11-10 |
+| SF-0207-02 | [ADR-0207](adr-0207-the-thread.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/controls.test.tsx` 'never rely on colour alone'; `web/e2e/flow-forced-colors.e2e.ts`; run 2026-11-10 |
+| SF-0207-03 | [ADR-0207](adr-0207-the-thread.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/player.test.ts` 'keeps the later occurrence when the same recording appears twice', 'previous and seek do not jump to the first copy'; `web/src/views/Mix.test.tsx` occurrence labels; run 2026-11-10 |
+| SF-0207-04 | [ADR-0207](adr-0207-the-thread.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an NVDA session on the Thread descriptions |
+| SF-0207-05 | [ADR-0207](adr-0207-the-thread.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a 320-2560 visual fixture review of compact and expanded forms |
+| SF-0207-06 | [ADR-0207](adr-0207-the-thread.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'keeps requested and measured energy explicitly separate', 'keeps unknown song energy as an unknown gap'; run 2026-11-10 |
+| SF-0207-07 | [ADR-0207](adr-0207-the-thread.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/sf0207ThreadContract.test.tsx` (5 tests: 'every route that draws a song motif or seam imports the one shared component', 'no route draws its own copy ...', 'the shared module keeps no state ...', 'the same song looks the same on any route ...', 'a seam says the same thing in the compact Edit row and the full Inspector'); run 2026-11-10 |
+| SF-0207-08 | [ADR-0207](adr-0207-the-thread.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a user comprehension study of planned, playing and ready |
+| SF-0208-01 | [ADR-0208](adr-0208-navigation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/router.test.tsx` 'every page's address leads back to it'; `web/src/shell/mpSurfaceInventory.test.ts`; `web/e2e/pages.e2e.ts` 'addresses that go nowhere say so'; run 2026-11-10 |
+| SF-0208-02 | [ADR-0208](adr-0208-navigation.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a findability study of desktop navigation |
+| SF-0208-03 | [ADR-0208](adr-0208-navigation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'the mini-player and bottom bar never overlap, and the last row can always be reached'; `web/e2e/pages.e2e.ts` 'on a phone, nothing you can press sits half hidden behind the player, at any height'; run 2026-11-10 |
+| SF-0208-04 | [ADR-0208](adr-0208-navigation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/router.test.tsx` 'moving around' (4 tests); `web/e2e/pages.e2e.ts` 'Back and Forward go where they should', 'reloading any page stays on it', 'the Library's filters are part of its address'; run 2026-11-10 |
+| SF-0208-05 | [ADR-0208](adr-0208-navigation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Mix.test.tsx` 'keeps each mix scope's exact selection separate when the mounted editor switches scope'; `web/src/App.test.tsx` 'opens from the list without touching the current mix, and stays open after a reload'; `web/e2e/pages.e2e.ts` 'the Library's filters are part of its address'; run 2026-11-10 |
+| SF-0208-06 | [ADR-0208](adr-0208-navigation.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an NVDA session on focus and scroll restoration |
+| SF-0208-07 | [ADR-0208](adr-0208-navigation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/shell/sceneTransition.test.ts` (5 tests incl. 'detects a browser without the View Transitions API and changes the page at once', 'falls back to an instant change when the browser refuses to start one'); `web/src/router.test.tsx`; `tests/test_flags.py` 'test_the_registry_has_no_problems', 'test_the_catalog_in_docs_is_up_to_date' (`app.scene_transitions`, `docs/flags.md`); run 2026-11-10 |
+| SF-0208-08 | [ADR-0208](adr-0208-navigation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/listen.e2e.ts` 'moving around the app leaves the music alone, and the mini-player follows'; run 2026-11-10 |
+| SF-0209-01 | [ADR-0209](adr-0209-persistent-player.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/player.ts` NowState; `web/src/player.test.ts` (32 tests incl. 'stops and says why when the last song won't load', 'never claims sound started when the context is closed'); run 2026-11-10 |
+| SF-0209-02 | [ADR-0209](adr-0209-persistent-player.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a wide and shallow visual review of the desktop transport |
+| SF-0209-03 | [ADR-0209](adr-0209-persistent-player.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'the mini-player and bottom bar never overlap' (320-430 and landscape); `web/e2e/overlay-arbitration.e2e.ts` 'software keyboard makes notification chrome yield without removing notices or the mini-player'; run 2026-11-10 |
+| SF-0209-04 | [ADR-0209](adr-0209-persistent-player.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/listen.e2e.ts` 'Play makes real sound, on a clock that really moves', 'a transition takes over exactly where it was planned, with no gap'; `web/src/player.test.ts` 'never shows a time past the end of the song'; run 2026-11-10 |
+| SF-0209-05 | [ADR-0209](adr-0209-persistent-player.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/audio/focus.test.tsx` (13 tests); `web/e2e/listen.e2e.ts` 'a preview takes the sound, and gives it back when it's done', 'only one tab plays at a time'; run 2026-11-10 |
+| SF-0209-06 | [ADR-0209](adr-0209-persistent-player.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'changing the theme while playing starts nothing again'; `web/e2e/listen.e2e.ts` 'moving around the app leaves the music alone'; `web/src/audio/focus.test.tsx` 'does not revive a mix after the listener pauses while a slow suspension is pending'; run 2026-11-10 |
+| SF-0209-07 | [ADR-0209](adr-0209-persistent-player.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/audio/mediaSession.test.ts` (3 tests); `web/e2e/listen.e2e.ts` 'media keys do what they say'; run 2026-11-10 |
+| SF-0209-08 | [ADR-0209](adr-0209-persistent-player.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'playing doesn't flood a screen reader: the song is said once, and the clock never is'; `web/e2e/listen.e2e.ts` 'the keyboard works the player'; `web/e2e/pages.e2e.ts` axe; run 2026-11-10 |
+| SF-0210-01 | [ADR-0210](adr-0210-listening-theatre.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a dark/light first-glance review of the song-first hero |
+| SF-0210-02 | [ADR-0210](adr-0210-listening-theatre.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/pages.e2e.ts` 'on a phone, Listen keeps display options after the song identity and transport reachable', landscape and zoom overflow tests; run 2026-11-10 |
+| SF-0210-03 | [ADR-0210](adr-0210-listening-theatre.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Now.test.tsx` 'missing or invalid song duration', 'beat-grid transition countdown'; `web/e2e/listen.e2e.ts` 'a song's audio going missing says so', 'a transition that isn't ready doesn't stop the music', 'the end of the mix comes to a stop'; run 2026-11-10 |
+| SF-0210-04 | [ADR-0210](adr-0210-listening-theatre.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'gives one library ID the same decorative motif without depending on titles or artwork'; `web/src/views/Now.tsx` TrackTitle; run 2026-11-10 |
+| SF-0210-05 | [ADR-0210](adr-0210-listening-theatre.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Now.test.tsx` 'keeps expert view controls discoverable without competing with playback'; run 2026-11-10 |
+| SF-0210-06 | [ADR-0210](adr-0210-listening-theatre.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a visual review during real playback that lyrics and Up Next never cover transport or text |
+| SF-0210-07 | [ADR-0210](adr-0210-listening-theatre.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'fullscreen refused: the lyrics still fill the page, Escape gets out, focus comes back, and the music never stops'; `web/e2e/listen.e2e.ts` 'lyrics follow the song, and the fullscreen view keeps everything working'; run 2026-11-10 |
+| SF-0210-08 | [ADR-0210](adr-0210-listening-theatre.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a comparative music study of listener preference |
+| SF-0211-01 | [ADR-0211](adr-0211-real-handoff.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/player.test.ts` 'transition readiness deadlines' (5 tests); `web/src/views/Now.test.tsx` 'beat-grid transition countdown', 'uses chronological seconds when the next handoff has no valid beat grid'; run 2026-11-10 |
+| SF-0211-02 | [ADR-0211](adr-0211-real-handoff.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a DJ audio review of cut, blend, wordplay and stem treatments |
+| SF-0211-03 | [ADR-0211](adr-0211-real-handoff.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/player.test.ts` 'keeps the later occurrence when the same recording appears twice', 'asks for the next seam once'; `web/src/views/Now.test.tsx`; run 2026-11-10 |
+| SF-0211-04 | [ADR-0211](adr-0211-real-handoff.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/listen.e2e.ts` 'a transition takes over exactly where it was planned, with no gap'; `web/src/views/Now.test.tsx` beat-grid countdown tests; run 2026-11-10 |
+| SF-0211-05 | [ADR-0211](adr-0211-real-handoff.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'uses the rendered move rather than disguising a fallback as the selected technique'; `web/e2e/listen.e2e.ts` 'a transition that isn't ready doesn't stop the music'; run 2026-11-10 |
+| SF-0211-06 | [ADR-0211](adr-0211-real-handoff.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/player.test.ts` 'a transition already sounding can't be taken back', 'ignores a failed fallback download after the listener seeks elsewhere', 'seeking while paused stays paused'; `web/e2e/listen.e2e.ts` 'seeking past the way out still gets to the next song'; run 2026-11-10 |
+| SF-0211-07 | [ADR-0211](adr-0211-real-handoff.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an NVDA test of the hand-off's written and spoken equivalents |
+| SF-0211-08 | [ADR-0211](adr-0211-real-handoff.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a counterbalanced listener study of artistic payoff |
+| SF-0212-01 | [ADR-0212](adr-0212-visualizer-curation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/spectrumVisuals.test.ts` (16 tests); run 2026-11-10 |
+| SF-0212-02 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a screen gallery review of palette and composition for every mode |
+| SF-0212-03 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a preference study of selector grouping |
+| SF-0212-04 | [ADR-0212](adr-0212-visualizer-curation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/spectrumVisuals.test.ts` 'groups only actual nonzero bins, keeps silence at zero and refuses absent signal', 'caps afterglow to seven real sampled frames, records silence'; run 2026-11-10 |
+| SF-0212-05 | [ADR-0212](adr-0212-visualizer-curation.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/creative-visualizers.e2e.ts` 'all thirteen additional horizontal visualizers are selectable without restarting real audio'; `web/src/views/Now.test.tsx` 'lets the listener choose a full-width real-data frequency ribbon without changing playback'; run 2026-11-10 |
+| SF-0212-06 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started; needs a person | No | Unassigned | - | Needs a person: CPU and GPU profiles on real hardware |
+| SF-0212-07 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an NVDA and comfort review across all styles |
+| SF-0212-08 | [ADR-0212](adr-0212-visualizer-curation.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a listener comparison to justify the default mode |
+| SF-0213-01 | [ADR-0213](adr-0213-lyric-stage.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Now.test.tsx` 'follows the current playback time and keeps the lyric punctuation', 'keeps line lyrics visible when word timing is unavailable'; `web/src/views/Now.tsx` noLyricsWords explains untimed or missing lyrics; run 2026-11-10 |
+| SF-0213-02 | [ADR-0213](adr-0213-lyric-stage.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a listening test that Focus lyrics stay unobtrusive |
+| SF-0213-03 | [ADR-0213](adr-0213-lyric-stage.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Now.test.tsx` 'can read a full static lyric sheet and resume following without affecting audio'; run 2026-11-10 |
+| SF-0213-04 | [ADR-0213](adr-0213-lyric-stage.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'fullscreen refused: the lyrics still fill the page, Escape gets out, focus comes back, and the music never stops'; run 2026-11-10 |
+| SF-0213-05 | [ADR-0213](adr-0213-lyric-stage.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/NowFlow.test.tsx` 'names the shared words while a rendered word move plays', 'says nothing about words for a fallback / another move / an unfinished render' (4 passed); `tests/test_flags.py` (19 passed); `docs/flags.md` regenerated; run 2026-11-10 |
+| SF-0213-06 | [ADR-0213](adr-0213-lyric-stage.md) | Not started; needs a person | No | Unassigned | - | Needs a person: Unicode snapshot review of RTL and long lyric lines at 400% zoom |
+| SF-0213-07 | [ADR-0213](adr-0213-lyric-stage.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/finishing.e2e.ts` 'playing doesn't flood a screen reader: the song is said once, and the clock never is'; `web/src/views/Now.tsx` lyrics aria-live="off"; run 2026-11-10 |
+| SF-0213-08 | [ADR-0213](adr-0213-lyric-stage.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a user reading study with reduced motion |
+| SF-0214-01 | [ADR-0214](adr-0214-time-seek.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/NowFlow.test.tsx` 'reads time, length and time left from the player clock'; `web/src/views/Now.test.tsx` 'keeps a finite, disabled slider and never attempts a seek'; `web/src/player.test.ts` 'never shows a time past the end of the song'; run 2026-11-10 |
+| SF-0214-02 | [ADR-0214](adr-0214-time-seek.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/e2e/flow-narrow.e2e.ts` 'the seek strip takes a tap on a touch screen and arrow keys, at 320px'; `web/e2e/listen.e2e.ts` 'the keyboard works the player'; run 2026-11-10 |
+| SF-0214-03 | [ADR-0214](adr-0214-time-seek.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Now.test.tsx` 'previews the target without seeking until release'; `web/src/player.test.ts` 'rejects non-finite seeking without changing the playback position'; run 2026-11-10 |
+| SF-0214-04 | [ADR-0214](adr-0214-time-seek.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Now.tsx` Strip CANT_SEEK note; `web/src/audio/mediaSession.test.ts` 'follows the current song, rejects invalid seeks and refuses seeking during a seam'; `web/e2e/listen.e2e.ts` 'seeking moves within the song, and doesn't set off the transition'; run 2026-11-10 |
+| SF-0214-05 | [ADR-0214](adr-0214-time-seek.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `tests/test_flow_waveform_peaks.py` (3 passed); `web/src/views/NowFlow.test.tsx` 'draws one stroke per measured peak ...', 'draws no waveform, bars, sections or seam mark when analysis has none'; run 2026-11-10 |
+| SF-0214-06 | [ADR-0214](adr-0214-time-seek.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/NowFlow.test.tsx` 'draws no waveform, bars, sections or seam mark when analysis has none', '... marks only known sections and the planned seam'; run 2026-11-10 |
+| SF-0214-07 | [ADR-0214](adr-0214-time-seek.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a hardware trace of rapid scrubbing for audio dropouts |
+| SF-0214-08 | [ADR-0214](adr-0214-time-seek.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an uncoached task test of preview versus commit |
+| SF-0215-01 | [ADR-0215](adr-0215-up-next.md) | Needs a person: first-glance task with listeners. Automated part: `web/src/views/UpNext.test.tsx` 'SF-0215-01 names the next song and artist first' passes | No | Unassigned | - | - |
+| SF-0215-02 | [ADR-0215](adr-0215-up-next.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/UpNext.test.tsx` 'SF-0215-02 keeps planned, ready and failed transitions visibly distinct' (TransitionTruth in `web/src/views/Now.tsx`) (2026-11-10) |
+| SF-0215-03 | [ADR-0215](adr-0215-up-next.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/UpNext.test.tsx` 'SF-0215-03 says steering changes only the next song, and guards it with the mix it saw' (x-mix-order); `web/src/views/Now.test.tsx` 'blocks overlapping steering presses'; `web/e2e/flows.e2e.ts` 'a change to a mix that's moved on stops, says so, and touches nothing' (2026-11-10) |
+| SF-0215-04 | [ADR-0215](adr-0215-up-next.md) | Needs a person: usability test separating request lifecycle from steering. Automated part: request entry sits apart in DJ controls (`web/src/views/Now.tsx`), lifecycle covered by `web/src/views/RequestsJoining.test.tsx` | No | Unassigned | - | - |
+| SF-0215-05 | [ADR-0215](adr-0215-up-next.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/UpNext.test.tsx` 'SF-0215-05 ends the set with no phantom next track'; `web/e2e/listen.e2e.ts` 'the end of the mix comes to a stop, and it can be played again' (2026-11-10) |
+| SF-0215-06 | [ADR-0215](adr-0215-up-next.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/pages.e2e.ts` 'nothing goes wider than the window in landscape, or zoomed in as far as browsers go' and 'on a phone, Listen keeps display options after the song identity and transport reachable' (2026-11-10) |
+| SF-0215-07 | [ADR-0215](adr-0215-up-next.md) | Needs a person: NVDA review of Up Next announcements. Automated part: `web/e2e/finishing.e2e.ts` 'playing doesn't flood a screen reader' passes | No | Unassigned | - | - |
+| SF-0215-08 | [ADR-0215](adr-0215-up-next.md) | Needs a person: participant listening study on attention | No | Unassigned | - | - |
+| SF-0216-01 | [ADR-0216](adr-0216-explore-gallery.md) | Needs a person: five-second glance study of the featured idea | No | Unassigned | - | - |
+| SF-0216-02 | [ADR-0216](adr-0216-explore-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mixes.test.tsx` 'groups mixes by why you'd press them', 'says what's inside each one, from the songs that would really play', 'shows and filters truthful family-specific candidates' (2026-11-10) |
+| SF-0216-03 | [ADR-0216](adr-0216-explore-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/ui/MusicObjects.test.tsx` 'gives idea groups distinct, stable abstract motifs without pretending to show album art'; `web/src/views/Mixes.test.tsx` 'uses different decorative motifs for different ideas' (motifs aria-hidden, encode only the key) (2026-11-10) |
+| SF-0216-04 | [ADR-0216](adr-0216-explore-gallery.md) | Needs a person: task study of Play, Shape and Save outcomes | No | Unassigned | - | - |
+| SF-0216-05 | [ADR-0216](adr-0216-explore-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mixes.test.tsx` 'says why a preset can't be played yet', 'waits for six mix-ready songs', 'keeps Christmas off the waiting list until there are enough songs'; `tests/test_product.py::test_status_distinguishes_analysed_songs_from_mix_ready_and_refreshes_after_lyrics` (2026-11-10) |
+| SF-0216-06 | [ADR-0216](adr-0216-explore-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mixes.test.tsx` 'keeps the active mix until confirmation and guards the mix seen when Play was chosen'; `web/e2e/flows.e2e.ts` 'a slow answer still gets an instant reaction on Start'; `tests/test_api_contracts.py::test_slow_build_never_replaces_a_mix_changed_during_planning` (2026-11-10) |
+| SF-0216-07 | [ADR-0216](adr-0216-explore-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mixes.test.tsx` 'builds it without touching what's playing'; `web/src/views/Library.test.tsx` 'cancels active playback replacement without building'; `web/e2e/integration.e2e.ts` 'editing a draft while the current mix plays' (2026-11-10) |
+| SF-0216-08 | [ADR-0216](adr-0216-explore-gallery.md) | Needs a person: comparative user study of inspiration | No | Unassigned | - | - |
+| SF-0217-01 | [ADR-0217](adr-0217-listening-compass.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | capability audit: feel, stem moves, energy arc and destination each persist through `/api/steer`: `tests/test_product.py::test_steering_persists`, `::test_the_api_saves_and_clears_the_custom_energy_arc`, `::test_mixing_language_keeps_choices_without_forcing_one_recipe`, `tests/test_mix_mixes.py::test_destination_steering_persists_and_status_names_the_song`, `::test_stem_frequency_steering_persists_and_validates` (2026-11-10) |
+| SF-0217-02 | [ADR-0217](adr-0217-listening-compass.md) | Needs a person: novice comprehension study of Compass vocabulary | No | Unassigned | - | - |
+| SF-0217-03 | [ADR-0217](adr-0217-listening-compass.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/MixSetup.test.tsx` 'keeps numeric input, slider and drawn stops on the same exact preference values' (native range and spinbutton inputs) (2026-11-10) |
+| SF-0217-04 | [ADR-0217](adr-0217-listening-compass.md) | In progress: settings are labelled as for new mixes (`web/src/views/Mixes.test.tsx` 'how mixes get built ... says it's for new mixes'), but no refresh/draft E2E proves default and this-mix scope stay apart | No | Claude agent flb | - | - |
+| SF-0217-05 | [ADR-0217](adr-0217-listening-compass.md) | Implemented | No | Claude agent r2k | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/sfFlowCompass.test.tsx` 'says plainly when no ready song matches, rather than offering songs that can’t be mixed', 'says a destination is something mixes try for, and that they finish as near as they can', 'a failed search is a failure with a retry, never an empty “no match”' (3 passed); `tests/test_mix_mixes.py::test_destination_steering_persists_and_status_names_the_song` (2026-11-10) |
+| SF-0217-06 | [ADR-0217](adr-0217-listening-compass.md) | Needs a person: findability task confirming the Compass stays optional | No | Unassigned | - | - |
+| SF-0217-07 | [ADR-0217](adr-0217-listening-compass.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/MixSetup.test.tsx` 'cancels an interrupted pointer stroke without leaving a half-drawn energy choice'; `web/src/views/Mixes.test.tsx` 'keeps the active mix until confirmation', 'does not claim an energy shape was saved when clearing the shape fails' (2026-11-10) |
+| SF-0217-08 | [ADR-0217](adr-0217-listening-compass.md) | Needs a person: DJ/listener sessions on predicted outcome and scope | No | Unassigned | - | - |
+| SF-0218-01 | [ADR-0218](adr-0218-connection-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Links.test.tsx` 'show only what's asked for', 'each have their own address', 'can't load isn't the same as nothing there'; `tests/test_discovery_search.py` (13 tests incl. test_lyric_links_ignore_legacy_synced_rows_without_text) (2026-11-10) |
+| SF-0218-02 | [ADR-0218](adr-0218-connection-gallery.md) | Needs a person: expert review of evidence cards | No | Unassigned | - | - |
+| SF-0218-03 | [ADR-0218](adr-0218-connection-gallery.md) | Implemented | No | Claude agent r2k | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/RelationshipMap.tsx` (optional, closed by default, above the cards in `web/src/views/Links.tsx`; flag `discover.relationship_map`); `web/src/views/sfFlowConnections.test.tsx` (5 passed: dots only for touched songs and lines only per returned pair, playing order kept, same titles told apart by ID, closed by default and exact edges once opened, too sparse shows nothing); `web/src/views/Links.test.tsx` passed (2026-11-10) |
+| SF-0218-04 | [ADR-0218](adr-0218-connection-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Links.test.tsx` 'says so when a pair cannot be played, and you can still answer', 'never calls a requested harmonic stage playing until the media element starts', 'pauses the mix when it starts playing' (2026-11-10) |
+| SF-0218-05 | [ADR-0218](adr-0218-connection-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Links.test.tsx` 'says how long it will take while it gets ready', 'keeps answers out of the way, and they can be changed', 'says there's nothing yet when there is nothing to show'; `tests/test_discovery_search.py::test_exhaustive_sweep_resumes_remembers_nonmatches_and_invalidates_changes` (2026-11-10) |
+| SF-0218-06 | [ADR-0218](adr-0218-connection-gallery.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Links.test.tsx` 'never plays an obsolete prepared audition after the user skips that pair', 'answering moves straight on to the next pair', 'keeps focus on the answer while it saves' (2026-11-10) |
+| SF-0218-07 | [ADR-0218](adr-0218-connection-gallery.md) | Needs a person: NVDA review of the card list as the map's alternative. Automated part: the map (`web/src/views/RelationshipMap.tsx`) is optional and closed by default, and draws only connections the card list also shows (`web/src/views/sfFlowConnections.test.tsx`, passed 2026-11-10) | No | Unassigned | - | - |
+| SF-0218-08 | [ADR-0218](adr-0218-connection-gallery.md) | Needs a person: uncoached discoverability study | No | Unassigned | - | - |
+| SF-0219-01 | [ADR-0219](adr-0219-create-workspace.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/editorMode.test.tsx` 'reads every view from the address', 'describes a transition in Story only from what the server says', 'keys Story chapters and seams by the same occurrence keys as the Arrange timeline' (2026-11-10) |
+| SF-0219-02 | [ADR-0219](adr-0219-create-workspace.md) | Needs a person: novice design test of Story mode | No | Unassigned | - | - |
+| SF-0219-03 | [ADR-0219](adr-0219-create-workspace.md) | Needs a person: creator task test of Arrange mode | No | Unassigned | - | - |
+| SF-0219-04 | [ADR-0219](adr-0219-create-workspace.md) | Needs a person: DJ expert review of Detail mode | No | Unassigned | - | - |
+| SF-0219-05 | [ADR-0219](adr-0219-create-workspace.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/editorMode.test.tsx` 'carries a selected transition from Story to Detail to Story to Arrange, sending nothing'; `web/src/views/Mix.test.tsx` 'keeps each mix scope's exact selection separate when the mounted editor switches scope' (2026-11-10) |
+| SF-0219-06 | [ADR-0219](adr-0219-create-workspace.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mix.test.tsx` 'keeps the latest choice visible when an older server response refreshes the inspector', 'lets go of a choice that changed nothing on the server'; `web/e2e/finishing.e2e.ts` 'two quick seam changes on a slow server: the last one wins, and Undo shows what's really there' (2026-11-10) |
+| SF-0219-07 | [ADR-0219](adr-0219-create-workspace.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mix.test.tsx` 'stop and catch up if the mix has moved on', 'follows the server again, so an Undo shows what's really there'; `tests/test_api_contracts.py::test_a_change_to_a_mix_that_has_moved_on_stops`; `web/e2e/flows.e2e.ts` 'a change to a mix that's moved on stops' (2026-11-10) |
+| SF-0219-08 | [ADR-0219](adr-0219-create-workspace.md) | Needs a person: comparative novice/expert session | No | Unassigned | - | - |
+| SF-0220-01 | [ADR-0220](adr-0220-arrangement-gestures.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mix.test.tsx` 'keeps duplicate, RTL and CJK song names readable and occurrence-scoped'; `web/e2e/finishing.e2e.ts` 'long, right-to-left and duplicate names stay readable and whole at the smallest size' (2026-11-10) |
+| SF-0220-02 | [ADR-0220](adr-0220-arrangement-gestures.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mix.test.tsx` 'opens beside the timeline, for the two songs it's between', 'plays the exact render, and the same stays selected when others move', 'never confuses two different drafts with identical songs and transition keys' (2026-11-10) |
+| SF-0220-03 | [ADR-0220](adr-0220-arrangement-gestures.md) | In progress: drops are guarded (`web/src/views/Mix.test.tsx` 'ignores outside text drops'), but no pointer E2E proves a distinct provisional insertion preview and cancel | No | Claude agent flb | - | - |
+| SF-0220-04 | [ADR-0220](adr-0220-arrangement-gestures.md) | Needs a person: NVDA test of reorder announcements. Automated part: `web/e2e/finishing.e2e.ts` 'reordering with the keyboard moves the song, and focus stays on it' passes | No | Unassigned | - | - |
+| SF-0220-05 | [ADR-0220](adr-0220-arrangement-gestures.md) | Implemented | No | Claude agent r2k | feat/finish-checklists (uncommitted; coordinator commits) | `src/selecta/mix.py` locked_in_the_way + `src/selecta/routes/edit.py` /api/mix/move refuses (409) a move that would shift a locked song; `tests/test_sf_flow_locks.py` (4 passed: refused and unchanged, moves that leave it in place work, moving the locked song itself keeps its lock, drafts guarded); `web/src/views/sfFlowEditor.test.tsx` 'says why a move past a locked song did nothing, and leaves every row where it was'; `tests/test_mix.py` lock/move tests (5 passed) (2026-11-10) |
+| SF-0220-06 | [ADR-0220](adr-0220-arrangement-gestures.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/flows.e2e.ts` 'a change to a mix that's moved on stops, says so, and touches nothing', 'editing: move with the buttons, undo it, and remove a song'; `tests/test_api_contracts.py::test_a_change_to_a_mix_that_has_moved_on_stops` (2026-11-10) |
+| SF-0220-07 | [ADR-0220](adr-0220-arrangement-gestures.md) | Not started: no hundred-song editor stress test yet | No | Claude agent flb | - | - |
+| SF-0220-08 | [ADR-0220](adr-0220-arrangement-gestures.md) | Needs a person: creator study of reorder confidence | No | Unassigned | - | - |
+| SF-0221-01 | [ADR-0221](adr-0221-transition-inspector.md) | Needs a person: first-glance test of the inspector hierarchy | No | Unassigned | - | - |
+| SF-0221-02 | [ADR-0221](adr-0221-transition-inspector.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/listen.e2e.ts` 'a preview takes the sound, and gives it back when it's done'; `web/src/views/Mix.test.tsx` 'plays the exact render'; `web/src/audio/focus.test.tsx` (2026-11-10) |
+| SF-0221-03 | [ADR-0221](adr-0221-transition-inspector.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mix.test.tsx` 'keeps the move you asked for pressed, and names what really plays separately', 'says what you chose and what will really play, if they differ'; `web/src/ui/MusicObjects.test.tsx` 'uses the rendered move rather than disguising a fallback' (2026-11-10) |
+| SF-0221-04 | [ADR-0221](adr-0221-transition-inspector.md) | Needs a person: assistive-technology check of unavailable-move reasons. Automated part: `web/src/views/Mix.test.tsx` 'says why the stems can't be shaped' and `tests/test_studio.py::test_the_chooser_explains_when_the_studio_is_not_possible` pass | No | Unassigned | - | - |
+| SF-0221-05 | [ADR-0221](adr-0221-transition-inspector.md) | Implemented | No | Claude agent r2k | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/sfFlowInspector.test.tsx` 'shows cue choices and their range in one unit, and length in bars', 'keyboard edits send exact bar values, for this transition only, guarded by the mix order' (2 passed); `web/src/views/ex0121SeamInspector.test.tsx` 'every enabled choice is reached with Tab alone, in reading order' (2026-11-10) |
+| SF-0221-06 | [ADR-0221](adr-0221-transition-inspector.md) | Not started: the inspector has no A/B comparison to gate | No | Claude agent flb | - | - |
+| SF-0221-07 | [ADR-0221](adr-0221-transition-inspector.md) | In progress: selection survives reorder (`web/src/views/Mix.test.tsx` 'the same stays selected when others move') and the column can stick (`tests/test_selecta3_changes.py`), but no large-mix E2E | No | Claude agent flb | - | - |
+| SF-0221-08 | [ADR-0221](adr-0221-transition-inspector.md) | Needs a person: DJ and novice listen-first study | No | Unassigned | - | - |
+| SF-0222-01 | [ADR-0222](adr-0222-energy-composition.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/ui/MusicObjects.test.tsx` 'keeps requested and measured energy explicitly separate, with no invented measurement', 'keeps unknown song energy as an unknown gap' (2026-11-10) |
+| SF-0222-02 | [ADR-0222](adr-0222-energy-composition.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/MixSetup.test.tsx` 'keeps numeric input, slider and drawn stops on the same exact preference values', 'cancels an interrupted pointer stroke' (2026-11-10) |
+| SF-0222-03 | [ADR-0222](adr-0222-energy-composition.md) | Needs a person: AT and 400% zoom review of the five stops. Automated part: each stop has a labelled slider and spinbutton (`web/src/views/MixSetup.test.tsx`) | No | Unassigned | - | - |
+| SF-0222-04 | [ADR-0222](adr-0222-energy-composition.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/MixSetup.test.tsx` 'SF-0222-04 shows a preset as its exact five stops, and it can be put back to each mix's arc'; `web/src/views/Mixes.test.tsx` 'clears a saved energy arc back to the mix-specific default' (2026-11-10) |
+| SF-0222-05 | [ADR-0222](adr-0222-energy-composition.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/ui/MusicObjects.test.tsx` 'keeps requested and measured energy explicitly separate'; relative-scale caption in `web/src/views/MixSetup.tsx` (2026-11-10) |
+| SF-0222-06 | [ADR-0222](adr-0222-energy-composition.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mixes.test.tsx` 'lets the listener shape and save a five-stop energy arc', 'does not claim an energy shape was saved when clearing the shape fails'; `tests/test_product.py::test_the_api_saves_and_clears_the_custom_energy_arc` (2026-11-10) |
+| SF-0222-07 | [ADR-0222](adr-0222-energy-composition.md) | Not started: no frame trace of drag during playback yet | No | Claude agent flb | - | - |
+| SF-0222-08 | [ADR-0222](adr-0222-energy-composition.md) | Needs a person: novice/DJ study of rise, drop and uncertainty | No | Unassigned | - | - |
+| SF-0223-01 | [ADR-0223](adr-0223-studio-canvas.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'shows a square for every part of both songs, named for a screen reader', 'shows which numbered pair is being shaped'; `tests/test_studio.py::test_a_session_lays_out_eight_stems_of_exactly_the_same_length` (2026-11-10) |
+| SF-0223-02 | [ADR-0223](adr-0223-studio-canvas.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/finishing.e2e.ts` 'the full Studio grid works at the smallest size: it scrolls by itself, and the keyboard can reach all of it'; `web/src/views/Studio.test.tsx` 'marks the square being played' (2026-11-10) |
+| SF-0223-03 | [ADR-0223](adr-0223-studio-canvas.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'paints a consistent value over touched cells without re-toggling a revisited cell', 'tapping twice puts it back' (2026-11-10) |
+| SF-0223-04 | [ADR-0223](adr-0223-studio-canvas.md) | Needs a person: NVDA test of the grid. Automated part: `web/src/views/Studio.test.tsx` 'is one tab stop, moves with the arrow keys, and Space turns a square on or off' passes | No | Unassigned | - | - |
+| SF-0223-05 | [ADR-0223](adr-0223-studio-canvas.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'switches between guided Shape and Detailed without changing the grid', 'keeps every stem square and its saved value when changing editor modes' (2026-11-10) |
+| SF-0223-06 | [ADR-0223](adr-0223-studio-canvas.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'says how long the stems will take while they are split', 'keeps asking until the stems are ready', 'using it saves the shape, closes and says what happens next'; `tests/test_studio.py::test_only_real_stems_can_be_fetched` (2026-11-10) |
+| SF-0223-07 | [ADR-0223](adr-0223-studio-canvas.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'play and stop, and it pauses the mix when it plays', 'closing lets go of the audio', 'stops the owned Studio preview and its playhead when the tab becomes hidden'; `web/src/audio/focus.test.tsx` (2026-11-10) |
+| SF-0223-08 | [ADR-0223](adr-0223-studio-canvas.md) | Needs a person: beginner/producer legibility study | No | Unassigned | - | - |
+| SF-0224-01 | [ADR-0224](adr-0224-studio-ai-diff.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'lists the exact server-returned cell differences and lets the user restore the previous shape', 'fine tunes your own grid and says what it changed and why' (2026-11-10) |
+| SF-0224-02 | [ADR-0224](adr-0224-studio-ai-diff.md) | Needs a person: visual task test of before/after comparison | No | Unassigned | - | - |
+| SF-0224-03 | [ADR-0224](adr-0224-studio-ai-diff.md) | In progress: a new stroke clears fine-tune notes (`web/src/views/Studio.test.tsx` 'a change of your own clears what fine tuning said'), but no race E2E proves a stale proposal cannot overwrite newer strokes | No | Claude agent flb | - | - |
+| SF-0224-04 | [ADR-0224](adr-0224-studio-ai-diff.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'nothing it does is final until Apply to this transition', 'using it saves the shape, closes and says what happens next'; `tests/test_studio.py::test_using_a_shape_makes_it_that_seam_and_renders_it_first` (2026-11-10) |
+| SF-0224-05 | [ADR-0224](adr-0224-studio-ai-diff.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'recovers a valid uncommitted grid for the same transition', 'ignores a corrupted local grid', 'lets Selecta arrange it, and what was there can be put back'; `tests/test_studio.py::test_a_used_shape_can_be_undone` (2026-11-10) |
+| SF-0224-06 | [ADR-0224](adr-0224-studio-ai-diff.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'explains when Selecta can't arrange these two', 'explains a failure in the words it was given', 'if using it fails, the shape is still there'; `tests/test_studio.py::test_songs_that_cannot_share_a_studio_get_a_reason` (2026-11-10) |
+| SF-0224-07 | [ADR-0224](adr-0224-studio-ai-diff.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Studio.test.tsx` 'closing lets go of the audio', 'stops the owned Studio preview ... when the tab becomes hidden'; `web/e2e/listen.e2e.ts` 'a preview takes the sound, and gives it back' (2026-11-10) |
+| SF-0224-08 | [ADR-0224](adr-0224-studio-ai-diff.md) | Needs a person: producer study of perceived control | No | Unassigned | - | - |
+| SF-0225-01 | [ADR-0225](adr-0225-requests-route.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/RequestsJoining.test.tsx` (joining, bridge, timeline states) and `web/src/views/Requests.test.tsx` 'says when it has to be analysed first', 'is plain about a song it can't place'; `tests/test_request_planner.py::test_a_song_still_being_analysed_is_told_apart_from_one_that_cannot_be_placed` (2026-11-10) |
+| SF-0225-02 | [ADR-0225](adr-0225-requests-route.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Requests.test.tsx` 'won't let a song be asked for twice, or one already in the mix', 'notices a song already in the mix'; `tests/test_requests.py::test_locks_custom_seams_duplicates_and_no_current_mix`; `web/e2e/integration.e2e.ts` 'two requests at once: no song goes in twice' (2026-11-10) |
+| SF-0225-03 | [ADR-0225](adr-0225-requests-route.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/RequestsJoining.test.tsx` 'shows the best first, how it gets there, and why'; `web/src/ui/MusicObjects.test.tsx` 'shows only returned ordered route songs'; `tests/test_request_routes.py::test_finding_a_bridge_lists_what_it_found` (2026-11-10) |
+| SF-0225-04 | [ADR-0225](adr-0225-requests-route.md) | Needs a person: uncoached consent test. Automated part: `web/src/views/Requests.test.tsx` 'names the extra song and asks' passes | No | Unassigned | - | - |
+| SF-0225-05 | [ADR-0225](adr-0225-requests-route.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `tests/test_requests.py::test_ready_insertion_is_atomic_and_rejects_stale_or_unapproved_plans`; `tests/test_request_routes.py::test_when_it_does_they_all_come_in_at_once_as_one_step`; `web/src/views/Requests.test.tsx` 'puts the request back if it can't be added' (2026-11-10) |
+| SF-0225-06 | [ADR-0225](adr-0225-requests-route.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/integration.e2e.ts` 'a cancelled request that's answered late doesn't come back'; `web/src/views/Requests.test.tsx` 'a slow poll can't bring back something just cancelled', 'two picks close together both stay' (2026-11-10) |
+| SF-0225-07 | [ADR-0225](adr-0225-requests-route.md) | Needs a person: NVDA and 400% zoom review of the route list | No | Unassigned | - | - |
+| SF-0225-08 | [ADR-0225](adr-0225-requests-route.md) | Needs a person: real session observation of request confidence | No | Unassigned | - | - |
+| SF-0226-01 | [ADR-0226](adr-0226-library-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/ui/MusicObjects.test.tsx` 'gives one library ID the same decorative motif without depending on titles or artwork'; `web/src/views/Library.test.tsx` 'preserves the same song actions, readiness reason and list while switching layouts', 'offers an actual next step for a library without source music' (2026-11-10) |
+| SF-0226-02 | [ADR-0226](adr-0226-library-experience.md) | Needs a person: expert task review of the dense table | No | Unassigned | - | - |
+| SF-0226-03 | [ADR-0226](adr-0226-library-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `tests/test_library_edges.py::test_twenty_thousand_songs_are_all_reachable_and_a_page_stays_quick`; `tests/test_api_contracts.py::test_carrying_on_gets_the_rest_with_nothing_repeated_or_skipped` (2026-11-10) |
+| SF-0226-04 | [ADR-0226](adr-0226-library-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Library.test.tsx` 'keeps what you were looking for in the address', 'only the newest search counts'; `web/e2e/pages.e2e.ts` 'the Library's filters are part of its address'; `web/e2e/finishing.e2e.ts` 'a slow search can't replace a newer one' (2026-11-10) |
+| SF-0226-05 | [ADR-0226](adr-0226-library-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | built: last page hands focus from Show more to the first new song (`web/src/views/Library.tsx`); `web/src/views/Library.test.tsx` 'keeps focus on Show more while pages remain, then hands it to the first new song on the last page' (2026-11-10) |
+| SF-0226-06 | [ADR-0226](adr-0226-library-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Library.test.tsx` 'distinguishes analysed songs from mix-ready songs', 'gives the reason in the song's details'; `web/src/state/readiness.test.ts`; `tests/test_library_edges.py::test_a_song_analysis_gave_up_on_says_so_rather_than_looking_ready`, `::test_a_song_whose_file_has_moved_says_so` (2026-11-10) |
+| SF-0226-07 | [ADR-0226](adr-0226-library-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Library.test.tsx` 'not being able to load isn't the same as having no songs', 'offers an actual next step for a library without source music'; `tests/test_library_edges.py::test_a_song_whose_file_has_moved_says_so` (2026-11-10) |
+| SF-0226-08 | [ADR-0226](adr-0226-library-experience.md) | Needs a person: timed casual/DJ task study | No | Unassigned | - | - |
+| SF-0227-01 | [ADR-0227](adr-0227-song-identity.md) | Needs a person: detail screen critique | No | Unassigned | - | - |
+| SF-0227-02 | [ADR-0227](adr-0227-song-identity.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Library.test.tsx` 'double and half fill in what was measured', 'can go back to what was measured'; `tests/test_api_contracts.py::test_a_correction_leaves_what_was_measured_alone`, `::test_every_song_list_shows_a_correction` (2026-11-10) |
+| SF-0227-03 | [ADR-0227](adr-0227-song-identity.md) | Implemented | No | Claude agent r2k | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/state/capabilities.ts` and a 'What it’s ready for' list in `web/src/views/SongDetails.tsx` (flag `library.capability_readiness`); `web/src/views/sfFlowSong.test.tsx` (5 passed: playable but not mix-ready, mix-ready with untimed lyrics, missing file, unknown state never promoted, flag off closes up) (2026-11-10) |
+| SF-0227-04 | [ADR-0227](adr-0227-song-identity.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/flows.e2e.ts` 'the Library: search, song details, a correction that can be put back'; `web/src/views/Library.test.tsx` 'shows what's wrong with a value that isn't allowed' (2026-11-10) |
+| SF-0227-05 | [ADR-0227](adr-0227-song-identity.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `tests/test_api_contracts.py::test_setting_aside_is_reversible_and_touches_no_file`; `web/src/views/Library.test.tsx` 'music and not music can be switched, without touching the file' (2026-11-10) |
+| SF-0227-06 | [ADR-0227](adr-0227-song-identity.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Library.test.tsx` 'gives the reason in the song's details'; `web/e2e/flows.e2e.ts` 'songs that can't be mixed say why'; `tests/test_library_edges.py::test_a_song_analysis_gave_up_on_says_so_rather_than_looking_ready` (2026-11-10) |
+| SF-0227-07 | [ADR-0227](adr-0227-song-identity.md) | Needs a person: visual and AT review. Automated part: `web/e2e/finishing.e2e.ts` 'long, right-to-left and duplicate names stay readable' passes | No | Unassigned | - | - |
+| SF-0227-08 | [ADR-0227](adr-0227-song-identity.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Library.test.tsx` 'resolves a linked song by exact ID outside the current filter and page', 'makes duplicate recording IDs visible in both rows and song details'; `tests/test_library_edges.py::test_songs_with_the_same_name_are_kept_apart` (2026-11-10) |
+| SF-0228-01 | [ADR-0228](adr-0228-my-mixes.md) | Needs a person: current/draft comprehension test | No | Unassigned | - | - |
+| SF-0228-02 | [ADR-0228](adr-0228-my-mixes.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Drafts.test.tsx` 'says where each draft has got to', 'is honest about seams that could not be made', 'says when a song has left the library' (2026-11-10) |
+| SF-0228-03 | [ADR-0228](adr-0228-my-mixes.md) | Needs a person: novice task test of edit versus play | No | Unassigned | - | - |
+| SF-0228-04 | [ADR-0228](adr-0228-my-mixes.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Mixes.test.tsx` 'keeps the active mix until confirmation'; `tests/test_drafts.py::test_playing_a_draft_makes_it_current_and_nothing_is_lost`, `::test_playing_can_be_undone_completely`; `web/e2e/flows.e2e.ts` 'drafts: make one, name it, fill it, and it stays apart from the current mix' (2026-11-10) |
+| SF-0228-05 | [ADR-0228](adr-0228-my-mixes.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Drafts.test.tsx` 'confirms before deleting, preserves the draft on cancel and supports Undo', 'keeps the delete confirmation and error visible when the server rejects the deletion', 'Escape and Cancel keep the old name'; `tests/test_drafts.py::test_a_deleted_draft_can_be_taken_back_exactly_as_it_was` (2026-11-10) |
+| SF-0228-06 | [ADR-0228](adr-0228-my-mixes.md) | Needs a person: comprehension study separating render line from Up Next | No | Unassigned | - | - |
+| SF-0228-07 | [ADR-0228](adr-0228-my-mixes.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/flows.e2e.ts` 'a draft that's been deleted is explained, and never quietly swapped for another mix'; `web/e2e/pages.e2e.ts` 'reloading any page stays on it' (2026-11-10) |
+| SF-0228-08 | [ADR-0228](adr-0228-my-mixes.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/flows.e2e.ts` 'drafts: make one, name it, fill it, and it stays apart from the current mix'; `web/e2e/integration.e2e.ts` 'saving a draft as a file while another mix is reordered: the file is of the draft' (2026-11-10) |
+| SF-0229-01 | [ADR-0229](adr-0229-first-run.md) | Needs a person: first-time comprehension test | No | Unassigned | - | - |
+| SF-0229-02 | [ADR-0229](adr-0229-first-run.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/finishing.e2e.ts` 'a folder that can't be used says why and what to try'; `tests/test_selecta3_changes.py::test_folder_preflight_keeps_existing_library_unchanged`; `tests/test_folder_relink.py::test_network_and_relative_addresses_are_refused` (2026-11-10) |
+| SF-0229-03 | [ADR-0229](adr-0229-first-run.md) | Needs a person: privacy review of the lyrics lookup disclosure. Automated part: `web/e2e/finishing.e2e.ts` 'a first run says what leaves this PC before anything is sent' passes | No | Unassigned | - | - |
+| SF-0229-04 | [ADR-0229](adr-0229-first-run.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/finishing.e2e.ts` 'the first run says which stage it's at, from what the server says, and each can go wrong on its own'; `web/src/views/Setup.test.tsx` (2026-11-10) |
+| SF-0229-05 | [ADR-0229](adr-0229-first-run.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Setup.test.tsx` 'offers the first mix as soon as enough songs are ready', 'does not promise a playable mix before the real readiness threshold'; `web/src/views/Mixes.test.tsx` 'waits for six mix-ready songs' (2026-11-10) |
+| SF-0229-06 | [ADR-0229](adr-0229-first-run.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `tests/test_selecta3_changes.py::test_stopping_scan_before_listing_does_not_write_partial_music`; `web/e2e/finishing.e2e.ts` 'the first run says which stage it's at ... each can go wrong on its own' (2026-11-10) |
+| SF-0229-07 | [ADR-0229](adr-0229-first-run.md) | Needs a person: novice first-play task study | No | Unassigned | - | - |
+| SF-0229-08 | [ADR-0229](adr-0229-first-run.md) | Needs a person: uncoached real-music first handoff session | No | Unassigned | - | - |
+| SF-0230-01 | [ADR-0230](adr-0230-workspace.md) | Needs a person: operator findability test | No | Unassigned | - | - |
+| SF-0230-02 | [ADR-0230](adr-0230-workspace.md) | Implemented | No | Claude agent r2k | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/sfFlowWorkspace.test.tsx` 'puts every known fault, with its fix, above the metrics and the job list' (storage full, too few ready songs, failed transition, failed song, paused analysis, missing folder; DOM order needs-you, metrics, jobs) passed (2026-11-10) |
+| SF-0230-03 | [ADR-0230](adr-0230-workspace.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Workshop.test.tsx` 'say what's really happening, including what's failed', 'say when they can't find out'; `web/src/state/jobs.test.ts`; `tests/test_api_contracts.py::test_jobs_say_what_is_really_there` (2026-11-10) |
+| SF-0230-04 | [ADR-0230](adr-0230-workspace.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/Workshop.test.tsx` 'show folders, and whether each can be found'; `tests/test_api_contracts.py::test_folders_say_whether_they_can_be_found`, `::test_stopping_watching_touches_nothing_else`; `tests/test_folder_relink.py` (2026-11-10) |
+| SF-0230-05 | [ADR-0230](adr-0230-workspace.md) | Implemented | No | Claude agent r2k | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/WorkshopPanels.tsx` StoragePanel: a limit below what is kept shows a removal preview and waits for a yes; the result reports the real amount from the server; `web/src/views/sfFlowWorkspace.test.tsx` 'previews, and Keep cancels without sending anything', 'removes only after a yes, and reports the real amount from the server', 'a failed removal says nothing was removed, and the limit goes back', 'raising the limit removes nothing, so it saves without asking' (passed); `web/src/views/Workshop.test.tsx` (12 passed) (2026-11-10) |
+| SF-0230-06 | [ADR-0230](adr-0230-workspace.md) | Needs a person: privacy review of diagnostics. Automated part: `web/e2e/flows.e2e.ts` 'Workshop tells the truth ... diagnostics hold nothing private' and `tests/test_api_contracts.py::test_diagnostics_have_no_paths_or_song_names` pass | No | Unassigned | - | - |
+| SF-0230-07 | [ADR-0230](adr-0230-workspace.md) | In progress: no audio/attention E2E yet proves job updates never steal focus or auto-play | No | Claude agent flb | - | - |
+| SF-0230-08 | [ADR-0230](adr-0230-workspace.md) | Needs a person: scenario study recovering a stuck source | No | Unassigned | - | - |
+| SF-0231-01 | [ADR-0231](adr-0231-export-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/UpNext.test.tsx` 'SF-0231-01 confirms the frozen mix, its revision and exact songs once saving starts'; `web/src/views/Mix.test.tsx` 'shows the exact ordered source songs before creating a file' (2026-11-10) |
+| SF-0231-02 | [ADR-0231](adr-0231-export-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `tests/test_flow_export_jobs.py` (preparing, encoding, ready, cancelled, failed); `web/src/views/UpNext.test.tsx` 'SF-0231-02 gives each job phase its own words'; `web/src/views/Mix.test.tsx` 'only offers the file once it really exists' (2026-11-10) |
+| SF-0231-03 | [ADR-0231](adr-0231-export-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/src/views/UpNext.test.tsx` 'SF-0231-03 counts real transitions and never shows an invented percentage' (2026-11-10) |
+| SF-0231-04 | [ADR-0231](adr-0231-export-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `web/e2e/integration.e2e.ts` 'editing a draft during export keeps the job pinned to its original revision'; `tests/test_selecta3_changes.py::test_export_job_keeps_its_original_revision_after_the_mix_changes` (2026-11-10) |
+| SF-0231-05 | [ADR-0231](adr-0231-export-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `tests/test_flow_export_jobs.py::test_cancel_is_offered_only_while_waiting_and_really_stops`, `::test_once_the_file_is_being_written_cancel_is_refused`; `web/src/views/UpNext.test.tsx` 'SF-0231-05 offers Cancel only when the server says it can still cancel'; `tests/test_export_retry.py` (2026-11-10) |
+| SF-0231-06 | [ADR-0231](adr-0231-export-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `tests/test_export_validation.py::test_complete_export_is_decoded_frame_by_frame`, `::test_bad_or_wrong_export_cannot_be_reported_ready`; `tests/test_flow_export_jobs.py::test_once_the_file_is_being_written_cancel_is_refused` (ready job names its .flac file, length and revision); download link in `web/src/views/Mix.test.tsx` 'only offers the file once it really exists' (2026-11-10) |
+| SF-0231-07 | [ADR-0231](adr-0231-export-experience.md) | Implemented | No | Claude agent flb | feat/finish-checklists (uncommitted; coordinator commits) | `tests/test_flow_export_jobs.py::test_no_room_fails_before_encoding_and_a_retry_keeps_the_same_snapshot`, `::test_a_corrupt_file_or_full_disk_mid_write_is_reported_specifically`, `::test_a_failed_transition_names_the_pair_and_the_job_says_failed` (2026-11-10) |
+| SF-0231-08 | [ADR-0231](adr-0231-export-experience.md) | Needs a person: user and music output review of the finishing moment | No | Unassigned | - | - |
+| SF-0232-01 | [ADR-0232](adr-0232-feedback-recovery.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/engineering/flow-cross-cutting.md` Feedback taxonomy; `web/src/state/feedbackTaxonomy.test.tsx` (2 passed); `web/src/ui/controls.test.tsx` 'problems are announced as problems', 'never rely on colour alone'; `tests/test_flow_cross_cutting.py` 'test_every_section_is_there'; all run 2026-11-10 |
+| SF-0232-02 | [ADR-0232](adr-0232-feedback-recovery.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/engineering/flow-cross-cutting.md` Undo availability; `web/src/ui/controls.test.tsx` 'Undo runs what that message was about', 'says so if undoing fails', 'keeps older Undo blocked while the newer one runs and after it fails'; `web/src/ui/CommandPalette.test.tsx` 'shows exact Undo scope but refuses an unavailable mutation'; `web/src/views/Drafts.test.tsx`, `web/src/views/Mix.test.tsx` 'deleting closes it, goes back to the list, and can be undone', `web/src/views/Requests.test.tsx` 'can be undone from the message that says it joined'; all passed 2026-11-10 |
 | SF-0232-03 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started | No | Unassigned | - | - |
 | SF-0232-04 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started | No | Unassigned | - | - |
-| SF-0232-05 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started | No | Unassigned | - | - |
-| SF-0232-06 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started | No | Unassigned | - | - |
+| SF-0232-05 | [ADR-0232](adr-0232-feedback-recovery.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/engineering/flow-cross-cutting.md` Destructive confirmations; `web/src/views/Drafts.test.tsx` 'confirms before deleting, preserves the draft on cancel and supports Undo', 'keeps the delete confirmation and error visible when the server rejects the deletion'; `web/src/views/Library.test.tsx` 'shows exact current flags before confirming a batch edit', 'refuses a confirmed batch action if a different filter takes over while the dialog is open', 'cancels active playback replacement without building, and guards the confirmed build'; all passed 2026-11-10 |
+| SF-0232-06 | [ADR-0232](adr-0232-feedback-recovery.md) | In progress; needs a person | No | Unassigned | - | Needs a person: an NVDA review that nothing speaks too often or opens unasked. Automated part passed 2026-11-10: `web/src/ui/toastsCoalesce.test.tsx`, `web/src/ui/toastPriority.test.tsx`, `web/src/ui/controls.test.tsx` 'never shows more than a few at once', 'restores focus to the active page after a confirmed Undo removes its button' |
 | SF-0232-07 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started | No | Unassigned | - | - |
-| SF-0232-08 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started | No | Unassigned | - | - |
+| SF-0232-08 | [ADR-0232](adr-0232-feedback-recovery.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a fault-injection user study of people restoring a failed edit or job |
 | SF-0233-01 | [ADR-0233](adr-0233-responsive-scenes.md) | Not started | No | Unassigned | - | - |
 | SF-0233-02 | [ADR-0233](adr-0233-responsive-scenes.md) | Not started | No | Unassigned | - | - |
 | SF-0233-03 | [ADR-0233](adr-0233-responsive-scenes.md) | Not started | No | Unassigned | - | - |
@@ -291,119 +291,119 @@
 | SF-0233-05 | [ADR-0233](adr-0233-responsive-scenes.md) | Not started | No | Unassigned | - | - |
 | SF-0233-06 | [ADR-0233](adr-0233-responsive-scenes.md) | Not started | No | Unassigned | - | - |
 | SF-0233-07 | [ADR-0233](adr-0233-responsive-scenes.md) | Not started | No | Unassigned | - | - |
-| SF-0233-08 | [ADR-0233](adr-0233-responsive-scenes.md) | Not started | No | Unassigned | - | - |
+| SF-0233-08 | [ADR-0233](adr-0233-responsive-scenes.md) | Not started; needs a person | No | Unassigned | - | Needs a person: independent visual and assistive-technology sign-off of each scene across named device sizes |
 | SF-0234-01 | [ADR-0234](adr-0234-accessible-art.md) | Not started | No | Unassigned | - | - |
-| SF-0234-02 | [ADR-0234](adr-0234-accessible-art.md) | Not started | No | Unassigned | - | - |
+| SF-0234-02 | [ADR-0234](adr-0234-accessible-art.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an NVDA with Edge session through Listen, Explore, Create, Studio, Requests and Export |
 | SF-0234-03 | [ADR-0234](adr-0234-accessible-art.md) | Not started | No | Unassigned | - | - |
 | SF-0234-04 | [ADR-0234](adr-0234-accessible-art.md) | Not started | No | Unassigned | - | - |
-| SF-0234-05 | [ADR-0234](adr-0234-accessible-art.md) | Not started | No | Unassigned | - | - |
+| SF-0234-05 | [ADR-0234](adr-0234-accessible-art.md) | In progress; needs a person | No | Unassigned | - | Needs a person: a screen-reader listening study of lyric ticks and meters. Automated part: `web/e2e/finishing.e2e.ts` 'playing doesn’t flood a screen reader: the song is said once, and the clock never is' |
 | SF-0234-06 | [ADR-0234](adr-0234-accessible-art.md) | Not started | No | Unassigned | - | - |
 | SF-0234-07 | [ADR-0234](adr-0234-accessible-art.md) | Not started | No | Unassigned | - | - |
-| SF-0234-08 | [ADR-0234](adr-0234-accessible-art.md) | Not started | No | Unassigned | - | - |
-| SF-0235-01 | [ADR-0235](adr-0235-performance.md) | Not started | No | Unassigned | - | - |
+| SF-0234-08 | [ADR-0234](adr-0234-accessible-art.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a named access reviewer signing the exact SHA with blockers resolved |
+| SF-0235-01 | [ADR-0235](adr-0235-performance.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a real-device baseline (OS, browser, cores, memory, real media) recorded as a reproducible trace register |
 | SF-0235-02 | [ADR-0235](adr-0235-performance.md) | Not started | No | Unassigned | - | - |
 | SF-0235-03 | [ADR-0235](adr-0235-performance.md) | Not started | No | Unassigned | - | - |
-| SF-0235-04 | [ADR-0235](adr-0235-performance.md) | Not started | No | Unassigned | - | - |
+| SF-0235-04 | [ADR-0235](adr-0235-performance.md) | In progress; needs a person | No | Unassigned | - | Needs a person: real-audio observation of playback during background render load; the lab check `web/e2e/mi-0162-performance.e2e.ts` 'MI-0162-03' exists but is not a listening result |
 | SF-0235-05 | [ADR-0235](adr-0235-performance.md) | Not started | No | Unassigned | - | - |
 | SF-0235-06 | [ADR-0235](adr-0235-performance.md) | Not started | No | Unassigned | - | - |
 | SF-0235-07 | [ADR-0235](adr-0235-performance.md) | Not started | No | Unassigned | - | - |
-| SF-0235-08 | [ADR-0235](adr-0235-performance.md) | Not started | No | Unassigned | - | - |
-| SF-0236-01 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0236-02 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0236-03 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started | No | Unassigned | - | - |
+| SF-0235-08 | [ADR-0235](adr-0235-performance.md) | In progress | No | Flow checklist agent (Claude) | - | Not built: no automatic low-power or throttled-device detection lowers motion today; Still and OS reduced motion are manual and keep all data (`web/e2e/mp-0296-motion.e2e.ts` 'MP-0296-06'); a forced-throttle device review is also needed |
+| SF-0236-01 | [ADR-0236](adr-0236-frontend-architecture.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `tests/test_flow_cross_cutting.py` 'test_transport_and_routes_each_have_one_owner' (passed 2026-11-10); `docs/engineering/architecture.md` |
+| SF-0236-02 | [ADR-0236](adr-0236-frontend-architecture.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `tests/test_flow_cross_cutting.py` 'test_shared_primitives_never_reach_into_a_screen' (passed 2026-11-10); `web/src/styles/tokens.css` |
+| SF-0236-03 | [ADR-0236](adr-0236-frontend-architecture.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/state/readiness.test.ts` (5 passed), `web/src/state/jobs.test.ts`, `web/src/state/polishReadinessDistinct.test.ts`; `tests/test_api_contract_fixtures.py` and `tests/test_api_contracts.py`; run 2026-11-10 |
 | SF-0236-04 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started | No | Unassigned | - | - |
 | SF-0236-05 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0236-06 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0236-07 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0236-08 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0237-01 | [ADR-0237](adr-0237-truth-provenance.md) | Not started | No | Unassigned | - | - |
-| SF-0237-02 | [ADR-0237](adr-0237-truth-provenance.md) | Not started | No | Unassigned | - | - |
-| SF-0237-03 | [ADR-0237](adr-0237-truth-provenance.md) | Not started | No | Unassigned | - | - |
-| SF-0237-04 | [ADR-0237](adr-0237-truth-provenance.md) | Not started | No | Unassigned | - | - |
-| SF-0237-05 | [ADR-0237](adr-0237-truth-provenance.md) | Not started | No | Unassigned | - | - |
-| SF-0237-06 | [ADR-0237](adr-0237-truth-provenance.md) | Not started | No | Unassigned | - | - |
-| SF-0237-07 | [ADR-0237](adr-0237-truth-provenance.md) | Not started | No | Unassigned | - | - |
-| SF-0237-08 | [ADR-0237](adr-0237-truth-provenance.md) | Not started | No | Unassigned | - | - |
-| SF-0238-01 | [ADR-0238](adr-0238-privacy-future.md) | Not started | No | Unassigned | - | - |
-| SF-0238-02 | [ADR-0238](adr-0238-privacy-future.md) | Not started | No | Unassigned | - | - |
-| SF-0238-03 | [ADR-0238](adr-0238-privacy-future.md) | Not started | No | Unassigned | - | - |
+| SF-0236-06 | [ADR-0236](adr-0236-frontend-architecture.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `tests/test_file_length.py` passed 2026-11-10 |
+| SF-0236-07 | [ADR-0236](adr-0236-frontend-architecture.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `tests/test_flow_release_safety.py` 'test_switching_every_optional_feature_off_and_back_changes_no_stored_music_or_mix', 'test_a_feature_switched_off_mid_session_keeps_what_it_saved' (passed 2026-11-10); cross-checkout `tests/rollback_check.py` |
+| SF-0236-08 | [ADR-0236](adr-0236-frontend-architecture.md) | Not started; superseded | No | Unassigned | - | Superseded by ADR-0391: Selecta Cloud is now a goal; its no-SaaS clause holds only in local mode, and cloud storage and identity interfaces (ADR-0397, ADR-0392) were built on purpose |
+| SF-0237-01 | [ADR-0237](adr-0237-truth-provenance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/engineering/flow-cross-cutting.md` Musical provenance and authority; `web/src/ui/MusicObjects.test.tsx` (passed), `web/src/state/readiness.test.ts`, `web/src/state/jobs.test.ts`; `tests/test_flow_cross_cutting.py`; run 2026-11-10 |
+| SF-0237-02 | [ADR-0237](adr-0237-truth-provenance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/state/readiness.test.ts` 'shows failures before pending queue or rendering states', 'does not call a cached but cut-off seam ready for a continuous mix'; `web/src/state/polishReadinessDistinct.test.ts`; `tests/test_api_contracts.py`; passed 2026-11-10 |
+| SF-0237-03 | [ADR-0237](adr-0237-truth-provenance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Mix.test.tsx` 'keeps the move you asked for pressed, and names what really plays separately', 'says nothing about a fallback when what played is what was asked for'; `web/src/ui/MusicObjects.test.tsx` 'shows only returned ordered route songs, and never implies a proposed path has joined', 'keeps queued, rendering, failed and rendered Thread states distinct without inventing sound'; passed 2026-11-10 |
+| SF-0237-04 | [ADR-0237](adr-0237-truth-provenance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'keeps unknown song energy as an unknown gap and selects only the actual row'; `web/src/views/Library.test.tsx` 'never opens another song if a deep-link ID is missing, and can retry'; `web/src/state/jobs.test.ts` 'never crashes the app for an incomplete status from a different server version'; passed 2026-11-10 |
+| SF-0237-05 | [ADR-0237](adr-0237-truth-provenance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Library.test.tsx` 'makes duplicate recording IDs visible in both rows and song details'; `web/src/views/Mix.test.tsx` 'keeps duplicate, RTL and CJK song names readable and occurrence-scoped', 'never confuses two different drafts with identical songs and transition keys'; `web/src/ui/CommandPalette.test.tsx` 'opens the exact recording ID even when different results share a title'; `tests/test_requests.py` 'test_ready_insertion_is_atomic_and_rejects_stale_or_unapproved_plans'; passed 2026-11-10 |
+| SF-0237-06 | [ADR-0237](adr-0237-truth-provenance.md) | In progress; needs a person | No | Unassigned | - | Needs a person: an NVDA inspection that readiness is understandable without colour or diagrams. Automated part passed 2026-11-10: `web/src/ui/controls.test.tsx` 'never rely on colour alone' |
+| SF-0237-07 | [ADR-0237](adr-0237-truth-provenance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'uses the rendered move rather than disguising a fallback as the selected technique', 'never calls an automatic unrendered transition a confirmed technique'; `web/src/views/Mix.test.tsx` 'keeps the move you asked for pressed, and names what really plays separately'; `web/src/state/readiness.test.ts` 'shows failures before pending queue or rendering states'; passed 2026-11-10 |
+| SF-0237-08 | [ADR-0237](adr-0237-truth-provenance.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an uncoached status study of novices telling prepared, playing and requested apart |
+| SF-0238-01 | [ADR-0238](adr-0238-privacy-future.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/engineering/flow-cross-cutting.md` Network egress and local files; `tests/test_flow_cross_cutting.py` 'test_only_listed_modules_open_outbound_connections', 'test_the_local_server_only_listens_on_this_computer' (passed 2026-11-10) |
+| SF-0238-02 | [ADR-0238](adr-0238-privacy-future.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `tests/test_polish_phase03.py` 'test_lyric_lookup_sends_only_artist_title_album_and_duration'; `web/src/localPrivacyCopy.test.ts` 'only drops the LRCLIB sentence when lyric lookup is turned off'; passed 2026-11-10 |
+| SF-0238-03 | [ADR-0238](adr-0238-privacy-future.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `tests/test_api_contracts.py` 'test_stopping_watching_leaves_every_music_file_byte_for_byte'; `tests/test_flow_release_safety.py` (music hashed before and after); passed 2026-11-10 |
 | SF-0238-04 | [ADR-0238](adr-0238-privacy-future.md) | Not started | No | Unassigned | - | - |
-| SF-0238-05 | [ADR-0238](adr-0238-privacy-future.md) | Not started | No | Unassigned | - | - |
-| SF-0238-06 | [ADR-0238](adr-0238-privacy-future.md) | Not started | No | Unassigned | - | - |
+| SF-0238-05 | [ADR-0238](adr-0238-privacy-future.md) | Not started; superseded | No | Unassigned | - | Superseded by ADR-0391 and ADR-0397: cloud storage interfaces were built on purpose for Selecta Cloud; local mode keeps its local storage unchanged |
+| SF-0238-06 | [ADR-0238](adr-0238-privacy-future.md) | Not started; superseded | No | Unassigned | - | Superseded by ADR-0391: login and billing now exist in cloud mode by owner decision; local mode still has no login, billing or remote media |
 | SF-0238-07 | [ADR-0238](adr-0238-privacy-future.md) | Not started | No | Unassigned | - | - |
 | SF-0238-08 | [ADR-0238](adr-0238-privacy-future.md) | Not started | No | Unassigned | - | - |
-| SF-0239-01 | [ADR-0239](adr-0239-test-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0239-02 | [ADR-0239](adr-0239-test-architecture.md) | Not started | No | Unassigned | - | - |
+| SF-0239-01 | [ADR-0239](adr-0239-test-architecture.md) | In progress | No | Flow checklist agent (Claude) | - | the Flow checklist and evidence ledger now record automated evidence or the named human gap for each task ADR-0198 to ADR-0247 handled so far; earlier Flow sections are still being filled by other agents |
+| SF-0239-02 | [ADR-0239](adr-0239-test-architecture.md) | In progress | No | Flow checklist agent (Claude) | - | fixtures exist for light/dark, empty, error, loading and sizes (`web/e2e/visual.e2e.ts`, `web/e2e/paired-theme.e2e.ts`, `web/e2e/mp-baseline.mp.ts`), but a deterministic screenshot run was not done in this session |
 | SF-0239-03 | [ADR-0239](adr-0239-test-architecture.md) | Not started | No | Unassigned | - | - |
 | SF-0239-04 | [ADR-0239](adr-0239-test-architecture.md) | Not started | No | Unassigned | - | - |
 | SF-0239-05 | [ADR-0239](adr-0239-test-architecture.md) | Not started | No | Unassigned | - | - |
 | SF-0239-06 | [ADR-0239](adr-0239-test-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0239-07 | [ADR-0239](adr-0239-test-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0239-08 | [ADR-0239](adr-0239-test-architecture.md) | Not started | No | Unassigned | - | - |
-| SF-0240-01 | [ADR-0240](adr-0240-human-research.md) | Not started | No | Unassigned | - | - |
-| SF-0240-02 | [ADR-0240](adr-0240-human-research.md) | Not started | No | Unassigned | - | - |
-| SF-0240-03 | [ADR-0240](adr-0240-human-research.md) | Not started | No | Unassigned | - | - |
-| SF-0240-04 | [ADR-0240](adr-0240-human-research.md) | Not started | No | Unassigned | - | - |
+| SF-0239-07 | [ADR-0239](adr-0239-test-architecture.md) | Not started; needs a person | No | Unassigned | - | Needs a person: hardware logs of live playback during analysis and render on named low-power machines |
+| SF-0239-08 | [ADR-0239](adr-0239-test-architecture.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `.github/pull_request_template.md` Evidence record; `tests/test_flow_cross_cutting.py` 'test_every_pull_request_carries_its_evidence_record' (passed 2026-11-10) |
+| SF-0240-01 | [ADR-0240](adr-0240-human-research.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/research/flow-research-protocol.md` Listener journey scripts; `tests/test_flow_cross_cutting.py` 'test_the_research_protocol_covers_each_journey_and_keeps_joy_apart' (passed 2026-11-10) |
+| SF-0240-02 | [ADR-0240](adr-0240-human-research.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/research/flow-research-protocol.md` Creator journey scripts and Task outcome form; `tests/test_flow_cross_cutting.py` 'test_the_research_protocol_covers_each_journey_and_keeps_joy_apart' (passed 2026-11-10) |
+| SF-0240-03 | [ADR-0240](adr-0240-human-research.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a DJ expert review with recorded feedback on technique, cue and handoff precision |
+| SF-0240-04 | [ADR-0240](adr-0240-human-research.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/research/flow-research-protocol.md` Accessibility participant sessions; `tests/test_flow_cross_cutting.py` (passed 2026-11-10) |
 | SF-0240-05 | [ADR-0240](adr-0240-human-research.md) | Not started | No | Unassigned | - | - |
-| SF-0240-06 | [ADR-0240](adr-0240-human-research.md) | Not started | No | Unassigned | - | - |
-| SF-0240-07 | [ADR-0240](adr-0240-human-research.md) | Not started | No | Unassigned | - | - |
-| SF-0240-08 | [ADR-0240](adr-0240-human-research.md) | Not started | No | Unassigned | - | - |
-| SF-0241-01 | [ADR-0241](adr-0241-migration-rollback.md) | Not started | No | Unassigned | - | - |
+| SF-0240-06 | [ADR-0240](adr-0240-human-research.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/research/flow-research-protocol.md` Joy kept apart from correctness; `tests/test_flow_cross_cutting.py` (passed 2026-11-10) |
+| SF-0240-07 | [ADR-0240](adr-0240-human-research.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/research/flow-research-protocol.md` Reproducible findings; `tests/test_flow_cross_cutting.py` (passed 2026-11-10) |
+| SF-0240-08 | [ADR-0240](adr-0240-human-research.md) | Not started; needs a person | No | Unassigned | - | Needs a person: the owner and an independent reviewer approving P0 and P1 thresholds before testing |
+| SF-0241-01 | [ADR-0241](adr-0241-migration-rollback.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/selecta-flow-roadmap.md` Delivery phases; `tests/test_flow_cross_cutting.py` 'test_the_rollout_order_goes_foundation_then_shell_then_scenes_then_operations' (passed 2026-11-10) |
 | SF-0241-02 | [ADR-0241](adr-0241-migration-rollback.md) | Not started | No | Unassigned | - | - |
-| SF-0241-03 | [ADR-0241](adr-0241-migration-rollback.md) | Not started | No | Unassigned | - | - |
+| SF-0241-03 | [ADR-0241](adr-0241-migration-rollback.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `tests/test_flow_release_safety.py` (2 passed 2026-11-10) |
 | SF-0241-04 | [ADR-0241](adr-0241-migration-rollback.md) | Not started | No | Unassigned | - | - |
 | SF-0241-05 | [ADR-0241](adr-0241-migration-rollback.md) | Not started | No | Unassigned | - | - |
-| SF-0241-06 | [ADR-0241](adr-0241-migration-rollback.md) | Not started | No | Unassigned | - | - |
-| SF-0241-07 | [ADR-0241](adr-0241-migration-rollback.md) | Not started | No | Unassigned | - | - |
-| SF-0241-08 | [ADR-0241](adr-0241-migration-rollback.md) | Not started | No | Unassigned | - | - |
+| SF-0241-06 | [ADR-0241](adr-0241-migration-rollback.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `.github/pull_request_template.md`; `tests/test_flow_cross_cutting.py` 'test_every_pull_request_carries_its_evidence_record' (passed 2026-11-10) |
+| SF-0241-07 | [ADR-0241](adr-0241-migration-rollback.md) | In progress | No | Flow checklist agent (Claude) | - | edit and request state survive a forced feature rollback (`tests/test_flow_release_safety.py`, passed 2026-11-10) and `tests/rollback_check.py` covers a finished export's record across checkouts, but no end-to-end forced-revert scenario after an export was run |
+| SF-0241-08 | [ADR-0241](adr-0241-migration-rollback.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a release record pinning the gate decision to an exact candidate SHA and evidence, signed by the owner |
 | SF-0242-01 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started | No | Unassigned | - | - |
-| SF-0242-02 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started | No | Unassigned | - | - |
+| SF-0242-02 | [ADR-0242](adr-0242-musical-microcopy.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/ui/MusicObjects.test.tsx` 'never calls an automatic unrendered transition a confirmed technique', 'shows only returned ordered route songs, and never implies a proposed path has joined'; `web/src/views/Requests.test.tsx` 'says requested', 'says which request a bridge is for'; passed 2026-11-10 |
 | SF-0242-03 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started | No | Unassigned | - | - |
-| SF-0242-04 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started | No | Unassigned | - | - |
+| SF-0242-04 | [ADR-0242](adr-0242-musical-microcopy.md) | In progress; needs a person | No | Unassigned | - | Needs a person: a user prediction test of Save, Play, Replace and Undo scope. Automated part passed 2026-11-10: `web/src/ui/CommandPalette.test.tsx` 'shows exact Undo scope but refuses an unavailable mutation', `web/src/shell/commands.test.ts` 'names the exact mix for Undo and refuses unloaded draft actions' |
 | SF-0242-05 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started | No | Unassigned | - | - |
 | SF-0242-06 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started | No | Unassigned | - | - |
 | SF-0242-07 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started | No | Unassigned | - | - |
-| SF-0242-08 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started | No | Unassigned | - | - |
-| SF-0243-01 | [ADR-0243](adr-0243-creative-gestures.md) | Not started | No | Unassigned | - | - |
+| SF-0242-08 | [ADR-0242](adr-0242-musical-microcopy.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an uncoached task study of whether people understand what changed and what happens next |
+| SF-0243-01 | [ADR-0243](adr-0243-creative-gestures.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/engineering/flow-cross-cutting.md` Gesture affordances; `web/src/views/Studio.test.tsx` 'is one tab stop, moves with the arrow keys, and Space turns a square on or off'; `web/src/state/shortcuts.test.ts` 'leaves Space to a custom role=button reorder grip and its children'; `web/src/views/MixSetup.test.tsx`; passed 2026-11-10 |
 | SF-0243-02 | [ADR-0243](adr-0243-creative-gestures.md) | Not started | No | Unassigned | - | - |
 | SF-0243-03 | [ADR-0243](adr-0243-creative-gestures.md) | Not started | No | Unassigned | - | - |
 | SF-0243-04 | [ADR-0243](adr-0243-creative-gestures.md) | Not started | No | Unassigned | - | - |
 | SF-0243-05 | [ADR-0243](adr-0243-creative-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0243-06 | [ADR-0243](adr-0243-creative-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0243-07 | [ADR-0243](adr-0243-creative-gestures.md) | Not started | No | Unassigned | - | - |
-| SF-0243-08 | [ADR-0243](adr-0243-creative-gestures.md) | Not started | No | Unassigned | - | - |
+| SF-0243-06 | [ADR-0243](adr-0243-creative-gestures.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/views/Studio.test.tsx` 'paints a consistent value over touched cells without re-toggling a revisited cell' (passed 2026-11-10) |
+| SF-0243-07 | [ADR-0243](adr-0243-creative-gestures.md) | In progress; needs a person | No | Unassigned | - | Needs a person: a stylus and coarse-pointer device test; `pointer: coarse` raises targets in CSS and MP-0298-03 measures 44px primary targets, but no real device was used |
+| SF-0243-08 | [ADR-0243](adr-0243-creative-gestures.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a creator study of editing speed and unintended changes |
 | SF-0244-01 | [ADR-0244](adr-0244-command-palette.md) | Not started | No | Unassigned | - | - |
-| SF-0244-02 | [ADR-0244](adr-0244-command-palette.md) | Not started | No | Unassigned | - | - |
+| SF-0244-02 | [ADR-0244](adr-0244-command-palette.md) | In progress; needs a person | No | Unassigned | - | Needs a person: a results task study of whether songs, mixes, routes and actions are told apart; results are grouped Songs, Go to, Playback, Do and Your drafts in `web/src/shell/commands.ts` |
 | SF-0244-03 | [ADR-0244](adr-0244-command-palette.md) | Not started | No | Unassigned | - | - |
-| SF-0244-04 | [ADR-0244](adr-0244-command-palette.md) | Not started | No | Unassigned | - | - |
+| SF-0244-04 | [ADR-0244](adr-0244-command-palette.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `web/src/shell/commands.test.ts` 'names the exact mix for Undo and refuses unloaded draft actions'; `web/src/ui/CommandPalette.test.tsx` 'shows exact Undo scope but refuses an unavailable mutation'; passed 2026-11-10 |
 | SF-0244-05 | [ADR-0244](adr-0244-command-palette.md) | Not started | No | Unassigned | - | - |
 | SF-0244-06 | [ADR-0244](adr-0244-command-palette.md) | Not started | No | Unassigned | - | - |
 | SF-0244-07 | [ADR-0244](adr-0244-command-palette.md) | Not started | No | Unassigned | - | - |
-| SF-0244-08 | [ADR-0244](adr-0244-command-palette.md) | Not started | No | Unassigned | - | - |
-| SF-0245-01 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | - | - |
-| SF-0245-02 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | - | - |
-| SF-0245-03 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | - | - |
+| SF-0244-08 | [ADR-0244](adr-0244-command-palette.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a comparative study of expert speed against novice confusion |
+| SF-0245-01 | [ADR-0245](adr-0245-final-pixel-polish.md) | In progress; needs a person | No | Unassigned | - | Needs a person: a pixel-diff review of control alignment across scene, card and dialog; automated rhythm checks exist (`web/src/styles/optical-alignment.test.ts`, `web/src/styles/spacing-tokens.test.ts`) |
+| SF-0245-02 | [ADR-0245](adr-0245-final-pixel-polish.md) | In progress; needs a person | No | Unassigned | - | Needs a person: a visual specimen audit of title, timestamp and icon optics; `web/src/styles/typography.test.ts` and `web/e2e/mp-0277-icon-geometry.e2e.ts` cover the measurable part |
+| SF-0245-03 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a light and dark gallery review of borders, elevation and selected states |
 | SF-0245-04 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | - | - |
-| SF-0245-05 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | - | - |
+| SF-0245-05 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an interactive screenshot grid review of hover, focus and active states across shared primitives |
 | SF-0245-06 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | - | - |
-| SF-0245-07 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | - | - |
-| SF-0245-08 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started | No | Unassigned | - | - |
-| SF-0246-01 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | - | - |
-| SF-0246-02 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | - | - |
-| SF-0246-03 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | - | - |
+| SF-0245-07 | [ADR-0245](adr-0245-final-pixel-polish.md) | In progress; needs a person | No | Unassigned | - | Needs a person: a slow-motion capture review of transitions cancelling without jitter; `web/e2e/mp-0296-motion.e2e.ts` 'MP-0296-05' is the automated part |
+| SF-0245-08 | [ADR-0245](adr-0245-final-pixel-polish.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an independent reviewer approving the exact candidate SHA in a signed visual QA dossier |
+| SF-0246-01 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a recorded journey from folder to six ready tracks to Listen under `docs/research/flow-research-protocol.md` task L1 and L2 |
+| SF-0246-02 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a real playback review identifying the actual audio handoff and its visual moment |
+| SF-0246-03 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a task test of people reaching the correct song and seam |
 | SF-0246-04 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | - | - |
-| SF-0246-05 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | - | - |
+| SF-0246-05 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started; needs a person | No | Unassigned | - | Needs a person: a consent usability test of the request route and bridge decision |
 | SF-0246-06 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | - | - |
-| SF-0246-07 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | - | - |
-| SF-0246-08 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started | No | Unassigned | - | - |
-| SF-0247-01 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | - | - |
-| SF-0247-02 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | - | - |
-| SF-0247-03 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | - | - |
-| SF-0247-04 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | - | - |
+| SF-0246-07 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an uncoached session on whether song, mix and intent are recognisable after navigation |
+| SF-0246-08 | [ADR-0246](adr-0246-end-to-end-journey.md) | Not started; needs a person | No | Unassigned | - | Needs a person: listener and DJ feedback recording music satisfaction apart from task accuracy |
+| SF-0247-01 | [ADR-0247](adr-0247-release-governance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/selecta-flow-implementation-checklist.md` Status update policy; `tests/test_flow_cross_cutting.py` 'test_every_flow_adr_records_a_dated_decision_and_counted_implementation' (passed 2026-11-10) |
+| SF-0247-02 | [ADR-0247](adr-0247-release-governance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `src/selecta/audit/checklist_evidence.py`; `tests/test_checklist_evidence.py`; `tests/test_flow_cross_cutting.py` 'test_every_flow_adr_records_a_dated_decision_and_counted_implementation'; passed 2026-11-10 |
+| SF-0247-03 | [ADR-0247](adr-0247-release-governance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/selecta-flow-implementation-evidence.md` (Independently Verified and reviewer columns); `docs/adr/selecta-flow-release-gates.md` Evidence needed item 3; `docs/research/flow-research-protocol.md` Reproducible findings |
+| SF-0247-04 | [ADR-0247](adr-0247-release-governance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/selecta-flow-release-gates.md` Blocking severity; `tests/test_flow_cross_cutting.py` 'test_release_gates_block_audio_data_privacy_and_access_failures' (passed 2026-11-10) |
 | SF-0247-05 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | - | - |
-| SF-0247-06 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | - | - |
-| SF-0247-07 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | - | - |
-| SF-0247-08 | [ADR-0247](adr-0247-release-governance.md) | Not started | No | Unassigned | - | - |
+| SF-0247-06 | [ADR-0247](adr-0247-release-governance.md) | Implemented | No | Flow checklist agent (Claude) | feat/finish-checklists, 2026-11-10 | `docs/adr/adr-0199-historical-status-reconciliation.md` Screen review protocol; `docs/adr/completion/visual-evidence.md` |
+| SF-0247-07 | [ADR-0247](adr-0247-release-governance.md) | In progress | No | Flow checklist agent (Claude) | - | feature rollback keeps music, mix, drafts and requests (`tests/test_flow_release_safety.py`, passed 2026-11-10) and `tests/rollback_check.py` reads an old checkout's home, but no rollback E2E against an older build was run in this session |
+| SF-0247-08 | [ADR-0247](adr-0247-release-governance.md) | Not started; needs a person | No | Unassigned | - | Needs a person: an independent release report and signed exact-SHA GO/NO-GO with music evaluation |
 
 ## Independent verification discipline
 

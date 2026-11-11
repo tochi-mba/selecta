@@ -68,7 +68,7 @@ function apply(next: Prefs) {
   if (next.theme === 'system') delete root.dataset.theme;
   else root.dataset.theme = next.theme;
   for (const bar of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
-    const own = bar.media.includes('light') ? BAR_COLOUR.light : BAR_COLOUR.dark;
+    const own = (bar.getAttribute('media') ?? '').includes('light') ? BAR_COLOUR.light : BAR_COLOUR.dark;
     bar.content = next.theme === 'system' ? own : BAR_COLOUR[next.theme];
   }
 }

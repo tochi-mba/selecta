@@ -4,7 +4,7 @@
 .overlay-dialog .overlay-panel:has(.glossary) { width: min(640px, 100%); }
 .glossary { display: grid; gap: var(--space-3); }
 .glossary > .hint { margin: 0; }
-.glossary .field { display: grid; gap: var(--space-1); }
+.glossary .field { display: grid; gap: var(--field-gap); }
 .glossary .field input { width: 100%; }
 .glossary .field-help { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
 .glossary-count { margin: 0; }
@@ -17,7 +17,7 @@
 .glossary-aka { font-size: var(--text-sm); }
 .glossary-related { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
 .glossary-related .hint { margin: 0; }
-.glossary-related .link { min-height: var(--control-height); }
+.glossary-related .link { min-height: var(--control-height); min-width: 24px; } /* MP-0272 D-03: short terms stay 24px wide */
 .glossary-hints-choice { justify-self: start; max-width: 100%; }
 
 /* The ? itself, and the short definition it opens just below. */

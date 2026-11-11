@@ -68,8 +68,10 @@ export function EditorHeader(props: {
   actions: ReactNode;
   /** Story, Arrange or Detail: how the same mix is shown below. */
   view?: ReactNode;
+  /** MP-0287-07: the chosen view's name, kept in the pinned scope bar so it stays in sight while scrolling */
+  viewName?: string;
 }) {
-  const { draftId, mix, mixName, mixEta, draftPlace, currentMixName, readiness, totalSeconds, switcher, actions, view } = props;
+  const { draftId, mix, mixName, mixEta, draftPlace, currentMixName, readiness, totalSeconds, switcher, actions, view, viewName } = props;
   const inDraft = draftId !== null;
   const facts = readinessWords(readiness);
   const { seams, ready } = readiness;
@@ -82,6 +84,7 @@ export function EditorHeader(props: {
             ? `Nothing here touches ${currentMixName ?? 'what’s playing'}.`
             : 'Changes here change what’s playing.'}
         </span>
+        {viewName && <span className="scope-view">{viewName} view</span>}
         <span className="scope-revision" title="Changes whenever the order of songs changes">Revision {revisionOf(mix)}</span>
         <Status kind={facts.kind}>{facts.words}</Status>
       </div>

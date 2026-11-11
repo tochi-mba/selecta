@@ -26,6 +26,12 @@
       "routes": ["POST /api/mix/{position}/lock"],
       "surfaces": ["edit"]
     },
+    "editor.drag_preview": {
+      "label": "Move preview",
+      "about": "While a song is dragged, the transitions the drop would change are marked before it lands.",
+      "requires": ["editor"],
+      "surfaces": ["edit"]
+    },
     "seam_inspector": {
       "label": "Transition inspector",
       "about": "Pick the move for any transition, hear it, render it and see its checks.",
@@ -40,6 +46,13 @@
       "requires": ["seam_inspector"],
       "surfaces": ["overlay.inspector"],
       "words": ["Exact cues"]
+    },
+    "seam_inspector.compare": {
+      "label": "Compare with before",
+      "about": "Hear a transition's earlier finished render beside the new one, once both really exist.",
+      "requires": ["seam_inspector"],
+      "surfaces": ["overlay.inspector"],
+      "words": ["Compare with before"]
     },
     "stem_studio": {
       "label": "Stem Studio",

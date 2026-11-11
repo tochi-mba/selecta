@@ -1,7 +1,7 @@
 # ADR-0112: Full regression strategy, stable test fixtures, visual review and adversarial races
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started (0/10 implemented)
+- **Implementation status:** In progress (8/10 implemented, 2 in progress; source reconciliation 2026-11-10, branch feat/finish-checklists)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -29,18 +29,18 @@ Build a feature-to-test traceability matrix with a layered suite: static/API/uni
 - Model-based/property invariants: one audio owner, wrong-scope writes impossible, atomic bridge, exact export snapshot, latest intent.
 - Exact CI head SHA, runner version and manual evidence recorded separately.
 
-## Detailed implementation work - all Not started
+## Detailed implementation work
 
-1. **S4-0112-01 - Inventory all prior Python, Web, audio and Edge tests and contracts.** Acceptance: No behavioural assertion silently dropped due to selector change. Required verification: File-by-file old-to-new test mapping. **Implementation: Not started; Verified: No.**
-2. **S4-0112-02 - Create deterministic fixtures for small/large/error/race states.** Acceptance: Fixtures independent and avoid private user music. Required verification: Isolated server/data setup and seeded media checks. **Implementation: Not started; Verified: No.**
-3. **S4-0112-03 - Establish component interaction/state suite for shared controls.** Acceptance: Every default/focused/pressed/busy/error variant covered. Required verification: Unit, component, keyboard tests. **Implementation: Not started; Verified: No.**
-4. **S4-0112-04 - Expand transport/audio-focus and player lifecycle regression.** Acceptance: No unintended overlap/stop/resume across every preview owner. Required verification: Pairwise player-owner matrix and real-media checks. **Implementation: Not started; Verified: No.**
-5. **S4-0112-05 - Expand current/draft/editor/request/export concurrency suite.** Acceptance: No wrong pair, duplicate join, partial bridge or wrong FLAC. Required verification: Sequences A–J in verification matrix. **Implementation: Not started; Verified: No.**
-6. **S4-0112-06 - Promote screenshot captures to reviewed golden comparisons.** Acceptance: Each intended diff approved and stored with fixture metadata. Required verification: Playwright toHaveScreenshot pinned browser. **Implementation: Not started; Verified: No.**
-7. **S4-0112-07 - Run automated WCAG checks plus manual AT acceptance.** Acceptance: Axe pass not misreported as manual conformance. Required verification: Per-route axe + NVDA/Edge session logs. **Implementation: Not started; Verified: No.**
-8. **S4-0112-08 - Measure large-data performance and export audio bytes.** Acceptance: 20k/100-song/64 cell and decodable snapshot-accurate FLAC. Required verification: Performance traces and audio decode assertions. **Implementation: Not started; Verified: No.**
-9. **S4-0112-09 - Require negative/offline/recovery/old server fixtures.** Acceptance: Failed, stale, interrupted and recovered visibly distinct. Required verification: Fault injection including timeout/duplicate response. **Implementation: Not started; Verified: No.**
-10. **S4-0112-10 - Publish CI matrix, flakes, quarantine policy and evidence links.** Acceptance: No broad test skip/update of failing snapshot to force green. Required verification: Exact-head checks, flake owner and PR review. **Implementation: Not started; Verified: No.**
+1. **S4-0112-01 - Inventory all prior Python, Web, audio and Edge tests and contracts.** Acceptance: No behavioural assertion silently dropped due to selector change. Required verification: File-by-file old-to-new test mapping. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: docs/engineering/testing.md and docs/ci.md describe the suites; no file-by-file old-to-new mapping. Needs a person: file-by-file test mapping review.
+2. **S4-0112-02 - Create deterministic fixtures for small/large/error/race states.** Acceptance: Fixtures independent and avoid private user music. Required verification: Isolated server/data setup and seeded media checks. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: tests/e2e_server.py synthetic library (SELECTA_E2E_STRESS for awkward names), tests/synth.py, tests/scale_server.py; no private music. Needs a person: independent review.
+3. **S4-0112-03 - Establish component interaction/state suite for shared controls.** Acceptance: Every default/focused/pressed/busy/error variant covered. Required verification: Unit, component, keyboard tests. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: web/src/ui/controls.test.tsx; docs/adr/completion/components.md interaction state matrix. Needs a person: independent review.
+4. **S4-0112-04 - Expand transport/audio-focus and player lifecycle regression.** Acceptance: No unintended overlap/stop/resume across every preview owner. Required verification: Pairwise player-owner matrix and real-media checks. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: focus.test.tsx; listen.e2e.ts 'a preview takes the sound', 'only one tab plays at a time'. Needs a person: real-media pairwise owner matrix.
+5. **S4-0112-05 - Expand current/draft/editor/request/export concurrency suite.** Acceptance: No wrong pair, duplicate join, partial bridge or wrong FLAC. Required verification: Sequences A–J in verification matrix. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: web/e2e/integration.e2e.ts draft vs current, two requests, late cancel, export pinned to revision. Needs a person: independent review.
+6. **S4-0112-06 - Promote screenshot captures to reviewed golden comparisons.** Acceptance: Each intended diff approved and stored with fixture metadata. Required verification: Playwright toHaveScreenshot pinned browser. **Implementation: In progress (2026-11-10, source-reconciled); Verified: No.** Evidence: web/e2e/paired-theme.e2e.ts captures with docs/adr/completion/visual-evidence.md; no toHaveScreenshot golden baselines. Needs a person: approve golden baselines.
+7. **S4-0112-07 - Run automated WCAG checks plus manual AT acceptance.** Acceptance: Axe pass not misreported as manual conformance. Required verification: Per-route axe + NVDA/Edge session logs. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: pages.e2e.ts axe on pages, dialogs and drawers. Needs a person: NVDA/Edge session logs.
+8. **S4-0112-08 - Measure large-data performance and export audio bytes.** Acceptance: 20k/100-song/64 cell and decodable snapshot-accurate FLAC. Required verification: Performance traces and audio decode assertions. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: test_export_validation.py decode; test_library_edges.py 20k. Needs a person: performance traces.
+9. **S4-0112-09 - Require negative/offline/recovery/old server fixtures.** Acceptance: Failed, stale, interrupted and recovered visibly distinct. Required verification: Fault injection including timeout/duplicate response. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: flows.e2e.ts 'it says so, keeps what's on screen, and recovers by itself', 'a change that couldn't be sent says so'; jobs.test.ts old server; test_api_contracts.py 'guarded_replay_returns_original_response_after_its_own_mix_change'. Needs a person: independent review.
+10. **S4-0112-10 - Publish CI matrix, flakes, quarantine policy and evidence links.** Acceptance: No broad test skip/update of failing snapshot to force green. Required verification: Exact-head checks, flake owner and PR review. **Implementation: Implemented (2026-11-10, source-reconciled); Verified: No.** Evidence: docs/ci.md CI matrix and new 'Flakes and quarantine'; new tests/test_no_quarantined_tests.py. Needs a person: flake owner and exact-head PR review.
 
 ## Required negative cases and regression strategy
 
@@ -69,6 +69,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 |---|---|---|---|---|
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress (8/10) | Not verified | Source reconciliation against current code with focused tests run 2026-11-10; every task still needs independent verification |
 
 ## Related documents
 

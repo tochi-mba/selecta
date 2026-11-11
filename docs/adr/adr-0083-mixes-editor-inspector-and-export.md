@@ -1,7 +1,7 @@
 # ADR-0083: Make drafts, timeline editing, transition intent and export unambiguous
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
+- **Implementation status:** In progress: 10 Implemented (automated), 2 In progress, 0 need a person only (2026-11-10 reconciliation); 0/12 Verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 3 - creator journeys
@@ -23,18 +23,18 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0083-01 - Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next.
-2. **S31-0083-02 - Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity.
-3. **S31-0083-03 - Review creator timeline hierarchy at 2, 20 and 100 songs.** Acceptance: Track identity, seam status and contextual actions stay scannable under long metadata.
-4. **S31-0083-04 - Provide predictable non-drag reorder and insertion affordances.** Acceptance: Pointer/touch/keyboard alternatives clearly indicate destination and resulting order.
-5. **S31-0083-05 - Review draft versus current editor headers and action copy.** Acceptance: User knows what changes immediately affect playback and what remains a separate project.
-6. **S31-0083-06 - Audit Inspector Listen/Change/Studio/Details consistency.** Acceptance: Tab semantics, pair context, focus and requested-versus-rendered outcome stay stable.
-7. **S31-0083-07 - Review transition cue, style, bar count and fallback presentation.** Acceptance: User choice is not visually overwritten by a different actually rendered move.
-8. **S31-0083-08 - Verify preview/rating/render failure and stale-request recovery.** Acceptance: A late render cannot trump newer intent; audio preview preserves proper owner.
-9. **S31-0083-09 - Review export scope, prerequisites and exact snapshot identity.** Acceptance: Before confirm, user knows selected mix/revision and why export may be unavailable.
-10. **S31-0083-10 - Review persistent export stages, errors, retries and download recovery.** Acceptance: Closing panel or modifying mix does not lose job; final output corresponds to captured revision.
-11. **S31-0083-11 - Test cross-mix concurrent edits, requests and Undo.** Acceptance: Mutation/Undo only affects intended current/draft revision despite stale responses.
-12. **S31-0083-12 - Verify actual FLAC decoding and authored track order.** Acceptance: Downloaded file format, duration, transition identity and source scope match intended snapshot.
+1. **S31-0083-01 - Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `Drafts.test.tsx`, `MyMixes.test.tsx`, `CurrentMix.test.tsx` passed. **Needs a person:** users distinguish playing, saved, queued and next render.
+2. **S31-0083-02 - Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Drafts.test.tsx` (confirm delete, Undo, copy, rename, serialized render line); `Mix.test.tsx` ("renames in place", "deleting ... can be undone") passed. **Needs a person:** owner review for Verified.
+3. **S31-0083-03 - Review creator timeline hierarchy at 2, 20 and 100 songs.** Acceptance: Track identity, seam status and contextual actions stay scannable under long metadata. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `Mix.test.tsx` ("keeps duplicate, RTL and CJK song names readable and occurrence-scoped") passed. **Needs a person:** scan review at 2, 20 and 100 songs.
+4. **S31-0083-04 - Provide predictable non-drag reorder and insertion affordances.** Acceptance: Pointer/touch/keyboard alternatives clearly indicate destination and resulting order. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("reordering with the keyboard moves the song, and focus stays on it") passed. **Needs a person:** touch reorder on a real device.
+5. **S31-0083-05 - Review draft versus current editor headers and action copy.** Acceptance: User knows what changes immediately affect playback and what remains a separate project. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Mix.test.tsx` ("is plainly a draft, and says what's playing isn't affected", "has no buttons that would change the current mix") passed. **Needs a person:** owner review for Verified; comprehension check.
+6. **S31-0083-06 - Audit Inspector Listen/Change/Studio/Details consistency.** Acceptance: Tab semantics, pair context, focus and requested-versus-rendered outcome stay stable. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("a transition's tabs work from the keyboard, and it stays clear which pair they're about"); `Mix.test.tsx` inspector cases passed. **Needs a person:** screen-reader check of Inspector tabs.
+7. **S31-0083-07 - Review transition cue, style, bar count and fallback presentation.** Acceptance: User choice is not visually overwritten by a different actually rendered move. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Mix.test.tsx` ("keeps the move you asked for pressed, and names what really plays separately"); `web/src/ui/MusicObjects.test.tsx` passed. **Needs a person:** owner review for Verified.
+8. **S31-0083-08 - Verify preview/rating/render failure and stale-request recovery.** Acceptance: A late render cannot trump newer intent; audio preview preserves proper owner. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Mix.test.tsx` ("keeps the latest choice visible when an older server response refreshes the inspector"); `web/e2e/finishing.e2e.ts` ("two quick seam changes on a slow server") passed. **Needs a person:** real render and preview stale-order check.
+9. **S31-0083-09 - Review export scope, prerequisites and exact snapshot identity.** Acceptance: Before confirm, user knows selected mix/revision and why export may be unavailable. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Mix.test.tsx` ("shows the exact ordered source songs before creating a file", "says exactly which mix"); `UpNext.test.tsx` SF-0231-01 passed. **Needs a person:** owner review for Verified.
+10. **S31-0083-10 - Review persistent export stages, errors, retries and download recovery.** Acceptance: Closing panel or modifying mix does not lose job; final output corresponds to captured revision. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/integration.e2e.ts` ("editing a draft during export keeps the job pinned to its original revision"); `tests/test_export_retry.py`, `tests/test_export_validation.py` passed. **Needs a person:** owner review for Verified.
+11. **S31-0083-11 - Test cross-mix concurrent edits, requests and Undo.** Acceptance: Mutation/Undo only affects intended current/draft revision despite stale responses. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/integration.e2e.ts` ("editing a draft while the current mix plays ... Undo knows which is which"); `Shell.test.tsx` Undo identity passed. **Needs a person:** owner review for Verified.
+12. **S31-0083-12 - Verify actual FLAC decoding and authored track order.** Acceptance: Downloaded file format, duration, transition identity and source scope match intended snapshot. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("a saved file has the songs of the mix at the moment it was saved, in that order") passed. **Needs a person:** listen to a downloaded FLAC and confirm transition identity.
 
 ## Required adverse cases and evidence
 
@@ -59,6 +59,7 @@ The owner accepted this decision on 2026-11-08. Only the explicitly identified S
 | 2026-11-07 | Proposed | Not started | Initial documentation-only finishing plan | 
 | 2026-11-07 | Proposed | In progress | Selected UI/Edge/test or visual-review infrastructure on draft PR #25; no human acceptance or task Verified |
 | 2026-11-08 | Accepted | In progress | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress | Every task re-checked against current code; 10 Implemented (automated), 2 In progress, 0 need a person only (2026-11-10 reconciliation); focused Vitest, pytest and Edge runs named per task; 0/12 Verified |
 
 ## Related documents
 

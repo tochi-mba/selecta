@@ -22,6 +22,7 @@ from typing import Any, Protocol
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
+from selecta.observability import tracing
 from selecta.persistence import db_now, new_id, transaction
 from selecta.scheduling import admission
 from selecta.scheduling.policy import Lane, PolicyConfig, WorkerCaps
@@ -34,6 +35,7 @@ from selecta.work import (
     heads,
     lifecycle,
     outbox,
+    plans,
     retrying,
     upkeep,
 )
@@ -70,6 +72,9 @@ class TermFence(Protocol):
 
 
 class JobStore:
+    trace_service = "api"
+    """Which service this store's job spans name (the gateway sets "gateway"; ADR-0410)."""
+
     def __init__(
         self,
         engine: Engine,
@@ -180,8 +185,14 @@ class JobStore:
     # --- producers ---
 
     def enqueue(self, spec: JobSpec) -> Enqueued:
+        started = tracing.now_ns()
         with self._tx(spec.workspace_id, heads_first=True) as (connection, now):
-            return enqueue.enqueue(connection, spec, now)
+            made = enqueue.enqueue(connection, spec, now)
+        tracing.record_job_span(
+            "job.enqueue", made.job.id, started, service=self.trace_service,
+            **{"selecta.job_type": made.job.type, "selecta.created": made.created},
+        )
+        return made
 
     def add_dependency(self, workspace_id: str, job_id: str, depends_on: str) -> Job:
         with self._tx(workspace_id, heads_first=True) as (connection, now):
@@ -255,6 +266,53 @@ class JobStore:
         ).scalar()
         return float(ended or 0.0) + float(running or 0.0)
 
+    # --- plans: bulk work, materialised lazily (`selecta.work.plans`) ---
+
+    def submit_plan(self, spec: plans.PlanSpec) -> plans.Plan:
+        """Accept many items of one job type as one row, and make the first page of jobs."""
+        with self._tx(spec.workspace_id) as (connection, now):
+            plan, created = plans.submit(connection, spec, now)
+        if created:
+            self.materialise_plan(plan.workspace_id, plan.id)
+        return self.plan(plan.workspace_id, plan.id)
+
+    def plan(self, workspace_id: str, plan_id: str) -> plans.Plan:
+        with transaction(self.engine, workspace_id) as connection:
+            return plans.read(connection, workspace_id, plan_id)
+
+    def materialise_plan(
+        self, workspace_id: str, plan_id: str, fence: TermFence | None = None
+    ) -> int:
+        """Make the plan's next page into jobs if the last one has drained. Returns how many."""
+        with self._tx(workspace_id, fence) as (connection, _now):
+            plan = plans.read(connection, workspace_id, plan_id)
+            wanted = plans.page_size(connection, self.config, plan)
+        made = 0
+        while made < wanted:
+            with self._tx(workspace_id, fence, heads_first=True) as (connection, now):
+                step = plans.write_chunk(
+                    connection, plan_id, plan.materialised + made,
+                    min(plans.CHUNK, wanted - made), now,
+                )
+            if step == 0:
+                break
+            made += step
+        return made
+
+    def materialise_plans(self, fence: TermFence | None = None, limit: int = 1_000) -> int:
+        """The maintenance task: the next page of every open plan whose last page drained."""
+        with self._tx(None, fence) as (connection, _now):
+            due = plans.due(connection, limit)
+        return sum(self.materialise_plan(workspace, plan_id, fence) for workspace, plan_id in due)
+
+    def cancel_plan(self, workspace_id: str, plan_id: str) -> plans.Plan:
+        """Stop the plan and cancel the jobs it has made that haven't finished."""
+        with self._tx(workspace_id, heads_first=True) as (connection, now):
+            plan = plans.cancel(connection, workspace_id, plan_id, now)
+            for job_id in plans.live_children(connection, plan_id):
+                lifecycle.cancel(connection, workspace_id, job_id, now)
+        return plan
+
     # --- workers ---
 
     def register_worker(self, caps: WorkerCaps, worker_id: str | None = None) -> str:
@@ -273,10 +331,22 @@ class JobStore:
 
     def claim(self, pool: str, caps: WorkerCaps) -> Claim | None:
         """The next job this worker should run in this pool, or None if nothing is eligible."""
+        started = tracing.now_ns()
         with self._tx() as (connection, now):
             claimed = claims.ClaimSession(connection, self, pool, caps, now).run()
         if claimed is not None:
             self._remember(claimed.attempt_id, claimed.job.workspace_id)
+            if claimed.job.queued_at:
+                # Queue wait as its own span, so span metrics give wait time by lane (SLOs).
+                tracing.record_job_span(
+                    "job.wait", claimed.job.id, int(claimed.job.queued_at * 1e9),
+                    service=self.trace_service,
+                    **{"selecta.lane": str(claimed.job.lane), "selecta.pool": pool},
+                )
+            tracing.record_job_span(
+                "job.claim", claimed.job.id, started, service=self.trace_service,
+                **{"selecta.attempt_id": claimed.attempt_id, "selecta.pool": pool},
+            )
         return claimed
 
     def start(self, attempt_id: str, token: int) -> Job:
@@ -337,11 +407,17 @@ class JobStore:
             if size > self.config.max_result_bytes:
                 raise ResultTooLarge(f"The results are {size} bytes; store them as artifacts.")
         outputs = tuple(artifacts)
+        started = tracing.now_ns()
         with self._tx(self._workspace_of(attempt_id), heads_first=True) as (connection, now):
             job, problem = lifecycle.complete(
                 connection, self, attempt_id, token, result, outputs, cost_s, now
             )
         self._forget(attempt_id)
+        tracing.record_job_span(
+            "job.complete", getattr(job, "id", ""), started, service=self.trace_service,
+            **{"selecta.attempt_id": attempt_id, "selecta.state": str(getattr(job, "state", "")),
+               "selecta.artifacts": len(outputs)},
+        )
         if problem is not None:
             raise problem
         return job
@@ -354,11 +430,16 @@ class JobStore:
         detail: str = "",
         cost_s: float | None = None,
     ) -> Job:
+        started = tracing.now_ns()
         with self._tx(self._workspace_of(attempt_id), heads_first=True) as (connection, now):
             job = lifecycle.fail(
                 connection, self, attempt_id, token, error_class, detail, cost_s, now
             )
         self._forget(attempt_id)
+        tracing.record_job_span(
+            "job.fail", getattr(job, "id", ""), started, service=self.trace_service,
+            **{"selecta.attempt_id": attempt_id, "selecta.error_class": str(error_class)},
+        )
         return job
 
     def release(self, attempt_id: str, token: int, cost_s: float | None = None) -> Job:

@@ -2,6 +2,8 @@
 
 - `jobs`: one row per unit of work, with everything the scheduler orders and filters by.
 - `job_dependencies`: the DAG of prerequisites (cycles are refused when edges are added).
+- `job_plans`: bulk work accepted as one row (a 20,000-song import, or ten million items) and
+  materialised into `jobs` lazily, a page at a time as earlier pages drain (§4A.4 admission).
 - `job_attempts`: one row per try, holding the lease and fencing token. Heartbeats touch only
   this table, so a thousand busy workers never churn the `jobs` rows.
 - `fair_heads`: per (pool, lane, workspace) virtual time and counts, changed in the same
@@ -141,6 +143,40 @@ job_dependencies = sa.Table(
     sa.Column("workspace_id", Id, nullable=False, index=True),
 )
 sa.Index("ix_job_dependencies_depends_on", job_dependencies.c.depends_on)
+
+PLAN_STATES = ("cancelled", "done", "open")
+job_plans = sa.Table(
+    "job_plans",
+    metadata,
+    sa.Column("id", Id, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False),
+    sa.Column("type", sa.String(64), nullable=False),
+    sa.Column("lane", sa.String(16), nullable=False),
+    sa.Column("urgency", sa.SmallInteger, nullable=False),
+    sa.Column("input_ref", JSON, nullable=False),
+    sa.Column("idempotency_key", sa.String(255)),
+    sa.Column("total", sa.BigInteger, nullable=False),
+    sa.Column("materialised", sa.BigInteger, nullable=False, server_default=sa.text("0")),
+    sa.Column("state", sa.String(16), nullable=False),
+    sa.Column("created_by", sa.String(64)),
+    sa.Column("created_at", Epoch, nullable=False),
+    sa.Column("updated_at", Epoch, nullable=False),
+    sa.Column("finished_at", Epoch),
+    sa.CheckConstraint(f"state IN ({_quoted(PLAN_STATES)})", name="state"),
+    sa.CheckConstraint(f"lane IN ({LANE_NAMES})", name="lane"),
+    sa.CheckConstraint("materialised >= 0 AND materialised <= total", name="materialised"),
+)
+"""Bulk work accepted as one row and turned into jobs a page at a time (`work/plans.py`)."""
+sa.Index("ix_job_plans_workspace_state", job_plans.c.workspace_id, job_plans.c.state)
+sa.Index("ix_job_plans_open", job_plans.c.created_at, **_where("state = 'open'"))
+sa.Index(
+    "uq_job_plans_open_idempotency",
+    job_plans.c.workspace_id,
+    job_plans.c.type,
+    job_plans.c.idempotency_key,
+    unique=True,
+    **_where("state = 'open'"),
+)
 
 job_attempts = sa.Table(
     "job_attempts",

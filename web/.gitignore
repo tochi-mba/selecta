@@ -1,4 +1,12 @@
 test-results/
+mp-results/
+mp-data/
 playwright-report/
 verify-tmp/
 dist-cloud-e2e/
+dist-cloud-e2e-authkit/
+
+# per-run e2e builds (SELECTA_E2E_DIST)
+/dist-*/
+# per-agent Playwright output (--output test-results-<tag>)
+/test-results-*/

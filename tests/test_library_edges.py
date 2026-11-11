@@ -148,3 +148,34 @@ def test_duplicates_of_a_song_stay_out_of_the_list(client, conn):
     conn.execute("UPDATE songs SET duplicate_of=1 WHERE id=2")
     conn.commit()
     assert [song["id"] for song in _everything(client)] == [1]
+
+
+def test_a_correction_survives_reanalysis_a_folder_update_and_a_same_named_song(client, conn):
+    """S3-0063-05: what the listener corrected stays in use when the song is measured again or its
+    file changes on disk, and a song with the same name is never corrected along with it."""
+    _add(conn, 1, "Twin", path="twin-a.flac")
+    _add(conn, 2, "Twin", path="twin-b.flac")
+    conn.commit()
+    assert (
+        client.post("/api/songs/1/correct", json={"bpm": 240.0, "camelot": "9B"}).status_code < 300
+    )
+    db.save_analysis(conn, 1, {"version": ANALYSIS_VERSION, "bpm": 118.0, "camelot": "4A"})
+    db.upsert_song(
+        conn,
+        {
+            "path": "twin-a.flac",
+            "folder": "f",
+            "size": 2,
+            "mtime": 9.0,
+            "duration": 201.0,
+            "artist": "Someone",
+            "title": "Twin",
+            "is_music": 1,
+        },
+    )
+    conn.commit()
+    songs = {song["id"]: song for song in _everything(client)}
+    assert (songs[1]["bpm"], songs[1]["camelot"]) == (240.0, "9B")
+    assert (songs[1]["detected_bpm"], songs[1]["detected_camelot"]) == (118.0, "4A")
+    assert (songs[1]["override_bpm"], songs[1]["override_camelot"]) == (240.0, "9B")
+    assert songs[2]["override_bpm"] is None and songs[2]["bpm"] == 120.0

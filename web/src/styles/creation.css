@@ -1,11 +1,16 @@
 /* The editor, the transition inspector and the Studio. */
 
 /* The editor's three regions: a scoped header, a fluid timeline, and what's selected beside it. */
-.page.mix { max-width: var(--content-work); padding-top: var(--space-4); }
-.editor-head { margin-bottom: var(--space-4); }
+.page.mix { padding-top: var(--space-4); }
+/* The header's parts sit straight in the page, so the scope bar is pinned for the whole editor rather than
+   only while the header itself is on screen, where it slid up under the context bar (MP-0274-06, MP-0287-07) */
+.editor-head { display: contents; }
+.editor-head > :last-child { margin-bottom: var(--space-4); }
 .editor-scope {
   position: sticky;
-  top: var(--header-height);
+  /* MP-0274-05/06: pinned under the bar's real height, its top hairline tucked under the bar's own
+     bottom border, so the two read as one 1px edge rather than a doubled 2px line */
+  top: calc(var(--header-block) - 1px);
   z-index: var(--layer-sticky);
   display: flex;
   flex-wrap: wrap;
@@ -17,11 +22,13 @@
   border-block: 1px solid var(--border);
   font-size: var(--text-sm);
 }
-.editor-scope.is-current { box-shadow: inset 3px 0 0 var(--playing); }
-.editor-scope.is-draft { box-shadow: inset 3px 0 0 var(--status-request); }
+.editor-scope.is-current { box-shadow: inset var(--marker) 0 0 var(--playing); }
+.editor-scope.is-draft { box-shadow: inset var(--marker) 0 0 var(--status-request); }
 .scope-badge { font-weight: 700; }
 .scope-words { color: var(--text-soft); overflow-wrap: anywhere; }
 .scope-revision { font: var(--type-counter); color: var(--text-soft); }
+/* MP-0287-07: Story, Arrange or Detail, named in the pinned bar beside current or draft */
+.scope-view { font-weight: 600; color: var(--text); }
 .editor-scope .status { white-space: normal; margin-left: auto; }
 @media (max-width: 760px) {
   .editor-scope .status { margin-left: 0; }
@@ -30,13 +37,12 @@
 .editor-actions { justify-content: flex-start; }
 /* on a phone the songs are what you came for, so the actions take as little of the first screen as they can */
 @media (max-width: 760px) {
-  .editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: var(--space-2); }
   .editor-actions > .primary { grid-column: 1 / -1; }
   /* which actions there are depends on the build, so one left alone on its row takes the row */
   .editor-actions > .primary:first-child ~ :last-child:nth-child(even) { grid-column: 1 / -1; }
-  .editor-actions > button, .editor-actions > a { width: 100%; padding-inline: var(--space-2); }
+  .editor-actions > button, .editor-actions > a { width: 100%; padding-inline: var(--space-2); display: inline-flex; align-items: center; justify-content: center; }
 }
-.editor-actions .destructive .ui-icon, .editor-actions button .ui-icon { margin-right: 4px; }
 
 /* the timeline: songs are solid rows, transitions hang between them */
 .timeline .song {
@@ -45,7 +51,7 @@
   cursor: default;
 }
 .timeline .song.selected { box-shadow: 0 0 0 2px var(--selected); background: var(--surface-selected); }
-.timeline .song.selected.playing { box-shadow: 0 0 0 2px var(--selected), inset 3px 0 0 var(--playing); }
+.timeline .song.selected.playing { box-shadow: 0 0 0 2px var(--selected), inset var(--marker) 0 0 var(--playing); }
 .timeline .song.over { box-shadow: 0 -3px 0 0 var(--selected); }
 .timeline .grip {
   display: inline-grid;
@@ -74,26 +80,33 @@
 }
 .song-select b { display: block; white-space: normal; overflow-wrap: anywhere; }
 .song-select:hover:not(:disabled) b { text-decoration: underline; }
-.locked-badge { display: inline-flex; align-items: center; gap: 4px; width: fit-content; margin-top: 2px; font-size: var(--text-xs); color: var(--text); }
-.timeline .song-actions button { min-height: var(--control-height); min-width: var(--control-height); display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.locked-badge { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); width: fit-content; margin-top: var(--space-hair); font-size: var(--text-xs); color: var(--text); }
+.timeline .song-actions button { min-height: var(--control-height); min-width: var(--control-height); display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
 .song-more .menu-list { min-width: 170px; }
-.song-more .menu-list button { display: flex; justify-content: flex-start; gap: var(--space-2); }
+.song-more .menu-list button { display: flex; justify-content: flex-start; gap: var(--icon-gap); }
 
 .timeline .seam { cursor: default; }
 .timeline .seam.open { outline: none; border-left-color: var(--selected); background: var(--surface-selected); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
 .timeline .seam-actions button { min-height: var(--control-height); }
+/* MP-0288-03: Hear it leads the row, ahead of Good and Bad, with its play mark and a firmer edge */
+.timeline .seam-actions .seam-hear { font-weight: 600; color: var(--text); border-color: var(--text-soft); }
 .timeline .seam-name { min-height: var(--control-height); }
+/* CI-0173-02: while a song is carried, the transitions its drop would replace are dashed and say so */
+.timeline .seam.drop-affected { border-left-style: dashed; border-left-color: var(--selected); background: var(--surface-selected); }
+.timeline .drop-affected-note { margin: 0; font-size: var(--text-xs); color: var(--text); }
+.drop-preview { margin: 0 0 var(--space-2); font-size: var(--text-sm); color: var(--text); }
+@media (forced-colors: active) { .timeline .seam.drop-affected { border-left-color: Highlight; } }
 
 /* somewhere real to press between two songs */
-.timeline .add-gap { padding-block: 2px; }
+.timeline .add-gap { padding-block: var(--space-hair); }
 .timeline .add-gap button {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--icon-gap);
   width: auto;
   height: auto;
   min-height: 36px;
-  padding: 2px var(--space-3);
+  padding: var(--space-hair) var(--space-3);
   color: var(--text-soft);
   background: none;
   border-color: transparent;
@@ -121,8 +134,8 @@
 
 /* what's selected, beside the timeline */
 .edit-inspector {
-  top: calc(var(--header-height) + 64px);
-  max-height: calc(100dvh - var(--header-height) - 64px - var(--bottom-chrome) - var(--space-4));
+  top: calc(var(--header-block) + 64px);
+  max-height: calc(100dvh - var(--header-block) - 64px - var(--bottom-chrome) - var(--space-4));
   padding: 0 var(--space-4) var(--space-4);
   margin-top: 0;
 }
@@ -139,10 +152,10 @@
 .overlay-sheet .overlay-body:has(.inspector-identity) { padding-top: 0; }
 .inspector-identity p { margin: 0; }
 .inspector-identity .inspector-pair { padding-bottom: 0; border-bottom: 0; }
-.inspector-scope { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); font-size: var(--text-sm); color: var(--text-soft); margin-top: var(--space-1) !important; }
+.inspector-scope { display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-3); font-size: var(--text-sm); color: var(--text-soft); margin-top: var(--space-1) !important; }
 .inspector-state { margin-top: var(--space-1) !important; }
 
-.seam-layers { display: grid; gap: 2px; margin: 0 0 var(--space-3); font-size: var(--text-sm); }
+.seam-layers { display: grid; gap: var(--space-hair); margin: 0 0 var(--space-3); font-size: var(--text-sm); }
 .seam-layers > div { display: grid; grid-template-columns: minmax(84px, 110px) minmax(0, 1fr); gap: var(--space-2); padding-block: var(--space-1); border-bottom: 1px solid var(--border); }
 .seam-layers dt { color: var(--text-soft); }
 .seam-layers dd { margin: 0; overflow-wrap: anywhere; }
@@ -172,7 +185,7 @@
   border-bottom: 1px solid var(--border);
 }
 .studio-pair { flex: 1 1 240px; min-width: 0; }
-.studio-pair p { margin: 2px 0 0; overflow-wrap: anywhere; color: var(--text-soft); font-size: var(--text-sm); }
+.studio-pair p { margin: var(--space-hair) 0 0; overflow-wrap: anywhere; color: var(--text-soft); font-size: var(--text-sm); }
 .studio-pair b { color: var(--text); unicode-bidi: plaintext; }
 .studio-transport { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .studio-transport .primary { display: inline-flex; align-items: center; gap: var(--space-2); }
@@ -196,13 +209,15 @@
   grid-template-columns: var(--name-width) repeat(var(--cells, 8), minmax(44px, 1fr));
   min-width: calc(var(--name-width) + var(--cells, 8) * 48px);
 }
-.studio-ruler { position: sticky; top: 0; z-index: 3; background: var(--surface-raised); padding-block: 2px; }
-.studio-lane.studio-ruler .studio-name { position: sticky; left: 0; z-index: 4; display: block; min-height: 0; padding: 2px; background: var(--surface-raised); }
+.studio-ruler { position: sticky; top: 0; z-index: 3; background: var(--surface-raised); padding-block: var(--space-hair); }
+.studio-lane.studio-ruler .studio-name { position: sticky; left: 0; z-index: 4; display: block; min-height: 0; padding: var(--space-hair); background: var(--surface-raised); }
 .studio-ruler span.now { color: var(--text); font-weight: 700; text-decoration: underline; }
 .studio-side-name { position: sticky; left: 0; width: fit-content; max-width: min(100%, 70vw); }
 .studio-side-name h4 { white-space: normal; overflow-wrap: anywhere; margin: var(--space-2) 0 var(--space-1); unicode-bidi: plaintext; position: static; }
 .studio-side-name [role='gridcell'] { display: block; }
 .studio-lane .studio-name { background: var(--surface-control); font-size: var(--text-xs); overflow-wrap: anywhere; }
+/* MP-0274-05: a lane name is pinned to the grid scroller's left edge, so its ring sits inside it, like the cells' */
+.studio-grid .studio-name:focus-visible { outline-offset: -4px; }
 .studio-lane.soloed .studio-name { font-weight: 700; }
 /* on, off and being played each look different without colour: a filled mark, a hollow square, a bar on top */
 .studio-cell { position: relative; }
@@ -210,8 +225,8 @@
   content: '';
   position: absolute;
   inset: 30% 30%;
-  border-radius: 2px;
-  background: var(--bg);
+  border-radius: var(--radius-hair);
+  background: var(--surface-base);
 }
 .studio-lane.silenced .studio-cell, .studio-lane.silenced .studio-name { opacity: 0.45; }
 .studio-lane.lost .studio-cell { cursor: not-allowed; opacity: 0.35; background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--border) 4px 6px); }
@@ -265,9 +280,9 @@
 .view-switch-options {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 2px;
+  gap: var(--space-hair);
   max-width: 100%;
-  padding: 2px;
+  padding: var(--space-hair);
   background: var(--surface-control);
   border: 1px solid var(--edge-interactive);
   border-radius: var(--radius-pill);
@@ -311,8 +326,8 @@
   border-radius: var(--radius-sm);
 }
 .story-song.selected { background: var(--surface-selected); border-color: var(--selected); box-shadow: 0 0 0 1px var(--selected); }
-.story-song.playing { box-shadow: inset 3px 0 0 var(--playing); }
-.story-song.selected.playing { box-shadow: 0 0 0 1px var(--selected), inset 3px 0 0 var(--playing); }
+.story-song.playing { box-shadow: inset var(--marker) 0 0 var(--playing); }
+.story-song.selected.playing { box-shadow: 0 0 0 1px var(--selected), inset var(--marker) 0 0 var(--playing); }
 .story-number {
   display: grid;
   place-items: center;
@@ -325,12 +340,12 @@
 }
 .story-song-words { min-width: 0; }
 .story-song-words h3 { margin: 0; font: var(--type-song); overflow-wrap: anywhere; unicode-bidi: plaintext; }
-.story-song-words p { margin: 2px 0 0; color: var(--text-soft); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.story-song-words p { margin: var(--space-hair) 0 0; color: var(--text-soft); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .story-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .story-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 0 var(--space-2);
   color: var(--text);
   font-size: var(--text-xs);
@@ -338,7 +353,7 @@
   border: 1px solid var(--edge-interactive);
   border-radius: var(--radius-pill);
 }
-.story-edit { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-height); }
+.story-edit { display: inline-flex; align-items: center; gap: var(--icon-gap); min-height: var(--control-height); }
 .story-seam {
   display: flex;
   flex-wrap: wrap;
@@ -370,7 +385,7 @@
 /* The measured energy overview, folded away above Arrange until it's wanted. */
 .energy-disclosure { margin-block: var(--space-3); }
 .energy-disclosure-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.energy-disclosure-toggle { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-height); }
+.energy-disclosure-toggle { display: inline-flex; align-items: center; gap: var(--icon-gap); min-height: var(--control-height); }
 .energy-disclosure .energy-overview { margin-top: var(--space-2); }
 /* Unknown energy is a hatched gap with a "?", never a bar: a pattern and a mark, not colour alone. */
 .energy-overview button { position: relative; }
@@ -382,7 +397,7 @@
   color: var(--text);
   font-weight: 700;
   border: 1px dashed var(--border-strong);
-  border-radius: 2px;
+  border-radius: var(--radius-hair);
   background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--border-strong) 55%, transparent) 4px 5px);
 }
 .energy-overview-playing {
@@ -411,16 +426,16 @@
 .energy-thumb {
   display: inline-flex;
   align-items: flex-end;
-  gap: 1px;
+  gap: var(--grid-cell-gap);
   width: 96px;
   height: 28px;
-  padding: 2px;
+  padding: var(--space-hair);
   vertical-align: middle;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-mark);
 }
 .energy-thumb > span { flex: 1 1 0; min-width: 1px; }
-.energy-thumb-bar { min-height: 2px; background: var(--text-soft); border-radius: 1px 1px 0 0; }
+.energy-thumb-bar { min-height: 2px; background: var(--text-soft); border-radius: var(--radius-hair) var(--radius-hair) 0 0; }
 .energy-thumb-unknown { align-self: stretch; background-image: repeating-linear-gradient(135deg, transparent 0 2px, var(--border-strong) 2px 3px); }
 
 @media (forced-colors: active) {

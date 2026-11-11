@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { describe, expect, it, vi } from 'vitest';
 import { MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
-import { fakeBackend, status } from '../test/backend';
+import { fakeBackend, Reply, status } from '../test/backend';
 import { Now, transitionCount } from './Now';
 
 const mix: MixItem[] = [
@@ -431,5 +431,75 @@ describe('creative Listen states grounded in audio and known timing', () => {
     expect(await screen.findByText(/until the hand-off/)).toBeInTheDocument();
     expect(screen.getByText(/Beat grid unavailable, so time is shown/)).toBeInTheDocument();
     expect(screen.queryByRole('timer')).toBeNull();
+  });
+});
+
+// S3-0055-04, -05 and -08: lyric fallbacks, steering failure and the exact seam a rating is about
+function listen(tracks: MixItem[], more: { lastSeamKey?: string | null; notify?: (message: string) => void; setMixData?: () => void } = {}) {
+  const player = new SetPlayer(() => tracks, () => {});
+  return (
+    <Now
+      status={status()} mix={tracks} mixName="Test mix" canUndo={false}
+      refreshMix={() => {}} setMixData={more.setMixData ?? (() => {})} refreshStatus={() => {}}
+      player={player}
+      now={{ ...player.state, phase: 'playing', position: 0, songTime: 2, duration: 20, lastSeamKey: more.lastSeamKey ?? null }}
+      setView={() => {}} notify={more.notify ?? (() => {})} stage={false} toggleStage={() => {}}
+    />
+  );
+}
+
+describe('when there are no timed lyrics to follow', () => {
+  it.each([
+    ['instrumental', [], 'Instrumental'],
+    [null, [], 'Lyrics haven’t been looked up yet.'],
+    ['failed', [], 'Looking up lyrics for this song didn’t work. Selecta will try again later.'],
+    ['missing', [], 'No lyrics found for this song.'],
+  ])('says why for a %s song, and invents no timing', async (lyricStatus, lines, words) => {
+    fakeBackend({ 'GET /songs/1': { ...detail, lines, lyric_status: lyricStatus } });
+    const { container } = render(view(2.5));
+    expect(await screen.findByText(words)).toBeInTheDocument();
+    expect(container.querySelector('.current-word')).toBeNull();
+  });
+
+  it('labels untimed lyrics as untimed', async () => {
+    fakeBackend({ 'GET /songs/1': { ...detail, lyric_status: 'plain', lines: [{ start: 0, end: 0, text: 'Plain words only' }] } });
+    render(listen(mix));
+    expect(await screen.findByText('Untimed lyrics - word timing unavailable.')).toBeInTheDocument();
+  });
+});
+
+describe('steering that fails', () => {
+  it('keeps the planned next song, says what went wrong, and can be pressed again', async () => {
+    const tracks = [mix[0], { ...mix[0], position: 1, song_id: 2, title: 'Next Song' }];
+    let swaps = 0;
+    fakeBackend({
+      'GET /songs/1': detail,
+      'POST /mix/1/swap': () => { swaps += 1; return new Reply(409, { detail: 'Nothing else fits here right now.' }); },
+    });
+    const setMixData = vi.fn();
+    render(listen(tracks, { setMixData }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bigger' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Nothing else fits here right now. Nothing has changed, so the plan above still stands.');
+    expect(setMixData).not.toHaveBeenCalled();
+    expect(screen.getAllByText('Next Song').length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Calmer' })).not.toHaveAttribute('aria-disabled'));
+    fireEvent.click(screen.getByRole('button', { name: 'Calmer' }));
+    await waitFor(() => expect(swaps).toBe(2));
+  });
+});
+
+describe('rating what was just heard', () => {
+  it('rates the transition that just played, by its key, and explains what was measured', async () => {
+    const seamed: MixItem[] = [mix[0], { ...mix[0], position: 1, song_id: 2, title: 'Next Song', seam: { settings: { move: 'bass_swap_blend' }, state: { status: 'ready', key: 'next-k', passed: true, label: 'Blend', why: 'Close in tempo and key', checks: [{ name: 'beat', passed: true, text: 'The beats line up', value: '' }] } } as never }];
+    const calls = fakeBackend({ 'GET /songs/1': detail, 'POST /seams/played-k/rate': {} });
+    const notify = vi.fn();
+    render(listen(seamed, { lastSeamKey: 'played-k', notify }));
+    const thumbs = within(screen.getByRole('group', { name: 'Rate that transition' }));
+    fireEvent.click(thumbs.getByRole('button', { name: 'Good' }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Noted. More like that.'));
+    expect(calls.filter((call) => call.method === 'POST').map((call) => [call.path, call.body])).toEqual([['/seams/played-k/rate', { rating: 'good' }]]);
+    fireEvent.click(screen.getByText('Why this transition?'));
+    expect(screen.getByText('Close in tempo and key')).toBeInTheDocument();
+    expect(screen.getByText('The beats line up')).toBeInTheDocument();
   });
 });

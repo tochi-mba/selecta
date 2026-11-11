@@ -1,7 +1,7 @@
 # ADR-0087: Verify WCAG, device reflow, audio latency and scale
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress on PR #25 (selected sub-tasks only; none Verified)
+- **Implementation status:** In progress: 4 Implemented (automated), 1 In progress, 6 need a person only (2026-11-10 reconciliation); 0/11 Verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 5 - cross-cutting quality
@@ -23,17 +23,17 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0087-01 - Approve platform, width, zoom, orientation and keyboard matrix.** Acceptance: Matrix covers 320/375/390/430/768/1024/1280/1440/1920/3840 CSS px where meaningful.
-2. **S31-0087-02 - Run full keyboard-only tasks across core journeys.** Acceptance: Skip link, menus, forms, tabs, waveform, timeline, Studio grid, requests and export have no traps.
-3. **S31-0087-03 - Run manual supported screen-reader tasks with actual versions logged.** Acceptance: At minimum NVDA/Edge and available VoiceOver/TalkBack; unsupported/unavailable runs remain pending.
-4. **S31-0087-04 - Verify WCAG 2.2 AA reflow, focus, contrast and target size.** Acceptance: Record objective measurements/exceptions; 24px AA minimum is not falsely described as a universal 44px requirement.
-5. **S31-0087-05 - Check reduced motion, colour-independent statuses and live announcements.** Acceptance: No flashing/chattering, no essential meaning relies only on colour or animated visuals.
-6. **S31-0087-06 - Verify mobile player/nav/keyboard/safe-area geometry under short viewports.** Acceptance: Focused controls and final list rows remain visible without overlap.
-7. **S31-0087-07 - Measure user interactions during background render on real hardware.** Acceptance: Record hardware, production build, input latency, long tasks and any audio timing disturbances.
-8. **S31-0087-08 - Profile 20k Library, 100-song Edit and full Studio grid.** Acceptance: Realistic search, reorder, scroll, repaint, memory and loading budgets defined from baseline.
-9. **S31-0087-09 - Verify media continuity across page, theme, Stage, audition and tabs.** Acceptance: Real audible evidence shows correct owner, seek/transition timing and no surprise resume.
-10. **S31-0087-10 - Review PWA installed-mode startup and backend-unavailable recovery.** Acceptance: No claim of offline playback without running local server; direct routes and recovery remain truthful.
-11. **S31-0087-11 - Define evidence-backed performance and accessibility budgets.** Acceptance: Use reference 200ms INP/0.1 CLS properly as context, not unsupported field compliance claim.
+1. **S31-0087-01 - Approve platform, width, zoom, orientation and keyboard matrix.** Acceptance: Matrix covers 320/375/390/430/768/1024/1280/1440/1920/3840 CSS px where meaningful. **Status (2026-11-10):** Not Verified. **Evidence:** Matrix drafted in `selecta-3-1-verification-matrix.md`. **Needs a person:** owner approves the platform/width/zoom/keyboard matrix.
+2. **S31-0087-02 - Run full keyboard-only tasks across core journeys.** Acceptance: Skip link, menus, forms, tabs, waveform, timeline, Studio grid, requests and export have no traps. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("Tab reaches everything on every page at ${width}px", keyboard request, reorder, Studio, palette) passed. **Needs a person:** full keyboard-only journeys by a person.
+3. **S31-0087-03 - Run manual supported screen-reader tasks with actual versions logged.** Acceptance: At minimum NVDA/Edge and available VoiceOver/TalkBack; unsupported/unavailable runs remain pending. **Status (2026-11-10):** Not Verified. **Needs a person:** NVDA/Edge and available VoiceOver/TalkBack sessions with versions logged.
+4. **S31-0087-04 - Verify WCAG 2.2 AA reflow, focus, contrast and target size.** Acceptance: Record objective measurements/exceptions; 24px AA minimum is not falsely described as a universal 44px requirement. **Status (2026-11-10):** In progress, not Verified. **Evidence:** Target-size and reflow assertions in `web/e2e/mp-0281-mini-player.e2e.ts` and `finishing.e2e.ts`. **Needs a person:** record contrast, reflow, focus and 24px target measurements with exceptions.
+5. **S31-0087-05 - Check reduced motion, colour-independent statuses and live announcements.** Acceptance: No flashing/chattering, no essential meaning relies only on colour or animated visuals. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `controls.test.tsx` ("never rely on colour alone"); `web/e2e/finishing.e2e.ts` announcement case; `web/src/ui/useReducedMotion.test.tsx` passed. **Needs a person:** owner review for Verified.
+6. **S31-0087-06 - Verify mobile player/nav/keyboard/safe-area geometry under short viewports.** Acceptance: Focused controls and final list rows remain visible without overlap. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` mini-player/bottom bar and on-screen keyboard cases passed. **Needs a person:** real phones with short viewports and safe areas.
+7. **S31-0087-07 - Measure user interactions during background render on real hardware.** Acceptance: Record hardware, production build, input latency, long tasks and any audio timing disturbances. **Status (2026-11-10):** Not Verified. **Needs a person:** measure input latency and audio timing during background render on real hardware.
+8. **S31-0087-08 - Profile 20k Library, 100-song Edit and full Studio grid.** Acceptance: Realistic search, reorder, scroll, repaint, memory and loading budgets defined from baseline. **Status (2026-11-10):** Not Verified. **Needs a person:** profile 20k Library, 100-song Edit and full Studio grid on real hardware.
+9. **S31-0087-09 - Verify media continuity across page, theme, Stage, audition and tabs.** Acceptance: Real audible evidence shows correct owner, seek/transition timing and no surprise resume. **Status (2026-11-10):** Not Verified. **Needs a person:** audible continuity review across page, theme, Stage, audition and tabs.
+10. **S31-0087-10 - Review PWA installed-mode startup and backend-unavailable recovery.** Acceptance: No claim of offline playback without running local server; direct routes and recovery remain truthful. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/RuntimeApp.test.tsx` ("picks up by itself when a server that wasn't there starts", "never claims offline playback while the local server is down": no offline/still-playing claim, and no service worker in `main.tsx`, `RuntimeApp.tsx` or `index.html`) passed on 2026-11-10. **Needs a person:** installed-PWA startup with the backend stopped.
+11. **S31-0087-11 - Define evidence-backed performance and accessibility budgets.** Acceptance: Use reference 200ms INP/0.1 CLS properly as context, not unsupported field compliance claim. **Status (2026-11-10):** Not Verified. **Needs a person:** owner approves evidence-backed budgets from measured baselines.
 
 ## Required adverse cases and evidence
 
@@ -58,6 +58,7 @@ The owner accepted this decision on 2026-11-08. Only the explicitly identified S
 | 2026-11-07 | Proposed | Not started | Initial documentation-only finishing plan | 
 | 2026-11-07 | Proposed | In progress | Selected UI/Edge/test or visual-review infrastructure on draft PR #25; no human acceptance or task Verified |
 | 2026-11-08 | Accepted | In progress | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
+| 2026-11-10 | Accepted | In progress | Every task re-checked against current code; 4 Implemented (automated), 1 In progress, 6 need a person only (2026-11-10 reconciliation); focused Vitest, pytest and Edge runs named per task; 0/11 Verified |
 
 ## Related documents
 

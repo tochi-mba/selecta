@@ -154,7 +154,12 @@ def add_routes(app, ctx) -> None:
 
         with connect() as conn:
             songs, traits = library_now(conn)
-        return [describe(vibe, songs, traits) for vibe in candidate_vibes(songs, traits)]
+            chosen = get_steering(conn).mix_language
+        # a build uses the listener's transition feel over the idea's own, so the card says so too
+        language = chosen if chosen != "balanced" else None
+        return [
+            describe(vibe, songs, traits, language) for vibe in candidate_vibes(songs, traits)
+        ]
 
     def play_vibe(
         conn: sqlite3.Connection,

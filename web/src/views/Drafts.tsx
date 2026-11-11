@@ -8,11 +8,41 @@ import { draftReadiness } from '../state/readiness';
 import { Action, Dialog, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { MenuItem } from '../ui/primitives';
+import { MixSignature } from '../ui/MusicObjects';
 import { ViewProps } from './shared';
 
 type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'>;
 
 const CHECK_EVERY_MS = 4000;
+
+/** CI-0179-04: one segment per transition, from the server's own ready, failed and waiting counts, so
+ * a draft never shows an invented overall percentage and a failure is never hidden inside "not ready
+ * yet". Anything the server doesn't count as one of those three stays a plain, unclaimed segment. */
+export function SeamSegments({ draft }: { draft: Pick<DraftInfo, 'seams' | 'ready' | 'failed' | 'waiting'> }) {
+  const count = (value: number) => (Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
+  const seams = count(draft.seams);
+  const ready = Math.min(count(draft.ready), seams);
+  const failed = Math.min(count(draft.failed), seams - ready);
+  const waiting = Math.min(count(draft.waiting), seams - ready - failed);
+  const other = seams - ready - failed - waiting;
+  const said = [
+    `${ready} of ${seams} transitions ready`,
+    failed && `${failed} couldn’t be made`,
+    waiting && `${waiting} waiting`,
+    other && `${other} not started`,
+  ].filter(Boolean).join(', ');
+  const kinds = [
+    ...Array<string>(ready).fill('ready'),
+    ...Array<string>(failed).fill('failed'),
+    ...Array<string>(waiting).fill('waiting'),
+    ...Array<string>(other).fill('other'),
+  ];
+  return (
+    <div className="draft-progress draft-seams" role="img" aria-label={said} title={said}>
+      {kinds.map((kind, index) => <i key={index} className={kind} />)}
+    </div>
+  );
+}
 
 /** The order audio gets prepared in, which is separate from what's playing and from the order of the
  * songs in any mix. Changing it only changes what's ready first. */
@@ -39,8 +69,8 @@ function RenderLine({ inLine, current, onMove, onLeave }: {
             <b className="line-place">{nth(draft.place ?? 0)} in line</b>
             <span className="line-name">{draft.name}</span>
             <span className="line-buttons">
-              <button aria-label={`Move ${draft.name} up the line`} disabled={draft.place === 1} onClick={() => onMove(draft, -1)}><Icon name="up" /></button>
-              <button aria-label={`Move ${draft.name} down the line`} disabled={draft.place === inLine.length} onClick={() => onMove(draft, 1)}><Icon name="down" /></button>
+              <button data-line-move={`${draft.id}:-1`} aria-label={`Move ${draft.name} up the line`} title={`Move ${draft.name} up the line`} disabled={draft.place === 1} onClick={() => onMove(draft, -1)}><Icon name="up" /></button>
+              <button data-line-move={`${draft.id}:1`} aria-label={`Move ${draft.name} down the line`} title={`Move ${draft.name} down the line`} disabled={draft.place === inLine.length} onClick={() => onMove(draft, 1)}><Icon name="down" /></button>
               <button aria-label={`Take ${draft.name} out of the line`} onClick={() => onLeave(draft)}>Out of line</button>
             </span>
           </li>
@@ -196,6 +226,9 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
       }
       return b.id - a.id;
     });
+  const sameName = new Map<string, number>();
+  for (const draft of drafts) sameName.set(draft.name, (sameName.get(draft.name) ?? 0) + 1);
+  const who = (draft: DraftInfo) => ((sameName.get(draft.name) ?? 0) > 1 ? `${draft.name} (draft ${draft.id})` : draft.name);
   return (
     <>
       <section className="drafts" aria-label="Your drafts">
@@ -237,6 +270,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
           <div className="empty-state">
             <h3>A place for your next mix</h3>
             <p>Create a draft, or save a copy of your current mix. Editing a draft leaves playback alone.</p>
+            <Action className="primary" working="Starting…" run={startNew}>Start your first draft</Action>
           </div>
         )}
         {drafts.length > 0 && shownDrafts.length === 0 && (
@@ -260,6 +294,9 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                         ? <PageLink id={`draft-${draft.id}`} to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b>{draft.name}</b></PageLink>
                         : <b id={`draft-${draft.id}`} className="draft-open">{draft.name}</b>
                     )}
+                    {/* UF-0379-01/07: drafts that share a name are told apart by their exact draft number */}
+                    {(sameName.get(draft.name) ?? 0) > 1 && <span className="soft draft-number"> Draft {draft.id}</span>}
+                    {draft.song_ids?.length ? <MixSignature items={draft.song_ids.map((song_id) => ({ song_id }))} compact /> : null}
                     <span className="soft">
                       {draft.songs > 0 && `${draft.songs} ${draft.songs === 1 ? 'song' : 'songs'}, about ${length(draft.seconds)}. `}
                       Saved.
@@ -267,9 +304,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                     <Status kind={facts.kind}>{facts.words}</Status>
                     {line && draft.place !== null && <span className="soft"> {nth(draft.place)} in the render line.</span>}
                     {draft.seams > 0 && (
-                      <div className="draft-progress" role="img" aria-label={`${draft.ready} of ${draft.seams} transitions ready`}>
-                        <i style={{ width: `${(100 * draft.ready) / draft.seams}%` }} />
-                      </div>
+                      <SeamSegments draft={draft} />
                     )}
                     {line && draft.place === null && draft.waiting > 0 && draft.seams > 0 && (
                       <span className="soft"> Rendering it would take {etaRangeWords({ seconds: draft.to_render, low: draft.to_render, high: draft.to_render })}.</span>
@@ -280,20 +315,20 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                     {failure && <p className="warn" role="alert">{failure}</p>}
                   </div>
                   <div className="row wrap draft-actions">
-                    {on('editor') && <button className="primary" aria-label={`Edit ${draft.name}`} onClick={() => openDraft?.(draft.id)}>Edit</button>}
-                    <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${draft.name}`} run={() => playDraft?.(draft.id)}>
+                    {on('editor') && <button className="primary" aria-label={`Edit ${who(draft)}`} onClick={() => openDraft?.(draft.id)}>Edit</button>}
+                    <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${who(draft)}`} run={() => playDraft?.(draft.id)}>
                       Play
                     </Action>
-                    <Menu label={<><Icon name="more" /><span className="visually-hidden">More actions for {draft.name}</span></>}>
-                      <MenuItem aria-label={`Rename ${draft.name}`} onClick={() => setRenaming(draft.id)}>Rename</MenuItem>
-                      <MenuItem aria-label={`Copy ${draft.name}`} onClick={() => void duplicate(draft)}>Copy</MenuItem>
+                    <Menu title={`More actions for ${who(draft)}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {who(draft)}</span></>}>
+                      <MenuItem aria-label={`Rename ${who(draft)}`} onClick={() => setRenaming(draft.id)}>Rename</MenuItem>
+                      <MenuItem aria-label={`Copy ${who(draft)}`} onClick={() => void duplicate(draft)}>Copy</MenuItem>
                       {line && draft.place === null && draft.seams > 0 && draft.waiting > 0 && (
-                        <MenuItem aria-label={`Prioritize ${draft.name}`} title="Renders in the background, right after your current mix" onClick={() => void prioritize(draft)}>Prioritize</MenuItem>
+                        <MenuItem aria-label={`Prioritize ${who(draft)}`} title="Renders in the background, right after your current mix" onClick={() => void prioritize(draft)}>Prioritize</MenuItem>
                       )}
                       {line && draft.place !== null && (
-                        <MenuItem aria-label={`Out of line: ${draft.name}`} onClick={() => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</MenuItem>
+                        <MenuItem aria-label={`Out of line: ${who(draft)}`} onClick={() => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</MenuItem>
                       )}
-                      <MenuItem danger aria-label={`Delete ${draft.name}`} onClick={() => setDeleting(draft)}><Icon name="trash" /> Delete</MenuItem>
+                      <MenuItem danger aria-label={`Delete ${who(draft)}`} onClick={() => setDeleting(draft)}><Icon name="trash" /> Delete</MenuItem>
                     </Menu>
                   </div>
                 </li>
@@ -333,7 +368,15 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
         <RenderLine
           inLine={inLine}
           current={current}
-          onMove={(draft, step) => void act(() => post<DraftList>(`/drafts/${draft.id}/line/move`, { step }))}
+          onMove={(draft, step) => void act(() => post<DraftList>(`/drafts/${draft.id}/line/move`, { step })).then(() => {
+            // S4-0099-08: keep the keyboard on the draft that moved. Its button may now be at an end of
+            // the line and disabled, so fall back to its other direction rather than the top of the page.
+            window.requestAnimationFrame(() => {
+              const same = document.querySelector<HTMLButtonElement>(`[data-line-move="${draft.id}:${step}"]`);
+              const other = document.querySelector<HTMLButtonElement>(`[data-line-move="${draft.id}:${-step}"]`);
+              (same && !same.disabled ? same : other && !other.disabled ? other : null)?.focus({ preventScroll: true });
+            });
+          })}
           onLeave={(draft) => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}
         />
       )}

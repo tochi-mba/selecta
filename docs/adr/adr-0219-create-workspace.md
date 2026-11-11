@@ -1,7 +1,7 @@
 # ADR-0219 - Create workspace in Story, Arrangement and Detail modes
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Implementation:** In progress (4/8 Implemented, 0/8 In progress, 4/8 Not started or needing a person; updated 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Create.
@@ -28,16 +28,16 @@ Offer an expressive overview and precision editing within one server-authoritati
 
 No duplicate unsynchronized editor state, silent edit or ambiguous current versus draft. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist - 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 4/8 Implemented, 0/8 Verified
 
-1. **SF-0219-01 - Define shared edit model.** **Acceptance:** All modes use exact song occurrence and seam keys. **Required verification:** Model unit tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-2. **SF-0219-02 - Prototype Story mode.** **Acceptance:** Musical journey understandable without technical controls. **Required verification:** Novice design test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-3. **SF-0219-03 - Refine Arrangement mode.** **Acceptance:** Ordering and transitions tactile but clear. **Required verification:** Creator task test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-4. **SF-0219-04 - Build Detail mode.** **Acceptance:** Precise timing and move options reachable. **Required verification:** DJ expert review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-5. **SF-0219-05 - Preserve cross-mode context.** **Acceptance:** Selection, draft, focus and Undo retained. **Required verification:** Mode-switch E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-6. **SF-0219-06 - Make saved scope explicit.** **Acceptance:** Pending and confirmed edits distinct. **Required verification:** Revision fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **SF-0219-07 - Represent failure/recovery.** **Acceptance:** Failed edit restores authoritative arrangement. **Required verification:** Stale response tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0219-08 - Evaluate three-level system.** **Acceptance:** Novices gain clarity without expert regression. **Required verification:** Comparative session. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+1. **SF-0219-01 - Define shared edit model.** **Acceptance:** All modes use exact song occurrence and seam keys. **Required verification:** Model unit tests. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/editorMode.test.tsx` 'reads every view from the address', 'describes a transition in Story only from what the server says', 'keys Story chapters and seams by the same occurrence keys as the Arrange timeline' (2026-11-10).
+2. **SF-0219-02 - Prototype Story mode.** **Acceptance:** Musical journey understandable without technical controls. **Required verification:** Novice design test. **Implementation:** Needs a person: novice design test of Story mode; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0219-03 - Refine Arrangement mode.** **Acceptance:** Ordering and transitions tactile but clear. **Required verification:** Creator task test. **Implementation:** Needs a person: creator task test of Arrange mode; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0219-04 - Build Detail mode.** **Acceptance:** Precise timing and move options reachable. **Required verification:** DJ expert review. **Implementation:** Needs a person: DJ expert review of Detail mode; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **SF-0219-05 - Preserve cross-mode context.** **Acceptance:** Selection, draft, focus and Undo retained. **Required verification:** Mode-switch E2E. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/editorMode.test.tsx` 'carries a selected transition from Story to Detail to Story to Arrange, sending nothing'; `web/src/views/Mix.test.tsx` 'keeps each mix scope's exact selection separate when the mounted editor switches scope' (2026-11-10).
+6. **SF-0219-06 - Make saved scope explicit.** **Acceptance:** Pending and confirmed edits distinct. **Required verification:** Revision fixtures. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/Mix.test.tsx` 'keeps the latest choice visible when an older server response refreshes the inspector', 'lets go of a choice that changed nothing on the server'; `web/e2e/finishing.e2e.ts` 'two quick seam changes on a slow server: the last one wins, and Undo shows what's really there' (2026-11-10).
+7. **SF-0219-07 - Represent failure/recovery.** **Acceptance:** Failed edit restores authoritative arrangement. **Required verification:** Stale response tests. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/Mix.test.tsx` 'stop and catch up if the mix has moved on', 'follows the server again, so an Undo shows what's really there'; `tests/test_api_contracts.py::test_a_change_to_a_mix_that_has_moved_on_stops`; `web/e2e/flows.e2e.ts` 'a change to a mix that's moved on stops' (2026-11-10).
+8. **SF-0219-08 - Evaluate three-level system.** **Acceptance:** Novices gain clarity without expert regression. **Required verification:** Comparative session. **Implementation:** Needs a person: comparative novice/expert session; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and required negative cases
 
@@ -47,5 +47,5 @@ Preserve single audio owner, intentional Pause, original media and local privacy
 
 - **Depends on:** ADR-0120/0173/0150 and new foundation ADR-0198/0199, plus shared visual system.
 - **Next:** owner decision → prototype/critique → targeted implementation PR with tests → independent human/AT/real-audio/performance evidence → GO/NO-GO.
-- **Now:** Accepted, 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
+- **Now:** Accepted, 4/8 Implemented (2026-11-10), 0/8 independently Verified; no implementation PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

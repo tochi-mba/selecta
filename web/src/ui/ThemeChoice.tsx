@@ -19,6 +19,7 @@ export function ThemeMenu({ className = '' }: { className?: string }) {
   return (
     <Menu
       className={`theme-menu ${className}`}
+      title={`Theme: ${current?.label}`}
       label={<><Icon name={iconFor(theme)} /><span className="visually-hidden">Theme: {current?.label}</span></>}
     >
       {THEMES.map((option) => (

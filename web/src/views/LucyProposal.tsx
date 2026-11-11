@@ -45,6 +45,14 @@ function durationText(snapshot: ProposalSnapshot): string {
   return length(duration.low) === length(duration.high) ? `About ${length(duration.low)}` : `About ${length(duration.low)}–${length(duration.high)}`;
 }
 
+/** LX-0361-03: what a change does to verified transitions, not just to the song count. */
+function readinessChange(readiness: NonNullable<Diff['readiness']>): string {
+  const { before, after, lost, gained } = readiness;
+  const counts = `Verified ready transitions: ${before.ready} of ${before.needed} before, ${after.ready} of ${after.needed} after`;
+  const moves = [lost > 0 && `${lost} no longer ready`, gained > 0 && `${gained} newly ready`].filter(Boolean).join(', ');
+  return `${counts}${moves ? ` (${moves})` : ''}.`;
+}
+
 export function DiffSummary({ diff, label }: { diff: Diff; label: string }) {
   const removed = diff.removed?.filter((song) => song.title) ?? [];
   return (
@@ -52,6 +60,7 @@ export function DiffSummary({ diff, label }: { diff: Diff; label: string }) {
       <p><b>{label}</b> {countsWords(diff.counts)}.</p>
       {removed.length > 0 && <p className="hint">Taken out: {removed.map((song) => song.title).join(', ')}.</p>}
       {!!diff.rules_changed?.length && <p className="hint">{plural(diff.rules_changed.length, 'rule')} changed.</p>}
+      {diff.readiness && <p className="hint">{readinessChange(diff.readiness)}</p>}
     </div>
   );
 }
@@ -62,15 +71,15 @@ function Rules({ rules, readyOnly, editable, onRemove }: { rules: Rule[]; readyO
   const others = active.filter((rule) => rule !== readyRule);
   if (!readyOnly && !readyRule && !others.length) return null;
   const remove = (rule: Rule, name: string) => editable && (
-    <Action className="lucy-rule-remove" working={<span aria-hidden="true">…</span>} aria-label={`Remove rule: ${name}`} run={() => onRemove(rule)}>
-      <Icon name="close" width={14} height={14} />
+    <Action className="lucy-rule-remove" working={<span aria-hidden="true">…</span>} aria-label={`Remove rule: ${name}`} title={`Remove rule: ${name}`} run={() => onRemove(rule)}>
+      <Icon name="close" size="compact" />
     </Action>
   );
   return (
     <ul className="lucy-rules" aria-label="Rules for this mix">
       {(readyOnly || readyRule) && (
         <li className="lucy-rule lucy-ready-only">
-          <Icon name="check" width={16} height={16} />
+          <Icon name="check" size="toolbar" />
           <span><span className="lucy-strength">Must</span> Only transitions that are already ready</span>
           {readyRule && remove(readyRule, 'only transitions that are already ready')}
         </li>
@@ -182,7 +191,7 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
         <h2 id={headingId} dir="auto">{snap.title || 'Untitled mix'}</h2>
         <div className="row wrap">
           <LifecyclePill stage="proposed" />
-          <Menu className="lucy-revisions" label={<>Revision {shown.number}{isCurrent ? '' : ' (not the current one)'} <Icon name="down" width={14} height={14} /></>}>
+          <Menu className="lucy-revisions" label={<>Revision {shown.number}{isCurrent ? '' : ' (not the current one)'} <Icon name="down" size="compact" /></>}>
             {[...proposal.history].reverse().map((item) => (
               <button key={item.id} type="button" role="menuitemradio" aria-checked={item.id === shown.id} onClick={() => setViewing(item.id === currentId ? null : item.id)}>
                 Revision {item.number}{item.current ? ' · current' : ''}{item.summary ? ` - ${item.summary}` : ''}

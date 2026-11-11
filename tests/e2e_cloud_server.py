@@ -25,6 +25,10 @@ every open tab's event stream takes the one write lock, so a long run can hit "d
 Test controls live under `/test/...`, outside `/api`, and the built site
 (web/dist-cloud-e2e) is served for every other address. Never part of the real app.
 
+At `http://localhost:<port>` (rather than 127.0.0.1) the same server serves the site built with
+the real AuthKit library (web/dist-cloud-e2e-authkit), whose sign-in goes to the fake AuthKit in
+`e2e_cloud_authkit.py` (the sign-in redirect test, SC-0400-05).
+
 Run: `python tests/e2e_cloud_server.py 8812`.
 """
 
@@ -49,6 +53,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).parent))
 
 import cloud_db  # noqa: E402
+import e2e_cloud_authkit  # noqa: E402
 import e2e_cloud_flags  # noqa: E402
 import e2e_cloud_staff  # noqa: E402
 import httpx  # noqa: E402
@@ -72,12 +77,17 @@ from selecta.billing import stripe_sync  # noqa: E402
 from selecta.billing.plans import plan_for  # noqa: E402
 from selecta.identity.tokens import BadSignature, Claims  # noqa: E402
 from selecta.persistence import db_now, make_engine, migrate, transaction  # noqa: E402
+from selecta.playback.schema import playback_sessions  # noqa: E402
 from selecta.rooms.cloud_ports import RoomPorts  # noqa: E402
 from selecta.storage import api as storage_api  # noqa: E402
 from selecta.usage import allowances, quota  # noqa: E402
 from selecta.work import outbox  # noqa: E402
 
-DIST = ROOT / "web" / "dist-cloud-e2e"
+# SELECTA_CLOUD_E2E_DIST names another build folder, so parallel runs never share one.
+DIST = ROOT / "web" / os.environ.get("SELECTA_CLOUD_E2E_DIST", "dist-cloud-e2e")
+# The same site with the real AuthKit library, served at http://localhost:<port> for the sign-in
+# redirect test (e2e_cloud_authkit.py).
+DIST_AUTHKIT = DIST.with_name(DIST.name + "-authkit")
 # The Rooms and devices tests' people, by bearer token: True is on Premium.
 PEOPLE = {"alice": True, "bob": True, "carol": False}
 CONSENT = "terms-e2e-2026-11"
@@ -119,9 +129,15 @@ def quiet_song(index: int, seconds: float = 8.0, rate: int = 8000) -> bytes:
 
 class E2EVerifier:
     """`e2e:<name>` is a valid token for the listener <name>, valid for an hour from now; the
-    bare tokens in `PEOPLE` are the Rooms tests' people."""
+    bare tokens in `PEOPLE` are the Rooms tests' people; and the fake AuthKit's tokens are its
+    signed-in people."""
+
+    def __init__(self, authkit: e2e_cloud_authkit.FakeAuthKit | None = None) -> None:
+        self.authkit = authkit
 
     def verify(self, token: str) -> Claims:
+        if self.authkit is not None and token in self.authkit.tokens:
+            return self.authkit.tokens[token]
         if token in PEOPLE:
             return Claims(
                 subject=f"user_{token}",
@@ -215,7 +231,10 @@ def build(port: int):
         planner=FakeRequestPlanner(),
         now_playing=FakeNowPlaying(),
     )
-    app = create_cloud_app(settings, engine=engine, verifier=E2EVerifier(), room_ports=ports)
+    authkit = e2e_cloud_authkit.FakeAuthKit(f"http://localhost:{port}")
+    app = create_cloud_app(
+        settings, engine=engine, verifier=E2EVerifier(authkit), room_ports=ports
+    )
     with TestClient(app, base_url=base) as client:
         for token, premium in PEOPLE.items():
             made = client.post(
@@ -237,7 +256,10 @@ def build(port: int):
     songs = {index: quiet_song(index) for index in range(6)}
 
     def account_of(user: str) -> dict:
-        answer = httpx.get(f"{base}/api/account", headers={"Authorization": f"Bearer e2e:{user}"})
+        # Legacy Rooms harnesses use bare tokens (e.g. "bob"), while the cloud
+        # account tests use e2e:<name>; they represent distinct test principals.
+        token = user if user in PEOPLE else f"e2e:{user}"
+        answer = httpx.get(f"{base}/api/account", headers={"Authorization": f"Bearer {token}"})
         answer.raise_for_status()
         return answer.json()
 
@@ -247,6 +269,7 @@ def build(port: int):
     # -- test controls ------------------------------------------------------------------------
 
     e2e_cloud_staff.install(app, engine)
+    e2e_cloud_authkit.install(app, authkit)
     e2e_cloud_flags.install(app, engine, lambda user: account_of(user)["user"]["id"])
 
     @app.post("/test/seed")
@@ -325,6 +348,29 @@ def build(port: int):
         with objects.lock:
             objects.expired_through = next(objects.serial)
         return {"expired_through": objects.expired_through}
+
+    @app.post("/test/expire-lease")
+    def expire_lease(body: dict = Body(default={})):  # noqa: B008
+        """Let `user`'s speaker lease lapse now, as 20 s without a heartbeat would (SC-0415-04)."""
+        workspace_id = workspace_of(str(body["user"]))
+        with transaction(engine, workspace_id) as conn:
+            conn.execute(
+                playback_sessions.update()
+                .where(playback_sessions.c.workspace_id == workspace_id)
+                .values(lease_expires_at=db_now(conn) - 1)
+            )
+        return {"ok": True}
+
+    @app.post("/test/reset-playback")
+    def reset_playback(body: dict = Body(default={})):  # noqa: B008
+        """Forget `user`'s playback session, so a devices test starts from song 1 with no
+        speaker, whatever an earlier test or attempt left behind."""
+        workspace_id = workspace_of(str(body["user"]))
+        with transaction(engine, workspace_id) as conn:
+            conn.execute(
+                playback_sessions.delete().where(playback_sessions.c.workspace_id == workspace_id)
+            )
+        return {"ok": True}
 
     @app.post("/test/r2/fail-parts")
     def fail_parts(body: dict = Body(default={})):  # noqa: B008
@@ -458,26 +504,31 @@ def build(port: int):
 
     # -- the built site -----------------------------------------------------------------------
 
-    def built_files() -> dict[str, Path]:
-        """Every file of the built site by its URL path, listed once (the build runs first)."""
-        if not built_cache:
-            built_cache.update({
-                file.relative_to(DIST).as_posix(): file
-                for file in DIST.rglob("*") if file.is_file()
-            })
-        return built_cache
+    def built_files(dist: Path) -> dict[str, Path]:
+        """Every file of a built site by its URL path, listed once (the build runs first)."""
+        if dist not in built_cache:
+            built_cache[dist] = {
+                file.relative_to(dist).as_posix(): file
+                for file in dist.rglob("*") if file.is_file()
+            }
+        return built_cache[dist]
 
-    built_cache: dict[str, Path] = {}
+    built_cache: dict[Path, dict[str, Path]] = {}
 
     @app.get("/{path:path}", include_in_schema=False)
-    def site(path: str):
+    def site(path: str, request: Request):
         if path.startswith(("api/", "test/", "fake-", "e2e/")):
             return Response(status_code=404)
+        # http://localhost:<port> is the site with the real AuthKit library (the sign-in test).
+        dist = DIST_AUTHKIT if request.url.hostname == "localhost" else DIST
+        if not (dist / "index.html").is_file():
+            return Response("Build the cloud test sites first: pnpm build:cloud-e2e",
+                            status_code=503)
         # The request only ever picks from the files the build made; it never becomes a path.
-        built = built_files()
+        built = built_files(dist)
         if path in built:
             return FileResponse(built[path])
-        return FileResponse(DIST / "index.html", headers={"Cache-Control": "no-store"})
+        return FileResponse(dist / "index.html", headers={"Cache-Control": "no-store"})
 
     return app
 

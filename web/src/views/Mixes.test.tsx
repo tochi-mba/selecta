@@ -485,3 +485,34 @@ describe('Quick Play and optional Lucy creation', () => {
     expect(calls.some((call) => call.path.includes('/lucy/') || call.method === 'POST')).toBe(false);
   });
 });
+
+// S3-0054-07: a slower answer to an older destination search can never replace the newer one
+describe('destination search', () => {
+  it('ignores an older answer that arrives after the newer search, and can be cleared', async () => {
+    const row = (id: number, title: string) => ({ id, artist: 'Example Artist', title, genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false });
+    fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', '')], 'POST /steer': { mix_language: 'balanced', target: null } });
+    const stubbed = globalThis.fetch;
+    let releaseOld: (() => void) | null = null;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/songs?q=mi&')) {
+        await new Promise<void>((done) => { releaseOld = done; });
+        return new Response(JSON.stringify([row(1, 'Old Answer')]), { status: 200 });
+      }
+      if (url.includes('/songs?q=midnight&')) return new Response(JSON.stringify([row(7, 'Midnight')]), { status: 200 });
+      return stubbed(url, init);
+    }));
+    show();
+    fireEvent.click(await screen.findByRole('button', { name: /^Customize:/ }));
+    const box = await screen.findByLabelText('Take me to');
+    fireEvent.change(box, { target: { value: 'mi' } });
+    await waitFor(() => expect(releaseOld).not.toBeNull());
+    fireEvent.change(box, { target: { value: 'midnight' } });
+    expect(await screen.findByRole('button', { name: 'Midnight - Example Artist' })).toBeInTheDocument();
+    releaseOld!();
+    await new Promise((done) => setTimeout(done, 50));
+    expect(screen.queryByRole('button', { name: 'Old Answer - Example Artist' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Midnight - Example Artist' })).toBeInTheDocument();
+    fireEvent.change(box, { target: { value: '' } });
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Midnight - Example Artist' })).toBeNull());
+  });
+});

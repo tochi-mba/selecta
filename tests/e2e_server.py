@@ -58,6 +58,31 @@ LYRICS = """[00:01.00] the morning light comes through
 """
 BARS = 44
 
+# MP-0272-05: stress metadata, only when SELECTA_E2E_STRESS=1 (web/playwright.mp.config.ts), so the
+# ordinary run and its screenshots keep the twelve songs above. Every name is invented here: no real
+# artist, song, path or person. Missing means NULL in the database, as an untagged file arrives.
+STRESS = os.environ.get("SELECTA_E2E_STRESS") == "1"
+UNBROKEN_TITLE = "Hyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatall" + "Mix2026"
+CJK_TITLE = "夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル"
+ARABIC_TITLE = "أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة"
+STRESS_SONGS = [
+    (None, None, 120.0, "8A"),  # missing title and artist
+    (UNBROKEN_TITLE, "Nospacesartistnamethatalsorefusestowrap", 121.0, "8A"),
+    ("Same Name", "Hal Greene", 120.0, "8A"),  # exact duplicate of title and artist
+    ("Remix של שלום (feat. ليلى) 2026", "Mixed Bidi Ensemble", 120.0, "9A"),
+    (CJK_TITLE, "東京の夜の楽団と仲間たち", 119.0, "8A"),
+    (ARABIC_TITLE, "فرقة الليل الطويل", 122.0, "8A"),
+]
+# song ids: SONGS are 1-12, the set-aside and broken files 13-14, STRESS_SONGS 15-20
+STRESS_MIX = (8, 15, 18, 19, 20, 10, 17, 16)
+STRESS_LYRICS = (
+    LYRICS
+    + "[00:33.00] a lyric line long enough to wrap across the whole stage at every width\n"
+    + """[00:37.00] שורה בעברית שעוברת מימין לשמאל
+[00:41.00] 夜明けの街を歩きながら
+"""
+)
+
 
 def _add_song(conn, settings: Settings, music: Path, number: int, song: tuple) -> None:
     title, artist, bpm, camelot = song
@@ -83,7 +108,7 @@ def _add_song(conn, settings: Settings, music: Path, number: int, song: tuple) -
         raw_beats=track.beats.astype(np.float32),
         raw_downbeats=track.downbeats.astype(np.float32),
         chroma_bars=rng.random((BARS, 12)).astype(np.float16),
-        mfcc_bars=rng.normal(size=(BARS, 13)).astype(np.float16),
+        mfcc_bars=rng.normal(size=(BARS, 20)).astype(np.float16),
         energy_bars=np.full(BARS, energy).astype(np.float16),
         rms_db_bars=np.full(BARS, -14.0).astype(np.float16),
         low_share_bars=np.full(BARS, 0.3).astype(np.float16),
@@ -128,10 +153,11 @@ def _add_song(conn, settings: Settings, music: Path, number: int, song: tuple) -
             "timings": {},
         },
     )
-    if number == 0:
+    if number == 0 or (STRESS and number == 7):
+        words = STRESS_LYRICS if STRESS else LYRICS
         conn.execute(
             "INSERT INTO lyrics(song_id,status,synced,plain) VALUES(?,?,?,?)",
-            (song_id, "synced", LYRICS, LYRICS),
+            (song_id, "synced", words, words),
         )
     else:
         conn.execute("INSERT INTO lyrics(song_id,status) VALUES(?,?)", (song_id, "instrumental"))
@@ -165,10 +191,13 @@ def build(home: Path) -> Settings:
         (cursor.lastrowid, ANALYSIS_VERSION, "couldn't read it"),
     )
     db.set_preference(conn, "library_folders", [str(music)])
+    if STRESS:
+        for number, song in enumerate(STRESS_SONGS, start=len(SONGS) + 2):
+            _add_song(conn, settings, music, number, song)
     # splitting stems needs the big model, which isn't what these tests are about
     steer(conn, "stems", "never")
     conn.commit()
-    for song_id in (1, 2, 3, 4):
+    for song_id in STRESS_MIX if STRESS else (1, 2, 3, 4):
         mix.add_song(conn, song_id)
     conn.close()
     (home / "built.json").write_text(json.dumps({"songs": len(SONGS)}), "utf-8")
@@ -182,7 +211,10 @@ def main() -> None:
     atexit.register(shutil.rmtree, home, ignore_errors=True)
     os.environ["SELECTA_HOME"] = str(home)
     settings = build(home)
-    app = create_app(settings, ROOT / "web" / "dist", prepare_links=False)
+    # SELECTA_E2E_DIST names another build folder under web/, so runs side by side can each
+    # serve their own build instead of one rebuilding web/dist under another's feet
+    dist = ROOT / "web" / os.environ.get("SELECTA_E2E_DIST", "dist")
+    app = create_app(settings, dist, prepare_links=False)
     add_flag_switch(app)
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 

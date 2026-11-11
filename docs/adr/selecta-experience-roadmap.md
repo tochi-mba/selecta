@@ -24,13 +24,13 @@
 | [ADR-125](adr-0125-musical-discovery-audition-workflows.md) | Musical discovery as clear word and harmonic audition flows | Collection | P1 | Accepted | Not started (0/5) | No (0/5) |
 | [ADR-126](adr-0126-browser-first-onboarding-and-readiness.md) | Browser-first onboarding and readiness, without desktop packaging | Listener | P1 | Accepted | Not started (0/5) | No (0/5) |
 | [ADR-127](adr-0127-export-job-and-frozen-revision.md) | Export: truthful frozen revision, job lifecycle and file delivery | Operations | P1 | Accepted | Not started (0/5) | No (0/5) |
-| [ADR-128](adr-0128-calm-workspace-and-operations.md) | Workspace as a calm, actionable operations center | Operations | P2 | Accepted | Not started (0/5) | No (0/5) |
-| [ADR-129](adr-0129-blind-study-neutral-audio.md) | Neutral blind A/B listening study with protocol integrity | Operations | P1 | Accepted | Not started (0/5) | No (0/5) |
-| [ADR-130](adr-0130-brand-tokens-and-css-ownership.md) | Warm editorial design language, independent themes and CSS ownership | Foundation | P0 | Accepted | Not started (0/5) | No (0/5) |
-| [ADR-131](adr-0131-component-states-and-scoped-recovery.md) | Shared component contracts, honest async states and scoped recovery | Foundation | P0 | Accepted | Not started (0/5) | No (0/5) |
-| [ADR-132](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Responsive compositions, WCAG 2.2 AA and purposeful motion | Quality | P0 | Accepted | Not started (0/5) | No (0/5) |
-| [ADR-133](adr-0133-user-research-performance-and-release-evidence.md) | Uncoached user research, real performance and release evidence | Quality | P0 | Accepted | Not started (0/5) | No (0/5) |
-| [ADR-134](adr-0134-web-first-future-saas-boundary.md) | Web-first product boundary for a possible future SaaS | Scope | P0 | Accepted | Not started (0/5) | No (0/5) |
+| [ADR-128](adr-0128-calm-workspace-and-operations.md) | Workspace as a calm, actionable operations center | Operations | P2 | Accepted | 5/5 Implemented | Yes (2/5) |
+| [ADR-129](adr-0129-blind-study-neutral-audio.md) | Neutral blind A/B listening study with protocol integrity | Operations | P1 | Accepted | 4/5 Implemented | Yes (1/5) |
+| [ADR-130](adr-0130-brand-tokens-and-css-ownership.md) | Warm editorial design language, independent themes and CSS ownership | Foundation | P0 | Accepted | 5/5 Implemented | No (0/5) |
+| [ADR-131](adr-0131-component-states-and-scoped-recovery.md) | Shared component contracts, honest async states and scoped recovery | Foundation | P0 | Accepted | 5/5 Implemented | Yes (1/5) |
+| [ADR-132](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Responsive compositions, WCAG 2.2 AA and purposeful motion | Quality | P0 | Accepted | 4/5 Implemented | Yes (1/5) |
+| [ADR-133](adr-0133-user-research-performance-and-release-evidence.md) | Uncoached user research, real performance and release evidence | Quality | P0 | Accepted | 0/5 Implemented, 3 In progress | No (0/5) |
+| [ADR-134](adr-0134-web-first-future-saas-boundary.md) | Web-first product boundary for a possible future SaaS | Scope | P0 | Accepted | 2/5 Implemented, 2 Superseded by ADR-0391 | Yes (1/5) |
 | **Total** | **21 proposed design decisions** | | | **21 Proposed** | **0/105 Implemented** | **0/105 Verified** |
 
 ## Delivery sequence (dependencies, not schedule)

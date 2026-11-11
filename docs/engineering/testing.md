@@ -25,7 +25,11 @@ Playwright project (`playwright.cloud.config.ts`) against one server on port 881
 `SELECTA_CLOUD_E2E_PORT` to move it; never 8733, a running Selecta, or 8799, the local test
 server). It first builds the web app into `web/dist-cloud-e2e` with `vite.cloud-e2e.config.ts`:
 the real Cloud site, the Rooms guest page and display, and the test-only `cloud-harness.html`,
-with AuthKit swapped for `web/e2e-cloud/fakeAuthKit.tsx`. Then it starts
+with AuthKit swapped for `web/e2e-cloud/fakeAuthKit.tsx`; and the same site with the real AuthKit
+library into `web/dist-cloud-e2e-authkit` (`vite.cloud-e2e-authkit.config.ts`), which the server
+serves at `http://localhost:<port>` for the sign-in redirect test (`sign-in.cloud.ts`: the test
+routes the auth domain `https://auth.e2e.test` to the fake AuthKit in `tests/e2e_cloud_authkit.py`).
+Then it starts
 `tests/e2e_cloud_server.py`, the production Cloud API over a fresh schema and non-superuser role
 on the test PostgreSQL when `SELECTA_TEST_POSTGRES_URL` is set (as CI does; use it locally too,
 since on SQLite every tab's event stream contends for the one write lock), else a fresh migrated
@@ -121,7 +125,7 @@ Four workflows live in `.github/workflows/`. `test.yml` runs on every pull reque
 
 | Workflow | When | Runs |
 |---|---|---|
-| `nightly.yml` | Every night; Sundays; by hand | `pip-audit` and `pnpm audit` nightly; the cloud tests with Hypothesis at 5,000 examples on PostgreSQL on Sundays |
+| `nightly.yml` | Every night; Sundays; by hand | `pip-audit` and `pnpm audit` nightly; the cloud tests with Hypothesis at 5,000 examples on PostgreSQL, and the scrambled Stripe replay at 250,000 deliveries (`SELECTA_BILLING_REPLAY_DELIVERIES`), on Sundays |
 | `codeql.yml` | Pull requests and pushes to `main` | CodeQL security queries over Python and TypeScript |
 | `dependabot.yml` | Monthly | One grouped update pull request each for actions, Python and web dependencies |
 

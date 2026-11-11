@@ -71,7 +71,7 @@ function SeamRow({ seam, entry, readyOnly, number, into, onAsk, selected }: {
         </p>
         <Status kind={words.kind}>{words.words}</Status>
         {readyOnly && verified && isReadyStatus(status) && (
-          <p className="lucy-proof"><Icon name="check" width={14} height={14} /> Checked on disk{entry?.proof ? ` · ${entry.proof}` : ''}</p>
+          <p className="lucy-proof"><Icon name="check" size="compact" /> Checked on disk{entry?.proof ? ` · ${entry.proof}` : ''}</p>
         )}
         {evidence && <p className="hint">{tempoGapWords(evidence.tempo_gap)} · {keyDistanceWords(evidence.key_distance)}{notes.length ? ` · ${notes.join(' · ')}` : ''}</p>}
         {!!seam?.warnings.length && <ul className="lucy-warnings">{seam.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
@@ -142,7 +142,7 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
                 <p className="lucy-song-name"><span className="visually-hidden">Song {index + 1}: </span><b dir="auto">{name}</b> <span className="soft" dir="auto">{song.artist || 'Unknown artist'}</span></p>
                 <p className="lucy-song-facts">
                   {song.duration > 0 ? clock(song.duration) : 'Length unknown'} · {bpmWords(song.bpm)} · {keyWords(song.key)} · {energyWords(song.energy)}
-                  {song.locked && <> · <Icon name="lock" width={14} height={14} /> Locked</>}
+                  {song.locked && <> · <span className="icon-words"><Icon name="lock" size="compact" /> Locked</span></>}
                 </p>
               </div>
               <div className="lucy-song-actions" role="group" aria-label={`Change ${name}`}>
@@ -150,15 +150,15 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
                   onClick={() => void change({ op: song.locked ? 'unlock' : 'lock', occurrence: song.occurrence }, { occurrence: song.occurrence, act: 'lock' })}>
                   {song.locked ? 'Unlock' : 'Lock'}
                 </button>
-                <button type="button" data-act="up" disabled={index === 0} aria-disabled={busy || !editable || undefined} aria-label={`Move ${name} up`} title={blockedWords}
+                <button type="button" data-act="up" disabled={index === 0} aria-disabled={busy || !editable || undefined} aria-label={`Move ${name} up`} title={blockedWords ?? `Move ${name} up`}
                   onClick={() => void change({ op: 'move', occurrence: song.occurrence, to: index - 1 }, { occurrence: song.occurrence, act: 'up' })}>
                   <Icon name="up" />
                 </button>
-                <button type="button" data-act="down" disabled={!nextSong} aria-disabled={busy || !editable || undefined} aria-label={`Move ${name} down`} title={blockedWords}
+                <button type="button" data-act="down" disabled={!nextSong} aria-disabled={busy || !editable || undefined} aria-label={`Move ${name} down`} title={blockedWords ?? `Move ${name} down`}
                   onClick={() => void change({ op: 'move', occurrence: song.occurrence, to: index + 1 }, { occurrence: song.occurrence, act: 'down' })}>
                   <Icon name="down" />
                 </button>
-                <button type="button" data-act="remove" aria-disabled={busy || !editable || undefined} aria-label={`Remove ${name}`} title={blockedWords}
+                <button type="button" data-act="remove" aria-disabled={busy || !editable || undefined} aria-label={`Remove ${name}`} title={blockedWords ?? `Remove ${name}`}
                   onClick={() => void change({ op: 'remove', occurrence: song.occurrence }, (nextSong ?? previous) ? { occurrence: (nextSong ?? previous).occurrence, act: 'remove' } : null)}>
                   <Icon name="trash" />
                 </button>

@@ -1,0 +1,36 @@
+{
+  "about": "GP-0251-01 labelled music-search corpus. Every name is invented. 'top' is the song ID that must rank first; 'absent' are IDs that must not match at all; 'label' is the explanation the first result must carry.",
+  "songs": [
+    {"id": 1, "title": "Midnight City", "artist": "Neon Harbour"},
+    {"id": 2, "title": "Midnight City (Remix)", "artist": "Neon Harbour"},
+    {"id": 3, "title": "Midnight City (Live)", "artist": "Neon Harbour"},
+    {"id": 4, "title": "Midnight City", "artist": "Paper Lanterns"},
+    {"id": 5, "title": "Blue Monday feat. Ana Ruiz", "artist": "Velvet Static"},
+    {"id": 6, "title": "Blue Monday", "artist": "Velvet Static"},
+    {"id": 7, "title": "Déjà Vu", "artist": "Zoë Ørsted"},
+    {"id": 8, "title": "Deja Blue", "artist": "Someone Else"},
+    {"id": 9, "title": "Bohemian Rhapsody", "artist": "Crown Street"},
+    {"id": 10, "title": "Café del Mar", "artist": "Björk Ångström"},
+    {"id": 11, "title": "Harbour Lights", "artist": "Midnight Choir"},
+    {"id": 12, "title": "100% Love", "artist": "Number Band"},
+    {"id": 13, "title": "1000 Days", "artist": "Number Band"}
+  ],
+  "queries": [
+    {"kind": "exact", "q": "Midnight City", "top": [1, 4], "absent": [], "label": "Exact title"},
+    {"kind": "exact", "q": "Harbour Lights", "top": [11], "absent": [1, 2, 3, 4], "label": "Exact title"},
+    {"kind": "exact-id", "q": "9", "top": [9], "absent": [], "label": "Recording ID"},
+    {"kind": "remix", "q": "Midnight City Remix", "top": [2], "absent": [1, 3, 4], "label": "Exact title"},
+    {"kind": "live", "q": "midnight city live", "top": [3], "absent": [1, 2, 4], "label": "Exact title"},
+    {"kind": "feat", "q": "Blue Monday ft. Ana Ruiz", "top": [5], "absent": [6], "label": "Exact title"},
+    {"kind": "feat", "q": "blue monday", "top": [6], "absent": [], "label": "Exact title"},
+    {"kind": "accent", "q": "deja vu", "top": [7], "absent": [8], "label": "Exact title"},
+    {"kind": "accent", "q": "zoe orsted", "top": [7], "absent": [], "label": "Exact artist"},
+    {"kind": "accent", "q": "cafe del mar", "top": [10], "absent": [], "label": "Exact title"},
+    {"kind": "accent", "q": "bjork", "top": [10], "absent": [], "label": "Artist match"},
+    {"kind": "typo", "q": "Bohemian Rapsody", "top": [9], "absent": [], "label": "Approximate match - check the recording"},
+    {"kind": "typo-too-short", "q": "lvoe", "top": [], "absent": [12], "label": null},
+    {"kind": "symbol", "q": "100%", "top": [12], "absent": [13], "label": "Title match"},
+    {"kind": "artist", "q": "Neon Harbour", "top": [1, 2, 3], "absent": [4], "label": "Exact artist"},
+    {"kind": "none", "q": "qwxzv", "top": [], "absent": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], "label": null}
+  ]
+}

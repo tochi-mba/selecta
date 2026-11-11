@@ -8,8 +8,8 @@
   left: var(--space-3);
   top: -60px;
   z-index: var(--layer-toast);
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--primary-fill);
+  color: var(--primary-ink);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
 }
@@ -30,20 +30,20 @@ a.button {
   align-items: center;
   justify-content: center;
   min-height: 40px;
-  padding: 8px 14px;
+  padding: var(--space-2) var(--space-cozy);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-control);
   color: var(--text);
   text-decoration: none;
 }
-a.button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+a.button.primary { background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
 a.button:hover { border-color: var(--text); }
 
 .nav {
   position: fixed;
   z-index: var(--layer-nav);
-  background: var(--surface-raised);
+  background: var(--surface-panel);
   display: flex;
 }
 .nav ul { list-style: none; margin: 0; padding: 0; display: flex; }
@@ -55,7 +55,7 @@ a.button:hover { border-color: var(--text); }
 .nav-more-mobile { display: none; }
 .nav li a i { font-style: normal; width: 1.4em; text-align: center; flex: none; }
 .nav a[aria-current='true'] { color: var(--text); }
-.nav .count, .mini .count, .context-bar .count { color: var(--request); font: 700 0.85rem var(--mono); }
+.nav .count, .mini .count, .context-bar .count { color: var(--request); font: 700 0.85rem var(--mono); font-variant-numeric: tabular-nums; }
 
 /* One frame. Every bit of its shape is measured from the numbers in tokens.css, so there is exactly one
    answer to how much room the bars take, whichever bars are showing. */
@@ -75,16 +75,18 @@ a.button:hover { border-color: var(--text); }
     flex-direction: column;
     gap: var(--space-4);
     padding: var(--space-4) var(--space-3);
+    /* the 1px edge is part of the right inset, so the rows sit centred between the rail's two sides (MP-0280-01) */
+    padding-right: calc(var(--space-3) - 1px);
     border-right: 1px solid var(--border);
     overflow-y: auto;
   }
   .nav .brand { padding: var(--space-1) var(--space-2); }
-  .nav ul { flex-direction: column; gap: 2px; flex: 1 1 auto; }
-  .nav li a { display: flex; gap: var(--space-2); align-items: center; padding: 9px var(--space-2); border-radius: var(--radius-sm); min-height: var(--control-height); position: relative; }
+  .nav ul { flex-direction: column; gap: var(--space-hair); flex: 1 1 auto; }
+  .nav li a { display: flex; gap: var(--icon-gap); align-items: center; padding: var(--control-pad-block) var(--space-2); border-radius: var(--radius-sm); min-height: var(--control-height); position: relative; }
   .nav-context { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
   .nav-foot { display: flex; gap: var(--space-2); }
-  .nav-request { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-sm); padding: 8px; min-width: 0; }
-  .nav-collapse { flex: none; padding: 8px; }
+  .nav-request { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); font-size: var(--text-sm); padding: var(--space-2); min-width: 0; }
+  .nav-collapse { flex: none; padding: var(--space-2); }
 
   /* collapsed: icons only, and each one still has its name, for screen readers and on a resting pointer */
   :root[data-rail='collapsed'] .nav { padding-inline: var(--space-2); align-items: stretch; }
@@ -102,12 +104,13 @@ a.button:hover { border-color: var(--text); }
     top: 50%;
     transform: translateY(-50%);
     z-index: var(--layer-toast);
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
     white-space: nowrap;
     color: var(--text);
-    background: var(--surface-raised);
-    border: 1px solid var(--border-strong);
-    border-radius: 6px;
+    background: var(--surface-overlay);
+    border: 1px solid var(--edge-overlay);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-overlay);
     font-size: var(--text-sm);
   }
 }
@@ -140,7 +143,7 @@ a.button:hover { border-color: var(--text); }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: var(--space-hair);
     font-size: 0.75rem;
     white-space: nowrap;
     overflow: hidden;
@@ -155,7 +158,7 @@ a.button:hover { border-color: var(--text); }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: var(--space-hair);
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -164,22 +167,41 @@ a.button:hover { border-color: var(--text); }
     font-size: 0.75rem;
   }
   .nav-more-mobile[aria-current='page'] { color: var(--text); background: var(--surface-control); }
+  /* MP-0282-04: the Workspace warning arriving after the page has drawn would add a sixth button to the
+     top bar and rewrap the page's name, pushing the whole page down. On a phone it is a dot on More. */
+  .nav-more-mobile { position: relative; }
+  .nav-attention { position: absolute; top: var(--space-2); left: calc(50% + 8px); width: 8px; height: 8px; border-radius: 50%; background: var(--status-warning); }
+  .context-button.health-attention { display: none; }
+  /* MP-0274-05: each destination fills the scrolling tab list edge to edge, so its focus ring is drawn
+     inside the target; drawn outside, the list's own overflow would cut it off on every side */
+  .nav li a:focus-visible, .nav-more-mobile:focus-visible { outline-offset: -4px; }
   .mini-volume { display: none; }
   /* with a keyboard up, what's being typed gets the room */
   :root[data-keyboard='open'] .nav, :root[data-keyboard='open'] .mini { display: none; }
 }
+/* the Stage takes the whole window: with the frame's player reservation at zero, the mini-player goes
+   too, visually only, whatever has marked the Stage on (FP-0270-05) */
+:root[data-stage='on'] .mini { display: none; }
 .more-nav ul { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-2); }
 .more-nav a { display: block; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); text-decoration: none; }
 .more-nav a[aria-current='page'] { border-color: var(--focus); background: var(--surface-selected); }
 .listen-empty {
-  min-height: calc(100dvh - var(--header-height) - var(--bottom-chrome));
+  min-height: calc(100dvh - var(--header-block) - var(--bottom-chrome));
   display: grid;
   align-content: center;
   justify-items: start;
-  max-width: 760px;
 }
 .listen-empty .display { max-width: 12ch; }
 .on-stage .content { padding-bottom: 0; }
+
+/* MP-0274-01: one page column. Each kind of page names its width once, here on .content, so the
+   breadcrumb bar above it starts and ends on the same edges as the title, filters, cards and lists. */
+.content { --page-max: var(--content-reading); }
+.content:has(> main.page.browse, > main.page.mixes, > main.page.library) { --page-max: var(--content-browse); }
+.content:has(> main.page.mix, > main.page.lucy, > main.page.now) { --page-max: var(--content-work); }
+.content:has(> main.page.listen-empty) { --page-max: 760px; }
+.content:has(> main.page.now.stage) { --page-max: 100%; }
+.content > main.page { max-width: var(--page-max); }
 
 /* the page's own bar: where you are, and what's reachable from anywhere */
 .context-bar {
@@ -192,18 +214,20 @@ a.button:hover { border-color: var(--text); }
   gap: var(--space-3);
   min-height: var(--header-height);
   padding: var(--space-1) var(--gutter);
+  /* the page column's own edges: the gutter, plus half of whatever the column leaves either side */
+  padding-inline: max(var(--gutter), calc((100% - var(--page-max)) / 2 + var(--gutter)));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 .crumbs { min-width: 0; font-size: var(--text-sm); color: var(--text-soft); }
-.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px var(--space-2); }
+.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); }
 .crumbs li { min-width: 0; overflow-wrap: anywhere; }
 .crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
 .crumbs [aria-current='page'] { unicode-bidi: plaintext; }
 .crumbs a { color: var(--text-soft); }
 .crumbs [aria-current='page'] { color: var(--text); font-weight: 600; }
 .context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; min-width: 0; }
-.context-button { display: inline-flex; align-items: center; gap: var(--space-2); background: none; border-color: transparent; padding: 6px 8px; min-width: var(--control-height); justify-content: center; }
+.context-button { display: inline-flex; align-items: center; gap: var(--icon-gap); background: none; border-color: transparent; padding: var(--space-dense) var(--space-2); min-width: var(--control-height); justify-content: center; }
 .context-button:hover:not(:disabled) { border-color: var(--border); }
 .context-button.health-attention { color: var(--status-warning); text-decoration: none; border-color: var(--status-warning); }
 .palette-button { border-color: var(--border); color: var(--text-soft); }
@@ -217,6 +241,20 @@ a.button:hover { border-color: var(--text); }
   .context-bar { gap: var(--space-1); }
   .context-actions { gap: 0; }
   .crumbs { flex: 1 1 0; }
+  /* beside five actions, a whole trail broke letter by letter ("My Mixe/s") and the bar grew taller than
+     a 400% zoomed window can spare (MP-0275-07); the phone bar already reaches every section, so a
+     narrow bar keeps only where you are */
+  .crumbs li:not(:last-child) { display: none; }
+  .crumbs li + li::before { content: none; }
+  /* MP-0280-04 with MP-0277-05: a button that can carry a count keeps one width whether a count is there
+     or not, so a request or new activity arriving never takes width from the page's name (which then broke
+     one letter to a line and squeezed the editor at 320px). The icon stays centred in the target (MP-0274-02)
+     between two equal slots; the count sits in the one after it, centred on the icon, held for two tabular
+     digits even before one arrives (MP-0277-05) */
+  .context-actions .context-counted { position: relative; padding-inline: calc(var(--space-4) + var(--space-hair)); }
+  .context-actions .context-counted .count { position: absolute; top: 50%; translate: 0 -50%; inset-inline-start: calc(50% + var(--icon-size) / 2 + var(--icon-gap-dense)); font-size: var(--text-xs); }
+  /* and the name breaks between words wherever a word fits */
+  .crumbs li { overflow-wrap: break-word; }
 }
 
 .mini {
@@ -239,24 +277,26 @@ a.button:hover { border-color: var(--text); }
   right: 0;
   top: -1px;
   height: 2px;
-  background: var(--accent);
+  background: var(--playing);
   transform-origin: left;
 }
 a.mini-song { flex: 1 1 auto; min-width: 0; display: grid; color: var(--text); text-decoration: none; }
 .mini-song b, .mini-song span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .mini-song span { color: var(--text-soft); font-size: var(--text-sm); }
 .mini button { flex: none; }
-.mini .round { width: 44px; height: 44px; }
-.mini-next { padding: 8px 10px; min-width: 44px; }
+/* MP-0281-02: Play/Pause is the filled disc and outweighs Next, a bare glyph on the bar */
+.mini .round { width: 44px; height: 44px; border-radius: 50%; background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
+.mini-next { padding: var(--space-2) var(--space-snug); min-width: 44px; background: none; border-color: transparent; }
+.mini-next:hover:not(:disabled) { border-color: var(--border); }
 /* Reserve digits even at zero so arriving requests never shove transport or track identity. */
 .mini-requests .count { display: inline-block; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 420px) {
-  .mini-requests { padding: 8px; font-size: var(--text-sm); }
+  .mini-requests { padding: var(--space-2); font-size: var(--text-sm); }
 }
 
 .volume { display: flex; align-items: center; gap: var(--space-1); min-width: 0; }
 .volume input { width: 96px; min-height: 24px; }
-button.icon { padding: 6px 8px; min-width: 40px; }
+button.icon { padding: var(--space-dense) var(--space-2); min-width: 40px; }
 
 .connection {
   display: flex;
@@ -290,13 +330,13 @@ button.icon { padding: 6px 8px; min-width: 40px; }
   color: var(--bg);
   border-radius: var(--radius);
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
+  box-shadow: var(--shadow-overlay);
   font-size: 0.94rem;
 }
 .toast-row.problem { background: var(--warn); color: var(--accent-ink); }
 .toast-row > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: 4px 12px; flex: none; }
-.toast-row .toast-close { border: 0; padding: 4px 8px; min-width: 34px; }
+.toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: var(--space-1) var(--space-3); flex: none; }
+.toast-row .toast-close { border: 0; padding: var(--space-1) var(--space-2); min-width: 34px; }
 /* Only visual chrome yields here: the audio owner and saved Undo activity do not change. */
 :root[data-keyboard='open'] .toasts, :root[data-stage='on'] .toasts {
   visibility: hidden;
@@ -308,13 +348,14 @@ button.icon { padding: 6px 8px; min-width: 40px; }
   position: fixed;
   inset: 0;
   z-index: var(--layer-dialog);
-  background: var(--surface-overlay);
+  background: var(--surface-scrim);
   display: flex;
   padding: 0 0 var(--keyboard-inset);
 }
 .overlay-panel {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
+  background: var(--surface-overlay);
+  border: 1px solid var(--edge-overlay);
+  box-shadow: var(--shadow-overlay);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -326,7 +367,7 @@ button.icon { padding: 6px 8px; min-width: 40px; }
 .overlay-body { padding: var(--space-4); overflow-y: auto; flex: 1 1 auto; min-height: 0; scroll-padding-block: var(--space-3); }
 .overlay-body :is(input, select, textarea, button) { scroll-margin-block: var(--space-3); }
 .overlay-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
-.overlay-close { padding: 4px 10px; flex: none; }
+.overlay-close { padding: var(--space-1) var(--space-snug); flex: none; }
 
 .overlay-dialog { align-items: center; justify-content: center; padding: var(--space-4); }
 .overlay-dialog .overlay-panel { width: min(480px, 100%); border-radius: var(--radius); }
@@ -343,11 +384,16 @@ button.icon { padding: 6px 8px; min-width: 40px; }
     padding-bottom: var(--safe-bottom);
   }
 }
+/* a side task beside the music (SF-0203-06): it stops at the rail, the tab bar and the mini-player,
+   which stay on screen and working; the bottom chrome already holds the safe area */
+.overlay-keeps-chrome { left: var(--rail-offset); bottom: var(--bottom-chrome); }
+.overlay-keeps-chrome .overlay-panel { padding-bottom: 0; }
 
 /* shared states */
-.status { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-sm); white-space: nowrap; }
+.status { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); font-size: var(--text-sm); white-space: nowrap; }
 .status i { font-style: normal; }
 .status-planned, .status-unavailable, .status-queued { color: var(--status-planned); }
+.status-paused { color: var(--text-soft); }
 .status-working { color: var(--status-working); }
 .status-recovering { color: var(--status-recovering); }
 .status-ready { color: var(--status-ready); }
@@ -391,19 +437,19 @@ button[data-working]::after {
   margin-top: var(--space-1);
   min-width: 190px;
   display: grid;
-  gap: 2px;
+  gap: var(--space-hair);
   padding: var(--space-1);
-  background: var(--surface-raised);
-  border: 1px solid var(--border-strong);
+  background: var(--surface-overlay);
+  border: 1px solid var(--edge-overlay);
   border-radius: var(--radius-sm);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
+  box-shadow: var(--shadow-overlay);
 }
 .menu-list button { width: 100%; text-align: left; background: none; border-color: transparent; }
 .menu-list button:hover:not(:disabled), .menu-list button:focus { background: var(--surface-control); }
 
 .tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0 0 var(--space-4); border-bottom: 1px solid var(--border); }
 .tabs a { padding: var(--space-2) var(--space-3); color: var(--text-soft); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.tabs a[aria-current='page'] { color: var(--text); border-bottom-color: var(--accent); }
+.tabs a[aria-current='page'] { color: var(--text); border-bottom-color: var(--selected); }
 .tabs a:hover { color: var(--text); }
 
 .overlay-workspace { padding: var(--space-4); align-items: stretch; justify-content: center; }
@@ -411,7 +457,6 @@ button[data-working]::after {
 @media (max-width: 760px) { .overlay-workspace { padding: 0; } .overlay-workspace .overlay-panel { border-radius: 0; } }
 
 /* the timeline, with whatever's selected beside it */
-.page.mix { max-width: 1320px; }
 .edit-layout.has-inspector { display: grid; grid-template-columns: minmax(420px, 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
 .inspector-column { position: relative; min-width: 0; align-self: stretch; }
 .inspector-resize {
@@ -434,27 +479,27 @@ button[data-working]::after {
   scroll-behavior: smooth;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-raised);
+  background: var(--surface-panel);
   padding: var(--space-4);
-  margin-top: 20px;
+  margin-top: var(--space-loose);
 }
 @media (prefers-reduced-motion: reduce) { .edit-inspector { scroll-behavior: auto; } }
 .inspector-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .inspector-pair { overflow-wrap: anywhere; margin: var(--space-2) 0; }
-.inspector-tabs { display: flex; gap: var(--space-1); margin: var(--space-3) 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.inspector-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-soft); padding: var(--space-2) var(--space-3); }
-.inspector-tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+/* MP-0288-02: four equal tabs on one row at every width, so none drops to a second line in a phone's sheet */
+.inspector-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--space-1); margin: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.inspector-tabs button { min-width: 0; background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-soft); padding: var(--space-2) var(--space-1); overflow-wrap: anywhere; }
+.inspector-tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--selected); }
 .inspector .preview { width: 100%; }
 .inspector .status { white-space: normal; }
-.seam.open { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+.seam.open { outline: 2px solid var(--selected); outline-offset: 2px; border-radius: var(--radius-sm); }
 .export-left { list-style: none; margin: var(--space-2) 0; padding: 0; display: grid; gap: var(--space-1); max-height: 220px; overflow-y: auto; }
 .export-left .status { white-space: normal; }
 
 /* where a dragged song will land */
-.song.over { box-shadow: 0 -3px 0 0 var(--accent); }
+.song.over { box-shadow: 0 -3px 0 0 var(--selected); }
 
 /* Library */
-.page.library { max-width: 1120px; }
 .library-find { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; margin-bottom: var(--space-2); }
 .library-find input.wide { flex: 1 1 260px; margin: 0; width: auto; }
 .library-sort { display: flex; align-items: center; gap: var(--space-2); color: var(--text-soft); font-size: var(--text-sm); }
@@ -471,7 +516,7 @@ button.song-open:hover { text-decoration: underline; }
 .song-facts div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--border); padding: var(--space-1) 0; }
 .song-facts dt { color: var(--text-soft); }
 .song-facts dd { margin: 0; text-align: right; }
-.correct-field { display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.correct-field { display: grid; gap: var(--field-gap); font-size: var(--text-sm); }
 .correct-field input { width: 140px; }
 .overlay-body h3 { margin: var(--space-4) 0 var(--space-1); }
 
@@ -485,9 +530,9 @@ button.song-open:hover { text-decoration: underline; }
 .folder-list .status { white-space: normal; }
 .diagnostics { font: 0.82rem var(--mono); background: var(--surface-control); border-radius: var(--radius-sm); padding: var(--space-3); overflow-x: auto; margin: 0; }
 
-.choice { display: inline-flex; align-items: center; gap: var(--space-1); padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+.choice { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-dense) var(--space-snug); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
 .choice input { width: auto; min-height: 0; }
-.choice:has(input:checked) { border-color: var(--accent); }
+.choice:has(input:checked) { border-color: var(--selected); }
 .choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 
 /* nothing on a phone should be wider than the phone */
@@ -498,12 +543,12 @@ button.song-open { display: block; max-width: 100%; white-space: normal; overflo
 .seam-visual-bars { min-width: 0; overflow: hidden; }
 .seam-visual-caption { flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 560px) {
-  .seam { margin-left: 8px; padding-left: 10px; }
+  .seam { margin-left: var(--space-2); padding-left: var(--space-snug); }
   .seam-visual { margin-left: 0; }
 }
 
 /* Listen: the things you reach for stay in reach */
-.transport-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.transport-more { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
 .song-name { grid-template-columns: minmax(0, 1fr); }
 .song-name > * { min-width: 0; }
 button.song-open b { display: block; white-space: normal; overflow-wrap: anywhere; }
@@ -522,10 +567,11 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
   display: none;
   width: max-content;
   max-width: min(240px, 60vw);
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--edge-overlay);
+  border-radius: var(--radius-sm);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
   color: var(--text);
   font-size: 0.82rem;
 }

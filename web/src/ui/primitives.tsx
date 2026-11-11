@@ -29,6 +29,19 @@ export function LinkTabs({ label, items, current }: { label: string; items: { pa
 /** Tabs inside a panel, following the ARIA pattern: one tab stop, arrows move, the panel follows. */
 export function Tabs<T extends string>({ label, tabs, current, onChange, children }: { label: string; tabs: { id: T; label: string }[]; current: T; onChange: (tab: T) => void; children: ReactNode }) {
   const base = useId();
+  // ARIA's pattern: a panel is a tab stop of its own only when nothing inside it can take focus. A tall
+  // panel full of controls as a stop would put focus on a box bigger than a phone's screen (MP-0288-06).
+  const panel = useRef<HTMLDivElement>(null);
+  const [panelStop, setPanelStop] = useState(true);
+  useEffect(() => {
+    const node = panel.current;
+    if (!node) return;
+    const check = () => setPanelStop(!node.querySelector('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'));
+    check();
+    const watch = new MutationObserver(check);
+    watch.observe(node, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'tabindex', 'href'] });
+    return () => watch.disconnect();
+  }, [current]);
   const keys = (event: KeyboardEvent, index: number) => {
     const last = tabs.length - 1;
     // Arrow keys follow the visual order in RTL as well as LTR tab lists.
@@ -60,7 +73,7 @@ export function Tabs<T extends string>({ label, tabs, current, onChange, childre
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={`${base}-${current}-panel`} aria-labelledby={`${base}-${current}`} tabIndex={0}>{children}</div>
+      <div ref={panel} role="tabpanel" id={`${base}-${current}-panel`} aria-labelledby={`${base}-${current}`} tabIndex={panelStop ? 0 : -1}>{children}</div>
     </>
   );
 }

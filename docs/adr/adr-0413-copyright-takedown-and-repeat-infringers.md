@@ -1,7 +1,7 @@
 # ADR-0413 - Copyright terms, takedown and repeat infringers
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 0/4 Implemented; 2/4 In progress; 2/4 Not started.
+- **Implementation:** 1/4 Implemented; 1/4 In progress; 2/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P0 / Phase 7. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -31,12 +31,12 @@ Selecta behaves as a responsible host and avoids features that would turn it int
 - Public mix links at launch.
 - Cross-account deduplication.
 
-## Implementation checklist - 0/4 Implemented; 0/4 independently Verified
+## Implementation checklist - 1/4 Implemented; 0/4 independently Verified
 
-1. **SC-0413-01 - Terms.** **Acceptance:** Terms cover rights, private use and public performance. **Required verification:** Legal review. **Implementation:** Not started; **Independently Verified:** No.
-2. **SC-0413-02 - Takedown process.** **Acceptance:** Notices are logged, acted on and audited within the stated time. **Required verification:** Drill. **Implementation:** In progress; notice/action/deadline/evidence/audit services and staff routes exist; the drill remains. **Evidence:** `src/selecta/admin/takedowns.py`; `src/selecta/admin/routes_controls.py`. **Independently Verified:** No.
-3. **SC-0413-03 - Repeat-infringer enforcement.** **Acceptance:** Accounts with repeated valid notices are restricted per policy. **Required verification:** Admin test. **Implementation:** In progress; restriction and lifting commands exist; focused repeat-infringer admin coverage remains. **Evidence:** `src/selecta/admin/takedowns.py`; `src/selecta/admin/routes_controls.py`. **Independently Verified:** No.
-4. **SC-0413-04 - DMCA agent.** **Acceptance:** Agent registered and renewal calendared. **Required verification:** Registration on file. **Implementation:** Not started; **Independently Verified:** No.
+1. **SC-0413-01 - Terms.** **Acceptance:** Terms cover rights, private use and public performance. **Required verification:** Legal review. **Implementation:** Not started; the product side the terms describe exists (private lockers, no sharing, no audio to Room guests, versioned checkout consent). Needs a person: a UK media/IP lawyer drafts and reviews the terms covering upload rights, personal and private use and public performance licences, and the owner publishes them. **Independently Verified:** No.
+2. **SC-0413-02 - Takedown process.** **Acceptance:** Notices are logged, acted on and audited within the stated time. **Required verification:** Drill. **Implementation:** In progress; notice, 24-hour decision deadline, overdue flag, act (hides the asset and starts its deletion through the ledger), reject, evidence and audit (with whether the action was within target) plus staff routes exist and pass their tests. Needs a person: the owner (or named legal contact) runs a takedown drill end to end on staging (a test notice received by the published contact route, logged, decided and acted on within 24 hours, the audit trail checked) and files the drill record. **Evidence:** `src/selecta/admin/takedowns.py`; `src/selecta/admin/routes_controls.py`; `tests/test_cloud_admin_takedowns.py` (6 passed on SQLite on 2026-11-10; the PostgreSQL runs are in the Cloud / PostgreSQL job). **Independently Verified:** No.
+3. **SC-0413-03 - Repeat-infringer enforcement.** **Acceptance:** Accounts with repeated valid notices are restricted per policy. **Required verification:** Admin test. **Implementation:** Implemented; two valid notices restrict that workspace's uploads, raise a repeat-infringer alert and show on the admin account page; other workspaces are untouched; lifting is audited and restores uploads. **Evidence:** `tests/test_cloud_admin_takedowns.py::test_repeated_valid_notices_suspend_uploads_until_lifted`, passing locally on 2026-11-10. **Independently Verified:** No.
+4. **SC-0413-04 - DMCA agent.** **Acceptance:** Agent registered and renewal calendared. **Required verification:** Registration on file. **Implementation:** Not started; nothing to build in code. Needs a person: the owner registers a DMCA designated agent with the US Copyright Office (and publishes the agent's contact on the site), files the registration, and puts the three-year renewal in the calendar. **Independently Verified:** No.
 
 ## Governance
 

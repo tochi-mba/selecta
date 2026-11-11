@@ -39,6 +39,11 @@
       "about": "The older navigation labels over the same pages, with ?ui=classic as a way back.",
       "surfaces": ["workshop"]
     },
+    "app.scene_transitions": {
+      "label": "Page cross-fades",
+      "about": "With Expressive motion, pages cross-fade where the browser supports it; otherwise they change at once.",
+      "requires": ["app.motion_choice"]
+    },
     "app.install": {
       "label": "Install as an app",
       "about": "Chrome and Edge can install Selecta as its own window."

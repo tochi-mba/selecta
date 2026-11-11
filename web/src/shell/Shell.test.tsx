@@ -280,3 +280,46 @@ describe('the keyboard', () => {
     expect(mute).toHaveBeenCalled();
   });
 });
+
+// S3-0048-07 and S3-0049-07: titles, breadcrumbs and the collapsible rail
+describe('where you are, said three ways', () => {
+  it('names the page in the title and the breadcrumb, with its parent one step back', async () => {
+    window.history.pushState({}, '', '/discover/harmonic');
+    backend();
+    render(<App />);
+    const crumbs = within(await screen.findByRole('navigation', { name: 'Breadcrumb' }));
+    expect(crumbs.getByRole('link', { name: 'Make a Mix' })).toHaveAttribute('href', '/mixes');
+    expect(crumbs.getByText('Harmonic matches')).toHaveAttribute('aria-current', 'page');
+    await waitFor(() => expect(document.title).toBe('Harmonic matches · Selecta'));
+    fireEvent.click((await nav()).getByRole('link', { name: 'Library' }));
+    await waitFor(() => expect(document.title).toBe('Library · Selecta'));
+  });
+
+  it('marks My Mixes as the parent while a mix is being edited', async () => {
+    window.history.pushState({}, '', '/mix/current/edit');
+    backend();
+    render(<App />);
+    const links = await nav();
+    expect(links.getByRole('link', { name: 'My Mixes' })).toHaveAttribute('aria-current', 'true');
+    expect(links.getByRole('link', { name: 'Edit' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('collapses the rail with every place still named, and remembers it after a reload', async () => {
+    backend();
+    const first = render(<App />);
+    const links = await nav();
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse the side bar' }));
+    expect(document.documentElement.dataset.rail).toBe('collapsed');
+    expect(screen.getByRole('button', { name: 'Expand the side bar' })).toHaveAttribute('aria-pressed', 'true');
+    for (const name of ['Listen', 'Make a Mix', 'My Mixes', 'Library']) {
+      expect(links.getByRole('link', { name })).toHaveAttribute('data-tip', name);
+    }
+    expect(links.getByRole('link', { name: 'Make a Mix' })).toHaveAttribute('aria-current', 'page');
+    first.unmount();
+    render(<App />);
+    await nav();
+    expect(document.documentElement.dataset.rail).toBe('collapsed');
+    fireEvent.click(screen.getByRole('button', { name: 'Expand the side bar' }));
+    expect(document.documentElement.dataset.rail).toBe('open');
+  });
+});

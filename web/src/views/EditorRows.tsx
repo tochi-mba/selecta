@@ -20,6 +20,8 @@ export type RowActions = {
   toggleSeam: (rowKey: string) => void;
   hearSeam: (rowKey: string) => void;
   dragOver: (rowKey: string | null) => void;
+  /** CI-0173-02: which song is being carried, so the seams a drop would change can be marked. */
+  dragFrom: (rowKey: string | null) => void;
   refresh: () => void;
 };
 
@@ -44,11 +46,13 @@ type SeamRowProps = {
   names: Record<string, string>;
   guard: Record<string, string>;
   actions: RefObject<RowActions>;
+  /** this transition would be replaced if the carried song were dropped where it is hovering */
+  affected?: boolean;
 };
 
 /** A transition isn't a song, so it doesn't look like one: it hangs between two songs, with its own
  * state, and selecting it opens it beside the timeline. Nothing here plays unless Hear it is pressed. */
-const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, names, guard, actions }: SeamRowProps) {
+const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, names, guard, actions, affected = false }: SeamRowProps) {
   const seam = item.seam!;
   const state = seam.state;
   const chosen = seam.settings.move ?? 'auto';
@@ -64,8 +68,9 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
 
   return (
     <li
-      className={`seam ${open ? 'open' : ''}`}
+      className={`seam ${open ? 'open' : ''} ${affected ? 'drop-affected' : ''}`}
       data-seam={seamKey}
+      data-drop-affected={affected || undefined}
       onClick={(event) => { if (inspect && pickedTheRow(event)) actions.current.selectSeam(rowKey); }}
     >
       {seam.too_soon && (
@@ -87,7 +92,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
             : <span className="seam-name">{name}</span>;
         })()}
         <div className="seam-actions">
-          {inspect && state.status === 'ready' && <button onClick={() => actions.current.hearSeam(rowKey)}>Hear it</button>}
+          {inspect && state.status === 'ready' && <button className="seam-hear" aria-description={`Plays only the transition from ${previous.title} into ${item.title}`} onClick={() => actions.current.hearSeam(rowKey)}><Icon name="play" size="compact" /> Hear it</button>}
           {(state.status === 'none' || state.status === 'failed') && (
             <Action working="Asking…" run={async () => {
               await post(at(`/mix/${item.position}/render${state.status === 'failed' ? '?retry=true' : ''}`), undefined, guard);
@@ -105,6 +110,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
           {inspect && <button onClick={() => actions.current.toggleSeam(rowKey)}>{open ? 'Close' : 'Change'}</button>}
         </div>
       </div>
+      {affected && <p className="drop-affected-note">Changes if the song is dropped there</p>}
       <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} compact />
       {state.status === 'failed' && <p className="warn">Remembered failed attempt: {state.error}</p>}
     </li>
@@ -112,6 +118,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
 }, (before, after) => before.rowKey === after.rowKey
   && before.seamKey === after.seamKey
   && before.open === after.open
+  && before.affected === after.affected
   && before.guard === after.guard
   && before.names === after.names
   && before.previous.title === after.previous.title
@@ -138,6 +145,16 @@ const SONG_DRAG_TYPE = 'application/x-selecta-song-position';
 export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, actions }: SongRowProps) {
   const holding = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
   const [grabbed, setGrabbed] = useState(false);
+  // MI-0138-08: a removal is marked on its row at once, and the row only goes when the server has removed it
+  const [removing, setRemoving] = useState(false);
+  const removeSong = async () => {
+    setRemoving(true);
+    try {
+      await actions.current.remove(item, rowKey);
+    } finally {
+      setRemoving(false);
+    }
+  };
   const rowUnder = (event: PointerEvent<HTMLElement>) => document.elementFromPoint?.(event.clientX, event.clientY)?.closest<HTMLElement>('[data-song-key]') ?? null;
   const pressHandle = (event: PointerEvent<HTMLElement>) => {
     if (event.pointerType === 'mouse' || !event.isPrimary) return;
@@ -153,6 +170,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     if (!started.moved) {
       if (Math.hypot(event.clientX - started.x, event.clientY - started.y) < 8) return;
       started.moved = true;
+      actions.current.dragFrom(rowKey);
     }
     actions.current.dragOver(rowUnder(event)?.dataset.songKey ?? null);
     const margin = 90;
@@ -165,6 +183,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     holding.current = null;
     const target = started.moved ? rowUnder(event) : null;
     actions.current.dragOver(null);
+    actions.current.dragFrom(null);
     if (target?.dataset.position && Number(target.dataset.position) !== item.position) {
       void actions.current.move(item.position, Number(target.dataset.position), 'drag');
     }
@@ -192,7 +211,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
   };
   return (
     <li
-      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''}`}
+      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''} ${removing ? 'pending' : ''}`}
+      aria-busy={removing || undefined}
       data-song-key={rowKey}
       data-position={item.position}
       onClick={(event) => { if (pickedTheRow(event)) actions.current.selectSong(rowKey); }}
@@ -204,6 +224,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData(SONG_DRAG_TYPE, String(item.position));
         event.dataTransfer.setDragImage?.(event.currentTarget, 24, 24);
+        actions.current.dragFrom(rowKey);
       }}
       onDragOver={(event) => {
         if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
@@ -212,7 +233,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         actions.current.dragOver(rowKey);
       }}
       onDragLeave={() => actions.current.dragOver(null)}
-      onDragEnd={() => actions.current.dragOver(null)}
+      onDragEnd={() => { actions.current.dragOver(null); actions.current.dragFrom(null); }}
       onDrop={(event) => {
         if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
         event.preventDefault();
@@ -239,8 +260,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         onPointerDown={pressHandle}
         onPointerMove={moveHandle}
         onPointerUp={releaseHandle}
-        onPointerCancel={() => { holding.current = null; actions.current.dragOver(null); }}
-        onLostPointerCapture={() => { holding.current = null; actions.current.dragOver(null); }}
+        onPointerCancel={() => { holding.current = null; actions.current.dragOver(null); actions.current.dragFrom(null); }}
+        onLostPointerCapture={() => { holding.current = null; actions.current.dragOver(null); actions.current.dragFrom(null); }}
       >
         <Icon name="grip" />
       </span>
@@ -253,7 +274,9 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         </button>
         <span dir="auto" title={item.artist}>{item.artist}</span>
         <RequestTag item={item} />
-        {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" width={14} height={14} /> Locked</span>}
+        {playing && <span className="story-tag playing"><Icon name="play" size="compact" /> Playing now</span>}
+        {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" size="compact" /> Locked</span>}
+        {removing && <span className="status status-working" role="status">Removing…</span>}
       </div>
       <small className="facts">
         {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
@@ -262,6 +285,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         <button onClick={() => actions.current.play(item)} aria-label={`Play from ${item.title}`}><Icon name="play" /> Play</button>
         <Action
           aria-label={`Move ${item.title} up`}
+          title={`Move ${item.title} up`}
           data-move="up"
           disabled={item.position === 0}
           run={() => actions.current.move(item.position, item.position - 1, 'up')}
@@ -270,19 +294,20 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         </Action>
         <Action
           aria-label={`Move ${item.title} down`}
+          title={`Move ${item.title} down`}
           data-move="down"
           disabled={item.position === total - 1}
           run={() => actions.current.move(item.position, item.position + 1, 'down')}
         >
           <Icon name="down" />
         </Action>
-        <Menu className="song-more" label={<><Icon name="more" /><span className="visually-hidden">More for {item.title}</span></>}>
+        <Menu className="song-more" title={`More for ${item.title}`} label={<><Icon name="more" /><span className="visually-hidden">More for {item.title}</span></>}>
           {flagOn('editor.locks') && (
             <Action role="menuitem" title="A locked song stays right here when the mix is rebuilt" run={() => actions.current.lock(item)}>
               <Icon name="lock" /> {item.locked ? 'Unlock' : 'Lock'}
             </Action>
           )}
-          <Action role="menuitem" className="destructive" aria-label={`Remove ${item.title}`} run={() => actions.current.remove(item, rowKey)}>
+          <Action role="menuitem" className="destructive" aria-label={`Remove ${item.title}`} run={removeSong}>
             <Icon name="trash" /> Remove
           </Action>
         </Menu>
@@ -309,7 +334,7 @@ export function AddGap({ title, landsAt, onAdd }: { title: string; landsAt: numb
   return (
     <li className="add-gap">
       <button onClick={onAdd} aria-label={`Add a song after ${title}; Add a song as number ${landsAt}`} title={`Add a song here, as number ${landsAt}`}>
-        <Icon name="plus" width={16} height={16} /> Add a song <small aria-hidden="true">as number {landsAt}</small>
+        <Icon name="plus" size="toolbar" /> Add a song <small aria-hidden="true">as number {landsAt}</small>
       </button>
     </li>
   );

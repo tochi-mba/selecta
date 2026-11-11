@@ -11,12 +11,17 @@ import { words } from '../copy';
 const WHAT_TO_TRY: Record<FolderCheck['kind'], string> = {
   ok: '',
   missing: 'Check the address for typos. If it’s on an external drive, plug that in first.',
+  invalid: 'Copy the address from File Explorer’s address bar, so it starts with the drive letter.',
   not_a_folder: 'That’s a file. Use the address of the folder it’s in.',
   no_access: 'Windows won’t let Selecta read it. Choose a folder your account can open.',
   already_added: 'There’s nothing more to do for this one. Its songs are already in your library.',
   inside_added: 'Songs in this folder are already being picked up from the one it’s inside.',
+  empty: 'Nothing is in there yet. Copy your music into it first, or choose the folder your music is in.',
   no_audio: 'Selecta looked and found no audio files, including in subfolders. Choose the folder your music is in.',
 };
+
+/** The kinds of audio file Selecta reads (selecta.library.scan.AUDIO_EXTENSIONS). */
+export const SUPPORTED_AUDIO = 'Selecta reads MP3, FLAC, M4A, AAC, OGG, Opus, WAV and AIFF files. Anything else is left where it is.';
 
 /** The very first screen: where's your music? Everything else waits on this one answer. A browser's
  * folder picker can't help here, because what it hands back isn't an address the Selecta server can
@@ -86,13 +91,13 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
       <h1 className="display">Where’s your music?</h1>
       <p className="lede">
         Selecta reads the folder, sets aside anything that isn’t music, and works out how your songs fit
-        together. {words().startAudioStays}
+        together. {words().startAudioStays} Your original files are never moved or changed.
         {flagOn('lyrics.lookup') && ' Adding a folder starts lyric lookup: artist, title, album and duration are sent to LRCLIB to find lyrics.'}
       </p>
       <form onSubmit={(event) => void start(event)} className="stack">
         <Field
           label="Music folder"
-          help={words().startFolderHelp}
+          help={`${words().startFolderHelp} ${SUPPORTED_AUDIO}`}
           error={problem || undefined}
         >
           {(field) => (

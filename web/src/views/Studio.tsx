@@ -94,7 +94,7 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
                 <div className="studio-list-cells">
                   {shape[side][lane].map((value, index) => (
                     <label key={index}>
-                      <input type="checkbox" data-cell={`${row}-${index}`} checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
+                      <input type="checkbox" data-cell={`${row}-${index}`} disabled={lost} checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
                       <span>{barRange(index, barsPerCell)}</span>
                     </label>
                   ))}
@@ -270,7 +270,8 @@ export function Studio(props: {
     // Once Apply has started, this exact working copy is frozen. Otherwise a
     // late response could clear an unsaved newer arrangement.
     if (applying.current) return;
-    tuneAttempt.current += 1;
+    // A stroke doesn't cancel a fine tune on its way: askSelecta sees the grid moved on (latestShape)
+    // and keeps the person's version, saying so, rather than dropping the answer in silence.
     latestShape.current = next;
     setShape(next);
     setAsking('');
@@ -303,7 +304,7 @@ export function Studio(props: {
       if (session?.key) setRetained(keepShape(session.key, answer.shape));
       setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
     } catch (error) {
-      if (request === tuneAttempt.current) setProblem((error as Error).message);
+      if (request === tuneAttempt.current && latestShape.current === sent) setProblem((error as Error).message);
     } finally {
       if (request === tuneAttempt.current) setAsking('');
     }
@@ -611,7 +612,7 @@ export function Studio(props: {
                           tabIndex={focusCell.row === row && focusCell.column === SOLO_COLUMN ? 0 : -1}
                           aria-pressed={soloed === name}
                           aria-disabled={lost || saving || undefined}
-                          aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}`}
+                          aria-label={`Hear only ${titles[side]} ${LANE_WORDS[lane].toLowerCase()}${lost ? ', unavailable' : ''}`}
                           title={lost ? 'This part couldn’t be loaded' : undefined}
                           onFocus={() => setFocusCell({ row, column: SOLO_COLUMN })}
                           onClick={() => void solo(name)}
@@ -627,7 +628,7 @@ export function Studio(props: {
                             className={`studio-cell ${index === cell ? 'now' : ''} ${changedCells.has(side + '_' + lane + ':' + index) ? 'ai-changed' : ''}`}
                             aria-pressed={Boolean(value)}
                             aria-disabled={lost || saving || undefined}
-                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}`}
+                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}${lost ? ', unavailable' : ''}`}
                             title={lost ? 'This part couldn’t be loaded' : barRange(index, barsPerCell)}
                             onFocus={() => setFocusCell({ row, column: index })}
                             onClick={(event) => { if (event.detail === 0) toggle(side, lane, index); }}

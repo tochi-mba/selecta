@@ -1,7 +1,7 @@
 # ADR-0184 - Incremental implementation, evidence, neutrality and release gates
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/7 Implemented, 0/7 In progress, 7/7 Not started).
+- **Implementation:** 1/7 Implemented, 1/7 In progress, 5/7 Need a person, 0/7 Not started (2026-11-10).
 - **Independent verification:** No (0/7).
 - **Programme/date/baseline:** Selecta creative-interface synthesis; 2026-11-08; main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd.
 - **Priority / phase:** P0 / Quality.
@@ -34,15 +34,15 @@ This is a **new, not-yet-implemented design and acceptance delta**, not proof th
 
 Preserve the existing restrained experience if an expressive version cannot prove comprehension, tactile confidence, accessibility and real playback performance. Diagrams do not claim unverified musical precision or quality. Never fabricate beat, lyric, wave, cover, render status, progress or success. Supply static/keyboard alternatives and respect intentional silence/Pause.
 
-## Implementation checklist - 0/7 Implemented, 0/7 Verified
+## Implementation checklist - 1/7 Implemented, 0/7 Verified
 
-1. **CI-0184-01 - Establish source baseline and prior-work crosswalk.** **Acceptance:** CI tasks distinguish novel delta from already implemented MI behavior. **Required verification:** Exact main SHA and parity diff. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-2. **CI-0184-02 - Create reversible delivery slices.** **Acceptance:** Each PR changes one bounded surface with rollback plan. **Required verification:** Feature-flag and migration review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-3. **CI-0184-03 - Map test and visual matrices to task IDs.** **Acceptance:** Every new CI task has state, viewport and negative-case coverage. **Required verification:** Coverage matrix review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-4. **CI-0184-04 - Run real uncoached creative tasks.** **Acceptance:** Listener/creator/expert success and hesitation counts documented. **Required verification:** Human task protocol and raw denominators. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-5. **CI-0184-05 - Protect A/B study neutrality.** **Acceptance:** Blind versions have identical appearance and audio ownership. **Required verification:** Study bias review and real media test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-6. **CI-0184-06 - Rehearse correctness rollback.** **Acceptance:** Draft, revision, bridge, privacy and FLAC survive old/new/old. **Required verification:** Isolated data and real audio regression. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **CI-0184-07 - Record owner GO/NO-GO with independent review.** **Acceptance:** Every P0 passed; P1 dispositioned and signed for exact SHA. **Required verification:** Named reviewer evidence and release decision. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+1. **CI-0184-01 - Establish source baseline and prior-work crosswalk.** **Acceptance:** CI tasks distinguish novel delta from already implemented MI behavior. **Required verification:** Exact main SHA and parity diff. **Implementation:** Implemented (built 2026-11-10); **Verified:** No; **Owner:** Unassigned; **PR/SHA:** feat/finish-checklists (uncommitted); **Evidence:** docs/adr/selecta-creative-interface-source-baseline.md prior-work crosswalk (every CI task once, with disposition) at baseline ad32af8; tests/test_ci_creative_interface.py test_crosswalk_lists_every_ci_task_once_and_matches_the_checklist (pytest, passed 2026-11-10).
+2. **CI-0184-02 - Create reversible delivery slices.** **Acceptance:** Each PR changes one bounded surface with rollback plan. **Required verification:** Feature-flag and migration review. **Implementation:** Needs a person: owner review of PR slicing and rollback plans; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** features sit behind flags in src/selecta/flags and docs/flags.md.
+3. **CI-0184-03 - Map test and visual matrices to task IDs.** **Acceptance:** Every new CI task has state, viewport and negative-case coverage. **Required verification:** Coverage matrix review. **Implementation:** In progress: the crosswalk names the tests for each task, but not every task has state, viewport and negative-case coverage; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **CI-0184-04 - Run real uncoached creative tasks.** **Acceptance:** Listener/creator/expert success and hesitation counts documented. **Required verification:** Human task protocol and raw denominators. **Implementation:** Needs a person: real uncoached listener, creator and expert tasks with raw denominators; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+5. **CI-0184-05 - Protect A/B study neutrality.** **Acceptance:** Blind versions have identical appearance and audio ownership. **Required verification:** Study bias review and real media test. **Implementation:** Needs a person: study bias review with real media; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **CI-0184-06 - Rehearse correctness rollback.** **Acceptance:** Draft, revision, bridge, privacy and FLAC survive old/new/old. **Required verification:** Isolated data and real audio regression. **Implementation:** Needs a person: old/new/old rollback rehearsal with isolated data and real audio; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **CI-0184-07 - Record owner GO/NO-GO with independent review.** **Acceptance:** Every P0 passed; P1 dispositioned and signed for exact SHA. **Required verification:** Named reviewer evidence and release decision. **Implementation:** Needs a person: owner GO/NO-GO with named independent reviewer for the exact SHA; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

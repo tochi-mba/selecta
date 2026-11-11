@@ -42,27 +42,87 @@ def count_audio(
     return found
 
 
+def has_any_file(root: Path, look_at: int = MOST_FILES_LOOKED_AT) -> bool:
+    """Whether there's any file at all in here, so an empty folder isn't mistaken for one that
+    only holds other kinds of file."""
+    looked = 0
+    for _folder, subfolders, names in os.walk(root):
+        if names:
+            return True
+        looked += len(subfolders) + 1
+        if looked >= look_at:
+            return True
+    return False
+
+
+# characters no Windows folder name can hold, so a typed address with them can't be a real one
+NOT_IN_A_PATH = set("<>|?*")
+
+
+def _local_volume_root(address: str) -> str | None:
+    """Only locally attached drives may be previewed; never network-mapped volumes."""
+    if os.name != "nt":
+        # Linux/macOS development and supported local installations: absolute paths.
+        return os.sep
+    drive, _ = os.path.splitdrive(address)
+    if len(drive) != 2 or drive[1] != ":" or not drive[0].isalpha():
+        return None
+    # Windows: fixed, removable, optical and RAM disks. Exclude DRIVE_REMOTE.
+    import ctypes
+
+    root = drive + "\\"
+    if ctypes.windll.kernel32.GetDriveTypeW(root) not in {2, 3, 5, 6}:
+        return None
+    return root
+
+
 def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
     """Would this folder work? This reads nothing into the library and changes nothing."""
     text = typed.strip().strip('"')
     if not text:
         return _answer("missing", "Enter the address of a folder on this PC.", text)
+    invalid = _answer(
+        "invalid",
+        r"That isn't a full folder address. Start from the drive, like C:\Users\you\Music.",
+        text,
+    )
+    # Paths may be on any locally attached volume, including removable music drives.
+    # Reject remote/mapped drives *before* resolving links (which can initiate I/O).
+    if (
+        len(text) > 32767
+        or NOT_IN_A_PATH & set(text)
+        or any(ord(character) < 32 for character in text)
+        or text.startswith(("\\", "//"))
+        or not os.path.isabs(text)
+        or ".." in text.replace("\\", "/").split("/")
+    ):
+        return invalid
+    root = _local_volume_root(text)
+    if root is None:
+        return invalid
     try:
-        folder = Path(text).expanduser()
-        exists = folder.exists()
-    except (OSError, RuntimeError, ValueError):
-        folder, exists = Path(text), False
-    if not exists:
+        # Normalize symlinks before checking the trusted local-volume prefix.
+        # CodeQL recognizes this normalization + prefix guard, unlike a check
+        # performed only after constructing Path(untrusted_input).
+        canonical = os.path.normcase(os.path.realpath(text))
+        if not canonical.startswith(os.path.normcase(root)):
+            return invalid
+        folder = Path(canonical).resolve(strict=True)
+        if str(folder).startswith(("\\", "//")):
+            return invalid
+    except (FileNotFoundError, NotADirectoryError):
         return _answer(
             "missing",
             "That folder doesn't exist on this PC. If it's on a drive that isn't plugged in, "
             "plug it in and try again.",
             text,
         )
+    except (OSError, RuntimeError, ValueError):
+        return _answer("no_access", "Selecta isn't allowed to read that folder on this PC.", text)
     if not folder.is_dir():
         return _answer("not_a_folder", "That's a file, not a folder. Use the folder it's in.", text)
-    # a shortcut or link counts as wherever it really leads
-    resolved = folder.resolve()
+    # A shortcut or link counts as wherever it really leads; folder is already resolved.
+    resolved = folder
     shown = str(resolved)
     try:
         with os.scandir(resolved) as entries:
@@ -80,6 +140,8 @@ def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
                 shown,
             )
     audio = count_audio(resolved)
+    if audio == 0 and not has_any_file(resolved):
+        return _answer("empty", "That folder is empty, and so are any folders inside it.", shown, 0)
     if audio == 0:
         return _answer(
             "no_audio",

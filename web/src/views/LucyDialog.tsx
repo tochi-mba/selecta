@@ -51,7 +51,7 @@ export function NativeDialog({ title, onClose, children, footer, className = '' 
     >
       <header className="overlay-head">
         <h2 id={titleId}>{title}</h2>
-        <button type="button" className="overlay-close" aria-label={`Close ${title}`} onClick={() => closeRef.current()}><Icon name="close" /></button>
+        <button type="button" className="overlay-close" aria-label={`Close ${title}`} title={`Close ${title}`} onClick={() => closeRef.current()}><Icon name="close" /></button>
       </header>
       <div className="overlay-body">{children}</div>
       {footer && <footer className="overlay-foot">{footer}</footer>}

@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
+import re
+import sqlite3
 import threading
+import time
 from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
@@ -42,6 +46,9 @@ from selecta.seams import (
 
 __all__ = ["FreshFiles", "_Background", "create_app", "serve"]
 
+# What the page's operationId() makes: a lowercase kind, then a random UUID or a time and counter.
+SAFE_OPERATION = re.compile(r"[a-z]{1,32}-[A-Za-z0-9-]{1,96}")
+
 
 def create_app(
     settings: Settings | None = None, web_dir: Path | None = None, prepare_links: bool = False
@@ -62,10 +69,23 @@ def create_app(
 
     app = FastAPI(title="Selecta", docs_url="/api/docs")
 
+    @app.get("/api/health", include_in_schema=False)
+    def health() -> dict[str, str]:
+        """A cheap local readiness probe: no SQLite, models, cache or render work."""
+        return {"service": "selecta-local", "status": "ok"}
+
+    trace = os.environ.get("SELECTA_DEV_STARTUP") == "1"
+    started_at = time.monotonic()
+
+    def progress(stage: str) -> None:
+        if trace:
+            print(f"[BOOT] +{time.monotonic() - started_at:.1f}s {stage}", flush=True)
+
+    progress("Loading persisted transition metadata...")
     store = SeamStore(settings)
-
+    progress("Transition metadata loaded; clearing incomplete render states...")
     store.forget_unfinished()  # no worker is running yet, so nothing can be under way
-
+    progress("Constructing background worker controller...")
     background = _Background(settings.home)
 
     # Operation names are not permission to replay an unrelated command. Bind
@@ -85,8 +105,10 @@ def create_app(
         recent_operations=recent_operations,
         restore_problem=restore_problem,
     )
+    progress("Registering helper and library routes...")
     helpers_routes(app, ctx)
     library_routes(app, ctx)
+    progress("Registering mix and system routes...")
     mixes_routes(app, ctx)
     system_routes(app, ctx)
     # before edit's /api/exports/{name}, or that would answer for /api/exports/jobs
@@ -95,9 +117,33 @@ def create_app(
     song_requests_routes(app, ctx)
     discover_routes(app, ctx)
     lucy_routes(app, ctx)
+    progress("All routes registered; configuring middleware...")
     connect = ctx.connect
     ranked_links = ctx.ranked_links
     watch_for_new_songs = ctx.watch_for_new_songs
+
+    @app.get("/api/ready", include_in_schema=False)
+    def ready():
+        """Local SQLite check without loading every song or transition."""
+        if not settings.db_path.is_file():
+            return JSONResponse(
+                {"detail": "Local library database is not initialized"}, status_code=503
+            )
+        try:
+            connection = sqlite3.connect(
+                settings.db_path.resolve().as_uri() + "?mode=ro", uri=True, timeout=0.5
+            )
+            try:
+                row = connection.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='songs'"
+                ).fetchone()
+            finally:
+                connection.close()
+        except (sqlite3.Error, OSError) as problem:
+            return JSONResponse({"detail": type(problem).__name__}, status_code=503)
+        if row is None:
+            return JSONResponse({"detail": "Local library schema is not ready"}, status_code=503)
+        return {"service": "selecta-local", "status": "ready"}
 
     @app.middleware("http")
     async def same_operation_once(request, call_next):
@@ -125,6 +171,10 @@ def create_app(
                 )
             await running_operations[operation].wait()
         kind = operation.split("-", 1)[0]
+        # T0244: the page's own operation id ties its request to this outcome. It is the random id
+        # the page made up, so it names nothing; anything else is left out rather than echoed.
+        traced = {"operation": operation} if SAFE_OPERATION.fullmatch(operation) else {}
+        echo = {"x-operation-id": operation} if traced else {}
         known = finished_operations.get(operation)
         if known is not None:
             if known[2] != fingerprint:
@@ -132,15 +182,19 @@ def create_app(
                     {"detail": "That operation ID already belongs to a different action."},
                     status_code=409,
                 )
-            recent_operations.append({"kind": kind, "status": known[0], "repeat": True})
-            return Response(known[1], status_code=known[0], media_type="application/json")
+            recent_operations.append(
+                {"kind": kind, "status": known[0], "repeat": True, **traced}
+            )
+            return Response(
+                known[1], status_code=known[0], media_type="application/json", headers=echo
+            )
         running_operations[operation] = asyncio.Event()
         active_fingerprints[operation] = fingerprint
         try:
             response = await call_next(request)
             body = b"".join([chunk async for chunk in response.body_iterator])
             recent_operations.append(
-                {"kind": kind, "status": response.status_code, "repeat": False}
+                {"kind": kind, "status": response.status_code, "repeat": False, **traced}
             )
             if response.status_code < 500:
                 finished_operations[operation] = (response.status_code, body, fingerprint)
@@ -152,7 +206,10 @@ def create_app(
         return Response(
             body,
             status_code=response.status_code,
-            headers={k: v for k, v in response.headers.items() if k.lower() != "content-length"},
+            headers={
+                **{k: v for k, v in response.headers.items() if k.lower() != "content-length"},
+                **echo,
+            },
         )
 
     @app.middleware("http")
@@ -221,11 +278,12 @@ def create_app(
 
         threading.Thread(target=warm_up, daemon=True).start()
 
+    progress("Starting optional workers and setting up static assets...")
     root = web_dir or Path(__file__).parents[2] / "web" / "dist"
 
     if root.exists():
         app.mount("/", FreshFiles(directory=root, html=True), name="web")
-
+    progress("Application initialization complete.")
     return app
 
 
@@ -240,5 +298,30 @@ def serve() -> FastAPI:
 
     from selecta.homes import gather_if_needed
 
-    gather_if_needed(load_settings().home)
-    return create_app(prepare_links=True)
+    trace = os.environ.get("SELECTA_DEV_STARTUP") == "1"
+    started = time.monotonic()
+
+    def progress(message: str) -> None:
+        if trace:
+            print(f"[BOOT] {message}", flush=True)
+
+    settings = load_settings()
+    if trace and os.environ.get("SELECTA_DEV_ISOLATED") == "1":
+        progress("Isolated development data: skipping legacy folder migration.")
+    else:
+        progress("Checking existing Selecta data and prior installation folders...")
+        if trace:
+            gather_if_needed(settings.home, progress=progress)
+        else:
+            gather_if_needed(settings.home)
+    progress(f"Data check finished after {time.monotonic() - started:.1f}s.")
+    progress("Checking local database schema and first-run migrations...")
+    from selecta import db
+
+    connection = db.connect(settings.db_path)
+    connection.close()
+    progress("SQLite schema ready.")
+    progress("Preparing routes, persisted transitions and background workers...")
+    application = create_app(settings=settings, prepare_links=True)
+    progress(f"API factory completed after {time.monotonic() - started:.1f}s.")
+    return application

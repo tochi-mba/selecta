@@ -108,6 +108,7 @@ def row(**values) -> dict:
     }
 
 
+@pytest.mark.invariants_off("writes raw artifact rows to test the schema")
 def test_checksum_and_provenance_are_not_null_in_the_database(cloud_engine):
     columns = {item["name"]: item for item in sa.inspect(cloud_engine).get_columns("artifacts")}
     assert columns["checksum"]["nullable"] is False
@@ -160,6 +161,7 @@ def legacy_playback(source: str, rate: int) -> dict:
             "bits": 24}
 
 
+@pytest.mark.invariants_off("writes old-shape artifact rows to test the migration")
 def test_the_migration_rewrites_old_playback_rows_and_rolls_back_and_forward(cloud_engine):
     migrate.downgrade(cloud_engine, BEFORE)
     flat = legacy_playback(SHA, 48_000)
@@ -194,6 +196,7 @@ def test_the_migration_rewrites_old_playback_rows_and_rolls_back_and_forward(clo
 
 
 @pytest.mark.parametrize("missing", ["checksum", "provenance"])
+@pytest.mark.invariants_off("leaves an artifact row the migration refuses")
 def test_the_migration_stops_rather_than_invent_a_history(cloud_engine, missing):
     migrate.downgrade(cloud_engine, BEFORE)
     with transaction(cloud_engine) as connection:

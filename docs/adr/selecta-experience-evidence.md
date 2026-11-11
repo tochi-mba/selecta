@@ -77,41 +77,41 @@
 | [EX-0127-03](adr-0127-export-job-and-frozen-revision.md) | Handle blocked/failed/stale jobs | Not started | No | - | - | - | - | Unassigned |
 | [EX-0127-04](adr-0127-export-job-and-frozen-revision.md) | Verify final FLAC identity | Not started | No | - | - | - | - | Unassigned |
 | [EX-0127-05](adr-0127-export-job-and-frozen-revision.md) | Keep accessible export parity | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-01](adr-0128-calm-workspace-and-operations.md) | Prototype issue-first overview | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-02](adr-0128-calm-workspace-and-operations.md) | Preserve all job/source/storage operations | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-03](adr-0128-calm-workspace-and-operations.md) | Audit truth of job state labels | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-04](adr-0128-calm-workspace-and-operations.md) | Specify privacy-safe diagnostics | Not started | No | - | - | - | - | Unassigned |
-| [EX-0128-05](adr-0128-calm-workspace-and-operations.md) | Verify accessible layout | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-01](adr-0129-blind-study-neutral-audio.md) | Audit all method leakage | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-02](adr-0129-blind-study-neutral-audio.md) | Design balanced A/B interface | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-03](adr-0129-blind-study-neutral-audio.md) | Separate listening, grading and save | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-04](adr-0129-blind-study-neutral-audio.md) | Preserve once-only identity | Not started | No | - | - | - | - | Unassigned |
-| [EX-0129-05](adr-0129-blind-study-neutral-audio.md) | Verify with real blind sessions | Not started | No | - | - | - | - | Unassigned |
-| [EX-0130-01](adr-0130-brand-tokens-and-css-ownership.md) | Approve semantic color and type contracts | Not started | No | - | - | - | - | Unassigned |
-| [EX-0130-02](adr-0130-brand-tokens-and-css-ownership.md) | Design song-focused compositions | Not started | No | - | - | - | - | Unassigned |
-| [EX-0130-03](adr-0130-brand-tokens-and-css-ownership.md) | Audit and assign CSS ownership | Not started | No | - | - | - | - | Unassigned |
-| [EX-0130-04](adr-0130-brand-tokens-and-css-ownership.md) | Specify all interactive component states | Not started | No | - | - | - | - | Unassigned |
-| [EX-0130-05](adr-0130-brand-tokens-and-css-ownership.md) | Test real-content resilience | Not started | No | - | - | - | - | Unassigned |
-| [EX-0131-01](adr-0131-component-states-and-scoped-recovery.md) | Write interaction state matrix | Not started | No | - | - | - | - | Unassigned |
-| [EX-0131-02](adr-0131-component-states-and-scoped-recovery.md) | Validate overlay and focus behavior | Not started | No | - | - | - | - | Unassigned |
-| [EX-0131-03](adr-0131-component-states-and-scoped-recovery.md) | Protect async consistency | Not started | No | - | - | - | - | Unassigned |
-| [EX-0131-04](adr-0131-component-states-and-scoped-recovery.md) | Improve loading/empty/error feedback | Not started | No | - | - | - | - | Unassigned |
-| [EX-0131-05](adr-0131-component-states-and-scoped-recovery.md) | Preserve scoped Undo and recovery | Not started | No | - | - | - | - | Unassigned |
-| [EX-0132-01](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Review mobile/zoom layouts | Not started | No | - | - | - | - | Unassigned |
-| [EX-0132-02](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Ensure non-drag equivalents | Not started | No | - | - | - | - | Unassigned |
-| [EX-0132-03](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Audit composite ARIA behavior | Not started | No | - | - | - | - | Unassigned |
-| [EX-0132-04](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Specify reduced-motion fidelity | Not started | No | - | - | - | - | Unassigned |
-| [EX-0132-05](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Conduct named human AT acceptance | Not started | No | - | - | - | - | Unassigned |
-| [EX-0133-01](adr-0133-user-research-performance-and-release-evidence.md) | Define and run baseline UX tasks | Not started | No | - | - | - | - | Unassigned |
-| [EX-0133-02](adr-0133-user-research-performance-and-release-evidence.md) | Establish approved visual baselines | Not started | No | - | - | - | - | Unassigned |
-| [EX-0133-03](adr-0133-user-research-performance-and-release-evidence.md) | Benchmark meaningful scale | Not started | No | - | - | - | - | Unassigned |
-| [EX-0133-04](adr-0133-user-research-performance-and-release-evidence.md) | Verify real audio and assistive access | Not started | No | - | - | - | - | Unassigned |
-| [EX-0133-05](adr-0133-user-research-performance-and-release-evidence.md) | Conduct exact-head release and rollback | Not started | No | - | - | - | - | Unassigned |
-| [EX-0134-01](adr-0134-web-first-future-saas-boundary.md) | Record current platform truth | Not started | No | - | - | - | - | Unassigned |
-| [EX-0134-02](adr-0134-web-first-future-saas-boundary.md) | Review proposed UX for desktop coupling | Not started | No | - | - | - | - | Unassigned |
-| [EX-0134-03](adr-0134-web-first-future-saas-boundary.md) | Preserve folder setup until separate decision | Not started | No | - | - | - | - | Unassigned |
-| [EX-0134-04](adr-0134-web-first-future-saas-boundary.md) | Audit excluded implementation scope | Not started | No | - | - | - | - | Unassigned |
-| [EX-0134-05](adr-0134-web-first-future-saas-boundary.md) | Define future SaaS decision gate | Not started | No | - | - | - | - | Unassigned |
+| [EX-0128-01](adr-0128-calm-workspace-and-operations.md) | Prototype issue-first overview | Implemented | No | - | `web/src/views/Workshop.test.tsx` (2026-11-10) | - | Needs a person: uncoached recovery session | Unassigned |
+| [EX-0128-02](adr-0128-calm-workspace-and-operations.md) | Preserve all job/source/storage operations | Implemented | Yes (automated, 2026-11-10) | - | `tests/test_ex_0128_operations_parity.py` (2 passed), `s3-0064-workspace.test.tsx`, `Workshop.test.tsx` | - | - | Unassigned |
+| [EX-0128-03](adr-0128-calm-workspace-and-operations.md) | Audit truth of job state labels | Implemented | Yes (automated, 2026-11-10) | - | `web/src/views/ex-0128-job-truth.test.tsx`, `web/src/views/Workshop.test.tsx` (15 passed) | - | - | Unassigned |
+| [EX-0128-04](adr-0128-calm-workspace-and-operations.md) | Specify privacy-safe diagnostics | Implemented | No | - | `web/src/views/Workshop.test.tsx` diagnostics case | - | Needs a person: manual privacy and network review | Unassigned |
+| [EX-0128-05](adr-0128-calm-workspace-and-operations.md) | Verify accessible layout | Implemented | No | - | `web/e2e/mp-0293-workspace-operations.e2e.ts` (not green on 2026-11-10) | - | Needs a person: both themes, 400% zoom, NVDA | Unassigned |
+| [EX-0129-01](adr-0129-blind-study-neutral-audio.md) | Audit all method leakage | Implemented | No | - | `tests/test_ex_0129_study_integrity.py`; MP-0294-07 | - | Needs a person: screen reader | Unassigned |
+| [EX-0129-02](adr-0129-blind-study-neutral-audio.md) | Design balanced A/B interface | Implemented | No | - | MP-0294-05 | - | Needs a person: counterbalanced pilot | Unassigned |
+| [EX-0129-03](adr-0129-blind-study-neutral-audio.md) | Separate listening, grading and save | Implemented | No | - | `web/src/views/Listening.test.tsx`, `ListeningStudyFlow.test.tsx`; E2E rerun needed | - | - | Unassigned |
+| [EX-0129-04](adr-0129-blind-study-neutral-audio.md) | Preserve once-only identity | Implemented | Yes (automated, 2026-11-10) | - | `tests/test_ex_0129_study_integrity.py` (5 passed) | - | - | Unassigned |
+| [EX-0129-05](adr-0129-blind-study-neutral-audio.md) | Verify with real blind sessions | Not started | No | - | - | - | Needs a person: real blind sessions | Unassigned |
+| [EX-0130-01](adr-0130-brand-tokens-and-css-ownership.md) | Approve semantic color and type contracts | Implemented | No | - | MP-0298-05 contrast | - | Needs a person: owner approval | Unassigned |
+| [EX-0130-02](adr-0130-brand-tokens-and-css-ownership.md) | Design song-focused compositions | Implemented | No | - | - | - | Needs a person: visual critique | Unassigned |
+| [EX-0130-03](adr-0130-brand-tokens-and-css-ownership.md) | Audit and assign CSS ownership | Implemented | No | - | `web/src/styles/css-ownership.test.ts`, `mp-css-register.test.ts`, `uf-cascade.test.ts` | - | Needs a person: before/after captures | Unassigned |
+| [EX-0130-04](adr-0130-brand-tokens-and-css-ownership.md) | Specify all interactive component states | Implemented | No | - | `web/e2e/mp-0279-component-gallery.e2e.ts` (not green 2026-11-10) | - | Needs a person: gallery review | Unassigned |
+| [EX-0130-05](adr-0130-brand-tokens-and-css-ownership.md) | Test real-content resilience | Implemented | No | - | MP-0298-01/02, MP-0279-06 (not green 2026-11-10) | - | Needs a person: RTL/system-font screenshots | Unassigned |
+| [EX-0131-01](adr-0131-component-states-and-scoped-recovery.md) | Write interaction state matrix | Implemented | No | - | MP-0279 (not green 2026-11-10) | - | Needs a person: manual check | Unassigned |
+| [EX-0131-02](adr-0131-component-states-and-scoped-recovery.md) | Validate overlay and focus behavior | Implemented | No | - | `web/src/ui/controls.test.tsx` | - | Needs a person: APG and NVDA | Unassigned |
+| [EX-0131-03](adr-0131-component-states-and-scoped-recovery.md) | Protect async consistency | Implemented | No | - | unit only; race/two-tab/slow-network E2E missing | - | - | Unassigned |
+| [EX-0131-04](adr-0131-component-states-and-scoped-recovery.md) | Improve loading/empty/error feedback | Implemented | No | - | `web/src/state/workState.test.ts`, `skeletonHonesty.test.tsx`; MP-0297 not run | - | - | Unassigned |
+| [EX-0131-05](adr-0131-component-states-and-scoped-recovery.md) | Preserve scoped Undo and recovery | Implemented | Yes (automated, 2026-11-10) | - | toastPriority, toastsCoalesce, polish-components, controls, Mix tests (113 passed) | - | - | Unassigned |
+| [EX-0132-01](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Review mobile/zoom layouts | Implemented | No | - | MP-0298-01/02, MP-0295-07 (not green 2026-11-10) | - | - | Unassigned |
+| [EX-0132-02](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Ensure non-drag equivalents | Implemented | Yes (automated, 2026-11-10) | - | `Mix.test.tsx`, `Drafts.test.tsx`, `gp-0261-studio.test.tsx` | - | - | Unassigned |
+| [EX-0132-03](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Audit composite ARIA behavior | Implemented | No | - | - | - | Needs a person: APG and NVDA | Unassigned |
+| [EX-0132-04](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Specify reduced-motion fidelity | Implemented | No | - | MP-0296-06/07, motion-preference (rerun needed) | - | - | Unassigned |
+| [EX-0132-05](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Conduct named human AT acceptance | Not started | No | - | - | - | Needs a person: recorded AT sessions | Unassigned |
+| [EX-0133-01](adr-0133-user-research-performance-and-release-evidence.md) | Define and run baseline UX tasks | Not started | No | - | - | - | Needs a person: uncoached sessions | Unassigned |
+| [EX-0133-02](adr-0133-user-research-performance-and-release-evidence.md) | Establish approved visual baselines | In progress | No | - | `web/e2e/visual.e2e.ts` captures only | - | Needs a person: reviewer approval | Unassigned |
+| [EX-0133-03](adr-0133-user-research-performance-and-release-evidence.md) | Benchmark meaningful scale | In progress | No | - | `tests/scale_server.py` harness | - | Needs a person: recorded-hardware profile | Unassigned |
+| [EX-0133-04](adr-0133-user-research-performance-and-release-evidence.md) | Verify real audio and assistive access | Not started | No | - | - | - | Needs a person: listening and AT sign-off | Unassigned |
+| [EX-0133-05](adr-0133-user-research-performance-and-release-evidence.md) | Conduct exact-head release and rollback | In progress | No | - | `tests/rollback_check.py` harness | - | Needs a person: owner GO at exact SHA | Unassigned |
+| [EX-0134-01](adr-0134-web-first-future-saas-boundary.md) | Record current platform truth | Implemented | Yes (crosscheck, 2026-11-10) | - | `web/src/localPrivacyCopy.test.ts` (5 passed) | - | README/API/privacy crosscheck done 2026-11-10 | Unassigned |
+| [EX-0134-02](adr-0134-web-first-future-saas-boundary.md) | Review proposed UX for desktop coupling | Not started | No | - | - | - | Needs a person: design review | Unassigned |
+| [EX-0134-03](adr-0134-web-first-future-saas-boundary.md) | Preserve folder setup until separate decision | Implemented | No | - | `web/e2e/mp-0282-onboarding.e2e.ts` (rerun pending) | - | - | Unassigned |
+| [EX-0134-04](adr-0134-web-first-future-saas-boundary.md) | Audit excluded implementation scope | Superseded by ADR-0391 | No | - | - | - | - | Unassigned |
+| [EX-0134-05](adr-0134-web-first-future-saas-boundary.md) | Define future SaaS decision gate | Superseded by ADR-0391 | No | - | - | - | - | Unassigned |
 
 ## What changes each status
 

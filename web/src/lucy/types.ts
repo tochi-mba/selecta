@@ -181,6 +181,8 @@ export type Diff = {
   counts: DiffCounts;
   seams_changed: { a_occ: string; b_occ: string; status: string }[];
   rules_changed: { id: string; status: string }[];
+  /** Verified transitions before and after, by directed occurrence pair. Older servers leave it out. */
+  readiness?: { before: { ready: number; needed: number }; after: { ready: number; needed: number }; kept: number; lost: number; gained: number };
 };
 
 export type LedgerSeam = { a_occ: string; b_occ: string; key: string; status: string; requested: string; rendered: string | null; verified: boolean; proof: string };

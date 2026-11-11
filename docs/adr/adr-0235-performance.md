@@ -1,7 +1,7 @@
 # ADR-0235 - Audio-first performance and power-aware artistic rendering
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Implementation:** In progress (0/8 Implemented, 2/8 In progress, 6/8 Not started; 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Quality.
@@ -30,14 +30,14 @@ No power-draining hidden effects, work on the audio thread, uncontrolled canvas 
 
 ## Implementation checklist - 0/8 Implemented, 0/8 Verified
 
-1. **SF-0235-01 - Baseline real devices.** **Acceptance:** Record OS, browser, cores, memory and real media. **Required verification:** Reproducible trace register. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+1. **SF-0235-01 - Baseline real devices.** **Acceptance:** Record OS, browser, cores, memory and real media. **Required verification:** Reproducible trace register. **Implementation:** Not started; Needs a person: a real-device baseline (OS, browser, cores, memory, real media) recorded as a reproducible trace register; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 2. **SF-0235-02 - Define input and layout budgets.** **Acceptance:** Target p75 INP at most 200ms and low CLS where applicable. **Required verification:** Web vitals capture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 3. **SF-0235-03 - Profile visualizer loads.** **Acceptance:** Adaptive frames, device pixel ratio and visibility handling. **Required verification:** CPU/GPU profiling. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-4. **SF-0235-04 - Stress analysis plus playback.** **Acceptance:** No audible dropout during background render load. **Required verification:** Real-audio observation. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0235-04 - Stress analysis plus playback.** **Acceptance:** No audible dropout during background render load. **Required verification:** Real-audio observation. **Implementation:** In progress; Needs a person: real-audio observation of playback during background render load; the lab check `web/e2e/mi-0162-performance.e2e.ts` 'MI-0162-03' exists but is not a listening result; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 5. **SF-0235-05 - Stress 20k-song Library.** **Acceptance:** Search and paging remain responsive. **Required verification:** 20k fixture and heap trace. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 6. **SF-0235-06 - Stress 100-song editor.** **Acceptance:** Reorder and inspection stay interactive. **Required verification:** 100-song browser test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 7. **SF-0235-07 - Stress 64-cell Studio.** **Acceptance:** Painting remains responsive and audio focus stable. **Required verification:** 64-cell recording. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0235-08 - Gate degraded motion automatically.** **Acceptance:** Low-power fallback preserves information. **Required verification:** Forced throttle and device review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0235-08 - Gate degraded motion automatically.** **Acceptance:** Low-power fallback preserves information. **Required verification:** Forced throttle and device review. **Implementation:** In progress; Not built: no automatic low-power or throttled-device detection lowers motion today; Still and OS reduced motion are manual and keep all data (`web/e2e/mp-0296-motion.e2e.ts` 'MP-0296-06'); a forced-throttle device review is also needed; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 
@@ -47,5 +47,5 @@ Single player and intentional Pause; unchanged local music and explicit LRCLIB m
 
 - **Depends on:** ADR-0162/0183/0029; new ADR-0198/0199 and previous programme acceptance records.
 - **Next:** dated owner decision → design specimens → small code/test PR → separate independent human/AT/audio/performance report → explicit release gate.
-- **Now:** Accepted; 0/8 Implemented, 0/8 independently Verified; no implementation PR/SHA.
+- **Now:** Decision Accepted; Implementation 0/8 (2026-11-10); Independently Verified No; no implementation PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

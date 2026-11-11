@@ -1,7 +1,7 @@
 # ADR-0213 - Editorial lyrics, verified wordplay and fullscreen Stage
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Implementation:** In progress (5/8 Implemented, 0/8 In progress, 3/8 Not started; 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P1 / Listen.
@@ -28,16 +28,16 @@ Differentiate Focus, Reading and Stage while honestly representing lyric timing 
 
 No pseudo-word precision, auto-scroll fighting the reader or fullscreen-induced playback changes. Reject spectacle when it costs accessibility, audio continuity or task comprehension. This ADR approves no new SaaS, login, account, cloud upload, telemetry, audio engine rewrite or code change by itself.
 
-## Implementation checklist - 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 5/8 Implemented, 0/8 Verified
 
-1. **SF-0213-01 - Define timing confidence.** **Acceptance:** Line, word and unknown are distinguishable. **Required verification:** Metadata fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-2. **SF-0213-02 - Design Focus lyrics.** **Acceptance:** Live lyrics remain unobtrusive. **Required verification:** Listening test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-3. **SF-0213-03 - Design Reading lyrics.** **Acceptance:** Manual scroll persists and long text fits. **Required verification:** Scroll E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-4. **SF-0213-04 - Design Stage lyrics.** **Acceptance:** Fullscreen accessible with safe fallback. **Required verification:** Escape/refusal test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-5. **SF-0213-05 - Reveal real wordplay.** **Acceptance:** Shared phrase only on proven handoff. **Required verification:** Wordplay fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-6. **SF-0213-06 - Handle RTL and long lines.** **Acceptance:** No clipping or overlap at 400% zoom. **Required verification:** Unicode snapshots. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **SF-0213-07 - Limit announcements.** **Acceptance:** No continuous lyric tick chatter. **Required verification:** NVDA review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0213-08 - Assess reading comfort.** **Acceptance:** Reduced motion has equivalent meaning. **Required verification:** User reading study. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+1. **SF-0213-01 - Define timing confidence.** **Acceptance:** Line, word and unknown are distinguishable. **Required verification:** Metadata fixtures. **Implementation:** Implemented; word-timed, line-timed and unknown lyrics render differently, and line lyrics stay when word timing is missing; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/src/views/Now.test.tsx` 'follows the current playback time and keeps the lyric punctuation', 'keeps line lyrics visible when word timing is unavailable'; `web/src/views/Now.tsx` noLyricsWords explains untimed or missing lyrics; run 2026-11-10.
+2. **SF-0213-02 - Design Focus lyrics.** **Acceptance:** Live lyrics remain unobtrusive. **Required verification:** Listening test. **Implementation:** Not started; Needs a person: a listening test that Focus lyrics stay unobtrusive; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0213-03 - Design Reading lyrics.** **Acceptance:** Manual scroll persists and long text fits. **Required verification:** Scroll E2E. **Implementation:** Implemented; a full static lyric sheet can be read and scrolled without being pulled back, and following resumes on request; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/src/views/Now.test.tsx` 'can read a full static lyric sheet and resume following without affecting audio'; run 2026-11-10.
+4. **SF-0213-04 - Design Stage lyrics.** **Acceptance:** Fullscreen accessible with safe fallback. **Required verification:** Escape/refusal test. **Implementation:** Implemented; Stage is reachable by keyboard, falls back when fullscreen is refused, and Escape returns focus; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/e2e/finishing.e2e.ts` 'fullscreen refused: the lyrics still fill the page, Escape gets out, focus comes back, and the music never stops'; run 2026-11-10.
+5. **SF-0213-05 - Reveal real wordplay.** **Acceptance:** Shared phrase only on proven handoff. **Required verification:** Wordplay fixture. **Implementation:** Implemented; built: while a hand-off plays, the countdown names the shared words only when the render is ready, did not fall back and its move is a word move; flag listen.handoff_phrase; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/src/views/NowFlow.test.tsx` 'names the shared words while a rendered word move plays', 'says nothing about words for a fallback / another move / an unfinished render' (4 passed); `tests/test_flags.py` (19 passed); `docs/flags.md` regenerated; run 2026-11-10.
+6. **SF-0213-06 - Handle RTL and long lines.** **Acceptance:** No clipping or overlap at 400% zoom. **Required verification:** Unicode snapshots. **Implementation:** Not started; Needs a person: Unicode snapshot review of RTL and long lyric lines at 400% zoom. Automated part: lyric lines use dir="auto" and nothing overflows at zoom (`web/e2e/pages.e2e.ts`); **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0213-07 - Limit announcements.** **Acceptance:** No continuous lyric tick chatter. **Required verification:** NVDA review. **Implementation:** Implemented; the lyric region is aria-live off and the clock is never announced; only the song is said once; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/e2e/finishing.e2e.ts` 'playing doesn't flood a screen reader: the song is said once, and the clock never is'; `web/src/views/Now.tsx` lyrics aria-live="off"; run 2026-11-10.
+8. **SF-0213-08 - Assess reading comfort.** **Acceptance:** Reduced motion has equivalent meaning. **Required verification:** User reading study. **Implementation:** Not started; Needs a person: a user reading study with reduced motion; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 
@@ -47,5 +47,5 @@ Preserve one audio owner and intentional Pause, original local music and LRCLIB 
 
 - **Depends on:** ADR-0146/0171/0155, ADR-0198 and ADR-0199. Reconcile previous code per task rather than reimplementing blindly.
 - **Sequence:** owner decision → design specimens → scoped code/test PR → independent audio/visual/AT/performance review → recorded GO/NO-GO.
-- **Now:** Decision Accepted; Implementation Not started; Independently Verified No; no implementing PR/SHA.
+- **Now:** Decision Accepted; Implementation 5/8 (2026-11-10); Independently Verified No; no implementing PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

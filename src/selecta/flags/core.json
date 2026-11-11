@@ -5,8 +5,14 @@
       "label": "Local server",
       "about": "The server on this computer: its status, the local-only checks and the one data folder.",
       "core": "Everything else talks to it.",
-      "routes": ["GET /api/status", "GET /api/ready"],
+      "routes": ["GET /api/status", "GET /api/ready", "GET /api/health"],
       "cli": ["web", "gather-data", "flags"]
+    },
+    "core.upgrade_backup": {
+      "label": "Backup before upgrade",
+      "about": "The first time a newer Selecta opens a library, it keeps a copy of the library's database before changing its tables.",
+      "core": "An upgrade must never be the thing that loses a library.",
+      "modes": ["local"]
     },
     "core.library": {
       "label": "Library",

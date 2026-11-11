@@ -2,7 +2,8 @@ import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import { get, MixItem, post, SongRow, Status } from '../api';
 import { flagOn, useFlags } from '../flags';
 import { Action, Dialog, Problem } from '../ui/controls';
-import { EnergyHorizon } from '../ui/MusicObjects';
+import { EnergyHorizon, FeelDiagram } from '../ui/MusicObjects';
+import { SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
 
 const ARC_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'];
@@ -45,7 +46,12 @@ function achievedArc(mix: MixItem[]): number[] | null {
 }
 
 /** How the next mix gets built. It stays out of the way until someone wants it. */
-export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<ViewProps, 'status' | 'mix' | 'refreshStatus' | 'notify'> & { onClose: () => void }) {
+export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, onSongs }: Pick<ViewProps, 'status' | 'mix' | 'refreshStatus' | 'notify'> & {
+  onClose: () => void;
+  /** MP-0283-06: the length chosen on Make a Mix, so energy, duration and song count are shaped in one place */
+  songs?: number;
+  onSongs?: (songs: number) => void;
+}) {
   const [problem, setProblem] = useState('');
   const [mixLanguage, setMixLanguage] = useState(status.steering.mix_language);
   const [stemFrequency, setStemFrequency] = useState(status.steering.stems);
@@ -232,6 +238,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
           <option value="seamless">Smooth blends</option>
           <option value="punchy">Punchy changes</option>
         </select>
+        <FeelDiagram feel={mixLanguage} />
       </section>
       )}
 
@@ -247,7 +254,20 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose }: Pick<V
       </section>
       )}
 
-      {(arc || goal) && <h3 className="setup-group">Where the mix goes</h3>}
+      {(arc || goal || (songs !== undefined && onSongs)) && <h3 className="setup-group">Where the mix goes</h3>}
+      {songs !== undefined && onSongs && (
+      <section className="mix-length" aria-labelledby="mix-length-title">
+        <span className="energy-arc-title" id="mix-length-title">How long</span>
+        <div className="chips" role="group" aria-label="How long, roughly">
+          {SET_LENGTHS.map((option) => (
+            <button key={option.songs} type="button" aria-pressed={songs === option.songs} onClick={() => onSongs(option.songs)}>
+              About {option.label} <span className="soft">· {option.songs} songs</span>
+            </button>
+          ))}
+        </div>
+        <p className="hint">The song count is asked for, not promised: how long it really runs depends on where the transitions fall.</p>
+      </section>
+      )}
       {arc && (
       <section className="energy-arc" aria-label="Energy arc controls">
         <div className="energy-arc-heading">

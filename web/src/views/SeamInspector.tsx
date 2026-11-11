@@ -10,6 +10,7 @@ import { seamFacts, seamLayers } from '../ui/seam';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { MixScope, useMixPath } from './mixScope';
 import { Undo } from './shared';
+import { pairKey, rememberRender, SeamCompare } from './SeamCompare';
 import { Studio } from './Studio';
 
 const cueRange = (cues: { time: number }[]) => {
@@ -137,7 +138,7 @@ function SeamEditor(props: {
   };
 
   if (problem && !options) return <Problem retry={() => setAttempt((value) => value + 1)}>{problem}</Problem>;
-  if (!options) return <Skeleton variant="inspector" label="Working out what’s possible" />;
+  if (!options) return <Skeleton variant="inspector" label="Working out what’s possible" retry={() => setAttempt((value) => value + 1)} />;
 
   const move = options.moves.find((option) => option.name === requested) ?? options.moves.find((option) => option.name === inPlay);
   const blends = ['bass_swap_blend', 'filter_sweep'].includes(inPlay);
@@ -319,6 +320,11 @@ export function SeamInspector(props: {
   const position = item.position;
   const [capabilityError, setCapabilityError] = useState(false);
   const [capabilityAttempt, setCapabilityAttempt] = useState(0);
+  const pair = pairKey(scope, previous.song_id, item.song_id, item.position);
+  // SF-0221-06: every finished render seen here, so a later one can be compared with it
+  useEffect(() => {
+    if (state.status === 'ready' && state.key) rememberRender(pair, { key: state.key, label: state.label ?? layers.heard });
+  }, [pair, state.status, state.key]);
   useEffect(() => {
     let live = true;
     setCanStudio(null);
@@ -341,6 +347,7 @@ export function SeamInspector(props: {
       <div className="inspector-identity">
         <p className="inspector-pair"><SongMotif songId={previous.song_id} /><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <SongMotif songId={item.song_id} /><b>{item.title}</b></p>
         <p className="inspector-scope">
+          <span className="inspector-number">Transition {position}</span>
           <span>{scope === null ? 'In the current mix' : 'In a draft'}</span>
           {layers.version && <span>Version {layers.version}</span>}
         </p>
@@ -362,6 +369,7 @@ export function SeamInspector(props: {
                     <Action aria-pressed={state.rating === 'bad'} run={() => rate('bad')}>Bad</Action>
                   </div>
                 )}
+                {on('seam_inspector.compare') && <SeamCompare pair={pair} now={{ key: state.key, label: state.label ?? layers.heard }} title={`${previous.title} into ${item.title}`} />}
               </>
             ) : state.status === 'failed' ? (
               <p className="hint">There’s nothing to hear yet, because this one couldn’t be made. Try another move under Change.</p>
@@ -406,7 +414,7 @@ export function SeamInspector(props: {
                 <p className="hint">Measured on the finished audio. These can’t tell you how it sounds. Only you can.</p>
                 <ul>
                   {state.checks.map((check) => (
-                    <li key={check.name} className={check.passed ? 'ok' : 'bad'}><Icon name={check.passed ? 'check' : 'warning'} width={14} height={14} /> {check.text}</li>
+                    <li key={check.name} className={check.passed ? 'ok' : 'bad'}><Icon name={check.passed ? 'check' : 'warning'} size="compact" /> {check.text}</li>
                   ))}
                 </ul>
               </>

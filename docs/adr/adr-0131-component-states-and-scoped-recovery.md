@@ -1,7 +1,7 @@
 # ADR-0131 - Shared component contracts, honest async states and scoped recovery
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** Not started (0/5 new EX tasks).
+- **Implementation:** 5/5 Implemented (2026-11-10).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
 - **Priority / phase:** P0 / Foundation.
@@ -30,11 +30,11 @@ Undo cannot be described as durable after reload where underlying server guarant
 
 ## Implementation tasks (all Not started; Verified: No)
 
-1. **EX-0131-01 - Write interaction state matrix**. Acceptance: Every shared component state has visuals, copy and ARIA meaning. Required verification: Gallery plus automated/manual check. **Implementation: Not started; Verified: No.**
-2. **EX-0131-02 - Validate overlay and focus behavior**. Acceptance: Nested overlays trap and restore focus correctly. Required verification: WAI-ARIA APG, keyboard and NVDA. **Implementation: Not started; Verified: No.**
-3. **EX-0131-03 - Protect async consistency**. Acceptance: Old/failed responses never overwrite current revision. Required verification: Race, two-tab and slow-network E2E. **Implementation: Not started; Verified: No.**
-4. **EX-0131-04 - Improve loading/empty/error feedback**. Acceptance: No fake success, unreachable retry or loading-as-empty. Required verification: Deterministic visual fixtures. **Implementation: Not started; Verified: No.**
-5. **EX-0131-05 - Preserve scoped Undo and recovery**. Acceptance: Recovery action remains discoverable and exact. Required verification: Toast burst, stale mix and failure tests. **Implementation: Not started; Verified: No.**
+1. **EX-0131-01 - Write interaction state matrix**. Acceptance: Every shared component state has visuals, copy and ARIA meaning. Required verification: Gallery plus automated/manual check. **Implementation: Implemented; Verified: No.** Evidence: `docs/adr/completion/components.md`, `web/src/ui/ControlGallery.tsx`. Open: MP-0279 gallery spec not green on 2026-11-10; manual check needs a person.
+2. **EX-0131-02 - Validate overlay and focus behavior**. Acceptance: Nested overlays trap and restore focus correctly. Required verification: WAI-ARIA APG, keyboard and NVDA. **Implementation: Implemented; Verified: No. Needs a person: APG keyboard and NVDA on nested overlays.**
+3. **EX-0131-03 - Protect async consistency**. Acceptance: Old/failed responses never overwrite current revision. Required verification: Race, two-tab and slow-network E2E. **Implementation: Implemented; Verified: No.** Open: race, two-tab and slow-network E2E not yet written.
+4. **EX-0131-04 - Improve loading/empty/error feedback**. Acceptance: No fake success, unreachable retry or loading-as-empty. Required verification: Deterministic visual fixtures. **Implementation: Implemented; Verified: No.** Open: deterministic visual fixtures (MP-0297) not run here.
+5. **EX-0131-05 - Preserve scoped Undo and recovery**. Acceptance: Recovery action remains discoverable and exact. Required verification: Toast burst, stale mix and failure tests. **Implementation: Implemented; Verified: Yes (2026-11-10).** Evidence: `web/src/ui/toastPriority.test.tsx`, `toastsCoalesce.test.tsx`, `polish-components.test.tsx`, `controls.test.tsx`, `web/src/views/Mix.test.tsx`.
 
 ## Verification and sources
 

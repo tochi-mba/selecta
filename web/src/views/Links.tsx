@@ -6,6 +6,7 @@ import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { exploreTabs } from '../shell/manifest';
+import { LinkIfThere } from '../shell/PageLink';
 import { operationId } from '../state/async';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
@@ -14,6 +15,7 @@ import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { TermHint } from '../ui/Glossary';
 import { LinkTabs, SearchField } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
+import { RelationshipMap } from './RelationshipMap';
 import { ViewProps } from './shared';
 
 const HARMONIC_OWNER = 'harmonic-discoveries';
@@ -68,12 +70,16 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   // new pairs turn up in spare time; a hidden tab doesn't ask, and asks at once when it's back
   useVisiblePoll(loadDiscoveries, 15000);
 
+  // A background refresh can bring new pairs in ahead of the one being looked at; that one stays put
+  // until it's answered or skipped, so nobody loses their place (P0099).
+  const pairShowing = useRef<number | undefined>(undefined);
+  const shownBefore = pairShowing.current !== undefined && !skipped.includes(pairShowing.current) ? pairShowing.current : undefined;
   const waiting = items
     .filter((item) => item.status === 'new')
-    .sort((a, b) => Number(skipped.includes(a.id)) - Number(skipped.includes(b.id)));
+    .sort((a, b) => Number(skipped.includes(a.id)) - Number(skipped.includes(b.id))
+      || Number(b.id === shownBefore) - Number(a.id === shownBefore));
   const answered = items.filter((item) => item.status !== 'new');
   const item = waiting[0];
-  const pairShowing = useRef(item?.id);
   pairShowing.current = item?.id;
   const following = waiting[1];
 
@@ -187,7 +193,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 
   if (!loaded && !error) return <Skeleton variant="pairs" lines={1} label="Finding harmonic discoveries" />;
   if (!loaded && error) return <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
-  if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed.</p>;
+  // UF-0384-06: nothing found yet points at what would find more, rather than a dead end
+  if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed. <LinkIfThere to="/workshop">See analysis progress</LinkIfThere></p>;
   const listening = step !== null || requestedStep !== null;
   return (
     <section className="next-up discoveries">
@@ -229,9 +236,10 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         }}
       />
       {item && (
-        <article className="discovery">
+        <article className="discovery" data-pair={`${item.song_a}>${item.song_b}`}>
+          <p className="link-kind">Chord match, a suggestion to check by ear, not a verified match</p>
           <h3>
-            {item.title_a} <span className="soft">and</span> {item.title_b}
+            {item.title_a}{item.title_a === item.title_b && <small className="link-id"> (song {item.song_a})</small>} <span className="soft">and</span> {item.title_b}{item.title_a === item.title_b && <small className="link-id"> (song {item.song_b})</small>}
           </h3>
           <p className="hint">{item.artist_a} · {item.artist_b}</p>
           <button className="primary" disabled={getting} onClick={() => (listening ? (keepGoing.current = false, stop()) : void hear(item))}>
@@ -302,6 +310,10 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
   const busy = state.status === 'queued' || state.status === 'rendering';
   // what was asked for and what you'd really hear are kept apart, and neither says it sounds good
   const facts = seamFacts({ settings: { move }, state }, names);
+  const sameName = link.title_a === link.title_b;
+  const nameA = sameName ? `${link.title_a} (song ${link.a})` : link.title_a;
+  const nameB = sameName ? `${link.title_b} (song ${link.b})` : link.title_b;
+  const addId = `link-add-${link.a}-${link.b}-${link.phrase.replace(/\W+/g, '-')}`;
 
   useEffect(() => {
     if (!override || !['queued', 'rendering'].includes(override.status)) return;
@@ -342,14 +354,19 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
 
   return (
     <article className={`link-card ${state.status}`}>
-      <h2 className="phrase">“{link.phrase}”</h2>
-      <p className="link-handoff">
-        <b>{link.title_a}</b> <span>{link.artist_a}</span>
-        <q>{link.line_a}</q>
+      {/* CI-0176-01: each shared phrase, title and lyric line sets its own direction, so a right-to-left
+          or mixed-script line stays whole and readable beside a left-to-right one */}
+      <p className="link-kind">Word connection, in playing order</p>
+      <h2 className="phrase" dir="auto">“{link.phrase}”</h2>
+      {/* MP-0292-01/06: which song ends the line and which opens the next is spelled out, and two songs
+          with the same name are told apart by their exact recording IDs */}
+      <p className="link-handoff" data-song={link.a}>
+        <small className="link-order">From</small> <b dir="auto">{link.title_a}</b>{sameName && <small className="link-id"> (song {link.a})</small>} <span dir="auto">{link.artist_a}</span>
+        <q dir="auto">{link.line_a}</q>
       </p>
-      <p className="link-handoff">
-        <b>{link.title_b}</b> <span>{link.artist_b}</span>
-        <q>{link.line_b}</q>
+      <p className="link-handoff" data-song={link.b}>
+        <small className="link-order">Into</small> <b dir="auto">{link.title_b}</b>{sameName && <small className="link-id"> (song {link.b})</small>} <span dir="auto">{link.artist_b}</span>
+        <q dir="auto">{link.line_b}</q>
       </p>
       <div className="chips" role="group" aria-label="Which move">
         {link.moves.map((name) => (
@@ -379,7 +396,7 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
             ))}
           </Menu>
         ) : (
-          <Action working="Adding…" run={() => onAdd(link, move, null)}>Add both to the mix</Action>
+          <Action working="Adding…" aria-describedby={addId} run={() => onAdd(link, move, null)}>Add both to the mix</Action>
         )}
         {flagOn('ratings') && state.status === 'ready' && (
           <span className="pair" role="group" aria-label="Rate this link">
@@ -388,9 +405,21 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
           </span>
         )}
       </div>
+      <p className="hint link-destination" id={addId}>
+        Adds {nameA}, then {nameB}, joined by this transition, both at once or neither. They go at the end of {flagOn('drafts') && drafts.length ? 'the mix you choose: your current mix or one draft' : 'your current mix'}, or beside whichever of the two is already there.
+        {/* GP-0260-07: a shared phrase is evidence for a pair, not a finished transition, so the add
+            line says which of the two it is offering right now */}
+        <span className="link-evidence" data-evidence={state.status === 'ready' ? 'rendered' : state.status === 'failed' ? 'failed' : 'candidate'}>
+          {' '}{state.status === 'ready'
+            ? state.passed === false ? 'The transition is rendered, with a rough spot.' : 'The transition is rendered and is what you’d hear.'
+            : state.status === 'failed'
+              ? 'This transition didn’t render, so for now the shared words are only a match to check.'
+              : 'The transition isn’t rendered yet: the shared words are a match to check, and Selecta renders it after they go in.'}
+        </span>
+      </p>
       {state.status === 'ready' && playing && (
         // keyed by what was rendered, so a clip from before a change can't be taken for this one
-        <AudioPreview key={state.key} autoPlay src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} label={`${link.title_a} into ${link.title_b}`} />
+        <AudioPreview key={state.key} autoPlay src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} label={`${nameA} into ${nameB}`} />
       )}
     </article>
   );
@@ -468,7 +497,11 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
         notify(`Added “${link.phrase}” to your mix.`, true);
         if (flagOn('editor')) setView('Edit');
       } else {
-        notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`);
+        // Undo takes back this addition in that draft only, and only while the draft is as it was left.
+        const left = orderOf(answer.mix);
+        notify(`Added “${link.phrase}” to ${answer.name}. What’s playing hasn’t changed.`, async () => {
+          await post<MixData>(`/mix/undo?draft=${draft}`, undefined, { 'x-mix-order': left });
+        });
       }
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) pairOperations.current.delete(identity);
@@ -511,8 +544,12 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
           {failed && data !== null && <p className="warn" role="status">Can’t check for new ones right now, so what’s shown may be out of date.</p>}
           {data === null && !failed && <Skeleton variant="pairs" lines={4} label="Searching your lyrics" />}
           {data?.links.length === 0 && (
-            <p className="lede">{query ? `No links on “${query}” yet.` : 'No links yet. Analysing more songs will find more.'}</p>
+            <p className="lede">
+              {query ? `No links on “${query}” yet. ` : 'No links yet. Analysing more songs will find more. '}
+              {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
+            </p>
           )}
+          {flagOn('discover.relationship_map') && data && <RelationshipMap links={data.links} />}
           <div className="link-grid">{worked.map(card)}</div>
           {didnt.length > 0 && (
             <details className="didnt">

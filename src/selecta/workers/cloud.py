@@ -8,6 +8,7 @@ import signal
 import threading
 from pathlib import Path
 
+from selecta.observability import tracing
 from selecta.scheduling.policy import WorkerCaps
 from selecta.workers.audio_handlers import handlers
 from selecta.workers.remote import RemoteWorkerClient
@@ -21,8 +22,10 @@ def main() -> None:
     if ffmpeg is None:
         raise RuntimeError("Install ffmpeg before starting the Cloud worker.")
     registry = handlers(ffmpeg=ffmpeg)
+    tracing.configure_from_environment("worker")
     caps = WorkerCaps(
-        pool="cpu-light", slots=1, job_types=frozenset(registry),
+        pool=os.environ.get("SELECTA_WORKER_POOL", "cpu-light"),
+        slots=1, job_types=frozenset(registry),
         engine_version=int(os.environ.get("SELECTA_WORKER_ENGINE_VERSION", "1")),
         scratch_mb=int(os.environ.get("SELECTA_WORKER_SCRATCH_MB", "4096")),
     )

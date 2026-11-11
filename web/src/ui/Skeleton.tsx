@@ -3,12 +3,23 @@ import { useEffect, useState } from 'react';
 export type SkeletonVariant = 'text' | 'cards' | 'vibes' | 'library' | 'listen' | 'timeline' | 'inspector' | 'pairs' | 'metrics';
 
 /** Reserve real content geometry immediately, fading decorative placeholders in only if needed. */
-export function Skeleton({ lines = 3, label = 'Loading', variant = 'text' }: { lines?: number; label?: string; variant?: SkeletonVariant }) {
+export function Skeleton({ lines = 3, label = 'Loading', variant = 'text', retry }: {
+  lines?: number;
+  label?: string;
+  variant?: SkeletonVariant;
+  retry?: () => void;
+}) {
   const [slow, setSlow] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const timer = window.setTimeout(() => setSlow(true), 10000);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [attempt]);
+  const tryAgain = () => {
+    setSlow(false);
+    setAttempt((value) => value + 1);
+    retry?.();
+  };
   const count = variant === 'listen' || variant === 'inspector' ? 1 : lines;
   return (
     <div className={`skeleton skeleton-${variant}`} role="status" aria-live="polite" aria-busy="true" aria-label={label}>
@@ -23,7 +34,12 @@ export function Skeleton({ lines = 3, label = 'Loading', variant = 'text' }: { l
           </div>
         ))}
       </div>
-      {slow && <p className="hint">Still waiting for Selecta. If the server has stopped, start it again.</p>}
+      {slow && (
+        <div className="row wrap skeleton-slow">
+          <p className="hint">This is taking longer than expected. You can keep waiting{retry ? ' or try again' : ''}.</p>
+          {retry && <button type="button" onClick={tryAgain}>Try again</button>}
+        </div>
+      )}
     </div>
   );
 }

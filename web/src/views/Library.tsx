@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, get, LibraryPage, LibrarySong, MixData, post } from '../api';
+import { ApiError, get, LibraryPage, LibrarySong, MixData, post, problemKind } from '../api';
 import { Gate, useFlags, visible } from '../flags';
 import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
@@ -34,6 +34,13 @@ const PAGE_SIZE = 100;
 // the server's own limit on one page, which keeps refreshing what's on screen cheap
 const MOST_REFRESHED = 200;
 
+/** LX-0341-02: a count from the server, or plainly "not known yet" when the server didn't say. */
+function Counter({ value, words }: { value: number | undefined; words: string }) {
+  return Number.isFinite(value)
+    ? <span><b>{(value as number).toLocaleString()}</b> {words}</span>
+    : <span>{words[0].toUpperCase() + words.slice(1)}: <b>not known yet</b></span>;
+}
+
 const pagesFrom = (text: string | null) => {
   const pages = Number(text);
   return Number.isInteger(pages) && pages > 1 ? Math.min(pages, 200) : 1;
@@ -62,6 +69,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const [total, setTotal] = useState(0);
   const [next, setNext] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  // T0013: a server fault says so, apart from a dropped connection
+  const [serverFault, setServerFault] = useState(false);
   const [pageProblem, setPageProblem] = useState('');
   const [opened, setOpened] = useState<number | null>(null);
   const preferences = usePrefs();
@@ -86,10 +95,27 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     songs: { id: number; title: string; artist: string; priority: boolean; never: boolean }[];
   } | null>(null);
   const visibleSelected = useMemo(() => (committedRows ?? []).filter((song) => selectedIdSet.has(song.id)), [committedRows, selectedIdSet]);
-  const toggleBatch = (id: number) => setBatchSelection((before) => {
-    const ids = before.identity === selectionIdentity ? before.ids : [];
-    return { identity: selectionIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : ids.length >= 200 ? ids : [...ids, id] };
-  });
+  // GP-0258-03: Shift with a checkbox selects every loaded recording between the last one chosen and
+  // this one, in the order shown, never past the 200 limit. The anchor is read outside the updater.
+  const lastToggled = useRef<number | null>(null);
+  const toggleBatch = (id: number, range = false) => {
+    const anchor = lastToggled.current;
+    lastToggled.current = id;
+    const order = (committedRows ?? []).map((song) => song.id);
+    const from = anchor === null ? -1 : order.indexOf(anchor);
+    const to = order.indexOf(id);
+    setBatchSelection((before) => {
+      const ids = before.identity === selectionIdentity ? before.ids : [];
+      if (range && from >= 0 && to >= 0 && from !== to) {
+        const next = [...ids];
+        for (const songId of order.slice(Math.min(from, to), Math.max(from, to) + 1)) {
+          if (!next.includes(songId) && next.length < 200) next.push(songId);
+        }
+        return { identity: selectionIdentity, ids: next };
+      }
+      return { identity: selectionIdentity, ids: ids.includes(id) ? ids.filter((known) => known !== id) : ids.length >= 200 ? ids : [...ids, id] };
+    });
+  };
   const askBatch = (action: BatchAction) => {
     if (!visibleSelected.length || searching || failed) return;
     setConfirmBatch({
@@ -116,7 +142,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     setConfirmBatch(null);
     setBatchSelection({ identity: selectionIdentity, ids: [] });
     window.requestAnimationFrame(() => selectionEntryRef.current?.focus());
-    notify(`Updated ${wanted.songs.length} precisely selected recordings.`);
+    // GP-0258-07: Undo is offered only for songs this batch really changed, and puts back exactly
+    // those. The server refuses it whole if any of them has changed again since.
+    const priority = wanted.action === 'prioritize' || wanted.action === 'deprioritize';
+    const target = wanted.action === 'prioritize' || wanted.action === 'never';
+    const changedSongs = wanted.songs.filter((song) => (priority ? song.priority : song.never) !== target);
+    const inverse = { prioritize: 'deprioritize', deprioritize: 'prioritize', never: 'allow', allow: 'never' }[wanted.action];
+    notify(`Updated ${wanted.songs.length} precisely selected recordings.`, changedSongs.length ? async () => {
+      await post('/library/batch', { action: inverse, entries: changedSongs.map((song) => ({ id: song.id, expected: target })) });
+      await load();
+    } : undefined);
     await load();
   };
 
@@ -159,9 +194,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       pageBySong.current = pagesBySong;
       setFailed(false);
       setPageProblem('');
-    } catch {
+    } catch (error) {
       if (mine === asked.current) {
         setFailed(true);
+        setServerFault(problemKind(error) === 'server');
         setSearching(false);
       }
     }
@@ -175,6 +211,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     try {
       const page = await get<LibraryPage>(url(cursor));
       if (mine !== asked.current) return;
+      // The last page removes "Show more songs". If it had focus, hand focus to the first song that
+      // just arrived, so a keyboard user carries on from where the new songs start (SF-0226-05).
+      const fromMore = !page.next && !!document.activeElement?.closest('.library-more');
+      const firstNew = page.songs.find((song) => !pageBySong.current.has(song.id));
       const pageIndex = pageCursors.current.length;
       pageCursors.current = [...pageCursors.current, cursor];
       for (const song of page.songs) {
@@ -191,6 +231,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       // just because the shareable URL now records this scroll depth.
       pagesJustAppended.current = newPageCount;
       setAddressQuery({ pages: String(newPageCount) });
+      if (fromMore && firstNew) {
+        window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-focus-key="song-details-${firstNew.id}"]`)?.focus());
+      }
     } catch {
       // Keep the successful pages and cursor intact so the same page can be retried.
       if (mine === asked.current) setPageProblem('Couldn’t load more songs. The recordings already shown are unchanged.');
@@ -324,7 +367,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     }
     return startFrom(song);
   };
-  const left = Math.max(status.counts.music - status.counts.analysed, 0);
+  // LX-0341-02: an unknown count stays unknown; it never turns into a made-up zero or NaN
+  const left = Number.isFinite(status.counts.music) && Number.isFinite(status.counts.analysed)
+    ? Math.max(status.counts.music - status.counts.analysed, 0) : 0;
   const analyseAll = async () => {
     await post('/analysis/start');
     refreshStatus();
@@ -379,8 +424,26 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     return () => { live = false; };
     // A refreshed row list does not need to refetch the same deep link.
   }, [songWanted, searchIdentity, resolvedIdentity, linkRetry]);
+  // LX-0349-05: a change made in the open sheet can move its song out of the current view (This is
+  // music, from Set aside). The sheet stays open on that same recording, read afresh by its ID, so
+  // the way back (Let Selecta decide) is still right there.
+  useEffect(() => {
+    if (opened === null || rows === null || rows.some((song) => song.id === opened) || linkedSong?.id === opened) return;
+    let live = true;
+    void get<LibraryPage>(`/library?q=${opened}&state=all&limit=1`)
+      .then((page) => {
+        const exact = page.songs.find((song) => song.id === opened);
+        if (live && exact) setLinkedSong(exact);
+      })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [rows, opened, linkedSong]);
+  const lastShown = useRef<LibrarySong | null>(null);
   const shownDetails = rows?.find((song) => song.id === opened)
-    ?? (linkedSong?.id === opened ? linkedSong : null);
+    ?? (linkedSong?.id === opened ? linkedSong : null)
+    // while that fresh read is on its way, the sheet keeps what it last showed rather than vanishing
+    ?? (lastShown.current?.id === opened ? lastShown.current : null);
+  lastShown.current = shownDetails;
   const closeDetails = () => {
     setOpened(null);
     setLinkedSong(null);
@@ -402,6 +465,18 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     }
     return duplicates;
   }, [rows]);
+  // LX-0340-05: a title shared by different artists names the artist in every button, so no two
+  // buttons for different recordings ever read the same to a screen reader
+  const sharedTitles = useMemo(() => {
+    const seen = new Set<string>();
+    const shared = new Set<string>();
+    for (const song of rows ?? []) {
+      const title = song.title ?? 'Untitled';
+      if (seen.has(title)) shared.add(title);
+      seen.add(title);
+    }
+    return shared;
+  }, [rows]);
   const { counts } = status;
   const compact = preferences.density === 'compact';
   const on = useFlags();
@@ -414,10 +489,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       <header className="library-head">
         <h1 className="display small">Library</h1>
         <p className="library-summary">
-          {Number.isFinite(counts.ready) && <span><b>{counts.ready.toLocaleString()}</b> ready for mixes</span>}
-          <span><b>{counts.analysed.toLocaleString()}</b> analysed</span>
-          <span><b>{counts.music.toLocaleString()}</b> songs</span>
-          {!!counts.set_aside && <span><b>{counts.set_aside.toLocaleString()}</b> set aside</span>}
+          <Counter value={counts.ready} words="ready for mixes" />
+          <Counter value={counts.analysed} words="analysed" />
+          <Counter value={counts.music} words="songs" />
+          {/* LX-0341-07: an attention count opens exactly the songs it counts */}
+          {!!counts.set_aside && Number.isFinite(counts.set_aside) && (
+            <button type="button" className="link library-summary-link"
+              onClick={() => setAddressQuery({ show: 'set_aside', pages: null }, { push: true })}>
+              <b>{counts.set_aside.toLocaleString()}</b> set aside
+            </button>
+          )}
         </p>
         <p className="library-readiness-help">Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.</p>
       </header>
@@ -460,6 +541,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           )}
         </div>
       )}
+      {/* LX-0342-01: the count comes straight after the filters, ahead of the selection tools, so on a
+          phone it is still on screen beside the search that changed it */}
+      {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
       {batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
@@ -467,7 +551,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               identity: selectionIdentity,
               ids: committedRows.slice(0, 200).map((song) => song.id),
             })}>Select up to 200 loaded songs</button>
-            {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually.</span>}
+            {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually. Shift selects a range.</span>}
           </div>
           {visibleSelected.length > 0 && (
             <div className="library-batch-actions" aria-label="Actions for selected loaded recordings">
@@ -495,14 +579,19 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </section>
       )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
-      {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
+      {failed && committedRows === null && <Problem retry={load}><span>Couldn’t load your library. Your songs are fine.</span>{serverFault && <span className="library-fault"> Something went wrong inside Selecta, not your connection.</span>}</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
-      {committedRows === null && !failed && <Skeleton variant="library" lines={6} label="Loading your songs" />}
-      {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
+      {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
-          <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : 'No songs in this view'}</h2>
-          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while Selecta scans and analyses it.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
+          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while Selecta scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once Selecta has analysed it. Show all songs to see how far each one has got.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          {/* LX-0343-07: say which constraints are hiding songs, so clearing them is a known step */}
+          {(query || filter !== 'all') && (
+            <p className="hint library-active-constraints">
+              Looking in: {FILTERS.find((option) => option.name === filter)?.label ?? filter}{query ? `, searching for “${query}”` : ''}.
+            </p>
+          )}
           <div className="row wrap">
             {counts.music === 0 && !query && filter === 'all' && <button onClick={() => setView('Workshop')}>Add music</button>}
             {query && <button onClick={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}>Clear search</button>}
@@ -525,24 +614,28 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           const title = song.title ?? 'Untitled';
           const duplicate = duplicateIds.has(song.id);
           const name = duplicate ? `${title} (song ${song.id})` : title;
+          const spoken = duplicate || !sharedTitles.has(title) ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
           return (
             <li key={song.id} data-library-page={pageBySong.current.get(song.id) ?? 0} className={`song-row ${song.never ? 'never' : ''} ${selectedIdSet.has(song.id) ? 'selected' : ''}`}>
               <div className="song-name">
                 {batch && filter !== 'set_aside' && <label className="library-batch-check">
                   <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
-                    checked={selectedIdSet.has(song.id)} disabled={searching || failed || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
-                    onChange={() => toggleBatch(song.id)} />
+                    checked={selectedIdSet.has(song.id)} disabled={searching || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
+                    // a failed refresh holds the choice without disabling the box, so focus stays on it (MP-0297-03)
+                    aria-disabled={failed || undefined}
+                    onChange={(event) => { if (!failed) toggleBatch(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
                 </label>}
-                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${name}`} data-focus-key={`song-details-${song.id}`}>
-                  <SongMotif songId={song.id} /><b title={title}>{title}</b>
+                <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
+                  <SongMotif songId={song.id} /><b dir="auto" title={title}>{title}</b>
                 </button>
-                <span title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
+                <span dir="auto" title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
                 {duplicate && <small className="library-recording-id">Recording {song.id}</small>}
                 {query && song.match && <small className="hint" aria-label={`Search match: ${song.match}`}>{song.match}</small>}
               </div>
               <small className="facts song-columns">
                 <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
-                <span>{song.camelot ?? '–'}</span>
+                {/* LX-0344-03: an unknown key says so, rather than leaving a bare dash */}
+                <span>{song.camelot ?? (song.bpm !== null ? 'Key unknown' : 'No key yet')}</span>
                 <span>{clock(song.duration)}</span>
                 {on('lyrics.lookup') && song.lyric_status === 'synced' && <span>lyrics</span>}
               </small>
@@ -553,15 +646,15 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <div className="song-actions">
                 {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => requestStart(song)}>Start a mix</Action>}
                 {facts.canAnalyse && (
-                  <Action disabled={line.includes(song.id)} run={() => analyse(song)}>
-                    {analysingWords(line, song.id)}
+                  <Action disabled={line.includes(song.id)} working="Asking…" run={() => analyse(song)}>
+                    {song.readiness?.status === 'needs_attention' && !line.includes(song.id) ? 'Try analysing again' : analysingWords(line, song.id)}
                     {status.eta?.line[song.id] !== undefined && `, ${etaWords(status.eta.line[song.id])}`}
                   </Action>
                 )}
                 {((!facts.setAside && (on('library.priority') || on('library.never_play'))) || facts.canAdd) && (
-                  <Menu label={<><Icon name="more" /><span className="visually-hidden">More actions for {name}</span></>}>
-                    {facts.canAdd && <Action role="menuitem" disabled={already || searching} run={() => add(song)}>{already ? 'Already in current mix' : 'Add to current mix'}</Action>}
-                    {facts.canAdd && now.phase !== 'idle' && <Action role="menuitem" disabled={already || searching} run={() => add(song, now.position + 1)}>Play next in current mix</Action>}
+                  <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
+                    {facts.canAdd && <Action role="menuitem" disabled={already || searching} run={() => add(song)} title="Puts it at the end of the current mix. Nothing starts playing.">{already ? 'Already in current mix' : 'Add to current mix'}</Action>}
+                    {facts.canAdd && now.phase !== 'idle' && <Action role="menuitem" disabled={already || searching} run={() => add(song, now.position + 1)} title="Puts it straight after the song playing now. What's playing carries on.">Play next in current mix</Action>}
                     {!facts.setAside && on('library.priority') && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => setPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
                       {song.priority ? 'Priority: on' : 'Prioritize'}
                     </Action>}

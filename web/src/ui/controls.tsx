@@ -13,6 +13,7 @@ export function Action({
   working,
   failed,
   waiting,
+  busy: workingElsewhere,
   children,
   ...rest
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
@@ -20,8 +21,11 @@ export function Action({
   working?: ReactNode;
   failed?: string;
   waiting?: boolean;
+  /** Its work is going on somewhere else, such as a confirmation it opened (MI-0138-08). */
+  busy?: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [pressed, setBusy] = useState(false);
+  const busy = pressed || !!workingElsewhere;
   const going = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -29,7 +33,7 @@ export function Action({
     return () => { mounted.current = false; };
   }, []);
   const press = async () => {
-    if (going.current || waiting) return;
+    if (going.current || waiting || workingElsewhere) return;
     going.current = true;
     setBusy(true);
     try {
@@ -48,12 +52,14 @@ export function Action({
   );
 }
 
-export type StatusKind = 'planned' | 'queued' | 'working' | 'recovering' | 'ready' | 'warning' | 'blocked' | 'failed' | 'needs-action' | 'unavailable';
+export type StatusKind = 'planned' | 'queued' | 'working' | 'paused' | 'recovering' | 'ready' | 'warning' | 'blocked' | 'failed' | 'needs-action' | 'unavailable';
 
 const STATUS: Record<StatusKind, { words: string; mark: IconName }> = {
   planned: { words: 'Planned', mark: 'circle' },
   queued: { words: 'In line', mark: 'clock' },
   working: { words: 'Working on it', mark: 'half' },
+  // MP-0293-05: stopped on purpose, so it reads apart from waiting in line or never started
+  paused: { words: 'Paused', mark: 'pause' },
   recovering: { words: 'Recovering', mark: 'half' },
   ready: { words: 'Ready', mark: 'check' },
   warning: { words: 'Ready, with a warning', mark: 'warning' },
@@ -67,7 +73,7 @@ const STATUS: Record<StatusKind, { words: string; mark: IconName }> = {
 export function Status({ kind, children, title }: { kind: StatusKind; children?: ReactNode; title?: string }) {
   return (
     <span className={`status status-${kind}`} title={title}>
-      <Icon name={STATUS[kind].mark} width={14} height={14} />
+      <Icon name={STATUS[kind].mark} size="compact" />
       {children ?? STATUS[kind].words}
     </span>
   );
@@ -111,12 +117,35 @@ let openOverlays = 0;
 let previousOverflow = '';
 const overlayStack: HTMLElement[] = [];
 
+const chromeInert = new Set<Element>();
+const KEPT_CHROME = '.nav, .mini';
 /** Only the top overlay can be reached. Everything underneath it is inert: the page, and any overlay
- * this one opened on top of. */
+ * this one opened on top of. A sheet that keeps the shell's chrome (SF-0203-06) leaves the tab bar and
+ * the mini-player live: everything else in the page goes inert, one branch at a time. */
 function syncInert() {
   const top = overlayStack[overlayStack.length - 1];
   const root = document.getElementById('root');
-  if (top) root?.setAttribute('inert', '');
+  for (const node of chromeInert) node.removeAttribute('inert');
+  chromeInert.clear();
+  const kept = top?.dataset.keepsChrome === 'true' && root ? [...root.querySelectorAll(KEPT_CHROME)] : [];
+  if (top && kept.length && root) {
+    root.removeAttribute('inert');
+    const path = new Set<Element>();
+    for (const node of kept) for (let at: Element | null = node; at && at !== root; at = at.parentElement) path.add(at);
+    for (const branch of path) {
+      if (kept.includes(branch)) continue;
+      for (const sibling of branch.children) {
+        if (path.has(sibling) || sibling.hasAttribute('inert')) continue;
+        sibling.setAttribute('inert', '');
+        chromeInert.add(sibling);
+      }
+    }
+    for (const child of root.children) {
+      if (path.has(child) || child.hasAttribute('inert')) continue;
+      child.setAttribute('inert', '');
+      chromeInert.add(child);
+    }
+  } else if (top) root?.setAttribute('inert', '');
   else root?.removeAttribute('inert');
   for (const item of overlayStack) {
     if (item === top) item.removeAttribute('inert');
@@ -145,12 +174,15 @@ function Overlay({
   kind,
   children,
   footer,
+  keepsChrome,
 }: {
   title: string;
   onClose: () => void;
   kind: 'dialog' | 'sheet' | 'drawer' | 'workspace';
   children: ReactNode;
   footer?: ReactNode;
+  /** stops above the tab bar and mini-player and leaves them working, for a side task beside the music */
+  keepsChrome?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
@@ -176,9 +208,11 @@ function Overlay({
     const own = panel.current;
     const lost = new MutationObserver(() => {
       const at = document.activeElement;
-      if ((!at || at === document.body) && own?.isConnected && overlayStack[overlayStack.length - 1] === mine) own.focus({ preventScroll: true });
+      const gone = !at || at === document.body || (own?.contains(at) && (at as HTMLButtonElement).disabled);
+      if (gone && own?.isConnected && overlayStack[overlayStack.length - 1] === mine) own.focus({ preventScroll: true });
     });
-    if (own) lost.observe(own, { childList: true, subtree: true });
+    // a pressed button that turns itself off while it works (Save it, then Saving...) drops focus too
+    if (own) lost.observe(own, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden', 'inert'] });
     return () => {
       lost.disconnect();
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
@@ -218,11 +252,11 @@ function Overlay({
     }
   };
   return createPortal(
-    <div ref={holder} className={`overlay overlay-${kind}`} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div ref={panel} className="overlay-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
+    <div ref={holder} className={`overlay overlay-${kind}${keepsChrome ? ' overlay-keeps-chrome' : ''}`} data-keeps-chrome={keepsChrome ? 'true' : undefined} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={panel} className="overlay-panel" role="dialog" aria-modal={keepsChrome ? undefined : 'true'} aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
-          <button className="overlay-close" aria-label={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
+          <button className="overlay-close" aria-label={`Close ${title}`} title={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
         </header>
         <div className="overlay-body">{children}</div>
         {footer && <footer className="overlay-foot">{footer}</footer>}
@@ -246,12 +280,12 @@ export function Workspace(props: { title: string; onClose: () => void; children:
   return <Overlay kind="workspace" {...props} />;
 }
 
-export function Sheet(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
+export function Sheet(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; keepsChrome?: boolean }) {
   return <Overlay kind="sheet" {...props} />;
 }
 
 /** A small list of actions behind one button, usable with the keyboard. */
-export function Menu({ label, children, className }: { label: ReactNode; children: ReactNode; className?: string }) {
+export function Menu({ label, children, className, title }: { label: ReactNode; children: ReactNode; className?: string; title?: string }) {
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -314,7 +348,7 @@ export function Menu({ label, children, className }: { label: ReactNode; childre
   };
   return (
     <div className={`menu ${className ?? ''}`} ref={holder} onKeyDown={keys}>
-      <button ref={opener} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
+      <button ref={opener} type="button" title={title} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
       {open && (
         // a press on anything inside closes it, because each item is the end of the job
         <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); if (opener.current?.isConnected) opener.current.focus(); else document.getElementById('content')?.focus({ preventScroll: true }); }}>{children}</div>

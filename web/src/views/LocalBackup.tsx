@@ -111,7 +111,9 @@ export function LocalBackup() {
     <label>Choose a Selecta backup ZIP
       <input type="file" accept=".zip,application/zip" onChange={selectFile} disabled={working} />
     </label>
-    {chosen && <Action disabled={working} working="Checking archive…" run={inspect}>Validate and preview restore</Action>}
+    {/* MP-0293-06: `waiting`, not `disabled`, so the button keeps focus while it checks and the
+        preview dialog can hand focus back to it on Cancel */}
+    {chosen && <Action waiting={working} working="Checking archive…" run={inspect}>Validate and preview restore</Action>}
     {issue && <p className="warn" role="alert">{issue}</p>}
     {notice && <p role="status">{notice}</p>}
     {preview && <Dialog title="Replace local data on next restart?" onClose={() => setPreview(null)}

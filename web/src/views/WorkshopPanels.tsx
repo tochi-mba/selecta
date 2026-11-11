@@ -54,6 +54,9 @@ export function StoragePanel() {
   const [saved, setSaved] = useState(true);
   const [problem, setProblem] = useState('');
   const [wanted, setWanted] = useState<number | null>(null);
+  // SF-0230-05: a limit below what's already kept removes files, so it waits for a yes
+  const [pending, setPending] = useState<number | null>(null);
+  const [reclaimed, setReclaimed] = useState('');
 
   const [loadFailed, setLoadFailed] = useState(false);
   const refresh = () => {
@@ -72,24 +75,39 @@ export function StoragePanel() {
   useVisiblePoll(() => refresh().catch(() => {}), 15000);
 
   if ((!storage || limit === null) && loadFailed) return <Problem retry={refresh}>Couldn’t read storage information.</Problem>;
-  if (!storage || limit === null) return <Skeleton variant="metrics" label="Working out how much room there is" />;
+  // MP-0298-06: the placeholder is the panel itself, about as tall as the real one, so the backup
+  // panel under it doesn't jump down when the numbers arrive
+  if (!storage || limit === null) return <section className="panel stack"><h2>Storage</h2><Skeleton variant="metrics" lines={9} label="Working out how much room there is" /></section>;
   const words = storageWords(storage);
   const overBudget = storage.cache_bytes > storage.budget_bytes;
   const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);
   const smallest = storage.smallest_budget_bytes / GB;
 
-  const move = (value: number) => {
+  const move = (value: number, confirmedRemoval = false) => {
     budgetEditing.current = true;
     setLimit(value);
-    setSaved(false);
     setProblem('');
     setWanted(null);
+    setReclaimed('');
     saves.current += 1;
     const mine = saves.current;
     window.clearTimeout(wait.current);
+    if (!confirmedRemoval && value * GB < storage.cache_bytes) {
+      // nothing is removed until this is confirmed; the preview says how much could go
+      setPending(value);
+      setSaved(true);
+      return;
+    }
+    setPending(null);
+    setSaved(false);
+    const before = storage.cache_bytes;
     wait.current = window.setTimeout(() => {
       const work = writeQueue.current.then(() => post<Storage>('/storage', { budget_gb: value }))
         .then((answer) => {
+          if (confirmedRemoval) {
+            const gone = Math.max(before - answer.cache_bytes, 0);
+            setReclaimed(gone ? `Removed ${gb(gone)}. Selecta now keeps ${gb(answer.cache_bytes)} it can make again.` : 'Nothing could be removed: what’s left belongs to priority songs.');
+          }
           // All successful responses update the confirmed server value; only
           // the latest choice updates the visible setting. If that choice
           // later fails, the fallback is the last real accepted limit.
@@ -103,14 +121,19 @@ export function StoragePanel() {
         })
         .catch((error: Error) => {
           if (mine !== saves.current) return;
-          setProblem(error.message);
+          setProblem(confirmedRemoval ? `Nothing was removed. ${error.message}` : error.message);
           setWanted(value);
           budgetEditing.current = false;
           setSaved(true);
           if (confirmed.current !== null) setLimit(confirmed.current);
         });
       writeQueue.current = work;
-    }, 400);
+    }, confirmedRemoval ? 0 : 400);
+  };
+  const keepLimit = () => {
+    budgetEditing.current = false;
+    setPending(null);
+    if (confirmed.current !== null) setLimit(confirmed.current);
   };
 
   const total = Math.max(1, storage.used_bytes + storage.free_bytes);
@@ -144,8 +167,20 @@ export function StoragePanel() {
           onChange={(event) => move(Number(event.target.value))}
         />
       </label>
+      {pending !== null && (
+        <div className="stack storage-preview" role="group" aria-label="Before anything is removed">
+          <p>
+            A limit of {pending.toFixed(1)} GB removes up to {gb(storage.cache_bytes - pending * GB)} of vocals and seams, oldest first.
+            Priority songs’ stems stay. Anything removed is made again when it’s needed, and your music is never touched.
+          </p>
+          <div className="row wrap">
+            <Action run={() => move(pending, true)}>Remove up to {gb(storage.cache_bytes - pending * GB)}</Action>
+            <button type="button" onClick={keepLimit}>Keep {confirmed.current?.toFixed(1) ?? limit.toFixed(1)} GB</button>
+          </div>
+        </div>
+      )}
       {!saved && !problem && <p className="hint" role="status">Saving…</p>}
-      {saved && !problem && <p className="hint" role="status">Saved: {limit.toFixed(1)} GB.</p>}
+      {saved && !problem && pending === null && <p className="hint" role="status">{reclaimed || `Saved: ${limit.toFixed(1)} GB.`}</p>}
       {problem && <p className="warn" role="alert">{problem} The limit is still {limit.toFixed(1)} GB.</p>}
       {wanted !== null && <Action run={() => move(wanted)}>Retry saving budget</Action>}
       <p className="hint">
@@ -169,16 +204,29 @@ export function NeedsYou({ jobs, readySongs, folders }: { jobs: Jobs; readySongs
   if (jobs.failed_songs.length) items.push({ key: 'songs', words: `${jobs.failed_songs.length} song${jobs.failed_songs.length === 1 ? '' : 's'} couldn’t be analysed.`, to: '/library?show=attention', action: 'Look at those songs' });
   if (jobs.analysis.paused && jobs.analysis.left) items.push({ key: 'paused', words: `Analysis is paused, with ${jobs.analysis.left} to go.`, to: '/workshop/analysis', action: 'Carry on' });
   if (missing.length) items.push({ key: 'folders', words: `${missing.length} music folder${missing.length === 1 ? '' : 's'} can’t be found right now. Songs are kept until ${missing.length === 1 ? 'it’s' : 'they’re'} back.`, to: '/workshop/sources', action: 'See your folders' });
+  // CI-0180-01: one line on whether the library can be mixed at all, and the first item is the one
+  // thing to do first; the rest stay listed below it (MP-0293-01)
+  const health = flagOn('workspace.library_health');
+  const blocked = readySongs < 6;
   return (
     <section className="panel stack needs-you">
       <h2>What needs you</h2>
+      {health && (
+        <p className="library-health">
+          {blocked
+            ? <Status kind="blocked">{`Mixing is blocked: ${readySongs} of the 6 mix-ready songs a mix needs`}</Status>
+            : jobs.storage_full
+              ? <Status kind="blocked">{`Your library can be mixed, with ${readySongs} songs ready, but rendering is blocked`}</Status>
+              : <Status kind="ready">{`Your library can be mixed: ${readySongs} songs ready`}</Status>}
+        </p>
+      )}
       {items.length === 0
         ? <p><Status kind="ready">Nothing needs you right now</Status></p>
         : (
           <ul className="needs-you-list">
-            {items.map((item) => (
-              <li key={item.key}>
-                <Status kind="needs-action">{item.words}</Status>
+            {items.map((item, index) => (
+              <li key={item.key} className={health && index === 0 && items.length > 1 ? 'needs-you-first' : undefined}>
+                <Status kind="needs-action">{health && index === 0 && items.length > 1 ? <><b>Do this first. </b>{item.words}</> : item.words}</Status>
                 <LinkIfThere to={item.to}>{item.action}</LinkIfThere>
               </li>
             ))}
@@ -207,7 +255,7 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
           {!jobs.worker.running
             ? <Status kind="unavailable">Not started. It starts by itself when there’s something to do.</Status>
             : jobs.storage_full
-              ? <Status kind="needs-action">Paused: the storage limit has been reached</Status>
+              ? <Status kind="needs-action">Blocked: the storage limit has been reached</Status>
               : jobs.mix.rendering || jobs.worker.rendering_the_mix
                 ? <Status kind="working">Working through your current mix</Status>
                 : left
@@ -226,7 +274,7 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
             : jobs.analysis.running
               ? <Status kind={status.mix_rendering ? 'queued' : 'working'}>{status.mix_rendering ? 'Waiting while your mix renders' : `${jobs.analysis.left} to go`}</Status>
               : jobs.analysis.paused
-                ? <Status kind="planned">Paused, {jobs.analysis.left} to go</Status>
+                ? <Status kind="paused">Paused, {jobs.analysis.left} to go</Status>
                 : <Status kind="planned">{jobs.analysis.left} waiting</Status>}
         </li>
         {flagOn('render.spare_time') && <li>
@@ -402,7 +450,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
             <button onClick={() => { setRelocate(null); setRelocation(null); }}>Cancel - keep original paths</button>
             {relocation?.token && <Action className="primary" working="Re-linking…" run={confirmRelink}>Confirm {relocation.verified} verified songs</Action>}
           </>}>
-          <p>This only changes the recorded locations of songs from <b>{relocate.old}</b>. It never moves or modifies audio files. All recordings must match their original relative path, size, duration, title and artist.</p>
+          <p>This only changes the recorded locations of songs from <b className="relink-path">{relocate.old}</b>. It never moves or modifies audio files. All recordings must match their original relative path, size, duration, title and artist.</p>
           <Field label="New local folder address" error={relinkProblem}>
             {(field) => <input {...field} value={relocate.target} onChange={(event) => {
               setRelocate({ ...relocate, target: event.target.value });
@@ -439,7 +487,13 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
             />
           )}
         </Field>
-        <button disabled={!folder.trim() || reading} data-working={reading || undefined}>{reading ? 'Reading…' : 'Read folder'}</button>
+        {/* MP-0297-04: both labels share one cell, so Reading… never changes the button's width */}
+        <button disabled={!folder.trim() || reading} data-working={reading || undefined} aria-busy={reading || undefined}>
+          <span className="action-labels">
+            <span aria-hidden={reading || undefined} style={{ visibility: reading ? 'hidden' : undefined }}>Read folder</span>
+            <span aria-hidden={!reading || undefined} style={{ visibility: reading ? undefined : 'hidden' }}>Reading…</span>
+          </span>
+        </button>
         {scanning && <Action working="Stopping…" run={stopReading}>Stop reading</Action>}
       </form>
       {scanning && <p className="hint" role="status">Reading {status.scan.folder}. You can stop this and nothing already in your library changes.</p>}
@@ -504,6 +558,8 @@ export function safeDiagnostics(info: Record<string, unknown>): Record<string, u
         kind: typeof operation.kind === 'string' && /^[a-z]{1,32}$/.test(operation.kind) ? operation.kind : 'other',
         ...(typeof operation.status === 'number' && Number.isInteger(operation.status) ? { status: operation.status } : {}),
         repeat: operation.repeat === true,
+        // T0244: the page's random operation id, so a failed request can be matched to its outcome
+        ...(typeof operation.operation === 'string' && /^[a-z]{1,32}-[A-Za-z0-9-]{1,96}$/.test(operation.operation) ? { operation: operation.operation } : {}),
       }];
     });
   }

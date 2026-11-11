@@ -12,22 +12,22 @@ The first 30 rows retain their *original proposal* states and have not been reco
 
 | ADR | Decision | Implementation | Item progress | Actual evidence |
 |---|---|---|---|---|
-| [ADR-0047 - Selecta 3.0 charter, feature preservation and decision governance](adr-0047-overhaul-charter-and-governance.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0048 - Intent-based information architecture, routes and discoverability](adr-0048-intent-based-navigation-and-deep-links.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0049 - Responsive shell, persistent player and immersive Stage architecture](adr-0049-responsive-shell-player-and-stage.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0050 - Preserved palette with a rebuilt visual system, typography and density](adr-0050-brand-tokens-type-and-density.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0051 - Accessible primitives, overlays, feedback and durable undo](adr-0051-accessible-components-overlays-and-undo.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0052 - Truthful asynchronous state, optimistic mutations and recovery](adr-0052-truthful-async-and-state-contracts.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0053 - Guided onboarding, secure folder selection and time to first mix](adr-0053-first-run-sources-and-readiness.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0054 - Explore mixes, presets, creation defaults and energy journeys](adr-0054-explore-mix-discovery-and-steering.md) | Accepted | Not started | 0/9 | None - plan only |
-| [ADR-0055 - Calm Listen experience, accurate waveform, lyrics and Stage](adr-0055-listen-lyrics-waveform-and-stage.md) | Accepted | Not started | 0/9 | None - plan only |
-| [ADR-0056 - My Mixes workspace, safe drafts, restoration and render priority](adr-0056-my-mixes-drafts-and-render-line.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0057 - Safe timeline editor, insertion, reorder and stable identity](adr-0057-editor-song-seam-timeline.md) | Accepted | Not started | 0/9 | None - plan only |
-| [ADR-0058 - Context-preserving seam inspector, exact cues and honest rendered outcome](adr-0058-transition-inspector-cues-and-previews.md) | Accepted | Not started | 0/9 | None - plan only |
-| [ADR-0059 - Full Stem Studio workstation, grid interaction and commit safety](adr-0059-stem-studio-creative-grid.md) | Accepted | Not started | 0/9 | None - plan only |
-| [ADR-0060 - Requests, bridge approval and atomic live insertion](adr-0060-request-scheduling-bridge-consent.md) | Accepted | Not started | 0/9 | None - plan only |
-| [ADR-0061 - Word connections and four-stage harmonic discovery](adr-0061-discovery-word-and-harmonic-workflows.md) | Accepted | Not started | 0/8 | None - plan only |
-| [ADR-0062 - Scalable Library search, filters, rows and pagination](adr-0062-scalable-library-browse-search-filters.md) | Accepted | Not started | 0/8 | None - plan only |
+| [ADR-0047 - Selecta 3.0 charter, feature preservation and decision governance](adr-0047-overhaul-charter-and-governance.md) | Accepted | In progress | 4/8 | Task evidence on each checklist item (2026-11-10); 3 need a person, 1 open |
+| [ADR-0048 - Intent-based information architecture, routes and discoverability](adr-0048-intent-based-navigation-and-deep-links.md) | Accepted | In progress | 7/8 | Task evidence on each checklist item (2026-11-10); 1 need a person, 0 open |
+| [ADR-0049 - Responsive shell, persistent player and immersive Stage architecture](adr-0049-responsive-shell-player-and-stage.md) | Accepted | In progress | 7/8 | Task evidence on each checklist item (2026-11-10); 1 need a person, 0 open |
+| [ADR-0050 - Preserved palette with a rebuilt visual system, typography and density](adr-0050-brand-tokens-type-and-density.md) | Accepted | In progress | 7/8 | Task evidence on each checklist item (2026-11-10); 1 need a person, 0 open |
+| [ADR-0051 - Accessible primitives, overlays, feedback and durable undo](adr-0051-accessible-components-overlays-and-undo.md) | Accepted | In progress | 7/8 | Task evidence on each checklist item (2026-11-10); 0 need a person, 1 open |
+| [ADR-0052 - Truthful asynchronous state, optimistic mutations and recovery](adr-0052-truthful-async-and-state-contracts.md) | Accepted | In progress | 8/8 | Task evidence on each checklist item (2026-11-10); 0 need a person, 0 open |
+| [ADR-0053 - Guided onboarding, secure folder selection and time to first mix](adr-0053-first-run-sources-and-readiness.md) | Accepted | In progress | 7/8 | Task evidence on each checklist item (2026-11-10); 1 need a person, 0 open |
+| [ADR-0054 - Explore mixes, presets, creation defaults and energy journeys](adr-0054-explore-mix-discovery-and-steering.md) | Accepted | In progress | 8/9 | Task evidence on each checklist item (2026-11-10); 1 need a person, 0 open |
+| [ADR-0055 - Calm Listen experience, accurate waveform, lyrics and Stage](adr-0055-listen-lyrics-waveform-and-stage.md) | Accepted | In progress | 8/9 | Task evidence on each checklist item (2026-11-10); 0 need a person, 1 open |
+| [ADR-0056 - My Mixes workspace, safe drafts, restoration and render priority](adr-0056-my-mixes-drafts-and-render-line.md) | Accepted | In progress | 8/8 | Task evidence on each checklist item (2026-11-10); 0 need a person, 0 open |
+| [ADR-0057 - Safe timeline editor, insertion, reorder and stable identity](adr-0057-editor-song-seam-timeline.md) | Accepted | In progress | 8/9 | Task evidence on each checklist item (2026-11-10); 0 need a person, 1 open |
+| [ADR-0058 - Context-preserving seam inspector, exact cues and honest rendered outcome](adr-0058-transition-inspector-cues-and-previews.md) | Accepted | In progress | 9/9 | Task evidence on each checklist item (2026-11-10); 0 need a person, 0 open |
+| [ADR-0059 - Full Stem Studio workstation, grid interaction and commit safety](adr-0059-stem-studio-creative-grid.md) | Accepted | In progress | 7/9 | Task evidence on each checklist item (2026-11-10); 1 need a person, 1 open |
+| [ADR-0060 - Requests, bridge approval and atomic live insertion](adr-0060-request-scheduling-bridge-consent.md) | Accepted | In progress | 9/9 | Task evidence on each checklist item (2026-11-10); 0 need a person, 0 open |
+| [ADR-0061 - Word connections and four-stage harmonic discovery](adr-0061-discovery-word-and-harmonic-workflows.md) | Accepted | In progress | 8/8 | Task evidence on each checklist item (2026-11-10); 0 need a person, 0 open |
+| [ADR-0062 - Scalable Library search, filters, rows and pagination](adr-0062-scalable-library-browse-search-filters.md) | Accepted | In progress | 6/8 | Task evidence on each checklist item (2026-11-10); 1 need a person, 1 open |
 | [ADR-0063 - Library detail inspector, canonical readiness and protected corrections](adr-0063-library-track-details-corrections.md) | Accepted | Not started | 0/8 | None - plan only |
 | [ADR-0064 - Workspace status, analysis, watched folders, storage and diagnostics](adr-0064-workspace-operations-sources-storage.md) | Accepted | Not started | 0/8 | None - plan only |
 | [ADR-0065 - Persistent FLAC export jobs, exact revisions and download recovery](adr-0065-export-jobs-and-revision-identity.md) | Accepted | Not started | 0/8 | None - plan only |

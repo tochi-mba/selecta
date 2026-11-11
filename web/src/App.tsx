@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, DraftList, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
@@ -442,9 +442,14 @@ export function App() {
     const keys = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setHelping(false);
+        // also cancels a palette opening that hasn't painted yet (Ctrl K then Escape at once)
+        setCommanding(false);
         if (!document.fullscreenElement) {
           setStage(false);
           setStageFallback(false);
+        } else if (stageRef.current) {
+          // a browser usually takes Escape for itself; when the page gets it, it still leaves Stage (MP-0285-05)
+          void document.exitFullscreen?.().catch(() => {});
         }
       }
       const shortcut = shortcutFor(event);
@@ -455,7 +460,9 @@ export function App() {
           // turned off, it leaves the browser's own Ctrl K alone
           if (!prefs().palette) return;
           event.preventDefault();
-          setCommanding(true);
+          // MP-0298-06: opening re-renders the whole app (Listen and its visualiser included), so it is a
+          // transition: the key press paints at once and the palette renders right after, interruptibly
+          startTransition(() => setCommanding(true));
           break;
         case 'playPause':
           event.preventDefault();
@@ -614,7 +621,7 @@ export function App() {
         waitingRequests={waitingRequests}
         onRequests={() => setRequesting(true)}
         onHelp={() => setHelping(true)}
-        onCommands={() => setCommanding(true)}
+        onCommands={() => startTransition(() => setCommanding(true))}
         onActivity={() => setActivityOpen(true)}
         banner={problem ? (
           <div className="connection" role="alert">

@@ -12,6 +12,9 @@ import './styles/operations.css';
 import './styles/music-objects.css';
 import './styles/glossary.css';
 import './styles/palette.css';
+import './styles/icons.css';
+import './styles/depth.css';
+import './styles/typography.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

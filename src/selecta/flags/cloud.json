@@ -122,6 +122,13 @@
       "modes": ["cloud"],
       "owner": "platform"
     },
+    "cloud.tracing": {
+      "label": "Job tracing",
+      "about": "OpenTelemetry spans across the API, worker gateway, workers and storage, one trace per job with its id as a span attribute.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    },
     "billing.webhooks": {
       "label": "Billing updates",
       "about": "Accept signed subscription state changes from Stripe.",

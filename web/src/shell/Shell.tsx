@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
 import { useFlags } from '../flags';
 import { NowState, SetPlayer } from '../player';
@@ -8,6 +8,7 @@ import { useUnseenActivity } from '../state/activity';
 import { jobAttention, useJobsStatus } from '../state/jobs';
 import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock } from '../audio/transportWords';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
 import { aboutOf, classicDestinations, describeRoute, DESTINATIONS, destinationOf, workspaceTabs } from './manifest';
@@ -15,12 +16,9 @@ import { PageLink } from './PageLink';
 
 export { PageLink };
 
-export function clock(seconds: number): string {
-  // A seek, loading transition or missing duration must never render NaN/Infinity
-  // into the fixed mini-player or alter the transport's layout.
-  const whole = Number.isFinite(seconds) ? Math.max(Math.floor(seconds), 0) : 0;
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
-}
+// A seek, loading transition or missing duration must never render NaN/Infinity
+// into the fixed mini-player or alter the transport's layout.
+export const clock = transportClock;
 
 export function VolumeControl({ player, now }: { player: SetPlayer; now: NowState }) {
   return (
@@ -29,6 +27,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
         className="icon"
         aria-label={now.volume === 0 ? 'Restore sound at 50 percent' : now.muted ? 'Unmute' : 'Mute'}
         aria-pressed={now.muted || now.volume === 0}
+        title={now.volume === 0 ? 'Restore sound at 50 percent' : now.muted ? 'Unmute' : 'Mute'}
         onClick={() => player.toggleMute()}
       >
         <Icon name={now.muted || now.volume === 0 ? 'muted' : 'volume'} />
@@ -55,14 +54,17 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { playe
   return (
     <aside className="mini" aria-label={now.inSeam ? 'Playing transition' : now.phase === 'paused' ? 'Paused playback' : now.phase === 'loading' ? 'Loading playback' : 'Now playing'}>
       <i className="mini-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-      <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} aria-label={now.phase === 'playing' ? 'Pause' : now.phase === 'loading' ? 'Loading song' : now.phase === 'paused' ? 'Resume' : 'Play'}>
+      <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} title={playLabel(now.phase)} aria-label={playLabel(now.phase)}>
         <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
       </button>
-      <PageLink to="/listen" className="mini-song" title={`${song.title || 'Untitled'} - ${song.artist || 'Unknown artist'}`}>
-        <b title={song.title} dir="auto">{song.title || 'Untitled'}</b>
-        <span title={song.artist} dir="auto">{song.artist || 'Unknown artist'} · {clock(now.songTime)} / {clock(now.duration)}{now.inSeam ? ' · Transition playing' : ''}</span>
+      <PageLink to="/listen" className="mini-song" title={`${songTitle(song)} - ${songArtist(song)}`}>
+        <b title={song.title} dir="auto">{songTitle(song)}</b>
+        <span title={song.artist} dir="auto">{songArtist(song)} · {timeLabel(now.songTime, now.duration)}{now.inSeam ? ` · ${SEAM_LABEL}` : ''}</span>
+        {/* UF-0373-08: an interrupted output, a lost device or a song that won't load is said here
+            too, so the reason the music stopped is visible on every page, not only on Listen */}
+        {now.notice && now.phase !== 'playing' && <span className="mini-notice" role="status">{now.notice}</span>}
       </PageLink>
-      <button className="mini-next" disabled={now.phase === 'loading' || !hasNext} onClick={() => void player.next()} aria-label="Next song"><Icon name="next" /></button>
+      <button className="mini-next" disabled={now.phase === 'loading' || !hasNext} onClick={() => void player.next()} aria-label="Next song" title="Next song"><Icon name="next" /></button>
       {on('requests') && (
         <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
           Request<span className="count" aria-hidden={!waiting}>{waiting || '\u00a0'}</span>
@@ -80,8 +82,10 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
   const { jobs } = useJobsStatus();
   const attention = jobAttention(jobs);
   const on = useFlags();
+  const bar = useRef<HTMLElement>(null);
+  useHeaderBlock(bar);
   return (
-    <header className="context-bar">
+    <header className="context-bar" ref={bar}>
       <nav className="crumbs" aria-label="Breadcrumb">
         <ol>
           {crumbs.map((crumb, index) => (
@@ -100,13 +104,13 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
           </button>
         )}
         {on('requests') && (
-          <button className="context-button context-request" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
+          <button className="context-button context-request context-counted" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
             <Icon name="request" />{waiting ? <span className="count">{waiting}</span> : null}
           </button>
         )}
         {on('app.theme_choice') && <ThemeMenu />}
         {on('app.activity') && (
-          <button className="context-button" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
+          <button className="context-button context-counted" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
             <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
           </button>
         )}
@@ -119,6 +123,38 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
       </div>
     </header>
   );
+}
+
+/** MP-0274-06: publishes the context bar's real height as --header-block. Crumbs wrap on a phone and at
+ * high zoom, so a fixed number would let the editor scope, Listen's side column and Lucy's tabs pin
+ * underneath the bar. Removed again when the bar goes (the Stage), which falls back to --header-height.
+ * Measured again in the same commit whenever the bar itself renders: a count or the Workspace warning
+ * arriving can wrap the crumbs, and a ResizeObserver only reports that a frame later, long enough for
+ * the pinned scope to sit 18px under the taller bar (MP-0274-06 at 768px). The observer still catches
+ * what React doesn't render: the window, the theme menu, fonts. */
+function measureHeaderBlock(element: HTMLElement) {
+  const root = document.documentElement;
+  const value = `${Math.ceil(element.getBoundingClientRect().height)}px`;
+  if (root.style.getPropertyValue('--header-block') !== value) root.style.setProperty('--header-block', value);
+}
+
+function useHeaderBlock(bar: { current: HTMLElement | null }) {
+  useLayoutEffect(() => {
+    if (bar.current) measureHeaderBlock(bar.current);
+  });
+  useEffect(() => {
+    const element = bar.current;
+    const root = document.documentElement;
+    if (!element) return;
+    const measure = () => measureHeaderBlock(element);
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(element);
+    return () => {
+      observer?.disconnect();
+      root.style.removeProperty('--header-block');
+    };
+  }, [bar]);
 }
 
 /** Keeps everything fixed to the bottom above an on-screen keyboard, or out of its way, by working out
@@ -202,6 +238,8 @@ export function Shell({
   const first = useRef(true);
   const [popped, setPopped] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  // MP-0282-04: on a phone the Workspace warning is a dot on More, not one more button in the top bar
+  const attention = jobAttention(useJobsStatus().jobs);
   const prefs = usePrefs();
   const on = useFlags();
   useKeyboardInset();
@@ -251,7 +289,7 @@ export function Shell({
             {classic
               ? classicDestinations().map((item) => (
                   <li key={item.path}>
-                    <PageLink to={item.path} data-tip={item.label} aria-current={item.pages.includes(route.page) && !editing ? 'page' : undefined}>
+                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={item.pages.includes(route.page) && !editing ? 'page' : undefined}>
                       <Icon name={item.icon} />
                       <span className="nav-label">{item.label}</span>
                     </PageLink>
@@ -259,7 +297,7 @@ export function Shell({
                 ))
               : primaryDestinations.map((item) => (
                   <li key={item.id}>
-                    <PageLink to={item.path} data-tip={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
+                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
                       <Icon name={item.icon} />
                       <span className="nav-label">{item.label}</span>
                     </PageLink>
@@ -267,19 +305,20 @@ export function Shell({
                 ))}
             {!classic && workspace && (
               <li className="nav-more">
-                <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
+                <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-label={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
                   <Icon name={workspace.icon} />
                   <span className="nav-label">{workspace.label}</span>
                 </PageLink>
-                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
+                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
                   <Icon name={workspace.icon} />
+                  {attention > 0 && <span className="nav-attention" aria-hidden="true" />}
                   <span className="nav-label">More</span>
                 </button>
               </li>
             )}
             {hasMix && on('editor') && (
               <li className="nav-context">
-                <PageLink to="/mix/current/edit" data-tip="Edit" aria-current={editing ? 'page' : undefined}>
+                <PageLink to="/mix/current/edit" data-tip="Edit" aria-label="Edit" aria-current={editing ? 'page' : undefined}>
                   <Icon name="edit" />
                   <span className="nav-label">Edit</span>
                 </PageLink>

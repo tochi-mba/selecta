@@ -179,6 +179,7 @@ def test_an_applier_must_be_for_a_known_type(store):
         store.register_applier("nope", lambda *args: None)
 
 
+@pytest.mark.invariants_off("records artifacts under a shared test key")
 def test_artifacts_are_recorded_and_found_by_their_input_hash(store):
     job, claim = running(store)
     store.complete(claim.attempt_id, claim.fencing_token, artifacts=[output("b" * 64)])

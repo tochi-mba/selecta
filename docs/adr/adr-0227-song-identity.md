@@ -1,7 +1,7 @@
 # ADR-0227 - Song Details: trusted analysis, metadata corrections and availability
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started).
+- **Implementation:** In progress (6/8 Implemented, 0/8 In progress, 2/8 Not started or needing a person; updated 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P1 / Library.
@@ -28,16 +28,16 @@ Give each local recording an honest identity and readable provenance for BPM, ke
 
 No misleading exact BPM/quality, accidental source-file mutation or confusing pending analysis with ready playback. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist - 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 6/8 Implemented, 0/8 Verified
 
-1. **SF-0227-01 - Design rich song profile.** **Acceptance:** Core metadata and actions first, diagnostics progressive. **Required verification:** Detail screen critique. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-2. **SF-0227-02 - Identify provenance and uncertainty.** **Acceptance:** Measured, missing and corrected values distinguishable. **Required verification:** API fixture. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-3. **SF-0227-03 - Clarify readiness by capability.** **Acceptance:** Play, mix, stems and lyrics may have different states. **Required verification:** Readiness component tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-4. **SF-0227-04 - Refine correction workflow.** **Acceptance:** Editable metadata clear, reversible when supported. **Required verification:** Correction E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-5. **SF-0227-05 - Protect original files.** **Acceptance:** Metadata edits never rewrite source without approved contract. **Required verification:** Filesystem safety test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-6. **SF-0227-06 - Show analysis failures.** **Acceptance:** Reason and recovery are specific and truthful. **Required verification:** Backend failure fixtures. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **SF-0227-07 - Handle unusual metadata.** **Acceptance:** Long/RTL/null values fit at all widths. **Required verification:** Visual and AT review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0227-08 - Verify song identity continuity.** **Acceptance:** Duplicate titles link to correct recording ID. **Required verification:** Cross-route identity test. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+1. **SF-0227-01 - Design rich song profile.** **Acceptance:** Core metadata and actions first, diagnostics progressive. **Required verification:** Detail screen critique. **Implementation:** Needs a person: detail screen critique; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+2. **SF-0227-02 - Identify provenance and uncertainty.** **Acceptance:** Measured, missing and corrected values distinguishable. **Required verification:** API fixture. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/Library.test.tsx` 'double and half fill in what was measured', 'can go back to what was measured'; `tests/test_api_contracts.py::test_a_correction_leaves_what_was_measured_alone`, `::test_every_song_list_shows_a_correction` (2026-11-10).
+3. **SF-0227-03 - Clarify readiness by capability.** **Acceptance:** Play, mix, stems and lyrics may have different states. **Required verification:** Readiness component tests. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent r2k; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/state/capabilities.ts` and a 'What it’s ready for' list in `web/src/views/SongDetails.tsx` (flag `library.capability_readiness`); `web/src/views/sfFlowSong.test.tsx` (5 passed: playable but not mix-ready, mix-ready with untimed lyrics, missing file, unknown state never promoted, flag off closes up) (2026-11-10).
+4. **SF-0227-04 - Refine correction workflow.** **Acceptance:** Editable metadata clear, reversible when supported. **Required verification:** Correction E2E. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/e2e/flows.e2e.ts` 'the Library: search, song details, a correction that can be put back'; `web/src/views/Library.test.tsx` 'shows what's wrong with a value that isn't allowed' (2026-11-10).
+5. **SF-0227-05 - Protect original files.** **Acceptance:** Metadata edits never rewrite source without approved contract. **Required verification:** Filesystem safety test. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `tests/test_api_contracts.py::test_setting_aside_is_reversible_and_touches_no_file`; `web/src/views/Library.test.tsx` 'music and not music can be switched, without touching the file' (2026-11-10).
+6. **SF-0227-06 - Show analysis failures.** **Acceptance:** Reason and recovery are specific and truthful. **Required verification:** Backend failure fixtures. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/Library.test.tsx` 'gives the reason in the song's details'; `web/e2e/flows.e2e.ts` 'songs that can't be mixed say why'; `tests/test_library_edges.py::test_a_song_analysis_gave_up_on_says_so_rather_than_looking_ready` (2026-11-10).
+7. **SF-0227-07 - Handle unusual metadata.** **Acceptance:** Long/RTL/null values fit at all widths. **Required verification:** Visual and AT review. **Implementation:** Needs a person: visual and AT review. Automated part: `web/e2e/finishing.e2e.ts` 'long, right-to-left and duplicate names stay readable' passes; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0227-08 - Verify song identity continuity.** **Acceptance:** Duplicate titles link to correct recording ID. **Required verification:** Cross-route identity test. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/Library.test.tsx` 'resolves a linked song by exact ID outside the current filter and page', 'makes duplicate recording IDs visible in both rows and song details'; `tests/test_library_edges.py::test_songs_with_the_same_name_are_kept_apart` (2026-11-10).
 
 ## Invariants and required negative cases
 
@@ -47,5 +47,5 @@ Preserve original local music; intentional Pause and one audio owner; disclosed 
 
 - **Depends on:** ADR-0154/0177/0123; ADR-0198/0199 and cross-cutting UI foundation.
 - **Next:** owner decision → prototypes → source-level implementation PR → regression tests → independent visual, access, audio and device evidence → release gate.
-- **Now:** Accepted; 0/8 Implemented; 0/8 independently Verified; no implementing PR/SHA.
+- **Now:** Accepted; 5/8 Implemented (2026-11-10); 0/8 independently Verified; no implementing PR/SHA.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

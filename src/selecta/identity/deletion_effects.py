@@ -58,7 +58,7 @@ from selecta.storage.schema import deletions, upload_sessions
 from selecta.usage import quota
 from selecta.work.errors import UnknownJob
 from selecta.work.model import TERMINAL
-from selecta.work.schema import job_dependencies, jobs
+from selecta.work.schema import job_dependencies, job_plans, jobs
 from selecta.work.store import JobStore
 
 ANONYMIZED_ID = "00000000-0000-0000-0000-000000000000"
@@ -208,6 +208,15 @@ class AccountDeletionEffects(DeletionEffects):
         # JobStore applies the domain lifecycle and requests active workers to stop. Each call
         # commits on its own, so a large library never holds one account-wide transaction open.
         for workspace_id in plan.owned_workspace_ids:
+            with transaction(self.engine, workspace_id) as conn:
+                open_plans = conn.execute(
+                    sa.select(job_plans.c.id).where(
+                        job_plans.c.workspace_id == workspace_id, job_plans.c.state == "open"
+                    )
+                ).scalars().all()
+            for plan_id in open_plans:
+                # Bulk work not yet made into jobs must stop first, or it would keep making them.
+                self.job_store.cancel_plan(workspace_id, plan_id)
             with transaction(self.engine, workspace_id) as conn:
                 rows = conn.execute(
                     sa.select(jobs.c.id)

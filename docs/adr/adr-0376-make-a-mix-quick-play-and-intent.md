@@ -33,6 +33,22 @@ Users complete the named journey with clear action consequences, predictable con
 7. **UF-0376-07 - Handle insufficient ready songs.** **Acceptance:** Offer scan/analysis path rather than impossible mix action. **Required verification:** Zero-ready fixture. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 8. **UF-0376-08 - Check responsive card actions.** **Acceptance:** Mobile layouts retain comparable cards and safe button targets. **Required verification:** Paired screenshots. **Implementation:** Not started; **Independently Verified:** No; **Owner:** Unassigned; **Implementing PR/SHA:** -; **Evidence/reviewer:** -.
 
+## LX crosswalk and integration gaps (UF-0376-01, recorded 2026-11-10)
+
+Detailed Make a Mix design belongs to LX-0353 and LX-0354; UF adds no second design. Each UF task is classified against them:
+
+| UF task | LX / earlier owner | Classification | Proof |
+|---|---|---|---|
+| UF-0376-02 Quick Play predictable | LX-0353-01, -03, -07; MP-0282-07 | already satisfied; uncoached first use still needs people | `web/e2e/lx-lucy.e2e.ts` LX-0353-01/-03/-07, `web/e2e/mp-0282-onboarding.e2e.ts` MP-0282-07 |
+| UF-0376-03 replacement guard | ADR-0216, LX-0346-03 | already satisfied | `web/src/App.test.tsx` "asks before replacing an active mix with a draft", `web/e2e/mp-0283-make-a-mix.e2e.ts` MP-0283-07 |
+| UF-0376-04 genuine mood facts | ADR-0268 (FP), LX-0354 | already satisfied | `web/src/views/fp-0268-explore-cards.test.tsx`, `web/src/views/Mixes.test.tsx` "says what's inside each one, from the songs that would really play" |
+| UF-0376-05 advanced controls optional | MP-0283-06, LX-0353-02 | already satisfied; basic/expert comparison needs people | `web/e2e/mp-0283-make-a-mix.e2e.ts` MP-0283-06, `web/e2e/lx-lucy.e2e.ts` LX-0353-02 |
+| UF-0376-06 Lucy handoff scope | LX-0353-04, LX-0354-05 | already satisfied | `web/e2e/lx-lucy.e2e.ts` LX-0353-04/LX-0354-05, `web/src/views/Mixes.test.tsx` editable Lucy prompt |
+| UF-0376-07 insufficient ready songs | ADR-0217, ADR-0259 | already satisfied | `web/src/views/polishPhase03Start.test.tsx` "links to Library and progress before any mix can be made", `web/src/views/Mixes.test.tsx` "waits for six mix-ready songs" |
+| UF-0376-08 responsive card actions | MP-0283 | refinement (new UF test) | `web/e2e/uf-creation-entry.e2e.ts` UF-0376-08 at 320 and 375px |
+
+No UF-only Make a Mix source change was needed.
+
 ## Verification and release boundaries
 
 Compare baseline/candidate at the same route, viewport, theme, density, fixture, current player/revision and scroll. Test Light/Dark/System/forced-colours, 320–3840px, short landscape, 200/400% zoom, keyboard/touch/AT and reduced motion where relevant. Synthetic muted browser tests and screenshots alone do not prove real-audio quality, independent accessibility acceptance or user comprehension.

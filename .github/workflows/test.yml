@@ -13,7 +13,7 @@ on:
 # per group, so a burst of pushes costs one extra run, which tests the newest commit.
 concurrency:
   group: test-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.repository.private == true }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -130,6 +130,11 @@ jobs:
     env:
       CI: "true"
       SELECTA_TEST_POSTGRES_URL: postgresql+psycopg://selecta:selecta@localhost:5432/selecta_test
+      # SeaweedFS, an S3 server, for the object-storage adapter's integration tests
+      # (tests/test_cloud_storage_s3.py). Throwaway credentials for a throwaway container.
+      SELECTA_TEST_S3_ENDPOINT: http://localhost:8333
+      SELECTA_TEST_S3_ACCESS_KEY: selecta-s3
+      SELECTA_TEST_S3_SECRET_KEY: selecta-s3-secret
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -141,6 +146,27 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: uv sync --locked
+      - name: Start the S3 server (SeaweedFS)
+        # MinIO stopped publishing images, so SeaweedFS stands in: master, volume, filer and S3
+        # gateway in one container. The AWS_* variables make an admin identity and switch on
+        # SigV4 checking; the region is taken from each request's scope, so R2's `auto` works.
+        # Ready once the gateway answers and the master can hand out a file id (a volume server
+        # has registered), so the first upload doesn't race the cluster forming.
+        run: |
+          docker run -d --name seaweedfs -p 8333:8333 -p 9333:9333 \
+            -e AWS_ACCESS_KEY_ID="$SELECTA_TEST_S3_ACCESS_KEY" \
+            -e AWS_SECRET_ACCESS_KEY="$SELECTA_TEST_S3_SECRET_KEY" \
+            chrislusf/seaweedfs:4.52@sha256:57877e32bb90073b37dc109b438ba66e84fd5ed9ced5f5c04f56444ef243ce59 \
+            server -s3 -volume.max=100
+          for _ in $(seq 1 60); do
+            if curl -fsS http://localhost:8333/healthz > /dev/null \
+              && curl -fsS http://localhost:9333/dir/assign | grep -q '"fid"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs seaweedfs
+          exit 1
       - name: Cloud tests on SQLite and PostgreSQL, with branch coverage
         env:
           SELECTA_TEST_SHARD: ${{ matrix.shard }}/3
@@ -187,7 +213,7 @@ jobs:
     name: Edge E2E (shard ${{ matrix.shard }}/2)
     needs: [lint, web]
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -213,8 +239,11 @@ jobs:
           cache-dependency-path: web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: web
-      - run: pnpm build
+      - name: Build, with the component gallery the ADR-279 and S3-0051 specs measure
+        run: pnpm build
         working-directory: web
+        env:
+          VITE_SELECTA_GALLERY: "1"
       - name: Browser tests, in Edge, muted
         run: pnpm e2e --shard=${{ matrix.shard }}/2
         working-directory: web
