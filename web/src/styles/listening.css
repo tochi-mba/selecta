@@ -275,6 +275,8 @@
 .line-name { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; unicode-bidi: plaintext; }
 .line-buttons { display: inline-flex; flex-wrap: wrap; gap: var(--space-1); }
 .line-place { font-variant-numeric: tabular-nums; }
+/* every place takes the room of the longest ("10th in line"), so the names share one column (MP-0286-05) */
+.line-place { flex: none; min-width: 7em; }
 
 /* Requests */
 .request-cancel { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-height); padding: var(--space-1) var(--space-snug); font-size: var(--text-sm); }

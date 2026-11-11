@@ -421,8 +421,26 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     return () => { live = false; };
     // A refreshed row list does not need to refetch the same deep link.
   }, [songWanted, searchIdentity, resolvedIdentity, linkRetry]);
+  // LX-0349-05: a change made in the open sheet can move its song out of the current view (This is
+  // music, from Set aside). The sheet stays open on that same recording, read afresh by its ID, so
+  // the way back (Let Selecta decide) is still right there.
+  useEffect(() => {
+    if (opened === null || rows === null || rows.some((song) => song.id === opened)) return;
+    let live = true;
+    void get<LibraryPage>(`/library?q=${opened}&state=all&limit=1`)
+      .then((page) => {
+        const exact = page.songs.find((song) => song.id === opened);
+        if (live && exact) setLinkedSong(exact);
+      })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [rows, opened]);
+  const lastShown = useRef<LibrarySong | null>(null);
   const shownDetails = rows?.find((song) => song.id === opened)
-    ?? (linkedSong?.id === opened ? linkedSong : null);
+    ?? (linkedSong?.id === opened ? linkedSong : null)
+    // while that fresh read is on its way, the sheet keeps what it last showed rather than vanishing
+    ?? (lastShown.current?.id === opened ? lastShown.current : null);
+  lastShown.current = shownDetails;
   const closeDetails = () => {
     setOpened(null);
     setLinkedSong(null);
