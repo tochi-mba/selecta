@@ -135,7 +135,8 @@ def test_the_glossary_layers_numbers_and_motion_are_specified():
 
 
 def test_every_runtime_dependency_added_since_the_baseline_is_audited():
-    """S3-0072-05: a runtime dependency beyond the baseline's React and build tools is named in the audit."""
+    """S3-0072-05: a runtime dependency beyond the baseline's React and build tools is named
+    in the audit."""
     import json
 
     baseline = {"react", "react-dom", "vite", "@vitejs/plugin-react", "typescript"}
