@@ -435,6 +435,10 @@ test('LX-0352-04 LX-0352-05 a failed refresh keeps rows labelled stale with writ
   await page.mouse.wheel(0, 400);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
   const scrolled = await page.evaluate(() => window.scrollY);
+  // the first row in view, and where it sits on screen: a stale notice added above may scroll-anchor the page, never move the rows
+  const inView = await rows(page).evaluateAll((items) => items.findIndex((item) => item.getBoundingClientRect().top >= 0));
+  const rowTop = async () => (await box(rows(page).nth(inView))).y;
+  const shownAt = await rowTop();
   const address = page.url();
   await page.route('**/api/library?**', (route) => route.abort());
   await expect(page.getByText('Can’t check on your library right now, so what’s shown may be out of date.')).toBeVisible({ timeout: 30_000 });
@@ -443,8 +447,7 @@ test('LX-0352-04 LX-0352-05 a failed refresh keeps rows labelled stale with writ
   await expect(rows(page).first().getByRole('checkbox')).toBeDisabled();
   await page.unroute('**/api/library?**');
   // pressed in place, so the test itself doesn't scroll the page to the button
-  const before = await page.evaluate(() => window.scrollY);
-  expect(Math.abs(before - scrolled)).toBeLessThanOrEqual(2);
+  expect(Math.abs(await rowTop() - shownAt), 'the rows moved when the refresh failed').toBeLessThanOrEqual(2);
   await page.getByRole('button', { name: 'Retry loading' }).evaluate((button: HTMLButtonElement) => button.click());
   await expect(page.getByText(/may be out of date/)).toHaveCount(0);
   expect(page.url()).toBe(address);
