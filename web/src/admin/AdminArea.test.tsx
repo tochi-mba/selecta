@@ -195,7 +195,7 @@ describe('the Flags page', () => {
     await waitFor(() => expect(last('/api/admin/flags/rollback')?.body).toEqual({ version: 4, reason: 'back to before', before: false }));
   });
 
-  it('undoes a version, including a flag's first change', async () => {
+  it("undoes a version, including a flag's first change", async () => {
     await openRooms();
     await command('Undo version 4', 'never meant it');
     await waitFor(() => expect(last('/api/admin/flags/rollback')?.body).toEqual({ version: 4, reason: 'never meant it', before: true }));

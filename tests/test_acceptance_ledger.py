@@ -75,7 +75,12 @@ def test_local_only_server_and_lyric_lookups():
     assert api_common.LOCAL_HOSTS == {"127.0.0.1", "localhost", "testserver"}
     assert "Selecta is local only" in (ROOT / "src/selecta/api.py").read_text(encoding="utf-8")
     assert 'host="127.0.0.1"' in (ROOT / "src/selecta/cli.py").read_text(encoding="utf-8")
-    assert "lrclib.net" in LEDGER and lrclib.API == "https://lrclib.net/api"
+    disclosure = (
+        "| Nothing leaves this computer | Every page's requests stay on this computer | "
+        "Lyric lookups by the server still go to lrclib.net unless turned off |"
+    )
+    assert disclosure in LEDGER.splitlines()
+    assert lrclib.API == "https://lrclib.net/api"
 
 
 def test_flagged_rows_say_what_changed():

@@ -60,8 +60,8 @@ ADR-0234 (themes), ADR-0257 to ADR-0259 (Library selection, Explore truthfulness
 | Editor | clear confirmation | `Clear the current mix?` | contextual | rare | destructive: named confirmation, then Undo | `web/src/views/Mix.tsx` |
 | Studio | grid open | `Apply to this transition` | primary | per Studio visit | saves the shape and re-renders that one seam | `web/src/views/Studio.tsx` |
 | Studio | grid open | `Detailed list` | advanced | rare | same 64 cells as a list; no change | `web/src/views/Studio.tsx` |
-| Library | songs loaded | `Start a mix` | primary | often | builds a mix from that song, after a confirmation if one is playing | `web/src/views/Library.tsx` |
-| Library | songs loaded | `Details for` | contextual | often | opens song details; read-only until a correction is saved | `web/src/views/Library.tsx` |
+| Library | songs loaded | `Start a mix` | primary | often | builds a mix from that song, after a confirmation if one is playing | `web/src/views/LibraryRow.tsx` |
+| Library | songs loaded | `Details for` | contextual | often | opens song details; read-only until a correction is saved | `web/src/views/LibraryRow.tsx` |
 | Library | songs loaded, none selected | `Select up to 200 loaded songs` | contextual | rare | selects loaded rows only; changes nothing | `web/src/views/Library.tsx` |
 | Library | 1 to 200 selected | `Clear selection` | contextual | per selection | clears the selection; focus returns to the entry | `web/src/views/Library.tsx` |
 | Library | 1 to 200 selected | `Prioritize selected` | primary | per selection | confirmation names the songs; never moves or deletes audio | `web/src/views/Library.tsx` |

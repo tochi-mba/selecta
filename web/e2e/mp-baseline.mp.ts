@@ -307,7 +307,7 @@ async function go(page: Page, name: string, path: string) {
   const link = MAIN_NAV(page, name);
   if (await link.isVisible()) await link.click();
   else await page.evaluate((to) => { window.history.pushState({}, '', to); window.dispatchEvent(new PopStateEvent('popstate')); }, path);
-  await expect(page).toHaveURL(new RegExp(`${path.replace(/\//g, '\\/')}$`));
+  await expect(page).toHaveURL((url) => url.pathname === path);
   await settle(page);
 }
 

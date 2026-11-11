@@ -23,8 +23,9 @@ describe('the six UF type roles', () => {
     expect(tokens).toMatch(/--type-counter:[^;]*var\(--mono\)/);
   });
 
-  it('body text is the --body face at 16px, and the sung lyric uses the display face', () => {
-    expect(style).toMatch(/body \{[^}]*font: 16px\/1\.5 var\(--body\)/);
+  it('body text is the --body face at the 1rem body token, and the sung lyric uses the display face', () => {
+    expect(tokens).toMatch(/--text-md: 1rem;/);
+    expect(style).toMatch(/body \{[^}]*font: var\(--text-md\)\/1\.5 var\(--body\)/);
     expect(style).toMatch(/\.lyrics \.sung \{[^}]*font: 800 [^;]*var\(--display\)/);
   });
 });
