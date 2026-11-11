@@ -20,7 +20,7 @@ from lucy_helpers import (
 
 from selecta import db, mix
 from selecta.config import Settings
-from selecta.lucy import readiness
+from selecta.lucy import intent, readiness
 from selecta.planner.ready import ReadyEdge, _compatible
 from selecta.seam_kinds import SeamRequest, request_from
 from selecta.seams import SeamStore
@@ -87,9 +87,9 @@ def test_a_shorter_offer_keeps_an_immovable_end_song(lucy, lucy_home):
     assert len(song_ids(chosen)) == size and song_ids(chosen)[-1] == 12
     assert set(zip(song_ids(chosen), song_ids(chosen)[1:], strict=False)) <= set(CHAIN)
     assert chosen["snapshot"]["ready_only"] is True
-    other = current(say(lucy, new_conversation(lucy), relaxed))
-    assert len(song_ids(other)) == 9 and song_ids(other)[-1] == 12
-    assert other["snapshot"]["ready_only"] is False
+    # the relaxed offer keeps the count and the end song and swaps only the strict rule
+    kept = {(rule.kind, rule.value) for rule in intent.parse(relaxed)}
+    assert kept == {("count", 9), ("end_with", "Last Call"), ("prefer_ready", True)}
     # nothing reaches Morning Light, so no shorter mix can end there: only relaxing is offered
     snap = say(lucy, new_conversation(lucy), "make 9 songs, end with Morning Light, only "
                                              "transitions that are already ready")

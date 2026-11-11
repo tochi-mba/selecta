@@ -1,7 +1,7 @@
 # ADR-0233 - Responsive cinematic-to-precision layouts from 320px to wide screens
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (3/8 Implemented, 2/8 In progress, 3/8 Not started; 2026-11-10).
+- **Implementation:** In progress (3/8 Implemented, 2/8 In progress, 3/8 Not started or needing a person; updated 2026-11-11).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Cross-cutting.
@@ -47,5 +47,5 @@ Preserve original local music; intentional Pause and one audio owner; disclosed 
 
 - **Depends on:** ADR-0160/0183/0129; ADR-0198/0199 and cross-cutting UI foundation.
 - **Next:** owner decision → prototypes → source-level implementation PR → regression tests → independent visual, access, audio and device evidence → release gate.
-- **Now:** Decision Accepted; Implementation 3/8 (2026-11-10); Independently Verified No; implementing branch feat/finish-checklists.
+- **Now:** Decision Accepted; Implementation 3/8 (2026-11-11); Independently Verified No; implementing branch feat/finish-checklists.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

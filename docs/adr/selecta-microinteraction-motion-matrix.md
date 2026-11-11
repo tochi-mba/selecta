@@ -1,6 +1,6 @@
 # Selecta - microinteraction states, timing, causality and reduced-motion matrix
 
-**Decision:** all 30 ADRs are Accepted. **Source-level implementation:** 208 Implemented, 4 In progress, 28 Not started on PR #31. **Independent verification:** 0. Suggested timing and performance budgets are not proven on representative hardware; code-level motion tokens and reduced-motion paths exist but require device and AT review.
+**Decision:** all 30 ADRs are Accepted. **Source-level implementation:** 211 Implemented, 4 In progress, 25 Not started on PR #31. **Independent verification:** 0. Suggested timing and performance budgets are not proven on representative hardware; code-level motion tokens and reduced-motion paths exist but require device and AT review.
 
 ## Shared motion language
 

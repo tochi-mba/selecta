@@ -1,6 +1,6 @@
 # Selecta immersive experience and microinteraction programme - independent NO-GO release gates
 
-**Current programme verdict: NO-GO, because implementation is partial and independent acceptance has not occurred.** 30 ADRs Proposed; **208 source-level Implemented, 4 In progress, 28 Not started; 0 independently Verified**. [PR #31](https://github.com/tochi-mba/selecta/pull/31) contains code and tests, not a release approval. This does not mean the currently shipping local-first application is broken; it describes this newly proposed experience delta.
+**Current programme verdict: NO-GO, because implementation is partial and independent acceptance has not occurred.** 30 ADRs Proposed; **211 source-level Implemented, 4 In progress, 25 Not started; 0 independently Verified**. [PR #31](https://github.com/tochi-mba/selecta/pull/31) contains code and tests, not a release approval. This does not mean the currently shipping local-first application is broken; it describes this newly proposed experience delta.
 
 | Gate | Required before GO | Current |
 |---|---|---|
@@ -25,4 +25,4 @@
 
 **Research targets are proposed, not observed:** ≥90% uncoached core task completion with numerator/denominator, actual audio comparison with varied music, confident distinction between requested/rendered and current/draft, perceived calm/delight plus actual performance on named reference devices. Browser INP and DSP render latency are separate metrics.
 
-**A partially implemented PR is not GO.** The 208 checked source items still require relevant independent evidence; the remaining 32 tasks still require implementation or task-specific acceptance. Do not promote any gate without a named reviewer and exact tested SHA. [Ledger](selecta-microinteraction-evidence.md) · [Checklist](selecta-microinteraction-implementation-checklist.md) · [Verification matrix](selecta-microinteraction-verification-matrix.md) · [Status reconciliation](selecta-microinteraction-status-reconciliation.md).
+**A partially implemented PR is not GO.** The 211 checked source items still require relevant independent evidence; the remaining 29 tasks still require implementation or task-specific acceptance. Do not promote any gate without a named reviewer and exact tested SHA. [Ledger](selecta-microinteraction-evidence.md) · [Checklist](selecta-microinteraction-implementation-checklist.md) · [Verification matrix](selecta-microinteraction-verification-matrix.md) · [Status reconciliation](selecta-microinteraction-status-reconciliation.md).

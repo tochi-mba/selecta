@@ -1,6 +1,6 @@
 # Selecta - immersive UI/UX, microinteraction and animation roadmap
 
-**Planning baseline:** main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (2026-11-07, merged PR #30). **Current PR #31:** 30 Accepted ADRs; **208 source-level Implemented, 4 In progress, 28 Not started**, 0 independently Verified. This programme extends but does not silently supersede ADR-0114–0134 or older programmes.
+**Planning baseline:** main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (2026-11-07, merged PR #30). **Current PR #31:** 30 Accepted ADRs; **211 source-level Implemented, 4 In progress, 25 Not started**, 0 independently Verified. This programme extends but does not silently supersede ADR-0114–0134 or older programmes.
 
 ## Product experience contract
 
@@ -13,10 +13,10 @@ Selecta is a locally running autonomous DJ with optional precision creation. The
 | [ADR-0135](adr-0135-experience-choreography-and-attention-budget.md) | Experience choreography, musical attention and the calm-to-creative ladder | Experience foundation | P0 | Accepted | 6/8 Implemented; 0/8 In progress; 2/8 Not started | No (0/8) |
 | [ADR-0136](adr-0136-visual-language-and-music-materials.md) | Visual materials, typography, hierarchy and authentic musical identity | Visual foundation | P0 | Accepted | 8/8 Implemented; 0/8 In progress; 0/8 Not started | No (0/8) |
 | [ADR-0137](adr-0137-motion-tokens-timing-and-reduced-motion.md) | Motion grammar: timings, easing, causality and reduced-motion equivalence | Motion foundation | P0 | Accepted | 8/8 Implemented; 0/8 In progress; 0/8 Not started | No (0/8) |
-| [ADR-0138](adr-0138-tactile-controls-and-feedback-microstates.md) | Tactile microinteractions for buttons, menus, fields, chips and feedback | Shared interactions | P0 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
+| [ADR-0138](adr-0138-tactile-controls-and-feedback-microstates.md) | Tactile microinteractions for buttons, menus, fields, chips and feedback | Shared interactions | P0 | Accepted | 8/8 Implemented; 0/8 In progress; 0/8 Not started | No (0/8) |
 | [ADR-0139](adr-0139-navigation-scene-transitions-and-orientation.md) | Navigation choreography, breadcrumbs, page continuity and scene orientation | Shell | P0 | Accepted | 8/8 Implemented; 0/8 In progress; 0/8 Not started | No (0/8) |
-| [ADR-0140](adr-0140-persistent-player-audio-focus-and-microtransport.md) | Persistent mini-player, audio-focus handoff and frictionless microtransport | Playback shell | P0 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
-| [ADR-0141](adr-0141-onboarding-progress-and-first-musical-reward.md) | First run, library readiness and the first audible reward | Onboarding | P0 | Accepted | 6/8 Implemented; 0/8 In progress; 2/8 Not started | No (0/8) |
+| [ADR-0140](adr-0140-persistent-player-audio-focus-and-microtransport.md) | Persistent mini-player, audio-focus handoff and frictionless microtransport | Playback shell | P0 | Accepted | 8/8 Implemented; 0/8 In progress; 0/8 Not started | No (0/8) |
+| [ADR-0141](adr-0141-onboarding-progress-and-first-musical-reward.md) | First run, library readiness and the first audible reward | Onboarding | P0 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
 | [ADR-0142](adr-0142-mix-ideas-cards-and-discovery-delight.md) | Mix-idea cards, meaningful recommendation reveals and selection confidence | Make a Mix | P1 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
 | [ADR-0143](adr-0143-mix-shaping-energy-arc-and-destination-gestures.md) | Mix-shaping controls, expressive energy arc and destination selection | Make a Mix | P1 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
 | [ADR-0144](adr-0144-listen-hero-ambient-visuals-and-song-identity.md) | Listen as an immersive musical scene: song identity, ambient visuals and restraint | Listen | P0 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
@@ -40,7 +40,7 @@ Selecta is a locally running autonomous DJ with optional precision creation. The
 | [ADR-0162](adr-0162-motion-performance-and-audio-continuity-budgets.md) | Animation performance budgets, audio continuity and long-session stability | Performance | P0 | Accepted | 3/8 Implemented; 4/8 In progress; 1/8 Not started | No (0/8) |
 | [ADR-0163](adr-0163-musical-microcopy-trust-and-emotional-tone.md) | Musical microcopy, consent, explanations and the personality of a good DJ | Product language | P1 | Accepted | 7/8 Implemented; 0/8 In progress; 1/8 Not started | No (0/8) |
 | [ADR-0164](adr-0164-research-gates-visual-proof-and-release-governance.md) | Visual and audible proof, interaction research, rollback and release governance | Verification | P0 | Accepted | 6/8 Implemented; 0/8 In progress; 2/8 Not started | No (0/8) |
-| **Total** | **30 independent new decisions** | | | **30 Accepted** | **208 Implemented; 4 In progress; 28 Not started** | **0/240 Verified** |
+| **Total** | **30 independent new decisions** | | | **30 Accepted** | **211 Implemented; 4 In progress; 25 Not started** | **0/240 Verified** |
 
 ## Delivery sequence (dependencies, not a promised schedule)
 

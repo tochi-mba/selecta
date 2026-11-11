@@ -91,7 +91,8 @@ def test_the_accessibility_inventory_and_person_scripts_cover_the_named_journeys
         "4.1.3",
     ):
         cells = [line.split("|")[1] for line in text.splitlines() if line.startswith("| ")]
-        assert any(re.search(rf"(?<![\d.]){re.escape(criterion)}(?!\d)", cell) for cell in cells), criterion
+        pattern = rf"(?<![\d.]){re.escape(criterion)}(?!\d)"
+        assert any(re.search(pattern, cell) for cell in cells), criterion
     scripts = text.split("## Scripts for a person", 1)[1]
     for journey in ("First run", "Playback", "Editing", "Requests", "Studio", "Export", "Zoom"):
         assert f"**{journey}.**" in scripts, journey
@@ -131,3 +132,14 @@ def test_the_glossary_layers_numbers_and_motion_are_specified():
         "## Buttons and messages",
     ):
         assert heading in text, heading
+
+
+def test_every_runtime_dependency_added_since_the_baseline_is_audited():
+    """S3-0072-05: a runtime dependency beyond the baseline's React and build tools is named in the audit."""
+    import json
+
+    baseline = {"react", "react-dom", "vite", "@vitejs/plugin-react", "typescript"}
+    package = json.loads((ROOT / "web" / "package.json").read_text(encoding="utf-8"))
+    added = sorted(set(package.get("dependencies", {})) - baseline)
+    text = doc("selecta-3-privacy.md").split("## New dependencies", 1)[1].split("\n## ", 1)[0]
+    assert [name for name in added if f"`{name}`" not in text] == []

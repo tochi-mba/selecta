@@ -1,7 +1,7 @@
 # ADR-0239 - Automated regression strategy and visual-evidence governance
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (4/8 Implemented, 3/8 In progress, 1/8 Not started; 2026-11-10).
+- **Implementation:** In progress (4/8 Implemented, 3/8 In progress, 1/8 Not started or needing a person; updated 2026-11-11).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Verification.
@@ -47,5 +47,5 @@ Single player and intentional Pause; unchanged local music and explicit LRCLIB m
 
 - **Depends on:** ADR-0164/0184/0029; new ADR-0198/0199 and previous programme acceptance records.
 - **Next:** dated owner decision → design specimens → small code/test PR → separate independent human/AT/audio/performance report → explicit release gate.
-- **Now:** Decision Accepted; Implementation 4/8 (2026-11-10); Independently Verified No; implementing branch feat/finish-checklists.
+- **Now:** Decision Accepted; Implementation 4/8 (2026-11-11); Independently Verified No; implementing branch feat/finish-checklists.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

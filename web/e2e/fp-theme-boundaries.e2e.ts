@@ -57,6 +57,13 @@ const STATES: { id: string; path: string; prepare?: (page: Page) => Promise<void
   },
   { id: 'editor', path: '/mix/current/edit' },
   { id: 'workshop', path: '/workshop' },
+  {
+    id: 'seam-inspector', path: '/mix/current/edit',
+    prepare: async (page) => {
+      await page.getByRole('button', { name: 'Change', exact: true }).first().click();
+      await expect(page.getByRole('tablist', { name: 'This transition' })).toBeVisible();
+    },
+  },
 ];
 
 async function measure(page: Page, state: string, theme: string): Promise<Edge[]> {
@@ -117,7 +124,8 @@ async function measure(page: Page, state: string, theme: string): Promise<Edge[]
     const out: Edge[] = [];
     const seen = new Set<Element>();
     for (const [selector, role, essential] of roles) {
-      for (const node of scope.querySelectorAll(selector)) {
+      // the open dialog is the scope, so its own edge is measured too
+      for (const node of [...(scope.matches(selector) ? [scope] : []), ...scope.querySelectorAll(selector)]) {
         if (seen.has(node) || !visible(node)) continue;
         seen.add(node);
         const style = getComputedStyle(node);

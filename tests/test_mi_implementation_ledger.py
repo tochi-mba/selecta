@@ -108,12 +108,12 @@ def test_each_mi_has_one_coherent_implementation_and_verification_status():
 
     assert sum(counts.values()) == 240
     assert counts == {
-        "Implemented": 208,
+        "Implemented": 211,
         "In progress": 4,
-        "Not started": 28,
+        "Not started": 25,
     }
-    assert len(re.findall(r"^- \[x\] \*\*MI-", checklist, flags=re.MULTILINE)) == 208
-    assert "**208/240 source implementation boxes checked" in checklist
+    assert len(re.findall(r"^- \[x\] \*\*MI-", checklist, flags=re.MULTILINE)) == 211
+    assert "**211/240 source implementation boxes checked" in checklist
 
 
 def test_release_gate_and_roadmap_do_not_claim_independent_approval():

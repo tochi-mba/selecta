@@ -1,7 +1,7 @@
 # ADR-0138 - Tactile microinteractions for buttons, menus, fields, chips and feedback
 
 - **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
-- **Implementation:** 7/8 Implemented, 0/8 In progress, 1 Not started (source-level, PR #31).
+- **Implementation:** 8/8 Implemented, 0/8 In progress, 0 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Shared interactions.
@@ -41,7 +41,7 @@ Prefer semantic, truthful feedback over cosmetic animation; static UI is better 
 5. **MI-0138-05 - Define retry identity contracts.** Acceptance: Lost response retries exact operation, no double creation. Required verification: Mocked disconnect/timeout replay tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: stable operation-ID and revision-guard contract mapped to frontend/backend idempotence fixtures.**
 6. **MI-0138-06 - Document toast and status escalation.** Acceptance: No more than relevant messages; persistent actions remain in Activity. Required verification: Toast burst and delayed Undo simulation. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/controls.tsx`, `web/src/ui/toasts.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
 7. **MI-0138-07 - Audit hover-only affordances.** Acceptance: All essential actions visible to touch and keyboard users. Required verification: Touch/no-hover and keyboard-only walkthrough. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: focus/touch equivalents inventory plus visible controls in shared primitives and `EditorRows.tsx`; physical review remains open.**
-8. **MI-0138-08 - Validate user-perceived responsiveness.** Acceptance: Action acknowledgment perceived promptly even when server is delayed. Required verification: Timed interaction tests and 1–5 task confidence. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: -; evidence: -.**
+8. **MI-0138-08 - Validate user-perceived responsiveness.** Acceptance: Action acknowledgment perceived promptly even when server is delayed. Required verification: Timed interaction tests and 1–5 task confidence. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: feat/finish-checklists @ `49dd09a`; evidence: `web/e2e/mi-responsiveness.e2e.ts` 19/19 passed on 2026-11-11 (slot lock, fresh build): with every answer held back 2 s, each press is acknowledged in 11 to 35 ms against a 100 ms budget, then settles truthfully when answered and when refused with a 500 (Play, Replace and play, Replace and edit, move, remove, add, save as draft, Save a copy, song request, export). Fixes: `web/src/views/Mixes.tsx`, `web/src/views/Adder.tsx`, `web/src/views/EditorRows.tsx`, `web/src/views/Mix.tsx`, `web/src/ui/controls.tsx`. Needs a person: 1 to 5 task confidence ratings from real people doing these actions while the server is slow.**
 
 ## Shared invariants and negative cases
 
