@@ -154,7 +154,8 @@ test('MP-0296-05 rapid close, seek and route changes leave no stale animation be
     await customize.click();
     await page.keyboard.press('Escape');
   }
-  for (const link of ['Library', 'Workspace', 'Mixes', 'Library', 'Mixes']) {
+  // the rail names /mixes "Make a Mix" (ADR-0115 intent names)
+  for (const link of ['Library', 'Workspace', 'Make a Mix', 'Library', 'Make a Mix']) {
     await page.getByRole('link', { name: link, exact: true }).first().click();
   }
   await page.goto('/listen');
@@ -162,7 +163,7 @@ test('MP-0296-05 rapid close, seek and route changes leave no stale animation be
   const slider = page.getByRole('slider', { name: 'Where in the song' });
   await slider.focus();
   for (let index = 0; index < 6; index += 1) await page.keyboard.press(index % 2 ? 'ArrowLeft' : 'ArrowRight');
-  await page.getByRole('link', { name: 'Mixes', exact: true }).first().click();
+  await page.getByRole('link', { name: 'Make a Mix', exact: true }).first().click();
   await page.waitForTimeout(800);
   const left = await page.evaluate(() => ({
     overlays: document.querySelectorAll('.overlay').length,
