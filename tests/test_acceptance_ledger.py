@@ -50,8 +50,8 @@ def test_rides_allow_up_to_40_ms():
 
 
 def test_quick_search_samples_80_partners_and_keeps_3_per_song():
-    assert "samples up to 80 partners per song and caps harmonic matches at three per song" in
-    LEDGER
+    claim = "samples up to 80 partners per song and caps harmonic matches at three per song"
+    assert claim in LEDGER
     assert search.COMPARED_PER_SONG == 80
     assert search.MOST_PER_SONG == 3
 
@@ -65,8 +65,8 @@ def test_mix_count_and_headings():
     assert "Twenty-five mixes under four headings" in LEDGER
     grouped = [vibe for vibe in vibes.VIBES if vibe.group]
     assert len(grouped) == 25
-    assert {vibe.group for vibe in grouped} == {"The moment", "The mood", "The sound", "The
-    journey"}
+    headings = {"The moment", "The mood", "The sound", "The journey"}
+    assert {vibe.group for vibe in grouped} == headings
     assert len(vibes.VIBES) - len(grouped) == 1  # Selecta's pick
 
 

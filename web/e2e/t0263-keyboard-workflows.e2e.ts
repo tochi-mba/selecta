@@ -1,0 +1,157 @@
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { resetMix, rewriteJson } from './helpers';
+
+/**
+ * T0263: the request, Mixes, Edit, Studio, Library, export and study workflows done start to finish
+ * from the keyboard alone, in a real browser against tests/e2e_server.py. No test here clicks or
+ * calls focus(): every control is reached with Tab (or the page's own shortcut) and used with keys,
+ * so a control the keyboard can't reach fails the walk. A person still has to judge whether the walk
+ * is comfortable; that part is P0126 in the polish checklist.
+ */
+test.beforeEach(async ({ request }) => resetMix(request));
+
+/** Presses Tab until `target` has focus, as someone without a mouse would, or fails. */
+async function tabTo(page: Page, target: Locator, most = 120) {
+  for (let presses = 0; presses < most; presses += 1) {
+    if (await target.evaluate((node) => node === document.activeElement).catch(() => false)) return;
+    await page.keyboard.press('Tab');
+  }
+  await expect(target, `reachable with Tab within ${most} presses`).toBeFocused();
+}
+
+const order = async (page: Page) => ((await (await page.request.get('/api/mix')).json()).mix as { title: string }[]).map((song) => song.title);
+
+test('T0263 request: ask for a song, cancel it and close, from the keyboard alone', async ({ page, request }) => {
+  await page.goto('/listen');
+  await expect(page.locator('.lyrics')).toBeVisible();
+  await page.keyboard.press('r');
+  const drawer = page.getByRole('dialog', { name: 'Requests' });
+  const box = drawer.getByRole('combobox', { name: 'Request a song' });
+  await expect(box).toBeFocused();
+  await page.keyboard.type('Déjà');
+  await expect(drawer.getByRole('button', { name: /Déjà Vu/ })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(drawer.getByRole('list', { name: 'Your requests' }).getByText('Déjà Vu')).toBeVisible();
+  await tabTo(page, drawer.getByRole('button', { name: 'Cancel request for Déjà Vu' }));
+  await page.keyboard.press('Enter');
+  await expect(drawer.getByRole('list', { name: 'Your requests' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  expect((await (await request.get('/api/requests')).json()).requests).toEqual([]);
+});
+
+test('T0263 Mixes: start a mix from the Mixes page with Tab and Enter', async ({ page }) => {
+  await page.goto('/mixes');
+  const start = page.locator('.hero button.primary');
+  await expect(start).toBeVisible();
+  await tabTo(page, start);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/listen$/, { timeout: 30_000 });
+  expect((await order(page)).length).toBeGreaterThan(1);
+});
+
+test('T0263 Edit: move a song down and back with its handle, focus staying on it', async ({ page }) => {
+  await page.goto('/mix/current/edit');
+  const grip = page.getByRole('button', { name: 'Reorder Morning Light' });
+  await tabTo(page, grip);
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(() => order(page)).toEqual(['Slow Tide', 'Morning Light', 'Paper Moon', 'Neon Rain']);
+  await expect(page.getByRole('button', { name: 'Reorder Morning Light' })).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect.poll(() => order(page)).toEqual(['Morning Light', 'Slow Tide', 'Paper Moon', 'Neon Rain']);
+});
+
+test('T0263 Studio: open a transition, reach the Studio, turn a square over and leave, by keyboard', async ({ page, request }) => {
+  const cells = 8;
+  const row = Array.from({ length: cells }, (_, index) => (index < cells / 2 ? 1 : 0));
+  const shape = { a: { vocals: row, drums: row, bass: row, other: row }, b: { vocals: row, drums: row, bass: row, other: row } };
+  const stem = await (await request.get('/api/songs/1/audio')).body();
+  await page.route('**/api/mix/1/studio*', (route) => route.fulfill({ json: { status: 'ready', key: 't0263', cells, seconds: 8, bars: 16, start_shape: shape, shape } }));
+  await page.route('**/api/mix/1/options*', (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
+  await page.route('**/api/studio/**', (route) => route.fulfill({ body: stem, contentType: 'audio/flac' }));
+  await page.goto('/mix/current/edit');
+  await tabTo(page, page.getByRole('button', { name: 'Change', exact: true }).first());
+  await page.keyboard.press('Enter');
+  const changeTab = page.getByRole('tab', { name: 'Change' });
+  await expect(changeTab).toHaveAttribute('aria-selected', 'true');
+  await tabTo(page, changeTab);
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Studio' })).toHaveAttribute('aria-selected', 'true');
+  await tabTo(page, page.getByRole('button', { name: 'Open the Studio' }));
+  await page.keyboard.press('Enter');
+  const squares = page.locator('.studio-cell');
+  await expect(squares.first()).toBeVisible({ timeout: 60_000 });
+  // the grid is one tab stop, so Tab lands on a square and the arrows do the rest
+  await tabTo(page, squares.first());
+  const was = await squares.first().getAttribute('aria-pressed');
+  await page.keyboard.press('Space');
+  await expect(squares.first()).not.toHaveAttribute('aria-pressed', was ?? '');
+  await page.keyboard.press('ArrowRight');
+  await expect(squares.nth(1)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.studio')).toHaveCount(0);
+});
+
+test('T0263 Library: search with /, open a song’s menu and add it to the mix, by keyboard', async ({ page }) => {
+  await page.goto('/library');
+  await expect(page.locator('.library-count')).toBeVisible();
+  await page.keyboard.press('/');
+  const search = page.getByRole('searchbox', { name: 'Search your library' });
+  await expect(search).toBeFocused();
+  await page.keyboard.type('Last Call');
+  const more = page.getByRole('button', { name: 'More actions for Last Call' });
+  await expect(more).toBeVisible();
+  await tabTo(page, more);
+  await page.keyboard.press('Enter');
+  const add = page.getByRole('menu').getByRole('menuitem', { name: 'Add to current mix' });
+  await expect(add).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => order(page)).toContain('Last Call');
+});
+
+test('T0263 export: open the save dialog from Edit, reach Save, and close back to the button', async ({ page }) => {
+  await page.goto('/mix/current/edit');
+  const download = page.getByRole('button', { name: 'Download audio' });
+  await tabTo(page, download);
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });
+  await expect(dialog).toBeVisible();
+  // focus is held inside the dialog: Tab cycles its own controls and never reaches the page behind
+  for (let press = 0; press < 12; press += 1) {
+    await page.keyboard.press('Tab');
+    expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+  }
+  const save = dialog.getByRole('button', { name: 'Save it', exact: true });
+  if (await save.count()) await tabTo(page, save, 20);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(download).toBeFocused();
+});
+
+test('T0263 study: open a study, grade a version and answer, by keyboard to the end', async ({ page }) => {
+  const posted: unknown[] = [];
+  const audio = await (await page.request.get('/api/songs/1/audio')).body();
+  await page.route(/\/api\/listening\?/, (route) => route.fulfill({ json: [{ id: 'kb-1' }] }));
+  await page.route('**/api/listening/*/*/audio', (route) => route.fulfill({ body: audio, contentType: 'audio/flac' }));
+  await page.route('**/api/listening/*/response', (route) => { posted.push(route.request().postDataJSON()); return route.fulfill({ json: { ok: true } }); });
+  await page.goto('/listening');
+  const study = page.locator('section.study');
+  await tabTo(page, study.getByLabel('Study code'));
+  await page.keyboard.type('SYNTH-1');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('listener-one');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('headphones');
+  await page.keyboard.press('Enter');
+  await expect(study.getByText(/Comparison 1 of 1/)).toBeVisible();
+  const grade = study.getByRole('radiogroup', { name: 'Quality of A' }).getByRole('radio', { name: '4' });
+  await tabTo(page, study.getByRole('radiogroup', { name: 'Quality of A' }).getByRole('radio').first());
+  // a radio group takes its choice with the arrows
+  for (let step = 0; step < 6 && !(await grade.isChecked()); step += 1) await page.keyboard.press('ArrowRight');
+  await expect(grade).toBeChecked();
+  await tabTo(page, study.getByRole('button', { name: 'Cannot judge' }));
+  await page.keyboard.press('Enter');
+  await expect(study.getByText('All responses saved. Thank you for listening.')).toBeVisible();
+  expect(posted).toHaveLength(1);
+});

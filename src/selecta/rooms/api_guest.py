@@ -13,11 +13,16 @@ Guests and displays see the room's name and songs, never the host. Codes and tok
 logged, put in an error or a URL. Joins and actions are rate-limited per IP, guest and room
 (`rooms.limits`) in front of the room's own request limits, and an address that keeps missing
 codes is locked out of joining (`rooms.guessing`).
+
+Features the room offers guests follow the host's own flag decision, not just the build's: votes
+are shown and accepted only while `rooms.votes` is on for the host's account (plan, staff rules
+and opt-outs, as `flags.cloud_gate` decides it for the host's site).
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from types import SimpleNamespace
 from typing import Any
 
 import sqlalchemy as sa
@@ -25,6 +30,10 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from selecta import flags
+from selecta.flags import cloud_gate
+from selecta.flags.rules import RulesCache
+from selecta.identity.accounts import get_user
+from selecta.identity.schema import workspaces
 from selecta.persistence import transaction
 from selecta.rooms import guessing, limits
 from selecta.rooms.api_common import (
@@ -61,14 +70,15 @@ class NicknameBody(BaseModel):
     nickname: str = Field(max_length=40)
 
 
-def guest_json(view: GuestView, status: str) -> dict[str, Any]:
+def guest_json(view: GuestView, status: str, votes_allowed: bool | None = None) -> dict[str, Any]:
+    allowed = flags.on("rooms.votes") if votes_allowed is None else votes_allowed
     return {
         "room_name": view.room_name,
         "room_status": view.room_status.value,
         "guest_status": status,
         "nickname": view.nickname,
         "names_shown": view.names_shown,
-        "votes_on": view.votes_on and flags.on("rooms.votes"),
+        "votes_on": view.votes_on and allowed,
         "requests_open": view.requests_open,
         "music_paused": view.music_paused,
         "now_playing": song_json(view.now_playing),
@@ -85,6 +95,7 @@ def install_routes(
     rooms: Callable[[], Rooms],
     allowed_origins: Iterable[str],
     limiter: limits.Limiter,
+    rules: RulesCache | None = None,
 ) -> None:
     origins = tuple(allowed_origins)
     guard = guessing.JoinGuard(limiter, lambda: rooms().engine)
@@ -141,9 +152,32 @@ def install_routes(
                 sa.select(room_guests.c.status).where(room_guests.c.id == ref.guest_id)
             ).scalar_one()
 
+    def host_allows(ref: GuestRef, flag_id: str) -> bool:
+        """Whether the host's account has `flag_id` on now, as the host's own site decides it."""
+        if rules is None:
+            return flags.on(flag_id)
+        with transaction(rooms().engine, ref.workspace_id) as conn:
+            owner = conn.execute(
+                sa.select(workspaces.c.owner_user_id).where(workspaces.c.id == ref.workspace_id)
+            ).scalar()
+            user = get_user(conn, owner) if owner else None
+            if user is None:
+                return False
+            host = SimpleNamespace(workspace=SimpleNamespace(id=ref.workspace_id), user=user,
+                                   staff_roles=frozenset())
+            return cloud_gate.decide(conn, host, flag_id, rules).on
+
+    def voting(ref: GuestRef) -> None:
+        if not host_allows(ref, "rooms.votes"):
+            raise HTTPException(status_code=403, detail={
+                "code": "flag_off", "flag": "rooms.votes",
+                "message": "Voting isn't available in this room.",
+            })
+
     def view(token: str, ref: GuestRef) -> dict[str, Any]:
         try:
-            return guest_json(rooms().guest_view(token), guest_status(ref))
+            return guest_json(rooms().guest_view(token), guest_status(ref),
+                              host_allows(ref, "rooms.votes"))
         except RoomError as error:
             raise refusal(error) from error
 
@@ -222,6 +256,7 @@ def install_routes(
     @app.post("/api/guest/rooms/{room_id}/requests/{request_id}/vote")
     def guest_vote(room_id: str, request_id: str, request: Request) -> dict[str, Any]:
         token, ref = write(request, room_id)
+        voting(ref)
         try:
             rooms().vote(token, request_id)
         except RoomError as error:
@@ -231,6 +266,7 @@ def install_routes(
     @app.delete("/api/guest/rooms/{room_id}/requests/{request_id}/vote")
     def guest_unvote(room_id: str, request_id: str, request: Request) -> dict[str, Any]:
         token, ref = write(request, room_id)
+        voting(ref)
         try:
             rooms().unvote(token, request_id)
         except RoomError as error:

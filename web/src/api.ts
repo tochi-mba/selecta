@@ -312,6 +312,11 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const get = <T,>(path: string) => send<T>(path);
 
+/** T0068: raw bytes from the local server (song and stem audio, seam clips, backups), which the JSON
+ * helpers above do not carry. Callers check `ok` themselves, because each says its own words. */
+export const fetchBytes = (path: string, init?: RequestInit): Promise<Response> =>
+  init ? fetch(`/api${path}`, init) : fetch(`/api${path}`);
+
 /** Requests whose operation id post() made up, rather than the page choosing it. */
 const madeUpIds = new WeakSet<RequestInit>();
 

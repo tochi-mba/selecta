@@ -26,8 +26,12 @@ _UNDECOMPOSED = str.maketrans(
 @lru_cache(maxsize=131072)
 def normalize_music(text: str) -> str:
     """Case- and accent-insensitive comparison, not a display transformation."""
-    decomposed = unicodedata.normalize("NFKD", text.casefold()).translate(_UNDECOMPOSED)
-    plain = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    if text.isascii():
+        # the same answer, quicker: plain ASCII has nothing to decompose, fold or translate
+        plain = text.lower()
+    else:
+        decomposed = unicodedata.normalize("NFKD", text.casefold()).translate(_UNDECOMPOSED)
+        plain = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     # Keep meaningful remix, live, edit, acoustic and remaster qualifiers intact.
     return _SPACES.sub(" ", _PUNCTUATION.sub(" ", _CREDITS.sub("feat", plain))).strip()
 
@@ -68,8 +72,11 @@ def _prepared(
     tokens = frozenset((name + " " + creator).split())
     by_length: dict[int, list[str]] = {}
     for token in tokens:
-        by_length.setdefault(len(token), []).append(token)
-    return name, creator, tokens, {size: tuple(words) for size, words in by_length.items()}
+        if len(token) in by_length:
+            by_length[len(token)].append(token)
+        else:
+            by_length[len(token)] = [token]
+    return name, creator, tokens, by_length
 
 
 @lru_cache(maxsize=64)

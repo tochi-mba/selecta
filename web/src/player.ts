@@ -1,4 +1,4 @@
-import { MixItem, post, SeamState } from './api';
+import { fetchBytes, MixItem, post, SeamState } from './api';
 import { mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { saveResume } from './lib';
 import { listenEnded, listenStarted } from './lucy/listening';
@@ -255,7 +255,7 @@ export class SetPlayer {
   private loadSong(id: number): Promise<AudioBuffer> {
     let found = this.songs.get(id);
     if (!found) {
-      found = fetch(`/api/songs/${id}/audio`).then(async (response) => {
+      found = fetchBytes(`/songs/${id}/audio`).then(async (response) => {
         if (!response.ok) throw new Error('That song isn’t available.');
         const bytes = await response.arrayBuffer();
         try {
@@ -276,7 +276,7 @@ export class SetPlayer {
   private loadClip(key: string): Promise<AudioBuffer> {
     let found = this.clips.get(key);
     if (!found) {
-      found = fetch(`/api/seams/${key}/clip`).then(async (response) => {
+      found = fetchBytes(`/seams/${key}/clip`).then(async (response) => {
         if (!response.ok) throw new Error('That seam isn’t available.');
         return this.audio().decodeAudioData(await response.arrayBuffer());
       });
@@ -575,7 +575,7 @@ export class SetPlayer {
     const controller = new AbortController();
     this.stateRead = controller;
     const timeout = window.setTimeout(() => controller.abort(), 2000);
-    void fetch(`/api/seams/${encodeURIComponent(seam.key)}`, { signal: controller.signal, cache: 'no-store' })
+    void fetchBytes(`/seams/${encodeURIComponent(seam.key)}`, { signal: controller.signal, cache: 'no-store' })
       .then(async (response) => {
         if (!response.ok) return;
         const fresh = await response.json() as SeamState;
