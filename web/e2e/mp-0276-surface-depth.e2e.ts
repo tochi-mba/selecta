@@ -241,6 +241,8 @@ for (const theme of THEMES) {
       }
       const yours = drawer.getByRole('list', { name: 'Your requests' });
       await expect(yours.getByText('Last Call')).toBeVisible();
+      // a new pick reads "Adding" until the server has it (instant feedback); measure the saved state
+      await expect(yours.locator('.request-row', { hasText: 'Last Call' }).locator('.pill')).toHaveText(/Requested|Waiting|Finding|Getting ready|Needs|Ready/);
       const requests = await measure(page, stateCues, '.request-row');
       const asked = requests.find((cue) => cue.text.includes('Last Call'))!;
       expect(asked.bar, `${where}: request marker bar`).toBe(3);
