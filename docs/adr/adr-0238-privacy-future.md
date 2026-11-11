@@ -1,7 +1,7 @@
 # ADR-0238 - Local-first privacy and future SaaS-ready boundaries without SaaS
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (3/8 Implemented, 0/8 In progress, 5/8 Not started; 2026-11-10).
+- **Implementation:** In progress (3/8 Implemented, 2/8 In progress, 3/8 Not started; 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Architecture.
@@ -36,8 +36,8 @@ No account screens, cloud registration, remote music upload, analytics beacon or
 4. **SF-0238-04 - Set preference data boundaries.** **Acceptance:** Theme and motion preferences remain local. **Required verification:** Offline persistence tests. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 5. **SF-0238-05 - Plan abstract storage seams.** **Acceptance:** Optional future interfaces do not change local code now. **Required verification:** Architecture design review. **Implementation:** Not started; Superseded by ADR-0391 and ADR-0397: cloud storage interfaces were built on purpose for Selecta Cloud; local mode keeps its local storage unchanged; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 6. **SF-0238-06 - Specify future identity boundary.** **Acceptance:** No current login, billing or remote media scope. **Required verification:** Product scope check. **Implementation:** Not started; Superseded by ADR-0391: login and billing now exist in cloud mode by owner decision; local mode still has no login, billing or remote media; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **SF-0238-07 - Review new visual assets privacy.** **Acceptance:** Artwork and fonts work locally with authorized provenance. **Required verification:** Offline and resource inspection. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-8. **SF-0238-08 - Validate offline core paths.** **Acceptance:** Playback, library and editing do not require cloud. **Required verification:** Disconnected E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+7. **SF-0238-07 - Review new visual assets privacy.** **Acceptance:** Artwork and fonts work locally with authorized provenance. **Required verification:** Offline and resource inspection. **Implementation:** In progress; built `web/e2e/sf-0238-local-only.e2e.ts` 'SF-0238-07 every page, font, icon and picture comes from this machine'; not yet run because of laptop load; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+8. **SF-0238-08 - Validate offline core paths.** **Acceptance:** Playback, library and editing do not require cloud. **Required verification:** Disconnected E2E. **Implementation:** In progress; built `web/e2e/sf-0238-local-only.e2e.ts` 'SF-0238-08 playing, the library and editing all work with no internet at all' (every non-local host cut off); not yet run because of laptop load; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
 

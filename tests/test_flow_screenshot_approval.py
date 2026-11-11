@@ -25,11 +25,19 @@ def _specs() -> dict[str, str]:
 def test_every_screenshot_manifest_is_written_as_a_candidate() -> None:
     specs = _specs()
     # every spec that writes a capture manifest or a measured baseline
-    writers = {name for name, text in specs.items() if "writeFileSync(" in text and ("screenshot(" in text or CANDIDATE in text)}
+    writers = {
+        name
+        for name, text in specs.items()
+        if "writeFileSync(" in text and ("screenshot(" in text or CANDIDATE in text)
+    }
     assert {"paired-theme.e2e.ts", "mp-baseline.mp.ts"} <= writers
     for name in writers:
         statuses = set(re.findall(r"status:\s*'([a-z-]+)'", specs[name]))
-        manifest = {status for status in statuses if "verified" in status or "approved" in status or "golden" in status}
+        manifest = {
+            status
+            for status in statuses
+            if "verified" in status or "approved" in status or "golden" in status
+        }
         assert manifest == {CANDIDATE}, f"{name} writes {manifest}"
 
 
@@ -38,7 +46,9 @@ def test_no_spec_turns_a_capture_into_a_golden_baseline() -> None:
     for name, text in _specs().items():
         assert "toHaveScreenshot(" not in text, name
         assert "toMatchSnapshot(" not in text, name
-    assert not list((ROOT / "web").glob("e2e/*-snapshots")), "a committed snapshot folder is an unreviewed golden"
+    assert not list((ROOT / "web").glob("e2e/*-snapshots")), (
+        "a committed snapshot folder is an unreviewed golden"
+    )
 
 
 def test_an_approval_in_the_evidence_names_reviewer_date_device_and_sha() -> None:

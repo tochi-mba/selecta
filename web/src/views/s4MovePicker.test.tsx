@@ -51,7 +51,7 @@ describe('S4-0101-03 every move stays in the picker', () => {
         expect(button).toBeEnabled();
       }
     }
-    const why = group.getByText(/moves are greyed out/).closest('details')!;
+    const why = group.getAllByText(/moves are greyed out/).map((text) => text.closest<HTMLElement>('details.why-not')).find(Boolean)!;
     for (const [, label] of BEFORE_4.filter(([name]) => WORDS.has(name))) {
       expect(within(why).getByText(`${label}:`)).toBeInTheDocument();
     }

@@ -27,7 +27,10 @@ def client(tmp_path, monkeypatch):
         conn.execute(
             "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title,is_music) "
             "VALUES(?,?,?,?,?,?,?,?,1)",
-            (song_id, f"{song_id}.flac", "f", 1, 1.0, 200.0, f"Artist {song_id}", f"Song {song_id}"),
+            (
+                song_id, f"{song_id}.flac", "f", 1, 1.0, 200.0,
+                f"Artist {song_id}", f"Song {song_id}",
+            ),
         )
         conn.execute(
             "INSERT INTO analysis(song_id,version,bpm,camelot) VALUES(?,?,?,?)",

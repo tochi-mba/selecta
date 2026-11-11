@@ -1,6 +1,6 @@
 # Selecta - creative-interface implementation and independent evidence ledger
 
-**20 Accepted ADRs; 2026-11-10: 102 Implemented, 1 In progress, 33 Need a person, 4 Not started, 0 independently Verified.** Evidence for each implemented task is on its checklist line; dispositions are cross-checked in [the source baseline](selecta-creative-interface-source-baseline.md). A docs-only PR is not implementation evidence.
+**20 Accepted ADRs; 2026-11-10: 103 Implemented, 1 In progress, 33 Need a person, 3 Not started, 0 independently Verified.** Evidence for each implemented task is on its checklist line; dispositions are cross-checked in [the source baseline](selecta-creative-interface-source-baseline.md). A docs-only PR is not implementation evidence.
 
 | CI task | ADR | Implementation | Independently Verified | Owner | Implementing PR / SHA | Evidence / reviewer |
 |---|---|---|---|---|---|---|
@@ -92,7 +92,7 @@
 | CI-0177-02 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-03 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-04 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (built 2026-11-10: focused test added for existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
-| CI-0177-05 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Not started: song details show no validated related songs or candidate connections | No | Unassigned | - | - |
+| CI-0177-05 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
 | CI-0177-06 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0177-07 | [ADR-0177](adr-0177-musical-library-and-real-track-identity.md) | Needs a person: scroll, frame and zoom measurements on a large collection and an assistive technology review | No | Unassigned | - | - |
 | CI-0178-01 | [ADR-0178](adr-0178-first-run-library-awakening.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |

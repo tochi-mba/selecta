@@ -14,7 +14,7 @@ const song = (id: number, more: Partial<MixItem> = {}) => ({
 }) as MixItem;
 const detail: SongDetail = {
   id: 1, artist: 'Test Artist', title: 'Song 1', duration: 20, bpm: 120, key: '8A', peaks: [], bar_times: [0, 8, 16],
-  beat_times: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18], beats_per_bar: 4, sections: [], lines: [{ t: 0, text: 'Hello there' }],
+  beat_times: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18], beats_per_bar: 4, sections: [], lines: [{ start: 0, end: 2, text: 'Hello there' }],
 };
 const planned = { settings: { move: 'bass_swap_blend' }, state: { status: 'planned', why: 'Close in tempo and key' } };
 const fellBack = { settings: { move: 'echo_out' }, state: { status: 'ready', label: 'Blend', style: 'blend', passed: true, why: 'Close in tempo and key' } };

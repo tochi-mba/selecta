@@ -1,7 +1,8 @@
 """GP-0258-08: exact-scope batch actions stay quick and exact in a 20,000-song library.
 
 A full 200-song batch (the most one batch may name) changes exactly those songs, its Undo puts back
-exactly those songs, and paging the Library by its cursor around it stays responsive. Timings are measured on a
+exactly those songs, and paging the Library by its cursor around it stays responsive.
+Timings are measured on a
 shared 4-core laptop under load, so the bounds are generous; the printed numbers are the evidence.
 """
 
@@ -69,7 +70,7 @@ def test_gp_0258_08_a_full_batch_in_a_twenty_thousand_song_library(tmp_path):
     print(
         f"GP-0258-08: {SONGS} songs, 200-song batch {batch * 1000:.0f} ms, "
         f"undo {undone * 1000:.0f} ms, "
-        f"search page p95 {p95 * 1000:.0f} ms"
+        f"library page p95 {p95 * 1000:.0f} ms"
     )
     connection.close()
     assert batch < 3.0 and undone < 3.0

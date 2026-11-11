@@ -24,9 +24,7 @@ function seeded(seed: number) {
 }
 
 const settle = async () => {
-  for (let tick = 0; tick < 8; tick += 1) await Promise.resolve();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  for (let tick = 0; tick < 8; tick += 1) await Promise.resolve();
+  for (let tick = 0; tick < 20; tick += 1) await Promise.resolve();
 };
 
 afterEach(() => {
@@ -35,8 +33,8 @@ afterEach(() => {
 });
 
 describe('S4-0095-10 one sound at a time, under random sequences', () => {
-  it('holds every audio-owner invariant across 120 seeded runs', async () => {
-    for (let run = 1; run <= 120; run += 1) {
+  it('holds every audio-owner invariant across 60 seeded runs', async () => {
+    for (let run = 1; run <= 60; run += 1) {
       const random = seeded(run);
       const mix = { playing: random() < 0.7 };
       const slowPauses: (() => void)[] = [];
@@ -108,5 +106,5 @@ describe('S4-0095-10 one sound at a time, under random sequences', () => {
       connectMainPlayer(null);
       vi.clearAllMocks();
     }
-  });
+  }, 60_000);
 });

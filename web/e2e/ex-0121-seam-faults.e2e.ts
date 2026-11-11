@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { allRendered, resetMix } from './helpers';
+import { resetMix } from './helpers';
 
 /**
  * EX-0121-03 (Experience programme): a transition the server reports as failed or not rendered is never
@@ -26,7 +26,6 @@ test.beforeEach(async ({ page }) => {
 for (const status of ['failed', 'none'] as const) {
   test(`EX-0121-03 a ${status} transition offers no audio and no rating`, async ({ page, request }) => {
     await resetMix(request, [1, 2]);
-    await allRendered(request);
     await inject(page, status);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/mix/current/edit');

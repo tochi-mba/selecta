@@ -31,7 +31,7 @@ describe('S3-0071-01 the API inventory names every call the local app makes', ()
   });
 
   it('every address a local page calls is in docs/adr/selecta-3-api.md', () => {
-    const named = (path: string) => new RegExp(`[\\s\`]${path.replace(/\//g, '\\/')}(?![a-z_-])`).test(inventory);
+    const named = (path: string) => new RegExp(`[\\s\`]${path.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}(?![a-z_-])`).test(inventory);
     const missing = [...called().entries()].filter(([path]) => !named(path)).map(([path, files]) => `${path} (${files.join(', ')})`);
     expect(missing).toEqual([]);
   });

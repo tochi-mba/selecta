@@ -1,7 +1,8 @@
 """S4-0095-10: a model-based check that writes stay in the scope they were made in.
 
 Hypothesis drives random sequences of edits to the current mix and to several drafts (add, remove,
-move, add a two-song bridge, delete a draft, play a draft) and compares the real library after every step with a plain
+move, add a two-song bridge, delete a draft, play a draft) and compares the real library
+after every step with a plain
 Python model. The invariants: an edit to one scope never changes any other scope, playing a draft
 swaps it in whole and keeps what was playing as a draft, a bridge lands whole (both songs side by
 side with its transition) or not at all, and nothing is lost or duplicated.

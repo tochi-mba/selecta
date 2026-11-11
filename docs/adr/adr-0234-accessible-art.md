@@ -1,7 +1,7 @@
 # ADR-0234 - Accessibility as an artistic constraint, WCAG 2.2 AA and semantic parity
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (0/8 Implemented, 1/8 In progress, 7/8 Not started; 2026-11-10).
+- **Implementation:** In progress (3/8 Implemented, 1/8 In progress, 4/8 Not started; 2026-11-10).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Quality.
@@ -28,15 +28,15 @@ The expressive redesign must retain keyboard-only access and complete screen-rea
 
 No focus trap, unlabeled transport, auto-playing animated lyric chatter or essential information inside canvas only. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist - 0/8 Implemented, 0/8 Verified
+## Implementation checklist - 3/8 Implemented, 0/8 Verified
 
 1. **SF-0234-01 - Map focus and reading order.** **Acceptance:** Each scene has correct semantic structure. **Required verification:** Keyboard and DOM audit. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 2. **SF-0234-02 - Validate all core journeys by AT.** **Acceptance:** Listen, Explore, Create, Studio, Requests and Export operable. **Required verification:** NVDA/Edge session. **Implementation:** Not started; Needs a person: an NVDA with Edge session through Listen, Explore, Create, Studio, Requests and Export; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-3. **SF-0234-03 - Enforce 2.2 AA contrast and target sizing.** **Acceptance:** Text and essential indicators pass applicable criteria. **Required verification:** Measured contrast and touch-target report. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+3. **SF-0234-03 - Enforce 2.2 AA contrast and target sizing.** **Acceptance:** Text and essential indicators pass applicable criteria. **Required verification:** Measured contrast and touch-target report. **Implementation:** Implemented; text, large text and field edges are measured against WCAG 2.2 AA in both themes, and every target meets 24px or a WCAG exception with primary touch targets at 44px; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` 'MP-0298-03 every target meets 24px or a WCAG exception, and primary touch targets reach 44px', 'MP-0298-05 text meets 4.5:1, large text 3:1 and field edges 3:1 in both themes' (passed 2026-11-11).
 4. **SF-0234-04 - Protect focus under overlays.** **Acceptance:** Nav, toasts, modals and dialogs restore focus correctly. **Required verification:** Dialog Escape/Return E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 5. **SF-0234-05 - Define live announcement budget.** **Acceptance:** Lyric ticks and meters do not chatter. **Required verification:** Screen reader listening study. **Implementation:** In progress; Needs a person: a screen-reader listening study of lyric ticks and meters. Automated part: `web/e2e/finishing.e2e.ts` 'playing doesn’t flood a screen reader: the song is said once, and the clock never is'; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-6. **SF-0234-06 - Ensure full motion parity.** **Acceptance:** Still and reduced-motion show all data. **Required verification:** Motion emulator review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-7. **SF-0234-07 - Validate 320px and 400% zoom.** **Acceptance:** No hidden or clipped critical action. **Required verification:** Reflow matrix. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+6. **SF-0234-06 - Ensure full motion parity.** **Acceptance:** Still and reduced-motion show all data. **Required verification:** Motion emulator review. **Implementation:** Implemented; Still and OS reduced motion remove decorative movement while every piece of music data keeps updating; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/e2e/mp-0296-motion.e2e.ts` 'MP-0296-06 Still and reduced motion remove decorative movement while the music data keeps updating' (motion emulated; passed 2026-11-11).
+7. **SF-0234-07 - Validate 320px and 400% zoom.** **Acceptance:** No hidden or clipped critical action. **Required verification:** Reflow matrix. **Implementation:** Implemented; every page stays actionable at 320px and at 200% and 400% zoom, with no clipped critical action; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` 'MP-0298-01 every page holds from 320 to 3840px, at both sides of 620 and 760, and in short landscape', 'MP-0298-02 200% and 400% zoom keep every page actionable, and the Studio has its list form'; `web/e2e/mi-0141-first-screen-zoom.e2e.ts` MI-0141-07 at 200% and 400% zoom; all passed 2026-11-11.
 8. **SF-0234-08 - Record independent access sign-off.** **Acceptance:** Named reviewer and SHA with blockers resolved. **Required verification:** AT evidence report. **Implementation:** Not started; Needs a person: a named access reviewer signing the exact SHA with blockers resolved; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 
 ## Invariants and negative cases
@@ -47,5 +47,5 @@ Single player and intentional Pause; unchanged local music and explicit LRCLIB m
 
 - **Depends on:** ADR-0161/0183/0023; new ADR-0198/0199 and previous programme acceptance records.
 - **Next:** dated owner decision → design specimens → small code/test PR → separate independent human/AT/audio/performance report → explicit release gate.
-- **Now:** Decision Accepted; Implementation 0/8 (2026-11-10); Independently Verified No; no implementation PR/SHA.
+- **Now:** Decision Accepted; Implementation 3/8 (2026-11-10); Independently Verified No; implementing branch feat/finish-checklists.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

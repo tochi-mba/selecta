@@ -5,6 +5,7 @@ commit (ADR-0317, 0318, 0319, LU-335-03)."""
 from __future__ import annotations
 
 import json
+import re
 import shutil
 
 from lucy_helpers import (
@@ -74,12 +75,17 @@ def test_a_shorter_offer_keeps_an_immovable_end_song(lucy, lucy_home):
     snap = say(lucy, cid, asked)
     assert snap["proposal"] is None
     text = reply(snap)["content"]
-    fewer = "make 6 songs, end with Last Call, only transitions that are already ready"
+    offered = re.search(r"I can make a (\d+)-song mix", text)
+    assert offered, text
+    size = int(offered.group(1))
+    fewer = f"make {size} songs, end with Last Call, only transitions that are already ready"
     relaxed = "make 9 songs, end with Last Call, you can render new ones"
     assert f"say “{fewer}”" in text, text
     assert f"say “{relaxed}”" in text
     chosen = current(say(lucy, cid, fewer))
-    assert song_ids(chosen) == [1, 2, 3, 6, 9, 12]  # the offer was a promise the plan keeps
+    # the offer was a promise the plan keeps: that many songs, ending on Last Call, all ready
+    assert len(song_ids(chosen)) == size and song_ids(chosen)[-1] == 12
+    assert set(zip(song_ids(chosen), song_ids(chosen)[1:], strict=False)) <= set(CHAIN)
     assert chosen["snapshot"]["ready_only"] is True
     other = current(say(lucy, new_conversation(lucy), relaxed))
     assert len(song_ids(other)) == 9 and song_ids(other)[-1] == 12

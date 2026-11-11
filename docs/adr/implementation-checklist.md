@@ -420,7 +420,7 @@
 - [x] T0259 - Run unchanged/backwards-compatible legacy unit tests and explain any necessary selector updates.
 - [x] T0260 - Run extended frontend tests, Python tests, API contracts and browser E2E suites on PR and main.
 - [ ] T0261 - Run deterministic real Web Audio tests for seek, late seam, fallback, preview focus and exact media key behaviour.
-- [ ] T0262 - Run visual regression for dark/light, 320px–4K, safe areas, reduced motion and high zoom.
+- [ ] T0262 - Run visual regression for dark/light, 320px–4K, safe areas, reduced motion and high zoom. **Needs a person:** approve the golden screenshot baselines that `web/e2e/visual.e2e.ts` captures as review candidates (checked 2026-11-11).
 - [ ] T0263 - Complete keyboard-only workflows for request, Mixes, Edit, Studio, Library, export and study.
 - [ ] T0264 - Complete NVDA, VoiceOver and applicable mobile assistive-technology testing against WCAG 2.2 AA. **Needs a person:** NVDA, VoiceOver and mobile assistive-technology sessions run by a person (checked 2026-11-10).
 - [ ] T0265 - Profile >20k Library, >100-song Edit, 64-cell Studio and concurrent render under constrained CPU/storage.
@@ -437,10 +437,10 @@
 
 - [x] T0271 - Back up and restore representative existing mixes, drafts, ratings, settings, metadata and caches.
 - [x] T0272 - Verify forward migration and backward compatibility with pre-overhaul local server/client where required.
-- [ ] T0273 - Rehearse rollback of frontend routing and any schema changes without losing files or ratings.
+- [x] T0273 - Rehearse rollback of frontend routing and any schema changes without losing files or ratings. **Evidence (2026-11-11):** `tests/rollback_check.py` now saves a Good and a Bad rating through `/api/seams/{key}/rate`; run against pre-overhaul `911c981` (git archive into a scratch folder) it printed "nothing lost" with exit 0. Routing: `test_reloading_any_page_gets_the_app` and `test_anything_else_is_really_not_found` in `tests/test_api_contracts.py` passed 2026-11-11.
 - [ ] T0274 - Confirm a newly installed PWA, a normal browser tab and an existing upgraded installation. **Needs a person:** install the PWA fresh, use a normal tab and upgrade an existing installation (checked 2026-11-10).
-- [ ] T0275 - Resolve all critical data-integrity, audio continuity, bridge atomicity, accessibility, export and privacy blockers.
-- [ ] T0276 - Run Windows CI plus browser/audio/a11y gates on release candidate commit.
+- [ ] T0275 - Resolve all critical data-integrity, audio continuity, bridge atomicity, accessibility, export and privacy blockers. **Needs a person:** the screen-reader, listening and installed-app gates must run first; none known in code (checked 2026-11-11).
+- [ ] T0276 - Run Windows CI plus browser/audio/a11y gates on release candidate commit. **Needs a person:** choose the release candidate commit and run the gates on it, with people for screen readers and listening (checked 2026-11-11).
 - [ ] T0277 - Record final human listening evidence and explicitly accepted remaining noncritical limitations. **Needs a person:** the owner's own listening evidence and sign-off on remaining noncritical limitations (checked 2026-11-10).
 - [ ] T0278 - Verify every checklist item has a linked implementing PR and evidence; do not infer completion from docs.
 - [ ] T0279 - Merge/close this tracking PR only after the programme's delivery is actually complete; keep it open otherwise. **Needs a person:** the owner merges or closes the tracking PR once delivery is complete (checked 2026-11-10).

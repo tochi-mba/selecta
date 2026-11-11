@@ -29,7 +29,6 @@ from selecta.flags.guard import refusal
 from selecta.seam_kinds import MOVE_FLAGS, move_on
 from selecta.seams import MOVES, STEM_MOVES, CannotRender, SeamRequest, request_from, seam_options
 
-
 # the longest overlap anyone can ask for: twice the longest the planner itself would try
 MOST_OVERLAP_BARS = 64
 
@@ -273,7 +272,10 @@ def add_routes(app, ctx) -> None:
         return seam_options(a, b)
 
     def bars_in(conn, song_id: int) -> int | None:
-        """How many bars a song has, or None when that isn't known, so nothing is refused on a guess."""
+        """How many bars a song has, or None when that isn't known.
+
+        None means nothing is refused on a guess.
+        """
         from selecta.analysis.song import load_song
 
         try:
@@ -283,7 +285,8 @@ def add_routes(app, ctx) -> None:
         return count or None
 
     def check_placement(conn, request: SeamRequest, body: SeamSettings) -> None:
-        """S4-0101-04: an overlap length or a cue outside the songs is refused in plain words, before
+        """S4-0101-04: an overlap length or a cue outside the songs is refused in plain words,
+        before
         anything is saved, instead of being kept and quietly clamped when it renders."""
         if body.bars is not None and not 1 <= body.bars <= MOST_OVERLAP_BARS:
             raise HTTPException(

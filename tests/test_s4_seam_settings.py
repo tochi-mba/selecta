@@ -159,5 +159,6 @@ def test_a_cue_for_a_song_whose_bars_are_unknown_is_kept_for_the_render_to_place
         raise KeyError("not analysed")
 
     monkeypatch.setattr("selecta.analysis.song.load_song", not_analysed)
-    assert client.post("/api/mix/1/seam", json={"move": "echo_out", "exit_bar": 40}).status_code == 200
+    seam = {"move": "echo_out", "exit_bar": 40}
+    assert client.post("/api/mix/1/seam", json=seam).status_code == 200
     assert _settings(client)["exit_bar"] == 40

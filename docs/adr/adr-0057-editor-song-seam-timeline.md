@@ -1,7 +1,7 @@
 # ADR-0057: Safe timeline editor, insertion, reorder and stable identity
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Implemented: 9 of 9 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 0 still open
+- **Implementation status:** In progress: 9 of 9 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
@@ -67,7 +67,7 @@ Before marking **Implemented**, link implementing PR(s), commit(s), contract tes
 | 2026-11-07 | Proposed | Not started | Documentation-only ADR; no application or test changes |
 | 2026-11-08 | Accepted | Not started | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 | 2026-11-10 | Accepted | In progress (8/9) | Task-by-task evidence on each item; 0 need a person, 1 still open |
-| 2026-11-11 | Accepted | Implemented (9/9) | S3-0057-08 100-song timeline profile recorded within budget |
+| 2026-11-11 | Accepted | In progress (9/9) | S3-0057-08 100-song timeline profile recorded within budget |
 
 ## References
 
