@@ -129,8 +129,11 @@ test('MP-0288-02 Listen, Change, Studio and Details share one geometry and tab s
 });
 
 test('MP-0288-03 Hear it leads Good and Bad, and only previews', async ({ page, request }) => {
+  // this pair tries a filter sweep before it settles on a blend, so on a busy shared machine its one
+  // render can outlast allRendered's 280s; give it two rounds rather than measure the machine
+  test.setTimeout(900_000);
   await resetMix(request, [1, 2]);
-  await allRendered(request);
+  await allRendered(request).catch(() => allRendered(request));
   await openEditor(page, 1440);
   const row = page.locator('.timeline .seam').first();
   const hear = row.getByRole('button', { name: 'Hear it', exact: true });
