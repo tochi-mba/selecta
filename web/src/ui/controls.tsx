@@ -178,9 +178,11 @@ function Overlay({
     const own = panel.current;
     const lost = new MutationObserver(() => {
       const at = document.activeElement;
-      if ((!at || at === document.body) && own?.isConnected && overlayStack[overlayStack.length - 1] === mine) own.focus({ preventScroll: true });
+      const gone = !at || at === document.body || (own?.contains(at) && (at as HTMLButtonElement).disabled);
+      if (gone && own?.isConnected && overlayStack[overlayStack.length - 1] === mine) own.focus({ preventScroll: true });
     });
-    if (own) lost.observe(own, { childList: true, subtree: true });
+    // a pressed button that turns itself off while it works (Save it, then Saving...) drops focus too
+    if (own) lost.observe(own, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden', 'inert'] });
     return () => {
       lost.disconnect();
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
