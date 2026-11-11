@@ -482,8 +482,9 @@ test('LX-0352-02 LX-0352-06 the placeholder matches the layout, never pulses und
     await page.evaluate(() => { document.documentElement.dataset.motion = 'still'; });
     expect(await skeleton.locator('i').first().evaluate((node) => getComputedStyle(node).animationName)).toBe('none');
     release();
-    await page.unroute('**/api/library?**');
+    // the held request finishes through its own handler before the route goes, so nothing handles it twice
     await expect(rows(page).first()).toBeVisible();
+    await page.unroute('**/api/library?**');
   }
   await useLayout(page, 'List view');
 });

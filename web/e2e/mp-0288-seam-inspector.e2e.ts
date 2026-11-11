@@ -165,6 +165,8 @@ test('MP-0288-04 You chose, In progress, Made so far and You would hear share on
   for (const width of [320, 768, 1440]) {
     await openEditor(page, width);
     const inspector = await openInspector(page);
+    // the four layers are what Listen shows; Change opens on the choices themselves
+    await inspector.getByRole('tab', { name: 'Listen', exact: true }).click();
     const layers = inspector.locator('.seam-layers > div');
     await expect(layers.locator('dt')).toHaveText(['You chose', 'In progress', 'Made so far', 'You’d hear']);
     const rows = await layers.evaluateAll((elements) => elements.map((element) => {
