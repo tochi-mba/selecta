@@ -117,7 +117,10 @@ test('MP-0283-03 Play leads, Shape first follows, Save draft is the quiet third'
       const style = getComputedStyle(button);
       const box = button.getBoundingClientRect();
       // an Action keeps its busy label in the button, hidden, so its size never jumps: read the shown label
-      return { name: (button.querySelector('.action-labels > :first-child') ?? button).textContent?.trim(), background: style.backgroundColor, border: style.borderTopColor, color: style.color, weight: Number(style.fontWeight), top: box.top, bottom: box.bottom, height: box.height, width: box.width };
+      // and leave out the words only a screen reader hears ("for House party")
+      const shown = (button.querySelector('.action-labels > :first-child') ?? button).cloneNode(true) as Element;
+      shown.querySelectorAll('.visually-hidden').forEach((node) => node.remove());
+      return { name: shown.textContent?.trim(), background: style.backgroundColor, border: style.borderTopColor, color: style.color, weight: Number(style.fontWeight), top: box.top, bottom: box.bottom, height: box.height, width: box.width };
     }));
     const where = `${width}px`;
     expect(tiers.map((tier) => tier.name), `${where}: order`).toEqual(['Play', 'Shape first', 'Save draft']);

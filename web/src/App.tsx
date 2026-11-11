@@ -445,6 +445,9 @@ export function App() {
         if (!document.fullscreenElement) {
           setStage(false);
           setStageFallback(false);
+        } else if (stageRef.current) {
+          // a browser usually takes Escape for itself; when the page gets it, it still leaves Stage (MP-0285-05)
+          void document.exitFullscreen?.().catch(() => {});
         }
       }
       const shortcut = shortcutFor(event);
