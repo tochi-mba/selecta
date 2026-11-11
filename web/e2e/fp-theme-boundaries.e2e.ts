@@ -37,8 +37,8 @@ const STATES: { id: string; path: string; prepare?: (page: Page) => Promise<void
   {
     id: 'library-cards', path: '/library',
     prepare: async (page) => {
-      const cards = page.getByRole('radio', { name: /cards/i });
-      if (await cards.count()) await cards.first().check();
+      await page.getByRole('button', { name: 'Card view' }).click();
+      await expect(page.getByRole('button', { name: 'Card view' })).toHaveAttribute('aria-pressed', 'true');
     },
   },
   {

@@ -99,6 +99,9 @@
    untouched outside the drawing surface and numeric/keyboard controls remain available. */
 .energy-horizon.intention { touch-action: none; cursor: crosshair; }
 .energy-horizon.measured { cursor: default; }
+/* CI-0169-01: the same five named stops under a measured horizon in the editor */
+.mix-horizon { margin: var(--space-3) 0; }
+.mix-horizon-stops { display: flex; justify-content: space-between; margin: 0; padding: 0; list-style: none; color: var(--text-soft); font-size: var(--text-xs); }
 @media (forced-colors: active) {
   .song-motif { color: LinkText; }
   .music-seam-diagram.is-made { border-inline-start-color: Highlight; }

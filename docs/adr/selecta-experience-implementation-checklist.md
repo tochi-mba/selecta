@@ -96,7 +96,7 @@
 
 ## [ADR-123 - Library: music-first browsing and contextual actions](adr-0123-music-library-browse-and-contextual-actions.md)
 
-**Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
+**Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** In progress (2/5) · **Verified:** 0/5.
 
 - [ ] **EX-0123-01 - Design song row information hierarchy.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 title/artist, readiness and one primary action per row in `web/src/views/Library.tsx`, with duplicate recording IDs and long/missing tags covered by `web/src/views/Library.test.tsx` "makes duplicate recording IDs visible" and `web/e2e/lx-library.e2e.ts` LX-0340-05 and LX-0348-01; owner: Unassigned.** Needs a person: named both-theme responsive visual review of the song rows.
 - [ ] **EX-0123-02 - Crosswalk all existing row actions.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
@@ -106,7 +106,7 @@
 
 ## [ADR-124 - Requests: truthful lifecycle and explicit bridge consent](adr-0124-requests-lifecycle-and-bridge-consent.md)
 
-**Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
+**Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Implemented (5/5) · **Verified:** 2/5.
 
 - [x] **EX-0124-01 - Define canonical user-facing lifecycle.** **Implementation: Implemented; Verified: Yes (automated, 2026-11-10); PR/SHA: uncommitted on feat/finish-checklists; evidence: backend state map `tests/test_ex0124_request_states.py` (every stage set in `src/selecta/request_planner.py` and `src/selecta/routes/song_requests.py` is in the page's Stage union, and every Stage has its own words in `requestWords`); `web/src/views/ex0124Requests.test.tsx` (12 stages read differently, stuck stages give a reason and way forward, no promised play time); error fixtures in `web/src/views/Requests.test.tsx` (cancel and pick failures, can't place, gone, never play) and `tests/test_request_routes.py`; `.venv/Scripts/python -m pytest tests/test_request_routes.py tests/test_requests_together.py tests/test_requests.py tests/test_flow_export_jobs.py tests/test_export_retry.py tests/test_export_validation.py tests/test_s4_folder_input.py tests/test_ex0124_request_states.py tests/test_ex0125_discovery.py tests/test_discovery_search.py -q -p no:cacheprovider` 189 passed 2026-11-10, vitest Requests/RequestsJoining 100/100 and ex0124Requests passed; owner: Claude agent.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0124-02 - Redesign pending requests panel.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 `requestWords` in `web/src/views/Requests.tsx` separates Requested/waiting (no play time) from Ready for an opening; `web/src/views/ex0124Requests.test.tsx`; owner: Unassigned.** Needs a person: listener comprehension test of likely versus merely asked.
@@ -116,7 +116,7 @@
 
 ## [ADR-125 - Musical discovery as clear word and harmonic audition flows](adr-0125-musical-discovery-audition-workflows.md)
 
-**Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
+**Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Implemented (5/5) · **Verified:** 2/5.
 
 - [ ] **EX-0125-01 - Redesign word pair context.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 `tests/test_ex0125_discovery.py` (plain, untimed lyrics never reach the word-link search; only timed lines do) and `web/src/views/Links.test.tsx` "word connections with real-world lyrics" (RTL/CJK phrases whole, in their own direction) passed; owner: Unassigned.** Duplicate-title browser check `web/e2e/mp-0292-discovery.e2e.ts` MP-0292-06 still to run.
 - [ ] **EX-0125-02 - Design four-stage harmonic audition.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 chords, song A, song B, then both, in `web/src/views/Links.tsx`, covered by `web/src/views/Links.test.tsx` "plays what it detected in one press" and `web/e2e/mp-0292-discovery.e2e.ts` MP-0292-03; owner: Unassigned.** Needs a person: real-audio listening and uncoached comprehension of the comparison order and purpose.
@@ -126,7 +126,7 @@
 
 ## [ADR-126 - Browser-first onboarding and readiness, without desktop packaging](adr-0126-browser-first-onboarding-and-readiness.md)
 
-**Phase:** Listener · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
+**Phase:** Listener · **Priority:** P1 · **Decision:** Accepted · **Implementation:** In progress (2/5) · **Verified:** 0/5.
 
 - [ ] **EX-0126-01 - Improve local path guidance.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 folder help and per-reason advice in `web/src/views/Start.tsx`, covered by `web/src/views/polishPhase03Start.test.tsx` P0044/P0045; owner: Unassigned.** Needs a person: first-use and invalid-path comprehension test with a new user.
 - [ ] **EX-0126-02 - Clarify readiness and first mix.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.
@@ -136,7 +136,7 @@
 
 ## [ADR-127 - Export: truthful frozen revision, job lifecycle and file delivery](adr-0127-export-job-and-frozen-revision.md)
 
-**Phase:** Operations · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Not started (0/5) · **Verified:** 0/5.
+**Phase:** Operations · **Priority:** P1 · **Decision:** Accepted · **Implementation:** In progress (3/5) · **Verified:** 2/5.
 
 - [x] **EX-0127-01 - Specify export source identity.** **Implementation: Implemented; Verified: Yes (automated, 2026-11-10); PR/SHA: uncommitted on feat/finish-checklists; evidence: cross-scope walk-through in `web/src/views/Mix.test.tsx` ("shows the exact ordered source songs before creating a file", "says exactly which mix, and what it's waiting on", "does not carry an in-flight export across a change of editing scope", "never confuses two different drafts with identical songs and transition keys"), passed 2026-11-10 with `pnpm exec vitest run src/views/Mix.test.tsx`; frozen job songs/seams in `tests/test_flow_export_jobs.py` and `tests/test_export_retry.py` (`.venv/Scripts/python -m pytest tests/test_request_routes.py tests/test_requests_together.py tests/test_requests.py tests/test_flow_export_jobs.py tests/test_export_retry.py tests/test_export_validation.py tests/test_s4_folder_input.py tests/test_ex0124_request_states.py tests/test_ex0125_discovery.py tests/test_discovery_search.py -q -p no:cacheprovider` 189 passed 2026-11-10); owner: Claude agent.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0127-02 - Design durable job lifecycle.** **Implementation: Not started; Verified: No; PR/SHA: -; evidence: -; owner: Unassigned.** Acceptance and required verification are specified in the linked ADR.

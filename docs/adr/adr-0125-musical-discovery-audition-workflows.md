@@ -1,8 +1,8 @@
 # ADR-0125 - Musical discovery as clear word and harmonic audition flows
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** Not started (0/5 newly defined EX tasks).
-- **Verified:** No (0/5 independent acceptance).
+- **Implementation:** Implemented 5/5 new tasks (2026-11-10, uncommitted on `feat/finish-checklists`).
+- **Verified:** Automated verification 2/5 on 2026-11-10; open items name a person or a pending run in the checklist.
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P1 / Collection.
 - **Related:** ADR-0104, ADR-0061, not automatically superseded or verified.
@@ -30,11 +30,11 @@ No invented lyrical timing, technique certainty or instant audio availability; h
 
 ## New implementation status per task
 
-1. **EX-0125-01 - Redesign word pair context**. **Acceptance:** Two exact track identities and meaningful shared lyric readable. **Verification:** Duplicate title and untimed lyric fixtures. **Implementation: Not started; Verified: No.**
-2. **EX-0125-02 - Design four-stage harmonic audition**. **Acceptance:** Comparison order and purpose evident. **Verification:** Real audio and uncoached comprehension. **Implementation: Not started; Verified: No.**
-3. **EX-0125-03 - Maintain preview focus**. **Acceptance:** No overlapping preview or unsolicited resume. **Verification:** Concurrent preview/transport tests. **Implementation: Not started; Verified: No.**
-4. **EX-0125-04 - Guard feedback binding**. **Acceptance:** Rating remains attached to exact pair/version. **Verification:** Late response and changed-pair E2E. **Implementation: Not started; Verified: No.**
-5. **EX-0125-05 - Verify safe add-to-mix flow**. **Acceptance:** Edit/draft/current destinations and Undo explicit. **Verification:** Active mix and draft parity test. **Implementation: Not started; Verified: No.**
+1. **EX-0125-01 - Redesign word pair context**. **Acceptance:** Two exact track identities and meaningful shared lyric readable. **Verification:** Duplicate title and untimed lyric fixtures. **Implementation: Implemented; Verified: No. Duplicate-title browser check `web/e2e/mp-0292-discovery.e2e.ts` MP-0292-06 still to run. Evidence: see checklist.**
+2. **EX-0125-02 - Design four-stage harmonic audition**. **Acceptance:** Comparison order and purpose evident. **Verification:** Real audio and uncoached comprehension. **Implementation: Implemented; Verified: No. Needs a person: real-audio listening and uncoached comprehension of the comparison order and purpose. Evidence: see checklist.**
+3. **EX-0125-03 - Maintain preview focus**. **Acceptance:** No overlapping preview or unsolicited resume. **Verification:** Concurrent preview/transport tests. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
+4. **EX-0125-04 - Guard feedback binding**. **Acceptance:** Rating remains attached to exact pair/version. **Verification:** Late response and changed-pair E2E. **Implementation: Implemented; Verified: No. Changed-pair browser E2E still to run. Evidence: see checklist.**
+5. **EX-0125-05 - Verify safe add-to-mix flow**. **Acceptance:** Edit/draft/current destinations and Undo explicit. **Verification:** Active mix and draft parity test. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
 
 ## Independent verification
 
