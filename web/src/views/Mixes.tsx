@@ -182,11 +182,6 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   return (
     <main className="page mixes" id="main">
       {firstMix && <SetupSteps stage="listen" />}
-      {firstMix && (
-        <p className="notice" role="status">
-          Your library now has enough ready songs to make a first mix. Nothing starts playing until you choose Play.
-        </p>
-      )}
       <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
@@ -225,6 +220,12 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           </div>
           {shaping && <button aria-label="Customize: Shape this mix (optional)" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>
+        {/* MP-0282-07: the first-run reassurance sits under Play, so Play stays in the first screen on a phone */}
+        {firstMix && (
+          <p className="notice" role="status">
+            Your library now has enough ready songs to make a first mix. Nothing starts playing until you choose Play.
+          </p>
+        )}
         {hero && !hero.ready && <p className="hint">{hero.name} needs {hero.needs} more mix-ready {hero.needs === 1 ? 'song' : 'songs'} before it can play.</p>}
         {shaping && <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>}
         <p className="hint">
