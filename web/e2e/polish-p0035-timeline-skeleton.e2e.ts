@@ -34,7 +34,6 @@ test('P0035 the Edit timeline placeholder matches the loaded timeline’s rows a
         seam: node.querySelector('.skeleton-seam')!.getBoundingClientRect().toJSON(),
         text: (node.querySelector('.skeleton-content') as HTMLElement).innerText.trim(),
       }));
-      const skAnc = await skeleton.evaluate((n) => { const out = []; let e = n; while (e && e !== document.body) { out.push(e.tagName + "." + e.className + " " + Math.round(e.getBoundingClientRect().left) + "/" + Math.round(e.getBoundingClientRect().width)); e = e.parentElement; } return out; }); console.log("ANC", width, skAnc.join(" < "));
       await page.unroute(DRAFT);
       for (const route of held.splice(0)) await route.fallback();
       const firstSong = page.locator('.timeline > .song').first();
@@ -44,7 +43,6 @@ test('P0035 the Edit timeline placeholder matches the loaded timeline’s rows a
         seam: document.querySelector('.timeline > .seam')!.getBoundingClientRect().toJSON(),
       }));
       const at = `${width}px`;
-      console.log("DBG", width, JSON.stringify({p: placeholder.song, ps: placeholder.seam, l: loaded.song, ls: loaded.seam, sk: await page.evaluate(() => null)}));
       expect(placeholder.text, `${at}: shapes only`).toBe('');
       expect(placeholder.kinds.slice(0, 3), `${at}: song, transition, song`).toEqual(['song', 'seam', 'song']);
       // same left edge and width as the real rows, and heights within one row of padding
