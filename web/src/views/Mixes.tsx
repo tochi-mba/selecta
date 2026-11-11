@@ -149,8 +149,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const readinessAvailable = Number.isFinite(counts.ready);
   const readyCount = counts.ready;
-  // a mix that's playing or paused is what would be replaced, so that's when to ask
-  const replacing = mix.length > 0 && now.phase !== 'idle';
+  // Any existing mix would be replaced, even when playback is currently idle.
+  const replacing = mix.length > 0;
   const ask = (asked: Asked) => {
     const choice = { ...asked, order: orderOf(mix) };
     if (replacing) {

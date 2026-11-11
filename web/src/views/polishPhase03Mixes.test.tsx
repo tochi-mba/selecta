@@ -28,7 +28,7 @@ describe('P0057 requested versus achieved energy', () => {
     fakeBackend({ 'GET /vibes': [pick] });
     const mix = songs(undefined, undefined, undefined).map((item, index) => ({ ...item, energy: [0.2, 0.5, 0.9, 0.4][index] }));
     show(mix);
-    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Customize:/ }));
     expect(await screen.findByText('What your current mix measured')).toBeInTheDocument();
     expect(screen.getByText(/own range, so it is not a score against your requested arc/)).toBeInTheDocument();
   });
@@ -37,7 +37,7 @@ describe('P0057 requested versus achieved energy', () => {
     fakeBackend({ 'GET /vibes': [pick] });
     const mix = songs(undefined, undefined).map((item, index) => ({ ...item, energy: index === 1 ? undefined : 0.5 }));
     show(mix as MixItem[]);
-    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Customize:/ }));
     await screen.findByLabelText('Take me to');
     expect(screen.queryByText('What your current mix measured')).toBeNull();
   });
@@ -47,7 +47,7 @@ describe('P0058 destination search states', () => {
   it('says no ready song matches when the search worked', async () => {
     fakeBackend({ 'GET /vibes': [pick], 'GET /songs': [] });
     show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Customize:/ }));
     fireEvent.change(await screen.findByLabelText('Take me to'), { target: { value: 'nothing here' } });
     expect(await screen.findByText('No ready songs match yet.')).toBeInTheDocument();
     expect(screen.queryByText('Couldn’t search ready songs.')).toBeNull();
@@ -56,7 +56,7 @@ describe('P0058 destination search states', () => {
   it('says the search failed, offers a retry, and does not claim there is no match', async () => {
     fakeBackend({ 'GET /vibes': [pick], 'GET /songs': new Reply(500, { detail: 'boom' }) });
     show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Customize:/ }));
     fireEvent.change(await screen.findByLabelText('Take me to'), { target: { value: 'midnight' } });
     expect(await screen.findByText('Couldn’t search ready songs.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Try again|Retry/ })).toBeInTheDocument();

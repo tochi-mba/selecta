@@ -55,7 +55,7 @@ function show() {
 }
 
 async function openSearch() {
-  fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^Customize:/ }));
   return screen.findByLabelText('Take me to');
 }
 

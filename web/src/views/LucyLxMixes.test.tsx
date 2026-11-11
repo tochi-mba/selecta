@@ -54,7 +54,7 @@ describe('LX-0354 feelings as a way into a mix', () => {
     fakeBackend({ 'GET /vibes': [card('peak', 'Peak time')] });
     show();
     const found = await article('Peak time');
-    for (const name of ['Play', 'Shape first', 'Save Peak time as a draft']) {
+    for (const name of ['Play', 'Shape first', 'Save draft for Peak time']) {
       expect(within(found).getByRole('button', { name })).toBeInTheDocument();
     }
     expect(within(found).getAllByRole('button')).toHaveLength(3);

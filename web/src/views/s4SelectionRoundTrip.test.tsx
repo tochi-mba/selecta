@@ -33,7 +33,7 @@ async function openSecondTransition() {
   const rows = [...document.querySelectorAll<HTMLElement>('li.seam')];
   fireEvent.click(within(rows[1]).getByRole('button', { name: 'Change' }));
   await screen.findByRole('complementary', { name: 'This transition' });
-  expect(pair()).toMatch(/Song 2 .*into Song 3/);
+  expect(pair()).toMatch(/Song 2 .*into\s+Song 3/);
 }
 
 describe('S4-0092-07 the open transition survives a trip to Library', () => {
@@ -44,7 +44,7 @@ describe('S4-0092-07 the open transition survives a trip to Library', () => {
     expect(screen.queryByRole('complementary', { name: 'This transition' })).toBeNull();
     rerender(<Editor mix={three()} />);
     expect(await screen.findByRole('complementary', { name: 'This transition' })).toBeInTheDocument();
-    expect(pair()).toMatch(/Song 2 .*into Song 3/);
+    expect(pair()).toMatch(/Song 2 .*into\s+Song 3/);
   });
 
   it('follows the pair when a song was added in front of it while away', async () => {
@@ -57,7 +57,7 @@ describe('S4-0092-07 the open transition survives a trip to Library', () => {
     ];
     rerender(<Editor mix={moved} />);
     expect(await screen.findByRole('complementary', { name: 'This transition' })).toBeInTheDocument();
-    expect(pair()).toMatch(/Song 2 .*into Song 3/);
+    expect(pair()).toMatch(/Song 2 .*into\s+Song 3/);
   });
 
   it('a transition removed while away is not replaced by its neighbour', async () => {
@@ -67,6 +67,7 @@ describe('S4-0092-07 the open transition survives a trip to Library', () => {
     // Song 3 was removed in Library, so the Song 2 into Song 3 transition no longer exists
     rerender(<Editor mix={songs(seam('ready', 'a'))} />);
     expect(pair()).not.toMatch(/Song 1 .*into Song 2/);
-    expect(screen.queryByText(/Song 2 .*into Song 3/)).toBeNull();
+    expect(screen.queryByRole('complementary', { name: 'This transition' })).toBeNull();
+    expect(screen.getByText(/Song 2 .*into Song 3/)).toHaveAttribute('role', 'status');
   });
 });

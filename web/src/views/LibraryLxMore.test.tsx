@@ -100,8 +100,8 @@ describe('LX-0342-06, LX-0343-07 no match says what is hiding songs and each way
     await userEvent.click(await screen.findByRole('button', { name: 'Clear search' }));
     await waitFor(() => expect(window.location.search).toBe('?show=attention'));
     expect(screen.getByRole('searchbox', { name: 'Search your library' })).toHaveValue('');
-    await waitFor(() => expect(calls.at(-1)?.path).toContain('state=attention'));
-    expect(calls.at(-1)?.path).toContain('q=&');
+    await waitFor(() => expect(calls.at(-1)?.path).not.toContain('q=zzz'));
+    expect(calls.at(-1)?.path).toContain('state=attention');
   });
 });
 

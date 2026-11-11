@@ -502,7 +502,7 @@ describe('destination search', () => {
       return stubbed(url, init);
     }));
     show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Customize' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Customize:/ }));
     const box = await screen.findByLabelText('Take me to');
     fireEvent.change(box, { target: { value: 'mi' } });
     await waitFor(() => expect(releaseOld).not.toBeNull());
