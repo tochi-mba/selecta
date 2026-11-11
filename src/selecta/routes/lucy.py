@@ -129,8 +129,11 @@ def add_routes(app, ctx) -> None:
     def connect():
         return schema.ensure(connect_base())
 
-    with connect() as conn:
-        agent.recover(conn)
+    # nothing to recover before the library exists, and opening it here would create it, so
+    # /api/ready would say ready before the schema is (test_database_ready_requires_...)
+    if ctx.settings.db_path.is_file():
+        with connect() as conn:
+            agent.recover(conn)
 
     def fail(status: int, detail: str, code: str):
         raise LucyProblem(status, detail, code)
