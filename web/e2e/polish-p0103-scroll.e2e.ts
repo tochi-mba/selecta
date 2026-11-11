@@ -35,6 +35,22 @@ for (const how of ['the close button', 'Escape'] as const) {
     const opener = page.getByRole('button', { name: /^Details for Night Recording 60\b/ });
     await opener.scrollIntoViewIfNeeded();
     await page.evaluate(() => window.scrollBy(0, 120));
+    // Rows skip layout off screen (content-visibility) and stand in at an estimated height until they
+    // are drawn. The rows that just came into view take their real height a frame or more later, and
+    // scroll anchoring moves the page to keep what's on screen still, so the place is read only once
+    // the page and the row have stayed put for several frames (a slow machine takes longer to get there).
+    await opener.evaluate((element) => new Promise<void>((settled) => {
+      let last = '';
+      let still = 0;
+      const check = () => {
+        const now = `${window.scrollY}:${element.getBoundingClientRect().top}`;
+        still = now === last ? still + 1 : 0;
+        last = now;
+        if (still >= 5) settled();
+        else requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    }));
     const scrolled = await page.evaluate(() => window.scrollY);
     expect(scrolled).toBeGreaterThan(0);
     const rowTop = () => opener.evaluate((element) => element.getBoundingClientRect().top);

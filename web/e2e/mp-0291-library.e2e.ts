@@ -247,6 +247,21 @@ test('MP-0291-07 a 20,000-song library pages, searches and keeps focus without j
   // estimates (content-visibility), and the browser's scroll anchoring keeps what's on screen still
   // while those settle, so a page-relative position would move by the estimate, not by a jump
   const screenTop = () => anchor.evaluate((element) => element.getBoundingClientRect().top);
+  // The rows that just came into view are drawn a frame or more after the scroll, taking their real
+  // height in place of the estimate, so the starting place is read only once the row has stayed put
+  // for several frames (a slow machine takes longer to get there)
+  await anchor.evaluate((element) => new Promise<void>((settled) => {
+    let last = '';
+    let still = 0;
+    const check = () => {
+      const now = `${window.scrollY}:${element.getBoundingClientRect().top}`;
+      still = now === last ? still + 1 : 0;
+      last = now;
+      if (still >= 5) settled();
+      else requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }));
   const before = await screenTop();
   for (let round = 0; round < 3; round += 1) {
     await more.evaluate((button) => button.focus({ preventScroll: true }));
