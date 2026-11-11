@@ -67,7 +67,8 @@ test('a first run says what leaves this PC before anything is sent', async ({ pa
   page.on('request', (sent) => { if (!sent.url().startsWith('http://127.0.0.1')) away.push(sent.url()); });
   await page.goto('/');
   await expect(page.getByText(/artist, title, album and duration are sent to LRCLIB/)).toBeVisible();
-  await expect(page.getByText(/original files are never moved or changed/)).toBeVisible();
+  // the promise sits in the lede beside Start (MP-0282-03); the field help repeats it
+  await expect(page.locator('.lede').getByText(/original files are never moved or changed/)).toBeVisible();
   expect(away).toEqual([]);
 });
 
