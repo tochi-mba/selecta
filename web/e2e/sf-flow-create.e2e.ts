@@ -57,6 +57,10 @@ const centre = async (page: Page, title: string) => {
 // SF-0220-03: a finger on the handle shows where the song would land before anything moves; letting
 // go of nothing (a cancel) leaves no mark and no change; only a real drop moves it.
 test('SF-0220-03 a touch drag previews the insertion, a cancel leaves nothing, and a drop moves it', async ({ page }) => {
+  // The finger only ever lands on rows that are on screen: below the editor's header the third song sits
+  // near y=1150, past a 720px window, where elementFromPoint finds nothing. A tall window keeps both the
+  // handle and the target on screen and clear of the 90px edge that scrolls the page mid-drag.
+  await page.setViewportSize({ width: 1280, height: 1600 });
   await page.goto('/mix/current/edit');
   const grip = page.getByRole('button', { name: 'Reorder Morning Light' });
   await expect(grip).toBeVisible();

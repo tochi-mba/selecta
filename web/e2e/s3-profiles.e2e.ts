@@ -31,6 +31,9 @@ test('S3-0057-08 a 100-song timeline keeps audio, focus and scroll through moves
   await page.goto('/listen');
   await page.getByRole('button', { name: 'Play', exact: true }).first().click();
   await expect.poll(async () => (await audioClock(page))[0] ?? 0).toBeGreaterThan(0.2);
+  // the context's clock runs while the first song is still loading, so wait for the song itself to start
+  // before counting, or its own first start reads as a restart
+  await expect.poll(() => soundsRestarted(page)).toBeGreaterThan(0);
   const started = await soundsRestarted(page);
   const elements = await page.evaluate(() => document.querySelectorAll('audio').length);
 
