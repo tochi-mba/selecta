@@ -1,5 +1,7 @@
-"""GP-0252-03 and -04: a moved-folder preview says what refers to the songs it moves, and a recording
-whose details changed moves only after a person says, for that exact song, that it is the same one."""
+"""GP-0252-03 and -04: a moved-folder preview says what refers to the songs it moves, and a
+recording
+whose details changed moves only after a person says, for that exact song, that it is the same
+one."""
 
 from __future__ import annotations
 

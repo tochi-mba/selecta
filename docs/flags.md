@@ -181,6 +181,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `app.glossary` | **Music terms.** Plain explanations of the music words Selecta uses, and the small ? beside them. |  |
 | `app.theme_choice` | **Theme choice.** Light, dark or match this computer. |  |
 | `app.motion_choice` | **Motion choice.** Still, subtle or expressive movement. The computer's reduced-motion setting always wins. |  |
+| `app.auto_low_motion` | **Lower motion on a struggling device.** When frames keep arriving late, decorative movement switches to Still for this visit. Nothing is hidden, and Workspace can bring full motion back. |  |
 | `app.classic_nav` | **Classic navigation.** The older navigation labels over the same pages, with ?ui=classic as a way back. |  |
 | `app.scene_transitions` | **Page cross-fades.** With Expressive motion, pages cross-fade where the browser supports it; otherwise they change at once. | `app.motion_choice` |
 | `app.install` | **Install as an app.** Chrome and Edge can install Selecta as its own window. |  |

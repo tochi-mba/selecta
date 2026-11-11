@@ -34,8 +34,8 @@ def _local_root(value: str, must_exist: bool) -> Path:
 
 
 def _references(conn: sqlite3.Connection, ids: set[int]) -> dict[str, int]:
-    """GP-0252-03: what else points at these songs. A relink keeps every ID, so all of it keeps working,
-    and the preview says so in numbers rather than asking someone to take it on trust."""
+    """GP-0252-03: what else points at these songs. A relink keeps every ID, so all of it keeps
+    working, and the preview says so in numbers rather than asking someone to take it on trust."""
     if not ids:
         return {"current_mix": 0, "drafts": 0, "ratings": 0, "corrections": 0, "discoveries": 0}
     marks = ",".join("?" * len(ids))
@@ -71,7 +71,8 @@ def _references(conn: sqlite3.Connection, ids: set[int]) -> dict[str, int]:
 
 
 def _why_different(row: sqlite3.Row, size: int, tags: dict) -> str:
-    """In plain words, what doesn't match, so a person can decide whether it is the same recording."""
+    """In plain words, what doesn't match, so a person can decide whether it is the same
+    recording."""
     reasons = []
     if size != row["size"]:
         reasons.append("the file size changed")
@@ -87,9 +88,11 @@ def _why_different(row: sqlite3.Row, size: int, tags: dict) -> str:
 def preview_relink(
     conn: sqlite3.Connection, old: str, new: str, confirmed: list[int] | None = None
 ) -> dict:
-    """GP-0252-04: a recording whose file is readable but whose size, length or tags changed is never
+    """GP-0252-04: a recording whose file is readable but whose size, length or tags changed is
+    never
     assumed to be the same one. It is shown with what differs, and only a person's explicit yes for
-    that exact song ID lets it through. Missing, unsafe, unreadable or colliding files never can be."""
+    that exact song ID lets it through. Missing, unsafe, unreadable or colliding files never
+    can be."""
     yes = {int(song) for song in confirmed or []}
     old_root = _local_root(old, must_exist=False)
     new_root = _local_root(new, must_exist=True)
