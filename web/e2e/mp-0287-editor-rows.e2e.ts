@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { audioClock, resetMix, spyOnAudio } from './helpers';
+import { audioClock, resetMix, soundsRestarted, spyOnAudio } from './helpers';
 
 /**
  * ADR-0287 editor timeline: the song grid, seams between their pair, reorder targets, object states,
