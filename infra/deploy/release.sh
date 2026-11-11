@@ -10,7 +10,10 @@
 set -euo pipefail
 
 : "${SELECTA_ENVIRONMENT:?}" "${TAG:?}" "${IMAGE:?}"
-case "${SELECTA_ENVIRONMENT}" in staging|production) ;; *) exit 64 ;; esac
+case "${SELECTA_ENVIRONMENT}" in
+  staging|production) ;;
+  *) exit 64 ;;
+esac
 for tool in docker curl uv tofu; do
   command -v "${tool}" >/dev/null || { echo "::error::${tool} is not installed on this runner." >&2; exit 1; }
 done
