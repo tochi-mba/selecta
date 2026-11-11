@@ -166,7 +166,7 @@
 - [x] T0093 - Retain last safe snapshots on server loss; never replace them with false empty data.
 - [ ] T0094 - Define server-reconnect, retry and idempotent recovery for every durable mutation.
 - [x] T0095 - Implement active audio owner/takeover policy across multiple app tabs/windows.
-- [ ] T0096 - Show conflicts rather than silently overwriting newer mix, cue, request or setting state.
+- [x] T0096 - Show conflicts rather than silently overwriting newer mix, cue, request or setting state. **Evidence (2026-11-11):** `x-mix-order` guards mix/seam/cue edits and requests answer 409 with reasons; storage limit and steering settings now carry what the page last saw and answer 409 `setting_changed` (`src/selecta/routes/system.py`, `web/src/views/WorkshopPanels.tsx`, `web/src/views/MixSetup.tsx`). `tests/test_setting_conflicts.py` 6 passed, `web/src/views/settingConflicts.test.tsx` 3 passed.
 - [ ] T0097 - Test backend stop/restart during edit, request, export and storage update; test tab sleep/wake. **Implementation:** Implemented; browser check pending (`web/e2e/t0097-tab-sleep.e2e.ts`). Restarts proven by `tests/test_restart_mid_work.py` (4 passed, 2026-11-11).
 - [x] T0098 - Approve ADR-0028 reliability policy. **Evidence (2026-11-10):** The owner accepted ADR-0028 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 

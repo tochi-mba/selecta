@@ -200,7 +200,14 @@ def add_routes(app, ctx) -> None:
         # T0096: another window may have changed the limit since this page read it. Say so
         # rather than silently replacing the newer choice.
         current = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
-        if body.expected_budget_bytes is not None and body.expected_budget_bytes != current:
+        # T0094: a retry whose first try already landed (its reply lost, or the server restarted)
+        # finds the limit it asked for, which is a success to repeat rather than a conflict.
+        already = current == min(wanted, largest_cache_bytes(settings))
+        if (
+            body.expected_budget_bytes is not None
+            and body.expected_budget_bytes != current
+            and not already
+        ):
             return JSONResponse(
                 {
                     "detail": f"The storage limit was changed somewhere else to "
@@ -432,7 +439,12 @@ def add_routes(app, ctx) -> None:
                 now = getattr(get_steering(conn), field)
                 # no destination may be stored as None and sent as "" (or the other way round)
                 both_empty = field == "target" and not now and not body.expected
-                if now != body.expected and not both_empty:
+                # T0094: a retry whose first try already landed finds its own value: not a conflict
+                if field == "target":
+                    already = str(now or "") == str(body.value or "")
+                else:
+                    already = now == body.value
+                if now != body.expected and not both_empty and not already:
                     return JSONResponse(
                         {
                             "detail": "That setting was changed somewhere else, so it wasn't "

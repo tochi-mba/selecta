@@ -44,6 +44,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `listen.handoff_phrase` | **Shared words at the hand-off.** While a finished word transition plays, the countdown names the words the two songs share. | `listen.beat_countdown` |
 | `listen.steering` | **Change the next song.** Bigger, Calmer and Something else for whatever plays next. |  |
 | `listen.why_transition` | **Why this transition?.** Explains the move chosen for the coming transition. |  |
+| `listen.first_handoff` | **First hand-off note.** Once the first finished transition has really been heard, a small note names the two songs it joined. It can be dismissed and never comes back. |  |
 | `listen.media_keys` | **Media keys.** The computer's media keys and lock screen control playback. |  |
 
 ## Make a Mix
@@ -132,6 +133,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 |---|---|---|
 | `discover.word_links` | **Word connections.** Lyric links between songs, where a word in one hands off to the same word in the next. | `lyrics.display` |
 | `discover.relationship_map` | **Connection map.** An optional map of the word connections found, drawing only the ones returned. | `discover.word_links` |
+| `discover.scan_reveals` | **Connections found while preparing.** While the first songs are being prepared, the newest word connections the library has really found are named, and nothing is shown until there is one. | `discover.word_links` |
 | `discover.harmonic` | **Harmonic matches.** Songs that might share chords, with an audition in four steps. |  |
 
 ## Library
@@ -211,6 +213,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
 | `cloud.tracing` | **Job tracing.** OpenTelemetry spans across the API, worker gateway, workers and storage, one trace per job with its id as a span attribute. |  |
+| `cloud.export_expiry` | **Export expiry.** The maintenance leader deletes finished exports when their plan's retention runs out (Free 7 days, Standard 30, Premium 90) and gives their bytes back to the quota. |  |
+| `cloud.autoscale` | **Worker autoscaling.** The maintenance leader sizes each worker pool from the queue and asks the configured launcher (Modal) to start or stop workers. |  |
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |

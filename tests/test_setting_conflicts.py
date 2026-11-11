@@ -101,3 +101,25 @@ def test_nudges_and_older_pages_are_not_checked(tmp_path):
     client = _client(tmp_path)
     assert client.post("/api/steer", json={"action": "more"}).status_code == 200
     assert client.post("/api/steer", json={"action": "stems", "value": "often"}).status_code == 200
+
+
+def test_t0094_a_retried_setting_whose_reply_was_lost_succeeds_instead_of_conflicting(tmp_path):
+    client = _client(tmp_path)
+    ask = {"action": "mix_language", "value": "punchy", "expected": "balanced"}
+    assert client.post("/api/steer", json=ask).status_code == 200
+    # the reply was lost (or the server restarted); the page sends exactly the same thing again
+    again = client.post("/api/steer", json=ask)
+    assert again.status_code == 200
+    assert again.json()["mix_language"] == "punchy"
+
+
+def test_t0094_a_retried_storage_limit_succeeds_after_a_restart(tmp_path, monkeypatch):
+    monkeypatch.setattr("selecta.routes.system.largest_cache_bytes", lambda _settings: 100 * GB)
+    first = _client(tmp_path)
+    seen = first.get("/api/storage").json()["budget_bytes"]
+    ask = {"budget_gb": 4, "expected_budget_bytes": seen}
+    assert first.post("/api/storage", json=ask).status_code == 200
+    first.close()
+    second = _client(tmp_path)
+    assert second.post("/api/storage", json=ask).status_code == 200
+    assert second.get("/api/storage").json()["budget_bytes"] == 4 * GB

@@ -6,6 +6,8 @@ sweeps: Free keeps an export 7 days, Standard 30 and Premium 90. Runs on SQLite 
 
 from __future__ import annotations
 
+import hashlib
+
 import pytest
 import sqlalchemy as sa
 
@@ -45,20 +47,14 @@ def _plan(conn, workspace: str, plan_id: str | None) -> None:
 
 def _export(conn, workspace: str, age_days: float, size: int = 5 * MB) -> str:
     artifact_id = new_id()
-    conn.execute(
-        artifacts.insert().values(
-            id=artifact_id,
-            workspace_id=workspace,
-            kind="export",
-            input_hash=f"{artifact_id:0>64}"[:64],
-            keys=[f"w/{workspace}/export/{'a' * 64}/attempts/{artifact_id}/mix.flac"],
-            checksum="c" * 64,
-            size_bytes=size,
-            provenance=build({"songs": ["a" * 64]}, {"export": 1}),
-            created_at=NOW - age_days * DAY,
-            last_used_at=NOW,
-        )
-    )
+    input_hash = hashlib.sha256(artifact_id.encode()).hexdigest()
+    conn.execute(artifacts.insert().values(
+        id=artifact_id, workspace_id=workspace, kind="export", input_hash=input_hash,
+        keys=[f"w/{workspace}/export/{input_hash}/attempts/{artifact_id}/mix.flac"],
+        checksum="c" * 64, size_bytes=size,
+        provenance=build({"songs": ["a" * 64]}, {"export": 1}),
+        created_at=NOW - age_days * DAY, last_used_at=NOW,
+    ))
     return artifact_id
 
 
