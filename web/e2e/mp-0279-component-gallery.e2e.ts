@@ -34,7 +34,7 @@ async function keyboardFocus(page: Page, control: Locator) {
     // only what Tab can reach, so a disabled neighbour never swallows the focus call
     const all = [...document.querySelectorAll<HTMLElement>('button, a[href], input, select, summary, [tabindex="0"]')].filter((item) => item === element || (!(item as HTMLButtonElement).disabled && item.tabIndex >= 0 && item.getClientRects().length > 0));
     // a tab is reached through its list's one Tab stop, so start just before the list
-    const stop = element.getAttribute('role') === 'tab' ? element.closest('[role="tablist"]')!.querySelector<HTMLElement>('[role="tab"]')! : element as HTMLElement;
+    const stop = element.getAttribute('role') === 'tab' ? element.closest('[role="tablist"]')?.querySelector<HTMLElement>('[role="tab"][tabindex="0"]') ?? element as HTMLElement : element as HTMLElement;
     const before = all.filter((item) => item !== element || item === stop);
     before[before.indexOf(stop) - 1]?.focus();
   });
