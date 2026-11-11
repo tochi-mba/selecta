@@ -211,7 +211,8 @@ test('MP-0286-07 Copy, Delete, Undo and Play each touch exactly the draft or cur
   await mine(page);
   // Copy the second Twin: a new draft with its songs, nothing else changes
   await page.locator('.draft-list .draft', { has: page.locator(`#draft-${two.id}`) }).getByRole('button', { name: /More actions/ }).click();
-  await page.getByRole('menuitem', { name: 'Copy Twin', exact: true }).click();
+  // the server keeps draft names apart (the second Twin is given its own), so use the name it gave
+  await page.getByRole('menuitem', { name: `Copy ${two.name}`, exact: true }).click();
   await expect(page.locator('.draft-list .draft')).toHaveCount(3);
   const list = (await (await request.get('/api/drafts')).json()).drafts as Made[];
   const copy = list.find((item) => item.id !== one.id && item.id !== two.id)!;
@@ -219,7 +220,7 @@ test('MP-0286-07 Copy, Delete, Undo and Play each touch exactly the draft or cur
   expect(await ids(request, one.id)).toEqual([5, 6]);
   // Delete the first Twin, then Undo: that one comes back, the copy and second twin untouched
   await page.locator('.draft-list .draft', { has: page.locator(`#draft-${one.id}`) }).getByRole('button', { name: /More actions/ }).click();
-  await page.getByRole('menuitem', { name: 'Delete Twin', exact: true }).click();
+  await page.getByRole('menuitem', { name: `Delete ${one.name}`, exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete draft' }).click();
   await expect(page.locator('.draft-list .draft')).toHaveCount(2);
   await page.getByRole('button', { name: /Undo|Bring it back/ }).first().click();

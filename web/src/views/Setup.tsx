@@ -63,16 +63,19 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
     <main className="page setup" id="main">
       <SetupSteps stage="prepare" />
       <h1 className="display">Getting your songs ready.</h1>
-      <p className="lede">
-        {ready} of {counts.music} songs have the vocal or instrumental cues needed for mixes. Audio analysis is complete for {counts.analysed};
-        {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'} You can use your PC as normal while this happens.
-      </p>
+      {/* MP-0282-04: the lede holds no counts, so changing numbers can't rewrap it and push the
+          counters down; the sentence that does carry them sits under the counters */}
+      <p className="lede">Songs found, analysed and ready for mixes are counted separately. You can use your PC as normal while this happens.</p>
       <ol className="readiness-steps" aria-label="Library preparation">
         <li><span>Music found</span><strong>{counts.music}</strong></li>
         <li><span>Audio analysed</span><strong>{counts.analysed}</strong></li>
         {flagOn('lyrics.lookup') && counts.lyrics !== undefined && <li><span>With timed lyrics</span><strong>{counts.lyrics}</strong></li>}
         <li><span>Ready for mixes</span><strong>{ready} / {READY_NEEDED} needed</strong></li>
       </ol>
+      <p className="hint">
+        {ready} of {counts.music} songs have the vocal or instrumental cues needed for mixes. Audio analysis is complete for {counts.analysed};
+        {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'}
+      </p>
       {reading && <p role="status"><StatusMark kind="working">Still reading your folder{scan.folder ? `: ${scan.folder}` : ''}</StatusMark></p>}
       {scan.status === 'failed' && <p className="warn" role="alert">{scan.error ?? 'Reading that folder didn’t finish.'} What was already found is kept.</p>}
       {scan.status === 'cancelled' && <p role="status" className="hint">Reading that folder was stopped. What was already found is kept, and you can read it again from Sources.</p>}
