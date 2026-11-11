@@ -53,6 +53,9 @@
 .timeline .song.selected { box-shadow: 0 0 0 2px var(--selected); background: var(--surface-selected); }
 .timeline .song.selected.playing { box-shadow: 0 0 0 2px var(--selected), inset var(--marker) 0 0 var(--playing); }
 .timeline .song.over { box-shadow: 0 -3px 0 0 var(--selected); }
+/* SF-0243-02: a move that is still on its way is drawn dashed, apart from where songs really are */
+.timeline .song[data-moving] { outline: 2px dashed var(--status-working); outline-offset: -2px; }
+@media (forced-colors: active) { .timeline .song[data-moving] { outline-color: Highlight; } }
 .timeline .grip {
   display: inline-grid;
   place-items: center;
@@ -251,8 +254,11 @@
 .draft-list.long > li:has([aria-expanded='true']) { content-visibility: visible; }
 
 /* Only an actual grid cell takes ownership of a painting gesture. The
-   containing grid and the rest of the workspace still scroll naturally. */
-.studio-grid .studio-cell { touch-action: none; }
+   containing grid and the rest of the workspace still scroll naturally.
+   SF-0243-05: a finger moving up or down over the cells scrolls the page (the browser cancels the
+   stroke and anything it painted is put back); a sideways stroke along a lane or a tap paints. The
+   bar ruler and the part names still scroll the grid sideways. */
+.studio-grid .studio-cell { touch-action: pan-y; }
 .studio-grid .studio-cell:active { border-color: var(--focus); }
 
 /* The frozen export identity is deliberately inspectable, not hidden behind

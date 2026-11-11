@@ -97,7 +97,12 @@
 
 /* One source and scale per chart. Drawing is explicit; normal page scrolling is
    untouched outside the drawing surface and numeric/keyboard controls remain available. */
-.energy-horizon.intention { touch-action: none; cursor: crosshair; }
+/* SF-0243-05: a vertical swipe over the arc scrolls the page (and puts back anything a stray touch
+   drew); a tap or a sideways sweep draws. The stops below set exact values without any gesture. */
+.energy-horizon.intention { touch-action: pan-y; cursor: crosshair; }
+/* SF-0243-02: while being drawn, the shape is a dashed sketch, not yet the saved one */
+.energy-horizon[data-provisional] polyline { stroke-dasharray: 3 2; }
+.energy-horizon[data-provisional] circle { fill: none; }
 .energy-horizon.measured { cursor: default; }
 /* CI-0169-01: the same five named stops under a measured horizon in the editor */
 .mix-horizon { margin: var(--space-3) 0; }

@@ -191,7 +191,9 @@ export function Studio(props: {
   };
   const deck = useRef<StemDeck | null>(null);
   const grid = useRef<HTMLDivElement>(null);
-  const paintStroke = useRef<{ id: number; value: 0 | 1; visited: Set<string> } | null>(null);
+  // SF-0243-03: a stroke remembers the grid from before it started, so a cancelled pointer, Escape
+  // or leaving the page mid-stroke puts every square it touched back
+  const paintStroke = useRef<{ id: number; value: 0 | 1; visited: Set<string>; before: Shape; key?: string } | null>(null);
   const at = useMixPath();
   const owner = useRef({
     id: `studio-${position}-${item.song_id}`,
@@ -357,7 +359,7 @@ export function Studio(props: {
     const lane = LANES[Number(match[1]) % LANES.length];
     const current = latestShape.current;
     if (!side || !lane || !current?.[side]?.[lane]) return;
-    paintStroke.current = { id: event.pointerId, value: current[side][lane][Number(match[2])] ? 0 : 1, visited: new Set() };
+    paintStroke.current = { id: event.pointerId, value: current[side][lane][Number(match[2])] ? 0 : 1, visited: new Set(), before: current, key: session?.key };
     event.currentTarget.setPointerCapture?.(event.pointerId);
     paint(button, paintStroke.current);
   };
@@ -368,6 +370,30 @@ export function Studio(props: {
     paint(under ?? (event.target as HTMLElement), stroke);
   };
   const stopPaint = () => { paintStroke.current = null; };
+  /** The browser took the gesture (a scroll, a palm, a lost pointer) or Escape was pressed: undo
+   * just this stroke. Squares changed before it are kept. */
+  const cancelPaint = () => {
+    const stroke = paintStroke.current;
+    paintStroke.current = null;
+    if (!stroke || applying.current) return;
+    if (JSON.stringify(stroke.before) !== JSON.stringify(latestShape.current)) change(stroke.before);
+  };
+  useEffect(() => {
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || !paintStroke.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      cancelPaint();
+    };
+    window.addEventListener('keydown', escape, true);
+    return () => {
+      window.removeEventListener('keydown', escape, true);
+      // leaving mid-stroke keeps the grid as it was before the stroke, not half-painted
+      const stroke = paintStroke.current;
+      paintStroke.current = null;
+      if (stroke?.key) keepShape(stroke.key, stroke.before);
+    };
+  });
   const setLane = (side: Side, lane: Lane, value: 0 | 1) => {
     if (!shape || missing.includes(`${side}_${lane}`)) return;
     change({ ...shape, [side]: { ...shape[side], [lane]: shape[side][lane].map(() => value) } });
@@ -583,7 +609,7 @@ export function Studio(props: {
             onPointerDown={startPaint}
             onPointerMove={movePaint}
             onPointerUp={stopPaint}
-            onPointerCancel={stopPaint}
+            onPointerCancel={cancelPaint}
             onLostPointerCapture={stopPaint}
             style={{ '--cells': columns } as React.CSSProperties}
               >

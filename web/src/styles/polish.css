@@ -122,6 +122,8 @@ button[aria-disabled='true'] { cursor: progress; }
 /* Placeholder layout mirrors the content without pretending to contain waveform data. */
 .skeleton { display: block; padding-block: var(--space-4); }
 .skeleton-content { display: grid; gap: var(--space-4); animation: skeleton-reveal var(--motion-reveal) var(--motion-ease) both; animation-delay: var(--motion-fast); }
+/* P0038: space reserved at once, bars shown only after REVEAL_AFTER_MS (Skeleton.tsx), in every motion setting */
+.skeleton[data-revealed='false'] .skeleton-content { visibility: hidden; }
 .skeleton-unit { display: grid; gap: var(--space-3); min-width: 0; }
 .skeleton i { width: 100%; height: 16px; border-radius: var(--radius-mark); margin: 0; background: var(--surface-control); }
 .skeleton i:nth-child(2n) { width: 100%; }

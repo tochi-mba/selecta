@@ -430,7 +430,9 @@ def add_routes(app, ctx) -> None:
             field = STEERING_SETTINGS.get(body.action)
             if field and "expected" in body.model_fields_set:
                 now = getattr(get_steering(conn), field)
-                if now != body.expected and not (field == "target" and not now and not body.expected):
+                # no destination may be stored as None and sent as "" (or the other way round)
+                both_empty = field == "target" and not now and not body.expected
+                if now != body.expected and not both_empty:
                     return JSONResponse(
                         {
                             "detail": "That setting was changed somewhere else, so it wasn't "

@@ -134,6 +134,8 @@ export function Mix(props: ViewProps) {
   const [name, setName] = useState(mixName);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<string | null>(null);
+  // SF-0243-02: the song whose move is on its way to the server (shown as moving, not yet moved)
+  const [movingKey, setMovingKey] = useState<string | null>(null);
   // CI-0173-02: while a song is carried over another, mark the transitions that drop would replace
   const dropPreview = useMemo(() => {
     if (!flagOn('editor.drag_preview') || !dragFrom || !dragOver) return null;
@@ -374,6 +376,7 @@ export function Mix(props: ViewProps) {
       return;
     }
     moving.current = true;
+    setMovingKey(keys[from]);
     const words = how === 'up' ? `Moved ${moved.title} up.` : how === 'down' ? `Moved ${moved.title} down.` : 'Moved that song.';
     if (how !== 'drag') focusAfter.current = { key: keys[from], how };
     try {
@@ -387,6 +390,7 @@ export function Mix(props: ViewProps) {
       refreshMix();
     } finally {
       moving.current = false;
+      setMovingKey(null);
       setDragOver(null);
       setDragFrom(null);
     }
@@ -802,6 +806,7 @@ export function Mix(props: ViewProps) {
                   playing={!inDraft && now.phase !== 'idle' && now.position === index}
                   selected={selectedSongIndex === index}
                   over={dragOver === keys[index]}
+                  moving={movingKey === keys[index]}
                   actions={rowActions}
                 />
                 {!inDraft && <ComingSongs afterSongId={item.song_id} />}

@@ -167,9 +167,11 @@ export function RouteDiagram({ songs, requestedId, state, compact = false }: {
 
 /** Reusable five-stop intention or separately normalized measured energy. These are never
  * superimposed: user intentions and measured relative track energies use different scales. */
-export function EnergyHorizon({ values, source, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onLostPointerCapture }: {
+export function EnergyHorizon({ values, source, provisional = false, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onLostPointerCapture }: {
   values: number[];
   source: 'intention' | 'measured';
+  /** SF-0243-02: being drawn right now, so not yet the saved shape. */
+  provisional?: boolean;
   onPointerDown?: import('react').PointerEventHandler<SVGSVGElement>;
   onPointerMove?: import('react').PointerEventHandler<SVGSVGElement>;
   onPointerUp?: import('react').PointerEventHandler<SVGSVGElement>;
@@ -182,6 +184,7 @@ export function EnergyHorizon({ values, source, onPointerDown, onPointerMove, on
   return (
     <svg className={'energy-arc-preview energy-horizon ' + source} viewBox="0 0 100 40" preserveAspectRatio="none"
       role="img" aria-label={source === 'measured' ? 'Measured relative energy of the current mix, from start to finish' : 'Draw energy arc'}
+      data-provisional={provisional || undefined}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel} onLostPointerCapture={onLostPointerCapture}>
       <polyline className={source === 'measured' ? 'achieved' : undefined} points={points} />

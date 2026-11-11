@@ -133,6 +133,9 @@ type SongRowProps = {
   playing: boolean;
   selected: boolean;
   over: boolean;
+  /** SF-0243-02: this song's move has been sent and the server hasn't answered yet. The row stays
+   * where it was, marked as moving, until the answer says where it really is. */
+  moving?: boolean;
   actions: RefObject<RowActions>;
 };
 
@@ -142,7 +145,7 @@ const SONG_DRAG_TYPE = 'application/x-selecta-song-position';
 /** One song in the timeline. Only the handle starts a drag, so scrolling a long mix on a phone can't
  * pick a song up by accident. A mouse drags it the ordinary way, a finger or pen uses pointer events,
  * and the arrow keys and the Move buttons do the same job without dragging at all. */
-export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, actions }: SongRowProps) {
+export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, moving = false, actions }: SongRowProps) {
   const holding = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
   const [grabbed, setGrabbed] = useState(false);
   // MI-0138-08: a removal is marked on its row at once, and the row only goes when the server has removed it
@@ -211,8 +214,9 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
   };
   return (
     <li
-      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''} ${removing ? 'pending' : ''}`}
-      aria-busy={removing || undefined}
+      className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''} ${removing || moving ? 'pending' : ''}`}
+      aria-busy={removing || moving || undefined}
+      data-moving={moving || undefined}
       data-song-key={rowKey}
       data-position={item.position}
       onClick={(event) => { if (pickedTheRow(event)) actions.current.selectSong(rowKey); }}
@@ -277,6 +281,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         {playing && <span className="story-tag playing"><Icon name="play" size="compact" /> Playing now</span>}
         {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" size="compact" /> Locked</span>}
         {removing && <span className="status status-working" role="status">Removing…</span>}
+        {moving && !removing && <span className="status status-working" role="status">Moving…</span>}
       </div>
       <small className="facts">
         {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}

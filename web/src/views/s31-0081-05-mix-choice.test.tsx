@@ -56,7 +56,7 @@ describe('S31-0081-05 featured mix and mood cards read without DJ terms', () => 
     show();
     const article = (await screen.findByRole('heading', { name: 'Slow burn' })).closest('article')!;
     const inside = within(article);
-    expect(inside.getByText('Warm songs for a slow start')).toBeVisible();
+    expect(article.querySelector('.vibe-card-summary')).toHaveTextContent('Warm songs for a slow start');
     fireEvent.click(inside.getByText('Why Slow burn? More details'));
     expect(inside.getByText('Ada Lane, Bo Reyes')).toBeVisible();
     expect(inside.getByText(/Play replaces the current mix after confirmation/)).toBeVisible();

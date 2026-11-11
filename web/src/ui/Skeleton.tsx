@@ -22,6 +22,12 @@ function timelineUnits(songs: number) {
 
 export type SkeletonVariant ='text' | 'cards' | 'vibes' | 'library' | 'listen' | 'timeline' | 'inspector' | 'pairs' | 'metrics';
 
+/** P0038: an answer that arrives within this long never shows a placeholder at all. The space is
+ * reserved from the first frame (so nothing moves), but the bars stay invisible until then, in every
+ * motion setting: with reduced motion the fade is gone, the wait is not, because a wait isn't motion.
+ * Matches --motion-fast; ready content is never held back to honour it. */
+export const REVEAL_AFTER_MS = 120;
+
 /** Reserve real content geometry immediately, fading decorative placeholders in only if needed. */
 export function Skeleton({ lines = 3, label = 'Loading', variant = 'text', retry }: {
   lines?: number;
@@ -31,6 +37,11 @@ export function Skeleton({ lines = 3, label = 'Loading', variant = 'text', retry
 }) {
   const [slow, setSlow] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setRevealed(true), REVEAL_AFTER_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => setSlow(true), 10000);
     return () => window.clearTimeout(timer);
@@ -42,7 +53,7 @@ export function Skeleton({ lines = 3, label = 'Loading', variant = 'text', retry
   };
   const count = variant === 'listen' || variant === 'inspector' ? 1 : lines;
   return (
-    <div className={`skeleton skeleton-${variant}`} role="status" aria-live="polite" aria-busy="true" aria-label={label}>
+    <div className={`skeleton skeleton-${variant}`} role="status" aria-live="polite" aria-busy="true" aria-label={label} data-revealed={revealed}>
       <span className="visually-hidden">{label}</span>
       <div className="skeleton-content" aria-hidden="true">
         {variant === 'timeline' ? timelineUnits(lines) : Array.from({ length: count }, (_, index) => (

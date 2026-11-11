@@ -4,6 +4,9 @@ and a guarded mix edit retried against a mix that moved on is refused rather tha
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
@@ -36,6 +39,29 @@ def home(tmp_path, monkeypatch):
     monkeypatch.setattr(
         SeamStore, "submit", lambda self, request, **_k: {"status": "queued", "key": request.key}
     )
+
+    def load_song(_conn, _settings, song_id):
+        return SimpleNamespace(
+            id=song_id,
+            artist="Someone",
+            title=f"Song {song_id}",
+            vocals_known=True,
+            bpm=120.0,
+            camelot="8A",
+            duration=200.0,
+            bar_times=np.array([0.0, 2.0]),
+            beats=np.array([0.0, 0.5, 1.0, 1.5, 2.0]),
+            beats_per_bar=4,
+            sections=[],
+            lines=[],
+        )
+
+    monkeypatch.setattr("selecta.analysis.song.load_song", load_song)
+    monkeypatch.setattr(
+        "selecta.analysis.pipeline.load_features",
+        lambda _settings, _song_id: {"peaks": np.array([0, 128, 255], dtype=np.uint8)},
+    )
+    monkeypatch.setattr("selecta.planner.reel.load_library", lambda _conn, _settings: [])
     return settings, tmp_path
 
 
@@ -91,7 +117,8 @@ def test_only_the_newest_answers_are_kept_on_disk(tmp_path):
     kept = FinishedOperations(tmp_path / "operations", keep=30)
     for number in range(60):
         kept.remember(f"draft-{number}", (200, b"{}", "print"))
-    assert len(list((tmp_path / "operations").glob("*.json"))) <= 35
+    # pruned every 25 writes, so never more than keep + 25 files
+    assert len(list((tmp_path / "operations").glob("*.json"))) <= 30 + 25
     fresh = FinishedOperations(tmp_path / "operations", keep=30)
     assert fresh.get("draft-59") == (200, b"{}", "print")
     assert fresh.get("draft-0") is None

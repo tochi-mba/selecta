@@ -291,7 +291,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .energy-arc-heading > div { min-width: 0; flex: 1 1 240px; }
 .energy-arc-heading button { flex: none; }
 .energy-arc-heading .hint { margin: var(--space-dense) 0 0; }
-.energy-arc-preview { display: block; width: 100%; height: 72px; margin: var(--space-3) 0 var(--space-1); overflow: visible; cursor: crosshair; touch-action: none; }
+.energy-arc-preview { display: block; width: 100%; height: 72px; margin: var(--space-3) 0 var(--space-1); overflow: visible; cursor: crosshair; touch-action: pan-y; }
 .energy-arc-preview polyline { fill: none; stroke: var(--motif); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .energy-arc-preview circle { fill: var(--motif); }
 .energy-arc-stops { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-snug); }
