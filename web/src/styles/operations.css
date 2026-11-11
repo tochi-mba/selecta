@@ -92,6 +92,10 @@
 .sources-add { align-items: flex-end; }
 .sources-add .field { flex: 1 1 280px; }
 .folder-list b { unicode-bidi: plaintext; }
+/* MP-0293-03: the re-link dialog names a long missing folder in full, wrapping instead of scrolling sideways */
+.relink-path { overflow-wrap: anywhere; unicode-bidi: plaintext; }
+/* MP-0293-04: the browser's own 2px range margin would set the slider in from the GB amount and the Saved line */
+.limit input[type='range'] { margin-inline: 0; }
 .diagnostic-raw > summary { cursor: pointer; min-height: var(--control-height); display: flex; align-items: center; color: var(--text-soft); }
 
 /* Exports */

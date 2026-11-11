@@ -448,7 +448,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
             <button onClick={() => { setRelocate(null); setRelocation(null); }}>Cancel - keep original paths</button>
             {relocation?.token && <Action className="primary" working="Re-linking…" run={confirmRelink}>Confirm {relocation.verified} verified songs</Action>}
           </>}>
-          <p>This only changes the recorded locations of songs from <b>{relocate.old}</b>. It never moves or modifies audio files. All recordings must match their original relative path, size, duration, title and artist.</p>
+          <p>This only changes the recorded locations of songs from <b className="relink-path">{relocate.old}</b>. It never moves or modifies audio files. All recordings must match their original relative path, size, duration, title and artist.</p>
           <Field label="New local folder address" error={relinkProblem}>
             {(field) => <input {...field} value={relocate.target} onChange={(event) => {
               setRelocate({ ...relocate, target: event.target.value });

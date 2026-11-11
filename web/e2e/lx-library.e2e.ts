@@ -85,7 +85,7 @@ test('LX-0340-05 LX-0344-01 LX-0345-03 duplicate titles stay bound to their reco
       await expect(row.getByRole('checkbox')).toHaveAccessibleName(`Select recording Same Name by ${artist}, ID ${id}`);
       // title and artist never sit on top of each other
       const title = await box(row.locator('.song-open b'));
-      const by = await box(row.getByText(artist));
+      const by = await box(row.getByText(artist, { exact: true }));
       expect(overlap(title, by)).toBe(0);
     }
     // reorder, then the same button still opens the same recording
@@ -210,7 +210,10 @@ test('LX-0342-02 LX-0343-03 query, filter and sort live in the address and Back/
   const titles = () => page.locator('.song-open').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label')));
   const serverTitles = async (params: Record<string, string>) => {
     const answer = await (await request.get('/api/library', { params: { state: 'all', sort: 'title', q: '', limit: '100', ...params } })).json();
-    return answer.songs.map((song: { title: string }) => song.title);
+    // LX-0340-05: a title two different artists share is spoken with its artist, so each button names its own recording
+    const songs = answer.songs as { title: string; artist: string }[];
+    const shared = (song: { title: string; artist: string }) => songs.some((other) => other !== song && other.title === song.title && other.artist !== song.artist);
+    return songs.map((song) => (shared(song) ? `${song.title} by ${song.artist}` : song.title));
   };
   const matches = async (params: Record<string, string>) => {
     const want = await serverTitles(params);
