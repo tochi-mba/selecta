@@ -308,6 +308,16 @@ describe('LX-0359 to LX-0361 the proposal', () => {
     expect(screen.getByText('1 rule changed.')).toBeInTheDocument();
     expect(screen.getByText('Verified ready transitions: 3 of 5 before, 2 of 5 after (1 no longer ready).')).toBeInTheDocument();
   });
+
+  it('LX-0361-04 each instruction says whether it was met, not met or unknown, in words', () => {
+    render(<CardVisual card={card('1', 'completed', { family: 'constraints', visual: { rules: [
+      { id: 'a', strength: 'hard', label: 'No Jo Marsh', status: 'pass' },
+      { id: 'b', strength: 'soft', label: 'Around 120 BPM', status: 'block' },
+      { id: 'c', strength: 'soft', label: 'Build slowly', status: 'unknown' },
+    ] } })} />);
+    const said = screen.getAllByRole('listitem').map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+    expect(said).toEqual(['Must No Jo Marsh Met', 'Prefer Around 120 BPM Not met', 'Prefer Build slowly Unknown']);
+  });
 });
 
 describe('LX-0360 songs and transitions', () => {

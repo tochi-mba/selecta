@@ -15,15 +15,16 @@
       "owner": null,
       "implemented": [
         "03",
-        "04"
+        "04",
+        "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "05"
+      ],
       "not_started": [
         "01",
         "02",
-        "05",
         "06",
-        "07",
         "08"
       ],
       "independently_verified": [],
@@ -36,16 +37,16 @@
       "priority": "P1",
       "owner": null,
       "implemented": [
-        "01"
-      ],
-      "in_progress": [],
-      "not_started": [
-        "02",
+        "01",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "02",
         "08"
       ],
       "independently_verified": [],
@@ -59,15 +60,15 @@
       "owner": null,
       "implemented": [
         "01",
+        "02",
         "03",
+        "04",
         "05",
         "06",
         "07"
       ],
       "in_progress": [],
       "not_started": [
-        "02",
-        "04",
         "08"
       ],
       "independently_verified": [],
@@ -80,16 +81,17 @@
       "priority": "P0",
       "owner": null,
       "implemented": [
-        "04",
-        "07"
-      ],
-      "in_progress": [],
-      "not_started": [
-        "01",
         "02",
         "03",
+        "04",
         "05",
         "06",
+        "07"
+      ],
+      "in_progress": [
+        "01"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
