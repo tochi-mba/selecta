@@ -568,7 +568,7 @@ export function Mix(props: ViewProps) {
   const adder = (anchor: string) => (
     <Adder
       position={placeOf(anchor)}
-      onAdd={(song) => void addSong(song, anchor)}
+      onAdd={(song) => addSong(song, anchor)}
       onClose={() => setAdding(null)}
       notify={notify}
       line={line}
