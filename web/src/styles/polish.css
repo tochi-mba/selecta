@@ -144,7 +144,17 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-library .skeleton-meta { grid-column: 2; grid-row: 1; width: 80%; }
 .skeleton-listen .skeleton-unit { min-height: 260px; }
 .skeleton-listen .skeleton-region { height: 120px; }
-.skeleton-timeline .skeleton-unit { border-left: 2px solid var(--border); padding: var(--space-4); }
+/* P0035: song rows and the transitions hanging between them, at the timeline's own row heights
+   (creation.css .timeline.long intrinsic sizes: 84px songs, 96px transitions). */
+.skeleton-timeline .skeleton-content { gap: 0; }
+.skeleton-timeline .skeleton-song { grid-template-columns: var(--control-height) minmax(0, 1fr) auto; column-gap: var(--space-3); row-gap: var(--space-2); align-items: center; min-height: 84px; padding: var(--row-pad) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.skeleton-timeline .skeleton-grip { grid-row: 1 / span 2; width: var(--control-height); height: var(--control-height); }
+.skeleton-timeline .skeleton-song .skeleton-title { grid-column: 2; grid-row: 1; }
+.skeleton-timeline .skeleton-song .skeleton-detail { grid-column: 2; grid-row: 2; width: 48%; }
+.skeleton-timeline .skeleton-song .skeleton-meta { grid-column: 3; grid-row: 1; width: 72px; }
+.skeleton-timeline .skeleton-seam { min-height: 96px; margin-left: var(--space-2); padding: var(--space-3) var(--space-snug); border-left: 2px solid var(--border); align-content: center; }
+.skeleton-timeline .skeleton-seam .skeleton-region { height: 24px; }
+.skeleton-timeline .skeleton-seam .skeleton-action { width: 96px; height: var(--control-height); margin-top: 0; }
 .skeleton-inspector .skeleton-unit { min-height: 240px; }
 .skeleton-metrics .skeleton-content { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .skeleton-metrics .skeleton-unit { min-height: 110px; padding: var(--space-4); }

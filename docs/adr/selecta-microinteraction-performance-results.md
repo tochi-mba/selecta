@@ -6,6 +6,15 @@ These are lab numbers from one shared laptop, taken on 2026-11-11 by the agent t
 They are not field data, not an independent measurement and not a release sign-off. Nothing here is
 claimed to pass without the machine, SHA, output and limitations next to it.
 
+## Summary
+
+| Task | Spec and test | Runs | Verdict on this machine |
+|---|---|---|---|
+| MI-0162-02 | `web/e2e/mi-0162-performance.e2e.ts`, `MI-0162-02 animated surfaces stay inside long-task, frame and interaction budgets` | 2 runs, 2 passed | Within budget: p95 frame 16.8 ms on every animated surface, no long task in any quiet window, slowest animated interaction 144 ms, no slowdown against still |
+| MI-0162-03 | same file, `MI-0162-03 a seam stays contiguous on the audio clock with a busy main thread, page changes and a render going` | 1 run measured, passed (2 earlier runs timed out waiting for the first render) | Scheduling exact to within floating point under load; real audio not captured |
+| MI-0162-04 | `web/bench/mi-0162-scale.bench.ts`, `MI-0162-04 a 20,000-song library opens, searches, filters and scrolls deep within budget` | 3 runs, 0 passed | Typing, filter presses and paging stay responsive (every key and press painted within 166 ms, focus kept), but first rows (3.1 to 3.5 s), search results (2.0 to 2.5 s) and scrolling 1,100 loaded rows (p95 frame 300 to 333 ms, three long tasks of 260 to 380 ms) miss their budgets; causes below |
+| MI-0162-05 | same bench file, `MI-0162-05 a 100-song draft and the 64-cell Studio keep focus and stay quick` | 3 runs, 0 passed | Focus kept on every move and every grid key; draft opens in 1.4 to 2.0 s; Studio smooth. Misses: timeline scroll p95 50.1 ms against 50 (all runs), a keyboard move over 1,500 ms (runs B and C), one Studio Event Timing of 288 ms (run B) |
+
 ## Machine (all rows)
 
 Recorded with the fields of the reference hardware matrix in
@@ -96,7 +105,7 @@ render): **1 passed**.
 | Listen (playing, lyrics, visualizer) | 180 | 16.7 / 16.8 / 19.1 ms | none | 1 | 72 ms (pointerdown, Resume) | 23.1 ms | 16.8 ms, 48 / 14.6 ms |
 | Stage (fullscreen lyrics and visuals) | 180 | 16.7 / 16.8 / 17.8 ms | none | 1 | 144 ms (keyup, `f`) | 12.0 ms | 16.8 ms, 152 / 118.2 ms |
 | Make a Mix cards | 181 | 16.7 / 16.8 / 17.0 ms | none | 0 | 48 ms (pointerdown, card disclosure) | 29.2 ms | 16.8 ms, 144 / 19.8 ms |
-| Editor timeline | 180 | 16.7 / 16.8 / 33.2 ms | none | 0 | 72 ms (pointerdown, Close) | 40.0 ms | 16.8 ms, **216** / 44.5 ms |
+| Editor timeline | 180 | 16.7 / 16.8 / 33.2 ms | none | 0 | 72 ms (pointerdown on Change, which then reads Close) | 40.0 ms | 16.8 ms, **216** / 44.5 ms |
 | Studio grid (64 cells) | 181 | 16.7 / 16.8 / 16.8 ms | none | 0 | 48 ms (pointerdown, a square) | 24.8 ms | 16.7 ms, 32 / 22.4 ms |
 | Lucy activity cards | 181 | 16.7 / 16.8 / 17.0 ms | none | 0 | 48 ms (keydown, composer) | 22.7 ms | 16.8 ms, 32 / 18.6 ms |
 
@@ -115,7 +124,7 @@ render): **1 passed**.
   before the window, so their windows show the cost of the page at rest with music playing, and their
   motion cost shows in the interaction numbers.
 
-Run B, 2026-11-11, on its own (no other run of these specs at the same time): **1 passed**. Every surface,
+Run B, 2026-11-11, on its own (the whole spec file, without `-g`; MI-0162-03 ran after it in the same run): **1 passed**. Every surface,
 both passes: 172 to 181 frames in 3 s, p50 16.7 ms, p95 16.8 or 16.9 ms, worst 19.7 ms, and no long task
 in any quiet window. Animated pass: slowest Event Timing 136 ms (the `f` key entering the Stage), slowest
 next paint 105.2 ms (same key), a long task of 81 ms during that key; every other surface's slowest
@@ -166,10 +175,10 @@ overlap beyond the designed 30 ms crossfade. What it does not show: what a sound
 `--mute-audio` headless Edge has no audible output, so a dropout in the audio thread itself under CPU
 load, or a device-level glitch, cannot be seen here.
 
-Earlier attempts on the same day timed out before measuring anything: waiting for four, then one,
-transition render(s) with the shared 280 s helper. One render took about 4.5 minutes on the loaded laptop
-(measured by hand against a fresh server), so the test now renders one transition and waits up to 9
-minutes for it. The budgets did not change.
+Earlier attempts on the same day timed out before measuring anything: with four songs (three transitions)
+and then two songs (one transition), the shared 280 s `allRendered` helper ran out first. One render
+took about 4.5 minutes on the loaded laptop (measured by hand against a fresh server), so the test now
+renders one transition and waits up to 9 minutes for it. The tolerances did not change.
 
 ## MI-0162-04: a 20,000-song Library
 
@@ -185,43 +194,47 @@ Fixture: `tests/scale_server.py` with 20,000 songs and a 100-song current mix (2
 `MI-0162-04 a 20,000-song library opens, searches, filters and scrolls deep within budget`, motion
 default (subtle), nothing playing.
 
-| Reading | Run A | Run B | Budget | Result |
-|---|---|---|---|---|
-| First 100 rows visible after `goto('/library')` | 3,430 ms | 3,116 ms | ≤ 3,000 | **Fail** both runs |
-| Count shown | "of 20001 songs" | same | 20,000+ | Pass |
-| Typing "golden" (6 keys, 120 ms apart): slowest key paint / Event Timing | 30.5 / 40 ms | 29.4 / 48 ms | ≤ 200 | Pass |
-| Last key to narrowed count (2,499 matches) | 2,528 ms | 1,981 ms | ≤ 1,500 | **Fail** both runs |
-| Filter "Ready" press to count | 898 ms | 1,352 ms | ≤ 1,500 | Pass |
-| Filter press paint / Event Timing | 48.3 / 72 ms | 49.3 / 88 ms | ≤ 200 | Pass |
-| 10 x "Show more songs" by Enter (to 1,100 rows): median / worst | 947 / 1,186 ms | 1,319 / 2,064 ms | ≤ 1,500 | Pass A, **fail** B |
-| Enter paint / Event Timing, focus stayed on the button | 165.7 / 104 ms, yes | 97.2 / 96 ms, yes | ≤ 200 | Pass |
-| Scrolling 1,100 rows at 400 px per frame for 3 s: frames, p50, p95, worst | 54, 33.4, 300, 400 ms | 45, 50, 316.6, 316.8 ms | p95 ≤ 50 | **Fail** both runs |
-| Long tasks in that scroll window | 320, 261, 363 ms | 285, 286, 271 (+ six of 50 to 154) ms | none over 200 | **Fail** both runs |
-| DOM nodes with 1,100 rows | 32,069 | 32,069 | - | recorded |
+Runs A, B and C were on 2026-11-11 against the same dist; each was **failed** by the soft budget
+assertions below (every reading is still recorded, because the assertions are soft).
+
+| Reading | Run A | Run B | Run C | Budget | Result |
+|---|---|---|---|---|---|
+| First 100 rows visible after `goto('/library')` | 3,430 ms | 3,116 ms | 3,541 ms | ≤ 3,000 | **Fail** all runs |
+| Count shown | "of 20001 songs" | same | same | 20,000+ | Pass |
+| Typing "golden" (6 keys, 120 ms apart): slowest key paint / Event Timing | 30.5 / 40 ms | 29.4 / 48 ms | 28.7 / 32 ms | ≤ 200 | Pass |
+| Last key to narrowed count (2,499 matches) | 2,528 ms | 1,981 ms | 2,166 ms | ≤ 1,500 | **Fail** all runs |
+| Filter "Ready" press to count | 898 ms | 1,352 ms | 1,918 ms | ≤ 1,500 | Pass A and B, **fail** C |
+| Filter press paint / Event Timing | 48.3 / 72 ms | 49.3 / 88 ms | 43.6 / 80 ms | ≤ 200 | Pass |
+| 10 x "Show more songs" by Enter (to 1,100 rows): median / worst | 947 / 1,186 ms | 1,319 / 2,064 ms | 1,018 / 1,743 ms | ≤ 1,500 | Pass A, **fail** B and C |
+| Enter paint / Event Timing, focus stayed on the button | 165.7 / 104 ms, yes | 97.2 / 96 ms, yes | 140.9 / 136 ms, yes | ≤ 200 | Pass |
+| Scrolling 1,100 rows at 400 px per frame for 3 s: frames, p50, p95, worst | 54, 33.4, 300, 400 ms | 45, 50, 316.6, 316.8 ms | 47, 50, 333.2, 416.7 ms | p95 ≤ 50 | **Fail** all runs |
+| Long tasks over 200 ms in that scroll window | 320, 261, 363 ms | 285, 286, 271 ms | 313, 376, 306 ms | none | **Fail** all runs |
+| DOM nodes with 1,100 rows | 32,069 | 32,069 | 32,069 | - | recorded |
 
 Why the failing budgets fail (from the breakdown the bench records):
 
-- **First rows (3.1 to 3.4 s).** The page is interactive at about 0.76 s (DOMContentLoaded), but the
-  Library's own request only starts at about 2.3 s: the app first waits for `/api/status` (about 0.5 s),
-  then `/api/status` and `/api/mix` again (the 100-song mix answer takes about 0.75 s) and `/api/jobs`.
-  `/api/library` itself then answers in about 0.56 s. The budget is missed by start-up requests running
-  one after another on a loaded single-process server, not by the Library query.
-- **Search settled (2.0 to 2.5 s).** In run B the request left 209 ms after the last key (the 200 ms
-  debounce), and the server took 1,473 ms to answer `q=golden` over 20,001 songs with 2,499 matches; the
-  rest is rendering. The server-side relevance search, under contention, is the cost.
+- **First rows (3.1 to 3.5 s).** In run B the page reached DOMContentLoaded at 0.76 s (1.1 s in run C), but
+  the Library's own request only started at 2.3 s (2.4 s): the app first waits for `/api/status` (about
+  0.5 s), then `/api/status` and `/api/mix` again (the 100-song mix answer takes 0.75 to 1.1 s) and
+  `/api/jobs`. `/api/library` itself then answers in 0.56 to 0.69 s. The budget is missed by start-up
+  requests running one after another on a loaded single-process server, not by the Library query.
+- **Search settled (2.0 to 2.5 s).** The request leaves about 200 ms after the last key (the debounce),
+  then the server takes 1,473 ms (run B) and 1,707 ms (run C) to answer `q=golden` over 20,001 songs with
+  2,499 matches; the rest is rendering. The server-side relevance search, under contention, is the cost.
 - **Scrolling 1,100 loaded rows.** Each long task follows an API answer by a few milliseconds
   (`/api/mix` every 1.5 s while any transition is unrendered, `/api/status` every 4 s, the Library's own
-  refresh), and the browser blames React's scheduler (`MessagePort.onmessage`, 286 ms) or a fetch handler
-  (`Response.json.then`, 286 ms). The Library renders its rows inline, so every poll that changes app
-  state re-renders all 1,100 rows (about 32,000 DOM nodes), costing 260 to 360 ms each time on this
+  refresh), and the browser blames React's scheduler (`MessagePort.onmessage`, 286 to 377 ms) or a fetch
+  handler (`Response.json.then`, 286 ms). The Library renders its rows inline, so every poll that changes
+  app state re-renders all 1,100 rows (about 32,000 DOM nodes), costing 260 to 380 ms each time on this
   machine. Scrolling is not what costs; the polls landing during the scroll are. With only the first 100
   rows loaded this cost is roughly a tenth. Proposed fix (not made here, because `web/src/views/Library.tsx`
   is shared and was being edited by other agents): move a row into a memoized component with stable
   callbacks, so a poll that does not change a song's own facts does not re-render its row; or stop the
   1.5 s mix poll re-rendering the Library when nothing in the mix changed. The 400 px per frame scroll is
   deliberately fast; software raster with no GPU also keeps p50 at 33 to 50 ms.
-- **100 more rows, worst 2,064 ms in run B** but 1,186 ms in run A: the same request and render under
-  heavier load from other agents. Not reproducible as a code problem from these two runs.
+- **Filter (1.9 s in run C) and 100 more rows (worst 1.7 to 2.1 s in runs B and C)** passed in run A: the
+  same request and render under heavier load from other agents. Not shown to be a code problem by these
+  runs; the server answer dominates.
 
 ## MI-0162-05: a 100-song draft and the 64-cell Studio
 
@@ -232,37 +245,40 @@ current mix plays (muted) while the draft is edited. The Studio is the real 2 si
 grid for transition 1; its session and stems are served by the test (each stem is a whole synthetic song),
 because the server never splits stems in tests.
 
-| Reading | Run A | Run B | Budget | Result |
-|---|---|---|---|---|
-| Draft editor opened to 100 rows (in-app navigation) | 1,984 ms | 2,028 ms | ≤ 5,000 | Pass |
-| Long tasks while opening | 226, 70 ms | 222, 64 ms | recorded | over the 200 ms line once, during the open only |
-| Scrolling the 100-song timeline at 300 px per frame: p50 / p95 / worst | 33.3 / 50.1 / 67 ms | 33.4 / 50.1 / 50.2 ms | p95 ≤ 50 | **Fail by 0.1 ms** both runs (three refreshes) |
-| Long tasks while scrolling it | none | one of 52 ms | none over 200 | Pass |
-| 5 keyboard moves from row 50 (ArrowUp/Down on the grip): wall time each | 982, 955, 1,035, 983, 1,446 ms | 1,513, 2,521, 1,497, 398, 1,531 ms | ≤ 1,500 | Pass A, **fail** B |
-| Focus on the moved song's grip after every move, and the draft saved the move | yes | yes | always | Pass |
-| Reorder key: slowest next paint / Event Timing | 113.8 / 136 ms | 45.3 / 56 ms | ≤ 200 | Pass |
-| Studio grid rendered with 64 cells | 64 | 64 | 64 | Pass |
-| Studio idle 3 s: p50 / p95 / worst frame, long tasks | 16.7 / 16.9 / 31.9 ms, none | 16.7 / 17.1 / 18.3 ms, none | p95 ≤ 50 | Pass |
-| 19 grid keys (7 Right, 7 Down, Ctrl+Home, Ctrl+End, Home, Left to the lane name, Right): focus landed on the expected cell every time | yes | yes | always | Pass |
-| Grid keys: next paint p50 / worst | 10.3 / 19.5 ms | 14.4 / 32.7 ms | ≤ 200 | Pass |
-| Grid keys and Space toggles: slowest Event Timing | 176 ms | 288 ms (the click a Space press makes on a square) | ≤ 200 | Pass A, **fail** B |
-| Space toggles: pressed state changed, focus stayed | 46, 170, 23 ms | 45, 43, 67 ms | recorded | Pass |
-| Long tasks while moving round the grid | none | none | none over 200 | Pass |
-| Opening the Studio (8 whole-song stand-in stems decoded) | 7,852 ms | 12,723 ms | not budgeted | not representative: real stems are short windows |
+Runs A, B and C as above; each was **failed** by at least one soft budget.
+
+| Reading | Run A | Run B | Run C | Budget | Result |
+|---|---|---|---|---|---|
+| Draft editor opened to 100 rows (in-app navigation) | 1,984 ms | 2,028 ms | 1,409 ms | ≤ 5,000 | Pass |
+| Long tasks while opening | 226, 70 ms | 222, 64 ms | 228, 76 ms | recorded | one over 200 ms, during the open only |
+| Scrolling the 100-song timeline at 300 px per frame: p50 / p95 / worst | 33.3 / 50.1 / 67 ms | 33.4 / 50.1 / 50.2 ms | 33.4 / 50.1 / 51.2 ms | p95 ≤ 50 | **Fail by 0.1 ms** all runs (three refreshes) |
+| Long tasks while scrolling it | none | one of 52 ms | none | none over 200 | Pass |
+| 5 keyboard moves from row 50 (ArrowUp/Down on the grip): wall time each | 982, 955, 1,035, 983, 1,446 ms | 1,513, 2,521, 1,497, 398, 1,531 ms | 1,035, 966, 1,008, 1,500, 1,531 ms | ≤ 1,500 | Pass A, **fail** B and C |
+| Focus on the moved song's grip after every move, and the draft saved the move | yes | yes | yes | always | Pass |
+| Reorder key: slowest next paint / Event Timing | 113.8 / 136 ms | 45.3 / 56 ms | 40.1 / 200 ms (keydown on a grip) | ≤ 200 | Pass (C exactly at the line) |
+| Studio grid rendered with 64 cells | 64 | 64 | 64 | 64 | Pass |
+| Studio idle 3 s: p50 / p95 / worst frame, long tasks | 16.7 / 16.9 / 31.9 ms, none | 16.7 / 17.1 / 18.3 ms, none | 16.7 / 16.9 / 21.7 ms, none | p95 ≤ 50 | Pass |
+| 19 grid keys (7 Right, 7 Down, Ctrl+Home, Ctrl+End, Home, Left to the lane name, Right): focus landed on the expected cell every time | yes | yes | yes | always | Pass |
+| Grid keys: next paint p50 / worst | 10.3 / 19.5 ms | 14.4 / 32.7 ms | 13.3 / 31.5 ms | ≤ 200 | Pass |
+| Grid keys and Space toggles: slowest Event Timing | 176 ms | 288 ms (target not recorded in that run) | 168 ms (keydown on a square) | ≤ 200 | Pass A and C, **fail** B |
+| Space toggles: pressed state changed, focus stayed | 46, 170, 23 ms | 45, 43, 67 ms | 32, 51, 35 ms | recorded | Pass |
+| Long tasks while moving round the grid | none | none | none | none over 200 | Pass |
+| Opening the Studio (8 whole-song stand-in stems decoded) | 7,852 ms | 12,723 ms | 7,358 ms | not budgeted | not representative: real stems are short windows |
 
 Why: the move time is a server round trip (each move saves the 100-song draft and answers with the whole
-draft) under contention; the key press itself paints in under 120 ms and focus is never lost. The 50.1 ms
+draft) under contention; the key press itself paints in at most 114 ms and focus is never lost. The 50.1 ms
 p95 is three 60 Hz refreshes in software compositing; the release threshold of 32 ms (two refreshes) is
 not met either. The 288 ms Studio Event Timing in run B is not matched by the in-page next-paint time
-(32.7 ms worst) or by any long task, so it is presentation delay in the headless software compositor at
-that moment rather than script work; it is still a failed reading and is reported as one. While the current
-mix plays, the player asks `/api/seams/<key>` about eight times a second for the next unrendered seam, which
-adds server load during every MI-0162-05 reading (seen in the API timeline); that is worth a separate look.
+(32.7 ms worst) or by any long task, so it is most likely presentation delay in the headless software
+compositor at that moment rather than script work; it is still a failed reading and is reported as one.
+While the current mix plays, the player asks `/api/seams/<key>` about eight times a second for the next
+unrendered seam, which adds server load during every MI-0162-05 reading (seen in the API timeline); that
+is worth a separate look.
 
 ## Not shown by these numbers
 
 - One shared, overloaded laptop with no GPU, headless and muted. Other agents' builds and tests ran on the
-  same cores, so the same budget can pass in one run and fail in the next; two runs are not a distribution.
+  same cores, so the same budget can pass in one run and fail in the next; two or three runs are not a distribution.
 - Synthetic data: invented titles, one song's analysis copied 20,000 times, stand-in Studio stems. A real
   library's search relevance, artwork and metadata spread are not represented.
 - Not independent: the same agent wrote the budgets, the specs and this page.

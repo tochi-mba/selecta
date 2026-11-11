@@ -53,6 +53,18 @@ class RelinkRequest(BaseModel):
     confirmed: list[int] = []
 
 
+# T0096: steering actions that replace a setting outright, and the setting each one replaces.
+STEERING_SETTINGS = {
+    "wordplay": "wordplay",
+    "flash": "flash",
+    "mix_language": "mix_language",
+    "stems": "stems",
+    "energy_arc": "energy_arc",
+    "take_me_to": "target",
+    "length_mode": "length_mode",
+}
+
+
 def add_routes(app, ctx) -> None:
     background = ctx.background
     build_mix = ctx.build_mix
@@ -413,6 +425,21 @@ def add_routes(app, ctx) -> None:
     @app.post("/api/steer")
     def steering(body: SteerRequest) -> dict:
         with connect() as conn:
+            # T0096: a setting replaced outright (not nudged like more/less) is checked against
+            # what the page last saw, so another window's newer choice is reported, not lost.
+            field = STEERING_SETTINGS.get(body.action)
+            if field and "expected" in body.model_fields_set:
+                now = getattr(get_steering(conn), field)
+                if now != body.expected and not (field == "target" and not now and not body.expected):
+                    return JSONResponse(
+                        {
+                            "detail": "That setting was changed somewhere else, so it wasn't "
+                            "changed here. It now shows the newer choice.",
+                            "code": "setting_changed",
+                            "steering": get_steering(conn).__dict__,
+                        },
+                        status_code=409,
+                    )
             try:
                 return steer(conn, body.action, body.value).__dict__
             except ValueError as problem:

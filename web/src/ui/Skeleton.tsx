@@ -1,6 +1,26 @@
 import { useEffect, useState } from 'react';
 
-export type SkeletonVariant = 'text' | 'cards' | 'vibes' | 'library' | 'listen' | 'timeline' | 'inspector' | 'pairs' | 'metrics';
+/** P0035: Edit's timeline is song rows with a transition hanging between each pair, so its
+ * placeholder is the same: a song row (grip, title, artist, facts), then a transition (name, region,
+ * action), alternating, so the loaded timeline lands where the placeholder was. */
+function timelineUnits(songs: number) {
+  return Array.from({ length: Math.max(1, songs) * 2 - 1 }, (_, index) => index % 2 === 0 ? (
+    <div className="skeleton-unit skeleton-song" key={index}>
+      <i className="skeleton-grip" />
+      <i className="skeleton-title" />
+      <i className="skeleton-detail" />
+      <i className="skeleton-meta" />
+    </div>
+  ) : (
+    <div className="skeleton-unit skeleton-seam" key={index}>
+      <i className="skeleton-title" />
+      <i className="skeleton-region" />
+      <i className="skeleton-action" />
+    </div>
+  ));
+}
+
+export type SkeletonVariant ='text' | 'cards' | 'vibes' | 'library' | 'listen' | 'timeline' | 'inspector' | 'pairs' | 'metrics';
 
 /** Reserve real content geometry immediately, fading decorative placeholders in only if needed. */
 export function Skeleton({ lines = 3, label = 'Loading', variant = 'text', retry }: {
@@ -25,7 +45,7 @@ export function Skeleton({ lines = 3, label = 'Loading', variant = 'text', retry
     <div className={`skeleton skeleton-${variant}`} role="status" aria-live="polite" aria-busy="true" aria-label={label}>
       <span className="visually-hidden">{label}</span>
       <div className="skeleton-content" aria-hidden="true">
-        {Array.from({ length: count }, (_, index) => (
+        {variant === 'timeline' ? timelineUnits(lines) : Array.from({ length: count }, (_, index) => (
           <div className="skeleton-unit" key={index}>
             <i className="skeleton-title" />
             {variant !== 'text' && <><i className="skeleton-detail" /><i className="skeleton-meta" /></>}

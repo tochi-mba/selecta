@@ -1,7 +1,7 @@
 # ADR-0242 - Music-native microcopy, state language and non-patronizing feedback
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (4/8 Implemented, 2/8 In progress, 2/8 Not started or needing a person; updated 2026-11-11).
+- **Implementation:** In progress (6/8 Implemented, 1/8 In progress, 1/8 Not started; 2026-11-11).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P1 / Content.
@@ -28,7 +28,7 @@ Use conversational but precise musical language. Simple user intent first, techn
 
 No exaggerated intelligence claims, promise of guaranteed perfect transition or vague success when work is still processing. Preserve a proven reliable interface when a proposed artistic treatment cannot demonstrate improved user outcomes. This docs-only decision does not implement remote services, SaaS, telemetry, accounts or changes to music files.
 
-## Implementation checklist - 4/8 Implemented, 0/8 Verified
+## Implementation checklist - 6/8 Implemented, 0/8 Verified
 
 1. **SF-0242-01 - Define voice and terminology.** **Acceptance:** Action nouns and music terms consistent across routes. **Required verification:** Content inventory. **Implementation:** Implemented; the content inventory sets one voice (plain, second person, sentence case, no blame) and the consequence label for each action; the in-app glossary is the one reference for music terms, every ? hint on every route names a term it explains, and the local and Cloud copy layers keep the same words; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-11; **Evidence:** `docs/adr/completion/copy-audit.md` (conventions, consequence labels, forms and errors); `web/src/ui/Glossary.test.tsx` 'GP-0256-01 every ? hint on every route names a term the glossary explains', 'GP-0256-02 every term that describes an action says what it changes and whether it can be taken back' (8 files 171 passed 2026-11-11); `web/src/copy.test.ts` (6 files 66 passed 2026-11-11).
 2. **SF-0242-02 - Separate request and result labels.** **Acceptance:** Requested move never labeled rendered. **Required verification:** Status copy fixtures. **Implementation:** Implemented; a requested or proposed move is never labelled rendered or joined; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `web/src/ui/MusicObjects.test.tsx` 'never calls an automatic unrendered transition a confirmed technique', 'shows only returned ordered route songs, and never implies a proposed path has joined'; `web/src/views/Requests.test.tsx` 'says requested', 'says which request a bridge is for'; passed 2026-11-10.
@@ -47,5 +47,5 @@ Preserve one player and intentional Pause, unchanged local audio and LRCLIB meta
 
 - **Depends on:** ADR-0138/0182/0159; new ADR-0198/0199 and corresponding programme checklist.
 - **Next:** owner acceptance → design review → focused implementing PR with tests → independent audio, accessibility, visual and hardware acceptance → release decision.
-- **Now:** Decision Accepted; Implementation 4/8 (2026-11-11); Independently Verified No; implementing branch feat/finish-checklists.
+- **Now:** Decision Accepted; Implementation 6/8 (2026-11-11); Independently Verified No; implementing branch feat/finish-checklists.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

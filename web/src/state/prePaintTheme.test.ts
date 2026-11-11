@@ -6,8 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest';
  * before the app's own JavaScript loads, so a chosen theme never flashes the other one. */
 
 const html = readFileSync(resolve(__dirname, '../../index.html'), 'utf8');
-const head = html.slice(html.indexOf('<head>'), html.indexOf('</head>'));
-const inline = /<script>([\s\S]*?)<\/script>/.exec(head)?.[1] ?? '';
+// parse the page rather than pattern-match it: the first inline (no src) script in the head
+const parsed = new DOMParser().parseFromString(html, 'text/html');
+const inline = [...parsed.head.querySelectorAll('script')].find((script) => !script.src)?.textContent ?? '';
 const DARK = '#100f0c';
 const LIGHT = '#f5f2e9';
 
@@ -33,8 +34,13 @@ afterEach(() => {
 describe('the theme applied before first paint (S3-0077-02)', () => {
   it('runs inline in <head>, after the title-bar tags and before the app module', () => {
     expect(inline).toContain("localStorage.getItem('selecta.prefs')");
-    expect(head.indexOf('<script>')).toBeGreaterThan(head.lastIndexOf('<meta name="theme-color"'));
-    expect(html.indexOf('<script>')).toBeLessThan(html.indexOf('type="module"'));
+    const order = [...parsed.querySelectorAll('meta[name="theme-color"], script')];
+    const own = order.findIndex((node) => node.tagName === 'SCRIPT' && !(node as HTMLScriptElement).src);
+    const bars = order.map((node, index) => (node.tagName === 'META' ? index : -1)).filter((index) => index >= 0);
+    const app = order.findIndex((node) => node.getAttribute('type') === 'module');
+    expect(Math.max(...bars)).toBeLessThan(own);
+    expect(own).toBeLessThan(app);
+    expect(parsed.head.contains(order[own])).toBe(true);
   });
 
   it.each([

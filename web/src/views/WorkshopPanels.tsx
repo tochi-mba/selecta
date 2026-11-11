@@ -338,8 +338,27 @@ type RelinkPreview = {
   verified: number;
   blocked: number;
   token: string | null;
-  candidates: { id: number; title: string | null; artist: string | null; status: string }[];
+  confirmed?: number;
+  needs_confirmation?: number;
+  references?: { current_mix: number; drafts: number; ratings: number; corrections: number; discoveries: number };
+  candidates: { id: number; title: string | null; artist: string | null; status: string; why?: string; can_confirm?: boolean }[];
 };
+
+/** GP-0252-03: what refers to the songs a relink moves, in words. Their IDs don't change, so it all stays. */
+export function relinkReferenceWords(references: NonNullable<RelinkPreview['references']>): string {
+  const parts = [
+    [references.current_mix, 'in your current mix', 'in your current mix'],
+    [references.drafts, 'draft uses them', 'drafts use them'],
+    [references.ratings, 'rating', 'ratings'],
+    [references.corrections, 'correction', 'corrections'],
+    [references.discoveries, 'discovery', 'discoveries'],
+  ] as const;
+  const said = parts
+    .filter(([count]) => count > 0)
+    .map(([count, one, many], index) => (index === 0 && one.startsWith('in ') ? `${count} ${count === 1 ? 'song' : 'songs'} ${one}` : `${count} ${count === 1 ? one : many}`));
+  if (!said.length) return 'Nothing else refers to these songs yet.';
+  return `Kept as they are: ${said.join(', ')}. Song IDs don’t change, so all of it keeps working.`;
+}
 
 export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status' | 'refreshStatus' | 'notify'>) {
   const [folder, setFolder] = useState('');
@@ -352,6 +371,8 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   const [relocation, setRelocation] = useState<RelinkPreview | null>(null);
   const [relinkProblem, setRelinkProblem] = useState('');
   const [checkingRelink, setCheckingRelink] = useState(false);
+  // GP-0252-04: song IDs the person has said are the same recording, though their details changed
+  const [sameRecording, setSameRecording] = useState<number[]>([]);
   const previewRelink = async () => {
     if (!relocate?.target.trim()) return;
     setCheckingRelink(true);
@@ -359,7 +380,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     setRelocation(null);
     try {
       setRelocation(await post<RelinkPreview>('/folders/relink/preview', {
-        old: relocate.old, new: relocate.target.trim(),
+        old: relocate.old, new: relocate.target.trim(), confirmed: sameRecording,
       }));
     } catch (error) {
       setRelinkProblem((error as Error).message);
@@ -370,7 +391,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
   const confirmRelink = async () => {
     if (!relocate || !relocation?.token) return;
     try {
-      await post('/folders/relink', { old: relocate.old, new: relocate.target.trim(), token: relocation.token });
+      await post('/folders/relink', { old: relocate.old, new: relocate.target.trim(), token: relocation.token, confirmed: sameRecording });
       setRelocate(null);
       setRelocation(null);
       void refresh();
@@ -442,6 +463,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
                 setRelocate({ old: item.path, target: '' });
                 setRelocation(null);
                 setRelinkProblem('');
+                setSameRecording([]);
               }}>Find moved folder</button>}
               <button onClick={() => setConfirmUnwatch(item.path)}>Stop watching</button>
             </li>
@@ -471,15 +493,35 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
               setRelocate({ ...relocate, target: event.target.value });
               setRelocation(null);
               setRelinkProblem('');
+              setSameRecording([]);
             }} placeholder="Absolute path of the moved folder" />}
           </Field>
           <Action working="Checking recordings…" disabled={checkingRelink || !relocate.target.trim()} run={previewRelink}>Preview without changing anything</Action>
           {relocation && <>
             <p role="status">{relocation.verified} of {relocation.total} songs verified; {relocation.blocked} blocked.</p>
             {!!relocation.blocked && <p className="warn">No paths will change. Every song must pass verification. Check that the correct folder is selected.</p>}
-            {!!relocation.blocked && <ul>{relocation.candidates.filter((item) => item.status !== 'verified').slice(0, 12).map((item) =>
+            {!!relocation.blocked && <ul>{relocation.candidates.filter((item) => item.status !== 'verified' && !item.can_confirm).slice(0, 12).map((item) =>
               <li key={item.id}>{item.title ?? 'Untitled'} (ID {item.id}): {item.status.replaceAll('_', ' ')}</li>
             )}</ul>}
+            {relocation.references && <p className="hint">{relinkReferenceWords(relocation.references)}</p>}
+            {relocation.candidates.some((item) => item.can_confirm) && (
+              <fieldset className="relink-confirm">
+                <legend>These look different now. Only tick one if you know it is the same recording.</legend>
+                {relocation.candidates.filter((item) => item.can_confirm).slice(0, 50).map((item) => (
+                  <label key={item.id} className="check">
+                    <input
+                      type="checkbox"
+                      checked={sameRecording.includes(item.id)}
+                      onChange={(event) => setSameRecording((current) => event.target.checked
+                        ? [...current, item.id]
+                        : current.filter((song) => song !== item.id))}
+                    />
+                    {' '}Same recording: {item.title ?? 'Untitled'} (ID {item.id}). {item.why}.
+                  </label>
+                ))}
+                <Action working="Checking again…" disabled={checkingRelink} run={previewRelink}>Preview again with these answers</Action>
+              </fieldset>
+            )}
             {relocation.token && <p className="hint">Confirm only if this is the same recording collection. Exact song identities, ratings, drafts and analysis will be retained.</p>}
           </>}
         </Dialog>

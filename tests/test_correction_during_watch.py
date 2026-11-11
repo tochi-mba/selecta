@@ -4,6 +4,9 @@ lets the new songs arrive without touching either."""
 
 from __future__ import annotations
 
+import threading
+from types import SimpleNamespace
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -48,6 +51,23 @@ def setup(tmp_path, monkeypatch):
     conn.close()
 
 
+def _hold_background(monkeypatch) -> list[str]:
+    """Hand-off to lyrics and analysis is recorded instead of started, so the test stays offline."""
+    started: list[str] = []
+
+    class Recorded:
+        def __init__(self, target, daemon=True):
+            self.name = target.__name__
+
+        def start(self):
+            started.append(self.name)
+
+    monkeypatch.setattr(
+        "selecta.routes.library.threading", SimpleNamespace(Thread=Recorded, Lock=threading.Lock)
+    )
+    return started
+
+
 def _row(client, title):
     page = client.get("/api/library", params={"q": title, "state": "all"}).json()
     return next(song for song in page["songs"] if song["title"] == title)
@@ -70,10 +90,10 @@ def test_a_correction_survives_analysis_finishing_and_new_files_arriving(setup, 
     monkeypatch.setattr(scan, "library_folders", lambda _conn: [music])
     monkeypatch.setattr(scan, "folder_changed", lambda _conn, _folder: True)
     monkeypatch.setattr(scan, "scan_folder", found_new)
-    started: list[bool] = []
-    monkeypatch.setattr("threading.Thread.start", lambda self: started.append(True))
+    started = _hold_background(monkeypatch)
     assert client.post("/api/library/check").json() == {"new": 2}
-    assert started  # lyrics and analysis for the new songs are handed to the background
+    # lyrics and analysis for the new songs are handed to the background
+    assert started == ["settle_new_songs"]
 
     song = _row(client, "Still analysing")
     assert (song["bpm"], song["camelot"]) == (174.0, "5B")
@@ -96,7 +116,7 @@ def test_a_correction_made_after_the_new_files_arrive_lands_on_the_right_song(se
     monkeypatch.setattr(scan, "library_folders", lambda _conn: [music])
     monkeypatch.setattr(scan, "folder_changed", lambda _conn, _folder: True)
     monkeypatch.setattr(scan, "scan_folder", found_new)
-    monkeypatch.setattr("threading.Thread.start", lambda self: None)
+    _hold_background(monkeypatch)
     assert client.post("/api/library/check").json() == {"new": 1}
     client.post("/api/songs/1/correct", json={"bpm": 150.0}).raise_for_status()
     db.save_analysis(conn, 5, {"version": ANALYSIS_VERSION, "bpm": 120.0, "camelot": "1A"})

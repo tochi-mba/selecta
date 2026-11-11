@@ -18,6 +18,8 @@ export const length = (seconds: number): string => {
 
 export const gb = (bytes: number): string => {
   const value = bytes / 1024 ** 3;
+  // S31-0079-08: a few megabytes is not "0.0 GB"; small amounts read in MB instead
+  if (bytes > 0 && value < 0.1) return `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
   return value >= 10 ? `${Math.round(value)} GB` : `${value.toFixed(1)} GB`;
 };
 

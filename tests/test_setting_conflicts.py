@@ -52,3 +52,52 @@ def test_older_pages_that_do_not_say_what_they_saw_still_work(tmp_path):
     client = _client(tmp_path)
     smallest = client.get("/api/storage").json()["smallest_budget_bytes"]
     assert client.post("/api/storage", json={"budget_gb": smallest / GB}).status_code == 200
+
+
+def test_a_steering_setting_changed_elsewhere_is_refused_and_shows_the_newer_one(tmp_path):
+    client = _client(tmp_path)
+    first = client.post(
+        "/api/steer", json={"action": "stems", "value": "often", "expected": "sometimes"}
+    )
+    assert first.status_code == 200
+    # this window still thinks it is "sometimes"
+    late = client.post(
+        "/api/steer", json={"action": "stems", "value": "never", "expected": "sometimes"}
+    )
+    assert late.status_code == 409
+    assert late.json()["code"] == "setting_changed"
+    assert late.json()["steering"]["stems"] == "often"
+
+
+def test_an_energy_arc_and_a_destination_are_checked_too(tmp_path):
+    client = _client(tmp_path)
+    arc = [10, 30, 50, 70, 90]
+    assert (
+        client.post(
+            "/api/steer", json={"action": "energy_arc", "value": arc, "expected": None}
+        ).status_code
+        == 200
+    )
+    stale = client.post(
+        "/api/steer", json={"action": "energy_arc", "value": [0, 0, 0, 0, 0], "expected": None}
+    )
+    assert stale.status_code == 409
+    assert (
+        client.post(
+            "/api/steer", json={"action": "energy_arc", "value": None, "expected": arc}
+        ).status_code
+        == 200
+    )
+    # "no destination" can be sent as an empty string or as null
+    assert (
+        client.post(
+            "/api/steer", json={"action": "take_me_to", "value": "", "expected": None}
+        ).status_code
+        == 200
+    )
+
+
+def test_nudges_and_older_pages_are_not_checked(tmp_path):
+    client = _client(tmp_path)
+    assert client.post("/api/steer", json={"action": "more"}).status_code == 200
+    assert client.post("/api/steer", json={"action": "stems", "value": "often"}).status_code == 200

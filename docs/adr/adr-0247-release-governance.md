@@ -1,7 +1,7 @@
 # ADR-0247 - Implementation-status integrity and independent GO/NO-GO governance
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (7/8 Implemented, 0/8 In progress, 1/8 Not started; 2026-11-10).
+- **Implementation:** In progress (7/8 Implemented, 0/8 In progress, 1/8 Not started; 2026-11-11).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Delivery.
@@ -47,5 +47,5 @@ Preserve one player and intentional Pause, unchanged local audio and LRCLIB meta
 
 - **Depends on:** ADR-0184/0164/0030; new ADR-0198/0199 and corresponding programme checklist.
 - **Next:** owner acceptance → design review → focused implementing PR with tests → independent audio, accessibility, visual and hardware acceptance → release decision.
-- **Now:** Decision Accepted; Implementation 7/8 (2026-11-10); Independently Verified No; implementing branch feat/finish-checklists.
+- **Now:** Decision Accepted; Implementation 7/8 (2026-11-11); Independently Verified No; implementing branch feat/finish-checklists.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

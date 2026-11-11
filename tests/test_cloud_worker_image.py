@@ -41,8 +41,8 @@ def instructions() -> list[tuple[str, str]]:
 def test_the_image_starts_from_an_exact_python_matching_the_project():
     base = [rest for keyword, rest in instructions() if keyword == "FROM"]
     assert len(base) == 1
-    match = re.fullmatch(r"python:(\d+)\.(\d+)\.(\d+)-slim-bookworm", base[0])
-    assert match, "pin an exact Python patch release, never latest"
+    match = re.fullmatch(r"python:(\d+)\.(\d+)\.(\d+)-slim-bookworm@sha256:[0-9a-f]{64}", base[0])
+    assert match, "pin an exact Python patch release by digest, never latest"
     wanted = tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))["project"]
     assert f">={match[1]}.{match[2]}" in wanted["requires-python"]
     copies = [rest for keyword, rest in instructions() if keyword == "COPY"]
