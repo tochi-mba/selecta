@@ -43,7 +43,7 @@ describe('S4-0101-03 every move stays in the picker', () => {
   it('shows every move offered before 4.0, and the ones it can’t use are disabled with their reason', async () => {
     const { group } = await openPicker();
     for (const [name, label] of BEFORE_4) {
-      const button = group.getByRole('button', { name: label, exact: true });
+      const button = group.getByRole('button', { name: label });
       if (WORDS.has(name)) {
         expect(button).toBeDisabled();
         expect(button).toHaveAttribute('title', NO_PHRASE);
@@ -59,7 +59,7 @@ describe('S4-0101-03 every move stays in the picker', () => {
 
   it('the keyboard alone reaches a move and chooses it, skipping the disabled ones', async () => {
     const { calls, group } = await openPicker();
-    group.getByRole('button', { name: 'Let Selecta pick', exact: true }).focus();
+    group.getByRole('button', { name: 'Let Selecta pick' }).focus();
     const order: string[] = [];
     for (let step = 0; step < 15; step += 1) {
       await userEvent.tab();

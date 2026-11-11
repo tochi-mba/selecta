@@ -421,6 +421,14 @@ export function App() {
     document.addEventListener('fullscreenchange', change);
     return () => document.removeEventListener('fullscreenchange', change);
   }, []);
+  // The Stage belongs to Listen. Going to another page while it is open (Back, a link, a shortcut)
+  // leaves it, and the browser's fullscreen with it, instead of keeping that page fullscreen (T0128).
+  useEffect(() => {
+    if (route.page === 'listen' || !stageRef.current) return;
+    setStage(false);
+    setStageFallback(false);
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+  }, [route.page]);
   useEffect(() => {
     setToastsQuiet(stage);
     if (stage) return;

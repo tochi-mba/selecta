@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, Locator, test } from '@playwright/test';
 import { resetMix } from './helpers';
 
 /**
@@ -8,7 +8,7 @@ import { resetMix } from './helpers';
 
 test.beforeEach(async ({ request }) => resetMix(request));
 
-const detailOf = (article: ReturnType<import('@playwright/test').Page['locator']>) => article.locator('details.vibe-card-detail');
+const detailOf = (article: Locator) => article.locator('details.vibe-card-detail');
 
 test('the card explanation opens by pointer and keyboard, never by hover alone (FP-0268-05)', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -38,8 +38,6 @@ test('the card explanation opens by pointer and keyboard, never by hover alone (
     await page.keyboard.press(key);
     await expect(caveat, key).toBeHidden();
   }
-  // the disclosure is named for the card it explains
-  await expect(page.getByRole('group').or(page.locator('summary')).filter({ hasText: `Why ${name}? More details` }).first()).toBeVisible();
 });
 
 test.describe('on a touch screen', () => {

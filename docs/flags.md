@@ -141,6 +141,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `library.batch` | **Batch actions.** Select several songs and act on them at once. |  |
 | `library.priority` | **Priority songs.** Songs analysed first, whose stems are kept when the cache is cleared. |  |
 | `library.never_play` | **Never play.** Songs Selecta won't pick when it builds a mix. |  |
+| `library.related_links` | **Connected songs.** A song's details list the word connections found for it, each marked heard and kept or still a candidate. | `discover.word_links` |
 | `library.corrections` | **Corrections.** Fix a song's measured tempo, or say whether it's music. |  |
 | `library.capability_readiness` | **Readiness by capability.** Song details say separately whether a song can play, join mixes, have stems split and show timed lyrics. |  |
 | `library.card_view` | **Card view.** The Library as cards instead of a list. |  |

@@ -103,6 +103,10 @@
        label     a small bold label above or inside a control group
        caption   the smallest running text: help under a control, a footnote
        counter   numbers that change in place: counts, revisions, positions (tabular, mono)
+     Two roles live outside this list on purpose (UF-0369-01):
+       body      running text and explanations: the --body face at --text-md, the page default
+       lyric     the sung line on Listen and Stage (.lyrics .sung in style.css): the display face,
+                 fitted to the window; neighbouring lines step down to body size and dim
      Numbers that change while you watch (time, BPM, percentages, counts) are tabular wherever they
      appear; see styles/typography.css. Proof: web/e2e/mp-0275-typography.e2e.ts. */
   --type-display: 900 clamp(2.4rem, 8vw, 5.2rem) / 1.08 var(--display);

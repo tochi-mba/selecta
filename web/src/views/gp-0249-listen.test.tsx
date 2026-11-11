@@ -17,7 +17,7 @@ const detail: SongDetail = {
   beat_times: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18], beats_per_bar: 4, sections: [], lines: [{ t: 0, text: 'Hello there' }],
 };
 const planned = { settings: { move: 'bass_swap_blend' }, state: { status: 'planned', why: 'Close in tempo and key' } };
-const fellBack = { settings: { move: 'bass_swap_blend' }, state: { status: 'ready', label: 'Blend', style: 'blend', passed: true, why: 'Close in tempo and key' } };
+const fellBack = { settings: { move: 'echo_out' }, state: { status: 'ready', label: 'Blend', style: 'blend', passed: true, why: 'Close in tempo and key' } };
 
 function listen(tracks: MixItem[], more: { openRequests?: () => void } = {}) {
   const player = new SetPlayer(() => tracks, () => {});

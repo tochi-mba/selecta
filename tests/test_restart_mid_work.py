@@ -2,20 +2,35 @@
 
 Each test runs one server, changes something, then starts a second server on the same data folder,
 as a real restart would, and checks that nothing was lost, nothing ran twice and nothing claims to
-still be running. Tab sleep and wake in a real browser is in `web/e2e/t0121-t0128-listen-edges.e2e.ts`.
+still be running. Tab sleep and wake in a real browser is in `web/e2e/t0097-tab-sleep.e2e.ts`.
 """
 
 from __future__ import annotations
 
 import json
 import time
+from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 from test_api_contracts import _add, _somewhere_for_files  # noqa: F401 - shared fixture
 
 from selecta import db
 from selecta.api import create_app
 from selecta.config import Settings
+
+
+@pytest.fixture(autouse=True)
+def _songs_load_without_audio(monkeypatch):
+    """As in test_api_contracts: the made-up songs have no real audio to analyse."""
+
+    def load_song(_conn, _settings, song_id):
+        return SimpleNamespace(
+            id=song_id, title=f"Song {song_id}", vocals_known=True, bpm=120.0, duration=200.0
+        )
+
+    monkeypatch.setattr("selecta.analysis.song.load_song", load_song)
+    monkeypatch.setattr("selecta.planner.reel.load_library", lambda _conn, _settings: [])
 
 
 def _server(home):
@@ -73,11 +88,22 @@ def test_an_export_under_way_when_the_server_stopped_says_interrupted_not_runnin
     folder = tmp_path / "exports" / "jobs"
     folder.mkdir(parents=True)
     job = {
-        "id": "b" * 32, "operation": "export-1", "scope": "current", "draft": None,
-        "state": "encoding", "name": "mix.flac", "created_at": time.time(),
-        "last_progress_at": time.time(), "error": None, "seams_total": 1, "seams_ready": 1,
-        "songs": [{"song_id": 1, "title": "Song 001", "artist": "Someone"}], "seams": [],
-        "revision": "r1", "seconds_estimate": 200, "seconds": None,
+        "id": "b" * 32,
+        "operation": "export-1",
+        "scope": "current",
+        "draft": None,
+        "state": "encoding",
+        "name": "mix.flac",
+        "created_at": time.time(),
+        "last_progress_at": time.time(),
+        "error": None,
+        "seams_total": 1,
+        "seams_ready": 1,
+        "songs": [{"song_id": 1, "title": "Song 001", "artist": "Someone"}],
+        "seams": [],
+        "revision": "r1",
+        "seconds_estimate": 200,
+        "seconds": None,
     }
     (folder / f"{job['id']}.json").write_text(json.dumps(job), encoding="utf-8")
 
@@ -95,7 +121,8 @@ def test_an_export_under_way_when_the_server_stopped_says_interrupted_not_runnin
 def test_a_storage_limit_set_before_a_restart_is_still_the_limit(tmp_path):
     first = _server(tmp_path)
     smallest = first.get("/api/storage").json()["smallest_budget_bytes"]
-    chosen = first.post("/api/storage", json={"budget_gb": smallest / 1024**3}).json()["budget_bytes"]
+    answer = first.post("/api/storage", json={"budget_gb": smallest / 1024**3})
+    chosen = answer.json()["budget_bytes"]
     first.close()
 
     second = _server(tmp_path)

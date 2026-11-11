@@ -142,7 +142,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 
 | Task | Status | How we know, or what's left |
 |---|---|---|
-| T0075 Capture existing request/response contracts as fixtures; keep existing endpoints usable. | Partly | `tests/test_api_contracts.py` covers the new routes and that the older list still answers. Existing responses weren't captured as fixtures. |
+| T0075 Capture existing request/response contracts as fixtures; keep existing endpoints usable. | Done | `tests/fixtures/api_contracts_baseline.json` records all 73 routes of the pre-redesign server (main `911c981`, read from its `src/selecta/api.py`) and the response shape of 13 read routes (`/api/status`, `/api/storage`, `/api/songs`, `/api/songs/1`, `/api/mix`, `/api/drafts`, `/api/requests`, `/api/discoveries`, `/api/memory`, `/api/memory/ratings`, `/api/links`, `/api/vibes`, `/api/listening`). `tests/test_api_contract_fixtures.py` (15 tests: every old route still offered, each read still matching its recorded shape, and the shape check itself) fails on a removed route, removed field or changed type while allowing additions. Passed 2026-11-11 (pytest, 15 passed). |
 | T0076 Define typed error taxonomy and backward-compatible feature negotiation for older local servers. | Done | `problemKind` in `api.ts`, `status.api` from the server. |
 | T0077 Add canonical planner `mix-ready` eligibility status with structured reason codes. | Done | `readiness` on `/api/library`, tested in `tests/test_api_contracts.py`. |
 | T0078 Add paginated/cursor-based Library APIs and stable search/sort semantics. | Done | `/api/library`, tested in `tests/test_api_contracts.py`. |

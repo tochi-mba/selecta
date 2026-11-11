@@ -51,7 +51,10 @@ BARS_IN_A_SONG = 2
 
 def _settings(client, draft=None):  # noqa: F811
     query = f"?draft={draft}" if draft is not None else ""
-    return client.get(f"/api/mix{query}").json()["mix"][1]["seam"]["settings"]
+    saved = client.get(f"/api/mix{query}").json()["mix"][1]["seam"]["settings"]
+    # every choice made here is the person's own, which the server records beside it as soft=False
+    assert saved.pop("soft", False) is False
+    return saved
 
 
 @pytest.mark.parametrize(("bpm_a", "bpm_b"), [(120, 121), (120, 135)])

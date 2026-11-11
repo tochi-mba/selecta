@@ -24,7 +24,8 @@ def _specs() -> dict[str, str]:
 
 def test_every_screenshot_manifest_is_written_as_a_candidate() -> None:
     specs = _specs()
-    writers = {name for name, text in specs.items() if "screenshot(" in text and "writeFileSync(" in text}
+    # every spec that writes a capture manifest or a measured baseline
+    writers = {name for name, text in specs.items() if "writeFileSync(" in text and ("screenshot(" in text or CANDIDATE in text)}
     assert {"paired-theme.e2e.ts", "mp-baseline.mp.ts"} <= writers
     for name in writers:
         statuses = set(re.findall(r"status:\s*'([a-z-]+)'", specs[name]))

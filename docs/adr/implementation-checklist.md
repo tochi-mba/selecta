@@ -137,7 +137,7 @@
 
 ### Additive backend API evolution - [ADR-0026](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0026-api-compatibility.md)
 
-- [ ] T0075 - Capture existing request/response contracts as fixtures; keep existing endpoints usable.
+- [x] T0075 - Capture existing request/response contracts as fixtures; keep existing endpoints usable. **Evidence (2026-11-11):** `tests/fixtures/api_contracts_baseline.json` records all 73 routes of the pre-redesign server (main `911c981`) and the response shape of 13 read routes; `tests/test_api_contract_fixtures.py` (15 tests) fails on any removed route, removed field or changed field type, allowing additions. Passed 2026-11-11 (pytest, 15 passed).
 - [x] T0076 - Define typed error taxonomy and backward-compatible feature negotiation for older local servers.
 - [x] T0077 - Add canonical planner `mix-ready` eligibility status with structured reason codes.
 - [x] T0078 - Add paginated/cursor-based Library APIs and stable search/sort semantics.

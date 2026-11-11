@@ -22,6 +22,9 @@ ROOT = Path(__file__).resolve().parent.parent
 # seam keys of two made-up rated transitions, and the rating each was given
 RATED = {"rollback-good-seam": "good", "rollback-bad-seam": "bad"}
 
+# What an older build is known to read differently without losing it, as docs/acceptance.md records
+OLDER_LIMITS = {"corrected_bpm": "it ignores tempo corrections while it runs"}
+
 
 def read_everything(home: Path) -> dict:
     """What a person would look for, as this checkout's own server reports it."""
@@ -164,11 +167,18 @@ def main() -> int:
         # A feature the older build never had (None) can't be read by it, but it must survive the
         # trip: this checkout has to see it again afterwards, exactly as before.
         unknown = sorted(key for key, value in rolled_back.items() if value is None)
-        known = {key: value for key, value in before.items() if key not in unknown}
-        same = before == forward and known == {k: rolled_back[k] for k in known}
+        differs = sorted(
+            key for key in before if key not in unknown and before[key] != rolled_back.get(key)
+        )
         if unknown:
             print(f"the older checkout doesn't have: {', '.join(unknown)}")
-        print("identical across all three" if same else json.dumps(rolled_back, indent=1))
+        for key in differs:
+            why = OLDER_LIMITS.get(key, "NOT EXPECTED")
+            print(f"the older checkout reads {key} differently ({why}): {rolled_back.get(key)}")
+        again = "exactly the same" if before == forward else "A CHANGE"
+        print(f"this checkout again sees {again}")
+        same = before == forward and all(key in OLDER_LIMITS for key in differs)
+        print("nothing lost" if same else json.dumps(forward, indent=1))
         return 0 if same else 1
 
 

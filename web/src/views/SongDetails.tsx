@@ -7,6 +7,7 @@ import { trackReadiness } from '../state/readiness';
 import { Action, Sheet, Status } from '../ui/controls';
 import { Field } from '../ui/primitives';
 import { SongMotif } from '../ui/MusicObjects';
+import { SongRelated } from './SongRelated';
 import { ViewProps } from './shared';
 
 const LOWEST_TEMPO = 40;
@@ -139,6 +140,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
         <div><dt>Key measured</dt><dd>{song.detected_camelot ?? 'Not measured yet'}</dd></div>
         {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>}
       </dl>
+      {flagOn('library.related_links') && <SongRelated song={song} />}
       {flagOn('library.corrections') && (
       <section className="stack">
         <h3>Correct it</h3>

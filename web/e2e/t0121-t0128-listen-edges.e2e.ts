@@ -90,7 +90,7 @@ test('T0128 changing route while the fullscreen Stage is open leaves it cleanly 
   await page.goBack();
   await expect(page).toHaveURL(/\/library/);
   await expect(page.locator('.now.stage')).toHaveCount(0);
-  expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true);
   // the mini-player carries on
   await expect(page.getByRole('button', { name: 'Pause' }).first()).toBeVisible();
   await page.goForward();
