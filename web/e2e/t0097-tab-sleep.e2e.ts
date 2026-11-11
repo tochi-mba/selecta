@@ -22,7 +22,9 @@ test('a frozen tab wakes up still working, with its mix, and reads fresh state a
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
 
   let reads = 0;
-  page.on('request', (sent) => { if (/\/api\/(status|mix)(\?|$)/.test(sent.url())) reads += 1; });
+  // the status poll is presentation only, so it is the one that must stop while asleep (the player may
+  // still ask for the next transition's audio, because the music is still playing)
+  page.on('request', (sent) => { if (/\/api\/status(\?|$)/.test(sent.url())) reads += 1; });
   // Headless browsers never background a tab, so the page is told it is hidden the way a browser
   // tells it (visibilityState and visibilitychange), and then frozen.
   const setHidden = (hidden: boolean) => page.evaluate((value) => {
@@ -32,10 +34,11 @@ test('a frozen tab wakes up still working, with its mix, and reads fresh state a
   await setHidden(true);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Page.setWebLifecycleState', { state: 'frozen' });
+  await page.waitForTimeout(500); // a read already on its way when the tab went is not a new one
   reads = 0;
   // While asleep, the server changes underneath it.
   await request.post('/api/mix/songs', { data: { song_id: 4 } });
-  await page.waitForTimeout(4000);
+  await page.waitForTimeout(9000); // longer than the 4 s status poll, twice
   expect(reads).toBe(0);
   await cdp.send('Page.setWebLifecycleState', { state: 'active' });
   await setHidden(false);
