@@ -248,12 +248,11 @@ a.button:hover { border-color: var(--text); }
   .crumbs li + li::before { content: none; }
   /* MP-0280-04 with MP-0277-05: a button that can carry a count keeps one width whether a count is there
      or not, so a request or new activity arriving never takes width from the page's name (which then broke
-     one letter to a line and squeezed the editor at 320px). The count still sits after its icon, centred on
-     it, in a slot held for two tabular digits even before one arrives; tighter padding keeps the pair
-     about one target wide */
-  .context-actions .context-counted { justify-content: flex-start; padding-inline: var(--space-1); }
-  .context-actions .context-counted .count { font-size: var(--text-xs); }
-  .context-actions .context-counted:not(:has(.count))::after { content: ''; flex: none; inline-size: 2ch; font: 700 var(--text-xs) var(--mono); }
+     one letter to a line and squeezed the editor at 320px). The icon stays centred in the target (MP-0274-02)
+     between two equal slots; the count sits in the one after it, centred on the icon, held for two tabular
+     digits even before one arrives (MP-0277-05) */
+  .context-actions .context-counted { position: relative; padding-inline: calc(var(--space-4) + var(--space-hair)); }
+  .context-actions .context-counted .count { position: absolute; top: 50%; translate: 0 -50%; inset-inline-start: calc(50% + var(--icon-size) / 2 + var(--icon-gap-dense)); font-size: var(--text-xs); }
   /* and the name breaks between words wherever a word fits */
   .crumbs li { overflow-wrap: break-word; }
 }
