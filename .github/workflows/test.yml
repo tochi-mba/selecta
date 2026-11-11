@@ -13,7 +13,7 @@ on:
 # per group, so a burst of pushes costs one extra run, which tests the newest commit.
 concurrency:
   group: test-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.repository.private == true }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
