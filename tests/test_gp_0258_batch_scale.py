@@ -43,7 +43,8 @@ def test_gp_0258_08_a_full_batch_in_a_twenty_thousand_song_library(tmp_path):
     answer = client.post("/api/library/batch", json={"action": "prioritize", "entries": entries})
     batch = time.perf_counter() - started
     assert answer.status_code == 200, answer.text
-    changed = {row[0] for row in connection.execute("SELECT id FROM songs WHERE processing_priority > 0")}
+    raised = connection.execute("SELECT id FROM songs WHERE processing_priority > 0")
+    changed = {row[0] for row in raised}
     assert changed == set(chosen)
 
     undo = [{"id": n, "expected": True} for n in chosen]
@@ -55,7 +56,8 @@ def test_gp_0258_08_a_full_batch_in_a_twenty_thousand_song_library(tmp_path):
         == 200
     )
     undone = time.perf_counter() - started
-    assert connection.execute("SELECT COUNT(*) FROM songs WHERE processing_priority > 0").fetchone()[0] == 0
+    left = connection.execute("SELECT COUNT(*) FROM songs WHERE processing_priority > 0")
+    assert left.fetchone()[0] == 0
     p95 = statistics.quantiles(pages, n=20)[-1]
     print(
         f"GP-0258-08: {SONGS} songs, 200-song batch {batch * 1000:.0f} ms, "
