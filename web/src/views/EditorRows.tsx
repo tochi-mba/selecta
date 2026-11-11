@@ -300,8 +300,6 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         <RequestTag item={item} />
         {playing && <span className="story-tag playing"><Icon name="play" size="compact" /> Playing now</span>}
         {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" size="compact" /> Locked</span>}
-        {removing && <span className="status status-working" role="status">Removing…</span>}
-        {moving && !removing && <span className="status status-working" role="status">Moving…</span>}
       </div>
       <small className="facts">
         {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
@@ -337,6 +335,9 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
           </Action>
         </Menu>
       </div>
+      {/* below the actions, so the status line never pushes the pressed control (MP-0277-03) */}
+      {removing && <span className="status status-working song-status" role="status">Removing…</span>}
+      {moving && !removing && <span className="status status-working song-status" role="status">Moving…</span>}
     </li>
   );
 }, (before, after) => before.rowKey === after.rowKey

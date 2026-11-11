@@ -164,8 +164,9 @@ button[aria-disabled='true'] { cursor: progress; }
 @media (max-width: 620px) {
   /* The real phone row wraps its metadata and actions below the title. Reserve that geometry too. */
   .skeleton-timeline .skeleton-song { min-height: 144px; }
-  /* At phone width transition controls wrap, making the real seam taller than on desktop. */
-  .skeleton-timeline .skeleton-seam { min-height: 150px; }
+  /* At phone width a transition stacks its name, its wrapped actions and its compact diagram.
+     The real unrendered row measures 192px at 375px, so reserve that. */
+  .skeleton-timeline .skeleton-seam { min-height: 192px; }
 }
 .skeleton-inspector .skeleton-unit { min-height: 240px; }
 .skeleton-metrics .skeleton-content { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }

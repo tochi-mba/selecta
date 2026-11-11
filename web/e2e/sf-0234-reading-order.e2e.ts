@@ -65,24 +65,29 @@ test('SF-0234-01 inside the page, Tab goes down the page in the order things are
     await page.waitForLoadState('networkidle');
     const first = page.locator('main').locator('a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex="0"]').first();
     await first.focus();
-    const positions: Array<{ top: number; region: string }> = [];
+    const positions: Array<{ top: number; left: number; region: string }> = [];
     for (let step = 0; step < 12; step += 1) {
       const where = await page.evaluate(() => {
         const node = document.activeElement;
         if (!node || !node.closest('main')) return null;
         const box = node.getBoundingClientRect();
-        return { top: box.top + window.scrollY, region: node.closest('.listen-side') ? 'side' : node.closest('.listen-main') ? 'listen-main' : 'page' };
+        // Side-by-side columns: Listen's main and side, and Make a Mix's Quick Play and Lucy paths.
+        const column = node.closest('.listen-side, .listen-main, .mixes .mix-paths > section');
+        const region = column ? `${column.className}#${[...column.parentElement!.children].indexOf(column)}` : 'page';
+        return { top: box.top + window.scrollY, left: box.left, region };
       });
       if (where === null) break;
       positions.push(where);
       await page.keyboard.press('Tab');
     }
     expect(positions.length, `${path} has focusable content in its main region`).toBeGreaterThan(1);
-    // A two-column Listen layout may return to the top of its other column. In each region,
-    // the keyboard must still move in the same top-to-bottom order as the drawn controls.
+    // A two-column layout may return to the top of its other column, but only to a column drawn
+    // to the right. In each region the keyboard moves in the same top-to-bottom order as the drawing.
+    const order = positions.map((item) => `${Math.round(item.top)}@${Math.round(item.left)}`).join(',');
     for (let index = 1; index < positions.length; index += 1) {
-      if (positions[index].region !== positions[index - 1].region) continue;
-      expect(positions[index].top, `${path} focus order ${positions.map((item) => Math.round(item.top)).join(',')}`).toBeGreaterThan(positions[index - 1].top - 120);
+      const [before, now] = [positions[index - 1], positions[index]];
+      if (now.region !== before.region && now.left > before.left) continue;
+      expect(now.top, `${path} focus order ${order}`).toBeGreaterThan(before.top - 120);
     }
   }
 });

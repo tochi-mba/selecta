@@ -54,8 +54,11 @@ button[aria-pressed='true'] .soft { color: inherit; }
 .wide { margin-bottom: var(--space-3); }
 
 /* Translated and user-authored words must be allowed to wrap inside the page instead of defining
-   its minimum width. Controls keep their target size while long labels take another line. */
-.page :is(p, b, label, button, a.button) { min-width: 0; overflow-wrap: anywhere; }
+   its minimum width. Controls keep their target size while long labels take another line. The
+   min-width default has zero specificity, so a component's own min-width (a 44px tap target)
+   still wins. */
+.page :is(p, b, label, button, a.button) { overflow-wrap: anywhere; }
+:where(.page) :where(p, b, label, button, a.button) { min-width: 0; }
 .page :is(button, a.button) { max-width: 100%; white-space: normal; }
 
 
