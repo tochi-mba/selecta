@@ -36,6 +36,20 @@ describe('the speaker buffers ahead (SC-0415-04)', () => {
     expect(fetched.filter((url) => url === '/song/1.wav')).toHaveLength(1);
   });
 
+  it('a song that ends while the speaker fades out does not start the next one', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('offline'); }));
+    const audio = fakeAudio();
+    Object.defineProperty(audio, 'paused', { value: false, configurable: true });
+    const speaker = audioSpeaker(audio, async (index) => `/song/${index}.wav`);
+    await speaker.start(0, 0, true);
+    expect(audio.play).toHaveBeenCalledTimes(1);
+    speaker.stop(1000);
+    audio.dispatchEvent(new Event('ended'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(audio.play).toHaveBeenCalledTimes(1);
+    expect(speaker.position()).toBeNull();
+  });
+
   it('plays from the link itself when no copy can be made', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('blocked by CORS'); }));
     const audio = fakeAudio();

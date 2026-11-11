@@ -273,7 +273,7 @@ test('MP-0283-07 saving, building and a failure keep each card its size, and wha
     else await route.fallback();
   });
   // Save draft, held on the server: the card and every button keep their size while it says Saving
-  await card.getByRole('button', { name: /Save .* as a draft/ }).click();
+  await card.getByRole('button', { name: /^Save draft for / }).click();
   await expect(card.locator('.save-draft')).toHaveAttribute('aria-busy', 'true');
   expect(await size(), 'while saving').toEqual(before);
   release();

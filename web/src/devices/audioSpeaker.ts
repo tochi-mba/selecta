@@ -74,13 +74,16 @@ export function audioSpeaker(audio: HTMLAudioElement, source: (index: number) =>
     stop(fadeMs) {
       generation++;
       window.clearInterval(fade);
-      if (audio.paused || fadeMs <= 0) { audio.pause(); audio.volume = 1; index = -1; return; }
+      // Forget the song now, not when the fade ends: a song that ends mid-fade must not start
+      // the next one at full volume on a device that is no longer the speaker.
+      index = -1;
+      if (audio.paused || fadeMs <= 0) { audio.pause(); audio.volume = 1; return; }
       const steps = 10;
       let step = 0;
       fade = window.setInterval(() => {
         step++;
         audio.volume = Math.max(0, 1 - step / steps);
-        if (step >= steps) { window.clearInterval(fade); fade = 0; audio.pause(); audio.volume = 1; index = -1; }
+        if (step >= steps) { window.clearInterval(fade); fade = 0; audio.pause(); audio.volume = 1; }
       }, fadeMs / steps);
     },
     pause() { audio.pause(); },

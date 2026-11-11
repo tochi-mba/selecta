@@ -1,4 +1,4 @@
-import { expect, Page, test } from '@playwright/test';
+import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { playingAudio } from './helpers';
 
 // SC-0415-04: a speaker that loses its connection keeps playing from what it has, remotes say it
@@ -15,6 +15,18 @@ async function rename(page: Page, to: string) {
   await expect(page.getByTestId('device-row').filter({ hasText: to })).toBeVisible();
 }
 
+/** Start clean. A failed attempt leaves its devices signed in under the same names, and its
+ * speaker holding a live lease, so a retry would meet duplicate rows and be asked before Play
+ * here. Signing them out also stops their playback. */
+async function signOutEverywhere(request: APIRequestContext, as: string) {
+  const headers = { Authorization: `Bearer ${as}` };
+  const listed = await request.get('/api/devices', { headers });
+  expect(listed.ok()).toBe(true);
+  for (const device of (await listed.json()).devices as { id: string }[]) {
+    expect((await request.post(`/api/devices/${device.id}/sign-out`, { headers })).ok()).toBe(true);
+  }
+}
+
 const clock = (page: Page) => page.evaluate(() => document.querySelector<HTMLAudioElement>('[data-testid="speaker-audio"]')?.currentTime ?? 0);
 
 /** Wait until the speaker is early in a song, so a few offline seconds never cross into the next. */
@@ -23,6 +35,7 @@ async function earlyInSong(page: Page) {
 }
 
 test('an offline speaker keeps playing, carries on if nobody took over, and fades out if someone did', async ({ browser, request }) => {
+  await signOutEverywhere(request, 'bob');
   const laptopContext = await browser.newContext();
   const phoneContext = await browser.newContext({ viewport: { width: 412, height: 915 } });
   const laptop = await laptopContext.newPage();
