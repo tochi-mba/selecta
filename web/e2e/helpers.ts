@@ -1,4 +1,4 @@
-import { APIRequestContext, expect, Page } from '@playwright/test';
+import { APIRequestContext, expect, Page, Route } from '@playwright/test';
 
 export const PAGES = [
   '/listen',
@@ -111,4 +111,21 @@ export async function stickingOut(page: Page, where: string): Promise<string[]> 
       .map((part) => `${part.tagName.toLowerCase()}.${part.className}`);
     return [`${place}: ${document.documentElement.scrollWidth}px in ${room}px: ${parts.join(', ')}`];
   }, where);
+}
+
+/**
+ * Answers a request with the real server's JSON, changed by `edit`. The body is read into a variable
+ * before fulfilling (handing the fetched response to fulfill while still reading it races, "Response
+ * has been disposed"), and a route torn down because the test ended or the page moved on is let go.
+ */
+export async function rewriteJson(route: Route, edit: (body: any) => unknown) {
+  try {
+    const answer = await route.fetch();
+    const body = await answer.json();
+    // the edited body has its own length; the server's would cut it short or leave the browser waiting
+    const { 'content-length': _length, ...headers } = answer.headers();
+    await route.fulfill({ status: answer.status(), headers, json: edit(body) });
+  } catch (error) {
+    if (!/disposed|closed|already handled|Target page, context or browser/i.test(String(error))) throw error;
+  }
 }

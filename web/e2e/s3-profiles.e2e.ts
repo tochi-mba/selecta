@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { audioClock, resetMix, spyOnAudio } from './helpers';
+import { audioClock, resetMix, spyOnAudio, rewriteJson } from './helpers';
 import { browserLine, installProbe, interactionsSince, mark } from './perf-probe';
 
 /**
@@ -105,10 +105,7 @@ async function withStudio(page: Page, cells: number) {
   await page.route('**/api/mix/1/studio*', (route) => (/\/mix\/1\/studio(\?|$)/.test(route.request().url())
     ? route.fulfill({ json: { status: 'ready', key: `s3-${cells}`, cells, seconds: 8, bars: cells * 2, start_shape: shape, shape } })
     : route.fallback()));
-  await page.route('**/api/mix/1/options*', async (route) => {
-    const answer = await route.fetch();
-    await route.fulfill({ response: answer, json: { ...await answer.json(), studio: { available: true } } });
-  });
+  await page.route('**/api/mix/1/options*', (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
   await page.route('**/api/studio/**', (route) => route.fulfill({ body: stem, contentType: 'audio/flac' }));
 }
 

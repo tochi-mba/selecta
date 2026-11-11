@@ -86,9 +86,11 @@ test('MP-0293-02 Analysis, Sources, Storage, Learning and Diagnostics share one 
     for (const route of TABS) {
       await open(page, route, width);
       await expect(page.locator('main .panel h2').first()).toBeVisible();
-      await expect(page.locator('main .skeleton')).toHaveCount(0);
+      // test builds made with VITE_SELECTA_GALLERY=1 (CI) add the control gallery to Diagnostics: its
+      // loading examples never finish, and it is a showcase, not one of the tab's panels
+      await expect(page.locator('main .skeleton:not(details.control-gallery .skeleton)')).toHaveCount(0);
       readings.push(await page.evaluate((path) => {
-        const panels = [...document.querySelectorAll<HTMLElement>('main > .panel, main > section.panel')];
+        const panels = [...document.querySelectorAll<HTMLElement>('main > .panel:not(.control-gallery), main > section.panel')];
         const tabs = document.querySelector('main .tabs, main [role="tablist"], main nav')!.getBoundingClientRect();
         const first = panels[0];
         const style = getComputedStyle(first);

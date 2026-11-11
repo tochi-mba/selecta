@@ -1,6 +1,6 @@
 import { CDPSession, expect, Page, Route, test } from '@playwright/test';
 import { frameWindow, installProbe } from './perf-probe';
-import { allRendered, audioClock, audioStates, resetMix, soundsStarted, spyOnAudio } from './helpers';
+import { allRendered, audioClock, audioStates, resetMix, soundsStarted, spyOnAudio, rewriteJson } from './helpers';
 
 /** Selecta / Flow, ADR-0217 to ADR-0230: scope, gestures, long mixes, drag during playback, a stale
  * Studio proposal and background calm, each in a real browser against the synthesized library. */
@@ -233,10 +233,7 @@ test('SF-0224-03 a stale Studio proposal cannot overwrite newer strokes', async 
   const proposal = { a: { vocals: full, drums: full, bass: full, other: full }, b: { vocals: full, drums: full, bass: full, other: full } };
   const stem = await (await request.get('/api/songs/1/audio')).body();
   await page.route('**/api/mix/1/studio*', (route) => route.fulfill({ json: { status: 'ready', key: 'race', cells, seconds: 8, bars: 16, start_shape: shape, shape } }));
-  await page.route('**/api/mix/1/options*', async (route) => {
-    const answer = await route.fetch();
-    await route.fulfill({ response: answer, json: { ...await answer.json(), studio: { available: true } } });
-  });
+  await page.route('**/api/mix/1/options*', (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
   await page.route('**/api/studio/**', (route) => route.fulfill({ body: stem, contentType: 'audio/flac' }));
   let release: () => void = () => {};
   const held = new Promise<void>((done) => { release = done; });

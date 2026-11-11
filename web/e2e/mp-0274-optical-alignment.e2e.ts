@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { resetMix } from './helpers';
+import { resetMix, rewriteJson } from './helpers';
 import { borderJoins, buttonRows, cardFooters, chrome, clippedRings, iconCentring, pageAnchors } from './optical-measure';
 
 /**
@@ -26,10 +26,7 @@ async function withStudio(page: Page) {
   const shape = { a: { vocals: row, drums: row, bass: row, other: row }, b: { vocals: row, drums: row, bass: row, other: row } };
   const stem = await (await page.request.get('/api/songs/1/audio')).body();
   await page.route('**/api/mix/1/studio*', (route) => route.fulfill({ json: { status: 'ready', key: 'optical', cells, seconds: 8, bars: 16, start_shape: shape, shape } }));
-  await page.route('**/api/mix/1/options*', async (route) => {
-    const answer = await route.fetch();
-    await route.fulfill({ response: answer, json: { ...await answer.json(), studio: { available: true } } });
-  });
+  await page.route('**/api/mix/1/options*', (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
   await page.route('**/api/studio/**', (route) => route.fulfill({ body: stem, contentType: 'audio/flac' }));
 }
 

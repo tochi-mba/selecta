@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { allRendered, audioClock, resetMix, shownTime, soundsRestarted, spyOnAudio } from './helpers';
+import { allRendered, audioClock, resetMix, shownTime, soundsRestarted, spyOnAudio, rewriteJson } from './helpers';
 
 /**
  * ADR-0284 Listen: song identity, transport, song strip, lyrics, the coming transition, steering, the
@@ -148,8 +148,7 @@ test('MP-0284-04 the current lyric leads, neighbours stay readable, and untimed 
   for (const [status, words] of [['plain', /aren’t timed/], ['instrumental', /Instrumental/], ['failed', /didn’t work/]] as const) {
     await page.route('**/api/songs/*', async (route) => {
       if (route.request().method() !== 'GET' || /\/audio|\/peaks/.test(route.request().url())) return route.fallback();
-      const answer = await route.fetch();
-      await route.fulfill({ response: answer, json: { ...await answer.json(), lines: [], lyric_status: status } });
+      await rewriteJson(route, (body) => ({ ...body, lines: [], lyric_status: status }));
     });
     await listen(page);
     const fallback = page.locator('.lyrics.quiet p');

@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, Page, test } from '@playwright/test';
-import { allRendered, audioClock, PAGES, resetMix, soundsRestarted, spyOnAudio, stickingOut } from './helpers';
+import { allRendered, audioClock, PAGES, resetMix, soundsRestarted, spyOnAudio, stickingOut, rewriteJson } from './helpers';
 
 /** The awkward sequences from the Selecta 3.1 verification matrix, in a real browser against a real
  * server. Each name says what has to stay true. None of this says how anything sounds or whether
@@ -303,10 +303,7 @@ test('the full Studio grid works at the smallest size: it scrolls by itself, and
   const shape = { a: { vocals: row, drums: row, bass: row, other: row }, b: { vocals: row, drums: row, bass: row, other: row } };
   const stem = await (await request.get('/api/songs/1/audio')).body();
   await page.route('**/api/mix/1/studio*', (route) => route.fulfill({ json: { status: 'ready', key: 'smallest', cells, seconds: 8, bars: 16, start_shape: shape, shape } }));
-  await page.route('**/api/mix/1/options*', async (route) => {
-    const answer = await route.fetch();
-    await route.fulfill({ response: answer, json: { ...await answer.json(), studio: { available: true } } });
-  });
+  await page.route('**/api/mix/1/options*', (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
   await page.route('**/api/studio/**', (route) => route.fulfill({ body: stem, contentType: 'audio/flac' }));
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto('/mix/current/edit');

@@ -242,18 +242,21 @@ test('MP-0291-07 a 20,000-song library pages, searches and keeps focus without j
   const more = page.getByRole('button', { name: 'Show more songs' });
   const anchor = page.locator('.library-rows .song-row').nth(40);
   await anchor.scrollIntoViewIfNeeded();
-  // where the row sits on the page: focusing Show more scrolls the window to it, which is not a jump
-  const pageTop = () => anchor.evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
-  const before = await pageTop();
+  // where the row sits on screen, which is what a jump would move. Show more is focused without
+  // scrolling to it, so the row stays in view: rows far above that were never drawn are only size
+  // estimates (content-visibility), and the browser's scroll anchoring keeps what's on screen still
+  // while those settle, so a page-relative position would move by the estimate, not by a jump
+  const screenTop = () => anchor.evaluate((element) => element.getBoundingClientRect().top);
+  const before = await screenTop();
   for (let round = 0; round < 3; round += 1) {
-    await more.focus();
+    await more.evaluate((button) => button.focus({ preventScroll: true }));
     const started = Date.now();
-    await more.press('Enter');
+    await page.keyboard.press('Enter');
     await expect(page.locator('.library-rows .song-row')).toHaveCount(200 + round * 100);
     expect(Date.now() - started, 'a page took too long to show').toBeLessThan(3000);
     await expect(more).toBeFocused();
   }
-  const after = await pageTop();
+  const after = await screenTop();
   expect(Math.abs(after - before), 'rows already shown moved').toBeLessThanOrEqual(1);
   // a layout shift observer sees nothing big while a search narrows the list
   await page.evaluate(() => {

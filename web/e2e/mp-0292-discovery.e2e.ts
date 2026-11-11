@@ -223,6 +223,8 @@ test('MP-0292-07 adding says where both go, in what order, all at once', async (
   await expect(destination).toContainText(/the mix you choose: your current mix or one draft|your current mix/);
   const add = card.getByRole('button', { name: /^Add both to/ });
   if ((await add.textContent())?.includes('the mix')) await expect(add).toHaveAccessibleDescription(/Adds Morning Light, then Slow Tide/);
+  // the server's answer to the add, so the mix is read after it has changed, not while the add is on its way
+  const answered = page.waitForResponse((response) => response.url().includes('/api/mix/pair') && response.request().method() === 'POST');
   if ((await add.textContent())?.includes('to…')) {
     await add.click();
     await page.getByRole('menuitem', { name: 'Your current mix' }).click();
@@ -232,6 +234,7 @@ test('MP-0292-07 adding says where both go, in what order, all at once', async (
   await expect.poll(() => sent).not.toBeNull();
   expect(sent!.url).not.toContain('draft=');
   expect([sent!.body.a, sent!.body.b]).toEqual([1, 2]);
+  expect((await answered).ok(), 'the add was refused').toBe(true);
   const { mix } = await (await request.get('/api/mix')).json();
   expect(mix.map((item: { song_id: number }) => item.song_id)).toEqual([3, 4, 1, 2]);
 });

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { resetMix, spyOnAudio } from './helpers';
+import { resetMix, spyOnAudio, rewriteJson } from './helpers';
 
 /**
  * ADR-0289 Stem Studio: rulers against the eight lanes at 8 and 64 cells, cell states, solo names,
@@ -24,10 +24,7 @@ async function withStudio(page: Page, cells = 8, lost: string[] = []) {
   await page.route('**/api/mix/1/studio*', (route) => (/\/mix\/1\/studio(\?|$)/.test(route.request().url())
     ? route.fulfill({ json: { status: 'ready', key: `mp289-${cells}`, cells, seconds: 8, bars: cells * 2, start_shape: shape, shape } })
     : route.fallback()));
-  await page.route('**/api/mix/1/options*', async (route) => {
-    const answer = await route.fetch();
-    await route.fulfill({ response: answer, json: { ...await answer.json(), studio: { available: true } } });
-  });
+  await page.route('**/api/mix/1/options*', (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
   await page.route('**/api/studio/**', (route) => {
     const [side, lane] = route.request().url().split('/').slice(-2);
     return lost.includes(`${side}_${lane}`) ? route.fulfill({ status: 404, body: 'gone' }) : route.fulfill({ body: stem, contentType: 'audio/flac' });
