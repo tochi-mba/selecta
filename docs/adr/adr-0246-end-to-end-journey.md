@@ -1,7 +1,7 @@
 # ADR-0246 - Complete listening-to-creation journey and musical delight milestones
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** Not started (0/8 Implemented, 0/8 In progress, 8/8 Not started; 2026-11-10).
+- **Implementation:** In progress (0/8 Implemented, 1/8 In progress, 7/8 Not started or needing a person; updated 2026-11-11).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Experience.
@@ -33,7 +33,7 @@ No staged progress masquerading as real data, compulsory tutorial, synthetic fak
 1. **SF-0246-01 - Storyboard first playable set.** **Acceptance:** From folder to six ready tracks to Listen recorded. **Required verification:** Journey protocol. **Implementation:** Not started; Needs a person: a recorded journey from folder to six ready tracks to Listen under `docs/research/flow-research-protocol.md` task L1 and L2; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 2. **SF-0246-02 - Storyboard first handoff.** **Acceptance:** Actual audio event and truthful visual moment identified. **Required verification:** Real playback review. **Implementation:** Not started; Needs a person: a real playback review identifying the actual audio handoff and its visual moment; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 3. **SF-0246-03 - Storyboard first edit.** **Acceptance:** User navigates to correct song and seam. **Required verification:** Task test. **Implementation:** Not started; Needs a person: a task test of people reaching the correct song and seam; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
-4. **SF-0246-04 - Storyboard Studio recovery.** **Acceptance:** Unapplied cells survive intentional route changes. **Required verification:** Recovery E2E. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
+4. **SF-0246-04 - Storyboard Studio recovery.** **Acceptance:** Unapplied cells survive intentional route changes. **Required verification:** Recovery E2E. **Implementation:** In progress; `web/e2e/sf-flow-journey.e2e.ts` 'SF-0246-04 ...' now closes the Studio and its panel before using the main navigation (the panel keeps the page inert); on 2026-11-11 the rerun reopened a different transition after Back (Slow Tide into Paper Moon), so the reopen step still needs fixing before it can prove recovery; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 5. **SF-0246-05 - Storyboard request and consent.** **Acceptance:** Listener understands route and bridge decision. **Required verification:** Consent usability test. **Implementation:** Not started; Needs a person: a consent usability test of the request route and bridge decision; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 6. **SF-0246-06 - Storyboard finish and export.** **Acceptance:** Frozen rendered artifact validated. **Required verification:** FLAC decode and review. **Implementation:** Not started; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 7. **SF-0246-07 - Evaluate cross-scene memory.** **Acceptance:** Song, mix and intent recognizable after navigation. **Required verification:** Uncoached session. **Implementation:** Not started; Needs a person: an uncoached session on whether song, mix and intent are recognisable after navigation; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
@@ -47,5 +47,5 @@ Preserve one player and intentional Pause, unchanged local audio and LRCLIB meta
 
 - **Depends on:** ADR-0165/0184/0141; new ADR-0198/0199 and corresponding programme checklist.
 - **Next:** owner acceptance → design review → focused implementing PR with tests → independent audio, accessibility, visual and hardware acceptance → release decision.
-- **Now:** Decision Accepted; Implementation 0/8 (2026-11-10); Independently Verified No; no implementation PR/SHA.
+- **Now:** Decision Accepted; Implementation 0/8 (2026-11-11); Independently Verified No; implementing branch feat/finish-checklists.
 - [Roadmap](selecta-flow-roadmap.md) · [Checklist](selecta-flow-implementation-checklist.md) · [Evidence](selecta-flow-implementation-evidence.md) · [Parity](selecta-flow-feature-parity.md) · [Interaction](selecta-flow-interaction-matrix.md) · [Verification](selecta-flow-verification-matrix.md) · [Gates](selecta-flow-release-gates.md).

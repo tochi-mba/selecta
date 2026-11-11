@@ -19,7 +19,7 @@ async function fixtures(page: Page, asked: string[]) {
   await page.route('**/api/discoveries', (route) => route.fulfill({ json: [pair, { ...pair, id: 8, song_a: 5, song_b: 6, title_a: 'Later One', title_b: 'Later Two' }] }));
 }
 
-const search = (page: Page) => page.getByRole('textbox', { name: 'Search shared words' });
+const search = (page: Page) => page.getByRole('searchbox', { name: 'Search shared words' });
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

@@ -77,7 +77,24 @@ test('SF-0242-06 at 320px every control keeps an accessible name, and the main n
     // the main destinations are all still there by the same names, whatever shape the navigation takes
     const destinations = ['Listen', 'Make a Mix', 'My Mixes', 'Library', 'Workspace'];
     const namesAt = (controls: typeof wide) => destinations.filter((label) => controls.some((control) => control.nav && control.name.includes(label)));
-    expect(namesAt(narrow), `${path}: destinations at 320px`).toEqual(namesAt(wide));
+    // on a phone the bar keeps four and puts the rest (Workspace) one press away under More
+    const more = page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^More/ });
+    let underMore: string[] = [];
+    if (await more.isVisible()) {
+      await more.click();
+      const drawer = page.getByRole('dialog', { name: 'More' });
+      await expect(drawer).toBeVisible();
+      underMore = destinations.filter((label) => !namesAt(narrow).includes(label));
+      // Workspace comes as its own named section of links to each of its tabs
+      for (const label of underMore) {
+        const section = drawer.getByRole('navigation', { name: label });
+        await expect(section).toBeVisible();
+        expect(await section.getByRole('link').count()).toBeGreaterThan(0);
+      }
+      await page.keyboard.press('Escape');
+      await expect(drawer).toHaveCount(0);
+    }
+    expect([...namesAt(narrow), ...underMore].sort(), `${path}: destinations at 320px`).toEqual(namesAt(wide).sort());
   }
 });
 
