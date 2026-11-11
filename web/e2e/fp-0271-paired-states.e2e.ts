@@ -120,6 +120,7 @@ for (const viewport of VIEWPORTS) {
     const candidates: Array<{ id: string; mp: string; theme: string; width: number; height: number; semanticSha256: string; screenshot: string }> = [];
     for (const state of STATES) {
       const seen = new Map<string, string>();
+      const raw = new Map<string, string>();
       for (const theme of ['light', 'dark'] as const) {
         await resetMix(request);
         await page.unrouteAll({ behavior: 'ignoreErrors' });
@@ -129,13 +130,18 @@ for (const viewport of VIEWPORTS) {
         await state.drive(page, request);
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
         await page.waitForTimeout(180);
-        const semanticSha256 = sha256(await controlSemantics(page, state.root, state.clock));
+        const semantics = await controlSemantics(page, state.root, state.clock);
+        const semanticSha256 = sha256(semantics);
         seen.set(theme, semanticSha256);
+        raw.set(theme, semantics);
         const screenshot = `candidate-${viewport.width}x${viewport.height}-${state.id}-${theme}.png`;
         await page.screenshot({ path: info.outputPath(screenshot), animations: 'disabled', caret: 'hide' });
         candidates.push({ id: state.id, mp: state.mp, theme, ...viewport, semanticSha256, screenshot });
       }
-      expect(seen.get('dark'), `${state.id}: the theme changed a control's role, label or state at ${viewport.width}px`).toBe(seen.get('light'));
+      // on a mismatch, name the controls that differ rather than two hashes
+      const [light, dark] = ['light', 'dark'].map((theme) => (JSON.parse(raw.get(theme) ?? '[]') as unknown[]).map((item) => JSON.stringify(item)));
+      const differs = [...light.filter((item) => !dark.includes(item)).map((item) => `light only ${item}`), ...dark.filter((item) => !light.includes(item)).map((item) => `dark only ${item}`)];
+      expect(seen.get('dark'), `${state.id}: the theme changed a control's role, label or state at ${viewport.width}px ${differs.join(' | ')}`).toBe(seen.get('light'));
     }
     const required = STATES.length * 2;
     expect(candidates).toHaveLength(required);

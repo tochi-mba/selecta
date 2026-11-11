@@ -1,14 +1,14 @@
 # ADR-0063: Library detail inspector, canonical readiness and protected corrections
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 7 of 8 tasks implemented with automated evidence on 2026-11-10; 0 need a person; 1 still open
+- **Implementation status:** In progress: 8 of 8 tasks implemented with automated evidence on 2026-11-11; 0 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0018, ADR-0017, ADR-0043
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0063-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -29,7 +29,7 @@ Create one authoritative track-detail presentation and readiness projection. Sep
 ## Detailed implementation work
 
 1. **S3-0063-01 - Implemented.** Specify canonical track readiness from existing API fields and map each user-facing reason. **Evidence:** web/src/state/readiness.ts trackReadiness (one computation, used by Library, SongDetails, Mix, Drafts, Requests and the palette) with the reasons named in docs/adr/selecta-3-glossary.md 'States, and where each comes from'; web/src/state/readiness.test.ts 'shows failures before pending queue or rendering states' and 'never offers excluded music for manual mixing or analysis even with an old tempo'; web/src/views/Library.test.tsx 'gives the reason in the song’s details' and 'distinguishes analysed songs from mix-ready songs without promising rendered transitions' (passed 2026-11-10).
-2. **S3-0063-02 - In progress.** Build responsive song inspector with measured/effective BPM and key provenance. **Status:** In progress: the inspector shows measured and effective tempo and key with their source (web/src/views/LibraryLx.test.tsx 'a correction, the measurement and an unknown are labelled apart', passed 2026-11-10); the narrow-width browser check (web/e2e/lx-library.e2e.ts LX-0348-01 and LX-0348-05) has not been rerun in this session.
+2. **S3-0063-02 - Implemented.** Build responsive song inspector with measured/effective BPM and key provenance. **Evidence:** web/src/views/LibraryLx.test.tsx 'a correction, the measurement and an unknown are labelled apart'; web/e2e/lx-library.e2e.ts 'LX-0348-01 the sheet leads with the exact recording, whole long titles included' and 'LX-0348-05 LX-0348-07 the song sheet corrects with focus on errors, and closing returns to the exact row, scroll and address' (passed 2026-11-11).
 3. **S3-0063-03 - Implemented.** Retain Double, Half, manual tempo, key override, reset, exclusions, priority and classification operations. **Evidence:** web/src/views/Library.test.tsx 'double and half fill in what was measured', 'saves what was typed, and says what’ll be made again', 'can go back to what was measured', 'music and not music can be switched, without touching the file' and 'lets the listener prioritize a song and shows the priority list'; tests/test_api_contracts.py test_it_can_be_put_back, test_one_part_can_be_changed_without_losing_the_other and test_setting_aside_is_reversible_and_touches_no_file; tests/test_library_lx.py test_never_play_and_set_aside_are_different_states_that_both_reverse (passed 2026-11-10).
 4. **S3-0063-04 - Implemented.** Validate inputs, preserve edit focus and never turn a stale measurement into a successful correction. **Evidence:** web/src/views/SongDetails.tsx moves focus to the error and keeps what was typed; web/src/views/Library.test.tsx 'shows what’s wrong with a value that isn’t allowed, and keeps it there' (no success notice on a refused save); tests/test_api_contracts.py test_nonsense_is_refused_and_nothing_changes, test_a_correction_leaves_what_was_measured_alone and test_a_song_that_is_not_there_says_so (passed 2026-11-10).
 5. **S3-0063-05 - Implemented.** Protect user overrides during concurrent reanalysis, watcher updates and duplicate-title results. **Evidence:** tests/test_library_edges.py test_a_correction_survives_reanalysis_a_folder_update_and_a_same_named_song; tests/test_api_contracts.py test_analysing_the_song_again_can_not_lose_it; tests/test_library_lx.py test_another_tab_changing_a_song_after_selection_refuses_the_whole_batch and test_a_batch_with_one_stale_entry_changes_nothing (passed 2026-11-10).

@@ -95,12 +95,12 @@ judged by the test.
 
 | Defect class | Owning task(s) | Where it is caught |
 |---|---|---|
-| A control loses its boundary in one theme | FP-0264, SF-0201-05 | edge-contrast check; reviewer |
-| Theme changes control state or labels | FP-0266-02, FP-0271-04 | semantic hash in `paired-theme.e2e.ts` |
-| Browser chrome disagrees with the page | FP-0265 | `finishing.e2e.ts` theme tests |
+| A control loses its boundary in one theme | FP-0264, SF-0201-05 | `fp-theme-boundaries.e2e.ts` edge-contrast report; reviewer |
+| Theme changes control state or labels | FP-0266-02, FP-0271-04 | semantic hash in `paired-theme.e2e.ts` and `fp-0271-paired-states.e2e.ts` (a mismatch names the differing controls) |
+| Browser chrome disagrees with the page | FP-0265 | `fp-first-paint.e2e.ts`, `fp-live-theme.e2e.ts`, `state/prefs.test.ts` |
 | Overlay covers a required action | FP-0270 | `overlay-arbitration.e2e.ts` |
 | Long or RTL names clip | GP-0248, SF-0202-04 | `finishing.e2e.ts` long names test |
-| Canvas keeps an old theme | FP-0266-04 | repaint dependency in `views/Now.tsx`; reviewer |
+| Canvas keeps an old theme | FP-0266-04 | `fp-live-theme.e2e.ts` canvas pixel check; reviewer |
 
 A failure is filed against the owning task ID above; earlier programmes' histories are left as
 they are.

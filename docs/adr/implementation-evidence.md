@@ -215,7 +215,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0118 Keep Bigger/Calmer/Something else, transition Good/Bad and Why this song/transition actions. | Done | `web/src/views/Now.test.tsx`. |
 | T0119 Keep pending requests comprehensible without appearing queued to play prematurely. | Done | `web/src/views/Requests.tsx`. |
 | T0120 Ensure animation does not repeatedly rerender the entire React tree. | Done | `onChange` throttled in `App.tsx`. |
-| T0121 Test no next song, long metadata, failed seam, mobile and reduced motion. | Partly | No next song, long names and phone widths are tested. A failed seam is covered by a missing clip. |
+| T0121 Test no next song, long metadata, failed seam, mobile and reduced motion. | Done | `web/e2e/t0121-t0128-listen-edges.e2e.ts`, three tests at 375x812 with `reducedMotion: 'reduce'`: no next song (says it is the last song, Next disabled), very long and right-to-left names (no horizontal overflow, title inside the screen), and a transition reported failed with its clip missing (the next song still comes in, `--motion-fast` is zero, nothing overflows). Passed 2026-11-11 (Playwright, Edge, `dist-s2-b`, port 9102). Existing cover: `web/src/views/UpNext.test.tsx` SF-0215-02/05. |
 | T0122 Approve ADR-0008. | Done | The owner accepted ADR-0008 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
 
 ### [Lyrics and Stage](adr-0009-lyrics-and-stage.md)
@@ -227,7 +227,7 @@ Passing these checks doesn't mean it sounds good. That's for people to judge, us
 | T0125 Render no-lyrics, instrumental, loading and unavailable song states intentionally. | Done | `Lyrics` states in `Now.tsx`. |
 | T0126 Keep fullscreen enter/exit and browser denial recovery without losing transport. | Done | `toggleStage` in `App.tsx`, `web/e2e/listen.e2e.ts`. |
 | T0127 Make lyric layout readable under zoom, long/RTL lines and reduced motion. | Done | `.lyrics p` uses `unicode-bidi: plaintext`, with zoom widths tested. |
-| T0128 Test word/line timing regressions and route changes while fullscreen. | Partly | Timing unit tests and a browser test. Route changes while fullscreen weren't tested. |
+| T0128 Test word/line timing regressions and route changes while fullscreen. | Done | Route change while fullscreen: `web/e2e/t0121-t0128-listen-edges.e2e.ts` (T0128 test) enters the Stage with F, goes Back to Library and forward again. It caught a real fault (the browser stayed fullscreen on Library after the Stage unmounted), fixed in `web/src/App.tsx` with an effect that closes the Stage and calls `exitFullscreen` when the page leaves Listen; the test now passes with the mini-player still playing and a single AudioContext. Word/line timing regressions: `web/src/views/lyricHonesty.test.tsx` plus the word-focus and lyric tests in `web/src/views/Now.test.tsx` (14 passed). All run 2026-11-11. |
 | T0129 Approve ADR-0009. | Done | The owner accepted ADR-0009 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
 
 ### [Explanations and feedback](adr-0027-explanations-and-feedback.md)

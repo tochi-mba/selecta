@@ -1,14 +1,14 @@
 # ADR-0067: WCAG 2.2 AA, responsive reflow and complete keyboard access
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 2 of 9 tasks implemented with automated evidence on 2026-11-11; 1 need a person; 6 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0023, ADR-0024, ADR-0045
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0067-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Target WCAG 2.2 AA across essential flows, not just static pages. Support keyboa
 
 - Record manual NVDA/VoiceOver/TalkBack and keyboard passes; an axe scan alone never marks Verified. Ensure localized text and changing announcements do not cause endless live-region noise.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0067-01 - Not started.** Specify WCAG 2.2 AA inventory for every route/overlay and an applicability matrix with exceptions.
-2. **S3-0067-02 - Not started.** Create focus and screen-reader test scripts for first-run, playback, editing, requests, Studio and export.
+1. **S3-0067-01 - Implemented.** Specify WCAG 2.2 AA inventory for every route/overlay and an applicability matrix with exceptions. **Evidence:** docs/adr/selecta-3-accessibility.md 'How each criterion applies' (WCAG 2.2 AA criteria, where each applies and how it is met, with the Studio grid's 2D scrolling as the stated exception in 'Known limitations'); tests/test_s3_docs_contracts.py test_the_accessibility_inventory_and_person_scripts_cover_the_named_journeys (passed 2026-11-11).
+2. **S3-0067-02 - Implemented.** Create focus and screen-reader test scripts for first-run, playback, editing, requests, Studio and export. **Evidence:** docs/adr/selecta-3-accessibility.md 'Scripts for a person' (first run, playback, editing, requests, Studio, export and zoom, with NVDA, VoiceOver and TalkBack and what to record); tests/test_s3_docs_contracts.py test_the_accessibility_inventory_and_person_scripts_cover_the_named_journeys. Running them is S3-0067-08 (passed 2026-11-11).
 3. **S3-0067-03 - Not started.** Audit and fix every essential target below 24x24 or without adequate exceptions; choose comfortable 44px-class controls where useful.
 4. **S3-0067-04 - Not started.** Ensure non-drag alternatives for reorder and every pointer gesture; include touch switch and keyboard testing.
 5. **S3-0067-05 - Not started.** Implement semantic landmark, headings, error association and status announcement contracts.
 6. **S3-0067-06 - Not started.** Verify dialogs, sheets, menus, tabs, grid, sliders and waveform against relevant ARIA APG patterns.
 7. **S3-0067-07 - Not started.** Test 200%/400% zoom, small viewports, safe areas and visible keyboard focus without hidden controls.
-8. **S3-0067-08 - Not started.** Run manual assistive-tech sessions and record device/browser/AT versions and remaining limitations.
+8. **S3-0067-08 - Needs a person.** Run manual assistive-tech sessions and record device/browser/AT versions and remaining limitations. **Status:** Needs a person: NVDA, VoiceOver and TalkBack sessions following docs/adr/selecta-3-accessibility.md 'Scripts for a person', recording device, browser and screen-reader versions and what remains limited
 9. **S3-0067-09 - Not started.** Preserve reduced-motion and non-color-only statuses in dark/light themes.
 
 ## Preservation and integration constraints

@@ -1,14 +1,14 @@
 # ADR-0074: Full test architecture, invariants and concurrent edge-case matrix
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 4 of 10 tasks implemented with automated evidence on 2026-11-11; 2 need a person; 4 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 7 - Verification
 - **Extends existing decisions:** ADR-0029, ADR-0046
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0074-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,18 +26,18 @@ Preserve the entire existing behavioral suite and add state-machine, contract, a
 
 - Release blockers include wrong mix/draft mutation, unrecoverable data loss, unexpected sound/silence, unsafe file access, partial bridge insertion, invalid FLAC, inaccessible essential controls and fabricated readiness.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0074-01 - Not started.** Snapshot all existing unit/Python/E2E tests and map to ADR/feature parity before changes.
-2. **S3-0074-02 - Not started.** Build reusable fixtures for empty, 6-ready, 20k songs, duplicate/RTL metadata, missing audio and invalid durations.
-3. **S3-0074-03 - Not started.** Add domain tests for optimistic reconciliation, statuses, revision guards and safe Undo.
+1. **S3-0074-01 - Implemented.** Snapshot all existing unit/Python/E2E tests and map to ADR/feature parity before changes. **Evidence:** docs/adr/test-coverage-matrix.md and docs/adr/test-parity-inventory.json held by tests/test_parity_inventory.py; the older T and P tasks mapped to S3 decisions by tests/test_s3_parity_task_map.py (passed 2026-11-11).
+2. **S3-0074-02 - Implemented.** Build reusable fixtures for empty, 6-ready, 20k songs, duplicate/RTL metadata, missing audio and invalid durations. **Evidence:** tests/e2e_server.py (empty, six-ready and full made-up libraries; SELECTA_E2E_STRESS=1 adds long, duplicate and right-to-left names; set-aside and broken files); 20k: tests/test_s3_library_profile.py; missing audio and invalid durations: tests/test_library_edges.py (passed 2026-11-11).
+3. **S3-0074-03 - Implemented.** Add domain tests for optimistic reconciliation, statuses, revision guards and safe Undo. **Evidence:** web/src/state/workState.test.ts 'page reads keep loading, refreshing, stale and failed apart'; web/src/state/async.test.tsx 'ignores an old response that completes after a newer request'; tests/test_api_contracts.py test_guarded_replay_returns_original_response_after_its_own_mix_change; web/src/ui/controls.test.tsx Undo tests (passed 2026-11-11).
 4. **S3-0074-04 - Not started.** Add component keyboard/focus tests for dialogs, menus, playlist reorder, Studio grid and palette.
 5. **S3-0074-05 - Not started.** Add E2E end-to-end tasks from folder scan through playback, editing, requests, stems and export.
-6. **S3-0074-06 - Not started.** Add audio fixtures for preview ownership, gapless seams, late/fallback render and Media Session.
+6. **S3-0074-06 - Implemented.** Add audio fixtures for preview ownership, gapless seams, late/fallback render and Media Session. **Evidence:** preview ownership: web/src/audio/focusEdges.test.tsx; gapless seams and fallback: web/src/audio/transportEdges.test.ts 'a ready seam overlaps outgoing song, clip and incoming song with no gap' and 'a fallback fade brings the next song in before this one ends'; Media Session: web/src/audio/mediaSession.test.ts (passed 2026-11-11).
 7. **S3-0074-07 - Not started.** Add concurrency tests for simultaneous requests, stale edits, network loss, export snapshots and rescan overrides.
 8. **S3-0074-08 - Not started.** Add visual/state accessibility regression gates and human verification scripts.
-9. **S3-0074-09 - Not started.** Report test changes by assertion intent and investigate flakiness rather than raising timeouts blindly.
-10. **S3-0074-10 - Not started.** Require passing full CI and separate human review before describing an entire ADR as Verified.
+9. **S3-0074-09 - Needs a person.** Report test changes by assertion intent and investigate flakiness rather than raising timeouts blindly. **Status:** Needs a person: reporting test changes by assertion intent and investigating flakiness is a reviewer's practice on each PR; nothing here can show it was done
+10. **S3-0074-10 - Needs a person.** Require passing full CI and separate human review before describing an entire ADR as Verified. **Status:** Needs a person: full CI on the integrated head plus a separate human review before any ADR is called Verified
 
 ## Preservation and integration constraints
 

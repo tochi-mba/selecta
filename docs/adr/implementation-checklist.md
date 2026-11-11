@@ -201,7 +201,7 @@
 - [x] T0118 - Keep Bigger/Calmer/Something else, transition Good/Bad and Why this song/transition actions.
 - [x] T0119 - Keep pending requests comprehensible without appearing queued to play prematurely.
 - [x] T0120 - Ensure animation does not repeatedly rerender the entire React tree.
-- [ ] T0121 - Test no next song, long metadata, failed seam, mobile and reduced motion.
+- [x] T0121 - Test no next song, long metadata, failed seam, mobile and reduced motion. **Evidence (2026-11-11):** `web/e2e/t0121-t0128-listen-edges.e2e.ts` at 375px with reduced motion: last song with Next disabled, long and right-to-left names with nothing sticking out, a failed transition (failed status and missing clip) carrying the music on with motion tokens at zero. Passed 2026-11-11 (Playwright, Edge, dist-s2-b).
 - [x] T0122 - Approve ADR-0008. **Evidence (2026-11-10):** The owner accepted ADR-0008 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Lyrics and Stage - [ADR-0009](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0009-lyrics-and-stage.md)
@@ -211,7 +211,7 @@
 - [x] T0125 - Render no-lyrics, instrumental, loading and unavailable song states intentionally.
 - [x] T0126 - Keep fullscreen enter/exit and browser denial recovery without losing transport.
 - [x] T0127 - Make lyric layout readable under zoom, long/RTL lines and reduced motion.
-- [ ] T0128 - Test word/line timing regressions and route changes while fullscreen.
+- [x] T0128 - Test word/line timing regressions and route changes while fullscreen. **Evidence (2026-11-11):** the browser test `T0128 changing route while the fullscreen Stage is open...` in `web/e2e/t0121-t0128-listen-edges.e2e.ts` found the browser stayed fullscreen on Library after Back; fixed in `web/src/App.tsx` (leaving Listen closes the Stage and exits fullscreen), now passing, with the music and one AudioContext kept. Word/line timing: `web/src/views/lyricHonesty.test.tsx` and the lyric tests in `web/src/views/Now.test.tsx` (14 passed). Passed 2026-11-11.
 - [x] T0129 - Approve ADR-0009. **Evidence (2026-11-10):** The owner accepted ADR-0009 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Explanations and feedback - [ADR-0027](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0027-explanations-and-feedback.md)

@@ -1,14 +1,14 @@
 # ADR-0073: Rendering performance, 20k-track scale, 100-song edits and animation budgets
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 0 of 8 tasks implemented with automated evidence on 2026-11-11; 0 need a person; 8 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0017, ADR-0029, ADR-0046
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0073-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,15 +26,15 @@ Profile before optimizing, set measurable interactive responsiveness budgets and
 
 - Stop hidden/reduced-motion visualizers, avoid unnecessary row remounts, memoize only based on measured bottlenecks and keep large async data/animation out of audio control state. Lazy-load heavy workspaces only if navigation remains smooth.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0073-01 - Not started.** Capture baseline bundle, memory, mount, navigation, interaction and audio timing measurements.
+1. **S3-0073-01 - In progress.** Capture baseline bundle, memory, mount, navigation, interaction and audio timing measurements. **Status:** In progress: interaction, layout-shift and audio-timing numbers exist (web/e2e/s3-profiles.e2e.ts S3-PROFILE lines, docs/adr/selecta-microinteraction-performance-results.md), but no single baseline records bundle size, memory, first mount and navigation time together
 2. **S3-0073-02 - Not started.** Create deterministic 20k-library, 100-song-timeline, 64-cell Studio and background-load fixtures.
 3. **S3-0073-03 - Not started.** Profile long-list and panel interactions before deciding on virtualization or state architecture changes.
 4. **S3-0073-04 - Not started.** Define frame/interaction budgets and layout-shift acceptance based on measured devices.
 5. **S3-0073-05 - Not started.** Audit spectrum/lyrics animations under hidden tabs, reduced motion and low power.
-6. **S3-0073-06 - Not started.** Optimize loading splits and render boundaries without altering audio scheduling semantics.
-7. **S3-0073-07 - Not started.** Run memory/cleanup tests for repeated Studio, inspectors, overlays and preview mounts.
+6. **S3-0073-06 - In progress.** Optimize loading splits and render boundaries without altering audio scheduling semantics. **Status:** In progress: Lucy, Cloud and the admin area are lazily loaded chunks (web/src/App.tsx, web/src/RuntimeApp.tsx, web/src/cloud/CloudApp.tsx; seen in the 2026-11-11 vite build) and seam scheduling is unchanged (web/src/audio/transportEdges.test.ts), but no before-and-after load measurement shows an optimisation
+7. **S3-0073-07 - In progress.** Run memory/cleanup tests for repeated Studio, inspectors, overlays and preview mounts. **Status:** In progress: unmount cleanup is tested for listeners, media actions and audio ownership (web/src/ui/useVisiblePoll.test.tsx, web/src/audio/mediaSession.test.ts, web/src/audio/focus.test.tsx 'leaving the page lets the sound go'), but there is no repeated-mount memory test for the Studio, inspectors, overlays and previews
 8. **S3-0073-08 - Not started.** Track performance regression thresholds in CI where deterministic and manually when hardware-specific.
 
 ## Preservation and integration constraints

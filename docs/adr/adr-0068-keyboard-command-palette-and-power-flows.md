@@ -1,14 +1,14 @@
 # ADR-0068: Optional command palette, shortcut registry and expert navigation
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 7 of 8 tasks implemented with automated evidence on 2026-11-11; 1 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 6 - Cross-cutting quality
 - **Extends existing decisions:** ADR-0002, ADR-0006, ADR-0023
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0068-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Introduce an optional discoverable Ctrl/Cmd+K command palette and a single short
 
 - Commands for navigation and search are local-first; no new network dependency or telemetry is implied. Disabled commands explain missing prerequisites, such as insufficient mix-ready music.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0068-01 - Not started.** Inventory all existing keyboard shortcuts and collision with input, sliders, grid and browser controls.
-2. **S3-0068-02 - Not started.** Design searchable command palette with true labels, categories, descriptions and conditions.
-3. **S3-0068-03 - Not started.** Add safe navigation/request/edit/analysis commands, preserving visible alternate entry points.
-4. **S3-0068-04 - Not started.** Define non-destructive default Enter behavior and confirmation for active-mix replacement.
-5. **S3-0068-05 - Not started.** Implement consistent shortcut arbitration across dialogs, Studio, Stage and waveform.
-6. **S3-0068-06 - Not started.** Provide discoverable keyboard shortcut reference and optional user preference for palette use.
-7. **S3-0068-07 - Not started.** Add command identity, capability checks, route focus and Escape restoration tests.
-8. **S3-0068-08 - Not started.** Usability-test novice discovery versus expert acceleration; revise before implementation freeze.
+1. **S3-0068-01 - Implemented.** Inventory all existing keyboard shortcuts and collision with input, sliders, grid and browser controls. **Evidence:** docs/adr/selecta-3-keyboard.md 'Who gets a key', 'Global shortcuts' (each key with what it collides with and how that is settled) and 'Exceptions'; tests/test_s3_docs_contracts.py test_every_global_shortcut_is_in_the_keyboard_inventory; web/src/state/shortcuts.test.ts 'does not take Ctrl K or Cmd K from text editing', 'leaves Space to real buttons, checkboxes, text and grids' and 'leaves Space to a custom role=button reorder grip and its children' (passed 2026-11-11).
+2. **S3-0068-02 - Implemented.** Design searchable command palette with true labels, categories, descriptions and conditions. **Evidence:** web/src/ui/CommandPalette.tsx (combo box and list box, grouped Songs, Your drafts, Go to, Playback and Do, each option with its kind, detail or reason) over web/src/shell/commands.ts; web/src/ui/CommandPalette.test.tsx 'shows exact Undo scope but refuses an unavailable mutation' and 'clamps the active command if a live result list becomes shorter'; web/src/ui/paletteStale.test.tsx 'ignores an older answer that lands after the newer one'; web/e2e/finishing.e2e.ts 'the command palette says why a command can’t run, and works from the keyboard alone' (passed 2026-11-11).
+3. **S3-0068-03 - Implemented.** Add safe navigation/request/edit/analysis commands, preserving visible alternate entry points. **Evidence:** web/src/shell/commands.ts navigation, request, edit, undo and analysis commands, each a shortcut to a control that already exists; web/src/shell/paletteInventory.test.ts and web/src/shell/commands.test.ts; web/src/views/s3-0064-workspace.test.tsx 'Analysis starts the rest and pauses it again' (the visible Analyse control the palette command mirrors) (passed 2026-11-11).
+4. **S3-0068-04 - Implemented.** Define non-destructive default Enter behavior and confirmation for active-mix replacement. **Evidence:** web/e2e/s3-0068-palette-preference.e2e.ts 'Enter on Start a new mix only goes to Explore, and the mix that is playing carries on (S3-0068-04/07)' (passed 2026-11-11).
+5. **S3-0068-05 - Implemented.** Implement consistent shortcut arbitration across dialogs, Studio, Stage and waveform. **Evidence:** web/src/state/shortcuts.test.ts 'opens from the page, but not while an overlay owns the keys'; web/e2e/s3-0068-palette-preference.e2e.ts 'the shortcut list turns the palette off and on, and Ctrl K respects dialogs and text boxes (S3-0068-05/06)'; web/src/ui/controls.test.tsx 'does not swallow a dialog Escape when its menu is closed' (passed 2026-11-11).
+6. **S3-0068-06 - Implemented.** Provide discoverable keyboard shortcut reference and optional user preference for palette use. **Evidence:** web/e2e/s3-0068-palette-preference.e2e.ts 'the shortcut list turns the palette off and on, and Ctrl K respects dialogs and text boxes (S3-0068-05/06)' (the ? list shows Ctrl K only while it is on, and its checkbox turns the palette off and back on) (passed 2026-11-11).
+7. **S3-0068-07 - Implemented.** Add command identity, capability checks, route focus and Escape restoration tests. **Evidence:** command identity: web/src/ui/CommandPalette.test.tsx 'opens the exact recording ID even when different results share a title'; capability checks: 'shows exact Undo scope but refuses an unavailable mutation'; Escape restoration and no replacement of what plays: web/e2e/s3-0068-palette-preference.e2e.ts 'the shortcut list turns the palette off and on, and Ctrl K respects dialogs and text boxes (S3-0068-05/06)' (Escape returns focus to the opener) and 'Enter on Start a new mix only goes to Explore, and the mix that is playing carries on (S3-0068-04/07)' (passed 2026-11-11).
+8. **S3-0068-08 - Needs a person.** Usability-test novice discovery versus expert acceleration; revise before implementation freeze. **Status:** Needs a person: usability sessions comparing novice discovery with expert acceleration through the palette, run with real participants before a freeze
 
 ## Preservation and integration constraints
 

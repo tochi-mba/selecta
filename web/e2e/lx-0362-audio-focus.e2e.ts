@@ -1,6 +1,7 @@
 /* LX-0362-03: with real (muted) music playing, Lucy's Save and play never replaces it without an
  * explicit confirmation from the person: Cancel leaves the same player, the same mix and no draft;
- * only the confirm button in the dialog replaces the music with the approved songs. Lucy's
+ * only ticking "Yes, replace what's playing" and then the dialog's own button replaces the music
+ * with the approved songs. Lucy's
  * built-in planner makes the proposal, so no AI service is ever called. */
 import { APIRequestContext, expect, test } from '@playwright/test';
 import { audioClock, resetMix, spyOnAudio } from './helpers';
@@ -60,7 +61,11 @@ test('LX-0362-03 Save and play replaces the playing music only after its own con
   // the person's own confirmation is what replaces it
   await save.click();
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Save and play' }).click();
+  const confirm = dialog.getByRole('button', { name: 'Save and play' });
+  // replacing needs its own explicit agreement before the button does anything
+  await expect(confirm).toBeDisabled();
+  await dialog.getByRole('checkbox', { name: 'Yes, replace what’s playing with this mix' }).check();
+  await confirm.click();
   const proposal = (await (await request.get(`/api/lucy/conversations/${id}`)).json()).proposal.current;
   const approved = proposal.snapshot.songs.map((song: { song_id: number }) => song.song_id);
   await expect.poll(() => mixIds(request), { timeout: 30_000 }).toEqual(approved);

@@ -1,14 +1,14 @@
 # ADR-0075: Visual regression, usability research and observable release acceptance
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 2 of 9 tasks implemented with automated evidence on 2026-11-11; 5 need a person; 2 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 7 - Verification
 - **Extends existing decisions:** ADR-0029, ADR-0046
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0075-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,17 +26,17 @@ Gate releases on deterministic visual coverage, measured task outcomes, accessib
 
 - Maintain an evidence ledger with PR/commit/test/visual/audible/AT/manual owner and limitations. An accepted decision is not an implemented task, and a merged code PR is not automatically verified.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0075-01 - Not started.** Capture deterministic baseline screenshots and a coverage map of all meaningful states.
-2. **S3-0075-02 - Not started.** Create visual regression infrastructure for dark/light, mobile/desktop, large text and overlays.
-3. **S3-0075-03 - Not started.** Review screenshots under long/RTL/missing metadata, no art, loading, errors and network loss.
-4. **S3-0075-04 - Not started.** Run structured new listener, creator and expert usability sessions on realistic content.
-5. **S3-0075-05 - Not started.** Run manual screen-reader, keyboard and audio listening sessions with documented environments.
-6. **S3-0075-06 - Not started.** Define P0/P1/P2 issue severity, triage ownership and release-blocking standards.
-7. **S3-0075-07 - Not started.** Link CI, visual evidence, traces, measurements, study notes and rollback evidence to task ledger.
-8. **S3-0075-08 - Not started.** Create a release-candidate go/no-go review explicitly listing unperformed checks and accepted limitations.
-9. **S3-0075-09 - Not started.** Compare before/after interaction success without pretending aesthetic preference is objective proof.
+1. **S3-0075-01 - In progress.** Capture deterministic baseline screenshots and a coverage map of all meaningful states. **Status:** In progress: the surface inventory (docs/adr/mp-0272-surface-inventory.json) maps the states and web/e2e/mp-baseline.mp.ts captures them, but the baseline screenshots were not regenerated and compared in this session
+2. **S3-0075-02 - In progress.** Create visual regression infrastructure for dark/light, mobile/desktop, large text and overlays. **Status:** In progress: web/e2e/paired-theme.e2e.ts and web/e2e/visual.e2e.ts capture dark and light at phone and desktop for review, but they attach candidates rather than failing on a difference, and large text is not among them
+3. **S3-0075-03 - Needs a person.** Review screenshots under long/RTL/missing metadata, no art, loading, errors and network loss. **Status:** Needs a person: a person reviewing screenshots under long, right-to-left and missing metadata, no art, loading, errors and network loss
+4. **S3-0075-04 - Needs a person.** Run structured new listener, creator and expert usability sessions on realistic content. **Status:** Needs a person: structured usability sessions with a new listener, a creator and an expert on realistic content
+5. **S3-0075-05 - Needs a person.** Run manual screen-reader, keyboard and audio listening sessions with documented environments. **Status:** Needs a person: manual screen-reader, keyboard and audio listening sessions with their environments recorded (docs/adr/selecta-3-accessibility.md 'Scripts for a person')
+6. **S3-0075-06 - Implemented.** Define P0/P1/P2 issue severity, triage ownership and release-blocking standards. **Evidence:** docs/adr/selecta-3-baseline.md 'How issues are judged' (P0, P1 and P2 with what each blocks) and 'How work moves and who decides'; docs/adr/selecta-3-verification-matrix.md release disposition; tests/test_s3_docs_contracts.py test_severity_delivery_order_and_gates_are_written_down (passed 2026-11-11).
+7. **S3-0075-07 - Implemented.** Link CI, visual evidence, traces, measurements, study notes and rollback evidence to task ledger. **Evidence:** this checklist and docs/adr/selecta-3-evidence.md carry each task's evidence; src/selecta/audit/checklist_evidence.py, run in CI ('Reject checked tasks without evidence'), refuses a tick without it (passed 2026-11-11).
+8. **S3-0075-08 - Needs a person.** Create a release-candidate go/no-go review explicitly listing unperformed checks and accepted limitations. **Status:** Needs a person: a release-candidate go or no-go review by the owner, listing unperformed checks and accepted limitations
+9. **S3-0075-09 - Needs a person.** Compare before/after interaction success without pretending aesthetic preference is objective proof. **Status:** Needs a person: before and after task-success comparisons with participants
 
 ## Preservation and integration constraints
 

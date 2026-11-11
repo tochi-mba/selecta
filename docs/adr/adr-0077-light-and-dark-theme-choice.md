@@ -1,7 +1,7 @@
 # ADR-0077: Choosing light or dark
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress on PR 24; not merged or verified
+- **Implementation status:** In progress: 3 of 6 tasks implemented with automated evidence on 2026-11-11; 1 need a person; 2 still open
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 2 - Foundations
@@ -32,12 +32,12 @@ Bring lime back to the light theme where it can work: only as a filled shape wit
 
 ## Detailed implementation work
 
-1. **S3-0077-01 - In progress.** Add the `theme` preference, defaulting to following the computer, with unrecognised saved values ignored.
+1. **S3-0077-01 - Implemented.** Add the `theme` preference, defaulting to following the computer, with unrecognised saved values ignored. **Evidence:** web/src/state/prefs.ts theme preference defaulting to system; web/src/state/prefs.test.ts 'saved ... with the OS ... shows ...' rows and 'storage that refuses to be read follows the OS, and a choice still holds until the page closes'; web/src/state/prefsStorage.test.ts 'ignore values of the wrong type or outside the known choices' (passed 2026-11-11).
 2. **S3-0077-02 - In progress.** Apply it before first paint and keep it applied through `data-theme`, including the title bar colour.
-3. **S3-0077-03 - In progress.** Header menu with radio semantics, Workspace radio group and palette commands, all showing the current choice.
-4. **S3-0077-04 - In progress.** Semantic tokens for the main action and the current lyric word, so lime returns to the light theme without failing contrast.
+3. **S3-0077-03 - Implemented.** Header menu with radio semantics, Workspace radio group and palette commands, all showing the current choice. **Evidence:** web/e2e/s3-0077-theme-choice.e2e.ts 'header, Workspace and palette choose the theme and all show the same current choice (S3-0077-03)' (passed 2026-11-11).
+4. **S3-0077-04 - Implemented.** Semantic tokens for the main action and the current lyric word, so lime returns to the light theme without failing contrast. **Evidence:** web/src/styles/tokens.css semantic --primary-fill, --primary-ink and --primary-edge per theme; web/e2e/s3-0077-theme-choice.e2e.ts 'every page passes automatic contrast checks with light chosen while the computer is dark (S3-0077-04/06)' and the dark-on-light case (passed 2026-11-11).
 5. **S3-0077-05 - In progress.** Redraw the spectrum when the shown theme changes.
-6. **S3-0077-06 - In progress.** Run the automated contrast checks with the theme chosen explicitly, as well as following the system.
+6. **S3-0077-06 - Needs a person.** Run the automated contrast checks with the theme chosen explicitly, as well as following the system. **Status:** Needs a person: a person checking both themes by eye and with assistive technology; the automated half, web/e2e/s3-0077-theme-choice.e2e.ts 'every page passes automatic contrast checks with light chosen while the computer is dark (S3-0077-04/06)' and the dark case, passed 2026-11-11
 
 ## Preservation and integration constraints
 
