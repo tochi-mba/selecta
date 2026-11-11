@@ -256,6 +256,9 @@ def plan_turn(
         if not reservation.admitted:
             refund_turn(conn, workspace_id, month, start.bucket)
             limited = "platform"
+            from selecta.observability import metrics
+
+            metrics.add("selecta_spend_ceiling_hits_total", ceiling="ai_platform")
             break
         chosen, bucket = replace(route, request_class=served), start.bucket
         reserved, spend_day = reservation.amount_usd, reservation.day

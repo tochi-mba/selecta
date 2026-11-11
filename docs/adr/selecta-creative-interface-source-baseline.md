@@ -104,7 +104,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0175-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0175-07 | person | Needs a person: uncoached real-audio request study |
 | CI-0176-01 | built | Built or given a focused test on 2026-11-10 |
-| CI-0176-02 | open | Not started: there is no bounded song-neighbour graph; web/src/views/Links.tsx lists phrase and chord pairs as cards |
+| CI-0176-02 | built | Built or given a focused test on 2026-11-11 |
 | CI-0176-03 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0176-04 | built | Built or given a focused test on 2026-11-10 |
 | CI-0176-05 | existing | Met by earlier code; tests named on the checklist line |
@@ -120,8 +120,8 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0178-01 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0178-02 | built | Built or given a focused test on 2026-11-10 |
 | CI-0178-03 | existing | Met by earlier code; tests named on the checklist line |
-| CI-0178-04 | open | Not started: no new-musical-possibility reveal during the first scan |
-| CI-0178-05 | open | Not started: no first-seam reward moment |
+| CI-0178-04 | built | Built or given a focused test on 2026-11-11 |
+| CI-0178-05 | built | Built or given a focused test on 2026-11-11 |
 | CI-0178-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0178-07 | person | Needs a person: observed first-use task metrics and interviews |
 | CI-0179-01 | existing | Met by earlier code; tests named on the checklist line |
@@ -161,7 +161,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0183-07 | person | Needs a person: named screen reader, touch and low-vision tester signs the exact SHA |
 | CI-0184-01 | built | Built or given a focused test on 2026-11-10 |
 | CI-0184-02 | person | Needs a person: owner review of PR slicing and rollback plans |
-| CI-0184-03 | open | In progress: the crosswalk names the tests for each task, but not every task has state, viewport and negative-case coverage |
+| CI-0184-03 | open | In progress: coverage matrix built (selecta-creative-interface-coverage-matrix.md); 86 ticked tasks still have a gap |
 | CI-0184-04 | person | Needs a person: real uncoached listener, creator and expert tasks with raw denominators |
 | CI-0184-05 | person | Needs a person: study bias review with real media |
 | CI-0184-06 | person | Needs a person: old/new/old rollback rehearsal with isolated data and real audio |

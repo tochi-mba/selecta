@@ -21,6 +21,8 @@ depends on a cron somebody forgot:
 | `derived_eviction` | 10 min | Workspaces over their derived-data budget (`storage.eviction`) |
 | `export_expiry` | 1 h | Exports past their plan's retention (`storage.export_expiry`) |
 | `autoscale` | 30 s | Size each worker pool and tell the launcher (`work.autoscale_leader`) |
+| `queue_metrics`, `lost_jobs`, `backup_freshness` | 15 s, 10 min, 10 min | The SLO and alert
+  series only the leader sees (`observability.leader_metrics`) |
 
 Tasks that need a secret it doesn't have (Stripe, WorkOS, the deletion-ledger bucket, the room
 pepper) are left out, and the start-up log names each one and the setting it needs.
@@ -91,6 +93,9 @@ def usage_reconciliation(conn: Connection) -> int:
     from selecta.usage.reconcile import reconcile
 
     report = reconcile(conn)
+    from selecta.observability import metrics
+
+    metrics.set_gauge("selecta_reconciliation_drift", len(report.drifts), check="usage")
     if not report.ok:
         alerts.raise_alert(
             conn,
@@ -312,6 +317,11 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _eviction(engine, env, plan)
     _export_expiry(engine, env, plan)
     _autoscale(engine, env, plan)
+    from selecta.observability import leader_metrics
+
+    made, off = leader_metrics.tasks(engine, env)
+    plan.tasks += made
+    plan.disabled.update(off)
     return plan
 
 
@@ -382,6 +392,9 @@ def database_url(env: Mapping[str, str] | None = None) -> str:
 
 def main(tick_s: float = 1.0) -> None:
     """`selecta maintain`: build everything from the environment and run until stopped."""
+    from selecta.observability import metrics
+
+    metrics.configure_from_environment("maintenance")
     engine = make_engine(database_url())
     lock = engine.connect()
     service = Service(engine, lock, cloud_plan(engine), tick_s=tick_s)

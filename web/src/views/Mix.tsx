@@ -18,6 +18,7 @@ import { ExportPanel } from './ExportPanel';
 import { MixScope, useMixPath } from './mixScope';
 import { ComingSongs } from './Requests';
 import { InspectorTab, SeamInspector } from './SeamInspector';
+import { draftShown, movedLocally } from './optimisticMove';
 import { ViewProps } from './shared';
 
 /** A transition is known by the two songs it's between, and a song by which time it appears in the mix,
@@ -394,11 +395,20 @@ export function Mix(props: ViewProps) {
     setMovingKey(keys[from]);
     const words = how === 'up' ? `Moved ${moved.title} up.` : how === 'down' ? `Moved ${moved.title} down.` : 'Moved that song.';
     if (how !== 'drag') focusAfter.current = { key: keys[from], how };
+    // MI-0162-05: a draft shows the move at once and keeps the server's answer when it comes. The request
+    // still carries the order the server knows (`guard`), and a refusal puts the draft back as it was.
+    // The current mix waits for the server, because the player schedules its seams from it.
+    const shownBefore = draftId !== null ? draftShown(mix, mixName, canUndo, draftId, draftPlace, mixEta) : null;
+    if (shownBefore) setMixData({ ...shownBefore, mix: movedLocally(mix, from, to) });
     try {
       await act(post<MixData>(at('/mix/move'), { source: from, target: to }, guard), words);
       announce(`Moved ${moved.title} to number ${to + 1} of ${mix.length}.`);
     } catch (error) {
       focusAfter.current = null;
+      if (shownBefore) {
+        if (how !== 'drag') focusAfter.current = { key: keys[from], how };
+        setMixData(shownBefore);
+      }
       if (how === 'up' || how === 'down') throw error;
       // the row goes back where it was, because nothing actually moved
       setProblem((error as Error).message);

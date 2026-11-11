@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+import selecta.planner.reel  # noqa: F401  imported before load_song is faked below, so it keeps the real one
 from selecta import db
 from selecta.api import create_app
 from selecta.config import ANALYSIS_VERSION, Settings

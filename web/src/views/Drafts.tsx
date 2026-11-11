@@ -1,5 +1,5 @@
 import { Icon } from '../ui/Icon';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { del, DraftInfo, DraftList, get, post } from '../api';
 import { useFlags } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
@@ -390,6 +390,7 @@ export function RenameDraft({ id, name, onDone }: { id: number; name: string; on
   const [text, setText] = useState(name);
   const [problem, setProblem] = useState('');
   const [saving, setSaving] = useState(false);
+  const problemId = useId();
   const save = async (event?: FormEvent) => {
     event?.preventDefault();
     if (saving) return;
@@ -411,6 +412,7 @@ export function RenameDraft({ id, name, onDone }: { id: number; name: string; on
         value={text}
         aria-label="Name this draft"
         aria-invalid={problem ? true : undefined}
+        aria-describedby={problem ? problemId : undefined}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
@@ -421,7 +423,7 @@ export function RenameDraft({ id, name, onDone }: { id: number; name: string; on
       />
       <button className="primary" disabled={saving} aria-busy={saving || undefined}>{saving ? 'Saving…' : 'Save name'}</button>
       <button type="button" onClick={() => onDone(name)}>Cancel</button>
-      {problem && <p className="warn" role="alert">{problem}</p>}
+      {problem && <p className="warn" role="alert" id={problemId}>{problem}</p>}
     </form>
   );
 }

@@ -166,7 +166,7 @@
 - [x] T0093 - Retain last safe snapshots on server loss; never replace them with false empty data.
 - [ ] T0094 - Define server-reconnect, retry and idempotent recovery for every durable mutation.
 - [x] T0095 - Implement active audio owner/takeover policy across multiple app tabs/windows.
-- [x] T0096 - Show conflicts rather than silently overwriting newer mix, cue, request or setting state. **Evidence (2026-11-11):** `x-mix-order` guards mix/seam/cue edits and requests answer 409 with reasons; storage limit and steering settings now carry what the page last saw and answer 409 `setting_changed` (`src/selecta/routes/system.py`, `web/src/views/WorkshopPanels.tsx`, `web/src/views/MixSetup.tsx`). `tests/test_setting_conflicts.py` 6 passed, `web/src/views/settingConflicts.test.tsx` 3 passed.
+- [x] T0096 - Show conflicts rather than silently overwriting newer mix, cue, request or setting state. **Evidence (2026-11-11):** `x-mix-order` guards mix/seam/cue edits and requests answer 409 with reasons; storage limit and steering settings now carry what the page last saw and answer 409 `setting_changed` (`src/selecta/routes/system.py`, `web/src/views/WorkshopPanels.tsx`, `web/src/views/MixSetup.tsx`). `tests/test_setting_conflicts.py` 8 passed, `web/src/views/settingConflicts.test.tsx` 3 passed.
 - [ ] T0097 - Test backend stop/restart during edit, request, export and storage update; test tab sleep/wake. **Implementation:** Implemented; browser check pending (`web/e2e/t0097-tab-sleep.e2e.ts`). Restarts proven by `tests/test_restart_mid_work.py` (4 passed, 2026-11-11).
 - [x] T0098 - Approve ADR-0028 reliability policy. **Evidence (2026-11-10):** The owner accepted ADR-0028 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
@@ -410,7 +410,7 @@
 - [ ] T0253 - Complete Studio local audition → pause main playback → navigate → commit exact seam → render failure recovery. **Needs a person:** needs real stems on the owner's machine and someone listening to the committed seam (checked 2026-11-10).
 - [x] T0254 - Complete export of a draft while switching/reordering other mixes; verify snapshot and FLAC bytes.
 - [x] T0255 - Complete metadata override while background analysis finishes and the library watch detects new files. **Evidence (2026-11-11):** `tests/test_correction_during_watch.py` (2 passed): a tempo/key correction, then analysis finishing for that song, then the folder watch (`/api/library/check`) bringing in new files; the correction, the measured values beside it and the new songs all stay right. The page side is `web/e2e/integration.e2e.ts`.
-- [ ] T0256 - Complete backend restart during mutation, reconnect/retry and two-tab active playback takeover.
+- [x] T0256 - Complete backend restart during mutation, reconnect/retry and two-tab active playback takeover. **Evidence (2026-11-11):** new `src/selecta/operation_log.py` keeps each operation's first answer on disk, so a retry after a restart no longer repeats the change; `tests/test_restart_during_mutation.py` (4 passed). Two-tab takeover: `only one tab plays at a time` in `web/e2e/listen.e2e.ts` passed in Edge on 2026-11-11.
 - [x] T0257 - Confirm no preserved feature in feature-parity ledger has lost navigation or an authoritative backend side effect.
 - [ ] T0258 - Run end-to-end integration tests with representative song fixtures and audit all discovered regressions.
 

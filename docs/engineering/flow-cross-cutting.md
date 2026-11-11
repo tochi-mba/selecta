@@ -173,3 +173,26 @@ checks every test named here still exists in its file.
 | Reduced motion | `web/e2e/mp-0296-motion.e2e.ts` "MP-0296-06 Still and reduced motion remove decorative movement while the music data keeps updating"; `web/e2e/motion-preference.e2e.ts` "motion intensity is local and OS reduced-motion always wins" | Whether remaining motion is comfortable for people sensitive to it |
 | Forced colours | `web/e2e/flow-forced-colors.e2e.ts` "forced colours keep controls visible, and selection and focus distinct" | Windows High Contrast themes other than the emulated one |
 | Live announcements | `web/e2e/finishing.e2e.ts` "playing doesn’t flood a screen reader" | A screen-reader listening study (SF-0234-05) |
+
+## Focus and reading order (SF-0234-01)
+
+Every page shares one frame, read in this order: the skip link "Skip to the page" (first Tab stop,
+`web/src/shell/Shell.tsx`), the main navigation (`nav` named "Main"), the context bar with its breadcrumb,
+then the page's single `main` with one `h1`, then the mini-player (`aside`) when something plays. No
+control uses a positive `tabindex`, so Tab follows the DOM, and the DOM follows the drawn order.
+
+| Scene | Reading order inside `main` | Where focus goes back to |
+|---|---|---|
+| Listen | page heading, the playing song and its transport, the strip, lyrics, up next | the control that opened a dialog or the Stage |
+| Make a Mix | heading, setup (length, energy arc, feel), the mixes to start from | the card or button that opened a dialog |
+| My Mixes | heading, the current mix, then drafts in their order | the draft row an action came from |
+| Editor | scope bar (current or draft), view switch, the timeline: song, transition, song; the inspector after the timeline | the row the inspector was opened from (UF-0381-08) |
+| Library | heading, search, filters, count, results, one row per recording | the exact row a song sheet was opened from |
+| Workspace | heading, its tabs, the open tab's panels in order | the tab |
+| Dialogs and drawers | their own heading first, content, then actions; Tab stays inside | the opener, or the page heading if the opener has gone |
+
+Proof: `web/e2e/sf-0234-reading-order.e2e.ts` checks one main, one `h1`, headings that never skip down a
+level, the main navigation before the page, no positive `tabindex`, the skip link as the first stop on every
+page, and that Tab moves down each page in drawn order; `web/e2e/lx-library.e2e.ts` "LX-0340-03 one reading
+order" checks the Library in DOM, Tab and the accessibility outline; `web/e2e/finishing.e2e.ts` "Tab reaches
+everything on every page at" checks focus is always visible and never covered.

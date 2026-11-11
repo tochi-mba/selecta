@@ -10,6 +10,7 @@ import { operationId } from '../state/async';
 import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { SearchField } from '../ui/primitives';
 import { LibraryRow, LibraryRowActions } from './LibraryRow';
+import { hasEarlyLibrary, libraryUrl, takeEarlyLibrary } from './libraryPrefetch';
 import { ViewProps } from './shared';
 import { SongDetails } from './SongDetails';
 
@@ -160,11 +161,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   };
 
 
-  const url = useCallback((after?: string | null, limit = PAGE_SIZE) => {
-    const params = new URLSearchParams({ q: query, state: filter, sort, limit: String(limit) });
-    if (after) params.set('after', after);
-    return `/library?${params}`;
-  }, [query, filter, sort]);
+  const url = useCallback((after?: string | null, limit = PAGE_SIZE) => libraryUrl(query, filter, sort, after, limit), [query, filter, sort]);
 
   // Only the newest search can answer, however the answers arrive. Coming back to a list that had been
   // shown further down loads as many pages as it had, one after another, in the same order.
@@ -179,7 +176,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       let count = 0;
       for (let page = 0; page < pagesWanted.current; page += 1) {
         cursors.push(after);
-        const answer: LibraryPage = await get<LibraryPage>(url(after));
+        // MI-0162-04: the first page may already be on its way, asked for as the app opened
+        const answer: LibraryPage = await ((page === 0 ? takeEarlyLibrary(url(after)) : null) ?? get<LibraryPage>(url(after)));
         if (mine !== asked.current) return;
         for (const song of answer.songs) {
           found.set(song.id, song);
@@ -307,7 +305,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     pagesJustAppended.current = null;
     pageCursors.current = [null];
     setSearching(true);
-    const wait = window.setTimeout(() => void load(), 120);
+    const wait = window.setTimeout(() => void load(), hasEarlyLibrary(url()) ? 0 : 120);
     return () => { asked.current += 1; window.clearTimeout(wait); };
   }, [load, pagesAsked]);
 

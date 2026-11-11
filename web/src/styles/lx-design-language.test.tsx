@@ -90,7 +90,7 @@ describe('LX-0364-06 motion only for real work', () => {
 
 describe('LX-0364-02 one song identity in Library and Lucy', () => {
   it('both rows draw the same SongMotif from the recording id beside the title, and no artwork', () => {
-    const library = fs.readFileSync(`${SOURCE}views/Library.tsx`, 'utf8');
+    const library = fs.readFileSync(`${SOURCE}views/LibraryRow.tsx`, 'utf8');
     const lucy = fs.readFileSync(`${SOURCE}views/LucySongs.tsx`, 'utf8');
     expect(library).toMatch(/<SongMotif songId=\{song\.id\} \/><b dir="auto"/);
     expect(lucy).toMatch(/<SongMotif songId=\{song\.song_id\} \/>/);

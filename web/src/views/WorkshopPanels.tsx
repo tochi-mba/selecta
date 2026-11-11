@@ -1,6 +1,6 @@
 import { flagOn } from '../flags';
 import { LinkIfThere } from '../shell/PageLink';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { ApiError, FolderCheck, Folders, get, Jobs, post, Storage } from '../api';
 import { gb, storageWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -54,6 +54,7 @@ export function StoragePanel() {
   const confirmed = useRef<number | null>(null);
   const [saved, setSaved] = useState(true);
   const [problem, setProblem] = useState('');
+  const problemId = useId();
   const [wanted, setWanted] = useState<number | null>(null);
   // SF-0230-05: a limit below what's already kept removes files, so it waits for a yes
   const [pending, setPending] = useState<number | null>(null);
@@ -180,6 +181,8 @@ export function StoragePanel() {
           step={0.1}
           value={Math.min(limit, largest)}
           onChange={(event) => move(Number(event.target.value))}
+          aria-invalid={problem ? true : undefined}
+          aria-describedby={problem ? problemId : undefined}
         />
       </label>
       {pending !== null && (
@@ -196,7 +199,7 @@ export function StoragePanel() {
       )}
       {!saved && !problem && <p className="hint" role="status">Saving…</p>}
       {saved && !problem && pending === null && <p className="hint" role="status">{reclaimed || `Saved: ${limit.toFixed(1)} GB.`}</p>}
-      {problem && <p className="warn" role="alert">{problem} The limit is still {limit.toFixed(1)} GB.</p>}
+      {problem && <p className="warn" role="alert" id={problemId}>{problem} The limit is still {limit.toFixed(1)} GB.</p>}
       {wanted !== null && <Action run={() => move(wanted)}>Retry saving budget</Action>}
       <p className="hint">
         {overBudget

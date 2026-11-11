@@ -27,7 +27,9 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta import persistence
+from selecta.observability import metrics
 from selecta.work.autoscale import (
+    ALERT_SPEND,
     Decision,
     Launch,
     PoolConfig,
@@ -211,6 +213,8 @@ def tick(
             )
             decision = decide(config, state)
             for alert in decision.alerts:
+                if alert.kind == ALERT_SPEND:
+                    metrics.add("selecta_spend_ceiling_hits_total", ceiling="compute")
                 alerts.raise_alert(
                     conn,
                     f"autoscale.{alert.kind}",

@@ -42,7 +42,7 @@ describe('S31-0079-08 numbers read plainly at the edges', () => {
   });
 
   it('BPM and key are named in words, and a missing value says why', () => {
-    const library = read('views/Library.tsx');
+    const library = read('views/LibraryRow.tsx');
     expect(library).toContain("`${Math.round(song.bpm)} BPM`");
     expect(library).toContain("'Not analysed'");
     expect(library).toMatch(/song\.camelot \?\? \(song\.bpm !== null \? 'Key unknown' : 'No key yet'\)/);

@@ -53,6 +53,7 @@ describe('SF-0240-05 blind comparison neutrality', () => {
     expect(b).toBeTruthy();
     const neutral = (node: Element, letter: string) => node.outerHTML
       .replaceAll(`/${letter.toLowerCase()}/`, '/X/')
+      .replaceAll(`grade-${letter.toLowerCase()}"`, 'grade-X"')
       .replace(new RegExp(`\\b${letter}\\b`, 'g'), 'X')
       .replace(/_r_[0-9a-z]+_/g, 'ID');
     expect(neutral(a, 'A')).toBe(neutral(b, 'B'));

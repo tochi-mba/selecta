@@ -155,6 +155,9 @@ def record(
             metadata=scrub(dict(metadata)) if metadata else None,
         )
     )
+    from selecta.observability import metrics
+
+    metrics.add("selecta_audit_writes_total")
     return event_id
 
 

@@ -13,7 +13,7 @@ import signal
 import threading
 from pathlib import Path
 
-from selecta.observability import tracing
+from selecta.observability import metrics, tracing
 from selecta.scheduling.policy import WorkerCaps
 from selecta.work.catalogue import lookup
 from selecta.workers import engine_handlers
@@ -38,6 +38,7 @@ def main() -> None:
     if not registry:
         raise RuntimeError(f"This worker has no handlers for the {pool} pool.")
     tracing.configure_from_environment("worker")
+    metrics.configure_from_environment("worker")
     caps = WorkerCaps(
         pool=pool,
         slots=1,

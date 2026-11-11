@@ -59,6 +59,8 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
         "admin_metrics",
         "usage_reconcile",
         "export_expiry",
+        "queue_metrics",
+        "lost_jobs",
     }
     assert set(plan.disabled) == {
         "stripe_events",
@@ -68,6 +70,7 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
         "rooms",
         "derived_eviction",
         "autoscale",
+        "backup_freshness",
     }
     assert "SELECTA_MODAL_APP" in plan.disabled["autoscale"]
     assert "SELECTA_STRIPE_SECRET_KEY" in plan.disabled["stripe_events"]
@@ -90,6 +93,10 @@ def test_secrets_switch_the_external_tasks_on(sqlite_engine, monkeypatch):
         "SELECTA_MODAL_APP": "selecta-workers",
         "SELECTA_MODAL_TOKEN_ID": "ak-x",
         "SELECTA_MODAL_TOKEN_SECRET": "as-x",
+        "SELECTA_BACKUP_S3_ENDPOINT": "https://backup.test",
+        "SELECTA_BACKUP_BUCKET": "dumps",
+        "SELECTA_BACKUP_ACCESS_KEY_ID": "rk",
+        "SELECTA_BACKUP_SECRET_ACCESS_KEY": "rs",
     }
     plan = cloud_plan(sqlite_engine, env=env)
     assert plan.disabled == {}

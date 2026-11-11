@@ -65,8 +65,8 @@ describe('stable numbers (MP-0275-05)', () => {
 
 describe('international names (MP-0275-08)', () => {
   it('Library and editor song names resolve their own direction', () => {
-    expect(read('views/Library.tsx')).toMatch(/<b dir="auto" title=\{title\}>/);
-    expect(read('views/Library.tsx')).toMatch(/<span dir="auto" title=\{song\.artist/);
+    expect(read('views/LibraryRow.tsx')).toMatch(/<b dir="auto" title=\{title\}>/);
+    expect(read('views/LibraryRow.tsx')).toMatch(/<span dir="auto" title=\{song\.artist/);
     expect(read('views/EditorRows.tsx')).toMatch(/<b dir="auto" title=\{item\.title\}>/);
   });
 

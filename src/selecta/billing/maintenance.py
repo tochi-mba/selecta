@@ -157,6 +157,11 @@ def reconcile_stripe_billing(
                 reason="Stripe subscription price is not in the price map",
                 metadata={"price_id": item.stripe},
             )
+    from selecta.observability import metrics
+
+    metrics.set_gauge("selecta_reconciliation_drift",
+                      len(report.items) + len(report.unmatched) + len(report.unknown_prices),
+                      check="billing")
     return StripeReconcileResult(
         checked=report.checked,
         changed=len(report.items),

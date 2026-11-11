@@ -34,6 +34,7 @@ import { RequestsContext, RequestsPanel, waitingRequestCount, useRequests } from
 import { Start } from './views/Start';
 import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
+import { prefetchLibrary } from './views/libraryPrefetch';
 import type { Undo, View } from './views/shared';
 
 // Lucy is optional and only loaded when someone opens it, so it costs Make a Mix nothing.
@@ -146,16 +147,20 @@ export function App() {
   const draftRef = useRef(draftId);
   draftRef.current = draftId;
   const draftMixRef = useRef<MixItem[]>([]);
+  // as with the current mix, an edit (or a move shown before its answer) is newer than a read already on its way
+  const draftChanges = useRef(0);
   const setDraftMix = useCallback((next: MixData) => {
+    draftChanges.current += 1;
     draftMixRef.current = next.mix;
     setDraftData(next);
   }, []);
   const refreshDraft = useCallback(() => {
     const asked = draftRef.current;
     if (asked === null) return;
+    const seen = draftChanges.current;
     get<MixData>(`/mix?draft=${asked}`)
       .then((next) => {
-        if (draftRef.current !== asked) return;
+        if (draftRef.current !== asked || seen !== draftChanges.current) return;
         setDraftMix(next);
         setDraftGone(false);
       })
@@ -298,6 +303,8 @@ export function App() {
   }), [player]);
 
   useEffect(() => {
+    // MI-0162-04: opened on the Library, its first rows are asked for now, not after status and the mix
+    if (window.location.pathname === '/library') prefetchLibrary(window.location.search);
     void refreshStatus();
     const seen = mixChanges.current;
     get<MixData>('/mix')

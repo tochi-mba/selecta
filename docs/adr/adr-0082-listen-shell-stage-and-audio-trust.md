@@ -1,7 +1,7 @@
 # ADR-0082: Polish Listen, navigation, mini-player and Stage without audio regressions
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 10 Implemented (automated), 1 In progress, 0 need a person only (2026-11-10 reconciliation); 0/11 Verified
+- **Implementation status:** In progress: 11 Implemented (automated), 0 In progress, 0 need a person only (2026-11-10 reconciliation; updated 2026-11-11); 0/11 Verified
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.1 verification-led UI/UX finishing (proposal initially docs-only)
 - **Phase:** 2 - listener journeys
@@ -23,7 +23,7 @@ Preserve [Selecta 3.0 invariants INV-01–INV-20](selecta-3-roadmap.md): music a
 
 ## Tasks, observable acceptance and traceable ID
 
-1. **S31-0082-01 - Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `web/src/views/Now.test.tsx` ("keeps expert view controls discoverable without competing with playback") passed. **Needs a person:** listener tasks in playing/paused/empty/error in both themes.
+1. **S31-0082-01 - Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete. **Status (2026-11-11):** Implemented (automated), not Verified. **Evidence:** `web/src/views/s31-0082-01-listen-hierarchy.test.tsx`: playing, paused, loading and a playback problem each lead with song, artist, the main button (Pause, Resume or Loading song), Next and progress, with one primary action and the optional controls folded after them; paused names itself; the empty state has one heading and one main way forward (passed 2026-11-11). **Needs a person:** listener tasks in playing/paused/empty/error in both themes.
 2. **S31-0082-02 - Test Next versus Skip semantics and transition countdown wording.** Acceptance: Users understand whether the next song is immediate or transition-aligned without changing transport behaviour. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/player.test.ts` ("Next goes straight to the next song", "jumping to the transition isn't the same thing"); `listenNextUp.test.tsx`; `Shell.test.tsx` (N and Shift N) passed. **Needs a person:** comprehension check of the wording with listeners.
 3. **S31-0082-03 - Verify waveform seek and disabled-seek feedback with real audio.** Acceptance: Time, output and accessibility value agree; unavailable areas explain why. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Now.test.tsx` ("keeps a finite, disabled slider and never attempts a seek"); `listenSeek.test.tsx` ("refuses to seek during a transition and says why") passed. **Needs a person:** audible seek check with real audio and a screen reader.
 4. **S31-0082-04 - Review timed/untimed/instrumental/missing lyrics presentation.** Acceptance: Readable line and word focus; no fabricated timing; explicit no-lyrics fallback. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/views/lyricHonesty.test.tsx` (untimed, line-timed, word-aligned, no lyrics); `Now.test.tsx` lyric cases passed. **Needs a person:** readability review.

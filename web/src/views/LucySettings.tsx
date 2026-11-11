@@ -162,15 +162,17 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
             <div className="field" key={budget.name}>
               <label htmlFor={`${ids}-${budget.name}`}>{budget.label}</label>
               <input id={`${ids}-${budget.name}`} type="number" min={1} step={1} inputMode="numeric" value={budgets[budget.name]}
-                onChange={(event) => setBudgets({ ...budgets, [budget.name]: event.target.value })} aria-invalid={whole(budgets[budget.name]) === null || undefined} />
-              <p className="field-help">{budget.help}</p>
+                onChange={(event) => setBudgets({ ...budgets, [budget.name]: event.target.value })} aria-invalid={whole(budgets[budget.name]) === null || undefined}
+                aria-describedby={`${ids}-${budget.name}-help${whole(budgets[budget.name]) === null ? ` ${ids}-whole-error` : ''}`} />
+              <p className="field-help" id={`${ids}-${budget.name}-help`}>{budget.help}</p>
             </div>
           ))}
           <div className="field">
             <label htmlFor={`${ids}-cap`}>Spending limit in US dollars (optional)</label>
             <input id={`${ids}-cap`} type="number" min={0} step="0.01" inputMode="decimal" value={budgets.spend_cap_usd}
-              onChange={(event) => setBudgets({ ...budgets, spend_cap_usd: event.target.value })} aria-invalid={capInvalid || undefined} />
-            <p className="field-help">Only applies to a paid AI service. Leave it empty for no limit.</p>
+              onChange={(event) => setBudgets({ ...budgets, spend_cap_usd: event.target.value })} aria-invalid={capInvalid || undefined}
+              aria-describedby={`${ids}-cap-help${capInvalid ? ` ${ids}-cap-error` : ''}`} />
+            <p className="field-help" id={`${ids}-cap-help`}>Only applies to a paid AI service. Leave it empty for no limit.</p>
           </div>
         </fieldset>
 
@@ -186,8 +188,8 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
           </label>
         </fieldset>
 
-        {invalid.length > 0 && <p className="warn">Use a whole number above zero for: {invalid.join(', ')}.</p>}
-        {capInvalid && <p className="warn">The spending limit has to be a number of dollars, or empty.</p>}
+        {invalid.length > 0 && <p className="warn" id={`${ids}-whole-error`}>Use a whole number above zero for: {invalid.join(', ')}.</p>}
+        {capInvalid && <p className="warn" id={`${ids}-cap-error`}>The spending limit has to be a number of dollars, or empty.</p>}
         {needsConsent && <p className="warn">Tick the box to agree to what’s sent, or choose the built-in planner.</p>}
         {problem && <p className="warn" role="alert">{problem}</p>}
         <div className="row wrap">
