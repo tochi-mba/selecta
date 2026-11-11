@@ -96,7 +96,9 @@ test('MP-0284-02 Previous, Play/Pause and Next share a centre line, stay put thr
 });
 
 test('MP-0284-03 the clock, playhead and seam mark on the strip follow the real audio clock', async ({ page, request }) => {
-  await allRendered(request);
+  // the first test in this file to need rendered seams, so it waits out a fresh server's first renders
+  test.setTimeout(720_000);
+  await allRendered(request, 600_000);
   await listen(page);
   await play(page);
   const start = (await audioClock(page))[0];
