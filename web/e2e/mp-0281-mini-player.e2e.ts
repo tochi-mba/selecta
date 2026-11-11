@@ -285,7 +285,7 @@ test('MP-0281-08 changing page or theme keeps one audio owner, and Pause stays p
         await expect(mini(page)).toHaveCount(1);
       }
     }
-    for (const theme of ['Light', 'Dark', 'System']) {
+    for (const theme of ['Light', 'Dark', 'Match this computer']) {
       await page.locator('[title^="Theme:"]').first().click();
       await page.getByRole('menuitemradio', { name: theme }).click();
       await expect(mini(page)).toHaveCount(1);

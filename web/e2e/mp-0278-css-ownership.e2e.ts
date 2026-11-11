@@ -158,5 +158,5 @@ test('MP-0278-07 audio, API, data, routing and stored preferences are what they 
   const after = (await (await request.get('/api/mix')).json()).mix.map((item: { song_id: number }) => item.song_id);
   expect(after).toEqual(before);
   await page.locator('[title^="Theme:"]').first().click();
-  await page.getByRole('menuitemradio', { name: 'System' }).click();
+  await page.getByRole('menuitemradio', { name: 'Match this computer' }).click();
 });

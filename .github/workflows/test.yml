@@ -239,8 +239,11 @@ jobs:
           cache-dependency-path: web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: web
-      - run: pnpm build
+      - name: Build, with the component gallery the ADR-279 and S3-0051 specs measure
+        run: pnpm build
         working-directory: web
+        env:
+          VITE_SELECTA_GALLERY: "1"
       - name: Browser tests, in Edge, muted
         run: pnpm e2e --shard=${{ matrix.shard }}/2
         working-directory: web

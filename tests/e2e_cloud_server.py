@@ -361,6 +361,17 @@ def build(port: int):
             )
         return {"ok": True}
 
+    @app.post("/test/reset-playback")
+    def reset_playback(body: dict = Body(default={})):  # noqa: B008
+        """Forget `user`'s playback session, so a devices test starts from song 1 with no
+        speaker, whatever an earlier test or attempt left behind."""
+        workspace_id = workspace_of(str(body["user"]))
+        with transaction(engine, workspace_id) as conn:
+            conn.execute(
+                playback_sessions.delete().where(playback_sessions.c.workspace_id == workspace_id)
+            )
+        return {"ok": True}
+
     @app.post("/test/r2/fail-parts")
     def fail_parts(body: dict = Body(default={})):  # noqa: B008
         objects.failing_parts = {int(number) for number in body.get("parts", [])}

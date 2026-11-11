@@ -1,4 +1,4 @@
-import { Browser, BrowserContext, expect, Page } from '@playwright/test';
+import { APIRequestContext, Browser, BrowserContext, expect, Page } from '@playwright/test';
 
 /** A phone on a weak connection: 320 px wide, touch, and a slow 3G-like network. */
 export async function slowPhone(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
@@ -42,4 +42,18 @@ export async function endRooms(page: Page, as = 'alice'): Promise<void> {
 /** Every <audio> on a page that is playing right now. */
 export async function playingAudio(page: Page): Promise<number> {
   return page.evaluate(() => [...document.querySelectorAll('audio')].filter((a) => !a.paused && !a.ended).length);
+}
+
+/** Start a devices test clean: sign out every device this person has and forget their playback
+ * session. An earlier test or failed attempt otherwise leaves devices signed in under the same
+ * names, a speaker holding a live lease (so Play here asks first) and the music several songs
+ * along (so a later run can reach the end of the six test songs). */
+export async function startDevicesClean(request: APIRequestContext, as: string): Promise<void> {
+  const headers = { Authorization: `Bearer ${as}` };
+  const listed = await request.get('/api/devices', { headers });
+  expect(listed.ok()).toBe(true);
+  for (const device of (await listed.json()).devices as { id: string }[]) {
+    expect((await request.post(`/api/devices/${device.id}/sign-out`, { headers })).ok()).toBe(true);
+  }
+  expect((await request.post('/test/reset-playback', { data: { user: as } })).ok()).toBe(true);
 }

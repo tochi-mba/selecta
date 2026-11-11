@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { playingAudio } from './helpers';
+import { playingAudio, startDevicesClean } from './helpers';
 
 // SC-0415-01, -03 and -05: devices are listed, renamed and signed out, the eleventh signs out
 // the oldest with a notice; "Play here" moves playback between two browsers without the two
@@ -15,7 +15,8 @@ async function rename(page: Page, to: string) {
   await expect(page.getByTestId('device-row').filter({ hasText: to })).toBeVisible();
 }
 
-test('Play here moves playback with no double audio, and remotes steer it', async ({ browser }) => {
+test('Play here moves playback with no double audio, and remotes steer it', async ({ browser, request }) => {
+  await startDevicesClean(request, 'bob');
   const laptopContext = await browser.newContext();
   const phoneContext = await browser.newContext({ userAgent: IPHONE, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const laptop = await laptopContext.newPage();
