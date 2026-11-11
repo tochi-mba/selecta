@@ -274,7 +274,7 @@ export function Shell({
             {classic
               ? classicDestinations().map((item) => (
                   <li key={item.path}>
-                    <PageLink to={item.path} data-tip={item.label} aria-current={item.pages.includes(route.page) && !editing ? 'page' : undefined}>
+                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={item.pages.includes(route.page) && !editing ? 'page' : undefined}>
                       <Icon name={item.icon} />
                       <span className="nav-label">{item.label}</span>
                     </PageLink>
@@ -282,7 +282,7 @@ export function Shell({
                 ))
               : primaryDestinations.map((item) => (
                   <li key={item.id}>
-                    <PageLink to={item.path} data-tip={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
+                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
                       <Icon name={item.icon} />
                       <span className="nav-label">{item.label}</span>
                     </PageLink>
@@ -290,7 +290,7 @@ export function Shell({
                 ))}
             {!classic && workspace && (
               <li className="nav-more">
-                <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
+                <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-label={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
                   <Icon name={workspace.icon} />
                   <span className="nav-label">{workspace.label}</span>
                 </PageLink>
@@ -302,7 +302,7 @@ export function Shell({
             )}
             {hasMix && on('editor') && (
               <li className="nav-context">
-                <PageLink to="/mix/current/edit" data-tip="Edit" aria-current={editing ? 'page' : undefined}>
+                <PageLink to="/mix/current/edit" data-tip="Edit" aria-label="Edit" aria-current={editing ? 'page' : undefined}>
                   <Icon name="edit" />
                   <span className="nav-label">Edit</span>
                 </PageLink>
