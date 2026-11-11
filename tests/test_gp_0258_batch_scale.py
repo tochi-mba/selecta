@@ -32,7 +32,9 @@ def test_gp_0258_08_a_full_batch_in_a_twenty_thousand_song_library(tmp_path):
     pages = []
     for offset in range(0, 20):
         started = time.perf_counter()
-        answer = client.get("/api/library", params={"state": "all", "limit": 100, "q": f"Song {offset}"})
+        answer = client.get(
+            "/api/library", params={"state": "all", "limit": 100, "q": f"Song {offset}"}
+        )
         pages.append(time.perf_counter() - started)
         assert answer.status_code == 200
     chosen = list(range(5000, 20000, 75))[:200]
@@ -46,12 +48,20 @@ def test_gp_0258_08_a_full_batch_in_a_twenty_thousand_song_library(tmp_path):
 
     undo = [{"id": n, "expected": True} for n in chosen]
     started = time.perf_counter()
-    assert client.post("/api/library/batch", json={"action": "deprioritize", "entries": undo}).status_code == 200
+    assert (
+        client.post(
+            "/api/library/batch", json={"action": "deprioritize", "entries": undo}
+        ).status_code
+        == 200
+    )
     undone = time.perf_counter() - started
     assert connection.execute("SELECT COUNT(*) FROM songs WHERE priority > 0").fetchone()[0] == 0
     p95 = statistics.quantiles(pages, n=20)[-1]
-    print(f"GP-0258-08: {SONGS} songs, 200-song batch {batch * 1000:.0f} ms, undo {undone * 1000:.0f} ms, "
-          f"search page p95 {p95 * 1000:.0f} ms")
+    print(
+        f"GP-0258-08: {SONGS} songs, 200-song batch {batch * 1000:.0f} ms, "
+        f"undo {undone * 1000:.0f} ms, "
+        f"search page p95 {p95 * 1000:.0f} ms"
+    )
     connection.close()
     assert batch < 3.0 and undone < 3.0
     assert p95 < 3.0

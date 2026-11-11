@@ -121,7 +121,15 @@ describe('P0093 a word-pair transition that fails to render can be tried again',
       'GET /drafts': { drafts: [], current: {}, out_of_room: false },
       'POST /seams': () => (fail ? new Reply(500, { detail: 'Rendering that transition failed.' }) : { status: 'queued', key: 'k2' }),
     });
-    const { container } = render(<Links {...({ setMixData: vi.fn(), setView: vi.fn(), notify: vi.fn(), status: status(), mix: [], tab: 'words' } as never)} />);
+    const props = {
+      setMixData: vi.fn(),
+      setView: vi.fn(),
+      notify: vi.fn(),
+      status: status(),
+      mix: [],
+      tab: 'words',
+    } as unknown as Parameters<typeof Links>[0];
+    const { container } = render(<Links {...props} />);
     await screen.findByRole('button', { name: 'Add both to the mix' });
     const move = () => container.querySelector<HTMLButtonElement>('button[aria-pressed]')!;
     fireEvent.click(move());

@@ -62,7 +62,13 @@ describe('S4-0090-01 colour consumers', () => {
   });
 
   it('scripts paint no literal colour except the listed first-paint and QR cases', () => {
-    const scripts = ALL.filter((file) => /\.(?:ts|tsx)$/.test(file) && !/\.test\.|\/test\/|\.d\.ts$/.test(file));
+    const scripts = ALL.filter(
+      (file) =>
+        /\.(?:ts|tsx)$/.test(file) &&
+        !file.includes('.test.') &&
+        !file.includes('/test/') &&
+        !file.endsWith('.d.ts'),
+    );
     const allowed: Record<string, RegExp> = {
       // the browser chrome colour is set before any stylesheet exists, matching tokens.css --bg
       'state/prefs.ts': /const BAR_COLOUR = \{ dark: '#100f0c', light: '#f5f2e9' \};/,

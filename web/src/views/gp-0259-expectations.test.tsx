@@ -93,8 +93,8 @@ describe('GP-0259 Explore expectations', () => {
     expect(within(dialog).getByText(/You can undo this straight afterwards/)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(calls.some((call) => call.method === 'POST')).toBe(false);
-    await waitFor(() => expect(peak.getByRole('button', { name: 'Save Peak time as a draft' })).toBeEnabled());
-    fireEvent.click(peak.getByRole('button', { name: 'Save Peak time as a draft' }));
+    await waitFor(() => expect(peak.getByRole('button', { name: 'Save draft for Peak time' })).toBeEnabled());
+    fireEvent.click(peak.getByRole('button', { name: 'Save draft for Peak time' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     expect(calls.find((call) => call.method === 'POST')!.path).toContain('as_draft=true');
     expect(setMixData).not.toHaveBeenCalled();

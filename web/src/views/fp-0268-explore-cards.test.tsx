@@ -35,7 +35,7 @@ function show(mix = songs().slice(0, 0), setMixData = vi.fn(), notify = vi.fn())
 const scanText = (article: HTMLElement) => {
   const copy = article.cloneNode(true) as HTMLElement;
   copy.querySelectorAll('details > :not(summary)').forEach((node) => node.remove());
-  copy.querySelectorAll('svg').forEach((node) => node.remove());
+  copy.querySelectorAll('svg, .visually-hidden, [aria-hidden="true"]').forEach((node) => node.remove());
   return copy.textContent!.replace(/\s+/g, ' ').trim();
 };
 
@@ -48,7 +48,9 @@ describe('Explore card inventory and default content (FP-0268-01/02)', () => {
       'Peak time100–124 BPMPeak time words40 matching songsAbout 1 hr 5 min of matching source songsWhy Peak time? More detailsPlayShape firstSave draft',
     );
     const actions = within(article).getAllByRole('button');
-    expect(actions.map((button) => button.textContent)).toEqual(['Play', 'Shape first', 'Save draft']);
+    expect(within(article).getByRole('button', { name: 'Play' })).toBe(actions[0]);
+    expect(within(article).getByRole('button', { name: 'Shape first' })).toBe(actions[1]);
+    expect(within(article).getByRole('button', { name: 'Save draft for Peak time' })).toBe(actions[2]);
     expect(actions[0]).toHaveClass('primary');
     expect(actions.slice(1).every((button) => button.classList.contains('quiet'))).toBe(true);
   });

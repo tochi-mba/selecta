@@ -50,7 +50,7 @@ describe('EX-0117-04 Play, Edit and Save consequences', () => {
     it(`${phase}: Save draft never asks and never replaces the current mix`, async () => {
       const { calls, setMixData } = show(phase);
       const choice = within((await screen.findByRole('heading', { name: 'Peak time' })).closest('article')!);
-      fireEvent.click(choice.getByRole('button', { name: 'Save Peak time as a draft' }));
+      fireEvent.click(choice.getByRole('button', { name: 'Save draft for Peak time' }));
       expect(screen.queryByRole('dialog', { name: 'Replace Current?' })).toBeNull();
       await waitFor(() => expect(builds(calls)).toHaveLength(1));
       expect(builds(calls)[0].path).toContain('as_draft=true');

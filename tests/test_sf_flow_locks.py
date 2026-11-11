@@ -22,7 +22,9 @@ def _client_with_locked_middle(tmp_path):
 
 
 def _order(client):
-    return [(item["song_id"], bool(item["locked"])) for item in client.get("/api/mix").json()["mix"]]
+    return [
+        (item["song_id"], bool(item["locked"])) for item in client.get("/api/mix").json()["mix"]
+    ]
 
 
 def test_moving_a_song_past_a_locked_one_is_refused_and_changes_nothing(tmp_path):

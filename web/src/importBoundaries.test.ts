@@ -28,8 +28,8 @@ describe('frontend import direction', () => {
   });
 
   it('only api.ts talks to the local server with fetch, apart from the listed byte streams', () => {
-    // LocalBackup uploads and downloads backup archives as raw bytes, which api.ts's JSON helpers don't carry.
-    const streams = ['views/LocalBackup.tsx'];
+    // These endpoints carry raw backup or audio bytes, which api.ts's JSON helpers do not carry.
+    const streams = ['views/LocalBackup.tsx', 'views/SeamCompare.tsx'];
     const direct = [...SHARED, 'views'].flatMap(sources)
       .filter((file) => /\bfetch\(\s*[`'"]\/api\//.test(fs.readFileSync(`${SOURCE}${file}`, 'utf8')));
     expect(direct).toEqual(streams);

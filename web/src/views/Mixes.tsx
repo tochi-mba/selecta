@@ -149,8 +149,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const readinessAvailable = Number.isFinite(counts.ready);
   const readyCount = counts.ready;
-  // a mix that's playing or paused is what would be replaced, so that's when to ask
-  const replacing = mix.length > 0 && now.phase !== 'idle';
+  // Any existing mix would be replaced, even when playback is currently idle.
+  const replacing = mix.length > 0;
   const ask = (asked: Asked) => {
     const choice = { ...asked, order: orderOf(mix) };
     if (replacing) {
@@ -222,7 +222,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             ))}
             <LengthScale songs={songs} most={SET_LENGTHS[SET_LENGTHS.length - 1].songs} />
           </div>
-          {shaping && <button aria-label="Customize" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
+          {shaping && <button aria-label="Customize: Shape this mix (optional)" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>
         {hero && !hero.ready && <p className="hint">{hero.name} needs {hero.needs} more mix-ready {hero.needs === 1 ? 'song' : 'songs'} before it can play.</p>}
         {shaping && <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>}
@@ -312,7 +312,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                     <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
                       <Action className="primary" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
                       {on('editor') && <Action className="quiet" disabled={!!building} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
-                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building} working="Saving…" aria-label={`Save ${card.name} as a draft`} run={() => keepAsDraft(card.key)}>Save draft</Action>}
+                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
                     </div>
                   </article>
                 ))}

@@ -162,7 +162,8 @@ def add_routes(app, ctx) -> None:
             "eta": eta,
             "to_render": round(own),
             "missing": max(stored - len(items), 0),
-            # the returned song order, so a draft's Mix Sleeve is drawn from what it really holds (SF-0206-04)
+            # The returned song order makes a draft's Mix Sleeve reflect what it
+            # really holds (SF-0206-04).
             "song_ids": [item["song_id"] for item in items],
         }
 
