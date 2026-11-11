@@ -94,9 +94,14 @@ def add_routes(app, ctx) -> None:
     def read(job_id: str) -> dict | None:
         record = record_of(job_id)
         try:
-            return json.loads(_despite_a_busy_file(lambda: record.read_text("utf-8")))
+            job = json.loads(_despite_a_busy_file(lambda: record.read_text("utf-8")))
         except (OSError, ValueError):
             return None
+        # A record that isn't a job, or is missing what every job has, is left out. Otherwise
+        # one bad file in the folder takes the whole list of exports down with it.
+        if not isinstance(job, dict) or not {"id", "state", "created_at"} <= job.keys():
+            return None
+        return job
 
     def as_shown(job: dict) -> dict:
         """What's true of it now: under way only if something's really working on it, and ready only
@@ -111,9 +116,8 @@ def add_routes(app, ctx) -> None:
             if not (settings.home / "exports" / Path(name).name).exists():
                 shown["state"] = "expired"
         shown["can_cancel"] = shown["state"] == "preparing"
-        shown["quiet_seconds"] = (
-            round(time.time() - shown["last_progress_at"]) if shown["state"] in ACTIVE else 0
-        )
+        last = shown.get("last_progress_at", shown["created_at"])
+        shown["quiet_seconds"] = round(time.time() - last) if shown["state"] in ACTIVE else 0
         return shown
 
     def every_job() -> list[dict]:
