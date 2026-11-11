@@ -1,5 +1,7 @@
-"""The load ladder L1 to L4 and its pass/fail thresholds (ADR-0411 SC-0411-04, docs/saas/15-stress-testing.md
-§15.4 and §15.6), and a small driver that runs one rung against any Selecta Cloud base URL.
+"""The load ladder L1 to L4 and its pass/fail thresholds.
+
+See ADR-0411 SC-0411-04 and docs/saas/15-stress-testing.md §15.4 and §15.6.
+This module also provides a small driver for any Selecta Cloud base URL.
 
 The levels and thresholds live here once, as data: `tests/load/k6/ladder.js` (staging, real
 concurrency) reads the same numbers from `ladder.json`, which `python tests/load/ladder.py json`
@@ -8,7 +10,8 @@ writes, and `tests/test_load_ladder.py` checks the two never drift.
 - `LEVELS`: active users, pending jobs and duration per rung. Above L2 the users are synthetic and
   the workers simulated (§15.4).
 - `THRESHOLDS`: the §15.6 numbers a run must meet: routine API p95 under 300 ms, error rate under
-  0.5 % (deliberate 429s excluded), and zero duplicate results, cross-tenant successes and lost jobs.
+  0.5 % (deliberate 429s excluded), and zero duplicate results, cross-tenant
+  successes and lost jobs.
 - `run_level(...)`: a thread-pool driver of routine journeys (status, account, devices, playback
   session, uploads list) plus a cross-tenant probe, Play here, and one Pause sent twice with the
   same idempotency key per user.
@@ -17,7 +20,7 @@ writes, and `tests/test_load_ladder.py` checks the two never drift.
 
 Usage against staging (synthetic accounts only, never production):
 
-    python tests/load/ladder.py run --level L1 --base-url https://staging.example --tokens tokens.txt
+    python tests/load/ladder.py run --level L1 --base-url URL --tokens tokens.txt
     k6 run -e LEVEL=L2 -e BASE_URL=https://staging.example tests/load/k6/ladder.js
 """
 
@@ -108,9 +111,14 @@ def evaluate(report: Report | dict, thresholds: dict = THRESHOLDS) -> list[str]:
     data = report.summary() if isinstance(report, Report) else report
     failures = []
     if data["p95_ms"] >= thresholds["routine_p95_ms"]:
-        failures.append(f"routine API p95 {data['p95_ms']} ms is not under {thresholds['routine_p95_ms']} ms")
+        failures.append(
+            f"routine API p95 {data['p95_ms']} ms is not under {thresholds['routine_p95_ms']} ms"
+        )
     if data["error_rate"] >= thresholds["routine_error_rate"]:
-        failures.append(f"routine error rate {data['error_rate']:.4f} is not under {thresholds['routine_error_rate']}")
+        failures.append(
+            "routine error rate "
+            f"{data['error_rate']:.4f} is not under {thresholds['routine_error_rate']}"
+        )
     for key in ("duplicate_results", "cross_tenant_successes", "accepted_jobs_lost"):
         if data[key] > thresholds[key]:
             failures.append(f"{key.replace('_', ' ')}: {data[key]} (must be {thresholds[key]})")
@@ -160,22 +168,40 @@ def journey(client, recorder: Recorder, rng: random.Random, other_asset_ids: Seq
         mine = [d for d in devices.json().get("devices", []) if d.get("this_device")]
         device_id = mine[0]["id"] if mine else None
     if device_id is None:
-        made = recorder.call(lambda: client.post("/api/devices", json={"name": "Load test", "kind": "laptop"}), routine=False)
+        made = recorder.call(
+            lambda: client.post("/api/devices", json={"name": "Load test", "kind": "laptop"}),
+            routine=False,
+        )
         if made is not None and made.status_code in (200, 201):
             device_id = made.json()["device"]["id"]
     if device_id is None:
         return
     recorder.call(lambda: client.get(f"/api/playback/session?device_id={device_id}"))
-    taken = recorder.call(lambda: client.post("/api/playback/take-over", json={"device_id": device_id, "start_playing": True}), routine=False)
+    taken = recorder.call(
+        lambda: client.post(
+            "/api/playback/take-over", json={"device_id": device_id, "start_playing": True}
+        ),
+        routine=False,
+    )
     if taken is None or taken.status_code != 200:
         return
     seq = taken.json()["session"]["seq"]
     key = str(uuid.UUID(int=rng.getrandbits(128)))
     seqs = []
     for _ in range(2):  # the same press sent twice, as a retry after a lost response would
-        sent = recorder.call(lambda: client.post("/api/playback/commands", json={
-            "device_id": device_id, "command": "pause", "args": {}, "based_on_seq": seq,
-            "idempotency_key": key}), routine=False)
+        sent = recorder.call(
+            lambda: client.post(
+                "/api/playback/commands",
+                json={
+                    "device_id": device_id,
+                    "command": "pause",
+                    "args": {},
+                    "based_on_seq": seq,
+                    "idempotency_key": key,
+                },
+            ),
+            routine=False,
+        )
         if sent is not None and sent.status_code == 200:
             seqs.append(sent.json()["applied_seq"])
     if len(seqs) != 2 or seqs[0] != seqs[1]:
@@ -202,14 +228,25 @@ def run_level(
     rng = random.Random(seed)
     seeds = [rng.getrandbits(32) for _ in range(users)]
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
-        list(pool.map(lambda n: journey(clients[n % len(clients)], recorder, random.Random(seeds[n]), other_asset_ids), range(users)))
+        list(
+            pool.map(
+                lambda n: journey(
+                    clients[n % len(clients)], recorder, random.Random(seeds[n]), other_asset_ids
+                ),
+                range(users),
+            )
+        )
     if count_lost_jobs is not None:
         report.accepted_jobs_lost = count_lost_jobs()
     return report
 
 
 def ladder_json() -> dict:
-    return {"levels": {k: asdict(v) for k, v in LEVELS.items()}, "thresholds": THRESHOLDS, "routine": list(ROUTINE)}
+    return {
+        "levels": {k: asdict(v) for k, v in LEVELS.items()},
+        "thresholds": THRESHOLDS,
+        "routine": list(ROUTINE),
+    }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -221,12 +258,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     run = sub.add_parser("run", help="run one rung against a base URL")
     run.add_argument("--level", choices=sorted(LEVELS), required=True)
     run.add_argument("--base-url", required=True)
-    run.add_argument("--tokens", required=True, help="file of bearer tokens, one synthetic account per line")
+    run.add_argument(
+        "--tokens", required=True, help="file of bearer tokens, one synthetic account per line"
+    )
     run.add_argument("--scale", type=float, default=1.0)
     run.add_argument("--concurrency", type=int, default=64)
     args = parser.parse_args(argv)
     if args.command == "json":
-        (HERE / "ladder.json").write_text(json.dumps(ladder_json(), indent=2) + "\n", encoding="utf-8")
+        (HERE / "ladder.json").write_text(
+            json.dumps(ladder_json(), indent=2) + "\n", encoding="utf-8"
+        )
         return 0
     if args.command == "check":
         data = json.loads(Path(args.summary).read_text(encoding="utf-8"))
@@ -234,8 +275,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         import httpx
 
-        tokens = [t.strip() for t in Path(args.tokens).read_text(encoding="utf-8").splitlines() if t.strip()]
-        clients = [httpx.Client(base_url=args.base_url, headers={"Authorization": f"Bearer {t}", "Origin": args.base_url}, timeout=30) for t in tokens]
+        tokens = [
+            t.strip()
+            for t in Path(args.tokens).read_text(encoding="utf-8").splitlines()
+            if t.strip()
+        ]
+        clients = [
+            httpx.Client(
+                base_url=args.base_url,
+                headers={"Authorization": f"Bearer {t}", "Origin": args.base_url},
+                timeout=30,
+            )
+            for t in tokens
+        ]
         report = run_level(args.level, clients, scale=args.scale, concurrency=args.concurrency)
         print(json.dumps(report.summary(), indent=2))
         failures = evaluate(report)

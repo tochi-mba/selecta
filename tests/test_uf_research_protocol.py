@@ -1,4 +1,6 @@
-"""UF-0367: the research protocol separates cohorts, scripts the six uncoached scenarios, files friction
+"""UF-0367: the research protocol separates cohorts and scripts scenarios.
+
+It scripts the six uncoached scenarios and files friction
 with five fields and forbids overclaiming. It is a protocol only: no session result is recorded."""
 
 from pathlib import Path
@@ -23,7 +25,14 @@ def test_three_cohorts_reported_separately() -> None:
 
 def test_six_neutral_scenarios_cover_the_named_journeys() -> None:
     text = section("02")
-    for task in ("U1 First ready mix", "U2 Exact song", "U3 Lucy proposal", "U4 Seam edit", "U5 Bridge", "U6 Export"):
+    for task in (
+        "U1 First ready mix",
+        "U2 Exact song",
+        "U3 Lucy proposal",
+        "U4 Seam edit",
+        "U5 Bridge",
+        "U6 Export",
+    ):
         assert task in text
     assert "dry run" in text.lower()
 

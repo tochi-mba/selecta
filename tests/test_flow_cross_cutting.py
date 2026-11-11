@@ -86,12 +86,17 @@ def test_the_research_protocol_covers_each_journey_and_keeps_joy_apart() -> None
 
 
 def test_every_parity_capability_has_a_tested_journey_that_exists() -> None:
-    """SF-0247-05: each capability in the parity map names an end-to-end test that is really there."""
+    """Each parity capability names an end-to-end test that exists.
+
+    This verifies SF-0247-05.
+    """
     parity = (ROOT / "docs" / "adr" / "selecta-flow-feature-parity.md").read_text(encoding="utf-8")
     capabilities = [
         row.split("|")[1].strip()
         for row in parity.splitlines()
-        if row.startswith("| ") and not row.startswith("| Capability") and not row.startswith("|---")
+        if row.startswith("| ")
+        and not row.startswith("| Capability")
+        and not row.startswith("|---")
     ]
     assert len(capabilities) >= 20
     text = DOC.read_text(encoding="utf-8").split("(SF-0247-05)", 1)[1]
@@ -113,9 +118,17 @@ def test_the_breakpoint_matrix_names_real_media_queries() -> None:
         (ROOT / path).read_text(encoding="utf-8")
         for path in sorted(set(re.findall(r"`(web/src/[^`]+\.css)`", text)))
     )
-    for query in ("max-width: 1040px", "max-width: 1024px", "max-width: 760px", "max-width: 620px",
-                  "max-width: 520px", "max-width: 560px", "min-width: 761px", "max-height: 520px",
-                  "max-height: 420px"):
+    for query in (
+        "max-width: 1040px",
+        "max-width: 1024px",
+        "max-width: 760px",
+        "max-width: 620px",
+        "max-width: 520px",
+        "max-width: 560px",
+        "min-width: 761px",
+        "max-height: 520px",
+        "max-height: 420px",
+    ):
         assert f"({query})" in css, query
 
 
@@ -138,25 +151,44 @@ def test_the_rollout_order_goes_foundation_then_shell_then_scenes_then_operation
 
 
 def test_release_gates_block_audio_data_privacy_and_access_failures() -> None:
-    """SF-0247-04: P0 names audio, data, privacy and access failures; P1 and P2 are separate tiers."""
+    """P0 names audio, data, privacy and access failures.
+
+    P1 and P2 are separate tiers, as required by SF-0247-04.
+    """
     gates = (ROOT / "docs" / "adr" / "selecta-flow-release-gates.md").read_text(encoding="utf-8")
     p0 = next(line for line in gates.splitlines() if line.startswith("- **P0"))
-    for failure in ("overlapping audio", "rewriting local audio", "wrong-revision FLAC",
-                    "exposed private media", "inaccessible essential control"):
+    for failure in (
+        "overlapping audio",
+        "rewriting local audio",
+        "wrong-revision FLAC",
+        "exposed private media",
+        "inaccessible essential control",
+    ):
         assert failure in p0, failure
     assert "- **P1" in gates and "- **P2" in gates
 
 
 def test_every_pull_request_carries_its_evidence_record() -> None:
-    """SF-0239-08 and SF-0241-06: SHA, fixture, reviewer and open findings are asked for on every PR."""
+    """Every PR asks for SHA, fixture, reviewer and open findings.
+
+    This verifies SF-0239-08 and SF-0241-06.
+    """
     template = (ROOT / ".github" / "pull_request_template.md").read_text(encoding="utf-8")
-    for field in ("**Tested SHA:**", "**Fixture:**", "**Independent reviewer:**", "**Unresolved findings:**"):
+    for field in (
+        "**Tested SHA:**",
+        "**Fixture:**",
+        "**Independent reviewer:**",
+        "**Unresolved findings:**",
+    ):
         assert field in template, field
     assert "Link the ADR and checklist tasks" in template
 
 
 def test_every_flow_adr_records_a_dated_decision_and_counted_implementation() -> None:
-    """SF-0247-01 and SF-0247-02: decision and implementation states are explicit, dated and counted."""
+    """Decision and implementation states are explicit, dated and counted.
+
+    This verifies SF-0247-01 and SF-0247-02.
+    """
     states = ("Proposed", "Accepted", "Rejected", "Superseded")
     for number in range(198, 248):
         path = next((ROOT / "docs" / "adr").glob(f"adr-0{number}-*.md"))
@@ -164,12 +196,27 @@ def test_every_flow_adr_records_a_dated_decision_and_counted_implementation() ->
         decision = re.search(r"^- \*\*Decision:\*\* (\w+) \((.*?)\)", text, re.MULTILINE)
         assert decision and decision.group(1) in states, path.name
         assert re.search(r"\d{4}-\d{2}-\d{2}", decision.group(2)), path.name
-        implementation = re.search(r"^- \*\*Implementation:\*\* (Not started|In progress|Implemented)\b", text, re.MULTILINE)
+        implementation = re.search(
+            r"^- \*\*Implementation:\*\* (Not started|In progress|Implemented)\b",
+            text,
+            re.MULTILINE,
+        )
         assert implementation, path.name
-    policy = (ROOT / "docs" / "adr" / "selecta-flow-implementation-checklist.md").read_text(encoding="utf-8")
+    policy = (ROOT / "docs" / "adr" / "selecta-flow-implementation-checklist.md").read_text(
+        encoding="utf-8"
+    )
     policy = policy.split("## Status update policy", 1)[1]
-    assert "Proposed" in policy and "Rejected" in policy and "Superseded" in policy and "date" in policy
-    assert "Not started" in policy and "In progress" in policy and "Implemented only with matching code" in policy
+    assert (
+        "Proposed" in policy
+        and "Rejected" in policy
+        and "Superseded" in policy
+        and "date" in policy
+    )
+    assert (
+        "Not started" in policy
+        and "In progress" in policy
+        and "Implemented only with matching code" in policy
+    )
 
 
 def _web_sources() -> dict[str, str]:
@@ -182,14 +229,22 @@ def _web_sources() -> dict[str, str]:
 
 
 def test_transport_and_routes_each_have_one_owner() -> None:
-    """SF-0236-01: one module makes sound, one shares the audio element, one owns local addresses."""
+    """One module makes sound and one shares the audio element.
+
+    One module also owns local addresses, as required by SF-0236-01.
+    """
     sources = _web_sources()
     contexts = sorted(name for name, text in sources.items() if "new AudioContext(" in text)
     elements = sorted(name for name, text in sources.items() if "new Audio(" in text)
     assert contexts == ["player.ts", "studio.ts"], "the main player, and the Studio preview engine"
     assert elements == ["audio/focus.ts"], "every preview shares the one element audio focus owns"
     # everything that can make its own sound asks audio focus first
-    for name in ("views/Studio.tsx", "views/Listening.tsx", "views/Links.tsx", "ui/AudioPreview.tsx"):
+    for name in (
+        "views/Studio.tsx",
+        "views/Listening.tsx",
+        "views/Links.tsx",
+        "ui/AudioPreview.tsx",
+    ):
         assert "takeAudio" in sources[name], name
     local = {
         name
@@ -201,7 +256,10 @@ def test_transport_and_routes_each_have_one_owner() -> None:
 
 
 def test_shared_primitives_never_reach_into_a_screen() -> None:
-    """SF-0236-02: tokens, ui primitives and state never import a page, so screens stay uncoupled."""
+    """Tokens, UI primitives and state never import a page.
+
+    This keeps screens uncoupled, as required by SF-0236-02.
+    """
     sources = _web_sources()
     for name, text in sources.items():
         if name.startswith(("ui/", "state/", "styles/")):

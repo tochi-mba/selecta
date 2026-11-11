@@ -1,4 +1,6 @@
-"""The load ladder and its thresholds (ADR-0411 SC-0411-04, docs/saas/15-stress-testing.md §15.4, §15.6).
+"""The load ladder and its thresholds.
+
+See ADR-0411 SC-0411-04 and docs/saas/15-stress-testing.md §15.4 and §15.6.
 
 - The levels and thresholds in `tests/load/ladder.py` match the proposal's tables, and the k6
   script's `ladder.json` is the same data, so staging runs judge by the same numbers.
@@ -46,10 +48,15 @@ def test_the_levels_match_the_proposal_table():
 def test_the_thresholds_match_the_proposal_table():
     doc = (ROOT / "docs" / "saas" / "15-stress-testing.md").read_text(encoding="utf-8")
     assert "| Routine API p95 | < 300 ms" in doc and ladder.THRESHOLDS["routine_p95_ms"] == 300
-    assert "| Routine API error rate | < 0.5%" in doc and ladder.THRESHOLDS["routine_error_rate"] == 0.005
-    for words, key in [("Duplicate published results", "duplicate_results"),
-                       ("Cross-tenant successes", "cross_tenant_successes"),
-                       ("Accepted jobs lost", "accepted_jobs_lost")]:
+    assert (
+        "| Routine API error rate | < 0.5%" in doc
+        and ladder.THRESHOLDS["routine_error_rate"] == 0.005
+    )
+    for words, key in [
+        ("Duplicate published results", "duplicate_results"),
+        ("Cross-tenant successes", "cross_tenant_successes"),
+        ("Accepted jobs lost", "accepted_jobs_lost"),
+    ]:
         assert f"| {words} | 0 |" in doc and ladder.THRESHOLDS[key] == 0
 
 
@@ -58,25 +65,39 @@ def test_k6_reads_the_same_ladder():
     assert saved == ladder.ladder_json(), "run `python tests/load/ladder.py json`"
     script = (ROOT / "tests" / "load" / "k6" / "ladder.js").read_text(encoding="utf-8")
     assert "open('../ladder.json')" in script
-    for key in ("routine_p95_ms", "routine_error_rate", "duplicate_results", "cross_tenant_successes"):
+    for key in (
+        "routine_p95_ms",
+        "routine_error_rate",
+        "duplicate_results",
+        "cross_tenant_successes",
+    ):
         assert f"t.{key}" in script, key
 
 
 def _report(**over) -> dict:
-    data = {"requests": 100, "p95_ms": 120.0, "error_rate": 0.0, "duplicate_results": 0,
-            "cross_tenant_successes": 0, "accepted_jobs_lost": 0}
+    data = {
+        "requests": 100,
+        "p95_ms": 120.0,
+        "error_rate": 0.0,
+        "duplicate_results": 0,
+        "cross_tenant_successes": 0,
+        "accepted_jobs_lost": 0,
+    }
     data.update(over)
     return data
 
 
-@pytest.mark.parametrize(("over", "words"), [
-    ({"p95_ms": 300.0}, "p95"),
-    ({"error_rate": 0.006}, "error rate"),
-    ({"duplicate_results": 1}, "duplicate results"),
-    ({"cross_tenant_successes": 1}, "cross tenant"),
-    ({"accepted_jobs_lost": 2}, "accepted jobs lost"),
-    ({"requests": 0}, "no requests"),
-])
+@pytest.mark.parametrize(
+    ("over", "words"),
+    [
+        ({"p95_ms": 300.0}, "p95"),
+        ({"error_rate": 0.006}, "error rate"),
+        ({"duplicate_results": 1}, "duplicate results"),
+        ({"cross_tenant_successes": 1}, "cross tenant"),
+        ({"accepted_jobs_lost": 2}, "accepted jobs lost"),
+        ({"requests": 0}, "no requests"),
+    ],
+)
 def test_evaluate_fails_each_missed_threshold(over, words):
     failures = ladder.evaluate(_report(**over))
     assert len(failures) == 1 and words in failures[0]
@@ -84,7 +105,9 @@ def test_evaluate_fails_each_missed_threshold(over, words):
 
 def test_evaluate_passes_a_clean_run_and_throttling_is_not_an_error():
     assert ladder.evaluate(_report()) == []
-    report = ladder.Report("L1", 1.0, requests=200, errors=0, throttled=50, latencies_ms=[10.0] * 150)
+    report = ladder.Report(
+        "L1", 1.0, requests=200, errors=0, throttled=50, latencies_ms=[10.0] * 150
+    )
     assert report.error_rate == 0.0 and ladder.evaluate(report) == []
     assert ladder.percentile([float(n) for n in range(1, 101)], 95) == 95.0
 
@@ -105,8 +128,13 @@ class ManyListeners:
         if not token.startswith("listener-"):
             raise BadSignature("bad test token")
         n = token.split("-", 1)[1]
-        return Claims(subject=f"auth0|load{n}", issued_at=1_000, expires_at=10_000,
-                      email=f"load{n}@example.test", email_verified=True)
+        return Claims(
+            subject=f"auth0|load{n}",
+            issued_at=1_000,
+            expires_at=10_000,
+            email=f"load{n}@example.test",
+            email_verified=True,
+        )
 
 
 class As:
@@ -138,21 +166,31 @@ def test_a_scaled_down_l1_passes_the_thresholds_locally(tmp_path, monkeypatch):
             users = []
             for n in range(int(ladder.LEVELS["L1"].active_users * scale)):
                 user = As(client, f"listener-{n}")
-                made = user.post("/api/onboarding/complete", {"age_confirmed": True, "timezone": "UTC"})
+                made = user.post(
+                    "/api/onboarding/complete", {"age_confirmed": True, "timezone": "UTC"}
+                )
                 assert made.status_code == 201, made.text
                 users.append((user, made.json()["workspace_id"]))
             # Someone else's song, which every probe must find missing.
             secret = add_asset(engine, objects, users[0][1], b"RIFF" + b"\0" * 64)
             store = make_store(engine)
-            pending = [store.enqueue(JobSpec(ws, "analyse.song", input_ref={"n": n})).job.id
-                       for n in range(int(ladder.LEVELS["L1"].pending_jobs * scale))
-                       for ws in [users[n % len(users)][1]]]
+            pending = [
+                store.enqueue(JobSpec(ws, "analyse.song", input_ref={"n": n})).job.id
+                for n in range(int(ladder.LEVELS["L1"].pending_jobs * scale))
+                for ws in [users[n % len(users)][1]]
+            ]
 
             def lost() -> int:
                 return sum(1 for job_id in pending if store.job(job_id) is None)
 
-            report = ladder.run_level("L1", [u for u, _ in users[1:]], scale=scale, concurrency=1,
-                                      other_asset_ids=[secret], count_lost_jobs=lost)
+            report = ladder.run_level(
+                "L1",
+                [u for u, _ in users[1:]],
+                scale=scale,
+                concurrency=1,
+                other_asset_ids=[secret],
+                count_lost_jobs=lost,
+            )
     finally:
         engine.dispose()
     print(json.dumps(report.summary()))
@@ -166,7 +204,14 @@ def test_the_rooms_k6_script_uses_the_real_code_alphabet_and_has_pass_fail_thres
 
     script = (ROOT / "tests" / "load" / "k6" / "rooms.js").read_text(encoding="utf-8")
     assert f"const ALPHABET = '{ALPHABET}';" in script
-    for metric in ("room_join_duration", "room_join_failed", "room_vote_duration",
-                   "room_vote_failed", "brute_force_rooms_found"):
+    for metric in (
+        "room_join_duration",
+        "room_join_failed",
+        "room_vote_duration",
+        "room_vote_failed",
+        "brute_force_rooms_found",
+    ):
         assert f"{metric}: [" in script, metric
-    assert "iterations: 1000, maxDuration: '10s'" in script and "rate: 10000, timeUnit: '1m'" in script
+    assert (
+        "iterations: 1000, maxDuration: '10s'" in script and "rate: 10000, timeUnit: '1m'" in script
+    )

@@ -21,7 +21,7 @@ def cited_files(text: str) -> set[str]:
 def section(text: str, heading: str) -> str:
     start = text.index(heading)
     following = text.find("\n## ", start + len(heading))
-    return text[start: following if following >= 0 else None]
+    return text[start : following if following >= 0 else None]
 
 
 def test_p0001_baseline_support_boundary_and_kinds_of_evidence() -> None:
@@ -50,10 +50,22 @@ def test_p0003_state_matrix_explains_every_state_and_not_applicable_cell() -> No
     matrix = section(read(COMPLETION / "route-state-register.md"), "## State matrix")
     header = next(line for line in matrix.splitlines() if line.startswith("| Surface |"))
     assert [cell.strip() for cell in header.strip("|").split("|")] == [
-        "Surface", "Initial / loading", "Empty", "Partial", "Refreshing", "Saving",
-        "Failed", "Offline", "Unavailable", "Recovery",
+        "Surface",
+        "Initial / loading",
+        "Empty",
+        "Partial",
+        "Refreshing",
+        "Saving",
+        "Failed",
+        "Offline",
+        "Unavailable",
+        "Recovery",
     ]
-    rows = [line for line in matrix.splitlines() if line.startswith("| ") and not line.startswith(("| Surface", "|---"))]
+    rows = [
+        line
+        for line in matrix.splitlines()
+        if line.startswith("| ") and not line.startswith(("| Surface", "|---"))
+    ]
     assert len(rows) >= 11
     for row in rows:
         cells = [cell.strip() for cell in row.strip("|").split("|")]

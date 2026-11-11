@@ -66,5 +66,9 @@ def test_each_task_is_mapped_once_to_real_s3_decisions_and_claims_nothing_comple
             assert 47 <= int(number) <= 77, f"{row[1]} maps outside S3: {number}"
             assert target.startswith(f"adr-{number}-") and (ADR / target).exists(), target
     assert len(seen) == len(set(seen)), "a task is mapped in two rows"
-    block = MATRIX.read_text(encoding="utf-8").split("## Unverified T and P tasks", 1)[1].split("\n## ", 1)[0]
+    block = (
+        MATRIX.read_text(encoding="utf-8")
+        .split("## Unverified T and P tasks", 1)[1]
+        .split("\n## ", 1)[0]
+    )
     assert "[x]" not in block and "Verified" not in block

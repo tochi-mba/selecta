@@ -109,14 +109,19 @@ def test_every_keyframe_animation_has_an_owner_states_and_interruption_rule():
         assert (ROOT / path).is_file(), f"{animation}: {path} is missing"
         named[animation.strip("`")] = path
     sheets = [*(ROOT / "web/src").glob("*.css"), *(ROOT / "web/src/styles").glob("*.css")]
-    keyframes = {name for sheet in sheets for name in re.findall(r"@keyframes\s+([\w-]+)", sheet.read_text(encoding="utf-8"))}
+    keyframes = {
+        name
+        for sheet in sheets
+        for name in re.findall(r"@keyframes\s+([\w-]+)", sheet.read_text(encoding="utf-8"))
+    }
     assert len(keyframes) >= 10
     assert keyframes - set(named) == set(), "keyframes with no owner row"
     for clock_mark in ("Hand-over progress width", "Spectrum canvas", "Lyric focus"):
         assert clock_mark in named
 
 
-# CI-0177-04: Start a mix from a song puts that exact song first, once, in the set it returns, so the
+# CI-0177-04: Start a mix from a song puts that exact song first, once, in the
+# set it returns, so the
 # source track is identifiable; the site then plays from position 0 and names it.
 def test_start_a_mix_returns_a_set_that_opens_on_the_chosen_song(tmp_path):
     from mix_helpers import _vibe_library

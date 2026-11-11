@@ -3,7 +3,8 @@
 The profile pages the whole library twice through the real /api/library handler (called
 directly, so the test client's per-request thread hand-off on a shared machine isn't what gets
 measured), once idle and once while a second connection saves analysis rows as fast as it can
-(db.save_analysis, the same write and commit the analysis pipeline makes per song). It prints both profiles so the run log carries the
+(db.save_analysis, the same write and commit the analysis pipeline makes per
+song). It prints both profiles so the run log carries the
 numbers, and holds the budget that decides whether any optimisation is needed: every song reachable
 exactly once, no page over a second and the slow pages at most a few times the idle ones.
 """
@@ -84,7 +85,8 @@ def test_twenty_thousand_songs_page_quickly_while_analysis_writes_in_the_backgro
             song_id = 1
             while not stop.is_set() and song_id <= SONGS:
                 db.save_analysis(
-                    writer, song_id,
+                    writer,
+                    song_id,
                     {"version": ANALYSIS_VERSION, "bpm": 120.0, "camelot": "8A", "energy": 0.5},
                 )
                 written += 1
