@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { resetMix } from './helpers';
 
@@ -11,7 +12,7 @@ import { resetMix } from './helpers';
  * quietly accepting whatever the first run drew. Never update baselines in bulk to make a diff go away.
  */
 
-const BASELINES = `${__filename}-snapshots`;
+const BASELINES = `${fileURLToPath(import.meta.url)}-snapshots`;
 test.skip(!existsSync(BASELINES) && !process.env.SELECTA_VISUAL_BASELINE, 'no reviewed baseline folder yet (see the comment above)');
 
 test.beforeEach(async ({ request }) => resetMix(request));

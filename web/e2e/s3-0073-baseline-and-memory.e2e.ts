@@ -1,5 +1,6 @@
 import { readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
 import { PAGES, resetMix, rewriteJson } from './helpers';
 
@@ -23,7 +24,7 @@ async function heap(cdp: CDPSession) {
 }
 
 function bundle() {
-  const assets = join(__dirname, '..', process.env.SELECTA_E2E_DIST ?? 'dist', 'assets');
+  const assets = join(fileURLToPath(new URL('..', import.meta.url)), process.env.SELECTA_E2E_DIST ?? 'dist', 'assets');
   const files = readdirSync(assets).map((name) => ({ name, bytes: statSync(join(assets, name)).size }));
   const sum = (ext: string) => files.filter((file) => file.name.endsWith(ext)).reduce((total, file) => total + file.bytes, 0);
   const largest = files.filter((file) => file.name.endsWith('.js')).sort((a, b) => b.bytes - a.bytes)[0];
