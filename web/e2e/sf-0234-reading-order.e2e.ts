@@ -49,9 +49,11 @@ for (const path of PAGES) {
     expect(structure.positiveTabindex).toEqual([]);
 
     // the first Tab reaches the skip link, and following it lands in the page
-    await page.locator('body').click({ position: { x: 1, y: 1 } });
+    // The document start must be the Tab starting point, even when SPA routing had focused main.
+    await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus({ preventScroll: true }); });
     await page.keyboard.press('Tab');
     await expect(page.locator(':focus')).toHaveText('Skip to the page');
+    await page.evaluate(() => document.body.removeAttribute('tabindex'));
   });
 }
 
@@ -63,22 +65,24 @@ test('SF-0234-01 inside the page, Tab goes down the page in the order things are
     await page.waitForLoadState('networkidle');
     const first = page.locator('main').locator('a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex="0"]').first();
     await first.focus();
-    const tops: number[] = [];
+    const positions: Array<{ top: number; region: string }> = [];
     for (let step = 0; step < 12; step += 1) {
       const where = await page.evaluate(() => {
         const node = document.activeElement;
         if (!node || !node.closest('main')) return null;
         const box = node.getBoundingClientRect();
-        return box.top + window.scrollY;
+        return { top: box.top + window.scrollY, region: node.closest('.listen-side') ? 'side' : node.closest('.listen-main') ? 'listen-main' : 'page' };
       });
       if (where === null) break;
-      tops.push(where);
+      positions.push(where);
       await page.keyboard.press('Tab');
     }
-    expect(tops.length, `${path} has focusable content in its main region`).toBeGreaterThan(1);
-    // rows can sit side by side, so allow a step back up within one row's height, never a jump to an earlier section
-    for (let index = 1; index < tops.length; index += 1) {
-      expect(tops[index], `${path} focus order ${tops.map(Math.round).join(',')}`).toBeGreaterThan(tops[index - 1] - 120);
+    expect(positions.length, `${path} has focusable content in its main region`).toBeGreaterThan(1);
+    // A two-column Listen layout may return to the top of its other column. In each region,
+    // the keyboard must still move in the same top-to-bottom order as the drawn controls.
+    for (let index = 1; index < positions.length; index += 1) {
+      if (positions[index].region !== positions[index - 1].region) continue;
+      expect(positions[index].top, `${path} focus order ${positions.map((item) => Math.round(item.top)).join(',')}`).toBeGreaterThan(positions[index - 1].top - 120);
     }
   }
 });
