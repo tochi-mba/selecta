@@ -63,9 +63,17 @@ test('MP-0295-01 dialog, sheet, drawer and palette share header, body, footer in
     await expect(page.getByRole('dialog', { name: 'Search and commands' })).toBeVisible();
     frames.push(await frame(page));
     await page.keyboard.press('Escape');
-    await page.goto('/mix/current/edit');
-    await page.getByRole('button', { name: 'Change', exact: true }).first().click();
-    await expect(page.locator('.inspector-identity')).toBeVisible();
+    if (width <= 1100) {
+      // the editor's inspector is a sheet up to 1100px; wider, it sits inline beside the timeline (Mix.tsx useNarrow)
+      await page.goto('/mix/current/edit');
+      await page.getByRole('button', { name: 'Change', exact: true }).first().click();
+      await expect(page.locator('.inspector-identity')).toBeVisible();
+    } else {
+      // a song's details are a sheet at every width
+      await page.goto('/library');
+      await page.locator('.song-open').first().click();
+      await expect(page.locator('.song-details-identity')).toBeVisible();
+    }
     frames.push(await frame(page));
     const [base] = frames;
     for (const reading of frames) {
@@ -128,6 +136,8 @@ test('MP-0295-02 primary, cancel and destructive choices fit short windows at on
 test('MP-0295-03 songs, pages, playback and commands scan as separate labelled groups', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/mixes');
+  // the page is on screen, so the app (and its Ctrl K) is running: a press during start-up reaches nothing
+  await expect(page.locator('main h1')).toHaveText('Make a Mix');
   await page.keyboard.press('Control+k');
   const dialog = page.getByRole('dialog', { name: 'Search and commands' });
   await page.getByRole('combobox', { name: 'Search for a page or a command' }).fill('l');
