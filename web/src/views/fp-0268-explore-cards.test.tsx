@@ -20,12 +20,12 @@ const card = (key: string, name: string, more: Partial<VibeCard> = {}): VibeCard
   ...more,
 });
 
-function show(mix = songs().slice(0, 0), setMixData = vi.fn(), notify = vi.fn()) {
+function show(mix = songs().slice(0, 0), setMixData = vi.fn(), notify = vi.fn(), phase?: 'playing' | 'paused') {
   const player = new SetPlayer(() => [], () => {});
   vi.spyOn(player, 'playFrom').mockResolvedValue(undefined);
   render(
     <Mixes status={status()} mix={mix} mixName={mix.length ? 'Current' : ''} canUndo={false} refreshMix={() => {}}
-      setMixData={setMixData} refreshStatus={() => {}} player={player} now={player.state} setView={() => {}}
+      setMixData={setMixData} refreshStatus={() => {}} player={player} now={phase ? { ...player.state, phase } : player.state} setView={() => {}}
       notify={notify} stage={false} toggleStage={() => {}} />,
   );
   return { setMixData, notify };
@@ -106,7 +106,8 @@ describe('Play, Shape and Save keep their separate consequences, including a fai
       'GET /vibes': [card('peak', 'Peak time')],
       'POST /vibes/peak/build': new Reply(500, { detail: 'Not enough songs' }),
     });
-    const { setMixData } = show(songs());
+    // music is playing, so Play asks first (EX-0117-04: with nothing playing it builds straight away)
+    const { setMixData } = show(songs(), vi.fn(), vi.fn(), 'playing');
     const article = within((await screen.findByRole('heading', { name: 'Peak time' })).closest('article')!);
     fireEvent.click(article.getByRole('button', { name: 'Play' }));
     fireEvent.click(screen.getByRole('button', { name: 'Replace and play' }));

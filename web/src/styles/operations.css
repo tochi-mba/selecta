@@ -48,7 +48,9 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 72px;
 }
-.library-rows .song-row:has([aria-expanded='true']) { content-visibility: visible; }
+/* a row with its menu open is lifted over the rows after it: each row is its own stacking context
+   (content-visibility, and the dimmed Never play row's opacity), so without this the next row paints over the menu */
+.library-rows .song-row:has([aria-expanded='true']) { content-visibility: visible; position: relative; z-index: 1; }
 .library-rows .song-name { grid-area: name; }
 .library-rows .song-readiness { grid-area: readiness; min-width: 0; display: grid; gap: var(--space-hair); }
 .library-rows .song-actions { grid-area: actions; align-items: center; }
