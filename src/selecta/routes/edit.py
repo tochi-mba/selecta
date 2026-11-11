@@ -30,6 +30,10 @@ from selecta.seam_kinds import MOVE_FLAGS, move_on
 from selecta.seams import MOVES, STEM_MOVES, CannotRender, SeamRequest, request_from, seam_options
 
 
+# the longest overlap anyone can ask for: twice the longest the planner itself would try
+MOST_OVERLAP_BARS = 64
+
+
 def add_routes(app, ctx) -> None:
     analysed_or_404 = ctx.analysed_or_404
     connect = ctx.connect
@@ -268,6 +272,37 @@ def add_routes(app, ctx) -> None:
             b = analysed_or_404(conn, request.b)
         return seam_options(a, b)
 
+    def bars_in(conn, song_id: int) -> int | None:
+        """How many bars a song has, or None when that isn't known, so nothing is refused on a guess."""
+        from selecta.analysis.song import load_song
+
+        try:
+            count = len(load_song(conn, settings, song_id).bar_times)
+        except (AttributeError, KeyError, OSError, TypeError, ValueError):
+            return None
+        return count or None
+
+    def check_placement(conn, request: SeamRequest, body: SeamSettings) -> None:
+        """S4-0101-04: an overlap length or a cue outside the songs is refused in plain words, before
+        anything is saved, instead of being kept and quietly clamped when it renders."""
+        if body.bars is not None and not 1 <= body.bars <= MOST_OVERLAP_BARS:
+            raise HTTPException(
+                422, f"An overlap is between 1 and {MOST_OVERLAP_BARS} bars, not {body.bars}."
+            )
+        for bar, song_id, words in (
+            (body.exit_bar, request.a, "leave the first song"),
+            (body.entry_bar, request.b, "bring in the second song"),
+        ):
+            if bar is None:
+                continue
+            if bar < 0:
+                raise HTTPException(422, f"There's no bar {bar} to {words} at.")
+            count = bars_in(conn, song_id)
+            if count is not None and bar >= count:
+                raise HTTPException(
+                    422, f"That song has {count} bars, so there's no bar {bar} to {words} at."
+                )
+
     @app.post("/api/mix/{position}/seam")
     def set_seam(position: int, body: SeamSettings, draft: int | None = None) -> dict:
         if body.move not in MOVES:
@@ -275,7 +310,7 @@ def add_routes(app, ctx) -> None:
         if not move_on(body.move):
             return refusal(MOVE_FLAGS[body.move])
         with connect() as conn:
-            seam_request_at(conn, position, draft)
+            check_placement(conn, seam_request_at(conn, position, draft), body)
             mix.remember(conn, "changing that seam", draft)
             mix.set_seam(conn, position, body.model_dump(), draft)
             return mix_payload(conn, draft)

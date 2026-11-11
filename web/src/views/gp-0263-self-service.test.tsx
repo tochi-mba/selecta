@@ -112,8 +112,11 @@ describe('GP-0263-06 only detected dependency requirements', () => {
   it('a present ffmpeg is not explained anywhere on the page', async () => {
     fakeBackend({ 'GET /diagnostics': healthy });
     render(<Diagnostics />);
-    await screen.findByText('Nothing Selecta checks for is wrong right now.');
-    expect(document.body.textContent).not.toMatch(/ffmpeg|install/i);
+    const section = (await screen.findByRole('heading', { name: 'What went wrong' })).closest('section')!;
+    expect(section.textContent).not.toMatch(/ffmpeg|install/i);
+    expect(document.querySelector('.diagnostic-facts')!.textContent).not.toMatch(/ffmpeg|install/i);
+    // only the raw copied details record the check itself, as a plain true
+    expect(document.querySelector('pre.diagnostics')!.textContent).toMatch(/"ffmpeg": true/);
   });
 
   it('a missing ffmpeg is explained, with what still works', async () => {

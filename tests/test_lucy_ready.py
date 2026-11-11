@@ -64,6 +64,27 @@ def test_no_route_reports_real_limits_and_never_relaxes(lucy, lucy_home):
     assert "make it 6 songs" in text
 
 
+def test_a_shorter_offer_keeps_an_immovable_end_song(lucy, lucy_home):
+    """LX-0359-06: an infeasible strict plan offers only shorter mixes that keep the person's own
+    start and end songs, plus relaxing the rule, and builds nothing until they choose."""
+    ready_chain(lucy_home)
+    cid = new_conversation(lucy)
+    snap = say(lucy, cid, "make 9 songs ending with Last Call, only transitions that are already "
+                          "ready")
+    assert snap["proposal"] is None
+    text = reply(snap)["content"]
+    assert "say “make it 6 songs”" in text and "you can render new ones" in text
+    chosen = current(say(lucy, cid, "make it 6 songs"))
+    assert song_ids(chosen) == [1, 2, 3, 6, 9, 12]  # the offer was a promise the plan keeps
+    # nothing reaches Morning Light, so no shorter mix can end there: only relaxing is offered
+    other = new_conversation(lucy)
+    snap = say(lucy, other, "make 4 songs ending with Morning Light, only transitions that are "
+                            "already ready")
+    assert snap["proposal"] is None
+    text = reply(snap)["content"]
+    assert "make it" not in text and "you can render new ones" in text
+
+
 def test_reversed_pairs_and_history_never_count_as_ready(lucy, lucy_home):
     place_ready_seam(lucy_home, 2, 1)  # only B -> A exists
     store = SeamStore(Settings(lucy_home))

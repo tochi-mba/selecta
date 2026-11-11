@@ -86,6 +86,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `editor` | **Editor.** Change a mix song by song: reorder, add, remove, swap and clear. |  |
+| `editor.energy_horizon` | **Start-to-finish horizon.** Story view draws the same five-stop energy horizon as the mix builder, measured from this mix or draft's own songs. | `editor` |
 | `editor.suggestions` | **Song suggestions.** Songs suggested for a spot before you search, each saying how it would hand over. | `editor` |
 | `editor.locks` | **Locked songs.** A locked song stays where it is when the mix is rebuilt. | `editor` |
 | `editor.drag_preview` | **Move preview.** While a song is dragged, the transitions the drop would change are marked before it lands. | `editor` |

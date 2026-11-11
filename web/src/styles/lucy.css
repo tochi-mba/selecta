@@ -328,7 +328,7 @@
 .lucy-song-n { font: var(--type-counter); color: var(--text-soft); padding-top: var(--space-hair); }
 .lucy-song-main { min-width: 0; }
 .lucy-song-main p { margin: 0; overflow-wrap: anywhere; }
-.lucy-song-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-1); font-size: var(--text-sm); color: var(--text-soft); }
+.lucy-song-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-1); font-size: var(--text-sm); color: var(--text-soft); font-variant-numeric: tabular-nums; }
 .lucy-song-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .lucy-song-actions button { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 36px; padding: var(--space-1) var(--space-snug); font-size: var(--text-sm); }
 .lucy-song-actions button[aria-disabled='true'] { opacity: .5; cursor: not-allowed; }

@@ -1,4 +1,4 @@
-"""T0225: word connections with missing lyric timing, a word sung many times, and duplicate songs."""
+"""T0225: word connections with missing lyric timing, a word sung many times, duplicate songs."""
 
 from __future__ import annotations
 
@@ -17,7 +17,9 @@ def test_a_song_without_timed_lyrics_offers_no_link_and_breaks_nothing():
     )
     assert {(link.song_a, link.song_b) for link in links} == {(1, 3)}
     assert all(2 not in (link.song_a, link.song_b) for link in links)
-    timed = SimpleNamespace(id=1, lines=_song("on my knees"), artist="One", title="A", duration=240.0)
+    timed = SimpleNamespace(
+        id=1, lines=_song("on my knees"), artist="One", title="A", duration=240.0
+    )
     untimed = SimpleNamespace(id=2, lines=[], artist="Two", title="B", duration=240.0)
     assert links_between(timed, untimed) == [] and links_between(untimed, timed) == []
 

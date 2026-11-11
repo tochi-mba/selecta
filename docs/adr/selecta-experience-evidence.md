@@ -84,7 +84,7 @@
 | [EX-0128-05](adr-0128-calm-workspace-and-operations.md) | Verify accessible layout | Implemented | No | - | `web/e2e/mp-0293-workspace-operations.e2e.ts` (not green on 2026-11-10) | - | Needs a person: both themes, 400% zoom, NVDA | Unassigned |
 | [EX-0129-01](adr-0129-blind-study-neutral-audio.md) | Audit all method leakage | Implemented | No | - | `tests/test_ex_0129_study_integrity.py`; MP-0294-07 | - | Needs a person: screen reader | Unassigned |
 | [EX-0129-02](adr-0129-blind-study-neutral-audio.md) | Design balanced A/B interface | Implemented | No | - | MP-0294-05 | - | Needs a person: counterbalanced pilot | Unassigned |
-| [EX-0129-03](adr-0129-blind-study-neutral-audio.md) | Separate listening, grading and save | Implemented | No | - | `web/src/views/Listening.test.tsx`, `ListeningStudyFlow.test.tsx`; E2E rerun needed | - | - | Unassigned |
+| [EX-0129-03](adr-0129-blind-study-neutral-audio.md) | Separate listening, grading and save | Implemented | Yes (automated, 2026-11-11) | - | MP-0294-05 to -08 (14 passed with MP-0282); Listening unit tests | - | - | Unassigned |
 | [EX-0129-04](adr-0129-blind-study-neutral-audio.md) | Preserve once-only identity | Implemented | Yes (automated, 2026-11-10) | - | `tests/test_ex_0129_study_integrity.py` (5 passed) | - | - | Unassigned |
 | [EX-0129-05](adr-0129-blind-study-neutral-audio.md) | Verify with real blind sessions | Not started | No | - | - | - | Needs a person: real blind sessions | Unassigned |
 | [EX-0130-01](adr-0130-brand-tokens-and-css-ownership.md) | Approve semantic color and type contracts | Implemented | No | - | MP-0298-05 contrast | - | Needs a person: owner approval | Unassigned |
@@ -109,7 +109,7 @@
 | [EX-0133-05](adr-0133-user-research-performance-and-release-evidence.md) | Conduct exact-head release and rollback | In progress | No | - | `tests/rollback_check.py` harness | - | Needs a person: owner GO at exact SHA | Unassigned |
 | [EX-0134-01](adr-0134-web-first-future-saas-boundary.md) | Record current platform truth | Implemented | Yes (crosscheck, 2026-11-10) | - | `web/src/localPrivacyCopy.test.ts` (5 passed) | - | README/API/privacy crosscheck done 2026-11-10 | Unassigned |
 | [EX-0134-02](adr-0134-web-first-future-saas-boundary.md) | Review proposed UX for desktop coupling | Not started | No | - | - | - | Needs a person: design review | Unassigned |
-| [EX-0134-03](adr-0134-web-first-future-saas-boundary.md) | Preserve folder setup until separate decision | Implemented | No | - | `web/e2e/mp-0282-onboarding.e2e.ts` (rerun pending) | - | - | Unassigned |
+| [EX-0134-03](adr-0134-web-first-future-saas-boundary.md) | Preserve folder setup until separate decision | Implemented | Yes (automated, 2026-11-11) | - | `web/e2e/mp-0282-onboarding.e2e.ts` (8 passed) | - | - | Unassigned |
 | [EX-0134-04](adr-0134-web-first-future-saas-boundary.md) | Audit excluded implementation scope | Superseded by ADR-0391 | No | - | - | - | - | Unassigned |
 | [EX-0134-05](adr-0134-web-first-future-saas-boundary.md) | Define future SaaS decision gate | Superseded by ADR-0391 | No | - | - | - | - | Unassigned |
 

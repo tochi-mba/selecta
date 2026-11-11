@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest';
 import { SetPlayer } from '../player';
 import { fakeBackend, songs } from '../test/backend';
-import { ComingSongs, RequestRow, RequestsContext, RequestsPanel, RequestsState, savedRequestCount, Requests } from './Requests';
+import { ComingSongs, RequestRow, RequestsContext, RequestsPanel, RequestsState, waitingRequestCount, Requests } from './Requests';
 
 /** GP-0262-03: a request keeps the exact recording that was picked. Two recordings with the same
  * title and artist are told apart by song number, and the one asked for is the one sent and listed.
@@ -79,13 +79,13 @@ describe('GP-0262-07 Listen and Requests tell one story', () => {
     );
   };
 
-  it('a pick still being saved is counted nowhere, so the panel, Listen and the navigation agree', () => {
+  it('a pick being saved counts the same in the panel, Listen and the navigation', () => {
     const rows = [row(), row({ id: -1, song_id: 10, title: 'Saving', saving: true })];
-    expect(savedRequestCount(rows)).toBe(1);
-    expect(savedRequestCount(null)).toBe(0);
+    expect(waitingRequestCount(rows)).toBe(2);
+    expect(waitingRequestCount(null)).toBe(0);
     both(rows);
     // the panel header says the same number the Listen button and navigation are given
-    expect(screen.getByText('1 waiting')).toBeInTheDocument();
+    expect(screen.getByText('2 waiting')).toBeInTheDocument();
   });
 
   it('a request getting ready reads as getting ready in both places, with no play time promised', () => {

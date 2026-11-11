@@ -38,7 +38,9 @@ def test_a_partly_rendered_mix_waits_and_writes_no_file(client, tmp_path, monkey
     monkeypatch.setattr(SeamStore, "status", half_ready)
     monkeypatch.setattr(SeamStore, "submit", lambda _store, _request: None)
     written = []
-    monkeypatch.setattr(mix, "export_snapshot", lambda *args: written.append(args) or {"seconds": 1})
+    monkeypatch.setattr(
+        mix, "export_snapshot", lambda *args: written.append(args) or {"seconds": 1}
+    )
     job = client.post("/api/exports/jobs").json()
     time.sleep(0.2)
     shown = client.get(f"/api/exports/jobs/{job['id']}").json()

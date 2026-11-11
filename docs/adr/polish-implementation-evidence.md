@@ -22,13 +22,13 @@ Documentation/link/file-length checks on this PR validate the plan's structure o
 | [ADR-0037](adr-0037-polish-onboarding-and-readiness.md) | P0044–P0051 | Not started | No implementation or runtime verification |
 | [ADR-0038](adr-0038-polish-mixes-and-drafts.md) | P0052–P0060 | Not started | No implementation or runtime verification |
 | [ADR-0039](adr-0039-polish-listen-and-shell.md) | P0061–P0069 | Not started | No implementation or runtime verification |
-| [ADR-0040](adr-0040-polish-editor-and-inspector.md) | P0070–P0079 | Not started | No implementation or runtime verification |
-| [ADR-0041](adr-0041-polish-stem-studio.md) | P0080–P0088 | Not started | No implementation or runtime verification |
+| [ADR-0040](adr-0040-polish-editor-and-inspector.md) | P0070–P0079 | In progress: 4/10 ticked (P0072, P0075-P0077) | Per-task entries below (2026-11-10/11) |
+| [ADR-0041](adr-0041-polish-stem-studio.md) | P0080–P0088 | In progress: 4/9 ticked (P0082, P0083, P0085, P0086) | Per-task entries below (2026-11-10/11) |
 | [ADR-0042](adr-0042-polish-requests-and-discovery.md) | P0089–P0099 | Not started | No implementation or runtime verification |
-| [ADR-0043](adr-0043-polish-library-and-workshop.md) | P0100–P0111 | Not started | No implementation or runtime verification |
+| [ADR-0043](adr-0043-polish-library-and-workshop.md) | P0100–P0111 | In progress: 10/12 ticked (P0100-P0102, P0105-P0111) | Per-task entries below (2026-11-10/11) |
 | [ADR-0044](adr-0044-polish-language-and-motion.md) | P0112–P0120 | Implemented (9/9) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0045](adr-0045-polish-responsive-accessibility.md) | P0121–P0131 | Not started | No implementation or runtime verification |
-| [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | Not started | No implementation or runtime verification |
+| [ADR-0045](adr-0045-polish-responsive-accessibility.md) | P0121–P0131 | In progress: 2/11 ticked (P0124, P0127) | Per-task entries below (2026-11-10/11) |
+| [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | In progress: 0/12 ticked; P0141 rollback check passes except ratings | Per-task entries below (2026-11-10/11) |
 
 ## Required per-task evidence when implementation begins
 
@@ -236,3 +236,21 @@ Implementing history: PR #23 (`84b8b5c`) plus Library/Lucy (LX), Selecta 3.0 Lib
 | P0109 | Verified (automated) | A finished FLAC is decoded frame by frame and a wrong or bad file can never be reported ready; retry keeps the same snapshot; a failed transition names its pair | same pytest run (`test_export_validation.py`, `test_export_retry.py`, `test_flow_export_jobs.py`); `Mix.test.tsx` "says so if what's left can't be made" | Listening to an exported file is P0137 |
 | P0110 | Verified (automated) | Unfinished answers restored per study; failed save stays on its trial; both versions must be heard; nothing unblinds | `Listening.test.tsx` 5/5; `ListeningStudyFlow.test.tsx`; `tests/test_listening.py`; MP-0294-07, MP-0294-08 | MP-0294-05/06 layout checks failed |
 | P0111 | Verified (automated) | Unplugged folders lose nothing; worker stop/restart and storage-limit blocks reported; full disk named; stale storage writes ignored; diagnostics carry no paths | same pytest run (45 passed); `polishWorkshopShowcase.test.tsx` stale write; `Workshop.test.tsx` diagnostics | - |
+
+## ADR-0045 task evidence (reconciled 2026-11-10/11, uncommitted working tree)
+
+All runs are Edge (Chromium) on the shared Windows laptop and are simulated, not real-device. Playwright `mp-0298-responsive-and-a11y.e2e.ts` on 2026-11-10: MP-0298-01, -03, -05, -07 passed; -02 and -06 failed. 2026-11-11 rerun: both `flow-forced-colors.e2e.ts` tests failed, and 5 of 6 `integration.e2e.ts` tests that ran failed under heavy load. The rerun was stopped before `motion-preference`, `overlay-arbitration`, `mp-0287`, `mp-0288` and `mp-0289` ran.
+
+| Task | Status | Acceptance and result | Automated check | Remaining |
+|---|---|---|---|---|
+| P0121 | Open (Needs a person) | - | - | Owner agrees support matrix |
+| P0122 | Open (Needs a person) | 320 to 3840px, both sides of 620/760 and short landscape hold | MP-0298-01 passed | Safe areas and virtual keyboards on real devices |
+| P0123 | Open (Needs a person) | Emulated zoom spec failed | MP-0298-02 failed | Real 200%/400% browser zoom and text resizing |
+| P0124 | Verified (automated) | Every target is at least 24px or a documented WCAG exception; primary touch targets reach 44px | MP-0298-03 passed | - |
+| P0125 | Implemented | Text 4.5:1, large 3:1, field edges 3:1 in both themes | MP-0298-05 passed | Forced-colour focus/selection checks failed |
+| P0126 | Open (Needs a person) | Automated keyboard parts pass | `ListeningStudyFlow.test.tsx`, `gp-0261-studio.test.tsx`, MP-0293-08 | Full manual keyboard-only journeys |
+| P0127 | Verified (automated) | Sliders, seek, energy arc, tabs, grid and resize separator follow their keyboard and value patterns | `listenSeek.test.tsx`, `Mixes.test.tsx`, `ufSeamInspector.test.tsx`, `polish-components.test.tsx`, `Studio.test.tsx`, `gp-0261-studio.test.tsx`, `inspectorResize.test.tsx`, `Workshop.test.tsx` (vitest, passed) | - |
+| P0128 | Open (Needs a person) | - | - | NVDA and VoiceOver journeys |
+| P0129 | Implemented | - | MP-0288-06 failed | Rerun overlay-arbitration on a quiet machine |
+| P0130 | Implemented | RTL/CJK/duplicate names readable | `Mix.test.tsx` metadata stress test | Forced colours failed; motion spec not run |
+| P0131 | Open | Failures recorded per surface in this ledger | - | Resolve the failures; human checks pending |

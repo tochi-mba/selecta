@@ -72,7 +72,7 @@ export const FAULT_CATALOGUE: Record<FaultId, FaultSpec> = {
   },
   export_failed: {
     area: 'export', operation: 'Saving a mix as a file', certainty: 'possible',
-    cause: 'A file couldn’t be written. Free space or folder permissions are the usual reasons, but this one wasn’t confirmed.',
+    cause: 'A file couldn’t be written. Free space or folder permissions are the usual reasons, but the cause is not confirmed.',
     repair: 'Retry that export from your mix. Nothing else is affected.',
   },
   export_interrupted: {

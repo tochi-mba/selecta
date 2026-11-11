@@ -14,7 +14,7 @@ import { useMediaQuery } from '../ui/useMediaQuery';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
 import { seamFamily, SongMotif } from '../ui/MusicObjects';
-import { RequestsContext, RequestTag, savedRequestCount } from './Requests';
+import { RequestsContext, RequestTag, waitingRequestCount } from './Requests';
 import { frequencyLevels, paintFrequencyFrame, SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape } from './spectrumVisuals';
 import { ViewProps } from './shared';
 
@@ -575,19 +575,17 @@ function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail
 }
 
 /** What makes this hand-over what it is, from what was measured and what the render reported, and
- * nothing that wasn't. */
+ * nothing that wasn't. GP-0249-05: whether it is planned or made, and what was asked for versus what
+ * will play, is said once, by TransitionTruth under Up Next; this only adds the reasons. */
 function WhyThisTransition({ from, into, names }: { from?: ViewProps['mix'][number]; into: ViewProps['mix'][number]; names: Record<string, string> }) {
   const seam = into.seam;
   if (!seam) return null;
   const state = seam.state;
-  const facts = seamFacts(seam, names);
   const tempo = from?.bpm && into.bpm ? `${Math.round(from.bpm)} → ${Math.round(into.bpm)} BPM` : null;
   const keys = from?.key && into.key ? `${from.key} → ${into.key}` : null;
   return (
     <details className="why">
       <summary>Why this transition?</summary>
-      <p><Status kind={facts.kind}>{facts.words}</Status></p>
-      {facts.asked && state.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What will play is {state.label}.</p>}
       {state.why && <p>{state.why}</p>}
       <p className="hint">{[tempo, keys].filter(Boolean).join(' · ')}</p>
       {!!state.tried?.length && (
@@ -646,6 +644,14 @@ export function Now(props: ViewProps) {
   // Kept here because Stage takes the controls away. Returning should restore the listener's
   // chosen level of detail without making expert controls compete with Play and Up Next.
   const [djControlsOpen, setDjControlsOpen] = useState(false);
+  // GP-0249-06: steering lives in DJ controls, so Up Next offers a way straight to it while they're closed
+  const steeringHeading = useRef<HTMLHeadingElement>(null);
+  const [steerFocus, setSteerFocus] = useState(false);
+  useEffect(() => {
+    if (!steerFocus || !djControlsOpen) return;
+    steeringHeading.current?.focus({ preventScroll: false });
+    setSteerFocus(false);
+  }, [steerFocus, djControlsOpen]);
   const page = useRef<HTMLElement>(null);
   const stageWasOpen = useRef(stage);
   // Stage removes the launching button while fullscreen. Put focus on a
@@ -749,7 +755,7 @@ export function Now(props: ViewProps) {
           ? `Paused · ${mixName}`
           : mixName;
   const shown = detail && detail.id === item?.song_id ? detail : null;
-  const waiting = savedRequestCount(requests?.requests);
+  const waiting = waitingRequestCount(requests?.requests);
 
   const showChanged = changed && changed.id === next?.song_id ? changed : null;
   const on = useFlags();
@@ -844,6 +850,13 @@ export function Now(props: ViewProps) {
                 </div>
               )}
               <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} />
+              {steering && controls && !djControlsOpen && (
+                <button type="button" className="quiet next-steer-open" aria-describedby="next-steer-open-hint"
+                  onClick={() => { setDjControlsOpen(true); setSteerFocus(true); }}>
+                  Change the next song
+                </button>
+              )}
+              {steering && controls && !djControlsOpen && <span id="next-steer-open-hint" className="visually-hidden">Opens DJ controls at Bigger, Calmer and Something else</span>}
             </section>
           ) : (
             <section className="next-up">
@@ -926,7 +939,7 @@ export function Now(props: ViewProps) {
               )}
               {steering && (
                 <section className="listen-next-steering" aria-labelledby="listen-next-steering-title">
-                  <h3 id="listen-next-steering-title">Change the next song</h3>
+                  <h3 id="listen-next-steering-title" ref={steeringHeading} tabIndex={-1}>Change the next song</h3>
                   <div className="chips steer" role="group" aria-label="Change what plays next">
                     <Action waiting={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
                     <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>

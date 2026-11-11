@@ -1,4 +1,4 @@
-"""T0217: a correction holds while the analysis worker writes beside it and after its source moves."""
+"""T0217: a correction holds while the analysis worker writes and after its source moves."""
 
 from __future__ import annotations
 
