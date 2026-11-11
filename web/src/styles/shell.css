@@ -262,8 +262,10 @@ a.mini-song { flex: 1 1 auto; min-width: 0; display: grid; color: var(--text); t
 .mini-song b, .mini-song span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .mini-song span { color: var(--text-soft); font-size: var(--text-sm); }
 .mini button { flex: none; }
-.mini .round { width: 44px; height: 44px; }
-.mini-next { padding: var(--space-2) var(--space-snug); min-width: 44px; }
+/* MP-0281-02: Play/Pause is the filled disc and outweighs Next, a bare glyph on the bar */
+.mini .round { width: 44px; height: 44px; border-radius: 50%; background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
+.mini-next { padding: var(--space-2) var(--space-snug); min-width: 44px; background: none; border-color: transparent; }
+.mini-next:hover:not(:disabled) { border-color: var(--border); }
 /* Reserve digits even at zero so arriving requests never shove transport or track identity. */
 .mini-requests .count { display: inline-block; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 420px) {

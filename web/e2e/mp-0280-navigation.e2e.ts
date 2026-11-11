@@ -160,7 +160,8 @@ test('MP-0280-03 Search, Requests, Theme, Activity and Help share one height, li
 });
 
 test('MP-0280-04 deep crumbs and a long draft name stay whole and readable at narrow widths', async ({ page, request }) => {
-  const long = 'Saturday sunrise set for the long drive home along the coast road';
+  // drafts keep names to 60 characters (NAME_LIMIT in src/selecta/mix.py), so the longest a name can be
+  const long = 'Saturday sunrise set for the long drive home along the coast';
   const made = await (await request.post('/api/drafts', { data: { name: long } })).json();
   try {
     for (const width of [320, 375, 768]) {
@@ -271,6 +272,8 @@ test('MP-0280-07 history, older addresses, drafts and playback survive moving ar
   const contexts = await page.evaluate(() => window.audioSpy.contexts.length);
   const started = await soundsRestarted(page);
   const made = await (await request.post('/api/drafts', { data: { name: 'Route keeper' } })).json();
+  // a draft with songs opens the editor and its scope bar; an empty one opens its add-a-song start instead
+  for (const song of [5, 6]) await request.post(`/api/mix/songs?draft=${made.id}`, { data: { song_id: song } });
   try {
     for (const [name, path] of [['Library', '/library'], ['Make a Mix', '/mixes'], ['My Mixes', '/mixes/mine']] as const) {
       await nav(page).getByRole('link', { name, exact: true }).click();

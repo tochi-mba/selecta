@@ -144,8 +144,13 @@ test('MP-0281-03 time ticking, the next song and a long title never move the con
     same(await page.evaluate(parts), 'after Next');
     // a very long title and artist (as the stress library has); React writes it back on its next tick
     const stretched = await page.evaluate(() => {
-      document.querySelector('.mini-song b')!.textContent = 'An extraordinarily long song title that keeps going well past any sensible width (Extended Club Remix)';
-      document.querySelector('.mini-song span')!.textContent = 'A Very Long Collective Name featuring Several Other Artists · 12:34 / 59:59';
+      // written into React's own text nodes (not replacing them), so its next tick really does write them back
+      const write = (element: Element, text: string) => {
+        const nodes = [...element.childNodes].filter((node): node is Text => node.nodeType === Node.TEXT_NODE);
+        nodes.forEach((node, index) => { node.data = index === 0 ? text : ''; });
+      };
+      write(document.querySelector('.mini-song b')!, 'An extraordinarily long song title that keeps going well past any sensible width (Extended Club Remix)');
+      write(document.querySelector('.mini-song span')!, 'A Very Long Collective Name featuring Several Other Artists · 12:34 / 59:59');
       const song = document.querySelector<HTMLElement>('.mini-song b')!;
       return song.scrollWidth > song.clientWidth;
     });
