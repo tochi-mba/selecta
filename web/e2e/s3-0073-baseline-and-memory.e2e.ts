@@ -96,6 +96,8 @@ async function oneRound(page: Page) {
   await expect(transport).toHaveText(/Stop/, { timeout: 30_000 });
   await transport.click();
   await expect(transport).toHaveText(/Play preview/);
+  // The global palette intentionally cannot open while Studio's modal is active.
+  await page.locator('.studio').getByRole('button', { name: 'Close', exact: true }).click();
   await page.keyboard.press('Control+k');
   await expect(page.getByRole('combobox', { name: 'Search for a page or a command' })).toBeVisible();
   await page.keyboard.press('Escape');

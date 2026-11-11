@@ -2,9 +2,6 @@
 
 .shell { min-height: 100vh; }
 .content:focus { outline: none; }
-/* A busy action's original label and working words occupy one cell. */
-.action-labels { display: inline-grid; align-items: center; }
-.action-labels > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; }
 
 .skip-link {
   position: fixed;

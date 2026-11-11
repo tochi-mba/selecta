@@ -85,6 +85,8 @@
 .song-select:hover:not(:disabled) b { text-decoration: underline; }
 .locked-badge { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); width: fit-content; margin-top: var(--space-hair); font-size: var(--text-xs); color: var(--text); }
 .timeline .song-actions button { min-height: var(--control-height); min-width: var(--control-height); display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
+/* Moving a song may add a status line without shifting the row's action icons. */
+.timeline .song-actions { align-self: start; }
 .song-more .menu-list { min-width: 170px; }
 .song-more .menu-list button { display: flex; justify-content: flex-start; gap: var(--icon-gap); }
 

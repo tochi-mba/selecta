@@ -449,7 +449,7 @@
   margin-block: var(--space-4);
   border-top: 1px solid var(--border);
 }
-.listen-next-steering h3 { margin: 0; font-size: var(--text-md); }
+.listen-next-steering h2 { margin: 0; font-size: var(--text-md); }
 .listen-next-steering .steer {
   display: grid;
   /* wide enough that each label (and its working label) stays on one line, so a steering button is
