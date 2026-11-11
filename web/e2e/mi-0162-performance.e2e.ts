@@ -1,5 +1,5 @@
 import { APIRequestContext, BrowserContext, expect, Page, test } from '@playwright/test';
-import { allRendered, resetMix, rewriteJson } from './helpers';
+import { resetMix, rewriteJson } from './helpers';
 import { browserLine, frameWindow, installProbe, interactionsSince, mark, type FrameWindow } from './perf-probe';
 
 /**
@@ -260,12 +260,14 @@ async function busyMainThread(page: Page) {
 }
 
 test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thread, page changes and a render going', async ({ page, request }) => {
-  test.setTimeout(420_000);
+  // one real render takes about 4.5 minutes on the shared laptop when it is busy, so wait up to 9
+  test.setTimeout(900_000);
   await recordSchedule(page);
   await installProbe(page);
   // two songs, so only one transition has to render first on a loaded machine
   await resetMix(request, [1, 2]);
-  await allRendered(request);
+  await request.post('/api/mix/render');
+  await expect.poll(async () => (await (await request.get('/api/mix')).json()).mix[1]?.seam?.state.status, { timeout: 540_000, intervals: [3000] }).toBe('ready');
   await page.setViewportSize(VIEWPORT);
   await page.goto('/listen');
   await expect(page.locator('h1.display')).toHaveText('Morning Light');

@@ -115,7 +115,15 @@ render): **1 passed**.
   before the window, so their windows show the cost of the page at rest with music playing, and their
   motion cost shows in the interaction numbers.
 
-RESULTS-02B-03-PENDING
+Run B, 2026-11-11, on its own (no other run of these specs at the same time): **1 passed**. Every surface,
+both passes: 172 to 181 frames in 3 s, p50 16.7 ms, p95 16.8 or 16.9 ms, worst 19.7 ms, and no long task
+in any quiet window. Animated pass: slowest Event Timing 136 ms (the `f` key entering the Stage), slowest
+next paint 105.2 ms (same key), a long task of 81 ms during that key; every other surface's slowest
+interaction was 72 ms Event Timing or less (Editor Change 72, Make a Mix 48, Studio 48, Listen 48,
+Lucy 40). Still pass: slowest Event Timing 200 ms (the Editor Change click, again with a 38.8 ms next paint
+and no long task), so animation was again not slower than still.
+
+RESULTS-03-PENDING
 
 ## MI-0162-04: a 20,000-song Library
 
