@@ -246,6 +246,14 @@
 .stage .music-visualizer { order: 2; }
 .stage .handoff { order: 3; }
 .stage .lyrics { order: 4; }
+/* MP-0285-04: the lyrics keep the most room even before the first line is sung. The box holds a
+   two-line current lyric and a neighbour either side at Stage sizes (style.css), plus the timing caption,
+   so it is never shorter than the visualiser or the countdown. */
+.now.stage .lyrics {
+  --stage-sung: clamp(2.4rem, 7vw, 6rem);
+  --stage-line: clamp(1.1rem, 2.6vw, 2rem);
+  min-height: calc(var(--stage-sung) * 1.12 * 2 + var(--stage-line) * 1.5 * 2 + 2rem);
+}
 .stage .problem, .stage .skeleton { order: 4; }
 .stage .artist { margin-bottom: var(--space-2); font-size: clamp(1rem, 2vw, 1.6rem); }
 .stage-controls { position: fixed; right: var(--space-4); bottom: calc(var(--space-4) + var(--safe-bottom)); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-2); max-width: calc(100vw - 2 * var(--space-4)); z-index: var(--layer-sticky); }
@@ -468,4 +476,6 @@
   .now.stage .countdown-number strong { font-size: clamp(1.8rem, 6vh, 3rem); }
   /* the sung line sizes to the height too, so a two-line lyric still fits a 600px-tall window */
   .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(7vw, 9vh), 6rem); }
+  /* room for a one-line current lyric here, so the reserve itself doesn't push it below the fold */
+  .now.stage .lyrics { --stage-sung: clamp(2.4rem, min(7vw, 9vh), 6rem); min-height: calc(var(--stage-sung) * 1.12 + var(--stage-line) * 1.5 * 2 + 2rem); }
 }

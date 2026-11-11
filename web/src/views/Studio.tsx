@@ -270,7 +270,8 @@ export function Studio(props: {
     // Once Apply has started, this exact working copy is frozen. Otherwise a
     // late response could clear an unsaved newer arrangement.
     if (applying.current) return;
-    tuneAttempt.current += 1;
+    // A stroke doesn't cancel a fine tune on its way: askSelecta sees the grid moved on (latestShape)
+    // and keeps the person's version, saying so, rather than dropping the answer in silence.
     latestShape.current = next;
     setShape(next);
     setAsking('');
@@ -303,7 +304,7 @@ export function Studio(props: {
       if (session?.key) setRetained(keepShape(session.key, answer.shape));
       setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
     } catch (error) {
-      if (request === tuneAttempt.current) setProblem((error as Error).message);
+      if (request === tuneAttempt.current && latestShape.current === sent) setProblem((error as Error).message);
     } finally {
       if (request === tuneAttempt.current) setAsking('');
     }
