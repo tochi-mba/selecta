@@ -1,14 +1,14 @@
 # ADR-0062: Scalable Library search, filters, rows and pagination
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 6 of 8 tasks implemented with automated evidence on 2026-11-10; 1 need a person; 1 still open
+- **Implementation status:** In progress: 7 of 8 tasks implemented with automated evidence on 2026-11-11; 1 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0017, ADR-0034, ADR-0043
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Recorded on each item below (2026-11-10). Implemented means its automated evidence ran green; nothing here is independently Verified.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -34,7 +34,7 @@ Use a search-first Library with explicit filter scope, compact/comfortable densi
 4. **S3-0062-04 - Implemented.** Make all search/filter/sort/deep-link combinations deterministic and keyboard accessible. **Evidence:** web/e2e/pages.e2e.ts 'the Library’s filters are part of its address'; web/src/views/Library.test.tsx 'keeps what you were looking for in the address' and 'restores the requested page depth when navigation changes only the URL'; web/e2e/finishing.e2e.ts 'a slow search can’t replace a newer one, and typing keeps its place' (passed 2026-11-10).
 5. **S3-0062-05 - Implemented.** Implement stale-request cancellation and a truthful refreshing/failure experience. **Evidence:** web/src/views/Library.test.tsx 'only the newest search counts, however the answers arrive' and 'not being able to load isn’t the same as having no songs'; web/e2e/finishing.e2e.ts 'a slow search can’t replace a newer one, and typing keeps its place' (passed 2026-11-10).
 6. **S3-0062-06 - Implemented.** Preserve 100-item incremental loading or a tested equivalent with stable scroll and selection. **Evidence:** web/src/views/Library.test.tsx 'shows how many there are, and fetches more without losing its place', 'reloads an edited song on a middle page, not just the first or last page' and 'a song that turns up on two pages only shows once'; tests/test_library_edges.py test_twenty_thousand_songs_are_all_reachable_and_a_page_stays_quick (passed 2026-11-10).
-7. **S3-0062-07 - In progress.** Profile 20k tracks under background analysis and implement targeted optimization only if needed. **Status:** In progress: tests/test_library_edges.py test_twenty_thousand_songs_are_all_reachable_and_a_page_stays_quick proves 20k paging, but no profile under background analysis has been recorded.
+7. **S3-0062-07 - Implemented.** Profile 20k tracks under background analysis and implement targeted optimization only if needed. **Evidence:** tests/test_s3_library_profile.py test_twenty_thousand_songs_page_quickly_while_analysis_writes_in_the_background pages 20,000 songs idle and while analysis writes (2026-11-11 run: idle p95 172 ms, under analysis p95 371 ms and worst 551 ms with 3,496 rows written), every song reached once and every page under a second, so no optimisation was needed (passed 2026-11-11).
 8. **S3-0062-08 - Implemented.** Test long/unicode/RTL/duplicate/missing metadata and touch row actions. **Evidence:** tests/test_library_edges.py test_any_name_comes_back_exactly_as_it_is_and_can_be_searched_for, test_songs_with_the_same_name_are_kept_apart, test_songs_missing_things_still_turn_up_in_every_order and test_a_song_whose_file_has_moved_says_so; web/src/views/Library.test.tsx 'makes duplicate recording IDs visible in both rows and song details'; web/e2e/finishing.e2e.ts 'long, right-to-left and duplicate names stay readable and whole at the smallest size' (passed 2026-11-10).
 
 ## Preservation and integration constraints

@@ -604,7 +604,7 @@
 
 ## [ADR-0244 - Search-first navigation and expert command palette continuity](adr-0244-command-palette.md)
 
-**Priority / phase:** P1 / Shell. **Decision:** Accepted; **Implementation:** 4/8 Implemented, 1 in progress; **Verified:** 0/8.
+**Priority / phase:** P1 / Shell. **Decision:** Accepted; **Implementation:** 4/8 Implemented, 3 in progress; **Verified:** 0/8.
 
 - [x] **SF-0244-01 - Audit existing commands.** **Acceptance:** Every command maps to real capability and permission. **Required verification:** Palette inventory. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent r3j; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/shell/paletteInventory.test.ts` 'sends every Go to command to a page that exists', 'runs the app’s own handler, or saves a local preference, for every other command', 'says why a command can’t run, instead of hiding it or running it anyway' (vitest 2026-11-11).
 - [ ] **SF-0244-02 - Redesign search hierarchy.** **Acceptance:** Songs, mixes, routes and actions clearly differentiated. **Required verification:** Results task study. **Implementation:** In progress; Needs a person: a results task study of whether songs, mixes, routes and actions are told apart; results are grouped Songs, Go to, Playback, Do and Your drafts in `web/src/shell/commands.ts`; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.

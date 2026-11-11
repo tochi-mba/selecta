@@ -38,6 +38,10 @@ test('LX-0362-03 Save and play replaces the playing music only after its own con
   // client-side to Lucy, so the same player keeps going
   await page.evaluate((path) => { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }, `/mixes/lucy/${id}`);
   const contexts = (await audioClock(page)).length;
+  // the stacked layout shows the proposal on its own tab
+  const mixTab = page.getByRole('tab', { name: 'Your mix' });
+  await expect(page.getByRole('textbox', { name: 'Message to Lucy' })).toBeVisible();
+  if (await mixTab.isVisible()) await mixTab.click();
   const save = page.getByRole('button', { name: 'Save and play' });
   await save.click();
   const dialog = page.getByRole('dialog', { name: 'Save this mix and play it?' });
