@@ -201,11 +201,13 @@ test('MP-0281-05 on a phone the 58px tab bar and the player stack without overla
     // (content-visibility, MP-0272), so rows remembered at a wider window grow as they come into
     // view: keep going to the end until the page stops growing, as a person scrolling would.
     await page.evaluate(async () => {
-      for (let tries = 0; tries < 20; tries++) {
+      let settled = 0;
+      for (let tries = 0; tries < 40 && settled < 3; tries++) {
         const height = document.documentElement.scrollHeight;
         window.scrollTo(0, height);
-        await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
-        if (document.documentElement.scrollHeight === height && Math.ceil(window.scrollY + window.innerHeight) >= height) return;
+        await new Promise((done) => setTimeout(done, 100));
+        const end = document.documentElement.scrollHeight;
+        settled = end === height && Math.ceil(window.scrollY + window.innerHeight) >= end ? settled + 1 : 0;
       }
     });
     const last = await page.evaluate(() => {

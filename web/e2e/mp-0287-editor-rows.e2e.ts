@@ -91,6 +91,8 @@ test('MP-0287-03 the grip and move buttons stay full targets at 320px, and drag 
   await expect(page.getByRole('button', { name: 'Reorder Morning Light' })).toBeFocused();
   // pointer: drag the grip of the last song onto the first. Playwright's own drag carries the drag data
   // as a browser would; it drops low on the first row, clear of the scope bar pinned over its top.
+  // a window tall enough to hold both rows at once, so neither end of the drag is scrolled away mid-drag
+  await page.setViewportSize({ width: 320, height: 2000 });
   const first = page.locator('.timeline > .song').first();
   const height = (await first.boundingBox())!.height;
   await page.getByRole('button', { name: 'Reorder Neon Rain' }).dragTo(first, { targetPosition: { x: 24, y: height - 12 } });

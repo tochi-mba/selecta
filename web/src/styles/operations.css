@@ -119,10 +119,9 @@
 .study-version h3 { margin: 0; }
 .study-version audio { width: 100%; }
 .study-version .chips + .chips { margin-top: var(--space-2); }
-/* MP-0294-06: the four judgement buttons share one line wherever the window is 768px or wider,
-   including beside the side navigation, where the study column is only about 445px */
+/* MP-0294-06: the four judgement buttons fit one line from a 768px window, where the study column
+   beside the side navigation is only about 445px wide */
 .study-choices > button { padding-inline: var(--space-3); }
-@media (min-width: 768px) { .study-choices { flex-wrap: nowrap; } }
 .study-done { padding: var(--space-4); border: 1px solid var(--status-ready); border-radius: var(--radius); }
 .study-done p { margin: 0; }
 .request-group { list-style: none; margin: var(--space-5) 0 var(--space-2); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }

@@ -94,7 +94,7 @@ function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disable
                 <div className="studio-list-cells">
                   {shape[side][lane].map((value, index) => (
                     <label key={index}>
-                      <input type="checkbox" data-cell={`${row}-${index}`} checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
+                      <input type="checkbox" data-cell={`${row}-${index}`} disabled={lost} checked={Boolean(value)} onChange={() => onToggle(side, lane, index)} />
                       <span>{barRange(index, barsPerCell)}</span>
                     </label>
                   ))}

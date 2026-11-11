@@ -541,6 +541,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           )}
         </div>
       )}
+      {/* LX-0342-01: the count comes straight after the filters, ahead of the selection tools, so on a
+          phone it is still on screen beside the search that changed it */}
+      {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
       {batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
@@ -579,7 +582,6 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.{serverFault && ' Something went wrong inside Selecta, not your connection.'}</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
-      {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
           <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
