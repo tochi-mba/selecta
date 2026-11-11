@@ -89,7 +89,10 @@ test('MP-0287-03 the grip and move buttons stay full targets at 320px, and drag 
   await page.keyboard.press('ArrowDown');
   await expect.poll(() => order(page)).toEqual(['Slow Tide', 'Morning Light', 'Paper Moon', 'Neon Rain']);
   await expect(page.getByRole('button', { name: 'Reorder Morning Light' })).toBeFocused();
-  // pointer: drag the grip of the last song onto the first
+  // pointer: drag the grip of the last song onto the first, in a window tall enough to hold both rows
+  // (a pointer cannot press a grip that is below the bottom of the window)
+  await page.setViewportSize({ width: 320, height: 1600 });
+  await page.evaluate(() => window.scrollTo(0, 0));
   const from = (await page.getByRole('button', { name: 'Reorder Neon Rain' }).boundingBox())!;
   const to = (await page.locator('.timeline > .song').first().boundingBox())!;
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
