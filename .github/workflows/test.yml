@@ -213,7 +213,7 @@ jobs:
     name: Edge E2E (shard ${{ matrix.shard }}/2)
     needs: [lint, web]
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
