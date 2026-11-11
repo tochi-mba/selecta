@@ -836,7 +836,7 @@ export function Mix(props: ViewProps) {
         </div>
       </section>
       {inspecting && narrow && mode !== 'story' && (
-        <Sheet title={seamInspector ? 'Transition' : 'Song'} onClose={() => setSelected(null)}>{seamInspector || songInspector}</Sheet>
+        <Sheet title={seamInspector ? 'Transition' : 'Song'} onClose={() => setSelected(null)} keepsChrome>{seamInspector || songInspector}</Sheet>
       )}
     </main>
   );

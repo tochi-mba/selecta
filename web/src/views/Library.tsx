@@ -425,7 +425,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // music, from Set aside). The sheet stays open on that same recording, read afresh by its ID, so
   // the way back (Let Selecta decide) is still right there.
   useEffect(() => {
-    if (opened === null || rows === null || rows.some((song) => song.id === opened)) return;
+    if (opened === null || rows === null || rows.some((song) => song.id === opened) || linkedSong?.id === opened) return;
     let live = true;
     void get<LibraryPage>(`/library?q=${opened}&state=all&limit=1`)
       .then((page) => {
@@ -434,7 +434,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       })
       .catch(() => undefined);
     return () => { live = false; };
-  }, [rows, opened]);
+  }, [rows, opened, linkedSong]);
   const lastShown = useRef<LibrarySong | null>(null);
   const shownDetails = rows?.find((song) => song.id === opened)
     ?? (linkedSong?.id === opened ? linkedSong : null)

@@ -117,12 +117,11 @@ let openOverlays = 0;
 let previousOverflow = '';
 const overlayStack: HTMLElement[] = [];
 
-/** Only the top overlay can be reached. Everything underneath it is inert: the page, and any overlay
- * this one opened on top of. */
 const chromeInert = new Set<Element>();
-/** A sheet that keeps the shell's chrome (SF-0203-06) leaves the tab bar and the mini-player live: everything
- * else in the page goes inert, one branch at a time, so the player stays reachable beside it. */
 const KEPT_CHROME = '.nav, .mini';
+/** Only the top overlay can be reached. Everything underneath it is inert: the page, and any overlay
+ * this one opened on top of. A sheet that keeps the shell's chrome (SF-0203-06) leaves the tab bar and
+ * the mini-player live: everything else in the page goes inert, one branch at a time. */
 function syncInert() {
   const top = overlayStack[overlayStack.length - 1];
   const root = document.getElementById('root');

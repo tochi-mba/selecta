@@ -362,6 +362,10 @@ button.icon { padding: var(--space-dense) var(--space-2); min-width: 40px; }
     padding-bottom: var(--safe-bottom);
   }
 }
+/* a side task beside the music (SF-0203-06): it stops at the rail, the tab bar and the mini-player,
+   which stay on screen and working; the bottom chrome already holds the safe area */
+.overlay-keeps-chrome { left: var(--rail-offset); bottom: var(--bottom-chrome); }
+.overlay-keeps-chrome .overlay-panel { padding-bottom: 0; }
 
 /* shared states */
 .status { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); font-size: var(--text-sm); white-space: nowrap; }

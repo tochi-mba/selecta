@@ -87,11 +87,10 @@ export function ExportPanel(props: {
         Save captures exactly the songs and transitions shown for this {inDraft ? 'draft' : 'current mix'} at the moment you start. Later edits will not change the exported file.
       </p>
       {mine?.revision && <p className="hint">Frozen revision <code>{mine.revision}</code>. Use this ID to distinguish this file from later exports of the same mix.</p>}
-      {/* said in sight, not only inside the closed list, so a reopened dialog states the job is frozen (EX-0127-02) */}
-      {mine && <p className="hint">The original order below cannot be changed by editing the mix now.</p>}
-      <details className="export-snapshot">
+      {/* once a job exists its frozen order opens by itself, so a reopened dialog shows what is being made (EX-0127-02) */}
+      <details className="export-snapshot" open={mine ? true : undefined}>
         <summary>Review {mine ? 'frozen' : 'proposed'} order ({mine ? mine.songs.length : mix.length} songs)</summary>
-        {!mine && <p className="hint">This order will be captured when Save it succeeds. It is not a finished file yet.</p>}
+        <p className="hint">{mine ? 'The original order below cannot be changed by editing the mix now.' : 'This order will be captured when Save it succeeds. It is not a finished file yet.'}</p>
         <ol className="export-snapshot-songs">
           {mine ? mine.songs.map((song, index) => (
             <li key={index}><b>{song.title || 'Untitled'}</b> - {song.artist || 'Unknown artist'} <small>(song {song.song_id})</small></li>
