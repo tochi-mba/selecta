@@ -186,6 +186,17 @@ def test_the_service_image_runs_as_a_user_and_installs_the_locked_closure():
     assert "SELECTA_MODE=cloud" in dockerfile
 
 
+def test_the_service_image_can_install_every_index_the_lock_uses():
+    """An exported requirements file drops pyproject's extra indexes, so the image must pass any
+    the lock depends on, or the build can't find (for example) torch's CPU-only wheels."""
+    import tomllib
+
+    dockerfile = (INFRA / "docker" / "service.Dockerfile").read_text("utf-8")
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))
+    for index in project.get("tool", {}).get("uv", {}).get("index", []):
+        assert f"--extra-index-url {index['url']}" in dockerfile, index["name"]
+
+
 # --- Smoke test -------------------------------------------------------------------------------
 
 
