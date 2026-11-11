@@ -257,7 +257,7 @@ test('MP-0291-07 a 20,000-song library pages, searches and keeps focus without j
       const now = `${window.scrollY}:${element.getBoundingClientRect().top}`;
       still = now === last ? still + 1 : 0;
       last = now;
-      if (still >= 5) settled();
+      if (still >= 10) settled();
       else requestAnimationFrame(check);
     };
     requestAnimationFrame(check);

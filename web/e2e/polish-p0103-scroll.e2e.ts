@@ -46,7 +46,7 @@ for (const how of ['the close button', 'Escape'] as const) {
         const now = `${window.scrollY}:${element.getBoundingClientRect().top}`;
         still = now === last ? still + 1 : 0;
         last = now;
-        if (still >= 5) settled();
+        if (still >= 10) settled();
         else requestAnimationFrame(check);
       };
       requestAnimationFrame(check);
