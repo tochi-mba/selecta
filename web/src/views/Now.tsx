@@ -208,7 +208,7 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}
       aria-valuenow={Math.round(safeTime)}
-      aria-valuetext={unavailable ? 'Duration unknown' : `${clock(safeTime)} of ${clock(duration)}, ${clock(duration - safeTime)} left`}
+      aria-valuetext={unavailable ? 'Duration unknown' : `${transportClock(safeTime)} of ${transportClock(duration)}, ${transportClock(duration - safeTime)} left`}
       aria-disabled={locked || undefined}
       aria-describedby={locked ? noteId : undefined}
       onPointerDown={beginSeek}

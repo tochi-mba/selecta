@@ -33,4 +33,6 @@
   .editor-scope { position: static; }
   /* MP-0298-02: likewise the transition's pinned identity, which covered the very tabs it scrolls to */
   .inspector-identity { position: static; }
+  /* and the Studio's own pinned head, which covered the Grid and List switch below it */
+  .studio-head { position: static; }
 }

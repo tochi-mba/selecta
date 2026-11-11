@@ -91,6 +91,8 @@ test('MP-0296-04 countdown, lyric focus and playhead follow the real player cloc
   await allRendered(request);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/listen');
+  // Listen first: counting the DJ controls before the page has drawn finds none and never opens them
+  await expect(page.locator('.now .transport')).toBeVisible();
   const options = page.locator('details.view-options');
   if (await options.count() && !(await options.evaluate((node) => (node as HTMLDetailsElement).open))) await options.locator('summary').click();
   const countdown = page.getByRole('button', { name: 'Beat countdown' });
